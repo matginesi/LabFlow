@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Samples devices measurements and team" name="description"/>
+<title>Results workspace · LabFlow</title>
+<link href="assets/app.css" rel="stylesheet"/>
+<script defer="" src="assets/exporters.js"></script>
+<script defer="" src="assets/app.js"></script>
+</head>
+<body data-page="workspace">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header"><div><h1>Samples, devices &amp; results</h1><p>Browse only the current user's physical outputs, linked measurements, derived metrics and source files.</p></div><div class="page-actions"><button class="button" data-action="workspace-compare" type="button"><span data-icon="chart"></span>Compare selected</button><a class="button primary" href="report.html"><span data-icon="report"></span>Create report</a></div></header>
+<section class="panel"><div class="tabs" data-tabs=""><button class="tab-button active" data-tab="samples" type="button">Samples</button><button class="tab-button" data-tab="devices" type="button">Devices</button><button class="tab-button" data-tab="measurements" type="button">Measurements</button><button class="tab-button" data-tab="comparisons" type="button">Comparisons</button><button class="tab-button" data-tab="files" type="button">Files</button></div><div class="panel-body">
+<div data-tab-panel="samples"><div class="between mb-10"><input class="input search-field" data-page-search="" placeholder="Search sample, composition or condition" type="search"/><span class="badge">18 samples</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th></th><th>Sample</th><th>Composition</th><th>Process run</th><th>Thickness</th><th>RMS</th><th>Status</th></tr></thead><tbody><tr data-filter-item=""><td><input checked="" type="checkbox"/></td><td><div class="cell-main"><strong>S-052-B04</strong><small>Polycrystalline film</small></div></td><td class="mono">Cs/FA/MA–Pb–I/Br</td><td>1500 rpm · 30 s</td><td>392 nm</td><td>13.7 nm</td><td><span class="badge success">Validated</span></td></tr><tr data-filter-item=""><td><input checked="" type="checkbox"/></td><td><div class="cell-main"><strong>S-052-A02</strong><small>Polycrystalline film</small></div></td><td class="mono">Cs/FA/MA–Pb–I/Br</td><td>1000 rpm · 30 s</td><td>468 nm</td><td>19.8 nm</td><td><span class="badge success">Validated</span></td></tr><tr data-filter-item=""><td><input type="checkbox"/></td><td><div class="cell-main"><strong>S-052-C06</strong><small>Polycrystalline film</small></div></td><td class="mono">Cs/FA/MA–Pb–I/Br</td><td>2000 rpm · 30 s</td><td>325 nm</td><td>17.0 nm</td><td><span class="badge warning">Review</span></td></tr></tbody></table></div></div>
+<div data-tab-panel="devices" hidden=""><div class="grid grid-3"><article class="panel"><div class="panel-body"><div class="layer-stack"><div class="layer-band substrate">Glass / ITO</div><div class="layer-band transport">SnO₂</div><div class="layer-band absorber">Perovskite</div><div class="layer-band transport">Spiro-OMeTAD</div><div class="layer-band contact">Au</div></div><dl class="key-values mt-10"><div><dt>Device</dt><dd>DEV-052-B04-03</dd></div><div><dt>Architecture</dt><dd>n-i-p</dd></div><div><dt>Active area</dt><dd>0.10 cm²</dd></div><div><dt>Best PCE</dt><dd>21.4%</dd></div></dl></div></article><article class="panel"><div class="panel-body"><div class="layer-stack"><div class="layer-band substrate">Glass / ITO</div><div class="layer-band transport">SnO₂</div><div class="layer-band absorber">Perovskite</div><div class="layer-band transport">Spiro-OMeTAD</div><div class="layer-band contact">Au</div></div><dl class="key-values mt-10"><div><dt>Device</dt><dd>DEV-052-B04-04</dd></div><div><dt>Architecture</dt><dd>n-i-p</dd></div><div><dt>Active area</dt><dd>0.10 cm²</dd></div><div><dt>Best PCE</dt><dd>21.1%</dd></div></dl></div></article><article class="panel"><div class="panel-body"><div class="layer-stack"><div class="layer-band substrate">Glass / ITO</div><div class="layer-band transport">SnO₂</div><div class="layer-band absorber">Perovskite</div><div class="layer-band transport">Spiro-OMeTAD</div><div class="layer-band contact">Au</div></div><dl class="key-values mt-10"><div><dt>Device</dt><dd>DEV-052-C06-02</dd></div><div><dt>Architecture</dt><dd>n-i-p</dd></div><div><dt>Active area</dt><dd>0.10 cm²</dd></div><div><dt>Best PCE</dt><dd>19.4%</dd></div></dl></div></article></div></div>
+<div data-tab-panel="measurements" hidden="" id="measurements"><div class="measurement-grid"><article class="measurement-card selected"><header><div><h3>JV · DEV-052-B04-03</h3><p>29 July 2026 · JV-01</p></div><span class="badge success">Validated</span></header><div class="chart-frame" data-demo-chart="jv"></div><dl class="key-values"><div><dt>Voc</dt><dd>1.14 V</dd></div><div><dt>Jsc</dt><dd>23.2 mA/cm²</dd></div><div><dt>FF</dt><dd>81.0%</dd></div><div><dt>PCE</dt><dd>21.4%</dd></div></dl></article><article class="measurement-card selected"><header><div><h3>EQE · DEV-052-B04-03</h3><p>29 July 2026 · EQE-02</p></div><span class="badge success">Validated</span></header><div class="chart-frame" data-demo-chart="eqe"></div><dl class="key-values"><div><dt>Integrated Jsc</dt><dd>22.8 mA/cm²</dd></div><div><dt>Edge</dt><dd>785 nm</dd></div></dl></article><article class="measurement-card"><header><div><h3>XRD · S-052-B04</h3><p>28 July 2026 · XRD-03</p></div><span class="badge success">Validated</span></header><div class="chart-frame" data-demo-chart="xrd"></div><dl class="key-values"><div><dt>Main peak</dt><dd>14.12° 2θ</dd></div><div><dt>Secondary phase</dt><dd>Not detected</dd></div></dl></article></div></div>
+<div data-tab-panel="comparisons" hidden="">
+<div class="grid grid-2 dynamic-chart-grid">
+<article class="panel interactive-chart" data-dynamic-chart="performance">
+<div class="panel-header"><div class="panel-title"><strong>Performance explorer</strong><small>Change metric, chart type and visible conditions.</small></div><span class="badge violet">Live</span></div>
+<div class="chart-controls">
+<div class="field"><label>Metric</label><select class="input" data-chart-control="metric"><option value="pce">PCE (%)</option><option value="voc">Voc (V)</option><option value="ff">Fill factor (%)</option><option value="thickness">Thickness (nm)</option><option value="roughness">RMS roughness (nm)</option></select></div>
+<div class="field"><label>View</label><select class="input" data-chart-control="type"><option value="bar">Bar</option><option value="line">Line</option></select></div>
+<fieldset class="chart-filter-set"><legend>Conditions</legend><label><input checked="" data-chart-condition="" type="checkbox" value="A"/> A</label><label><input checked="" data-chart-condition="" type="checkbox" value="B"/> B</label><label><input checked="" data-chart-condition="" type="checkbox" value="C"/> C</label></fieldset>
+</div>
+<div class="chart-frame" data-dynamic-preview=""></div>
+<div class="chart-summary" data-dynamic-summary=""></div>
+</article>
+<article class="panel interactive-chart" data-dynamic-chart="relationship">
+<div class="panel-header"><div class="panel-title"><strong>Relationship explorer</strong><small>Compare any two numeric sample properties.</small></div><span class="badge violet">Live</span></div>
+<div class="chart-controls">
+<div class="field"><label>X axis</label><select class="input" data-chart-control="x"><option value="thickness">Thickness (nm)</option><option value="roughness">RMS roughness (nm)</option><option value="spin">Spin speed (rpm)</option><option value="voc">Voc (V)</option></select></div>
+<div class="field"><label>Y axis</label><select class="input" data-chart-control="y"><option value="pce">PCE (%)</option><option value="ff">Fill factor (%)</option><option value="voc">Voc (V)</option><option value="roughness">RMS roughness (nm)</option></select></div>
+<div class="field"><label>Sample scope</label><select class="input" data-chart-control="scope"><option value="all">All validated samples</option><option value="recommended">Recommended condition only</option><option value="review">Include review samples</option></select></div>
+</div>
+<div class="chart-frame" data-dynamic-preview=""></div>
+<div class="chart-summary" data-dynamic-summary=""></div>
+</article>
+</div>
+<article class="panel ai-insight-panel" id="aiChartInsight">
+<div class="panel-header"><div class="panel-title"><strong><span data-icon="spark"></span> AI comparison note</strong><small>Generate a short, evidence-linked interpretation of the visible chart settings.</small></div><button class="button small primary" data-action="ai-analyse-charts" type="button">Generate insight</button></div>
+<div class="panel-body ai-insight-empty" id="aiChartInsightBody"><span data-icon="info"></span><p>No narrative generated yet. Charts remain deterministic; AI only drafts the interpretation.</p></div>
+</article></div>
+<div data-tab-panel="files" hidden=""><div class="between mb-10"><div><strong>Your experiment files</strong><div class="small subtle">File access is restricted to the current owner and workspace.</div></div><span class="badge success">184 files</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>File</th><th>Target</th><th>Technique</th><th>Role</th><th>Integrity</th></tr></thead><tbody><tr><td class="mono">DEV-052-B04-03-jv.csv</td><td>DEV-052-B04-03</td><td>JV</td><td>Raw</td><td><span class="badge success">SHA256</span></td></tr><tr><td class="mono">DEV-052-B04-03-eqe.csv</td><td>DEV-052-B04-03</td><td>EQE</td><td>Raw</td><td><span class="badge success">SHA256</span></td></tr><tr><td class="mono">AFM-S-052-B04.png</td><td>S-052-B04</td><td>AFM</td><td>Image</td><td><span class="badge success">SHA256</span></td></tr></tbody></table></div></div></div>
+</section></main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

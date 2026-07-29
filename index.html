@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal laboratory workspace">
+  <title>Workspace home · LabFlow</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="dashboard">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+
+  <div class="app-main">
+    <main class="page home-page">
+      <header class="page-header home-header">
+        <div>
+          <span class="eyebrow">Personal workspace</span>
+          <h1>Good evening, <span data-user-name>Eleanor Wright</span></h1>
+          <p><span data-user-metric="projects">3</span> active projects · continue your work or start something new.</p>
+        </div>
+        <div class="page-actions">
+          <button class="button" type="button" data-action="project-wizard"><span data-icon="folder"></span>New project</button>
+          <a class="button primary" href="experiment.html"><span data-icon="flask"></span>New experiment</a>
+        </div>
+      </header>
+
+      <section class="panel home-continue" aria-labelledby="continueTitle">
+        <div class="home-continue-main">
+          <span class="home-continue-icon" data-icon="flask"></span>
+          <div class="min-0">
+            <span class="eyebrow">Continue your work</span>
+            <h2 id="continueTitle" data-project-name>Mixed-cation perovskite optimisation</h2>
+            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Results review · 6 of 8 steps completed</p>
+          </div>
+        </div>
+        <div class="home-continue-progress" aria-label="Experiment progress">
+          <div><span style="width:75%"></span></div>
+          <strong>75%</strong>
+        </div>
+        <div class="home-continue-actions">
+          <a class="button" href="project.html">Open project</a>
+          <a class="button primary" href="experiment.html#results">Continue experiment</a>
+        </div>
+      </section>
+
+      <div class="section-title home-section-title">
+        <div>
+          <h2>Your projects</h2>
+          <p>Open a research goal, review its experiments, or start the next run.</p>
+        </div>
+        <a href="projects.html">View all projects</a>
+      </div>
+      <section class="home-project-grid" id="homeProjectList" aria-label="Your projects"></section>
+
+      <section class="home-lower-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Needs attention</strong><small>Small tasks that unblock your work</small></div>
+            <span class="badge warning">3 items</span>
+          </div>
+          <div class="attention-list" id="homeAttentionList"></div>
+        </article>
+
+        <aside class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Quick start</strong><small>Reuse first, create only when needed</small></div>
+          </div>
+          <div class="panel-body home-quick-actions">
+            <a class="quick-action primary" href="experiment.html">
+              <span data-icon="flask"></span>
+              <div><strong>New experiment</strong><small>Start from a saved process</small></div>
+            </a>
+            <button class="quick-action" type="button" data-action="quick-create">
+              <span data-icon="catalog"></span>
+              <div><strong>Create reusable object</strong><small>Material, solution, stack or method</small></div>
+            </button>
+            <a class="quick-action" href="catalogs.html">
+              <span data-icon="grid"></span>
+              <div><strong>Browse your Library</strong><small>Use something already prepared</small></div>
+            </a>
+          </div>
+        </aside>
+      </section>
+
+      <section class="home-value-strip" aria-label="Why use LabFlow">
+        <div><span data-icon="check"></span><strong>Reuse reviewed objects</strong><small>No repeated typing</small></div>
+        <div><span data-icon="check"></span><strong>Change only what differs</strong><small>Wizard-guided variations</small></div>
+        <div><span data-icon="check"></span><strong>Export without reconstruction</strong><small>NOMAD metadata collected during work</small></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

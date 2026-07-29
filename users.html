@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="User account and personal data management">
+  <title>User management · LabFlow</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="users">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+  <div class="app-main"><main class="page">
+    <header class="page-header"><div><h1>User management</h1><p>Profile, preferences, sessions and explicit ownership of personal research data.</p></div><div class="page-actions"><button class="button primary" type="button" data-action="user-save"><span data-icon="save"></span>Save profile</button></div></header>
+
+    <section class="user-management-grid">
+      <article class="panel profile-card"><div class="profile-cover"></div><div class="panel-body profile-body"><button class="profile-avatar" type="button" data-action="user-avatar"><span data-user-initials>EW</span><small>Change</small></button><div><span class="eyebrow">Current account</span><h2 data-user-name>Eleanor Wright</h2><p data-user-role>Principal investigator</p><div class="row wrap"><span class="badge success">Authenticated</span><span class="badge info">Owner</span></div></div></div><div class="panel-footer"><span class="small subtle mono">User ID · <span data-user-id>USR-EW</span></span><span class="small subtle">Personal workspace only</span></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Profile details</strong><small>Used in experiment ownership, reports and provenance.</small></div></div><div class="panel-body form-grid"><div class="field"><label>Full name</label><input class="input" data-user-name value="Eleanor Wright"></div><div class="field"><label>Research role</label><input class="input" data-user-role value="Principal investigator"></div><div class="field span-2"><label>Email</label><input class="input" type="email" data-user-email value="eleanor.wright@lab.example"></div><div class="field"><label>Affiliation</label><input class="input" value="Perovskite Research Laboratory"></div><div class="field"><label>ORCID</label><input class="input mono" value="0000-0002-1825-0097"></div><div class="field span-2"><label>Research focus</label><textarea class="input">Mixed-cation perovskites, thin-film deposition and photovoltaic device optimisation.</textarea></div></div></article>
+    </section>
+
+    <section class="grid grid-3 mt-12">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Personal workspace</strong><small>Private root container</small></div><span class="badge success">Owner only</span></div><div class="panel-body stack-sm"><div class="between"><span>Name</span><strong data-workspace-name>Eleanor research workspace</strong></div><div class="between"><span>Workspace ID</span><strong class="mono" data-workspace-id>WS-EW-01</strong></div><div class="between"><span>Projects</span><strong data-user-metric="projects">3</strong></div><div class="between"><span>Visibility</span><strong>Private</strong></div><a class="button" href="projects.html">Open projects</a></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Preferences</strong><small>Local demonstration settings</small></div></div><div class="panel-body stack-sm"><div class="field"><label>Language</label><select class="input"><option>English</option><option>Italian</option></select></div><div class="field"><label>Units</label><select class="input"><option>SI units</option><option>Laboratory defaults</option></select></div><div class="field"><label>Date format</label><select class="input"><option>DD MMM YYYY</option><option>YYYY-MM-DD</option></select></div><div class="field"><label>Default export</label><select class="input"><option>NOMAD package</option><option>Research PDF</option><option>XLSX workbook</option></select></div></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data ownership</strong><small>What the backend must enforce</small></div><span data-icon="shield"></span></div><div class="panel-body ownership-rules"><div><span data-icon="check"></span><p><strong>Every record has an owner</strong><small>`owner_id` is mandatory.</small></p></div><div><span data-icon="check"></span><p><strong>Every record belongs to a workspace</strong><small>`workspace_id` scopes all queries.</small></p></div><div><span data-icon="check"></span><p><strong>Project records stay isolated</strong><small>`project_id` groups experiments and results.</small></p></div><div><span data-icon="check"></span><p><strong>Exports are explicit snapshots</strong><small>No hidden cross-user data.</small></p></div></div></article>
+    </section>
+
+    <div class="section-title"><div><h2>Demo accounts</h2><p>Switching account demonstrates separate personal workspaces and project collections.</p></div><span class="badge warning">Static POC simulation</span></div>
+    <section class="panel"><div class="panel-body account-list" id="demoAccounts"></div></section>
+
+    <div class="section-title"><div><h2>Active sessions</h2><p>A future backend will manage authentication, expiry and revocation.</p></div></div>
+    <section class="panel"><div class="panel-body session-list"><div class="session-row"><span data-icon="shield"></span><div><strong>Fedora workstation · current browser</strong><small>Rome, Italy · active now</small></div><span class="badge success">Current</span></div><div class="session-row"><span data-icon="shield"></span><div><strong>Laboratory workstation</strong><small>Last active 28 Jul 2026 · 17:42</small></div><button class="button small danger" type="button" data-action="user-session-revoke">Revoke</button></div></div></section>
+
+    <div class="alert warning mt-12"><span data-icon="warning"></span><div><strong>Frontend demonstration only</strong><div class="small subtle">The Flask backend must provide password handling, secure sessions, CSRF protection, authorization and owner-scoped database queries. The browser must never be trusted as the security boundary.</div></div></div>
+  </main></div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

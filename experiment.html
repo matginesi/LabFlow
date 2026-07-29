@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="data:," rel="icon"/>
+<meta content="Simple four-step guided experiment workspace" name="description"/>
+<title>Guided experiment · LabFlow</title>
+<link href="assets/app.css" rel="stylesheet"/>
+<script defer="" src="assets/exporters.js"></script>
+<script defer="" src="assets/app.js"></script>
+</head>
+<body data-page="experiment">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header compact-header experiment-page-head">
+<div><span class="eyebrow">Current project · <span data-project-id="">PRJ-MCP-01</span></span><h1>New experiment</h1><p>Choose a starting point, define the comparison, record the work, and finish.</p></div>
+<div class="page-actions"><a class="button" href="project.html">Back to project</a><button class="button" data-action="toast" data-message="Experiment draft saved" type="button">Save draft</button></div>
+</header>
+<section aria-label="Experiment steps" class="simple-wizard-nav simple-wizard-nav-4" data-wizard-nav="">
+<button class="active" data-wizard-step="0" type="button"><span>1</span><strong>Choose</strong><small>Use a ready setup</small></button>
+<button data-wizard-step="1" type="button"><span>2</span><strong>Plan</strong><small>Say what changes</small></button>
+<button data-wizard-step="2" type="button"><span>3</span><strong>Work</strong><small>Make and measure</small></button>
+<button data-wizard-step="3" type="button"><span>4</span><strong>Finish</strong><small>Review and export</small></button>
+</section>
+<div class="wizard-progress-track"><span id="wizardProgressFill" style="width:25%"></span></div>
+<section class="panel wizard-shell simple-experiment-wizard" data-wizard="">
+<div class="panel-body">
+<section data-wizard-label="Choose a starting point" data-wizard-panel="0">
+<div class="wizard-stage-head"><span class="stage-number">01</span><div><h2>Start from something ready</h2><p>Most experiments should begin from a saved setup. LabFlow fills the repeated details for you.</p></div></div>
+<div class="setup-choice-grid simplified-choice-grid">
+<button class="setup-choice-card selected" data-action="experiment-template" data-template="baseline" type="button"><span class="badge success">Recommended</span><span class="setup-choice-icon" data-icon="spark"></span><strong>Standard n-i-p PSC</strong><small>Device fabrication with J–V, EQE and XRD</small></button>
+<button class="setup-choice-card" data-action="experiment-template" data-template="previous" type="button"><span class="badge info">Repeat</span><span class="setup-choice-icon" data-icon="report"></span><strong>Previous experiment</strong><small>Reuse EXP-2026-048 without copying results</small></button>
+<button class="setup-choice-card" data-action="experiment-template" data-template="film" type="button"><span class="badge">Saved setup</span><span class="setup-choice-icon" data-icon="grid"></span><strong>Film screening</strong><small>Fast comparison without device fabrication</small></button>
+</div>
+<article class="selected-setup-summary">
+<div class="selected-setup-copy"><span class="eyebrow">Selected setup</span><h3>Standard n-i-p PSC</h3><p>Substrate, recipe, stack, process and planned measurements are already linked.</p><div class="inline-actions"><a class="button small" href="pipeline.html">Review setup</a><button class="button small ghost" data-action="create-type" data-create-type="process" type="button">Create a new setup</button></div></div>
+<div class="selected-setup-visual">
+<div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">Perovskite</span><span class="transport">ETL</span><span class="substrate">ITO</span></div>
+<div class="simple-flow-line"><span>Prepare</span><i></i><span>Deposit</span><i></i><span>Measure</span></div>
+</div>
+</article>
+</section>
+<section data-wizard-label="Plan the comparison" data-wizard-panel="1" hidden="">
+<div class="wizard-stage-head"><span class="stage-number">02</span><div><h2>What do you want to compare?</h2><p>Enter one variable and the conditions. Samples are generated automatically.</p></div></div>
+<div class="simple-plan-grid">
+<div class="panel clean-subpanel">
+<div class="panel-body form-grid compact-form">
+<div class="field span-2"><label>Experiment name</label><input class="input" value="Absorber spin-speed window"/></div>
+<div class="field span-2"><label>Scientific question</label><textarea class="input" rows="2">Which spin speed gives the best balance between film thickness and device efficiency?</textarea></div>
+<div class="field"><label>Variable</label><select class="input"><option>Spin speed</option><option>Annealing temperature</option><option>Solution concentration</option><option>Custom parameter</option></select></div>
+<div class="field"><label>Replicates</label><select class="input"><option>2</option><option selected="">3</option><option>4</option><option>6</option></select></div>
+<details class="advanced-details span-2"><summary>Advanced planning details</summary><div class="form-grid"><div class="field"><label>Sample ID pattern</label><input class="input mono" value="{group}{replicate}"/></div><div class="field"><label>Randomise run order</label><select class="input"><option>Yes</option><option>No</option></select></div></div></details>
+</div>
+</div>
+<aside class="condition-planner">
+<div class="condition-planner-head"><div><strong>Three conditions</strong><small>3 samples each · 9 total</small></div><button class="button small" data-action="experiment-add-group" type="button">Add condition</button></div>
+<div class="condition-visual-list" id="experimentLanes">
+<article class="condition-visual-card"><span class="condition-code">A</span><div><small>Baseline</small><strong>1000 rpm</strong></div><div class="sample-dots labeled"><span>A01</span><span>A02</span><span>A03</span></div></article>
+<article class="condition-visual-card focus"><span class="condition-code">B</span><div><small>Focus</small><strong>1500 rpm</strong></div><div class="sample-dots labeled"><span>B01</span><span>B02</span><span>B03</span></div></article>
+<article class="condition-visual-card"><span class="condition-code">C</span><div><small>Upper bound</small><strong>2000 rpm</strong></div><div class="sample-dots labeled"><span>C01</span><span>C02</span><span>C03</span></div></article>
+</div>
+</aside>
+</div>
+<article class="ai-inline-assist">
+<div class="ai-inline-icon"><span data-icon="spark"></span></div>
+<div class="ai-inline-copy"><span class="eyebrow">Optional AI suggestion</span><strong>Use 1000, 1500 and 2000 rpm with three replicates</strong><p>Based on the selected setup and the simulated previous experiment EXP-2026-048. This keeps one variable and gives a clear baseline, focus and upper bound.</p><div class="ai-evidence-row"><span class="badge success">Confidence 88%</span><span>Evidence: EXP-2026-048 · PSC baseline v4.1</span></div></div>
+<div class="ai-inline-actions"><button class="button small" data-action="ai-explain-plan" type="button">Why?</button><button class="button small primary" data-action="ai-apply-plan" type="button">Use suggestion</button></div>
+</article></section>
+<section data-wizard-label="Run the work" data-wizard-panel="2" hidden="">
+<div class="wizard-stage-head"><span class="stage-number">03</span><div><h2>Do the work, one action at a time</h2><p>LabFlow shows the next action and records only what actually happened.</p></div></div>
+<article class="next-action-card">
+<div class="next-action-status"><span>Next</span><strong>Prepare the solution batch</strong><small>Use recipe Mixed-cation 1.30 M</small></div>
+<div class="next-action-needs"><span class="badge warning">Batch required</span><strong>SOL-0719-B</strong><small>5 mL · filter before use</small></div>
+<button class="button primary" data-action="run-task" type="button">Mark complete</button>
+</article>
+<div class="work-board-simple">
+<section class="panel work-process-panel">
+<div class="panel-header"><div class="panel-title"><strong>Process</strong><small>Click a step when it is complete</small></div><span class="badge info" id="makeProgressBadge">2 / 6</span></div>
+<div class="panel-body simple-run-list">
+<button class="run-task complete" data-action="run-task" type="button"><span>1</span><div><strong>Prepare substrates</strong><small>Glass / ITO · cleaning complete</small></div><b>Done</b></button>
+<button class="run-task complete" data-action="run-task" type="button"><span>2</span><div><strong>Deposit ETL</strong><small>SnO₂ · anneal at 150 °C</small></div><b>Done</b></button>
+<button class="run-task active" data-action="run-task" type="button"><span>3</span><div><strong>Prepare solution batch</strong><small>Select the physical batch used today</small></div><b>Now</b></button>
+<button class="run-task" data-action="run-task" type="button"><span>4</span><div><strong>Deposit absorber</strong><small>Apply A, B and C spin-speed conditions</small></div><b>Next</b></button>
+<button class="run-task" data-action="run-task" type="button"><span>5</span><div><strong>Complete devices</strong><small>HTL and Au contact</small></div><b>Later</b></button>
+<button class="run-task" data-action="run-task" type="button"><span>6</span><div><strong>Measure samples</strong><small>J–V, EQE and XRD</small></div><b>Later</b></button>
+</div>
+</section>
+<aside class="work-summary-column">
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Setup in use</strong><small>Change only when needed</small></div><a class="button small" href="pipeline.html">Open</a></div><div class="panel-body setup-at-a-glance"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><dl><div><dt>Solution</dt><dd>SOL-0719-B</dd></div><div><dt>Process</dt><dd>PSC baseline v4.1</dd></div><div><dt>Variable</dt><dd>Spin speed</dd></div></dl></div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Samples and measurements</strong><small>Created from the plan</small></div></div><div class="panel-body measurement-progress-simple"><div><span>Samples produced</span><strong>6 / 9</strong><progress max="9" value="6"></progress></div><div><span>J–V</span><strong>5 / 9</strong><progress max="9" value="5"></progress></div><div><span>EQE</span><strong>3 / 9</strong><progress max="9" value="3"></progress></div><div><span>XRD</span><strong>6 / 9</strong><progress max="9" value="6"></progress></div></div></article>
+</aside>
+</div>
+<article class="ai-file-helper panel">
+<div class="panel-header"><div class="panel-title"><strong><span data-icon="spark"></span> AI file helper</strong><small>Simulate reading a measurement file and linking it to a sample.</small></div><span class="badge violet">Optional</span></div>
+<div class="panel-body ai-file-helper-body"><div><strong>Drop or select a J–V CSV</strong><small>The assistant proposes the technique, target sample, column mapping and derived values. You review before saving.</small></div><button class="button" data-action="ai-parse-file" type="button">Simulate file parsing</button><div class="ai-file-result" hidden="" id="aiFileResult"></div></div>
+</article></section>
+<section data-wizard-label="Review and finish" data-wizard-panel="3" hidden="">
+<div class="wizard-stage-head"><span class="stage-number">04</span><div><h2>Review once, then choose the output</h2><p>The experiment is understandable without reading the data model or NOMAD schema.</p></div></div>
+<div class="finish-summary-simple">
+<article class="best-result-card"><span class="eyebrow">Best condition</span><strong>1500 rpm</strong><div><span><b>21.4%</b>PCE</span><span><b>392 nm</b>Thickness</span><span><b>13.7 nm</b>Roughness</span></div><p>Condition B gives the best balance of performance and film uniformity.</p></article>
+<article class="panel finish-check-panel"><div class="panel-header"><div class="panel-title"><strong>What still needs attention?</strong><small>Only two items before final export</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Materials and process</strong><small>Complete</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Samples and files</strong><small>Complete</small></div></div><div><span data-icon="warning"></span><div><strong>One J–V measurement</strong><small>Sample C03</small></div><button class="button small">Complete</button></div><div><span data-icon="warning"></span><div><strong>Final metadata review</strong><small>3 optional NOMAD fields</small></div><button class="button small">Review</button></div></div></article>
+</div>
+<div class="finish-actions-simple">
+<a class="finish-action-card" href="workspace.html"><span data-icon="chart"></span><div><strong>Compare results</strong><small>Explore conditions and samples</small></div></a>
+<a class="finish-action-card" href="report.html"><span data-icon="report"></span><div><strong>Create report</strong><small>Editable scientific dossier</small></div></a>
+<a class="finish-action-card primary" href="exports.html#nomad"><span data-icon="download"></span><div><strong>Prepare NOMAD</strong><small>Validate and build the package</small></div></a>
+</div>
+</section>
+</div>
+<div class="panel-footer wizard-footer"><button class="button" data-action="wizard-prev" disabled="" type="button">Previous</button><span class="small subtle" id="wizardStatus">Step 1 of 4 · Choose a starting point</span><button class="button primary" data-action="wizard-next" type="button">Continue to plan</button></div>
+</section>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Simple personal library with ready-made experiment setups" name="description"/>
+<title>Reusable Library · LabFlow</title>
+<link rel="stylesheet" href="assets/app.css">
+<script defer src="assets/exporters.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body data-page="catalogs">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header compact-header"><div><h1>Your reusable Library</h1><p>Choose prepared setups during experiments. Open the Library only when you need to create, review or update reusable resources.</p></div><button class="button primary" data-action="quick-create" type="button"><span data-icon="plus"></span>Create with wizard</button></header>
+<section class="library-entry panel accent"><div class="panel-body"><div><span class="eyebrow">Fastest route</span><h2>Start with an experiment setup</h2><p>A setup combines the common choices. The experiment wizard asks only about variations, physical batches and actual results.</p></div><a class="button primary" href="pipeline.html">Manage experiment setups</a></div></section>
+<div class="section-title"><div><h2>Ready-made experiment setups</h2><p>Use as-is, duplicate, or customise through the setup wizard.</p></div><span class="badge success">3 recommended</span></div>
+<section class="library-setup-grid">
+<article class="library-setup-card"><header><span class="badge success">Recommended</span><strong>Standard n-i-p PSC</strong><small>Device fabrication and performance</small></header><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><dl><div><dt>Solution</dt><dd>Mixed-cation 1.30 M</dd></div><div><dt>Process</dt><dd>PSC baseline v4.1</dd></div><div><dt>Results</dt><dd>J–V, EQE, XRD</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
+<article class="library-setup-card"><header><span class="badge info">Fast screening</span><strong>Perovskite film screening</strong><small>Compare chemistry and deposition</small></header><div class="mini-stack"><span class="absorber">Perovskite film</span><span class="substrate">Glass / ITO</span></div><dl><div><dt>Solution</dt><dd>Select during experiment</dd></div><div><dt>Process</dt><dd>Film screening v3</dd></div><div><dt>Results</dt><dd>XRD, PL, AFM</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
+<article class="library-setup-card"><header><span class="badge violet">Flexible</span><strong>Flexible p-i-n device</strong><small>Low-temperature workflow</small></header><div class="mini-stack"><span class="contact">Ag</span><span class="transport">C₆₀</span><span class="absorber">PVK</span><span class="transport">NiOₓ</span><span class="substrate">PET/ITO</span></div><dl><div><dt>Solution</dt><dd>Low-temperature precursor</dd></div><div><dt>Process</dt><dd>Flexible p-i-n v2</dd></div><div><dt>Results</dt><dd>J–V, bending, stability</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
+</section>
+<div class="section-title"><div><h2>Create or maintain one reusable object</h2><p>Each object has a short wizard. Advanced scientific fields remain optional.</p></div></div>
+<section class="catalog-wizard-grid compact-catalog-wizards">
+<button class="catalog-wizard" data-action="create-type" data-create-type="material" type="button"><span class="choice-icon" data-icon="catalog"></span><span><strong>Material</strong><small>Identity and physical lot</small></span></button>
+<button class="catalog-wizard" data-action="create-type" data-create-type="solution" type="button"><span class="choice-icon" data-icon="spark"></span><span><strong>Solution</strong><small>Recipe and prepared batch</small></span></button>
+<button class="catalog-wizard" data-action="create-type" data-create-type="substrate" type="button"><span class="choice-icon" data-icon="grid"></span><span><strong>Substrate</strong><small>Type, size and surface</small></span></button>
+<button class="catalog-wizard" data-action="create-type" data-create-type="stack" type="button"><span class="choice-icon" data-icon="grid"></span><span><strong>Stack</strong><small>Arrange material layers</small></span></button>
+<button class="catalog-wizard" data-action="create-type" data-create-type="method" type="button"><span class="choice-icon" data-icon="flow"></span><span><strong>Method</strong><small>Reusable parameter form</small></span></button>
+<button class="catalog-wizard" data-action="create-type" data-create-type="process" type="button"><span class="choice-icon" data-icon="flow"></span><span><strong>Process</strong><small>Ordered actions and evidence</small></span></button>
+</section>
+<section class="panel library-browser-simple"><div class="tabs" data-tabs=""><button class="tab-button active" data-tab="recent" type="button">Recently used</button><button class="tab-button" data-tab="solutions" type="button">Solutions</button><button class="tab-button" data-tab="stacks" type="button">Stacks</button><button class="tab-button" data-tab="materials" type="button">Materials</button></div><div class="panel-body">
+<div class="resource-list" data-tab-panel="recent"><article><span data-icon="spark"></span><div><strong>Mixed-cation precursor v5</strong><small>Solution recipe · used today</small></div><span class="badge success">Published</span><button class="button small" data-action="create-type" data-create-type="solution" type="button">Duplicate</button></article><article><span data-icon="grid"></span><div><strong>Baseline n-i-p v2</strong><small>Material stack · 5 layers</small></div><span class="badge success">Published</span><button class="button small" data-action="create-type" data-create-type="stack" type="button">Edit copy</button></article><article><span data-icon="catalog"></span><div><strong>Lead iodide · PBI2-2606</strong><small>Material lot · available</small></div><span class="badge info">99.999%</span><button class="button small" data-action="create-type" data-create-type="material" type="button">View</button></article></div>
+<div data-tab-panel="solutions" hidden=""><div class="solution-diagram"><div class="solution-inputs"><span>PbI₂</span><span>FAI</span><span>MABr</span><span>CsI</span></div><div class="solution-beaker"><i class="fill-72"></i><strong>1.30 M</strong><small>DMF:DMSO 4:1</small></div><div class="solution-output"><strong>Recipe v5</strong><small>2 ready batches</small></div></div></div>
+<div data-tab-panel="stacks" hidden=""><div class="stack-gallery-simple"><div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><strong>Baseline n-i-p</strong></div><div><div class="mini-stack"><span class="contact">Ag</span><span class="transport">C₆₀</span><span class="absorber">PVK</span><span class="transport">NiOₓ</span><span class="substrate">PET</span></div><strong>Flexible p-i-n</strong></div></div></div>
+<div data-tab-panel="materials" hidden=""><div class="resource-list"><article><span class="material-symbol">PbI₂</span><div><strong>Lead iodide</strong><small>CAS 10101-63-0 · 2 lots</small></div><span class="badge success">Available</span></article><article><span class="material-symbol">FAI</span><div><strong>Formamidinium iodide</strong><small>CAS 879643-71-7 · 1 lot</small></div><span class="badge success">Available</span></article><article><span class="material-symbol">DMF</span><div><strong>Dimethylformamide</strong><small>CAS 68-12-2 · review due</small></div><span class="badge warning">Review</span></article></div></div>
+</div></section>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

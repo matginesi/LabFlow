@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Simulated optional AI assistant for LabFlow workflows">
+  <title>AI assistant · LabFlow</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="ai">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+  <div class="app-main"><main class="page">
+    <header class="page-header compact-header">
+      <div>
+        <span class="eyebrow">Optional intelligence layer</span>
+        <h1>AI assistant</h1>
+        <p>Simulated inputs and outputs for planning, file understanding, quality review, NOMAD mapping and report drafting.</p>
+      </div>
+      <div class="page-actions">
+        <span class="badge violet">Simulation</span>
+        <span class="badge warning">Human review required</span>
+      </div>
+    </header>
+
+    <section class="ai-principle-strip" aria-label="AI interaction principles">
+      <div><span data-icon="lock"></span><strong>Scoped context</strong><small>Only the active user, project and selected records.</small></div>
+      <div><span data-icon="spark"></span><strong>Suggestions, not decisions</strong><small>Nothing is written until the researcher accepts it.</small></div>
+      <div><span data-icon="check"></span><strong>Evidence shown</strong><small>Every suggestion includes sources and confidence.</small></div>
+    </section>
+
+    <section class="ai-layout">
+      <nav class="panel ai-mode-nav" aria-label="AI assistant tasks">
+        <div class="panel-header"><div class="panel-title"><strong>Choose a task</strong><small>One focused request at a time</small></div></div>
+        <div class="ai-mode-list">
+          <button class="active" type="button" data-ai-mode="plan"><span data-icon="flask"></span><span><strong>Plan an experiment</strong><small>Suggest conditions and replicates</small></span></button>
+          <button type="button" data-ai-mode="files"><span data-icon="file"></span><span><strong>Understand a file</strong><small>Extract columns and measurement values</small></span></button>
+          <button type="button" data-ai-mode="quality"><span data-icon="shield"></span><span><strong>Check data quality</strong><small>Find outliers, gaps and inconsistencies</small></span></button>
+          <button type="button" data-ai-mode="nomad"><span data-icon="download"></span><span><strong>Prepare NOMAD metadata</strong><small>Suggest mappings and missing fields</small></span></button>
+          <button type="button" data-ai-mode="report"><span data-icon="report"></span><span><strong>Draft report text</strong><small>Summarise findings from selected evidence</small></span></button>
+        </div>
+      </nav>
+
+      <section class="panel ai-conversation-panel">
+        <div class="panel-header">
+          <div class="panel-title"><strong id="aiModeTitle">Plan an experiment</strong><small id="aiModeSubtitle">Use the active setup and prior experiments as context.</small></div>
+          <span class="badge info" id="aiModeBadge">Experiment copilot</span>
+        </div>
+        <div class="ai-context-ribbon">
+          <span><b>User</b> <span data-user-name>Eleanor Wright</span></span>
+          <span><b>Project</b> <span data-project-id>PRJ-MCP-01</span></span>
+          <span><b>Experiment</b> EXP-2026-052</span>
+          <span><b>Mode</b> Read + suggest</span>
+        </div>
+        <div class="ai-chat" id="aiChat" aria-live="polite"></div>
+        <div class="ai-quick-prompts" id="aiQuickPrompts"></div>
+        <div class="ai-composer">
+          <textarea class="input" id="aiPrompt" rows="3" aria-label="AI prompt">Suggest a simple experiment plan that changes only spin speed and reuses the current setup.</textarea>
+          <div class="ai-composer-actions">
+            <span class="small subtle">Static POC · no request leaves the browser</span>
+            <button class="button primary" type="button" data-action="ai-run"><span data-icon="spark"></span>Generate suggestion</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel ai-context-panel">
+        <div class="panel-header"><div class="panel-title"><strong>Context sent to the model</strong><small>Explicit and inspectable</small></div></div>
+        <div class="panel-body stack-sm" id="aiContextList"></div>
+        <div class="panel-header compact"><div class="panel-title"><strong>Write policy</strong><small>Safe default</small></div></div>
+        <div class="panel-body stack-sm">
+          <label class="check-row"><input type="checkbox" checked disabled><span><strong>Require approval</strong><small>Suggestions are never applied automatically.</small></span></label>
+          <label class="check-row"><input type="checkbox" checked disabled><span><strong>Keep source links</strong><small>Evidence references remain attached.</small></span></label>
+          <label class="check-row"><input type="checkbox" disabled><span><strong>Allow autonomous actions</strong><small>Disabled in this POC.</small></span></label>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid grid-2 mt-12 ai-io-grid">
+      <article class="panel">
+        <div class="panel-header"><div class="panel-title"><strong>Simulated model input</strong><small>Structured context assembled by LabFlow</small></div><button class="button small" type="button" data-action="ai-copy-input">Copy</button></div>
+        <pre class="ai-json" id="aiInputPreview"></pre>
+      </article>
+      <article class="panel">
+        <div class="panel-header"><div class="panel-title"><strong>Simulated model output</strong><small>Suggestion, confidence and evidence</small></div><button class="button small" type="button" data-action="ai-copy-output">Copy</button></div>
+        <pre class="ai-json" id="aiOutputPreview"></pre>
+      </article>
+    </section>
+
+    <section class="panel mt-12 ai-audit-panel">
+      <div class="panel-header"><div class="panel-title"><strong>AI activity log</strong><small>Inputs, outputs and researcher decisions remain traceable</small></div><span class="badge success">3 reviewed</span></div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Time</th><th>Task</th><th>Target</th><th>Suggestion</th><th>Researcher action</th></tr></thead><tbody id="aiAuditRows"><tr><td>16:12</td><td>File understanding</td><td>DEV-052-B04-03-jv.csv</td><td>Mapped voltage/current columns</td><td><span class="badge success">Accepted</span></td></tr><tr><td>15:48</td><td>Quality check</td><td>Condition C</td><td>Review roughness outlier</td><td><span class="badge warning">Flagged</span></td></tr><tr><td>14:30</td><td>NOMAD mapping</td><td>EXP-2026-052</td><td>Suggested atmosphere field</td><td><span class="badge">Edited</span></td></tr></tbody></table></div>
+    </section>
+  </main></div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

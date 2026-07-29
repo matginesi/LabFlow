@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Personal research project portfolio">
+  <title>Projects · LabFlow</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="projects">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+  <div class="app-main"><main class="page">
+<header class="page-header compact-header"><div><h1>Your projects</h1><p>Open a research goal and continue its experiments. Create a new project only when the scientific objective changes.</p></div><button class="button primary" type="button" data-action="project-wizard"><span data-icon="folder"></span>New project</button></header>
+<section class="panel simple-concept-strip"><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="projectSimpleGraph"></div><script id="projectSimpleGraph" type="text/graph">direction LR
+Workspace[Personal workspace] --> Project[Project] : opens
+Project --> Experiment[Experiments] : contains
+Experiment --> Results[Samples and results]
+Results --> Output[Report / NOMAD]</script><p><strong>Library objects are offered inside the wizards.</strong> Researchers do not need to manage the data model before starting work.</p></div></section>
+<div class="section-title"><div><h2>Active and recent projects</h2><p>Each card shows the next useful action.</p></div><span class="badge success"><span data-user-metric="projects">3</span> personal projects</span></div>
+<section class="project-grid" id="projectList"></section>
+<section class="empty-project-cta panel"><div><span data-icon="plus"></span><div><strong>Starting a new research question?</strong><small>The project wizard asks for a name, objective and optional starting setup.</small></div></div><button class="button" type="button" data-action="project-wizard">Open project wizard</button></section>
+  </main></div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

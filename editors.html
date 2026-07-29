@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="Local text workbook image and chart tools" name="description"/>
+<title>Local tools · LabFlow</title>
+<link rel="stylesheet" href="assets/app.css">
+<script defer src="assets/exporters.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body data-page="editors">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header"><div><h1>Local tools</h1><p>Text, Markdown, multi-sheet workbook, images and scientific charts. Everything stays inside the browser.</p></div><div class="page-actions"><span class="badge success">No CDN</span><span class="badge success">No trackers</span><span class="badge info">Local files only</span></div></header>
+<section class="panel"><div class="tool-layout"><nav class="tool-nav" data-tool-nav=""><button class="active" data-tool="code" type="button"><span data-icon="code"></span>Structured text</button><button data-tool="markdown" type="button"><span data-icon="file"></span>Markdown</button><button data-tool="workbook" type="button"><span data-icon="table"></span>Workbook</button><button data-tool="images" type="button"><span data-icon="image"></span>Images</button><button data-tool="charts" type="button"><span data-icon="chart"></span>Charts</button><button data-tool="graphs" type="button"><span data-icon="flow"></span>Graphs</button></nav><div class="tool-content">
+<section data-tool-panel="code"><div class="editor-shell"><div class="editor-toolbar"><div class="row"><select class="input input-compact" id="codeMode"><option value="yaml">YAML</option><option value="json">JSON</option><option value="python">Python</option><option value="csv">CSV</option><option value="text">Text</option></select><button class="button small" data-action="code-load" type="button">Open file</button><input hidden="" id="codeFileInput" type="file"/></div><div class="row"><span class="small" id="codeStatus">Ready</span><button class="button small" data-action="code-validate" type="button">Validate</button><button class="button small primary" data-action="code-download" type="button">Download</button></div></div><div class="editor-area"><pre class="editor-lines" id="codeLines">1</pre><textarea class="code-input" id="codeInput" spellcheck="false">experiment:
+  id: EXP-2026-052
+  composition: Cs0.05FA0.78MA0.17PbI2.5Br0.5
+  process_template: psc_baseline@4.1
+  status: draft</textarea></div></div></section>
+<section data-tool-panel="markdown" hidden=""><div class="editor-toolbar toolbar-themed"><div class="row"><button class="button small" data-markdown="bold" type="button">Bold</button><button class="button small" data-markdown="heading" type="button">Heading</button><button class="button small" data-markdown="table" type="button">Table</button></div><div class="row"><button class="button small" data-action="markdown-load" type="button">Open</button><input hidden="" id="markdownFileInput" type="file"/><button class="button small primary" data-action="markdown-download" type="button">Download .md</button></div></div><div class="markdown-layout"><textarea class="input textarea-large" id="markdownInput" spellcheck="false"># Experiment note
+
+## Objective
+Optimise the mixed-cation absorber process.
+
+| Condition | PCE |
+|---|---:|
+| 1000 rpm | 18.7% |
+| 1500 rpm | 21.4% |
+
+&gt; All original files remain unchanged.
+
+## Traceability graph
+
+```graph
+direction LR
+Recipe[Solution recipe] --&gt; Batch[Prepared batch] : instantiated as
+Batch --&gt; Run[Process run] : consumed by
+Run --&gt; Sample[Sample] : produces
+Sample --&gt; Measurement[Measurement] : characterised by
+Measurement --&gt; Result[Derived result] : derives
+```</textarea><article class="markdown-preview" id="markdownPreview"></article></div></section>
+<section data-tool-panel="workbook" hidden=""><div class="workbook"><div class="editor-toolbar toolbar-themed"><div class="row"><button class="button small" data-action="sheet-add" type="button">Add sheet</button><button class="button small" data-action="sheet-rename" type="button">Rename</button><button class="button small danger" data-action="sheet-delete" type="button">Delete</button></div><div class="row"><button class="button small" data-action="sheet-row" type="button">Add row</button><button class="button small" data-action="sheet-col" type="button">Add column</button><button class="button small primary" data-action="workbook-export" type="button">Export XLSX</button></div></div><div class="sheet-tabs" id="sheetTabs"></div><div class="row toolbar-row"><span class="badge" id="cellName">A1</span><input class="input" id="formulaInput"/></div><div class="sheet-grid"><table id="workbookTable"><thead></thead><tbody></tbody></table></div></div></section>
+<section data-tool-panel="images" hidden=""><div class="image-workspace"><aside class="image-library"><button class="button primary w-100" data-action="image-open" type="button">Add images</button><input accept="image/*" hidden="" id="imageInput" multiple="" type="file"/><div class="stack-sm mt-8" id="imageList"></div></aside><div class="image-canvas-wrap"><canvas height="560" id="imageCanvas" width="900"></canvas></div><aside class="image-controls stack"><div class="field"><label>Brightness</label><input id="imageBrightness" max="160" min="40" type="range" value="100"/></div><label class="check-row"><input id="imageGray" type="checkbox"/><span><strong>Grayscale</strong><small>Local canvas filter</small></span></label><div class="grid grid-2"><button class="button small" data-action="image-left" type="button">Rotate left</button><button class="button small" data-action="image-right" type="button">Rotate right</button><button class="button small" data-action="image-flip" type="button">Flip</button><button class="button small" data-action="image-reset" type="button">Reset</button></div><button class="button primary" data-action="image-export" type="button">Export PNG</button></aside></div></section>
+<section data-tool-panel="charts" hidden=""><div class="split"><div class="panel"><div class="panel-header"><div class="panel-title"><strong>Chart data</strong><small>Edit the local dataset.</small></div><button class="button small" data-action="chart-row" type="button">Add row</button></div><div class="panel-body"><div class="form-grid"><div class="field"><label>Type</label><select class="input" id="chartType"><option value="line">Line</option><option value="bar">Bar</option><option value="donut">Donut</option><option value="scatter">Scatter</option></select></div><div class="field"><label>Title</label><input class="input" id="chartTitle" value="Efficiency by condition"/></div></div><div class="stack-sm mt-10" id="chartRows"></div></div></div><div class="panel"><div class="panel-header"><div class="panel-title"><strong>Preview</strong><small>Pure local SVG</small></div><div class="row"><button class="button small" data-action="chart-svg" type="button">SVG</button><button class="button small primary" data-action="chart-png" type="button">PNG</button></div></div><div class="chart-frame" id="chartPreview"></div></div></div></section>
+<section data-tool-panel="graphs" hidden="">
+<div class="graph-editor-grid">
+<article class="panel graph-source-panel">
+<div class="panel-header"><div class="panel-title"><strong>Graph source</strong><small>Small local DSL: nodes, edges and optional labels.</small></div><button class="button small" data-action="graph-reset" type="button">Reset</button></div>
+<div class="panel-body stack-sm">
+<div class="form-grid">
+<div class="field"><label>Layout</label><select class="input" id="graphDirection"><option value="LR">Left to right</option><option value="TB">Top to bottom</option></select></div>
+<div class="field"><label>Preset</label><select class="input" id="graphPreset"><option value="experiment">Experiment flow</option><option value="library">Library structure</option><option value="nomad">NOMAD package</option></select></div>
+</div>
+<textarea class="input graph-source" id="graphSource" spellcheck="false">direction LR
+User[User account] --&gt; Workspace[Personal workspace] : owns
+Workspace --&gt; Library[Reusable library] : contains
+Library --&gt; Process[Process template] : provides
+Process --&gt; Experiment[Experiment] : instantiated as
+Experiment --&gt; Sample[Samples &amp; devices] : produces
+Sample --&gt; Result[Measurements &amp; results] : characterised by
+Result --&gt; NOMAD[NOMAD package] : exported as</textarea>
+<div class="graph-quick-builder">
+<div class="field"><label>Node label</label><input class="input" id="graphNodeLabel" placeholder="New node"/></div>
+<button class="button" data-action="graph-add-node" type="button">Add node</button>
+<div class="field"><label>From</label><select class="input" id="graphEdgeFrom"></select></div>
+<div class="field"><label>To</label><select class="input" id="graphEdgeTo"></select></div>
+<div class="field"><label>Edge label</label><input class="input" id="graphEdgeLabel" placeholder="relates to"/></div>
+<button class="button" data-action="graph-add-edge" type="button">Add edge</button>
+</div>
+</div>
+</article>
+<article class="panel graph-preview-panel">
+<div class="panel-header"><div class="panel-title"><strong>Rendered graph</strong><small>Click a node to inspect its connections.</small></div><div class="row"><button class="button small" data-action="graph-svg" type="button">SVG</button><button class="button small primary" data-action="graph-png" type="button">PNG</button></div></div>
+<div class="graph-stage graph-stage-large" id="graphPreview"></div>
+<div class="graph-inspector" id="graphInspector"><span class="badge info">Graph ready</span><strong>Select a node</strong><small>Incoming and outgoing relationships will appear here.</small></div>
+</article>
+</div>
+</section>
+</div></div></section>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+
+<html data-theme="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="data:," rel="icon"/>
+<meta content="Editable experimental dossier with charts and images" name="description"/>
+<title>Editable Report · LabFlow</title>
+<link href="assets/app.css" rel="stylesheet"/>
+<script defer="" src="assets/exporters.js"></script>
+<script defer="" src="assets/app.js"></script>
+</head>
+<body data-page="report">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header"><div><h1>Editable Research Dossier</h1><p>A compact three-page scientific report with editable data, clear charts, stack diagrams and local images.</p></div><div class="page-actions"><button class="button" data-action="report-reset" type="button">Reset demo</button><button class="button" data-action="ai-draft-report" type="button"><span data-icon="spark"></span>Draft findings with AI</button><button class="button" data-action="report-json" type="button">JSON</button><button class="button" data-action="report-xlsx" type="button">Excel</button><button class="button primary" data-action="report-pdf" type="button"><span data-icon="report"></span>Export 3-page PDF</button></div></header>
+<section class="report-guide"><div><span class="eyebrow">Live report workflow</span><strong>Edit data → review three clear pages → export locally</strong></div><div class="row wrap"><span class="badge success">All text editable</span><span class="badge info">Charts regenerated</span><span class="badge violet">Images replaceable</span><span class="badge">No external service</span></div></section>
+<section class="report-shell"><div class="report-preview" id="reportPreview"></div><aside class="panel report-side"><div class="panel-header"><div class="panel-title"><strong>Report fields and media</strong><small>Changes update preview, PDF, Excel, CSV and JSON.</small></div><span class="badge info">All editable</span></div><div class="panel-body report-editor-grid" id="reportEditor"></div><div class="panel-footer"><button class="button small" data-action="report-csv" type="button">CSV</button><button class="button small primary" data-action="report-pdf" type="button">Generate PDF</button></div></aside></section>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body></html>
