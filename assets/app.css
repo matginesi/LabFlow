@@ -1669,7 +1669,7 @@ body {font-size:13px}
 
 .experiment-project-list {display:grid;gap:1px;padding:0!important;background:var(--line)}
 
-.experiment-project-card {display:grid;grid-template-columns:34px minmax(0,1fr) minmax(120px,220px) auto;align-items:center;gap:10px;padding:10px 12px;background:var(--surface)}
+.experiment-project-card {display:grid;grid-template-columns:34px minmax(0,1fr) minmax(100px,180px) auto auto;align-items:center;gap:10px;padding:10px 12px;background:var(--surface)}
 
 .experiment-state {width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line-strong);font-size:10px;font-weight:800}
 
@@ -1678,6 +1678,10 @@ body {font-size:13px}
 .experiment-project-card>div:nth-child(2) {display:grid;gap:2px}
 
 .experiment-project-card small {color:var(--muted)}
+
+.experiment-stack a {color:var(--muted);font-size:11px;white-space:nowrap}
+
+.experiment-actions {display:flex;gap:6px;white-space:nowrap}
 
 .experiment-progress {display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px}
 
@@ -1753,11 +1757,13 @@ body {font-size:13px}
 
 .project-starters {grid-template-columns:1fr}
 
-.experiment-project-card,.experiment-continue {grid-template-columns:32px minmax(0,1fr) auto}
+.experiment-project-card,.experiment-continue {grid-template-columns:32px 1fr auto}
 
 .experiment-project-card .experiment-progress,.experiment-continue .experiment-progress {grid-column:2/-1}
 
 .experiment-project-card>a,.experiment-continue>a {grid-column:3;grid-row:1}
+
+.experiment-project-card .experiment-stack,.experiment-project-card .experiment-actions {display:none}
 
 .profile-body {grid-template-columns:70px 1fr}
 

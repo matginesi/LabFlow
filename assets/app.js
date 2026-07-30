@@ -323,14 +323,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const experimentRows=[
+    {id:'EXP-2026-052',name:'Mixed-cation deposition window',status:'running',statusLabel:'Running',progress:92,stack:'n-i-p PSC baseline',date:'Today',actionLink:'<a class="button small primary" href="experiment.html#run">Continue</a>'},
+    {id:'EXP-2026-048',name:'Antisolvent timing refinement',status:'running',statusLabel:'Running',progress:68,stack:'n-i-p PSC baseline',date:'28 Jul',actionLink:'<a class="button small primary" href="experiment.html#plan">Continue</a>'},
+    {id:'EXP-2026-044',name:'Absorber concentration screening',status:'completed',statusLabel:'Completed',progress:100,stack:'n-i-p PSC baseline',date:'24 Jul',actionLink:'<a class="button small" href="workspace.html#comparisons">View results</a>'},
+    {id:'EXP-2026-039',name:'Baseline device reproducibility',status:'completed',statusLabel:'Completed',progress:100,stack:'n-i-p PSC baseline',date:'18 Jul',actionLink:'<a class="button small" href="exports.html">Export</a>'}
+  ];
+
   function renderProjectPage(){
     const list=$('#projectList');if(list)list.innerHTML=currentUser().projects.map(projectCard).join('');
-    const project=currentProject();const experiments=$('#projectExperiments');if(experiments)experiments.innerHTML=[
-      ['EXP-2026-052','Mixed-cation deposition window','Results review','92%','Today'],
-      ['EXP-2026-048','Antisolvent timing refinement','Running','68%','28 Jul'],
-      ['EXP-2026-044','Absorber concentration screening','Validated','100%','24 Jul'],
-      ['EXP-2026-039','Baseline device reproducibility','Exported','100%','18 Jul']
-    ].slice(0,Math.max(1,Math.min(project.experiments,4))).map((row,index)=>`<article class="experiment-project-card"><div class="experiment-state ${index===0?'current':''}">${index+1}</div><div><span class="eyebrow mono">${row[0]}</span><strong>${row[1]}</strong><small>${row[2]} · ${row[4]}</small></div><div class="experiment-progress"><span style="width:${row[3]}"></span><small>${row[3]}</small></div><a class="button small" href="experiment.html#${index===0?'review':'plan'}">Open</a></article>`).join('');
+    const project=currentProject();
+    const experimentCount=$('[data-project-experiment-count]');
+    if(experimentCount)experimentCount.textContent=Math.min(project.experiments,4);
+    const experiments=$('#projectExperiments');
+    if(experiments)experiments.innerHTML=experimentRows.slice(0,Math.max(1,Math.min(project.experiments,4))).map((row,index)=>`<article class="experiment-project-card"><div class="experiment-state ${index===0?'current':''}">${index+1}</div><div><span class="eyebrow mono">${row.id}</span><strong>${row.name}</strong><small><span class="badge ${row.status==='running'?'warning':row.status==='completed'?'success':'info'}">${row.statusLabel}</span> · ${row.date}</small></div><div class="experiment-progress"><span style="width:${row.progress}%"></span><small>${row.progress}%</small></div><span class="experiment-stack"><a href="stack.html">${row.stack}</a></span><div class="experiment-actions">${row.actionLink}</div></article>`).join('');
     const tags=$('#projectTags');if(tags)tags.innerHTML=project.tags.map(tag=>`<span class="badge">${escapeHtml(tag)}</span>`).join('');
   }
   function renderUsersPage(){
