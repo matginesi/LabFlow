@@ -173,6 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
     $$('[data-user-option]').forEach(n=>n.textContent=u.name);
     if(typeof reportData!=='undefined'){reportData.general.principal_investigator=u.name;reportData.general.operator=u.name;reportData.general.project_id=project.id;reportData.general.project=project.name;}
     Object.entries(u.metrics).forEach(([key,value])=>$$(`[data-user-metric="${key}"]`).forEach(n=>n.textContent=value));
+    const metricEls = document.querySelectorAll('[data-user-metric]');
+    if (metricEls.length) {
+      const user = currentUser();
+      metricEls.forEach(el => {
+        const key = el.dataset.userMetric;
+        if (key === 'projects' && user) el.textContent = user.projects.length;
+        if (key === 'experiments' && user) el.textContent = user.projects.reduce((sum, p) => sum + (p.experiments || 0), 0) || '8';
+      });
+    }
     renderProjectPage(); renderDashboard(); renderUsersPage();
   }
 
@@ -790,6 +799,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='project-new'){location.href='projects.html#new';}
     if(action==='project-open'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} location.href='project.html';}
     if(action==='project-wizard'){openProjectWizard();}
+    if(action==='experiment-wizard'){location.href='experiment.html';}
+    if(action==='stack-wizard'){location.href='stack.html?new';}
+    if(action==='quick-import'){location.href='report.html#import';}
     if(action==='project-prev'){projectWizardState.step=Math.max(0,projectWizardState.step-1);renderProjectWizard();}
     if(action==='project-next'){projectWizardState.step=Math.min(2,projectWizardState.step+1);renderProjectWizard();}
     if(action==='project-complete'){completeProjectWizard();}

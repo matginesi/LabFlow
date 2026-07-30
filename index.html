@@ -18,23 +18,48 @@
     <main class="page home-page">
       <header class="page-header home-header">
         <div>
-          <span class="eyebrow">Personal workspace</span>
-          <h1>Good evening, <span data-user-name>Eleanor Wright</span></h1>
-          <p><span data-user-metric="projects">3</span> active projects · continue your work or start something new.</p>
+          <span class="eyebrow" data-workspace-name>Personal workspace</span>
+          <h1>Buongiorno, <span data-user-name>Eleanor Wright</span></h1>
+          <p><span data-user-metric="projects">3</span> progetti attivi · <span data-user-metric="experiments">8</span> esperimenti · ultima sincronizzazione NOMAD: <span id="lastNomadSync">oggi</span></p>
         </div>
         <div class="page-actions">
-          <button class="button" type="button" data-action="project-wizard"><span data-icon="folder"></span>New project</button>
-          <a class="button primary" href="experiment.html"><span data-icon="flask"></span>New experiment</a>
+          <button class="button primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span>Nuovo esperimento</button>
+          <button class="button" type="button" data-action="stack-wizard"><span data-icon="model"></span>Nuovo stack</button>
         </div>
       </header>
 
+      <!-- Metric cards -->
+      <div class="grid-4" id="dashboardMetrics">
+        <div class="metric">
+          <span class="metric-label">Esperimenti attivi</span>
+          <span class="metric-value" data-user-metric="experiments">8</span>
+          <span class="metric-detail">3 in esecuzione</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Stack in uso</span>
+          <span class="metric-value" id="stackCount">12</span>
+          <span class="metric-detail">4 materiali diversi</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Export in coda</span>
+          <span class="metric-value" id="pendingExportCount">2</span>
+          <span class="metric-detail">1 per NOMAD</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Ultimo NOMAD</span>
+          <span class="metric-value" id="lastNomadLabel">oggi</span>
+          <span class="metric-detail">EXP-2026-052</span>
+        </div>
+      </div>
+
+      <!-- Continue card -->
       <section class="panel home-continue" aria-labelledby="continueTitle">
         <div class="home-continue-main">
           <span class="home-continue-icon" data-icon="flask"></span>
           <div class="min-0">
-            <span class="eyebrow">Continue your work</span>
+            <span class="eyebrow">Continua il tuo lavoro</span>
             <h2 id="continueTitle" data-project-name>Mixed-cation perovskite optimisation</h2>
-            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Results review · 6 of 8 steps completed</p>
+            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Revisione risultati · 6 di 8 step completati</p>
           </div>
         </div>
         <div class="home-continue-progress" aria-label="Experiment progress">
@@ -42,54 +67,69 @@
           <strong>75%</strong>
         </div>
         <div class="home-continue-actions">
-          <a class="button" href="project.html">Open project</a>
-          <a class="button primary" href="experiment.html#results">Continue experiment</a>
+          <a class="button" href="project.html">Apri progetto</a>
+          <a class="button primary" href="experiment.html#results">Continua esperimento</a>
         </div>
       </section>
 
+      <!-- Quick actions strip -->
+      <div class="home-value-strip" style="--strip-cols: 4;">
+        <button class="quick-action" type="button" data-action="experiment-wizard">
+          <span data-icon="flask"></span>
+          <div><strong>Nuovo esperimento</strong><small>Wizard guidato</small></div>
+        </button>
+        <button class="quick-action" type="button" data-action="stack-wizard">
+          <span data-icon="model"></span>
+          <div><strong>Nuovo stack</strong><small>Definisci materiali e condizioni</small></div>
+        </button>
+        <button class="quick-action" type="button" data-action="quick-import">
+          <span data-icon="upload"></span>
+          <div><strong>Importa dati</strong><small>Da file o NOMAD</small></div>
+        </button>
+        <a class="quick-action" href="report.html#nomad">
+          <span data-icon="download"></span>
+          <div><strong>Esporta per NOMAD</strong><small>Prepara package</small></div>
+        </a>
+      </div>
+
+      <!-- Projects section -->
       <div class="section-title home-section-title">
         <div>
-          <h2>Your projects</h2>
-          <p>Open a research goal, review its experiments, or start the next run.</p>
+          <h2>I tuoi progetti</h2>
+          <p>Apri un obiettivo di ricerca, revisiona esperimenti o avvia una nuova corsa.</p>
         </div>
-        <a href="projects.html">View all projects</a>
+        <a href="projects.html">Vedi tutti</a>
       </div>
-      <section class="home-project-grid" id="homeProjectList" aria-label="Your projects"></section>
+      <section class="home-project-grid" id="homeProjectList" aria-label="I tuoi progetti"></section>
 
+      <!-- Lower grid: needs attention + quick start -->
       <section class="home-lower-grid">
         <article class="panel">
           <div class="panel-header">
-            <div class="panel-title"><strong>Needs attention</strong><small>Small tasks that unblock your work</small></div>
-            <span class="badge warning">3 items</span>
+            <div class="panel-title"><strong>Da fare</strong><small>Azioni che sbloccano il tuo lavoro</small></div>
+            <span class="badge warning" id="attentionCount">3</span>
           </div>
           <div class="attention-list" id="homeAttentionList"></div>
         </article>
-
         <aside class="panel">
           <div class="panel-header">
-            <div class="panel-title"><strong>Quick start</strong><small>Reuse first, create only when needed</small></div>
+            <div class="panel-title"><strong>Avvio rapido</strong><small>Riutilizza prima, crea solo se serve</small></div>
           </div>
           <div class="panel-body home-quick-actions">
             <a class="quick-action primary" href="experiment.html">
               <span data-icon="flask"></span>
-              <div><strong>New experiment</strong><small>Start from a saved process</small></div>
+              <div><strong>Nuovo esperimento</strong><small>Parti da un processo salvato</small></div>
             </a>
             <button class="quick-action" type="button" data-action="quick-create">
               <span data-icon="catalog"></span>
-              <div><strong>Create reusable object</strong><small>Material, solution, stack or method</small></div>
+              <div><strong>Crea oggetto riutilizzabile</strong><small>Materiale, soluzione, stack o metodo</small></div>
             </button>
             <a class="quick-action" href="catalogs.html">
               <span data-icon="grid"></span>
-              <div><strong>Browse your Library</strong><small>Use something already prepared</small></div>
+              <div><strong>Sfoglia la libreria</strong><small>Usa qualcosa già preparato</small></div>
             </a>
           </div>
         </aside>
-      </section>
-
-      <section class="home-value-strip" aria-label="Why use LabFlow">
-        <div><span data-icon="check"></span><strong>Reuse reviewed objects</strong><small>No repeated typing</small></div>
-        <div><span data-icon="check"></span><strong>Change only what differs</strong><small>Wizard-guided variations</small></div>
-        <div><span data-icon="check"></span><strong>Export without reconstruction</strong><small>NOMAD metadata collected during work</small></div>
       </section>
     </main>
   </div>
