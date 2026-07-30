@@ -1,235 +1,321 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="icon" href="data:,"><meta name="description" content="LabFlow product and technical documentation">
-<title>Documentation · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet">
-<script defer src="assets/app.js"></script>
+  <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="LabFlow progressive user manual and implementation guide">
+  <title>User Manual · LabFlow</title>
+  <link href="assets/theme.css" rel="stylesheet">
+  <link href="assets/app.css" rel="stylesheet">
+  <script defer src="assets/app.js"></script>
 </head>
 <body data-page="docs">
-<header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside>
-<button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
-<div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><span class="eyebrow">Product and implementation reference</span><h1>Documentation</h1><p>The current LabFlow workflow, scientific records, interface rules, AI boundaries and POC limits.</p></div><div class="page-actions"><button class="button" data-action="docs-print" type="button">Print current section</button><a class="button primary" href="flow.html">Open visual model</a></div></header>
-<section class="documentation-shell panel">
-<nav class="doc-nav" aria-label="Documentation sections">
-  <button class="active" data-doc="overview" type="button"><strong>Overview</strong><small>Purpose and boundaries</small></button>
-  <button data-doc="workflows" type="button"><strong>Researcher workflow</strong><small>Eight concrete phases</small></button>
-  <button data-doc="data" type="button"><strong>Scientific records</strong><small>Definitions and actual use</small></button>
-  <button data-doc="ui" type="button"><strong>UI guide</strong><small>Shared interaction rules</small></button>
-  <button data-doc="ai" type="button"><strong>AI & knowledge</strong><small>RAG, analysis and agents</small></button>
-  <button data-doc="readme" type="button"><strong>Technical POC</strong><small>Files, runtime and limits</small></button>
-</nav>
-<article class="markdown-body" id="documentationPreview"></article>
-</section>
+  <header class="topbar" id="topbar"></header>
+  <aside class="sidebar" id="sidebar"></aside>
+  <button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
+  <div class="app-main"><main class="page documentation-page">
+    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>›</span><span>User manual</span></nav>
+    <header class="page-header compact-header">
+      <div><span class="eyebrow">LabFlow user manual</span><h1>From laboratory work to reusable evidence</h1><p>Understand the platform progressively: start with the researcher workflow, then inspect records, AI boundaries and technical decisions.</p></div>
+      <div class="page-actions"><button class="button" data-action="docs-print" type="button">Print section</button><a class="button primary" href="experiment.html">Open demo experiment</a></div>
+    </header>
 
-<script id="doc-overview" type="text/markdown">
-# LabFlow Researcher Workspace
+    <section class="docs-hero-map" aria-label="LabFlow workflow overview">
+      <button class="active" type="button" data-doc="overview"><span>01</span><strong>Understand</strong><small>Purpose</small></button>
+      <button type="button" data-doc="workflow"><span>02</span><strong>Experiment</strong><small>8 phases</small></button>
+      <button type="button" data-doc="cabinet"><span>03</span><strong>Reuse</strong><small>Lab Cabinet</small></button>
+      <button type="button" data-doc="records"><span>04</span><strong>Trace</strong><small>Data model</small></button>
+      <button type="button" data-doc="ai"><span>05</span><strong>Assist</strong><small>Human control</small></button>
+      <button type="button" data-doc="nomad"><span>06</span><strong>Share</strong><small>NOMAD</small></button>
+    </section>
 
-## Purpose
+    <section class="docs-search-panel">
+      <label><span data-icon="model"></span><input class="input" id="documentationSearch" type="search" name="documentation_search" autocomplete="off" placeholder="Search workspace, stack, processing, AI or NOMAD…"><kbd>/</kbd></label>
+      <div id="documentationSearchResults" class="docs-search-results" hidden></div>
+    </section>
 
-LabFlow is a static interface POC for testing one credible path between a perovskite laboratory experiment and NOMAD. It helps researchers organise shared resources, concrete experimental work, evidence, analysis and outputs without exposing repository-oriented complexity.
+    <section class="documentation-shell panel">
+      <nav class="doc-nav" aria-label="Manual contents">
+        <span class="doc-nav-label">Contents</span>
+        <button class="active" data-doc="overview" type="button"><strong>What is LabFlow?</strong><small>Purpose, scope and principles</small></button>
+        <button data-doc="workflow" type="button"><strong>Researcher workflow</strong><small>Solutions through NOMAD</small></button>
+        <button data-doc="cabinet" type="button"><strong>Workspace &amp; Lab Cabinet</strong><small>Shared and optional context</small></button>
+        <button data-doc="records" type="button"><strong>Scientific records</strong><small>Stacks, processing and evidence</small></button>
+        <button data-doc="ai" type="button"><strong>AI &amp; knowledge</strong><small>3 distinct purposes</small></button>
+        <button data-doc="nomad" type="button"><strong>Reports &amp; NOMAD</strong><small>Review before submission</small></button>
+        <button data-doc="interface" type="button"><strong>Interface guide</strong><small>Search, states and responsive UX</small></button>
+        <button data-doc="poc" type="button"><strong>Static POC</strong><small>Architecture and limits</small></button>
+        <div class="doc-nav-links"><a href="docs/GLOSSARY.md">Glossary</a><a href="README.md">Project README</a><a href="ui-kit.html">UI Kit</a></div>
+      </nav>
+      <article class="markdown-body" id="documentationPreview" tabindex="-1"></article>
+      <footer class="docs-pagination">
+        <button class="button" id="docsPrevious" data-action="docs-page" data-direction="-1" type="button">← Previous</button>
+        <span id="docsPosition">1 of 8</span>
+        <button class="button primary" id="docsNext" data-action="docs-page" data-direction="1" type="button">Next →</button>
+      </footer>
+    </section>
 
-## Product scope
+    <script id="doc-overview" type="text/markdown">
+# What is LabFlow?
+
+LabFlow is an AI-ready laboratory workflow platform concept. It helps researchers document an experiment while doing the work, produce structured and reusable evidence, and prepare interoperable outputs without starting from repository forms.
+
+> This repository is a static proof of concept for validating workflow, scientific usability, data relationships, AI integration and NOMAD preparation with real laboratory users.
+
+## The platform in one map
 
 ```graph
 direction LR
-Workspace[Laboratory workspace] --> Project[Project]
-Project --> Experiment[Experiment]
-Cabinet[Shared Lab Cabinet] --> Experiment
-Experiment --> Evidence[Data and results]
-Knowledge[Shared knowledge] --> Researcher[Researcher review]
-Evidence --> Output[Report and export]
-Output --> NOMAD[NOMAD]
+User[Researcher] --> Workspace[Workspace]
+Workspace --> Cabinet[Lab Cabinet]
+Workspace --> Experiment[Experiment]
+Cabinet --> Experiment : resources
+Experiment --> Workflow[Scientific workflow]
+Workflow --> Report[Report]
+Report --> Export[Export]
+Export --> NOMAD[NOMAD]
 ```
 
-The POC deliberately offers one standard experimental workflow. It does not present invented experiment categories. Additional workflows should follow only after testing this path with researchers.
+## Design principles
 
-## Core principles
+| Principle | What it changes |
+|---|---|
+| Workflow-first | The interface follows laboratory work rather than repository structure. |
+| Researcher-first | Familiar scientific language appears before implementation terms. |
+| Progressive complexity | Advanced planning appears only when the researcher needs it. |
+| Reusable resources | Shared definitions reduce repeated entry. |
+| Provenance | Results remain connected to processing, measurements and files. |
+| Human-in-the-loop AI | Suggestions show evidence and require review. |
+| NOMAD interoperability | Readiness is collected progressively and validated explicitly. |
 
-- start from the researcher’s next task;
-- prepare solutions before defining stacks;
-- reuse shared definitions but preserve experiment-owned snapshots;
-- separate protocol from actual execution;
-- show essential fields before advanced details;
-- keep the workflow editable and non-blocking;
-- show provenance, exclusions and warnings;
-- keep NOMAD last;
-- never present simulated AI output as verified truth.
+## Start here
 
-## Static boundary
+Open the Workspace. Choose **New experiment**, **Continue your work** or **Import**. Projects are optional organisational containers, not a prerequisite.
 
-The interface has no backend, authentication, shared persistence, database, file storage, real AI service, embeddings, vector database or NOMAD network integration. These behaviours are explicitly simulated where shown.
-</script>
+### Demo scenario
 
-<script id="doc-workflows" type="text/markdown">
-# Standard researcher workflow
+Perovskite Research Lab uses experiment `PSC-2026-041`, solution `FA–Cs 1.2 M` / `SOL-081`, stacks `S01` and `S02`, Spin Coater 01 and protocol PSC n-i-p standard v4.1.
+    </script>
 
-`Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
+    <script id="doc-workflow" type="text/markdown">
+# Researcher workflow
 
-The experiment home always shows the full path, phase state and one recommended next action. Researchers may save, skip optional work or revisit a phase.
+`Solutions → Stacks → Processing → Data → Analysis → Charts & Report → Export → NOMAD`
 
-## 1. Solutions
+The sequence is recommended and non-blocking. Save a draft, skip optional work or revisit a phase.
 
-Select one solvent or mixture, add solutes and optional additives, enter concentration and volume, describe preparation, then distinguish the reusable recipe from the concrete batch.
+| Phase | Researcher task | Record produced |
+|---|---|---|
+| 1 · Solutions | Define solvents, solutes, additives and preparation | Recipe + physical batch |
+| 2 · Stacks | Order layers and connect materials | One or more experiment stacks |
+| 3 · Processing | Perform and record laboratory actions | Processing run + actual values |
+| 4 · Data | Upload, enter manually or import | Files, tables and measurement context |
+| 5 · Analysis | Compare stacks and inspect anomalies | Reviewable findings |
+| 6 · Charts & Report | Save visualisations and scientific narrative | Editable report |
+| 7 · Export | Review scope, exclusions and formats | Local package |
+| 8 · NOMAD | Resolve readiness issues and choose a path | NOMAD package or simulated API request |
 
-## 2. Stacks
+## Creating an experiment
 
-Create one stack, similar stacks or simple variants. Record ordered layers, materials, substrate, dimensions, thicknesses, solution usage, instruments, conditions, notes and sample count.
+The creation wizard asks for name and goal, then solutions, then stacks. Conditions, replicates, automatic sample IDs and AI suggestions appear only after adding another stack.
 
-## 3. Processing
+## Processing is not a protocol
 
-Select the reusable protocol and record what was actually performed. Spin coating and annealing show only their relevant parameters. Actual values, timestamps, deviations and evidence belong to the run.
+A **protocol** is the reusable ordered definition. **Processing** records what actually happened: operator, time, instrument, parameters, deviations and evidence. An **action** is one operation inside that run.
+    </script>
 
-## 4. Data
+    <script id="doc-cabinet" type="text/markdown">
+# Workspace, projects and Lab Cabinet
 
-Upload a common file, enter a table/value/series manually, import, or add later. Associate data with the whole experiment, one or more stacks, a process action, measurement or result.
+## Workspace
 
-## 5. Analysis
+The Workspace is the researcher’s operating context. It contains experiments, shared Lab Cabinet resources, knowledge, reports and settings. The static POC displays ownership context but does not enforce real permissions.
 
-Compare stacks, explore linked data, create a chart, use a local tool or request optional evidence-linked AI analysis. Keep anomalies and missing data visible.
+## Projects
 
-## 6. Charts and report
+A Project optionally groups related experiments under one research goal. Researchers can start an experiment without creating a project first.
 
-Choose stacks and measurements, edit titles and units, save visualisations and build an editable report from experiment records and provenance.
+## Lab Cabinet
 
-## 7. Export
+```graph
+direction TB
+Workspace[Workspace] --> Cabinet[Lab Cabinet]
+Cabinet --> Materials[Materials & substances]
+Cabinet --> Solutions[Solutions]
+Cabinet --> Equipment[Equipment]
+Cabinet --> Stacks[Stack templates]
+Cabinet --> Protocols[Protocols]
+Cabinet --> Conditions[Conditions & actions]
+```
 
-Generate CSV, Excel, JSON, JSONL, images, PDF, ZIP or a full archive. Review included and excluded content, version and warnings first.
+The Lab Cabinet is search-first. Search for the resource you need, inspect its status and provenance, then link it to the experiment. Lab Cabinet resources are shared definitions; concrete use belongs to the experiment.
 
-## 8. NOMAD
+### Example
 
-Check completeness, units, resources, stacks, processing, instruments, data, files, identifiers, provenance and mapping. Then explicitly export a package or simulate API submission. Nothing is sent automatically.
-</script>
+`FA–Cs 1.2 M` is a reusable recipe. `SOL-081` is the physical solution batch prepared for `PSC-2026-041`.
+    </script>
 
-<script id="doc-data" type="text/markdown">
+    <script id="doc-records" type="text/markdown">
 # Scientific records
 
-## Shared definition versus concrete use
+## Reusable versus experiment-owned
 
-| Shared Lab Cabinet record | Experiment-owned evidence |
+| Lab Cabinet definition | Concrete experiment record |
 |---|---|
 | Solution recipe | Prepared solution batch |
 | Stack template | Experiment stack |
-| Protocol / pipeline | Process run |
+| Protocol | Processing run |
 | Reusable action | Executed action |
 | Instrument | Instrument use and actual settings |
-| Material / substance | Lot or recorded use |
+| Material or substance | Lot or recorded use |
 
-A usage snapshot preserves the referenced version, affected stacks, amount and unit, actual parameters, operator and time. Later edits to shared definitions must not rewrite history.
-
-## Experiment graph
+## Evidence chain
 
 ```graph
 direction LR
-Recipe[Solution recipe] --> Batch[Prepared batch]
-Batch --> Stack[Experiment stack]
-Protocol[Protocol] --> Run[Process run]
-Stack --> Run
-Run --> Sample[Samples]
-Sample --> Measurement[Measurements]
-Measurement --> File[Original files]
-Measurement --> Result[Derived results]
-Result --> Report[Report]
-Report --> Export[Export package]
+Workspace[Workspace] --> Experiment[Experiment]
+Experiment --> Stack[Stack]
+Stack --> Processing[Processing]
+Processing --> Data[Data & measurements]
+Data --> Results[Results]
+Results --> Report[Report]
+Report --> Export[Export]
 ```
 
-## Evidence rules
+A usage snapshot preserves the selected definition version, affected stacks, amounts, actual parameters, operator and time. Later Lab Cabinet edits must not silently change historical evidence.
 
-- Original files are evidence, not derived results.
-- Measurements add acquisition context.
-- Results reference their files, method/version and validation state.
-- Reports reference records rather than copying unexplained values.
-- Export packages record scope, inclusions, exclusions, warnings and versions.
-- AI outputs remain separate drafts and never overwrite originals.
-</script>
+## Stack
 
-<script id="doc-ui" type="text/markdown">
-# UI guide
+A stack is an ordered material structure inside an experiment. It links layers, roles, materials, substrate, solution usage, conditions and samples. `S01` and `S02` are the two demo stacks.
 
-## Interaction hierarchy
+## Data, results and reports
 
-Each workflow phase has one primary action. Secondary actions support inspection or optional work. Advanced scientific fields remain expandable.
+Original files remain evidence. Measurements add acquisition context. Results identify source files, method/version, unit and validation state. Reports select and explain those records without turning unexplained copied values into truth.
+    </script>
 
-## Canonical patterns
+    <script id="doc-ai" type="text/markdown">
+# AI and shared knowledge
 
-- eight-phase workflow rail with completed, current, to-do, optional and verify states;
-- next-action strip with one sentence and one control;
-- compact panels, low radii and information-bearing borders;
-- solution flow from solvent mixture to concrete batch;
-- visual ordered stack layers;
-- reusable protocol beside actual run;
-- contained data tables and explicit targets;
-- evidence citations with provenance and warnings;
-- included/excluded review before export;
-- confirmation before contextual knowledge actions.
+LabFlow separates three purposes.
 
-## Responsive rules
+| Surface | Purpose | Researcher control |
+|---|---|---|
+| Knowledge Assistant | Find and verify shared information | Inspect sources, conflicts and insufficiency warnings |
+| AI Analysis | Analyse selected experimental data | Review assumptions, evidence and limitations |
+| AI Agents | Execute guided multi-step proposals | Approve each selected action |
 
-Support 360–1440 px. Below 980 px the sidebar becomes a drawer. Workflow rails scroll horizontally. Tables stay in contained scrollers. Scientific grids collapse to one column without hiding context or primary actions.
+```graph
+direction LR
+Knowledge[Knowledge Assistant] --> Review[Researcher review]
+Analysis[AI Analysis] --> Review
+Agents[AI Agents] --> Review
+Review --> Decision[Accept, edit or reject]
+```
 
-## Language
+## Knowledge Assistant
 
-Use laboratory terms recognised by researchers. Do not expose implementation concepts as tasks and do not ask users to select an unvalidated experiment category.
-</script>
-
-<script id="doc-ai" type="text/markdown">
-# AI, Knowledge Chat and Agents
-
-## Three separate tools
-
-| Tool | Purpose |
-|---|---|
-| Knowledge Chat | Consult shared laboratory knowledge with explicit sources. |
-| AI Analysis | Interpret selected measurement and result data. |
-| Controlled Agents | Propose bounded multi-step workflow actions. |
-
-## Knowledge Chat
-
-The static RAG demo searches manuals, protocols, procedures, papers, technical sheets, shared notes, Lab Cabinet resources, experiments, approved reports and NOMAD documentation.
-
-Every answer is marked as simulated and to verify. It includes sources, provenance, evidence, related records, limitations and conflict or insufficiency warnings. Contextual actions require confirmation.
+The static RAG demonstration searches manuals, protocols, papers, technical sheets, shared notes, Lab Cabinet resources, experiments, approved reports and NOMAD documentation. Answers remain linked to numbered sources and never appear as unverified truth.
 
 ## AI Analysis
 
-Analysis receives explicit experiment, stack, file, column, measure and filter context. Outputs show assumptions, evidence, confidence, limitations and review state.
+AI Analysis works from explicit experiment, stack, file, column and measure context. It shows findings, anomalies, assumptions, confidence and limitations while leaving original measurements unchanged.
 
-## Controlled Agents
+## AI Agents
 
-Agent runs expose objective, allowed inputs and actions, blocked actions, steps, proposals and approval gates. They cannot autonomously delete, publish or send requests.
+Agents represent bounded workflows. They expose their objective, allowed inputs, blocked actions, steps and approval gates. The POC cannot autonomously delete, publish or send an API request.
+    </script>
 
-No real LLM, retrieval index, embedding, vector store or agent runtime exists in this repository.
-</script>
+    <script id="doc-nomad" type="text/markdown">
+# Reports, export and NOMAD
 
-<script id="doc-readme" type="text/markdown">
-# Technical POC
+```graph
+direction LR
+Evidence[Experiment evidence] --> Report[Editable report]
+Report --> Export[Export review]
+Export --> Prepare[Prepare NOMAD]
+Prepare --> Package[NOMAD package]
+Prepare --> API[Simulated API send]
+```
+
+## Report
+
+Build the scientific story from experiment records, saved charts, files and provenance. AI-assisted narrative remains an editable draft.
+
+## Export
+
+Generate represented formats including CSV, Excel, JSON, JSONL, YAML, images, PDF, ZIP and a full experiment archive. Before generation, inspect scope, included and excluded records, warnings and version.
+
+## NOMAD
+
+NOMAD is the final explicit phase. Readiness checks cover completeness, units, resources, stacks, processing, instruments, files, identifiers, provenance and mappings.
+
+Choose one path:
+
+1. Generate and inspect a local NOMAD package.
+2. Simulate an explicit submission through the user’s NOMAD API connection.
+
+Import from NOMAD remains a separate preview-and-map workflow. The static POC never transmits credentials or data.
+    </script>
+
+    <script id="doc-interface" type="text/markdown">
+# Interface guide
+
+## Search
+
+The top search uses one shared component. It filters visible page records when available and suggests relevant destinations across experiments, Lab Cabinet resources, reports, tools, settings, results and documentation.
+
+## States and actions
+
+- One primary action communicates the current next step.
+- Badges always include text; colour is supplementary.
+- Advanced scientific fields use expandable sections.
+- Destructive or contextual actions require confirmation.
+- Empty states explain the next useful action.
+- Tables remain inside horizontal scrollers.
+
+## Responsive behaviour
+
+The design supports 360–1440 px. Below 980 px the sidebar becomes a drawer. Workflow rails scroll horizontally, grids collapse and modals use internal scrolling without hiding primary actions.
+
+## Accessibility baseline
+
+Pages include a skip link, semantic controls, keyboard focus, labelled icon buttons and reduced-motion support. This POC still requires a complete production accessibility audit.
+    </script>
+
+    <script id="doc-poc" type="text/markdown">
+# Why this repository is a static POC
+
+The static architecture is a deliberate validation step, not an unfinished backend.
+
+## What it validates
+
+- researcher workflow and information hierarchy;
+- progressive disclosure and scientific usability;
+- reusable versus concrete data relationships;
+- provenance and export review;
+- credible AI boundaries;
+- NOMAD preparation as a natural final phase.
+
+## What is not implemented
+
+| Not present | Production responsibility |
+|---|---|
+| Backend or database | Durable records, transactions and APIs |
+| Authentication or authorization | Identity, permissions and workspace isolation |
+| File storage | Integrity, retention and access control |
+| Real AI or RAG | Models, retrieval, evaluation and audit |
+| Real agent runtime | Secure tools and persisted approvals |
+| Real NOMAD connection | Secret handling, network requests and retries |
 
 ## Runtime
 
-LabFlow is plain HTML, CSS and JavaScript with no build step or CDN. Serve the repository root with:
+LabFlow uses plain HTML, CSS and JavaScript without a framework, build step or CDN. Serve the repository root with `python3 -m http.server 8765` or publish it on GitHub Pages.
 
-```text
-python3 -m http.server 8765
-```
-
-Open `http://127.0.0.1:8765/`.
-
-## Shared files
-
-- `assets/theme.css`: theme tokens;
-- `assets/app.css`: layout and product components;
-- `assets/app.js`: shell, demo stores and interactions;
-- `assets/exporters.js`: browser-generated outputs;
-- `ui-kit.html`: canonical visual components;
-- `docs/`: maintained product and technical reference.
-
-## Security and integration limits
-
-The visible user/workspace scope is not authorization. API keys must never be shipped in static JavaScript. A production implementation requires a secure backend for authentication, permissions, persistence, files, audit history, external APIs and secrets.
-
-NOMAD import/upload, AI, RAG, agent execution and shared knowledge persistence are simulations. Browser-generated downloads are local POC artefacts and not a guarantee of scientific or NOMAD completeness.
-</script>
-</main></div><div class="toast-region" id="toastRegion" aria-live="polite"></div>
-</body></html>
+Never enter real API keys or sensitive laboratory data in this POC.
+    </script>
+  </main></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+</body>
+</html>

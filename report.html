@@ -39,11 +39,11 @@
   <section class="panel"><div class="panel-body ownership-map"><div class="ownership-node primary"><span class="eyebrow">Export owner</span><strong data-user-name="">Eleanor Wright</strong><small data-workspace-id="">WS-EW-01</small></div><div class="ownership-arrow">→</div><div class="ownership-node"><span class="eyebrow">Selected workspace</span><strong data-workspace-name="">Mixed-cation perovskites</strong><small>Only records in this scope</small></div><div class="ownership-arrow">→</div><div class="ownership-node"><span class="eyebrow">Export format</span><strong>JSON, CSV, Excel or YAML</strong><small>Built in the browser</small></div></div></section>
   <section class="grid grid-4 mt-12"><article class="panel metric"><span class="metric-label">Entities selected</span><strong class="metric-value">10</strong><span class="metric-detail">Complete experiment graph</span></article><article class="panel metric"><span class="metric-label">Referenced files</span><strong class="metric-value">23</strong><span class="metric-detail">Raw data and images</span></article><article class="panel metric"><span class="metric-label">Validation</span><strong class="metric-value">96%</strong><span class="metric-detail">2 warnings</span></article><article class="panel metric"><span class="metric-label">Package size</span><strong class="metric-value">1.8 GB</strong><span class="metric-detail">References only</span></article></section>
   <div class="section-title"><div><h2>Select export parts</h2><p>Choose what to include in the export.</p></div><button class="button small" data-action="export-toggle-all" type="button">Clear all</button></div>
-  <section class="grid grid-3" id="exportOptions"><label class="export-option"><input checked="" data-export-part="catalogues" type="checkbox"/><span><strong>Reference catalogues</strong><small>Ion, material, substrate and instrument identities.</small></span></label><label class="export-option"><input checked="" data-export-part="definitions" type="checkbox"/><span><strong>Reusable definitions</strong><small>Composition, solution recipe, process template and stack.</small></span></label><label class="export-option"><input checked="" data-export-part="instances" type="checkbox"/><span><strong>Physical instances</strong><small>Lots, batch, substrates, samples and devices.</small></span></label><label class="export-option"><input checked="" data-export-part="execution" type="checkbox"/><span><strong>Execution records</strong><small>Experiment, process runs and actual parameters.</small></span></label><label class="export-option"><input checked="" data-export-part="measurements" type="checkbox"/><span><strong>Measurements &amp; files</strong><small>Instrument context, raw-file references and metrics.</small></span></label><label class="export-option"><input checked="" data-export-part="reports" type="checkbox"/><span><strong>Reports &amp; provenance</strong><small>Editable report, quality checks and activity log.</small></span></label></section>
+  <section class="grid grid-3" id="exportOptions"><label class="export-option"><input checked="" data-export-part="catalogues" type="checkbox"/><span><strong>Reference catalogues</strong><small>Ion, material, substrate and instrument identities.</small></span></label><label class="export-option"><input checked="" data-export-part="definitions" type="checkbox"/><span><strong>Reusable definitions</strong><small>Composition, solution recipe, protocol and stack.</small></span></label><label class="export-option"><input checked="" data-export-part="instances" type="checkbox"/><span><strong>Physical instances</strong><small>Lots, batch, substrates, samples and devices.</small></span></label><label class="export-option"><input checked="" data-export-part="execution" type="checkbox"/><span><strong>Execution records</strong><small>Experiment, process runs and actual parameters.</small></span></label><label class="export-option"><input checked="" data-export-part="measurements" type="checkbox"/><span><strong>Measurements &amp; files</strong><small>Instrument context, raw-file references and metrics.</small></span></label><label class="export-option"><input checked="" data-export-part="reports" type="checkbox"/><span><strong>Reports &amp; provenance</strong><small>Editable report, quality checks and activity log.</small></span></label></section>
   <div class="section-title"><div><h2>Download formats</h2><p>All files are generated locally in the browser.</p></div></div>
   <section class="grid grid-4"><button class="panel button export-card-button" data-action="export-json" type="button"><span data-icon="code"></span><strong>JSON</strong><small class="subtle">Nested domain graph</small></button><button class="panel button export-card-button" data-action="export-csv" type="button"><span data-icon="table"></span><strong>CSV</strong><small class="subtle">Normalised entity rows</small></button><button class="panel button export-card-button" data-action="export-xlsx" type="button"><span data-icon="table"></span><strong>Excel</strong><small class="subtle">Multiple entity sheets</small></button><button class="panel button export-card-button" data-action="export-yaml" type="button"><span data-icon="file"></span><strong>YAML</strong><small class="subtle">Human-readable graph</small></button></section>
   <div class="section-title"><div><h2>Complete experiment archive</h2><p>Portable, versioned and traceable preview of the complete experiment record.</p></div><button class="button primary" type="button" data-action="experiment-archive">Generate archive ZIP</button></div>
-  <section class="export-archive-grid"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Archive contents</strong><small>EXP-2026-052 · version 1.3 · 31 Jul 2026</small></div><span class="badge warning">2 warnings</span></div><pre class="package-tree">experiment-EXP-2026-052/
+  <section class="export-archive-grid"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Archive contents</strong><small>PSC-2026-041 · version 1.3 · 31 Jul 2026</small></div><span class="badge warning">2 warnings</span></div><pre class="package-tree">experiment-PSC-2026-041/
 ├── experiment.json
 ├── manifest.json
 ├── stacks/
@@ -63,7 +63,7 @@
 
 <!-- Tab: NOMAD -->
 <div class="tab-panel" data-tab-panel="nomad" hidden>
-  <section class="nomad-readiness-strip"><div><span class="badge warning">Ready with warnings</span><strong>Experiment package · 94% complete</strong><small>4 stacks, resources, process and original files are mapped.</small></div><div class="nomad-checks"><span>✓ Experiment</span><span>✓ 4 stacks</span><span>✓ Solutions</span><span>✓ Process</span><span>✓ Files</span><span class="warning">⚠ 2 units</span><span class="warning">⚠ Instrument</span></div><button class="button" type="button" data-action="toast" data-message="NOMAD validation issues opened">Correct warnings</button></section>
+  <section class="nomad-readiness-strip"><div><span class="badge warning">Ready with warnings</span><strong>Experiment package · 94% complete</strong><small>2 stacks, resources, process and original files are mapped.</small></div><div class="nomad-checks"><span>✓ Experiment</span><span>✓ 2 stacks</span><span>✓ Solutions</span><span>✓ Process</span><span>✓ Files</span><span class="warning">⚠ 2 units</span><span class="warning">⚠ Instrument</span></div><button class="button" type="button" data-action="toast" data-message="NOMAD validation issues opened">Correct warnings</button></section>
   <section class="grid grid-2">
     <article class="panel">
       <div class="panel-header"><div class="panel-title"><strong>Export NOMAD package</strong><small>File workflow · validate, preview and build locally</small></div><span class="badge info">File</span></div>
@@ -75,13 +75,13 @@
   ├── manifest.json
   └── raw/
       ├── jv/
-      │   └── DEV-052-B04-03.csv
+      │   └── DEV-041-B04-03.csv
       ├── eqe/
-      │   └── DEV-052-B04-03.csv
+      │   └── DEV-041-B04-03.csv
       ├── xrd/
-      │   └── S-052-B04.xy
+      │   └── S-041-B04.xy
       └── images/
-          └── AFM-S-052-B04.png</pre>
+          └── AFM-S-041-B04.png</pre>
       </div>
       <div class="panel-footer">
         <button class="button" data-action="nomad-yaml" type="button">Archive YAML</button>
@@ -95,7 +95,7 @@
         <div class="field"><label>NOMAD URL</label><input class="input" id="nomadUrl" value="https://nomad-lab.eu/prod/v1/api/v1"/></div>
         <div class="field"><label for="nomadMaskedKey">Your NOMAD API key</label><input class="input" id="nomadMaskedKey" name="nomad_masked_key" value="nomad_••••••••••••8K2" readonly spellcheck="false" type="text"/></div>
         <div class="field"><label for="nomadUploadMode">Upload mode</label><select class="input" id="nomadUploadMode" name="nomad_upload_mode"><option>New draft upload</option><option>Update existing upload</option><option>New upload and publish later</option></select></div>
-        <div class="field"><label>Upload name</label><input class="input" id="nomadUploadName" value="LabFlow EXP-2026-052"/></div>
+        <div class="field"><label>Upload name</label><input class="input" id="nomadUploadName" value="LabFlow PSC-2026-041"/></div>
         <button class="button" data-action="nomad-script" type="button">Generate cURL / Python</button>
         <button class="button primary" data-action="nomad-upload-demo" type="button">Send via NOMAD API · simulation</button>
         <pre class="package-tree min-h-110" id="nomadConsole">No request generated.</pre>

@@ -1,5 +1,14 @@
 # Design system
 
+## Scientific object views
+
+LabFlow presents the experiment as connected laboratory objects before showing
+their detailed fields. Solution recipes use ingredient cards and proportional
+solvent bars; material stacks use ordered selectable layers; processing uses a
+vertical timeline; data files show their attached stack or device; reports show
+assembly progress. These patterns are canonical and are demonstrated in
+`ui-kit.html`. Forms remain available as secondary editors.
+
 ## Direction
 
 LabFlow uses compact technical surfaces, restrained navy/blue/teal accents,
@@ -37,3 +46,11 @@ reference; product pages should reuse its patterns rather than introduce local
 themes.
 
 Supported layouts cover 360–1440 px, keyboard focus and reduced motion.
+
+## Search pattern
+
+The topbar search is the shared cross-product entry point. Its placeholder
+adapts to the current area, visible records may be filtered in place and a
+compact result panel links to canonical destinations. Documentation and the Lab
+Cabinet retain deeper domain-specific search inputs beneath the same visual
+language.

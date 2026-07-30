@@ -44,11 +44,31 @@
 <div class="panel-body">
   <section data-wizard-label="Prepare solutions" data-wizard-panel="0">
     <div class="wizard-stage-head"><span class="stage-number">01</span><div><h2>Prepare the solutions first</h2><p>Start with the information available today. Chemical details can be completed later.</p></div></div>
-    <div class="solution-flow-strip"><span class="active">Solvent or mixture</span><b>→</b><span>Solutes</span><b>→</b><span>Additives</span><b>→</b><span>Concentration</span><b>→</b><span>Batch</span><b>→</b><span>Review</span></div>
+    <div class="solution-flow-strip"><span class="active">Recipe</span><b>→</b><span>Prepare</span><b>→</b><span>Use in stack</span></div>
     <div class="solution-prep-layout">
       <section class="panel clean-subpanel">
         <div class="panel-header"><div class="panel-title"><strong>FA-Cs 1.2 M</strong><small>Reusable recipe · draft changes</small></div><span class="badge warning">In progress</span></div>
-        <div class="panel-body form-grid compact-form">
+        <div class="panel-body">
+          <article class="solution-recipe-card" aria-label="FA-Cs 1.2 M solution recipe">
+            <header><div><span class="eyebrow">Absorber precursor</span><h3>FA-Cs 1.2 M</h3></div><span class="recipe-status"><i></i>Preparation in progress</span></header>
+            <div class="recipe-composition">
+              <section class="recipe-solvent">
+                <span class="recipe-label">Solvent mixture · 5.0 mL</span>
+                <div class="solvent-mixture" aria-label="80 percent DMF and 20 percent DMSO"><span class="dmf" style="--ratio:80%"><b>DMF</b><small>80% · 4.0 mL</small></span><span class="dmso" style="--ratio:20%"><b>DMSO</b><small>20% · 1.0 mL</small></span></div>
+              </section>
+              <span class="recipe-plus" aria-hidden="true">+</span>
+              <section class="recipe-ingredients">
+                <span class="recipe-label">Solutes</span>
+                <div><button type="button" data-action="toast" data-message="FAI ingredient details opened"><b>FAI</b><small>1.2 M target</small></button><button type="button" data-action="toast" data-message="PbI₂ ingredient details opened"><b>PbI₂</b><small>Lead source</small></button><button type="button" data-action="toast" data-message="CsI ingredient details opened"><b>CsI</b><small>Cs fraction</small></button></div>
+              </section>
+              <span class="recipe-plus" aria-hidden="true">+</span>
+              <section class="recipe-additive"><span class="recipe-label">Additive</span><button type="button" data-action="toast" data-message="MACl additive details opened"><b>MACl</b><small>5 mol%</small></button></section>
+            </div>
+            <footer><div><small>Final solution</small><strong>FA-Cs · 1.2 M</strong></div><div><small>Total volume</small><strong>5.0 mL</strong></div><div><small>Preparation</small><strong>60 °C · 30 min</strong></div><button class="button small" type="button" data-action="toast" data-message="Recipe order updated">Reorder ingredients</button></footer>
+          </article>
+          <details class="advanced-details recipe-editor">
+            <summary>Edit recipe details</summary>
+            <div class="form-grid compact-form">
           <div class="field span-2"><label>Solvent or mixture</label><div class="input-action"><select class="input"><option>DMF / DMSO</option><option>DMF</option></select><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials">Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials" data-cabinet-create="true">Create solvent</button></div></div>
           <div class="field"><label>DMF ratio</label><input class="input" value="80 %"></div><div class="field"><label>DMSO ratio</label><input class="input" value="20 %"></div>
           <div class="field span-2"><label>Solutes</label><div class="token-input"><span>FAI ×</span><span>PbI₂ ×</span><span>CsI ×</span><button type="button" data-action="toast" data-message="Solute selector opened">+ Add solute</button></div></div>
@@ -56,6 +76,8 @@
           <div class="field"><label>Target concentration</label><input class="input" value="1.2 M"></div><div class="field"><label>Total volume</label><input class="input" value="5.0 mL"></div>
           <div class="field span-2"><label>Preparation notes</label><textarea class="input" rows="2">Dissolve at 60 °C, stir for 30 min and filter before use.</textarea></div>
           <details class="advanced-details span-2"><summary>Advanced chemical details</summary><div class="form-grid"><div class="field"><label>Appearance</label><input class="input" value="Clear amber"></div><div class="field"><label>Filter</label><input class="input" value="0.45 µm PTFE"></div><div class="field"><label>Storage</label><input class="input" value="N₂ glovebox · dark"></div><div class="field"><label>Expected stability</label><input class="input" value="48 h"></div></div></details>
+            </div>
+          </details>
         </div>
       </section>
       <aside class="panel batch-card">
@@ -70,8 +92,8 @@
     <div class="stack-mode-switch"><button class="active" type="button">One stack</button><button type="button">Similar stacks</button><button type="button">Variants</button></div>
     <section class="panel"><div class="panel-header"><div class="panel-title"><strong>Stacks in PSC-2026-041</strong><small>Structure, solution, process and samples stay together</small></div><button class="button small" type="button" data-action="add-stack-to-experiment"><span data-icon="plus"></span>Add stack</button></div>
       <div class="panel-body" id="experimentStackList">
-        <article class="stack-card panel"><div class="stack-card-head"><strong>S01 · n-i-p PSC baseline</strong><span class="badge success">3 samples</span></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div><dt>Substrate</dt><dd>25 × 25 mm</dd></div><div><dt>Variant</dt><dd>90 °C</dd></div></dl><a class="button small" href="stack.html">Edit layers and details</a></article>
-        <article class="stack-card panel"><div class="stack-card-head"><strong>S02 · n-i-p PSC baseline</strong><span class="badge info">3 samples</span></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div><dt>Substrate</dt><dd>25 × 25 mm</dd></div><div><dt>Variant</dt><dd>100 °C</dd></div></dl><a class="button small" href="stack.html">Edit layers and details</a></article>
+        <article class="stack-card panel"><div class="stack-card-head"><strong>S01 · n-i-p PSC baseline</strong><span class="badge success">3 samples</span></div><button class="stack-specimen" type="button" data-action="toast" data-message="S01 layer details opened" aria-label="Open S01 layer details"><span class="contact"><b>Au</b><small>80 nm · evaporation</small></span><span class="transport"><b>HTL</b><small>180 nm · spin coat</small></span><span class="absorber"><b>Perovskite</b><small>400 nm · SOL-081</small></span><span class="transport"><b>SnO₂</b><small>30 nm · spin coat</small></span><span class="substrate"><b>ITO / glass</b><small>25 × 25 mm</small></span></button><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div><dt>Variant</dt><dd>90 °C</dd></div></dl><a class="button small" href="stack.html">Open stack editor</a></article>
+        <article class="stack-card panel stack-has-difference"><div class="stack-card-head"><strong>S02 · n-i-p PSC baseline</strong><span class="badge info">3 samples</span></div><button class="stack-specimen" type="button" data-action="toast" data-message="S02 layer details opened" aria-label="Open S02 layer details"><span class="contact"><b>Au</b><small>80 nm · evaporation</small></span><span class="transport"><b>HTL</b><small>180 nm · spin coat</small></span><span class="absorber"><b>Perovskite</b><small>400 nm · SOL-081</small></span><span class="transport"><b>SnO₂</b><small>30 nm · spin coat</small></span><span class="substrate"><b>ITO / glass</b><small>25 × 25 mm</small></span></button><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div class="difference"><dt>Variant</dt><dd>100 °C <span>Different</span></dd></div></dl><a class="button small" href="stack.html">Open stack editor</a></article>
       </div>
     </section>
     <details class="panel variant-builder"><summary class="panel-header"><div class="panel-title"><strong>Create simple variants</strong><small>Change solution, material, thickness, temperature, duration or one process parameter.</small></div><span class="badge info">Optional</span></summary><div class="panel-body variant-controls"><div class="field"><label>Parameter</label><select class="input"><option>Annealing temperature</option><option>Solution</option><option>Thickness</option></select></div><div class="field"><label>Values</label><input class="input" value="90 °C, 100 °C"></div><button class="button primary" type="button" data-action="stack-generate-variants">Preview variants</button></div></details>
@@ -83,7 +105,7 @@
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Reusable protocol</strong><small>PSC n-i-p standard · v4.1</small></div><span class="badge success">Approved</span></div><div class="panel-body"><p class="subtle">Cleaning → UV-Ozone → spin coating → annealing → HTL → Au evaporation</p><a class="button small" href="pipeline.html">Open protocol</a></div></article>
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Actual run</strong><small>PSC-2026-041 · S01 and S02</small></div><span class="badge warning">2 / 6 recorded</span></div><div class="panel-body"><p class="subtle">Operator values, timestamps, instruments and deviations belong here.</p><button class="button small primary" type="button" data-action="toast" data-message="Actual work log opened">Record work</button></div></article>
     </section>
-    <div class="processing-action-list">
+    <div class="processing-action-list scientific-timeline">
       <article><span>01</span><div><strong>Substrate cleaning</strong><small>Acetone · IPA · sonication</small></div><span class="badge success">Recorded</span></article>
       <article><span>02</span><div><strong>UV-Ozone treatment</strong><small>15 min · UV-Ozone 01</small></div><span class="badge success">Recorded</span></article>
       <article class="active"><span>03</span><div><strong>Spin coating</strong><small>4,000 rpm · 30 s · 2,000 rpm/s · 100 µL · Spin Coater 01 · N₂</small></div><button class="button small" type="button" data-action="toast" data-message="Spin coating parameters opened">Edit values</button></article>
@@ -102,6 +124,11 @@
       <button type="button" data-action="wizard-next"><span data-icon="save"></span><strong>Add later</strong><small>Continue without blocking the experiment</small></button>
     </div>
     <div class="data-import-preview" id="experimentDataPreview"><span class="subtle">No file selected. Existing: 10 files linked to S01 and S02.</span></div>
+    <section class="attached-data-objects" aria-label="Attached experiment data">
+      <article><span class="file-kind csv">CSV</span><div><strong>JV-S01-A01.csv</strong><small>J–V curve · 428 rows</small></div><span class="attachment-link"><i></i>Stack S01</span><button class="button small" type="button" data-action="toast" data-message="J–V file opened">Open</button></article>
+      <article><span class="file-kind image">IMG</span><div><strong>AFM-S02-C03.png</strong><small>Surface morphology · 2048 × 2048</small></div><span class="attachment-link"><i></i>Stack S02</span><button class="button small" type="button" data-action="toast" data-message="AFM image opened">Open</button></article>
+      <article><span class="file-kind curve">JV</span><div><strong>Device C03</strong><small>Measurement expected</small></div><span class="attachment-link warning"><i></i>Stack S02</span><span class="badge warning">Missing file</span></article>
+    </section>
   </section>
 
   <section data-wizard-label="Analyse results" data-wizard-panel="4" hidden>
@@ -122,6 +149,7 @@
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Saved visualisation</strong><small>PCE comparison · S01 and S02</small></div><span class="badge success">Ready</span></div><div class="panel-body"><div class="mini-bars"><i style="height:70%"></i><i style="height:88%"></i></div><div class="row wrap"><a class="button small" href="editors.html#chart">Edit title &amp; units</a><button class="button small" type="button" data-action="toast" data-message="Chart added to report">Add to report</button></div></div></article>
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment report</strong><small>Objective through NOMAD status</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Solutions, materials and stacks</strong><small>Included with provenance</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Processing, data and chart</strong><small>Included</small></div></div><div><span data-icon="warning"></span><div><strong>Conclusion</strong><small>Needs researcher review</small></div></div></div><div class="panel-footer"><a class="button primary" href="report.html">Create report draft</a></div></article>
     </div>
+    <div class="report-assembly-ribbon" aria-label="Report assembly progress"><span class="done"><i>✓</i><b>Goal</b></span><span class="done"><i>✓</i><b>Solutions</b></span><span class="done"><i>✓</i><b>Stacks</b></span><span class="done"><i>✓</i><b>Results</b></span><span class="active"><i>5</i><b>Charts</b></span><span><i>6</i><b>Export</b></span></div>
   </section>
 
   <section data-wizard-label="Save and export" data-wizard-panel="6" hidden>

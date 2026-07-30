@@ -37,7 +37,7 @@
   <header class="text-editor-head"><div><span class="text-file-mark" data-icon="file"></span><span><strong id="codeFileName">experiment.yaml</strong><small>Structured experiment record · local working copy</small></span></div><div class="text-editor-state"><i></i><span id="codeStatus">Ready to validate</span></div></header>
   <div class="editor-toolbar"><div class="row"><label class="editor-mode-label" for="codeMode">Format</label><select class="input input-compact" id="codeMode" name="code_format"><option value="yaml">YAML</option><option value="json">JSON</option><option value="python">Python</option><option value="csv">CSV</option><option value="text">Plain text</option></select><button class="button small" data-action="code-load" type="button">Open local file</button><input hidden="" id="codeFileInput" type="file"/></div><div class="row"><button class="button small" data-action="code-format" type="button">Format</button><button class="button small" data-action="code-copy" type="button">Copy</button><button class="button small primary" data-action="code-validate" type="button">Validate record</button></div></div>
   <div class="scientific-editor-grid"><div class="editor-area"><pre class="editor-lines" id="codeLines">1</pre><textarea class="code-input" id="codeInput" aria-label="Structured text content" spellcheck="false">experiment:
-  id: EXP-2026-052
+  id: PSC-2026-041
   composition: Cs0.05FA0.78MA0.17PbI2.5Br0.5
   process_template: psc_baseline@4.1
   status: draft</textarea></div><aside class="text-editor-inspector" id="codeInspector"><div><span class="eyebrow">Document</span><dl><div><dt>Lines</dt><dd>5</dd></div><div><dt>Characters</dt><dd>138</dd></div><div><dt>Format</dt><dd>YAML</dd></div></dl></div><div class="editor-check-list"><span class="done"><i></i>Readable structure</span><span><i></i>Validation not run</span><span><i></i>No file exported</span></div><div class="editor-inspector-actions"><button class="button small" data-action="code-download" type="button">Download copy</button><small>Original files are never overwritten.</small></div></aside></div>
@@ -74,12 +74,12 @@ Measurement --&gt; Result[Derived result] : derives
 <div class="panel-body stack-sm">
 <div class="form-grid">
 <div class="field"><label>Layout</label><select class="input" id="graphDirection"><option value="LR">Left to right</option><option value="TB">Top to bottom</option></select></div>
-<div class="field"><label>Preset</label><select class="input" id="graphPreset"><option value="experiment">Experiment flow</option><option value="library">Library structure</option><option value="nomad">NOMAD package</option></select></div>
+<div class="field"><label>Preset</label><select class="input" id="graphPreset"><option value="experiment">Experiment flow</option><option value="library">Lab Cabinet structure</option><option value="nomad">NOMAD package</option></select></div>
 </div>
 <textarea class="input graph-source" id="graphSource" spellcheck="false">direction LR
 User[User account] --&gt; Workspace[Personal workspace] : owns
-Workspace --&gt; Library[Reusable library] : contains
-Library --&gt; Process[Process template] : provides
+Workspace --&gt; Library[Lab Cabinet] : contains
+Library --&gt; Process[Protocol] : provides
 Process --&gt; Experiment[Experiment] : instantiated as
 Experiment --&gt; Sample[Samples &amp; devices] : produces
 Sample --&gt; Result[Measurements &amp; results] : characterised by

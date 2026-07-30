@@ -7,7 +7,10 @@ researcher to choose an invented experiment type. The goal is to let
 researchers test one credible end-to-end path and provide feedback before
 additional workflows are designed.
 
-`Workspace → Experiment → Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
+`Solutions → Stacks → Processing → Data → Analysis → Charts & Report → Export → NOMAD`
+
+The Workspace is the entry point and an Experiment owns the workflow. Projects
+are optional containers rather than a required first step.
 
 The sequence is recommended, editable and non-blocking. A researcher may save a
 draft, skip an optional activity or return to an earlier phase.
@@ -23,6 +26,11 @@ Researchers can select shared substances from the Lab Cabinet or create a
 minimal missing record without knowing every property.
 
 The interface distinguishes the reusable recipe from the physical batch.
+The recipe is read visually as solvents, solutes, additives, concentration and
+volume. Detailed fields stay in a secondary editor. Stacks are shown as ordered
+material layers and compared side by side; processing is shown as a timeline;
+files retain a visible connection to the stack, device or measurement they
+describe.
 
 ## 2. Define stacks
 

@@ -1,4 +1,4 @@
-# AI, RAG and agent architecture
+# AI and knowledge architecture
 
 ## Separation of responsibilities
 
@@ -6,13 +6,19 @@ LabFlow exposes three distinct concepts:
 
 | Surface | Purpose | Must not become |
 | --- | --- | --- |
-| Knowledge Chat | Search and consult shared laboratory knowledge. | Uncited scientific authority. |
+| Knowledge Assistant | Search and consult shared laboratory knowledge. | Uncited scientific authority. |
 | AI Analysis | Interpret selected measurements and results. | Automatic modification of source data. |
 | Controlled Agents | Propose bounded multi-step workflow actions. | Autonomous execution without approval. |
 
-All three are static simulations.
+All three are static simulations and converge on researcher review:
 
-## Knowledge Chat
+```text
+Knowledge Assistant ─┐
+AI Analysis ─────────┼──→ inspect evidence ──→ accept / edit / reject
+AI Agents ───────────┘
+```
+
+## Knowledge Assistant
 
 `knowledge.html` represents a shared laboratory RAG interface. Its demo
 knowledge base contains manuals, protocols, procedures, papers, technical

@@ -7,6 +7,26 @@ researcher workflow between laboratory work and NOMAD. It demonstrates
 information architecture, interaction patterns and browser-side outputs. It is
 not a production application.
 
+## Product architecture
+
+```text
+Researcher
+    ↓
+Workspace
+    ├── Lab Cabinet ── reusable resources ──┐
+    └── Experiment ←────────────────────────┘
+            ↓
+       Scientific workflow
+            ↓
+          Report
+            ↓
+          Export
+            ↓
+          NOMAD
+```
+
+Projects may group related experiments, but remain optional.
+
 ## Runtime
 
 - semantic HTML pages;
@@ -30,8 +50,8 @@ The repository root can be served by any static HTTP server or GitHub Pages.
 | Tools | `editors.html` | Local editing, validation, conversion and visualisation. |
 | Reports and export | `report.html` | Build reports and generate local output packages. |
 | NOMAD | `report.html#nomad` | Validate, package and simulate explicit submission. |
-| Knowledge Chat | `knowledge.html` | Consult shared knowledge with cited evidence. |
-| AI workspace | `ai-assistant.html` | Analyse data and demonstrate controlled agents. |
+| Knowledge Assistant | `knowledge.html` | Consult shared knowledge with cited evidence. |
+| AI Analysis & Agents | `ai-assistant.html` | Analyse data and demonstrate controlled agents. |
 | Settings | `users.html` | User preferences and personal NOMAD connection. |
 | Administration | `admin-settings.html` | Workspace-level POC settings. |
 | Documentation | `documentation.html`, `docs/` | Product, model and implementation guidance. |
@@ -48,6 +68,11 @@ not shared between browsers or users.
 
 The shell exposes a user, workspace and project context for credibility. These
 are interface demonstrations, not security boundaries.
+
+The shared search component combines optional filtering of visible
+`data-filter-item` records with a small fuzzy-matched index of canonical
+destinations. Documentation also indexes its embedded manual sections. All
+searching runs locally and contains only demo content.
 
 ## Architectural boundaries
 

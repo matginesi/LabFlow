@@ -11,6 +11,8 @@ The supported design range is 360–1440 px.
 - Forms and two-column scientific comparisons collapse to one column.
 - Modals and drawers use internal scrolling and near-full mobile width.
 - Primary actions remain visible and controls keep usable touch targets.
+- Shared search results stay within the viewport and documentation navigation
+  becomes a horizontally scrollable contents rail.
 
 ## Functional limits
 

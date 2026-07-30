@@ -23,7 +23,7 @@ The static POC only simulates this scope. A backend must enforce it.
 | Material or substance | Material lot or recorded use |
 | Solution recipe | Prepared solution batch |
 | Stack template | Experiment stack |
-| Protocol / pipeline | Process run |
+| Protocol | Processing run |
 | Reusable action | Executed action |
 | Instrument | Instrument use and actual settings |
 | Condition definition | Actual condition |

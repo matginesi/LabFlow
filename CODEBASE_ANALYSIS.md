@@ -9,7 +9,7 @@ designed to collect researcher feedback, not to model every experiment family.
 ## Current information architecture
 
 The primary operational destinations are Workspace, Experiments, Lab Cabinet,
-Imports, Reports, Tools and NOMAD. Knowledge Chat and AI workspace are
+Imports, Reports, Tools and NOMAD. Knowledge Assistant and AI Analysis & Agents are
 specialist tools. Documentation, UI Kit, user settings and administration are
 system areas.
 
@@ -28,7 +28,7 @@ No experiment-type selector is required.
 - Keep data attached to explicit experimental targets.
 - Make report and export useful before NOMAD.
 - Keep NOMAD last and separate package creation from API submission.
-- Keep Knowledge Chat, AI Analysis and Agents distinct.
+- Keep Knowledge Assistant, AI Analysis and Agents distinct.
 - Require human confirmation for simulated knowledge actions.
 
 ## Repository structure
@@ -41,6 +41,8 @@ No experiment-type selector is required.
 - `docs/` contains concise source documentation.
 - `documentation.html` presents an in-product documentation summary.
 - `ui-kit.html` is the component reference.
+- the topbar search provides a shared local fuzzy index and optional in-page
+  filtering; Documentation and Lab Cabinet add domain-specific search.
 
 The monolithic JavaScript is a maintenance risk, but splitting it into a
 framework application is outside the current POC goal. New work should preserve
@@ -55,7 +57,7 @@ shared helpers and avoid page-specific visual themes.
 - local import preview and manual data entry;
 - comparisons, charts, reports and local exports;
 - NOMAD validation/package/API simulations;
-- shared evidence-linked Knowledge Chat;
+- shared evidence-linked Knowledge Assistant;
 - optional AI Analysis and controlled agents;
 - responsive compact UI and reusable UI Kit.
 

@@ -19,13 +19,13 @@
 <div class="app-main"><main class="page">
 <header class="page-header compact-header"><div><h1>How LabFlow works</h1><p>A simple researcher workflow on top, complete structured data underneath.</p></div><a class="button primary" href="documentation.html">Read documentation</a></header>
 <section class="panel flow-hero-simple"><div class="panel-header"><div class="panel-title"><strong>The everyday workflow</strong><small>What the researcher actually sees</small></div><span class="badge success">Six decisions</span></div><div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="simpleResearchGraph"></div><script id="simpleResearchGraph" type="text/graph">direction LR
-Workspace[Personal workspace] --> Project[Open a project]
-Project --> Setup[Choose a prepared setup]
-Setup --> Changes[Define what changes]
-Changes --> Run[Make and measure]
-Run --> Review[Review once]
-Review --> Output[Report / NOMAD]</script></div></section>
-<div class="section-title"><div><h2>From formulation to evidence</h2><p>The concrete scientific work behind “choose a prepared setup”.</p></div><span class="badge info">Reusable first · actual data later</span></div>
+Workspace[Research workspace] --> Experiment[Open an experiment]
+Experiment --> Solutions[Prepare solutions]
+Solutions --> Stacks[Create stacks]
+Stacks --> Processing[Perform processing]
+Processing --> Data[Add and analyse data]
+Data --> Output[Report / Export / NOMAD]</script></div></section>
+<div class="section-title"><div><h2>From formulation to evidence</h2><p>The concrete scientific work behind the default experiment workflow.</p></div><span class="badge info">Reusable first · actual data later</span></div>
 <section class="research-workflow" aria-label="Researcher formulation workflow">
   <article class="research-workflow-step">
     <header><span>01</span><div><strong>Define solvents</strong><small>Solution recipe</small></div></header>
@@ -37,7 +37,7 @@ Review --> Output[Report / NOMAD]</script></div></section>
   <article class="research-workflow-step">
     <header><span>02</span><div><strong>Define solutes</strong><small>Solution recipe / batch</small></div></header>
     <p>Add solutes and optional additives with quantities and target concentration.</p>
-    <div class="formula-graphic"><div><span>FAI</span><i></i><strong>1.00 eq</strong></div><div><span>PbI₂</span><i></i><strong>1.05 eq</strong></div><div><span>Target</span><i></i><strong>1.30 M</strong></div></div>
+    <div class="formula-graphic"><div><span>FAI</span><i></i><strong>1.00 eq</strong></div><div><span>PbI₂</span><i></i><strong>1.05 eq</strong></div><div><span>Target</span><i></i><strong>1.2 M</strong></div></div>
     <dl><div><dt>Output</dt><dd>Recipe</dd></div><div><dt>Actual</dt><dd>Prepared batch</dd></div></dl>
     <a href="solution.html">Review composition</a>
   </article>
@@ -59,15 +59,15 @@ Review --> Output[Report / NOMAD]</script></div></section>
 <div class="section-title"><div><h2>What data is created?</h2><p>Five families are enough to understand the system.</p></div></div>
 <section class="data-family-grid">
 <article><span class="data-family-number">1</span><div><strong>Ownership</strong><p>User, personal workspace and project answer: whose data is this and what research goal does it belong to?</p><small>UserAccount · Workspace · Project</small></div></article>
-<article><span class="data-family-number">2</span><div><strong>Reusable resources</strong><p>Definitions created once and selected in wizards.</p><small>Material · Solution · Substrate · Stack · Method · Process · Setup</small></div></article>
-<article><span class="data-family-number">3</span><div><strong>Experiment plan</strong><p>The question, conditions, sample groups and selected setup.</p><small>Experiment · SampleGroup · ParameterOverride</small></div></article>
+<article><span class="data-family-number">2</span><div><strong>Lab Cabinet resources</strong><p>Definitions created once and selected when the experiment needs them.</p><small>Material · Solution · Substrate · Stack · Protocol · Equipment</small></div></article>
+<article><span class="data-family-number">3</span><div><strong>Experiment plan</strong><p>The goal, selected solutions, stacks and optional comparison parameters.</p><small>Experiment · SampleGroup · ParameterOverride</small></div></article>
 <article><span class="data-family-number">4</span><div><strong>Physical work</strong><p>What was actually prepared, executed and produced.</p><small>MaterialLot · SolutionBatch · ProcessRun · Sample · Device</small></div></article>
 <article><span class="data-family-number">5</span><div><strong>Evidence and output</strong><p>Measurements, files, extracted results, conclusions, report and NOMAD package.</p><small>Measurement · DataFile · DerivedResult · Report · ExportPackage</small></div></article>
 </section>
 <div class="section-title"><div><h2>Reuse versus execution</h2><p>The distinction that prevents repeated typing.</p></div></div>
 <section class="split-equal concept-comparison"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Reusable definition</strong><small>Can be selected many times</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="definitionGraph"></div><script id="definitionGraph" type="text/graph">direction TB
 Recipe[Solution recipe] --> Batch[Prepared batch] : creates
-Process[Process template] --> Run[Process run] : executes
+Process[Protocol] --> Run[Process run] : executes
 Stack[Stack definition] --> Device[Device instance] : builds</script></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment evidence</strong><small>Belongs to one actual run</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="evidenceGraph"></div><script id="evidenceGraph" type="text/graph">direction TB
 Experiment[Experiment] --> Sample[Physical sample] : produces
 Sample --> Measurement[Measurement] : tested by
@@ -79,7 +79,7 @@ AI --> Suggestion[Suggestion + confidence]
 Suggestion --> Evidence[Evidence + warnings]
 Evidence --> Researcher[Researcher review]
 Researcher --> Apply[Accept / edit / reject]</script><div class="ai-flow-note"><span data-icon="info"></span><p>Deterministic calculations, original files and scientific records stay authoritative. AI only helps with planning, reading, checking, mapping and drafting.</p></div></div></section><div class="section-title"><div><h2>Complete data dictionary</h2><p>The documentation explains every object, important field and relationship in plain language.</p></div><a href="documentation.html#data">Open data documentation</a></div>
-<section class="panel"><div class="panel-body entity-shortcuts"><a href="documentation.html#data"><span data-icon="user"></span><strong>Ownership data</strong><small>Privacy and project scope</small></a><a href="documentation.html#data"><span data-icon="catalog"></span><strong>Library data</strong><small>Reusable definitions and lots</small></a><a href="documentation.html#data"><span data-icon="flask"></span><strong>Experiment data</strong><small>Plan, groups and actual runs</small></a><a href="documentation.html#data"><span data-icon="chart"></span><strong>Result data</strong><small>Measurements, files and metrics</small></a><a href="documentation.html#data"><span data-icon="download"></span><strong>Export data</strong><small>Reports and NOMAD packages</small></a></div></section>
+<section class="panel"><div class="panel-body entity-shortcuts"><a href="documentation.html#data"><span data-icon="user"></span><strong>Ownership data</strong><small>Privacy and project scope</small></a><a href="documentation.html#data"><span data-icon="catalog"></span><strong>Lab Cabinet data</strong><small>Reusable definitions and lots</small></a><a href="documentation.html#data"><span data-icon="flask"></span><strong>Experiment data</strong><small>Plan, groups and actual runs</small></a><a href="documentation.html#data"><span data-icon="chart"></span><strong>Result data</strong><small>Measurements, files and metrics</small></a><a href="documentation.html#data"><span data-icon="download"></span><strong>Export data</strong><small>Reports and NOMAD packages</small></a></div></section>
 </main></div>
 <div aria-live="polite" class="toast-region" id="toastRegion"></div>
 </body>

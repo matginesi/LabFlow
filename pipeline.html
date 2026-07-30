@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+  <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Guided experiment setup builder">
-  <title>Experiment setups · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/app.css">
+  <meta name="description" content="Reusable laboratory protocol editor">
+  <title>PSC n-i-p standard protocol · LabFlow</title>
+  <link href="assets/theme.css" rel="stylesheet">
+  <link href="assets/app.css" rel="stylesheet">
   <script defer src="assets/exporters.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
@@ -16,34 +16,47 @@
   <aside id="sidebar" class="sidebar"></aside>
   <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
   <div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><h1>Experiment setups</h1><p>A setup bundles the reusable choices that researchers should not re-enter for every experiment.</p></div><div class="page-actions"><button class="button" type="button" data-action="create-type" data-create-type="process">Create process only</button><button class="button primary" type="button" data-action="toast" data-message="Experiment setup saved">Save setup</button></div></header>
-<section class="wizard-help"><span data-icon="spark"></span><div><strong>One choice can replace five separate forms</strong><p>A setup references a process, substrate, solution recipe, stack and measurement plan. Experiments choose a setup and override only what changes.</p></div></section>
-<section class="template-wizard process-wizard-nav simple-steps"><button class="active" data-target="setupStart" data-template-step type="button"><span>01</span><strong>Starter</strong><small>Choose a baseline</small></button><button data-target="setupContents" data-template-step type="button"><span>02</span><strong>Contents</strong><small>Confirm resources</small></button><button data-target="setupFlow" data-template-step type="button"><span>03</span><strong>Workflow</strong><small>Arrange actions</small></button><button data-target="setupReview" data-template-step type="button"><span>04</span><strong>Review</strong><small>Publish setup</small></button></section>
-<div class="section-title" id="setupStart"><div><h2>1. Start from something proven</h2><p>Duplicate a starter instead of designing every object from scratch.</p></div></div>
-<section class="setup-gallery">
-  <button class="setup-product-card selected" type="button" data-action="process-preset" data-process-preset="baseline"><div class="setup-product-top"><span class="badge success">Recommended</span><strong class="process-name">Standard n-i-p PSC</strong><small>Complete device workflow</small></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><div class="setup-product-meta"><span>8 steps</span><span>J–V · EQE · XRD</span></div></button>
-  <button class="setup-product-card" type="button" data-action="process-preset" data-process-preset="film"><div class="setup-product-top"><span class="badge info">Screening</span><strong>Film optimisation</strong><small>Fast material comparison</small></div><div class="mini-stack"><span class="absorber">Perovskite film</span><span class="substrate">Glass / ITO</span></div><div class="setup-product-meta"><span>5 steps</span><span>XRD · PL · AFM</span></div></button>
-  <button class="setup-product-card" type="button" data-action="process-preset" data-process-preset="flex"><div class="setup-product-top"><span class="badge violet">Flexible</span><strong>Flexible p-i-n</strong><small>Low-temperature baseline</small></div><div class="mini-stack"><span class="contact">Ag</span><span class="transport">C₆₀</span><span class="absorber">PVK</span><span class="transport">NiOₓ</span><span class="substrate">PET/ITO</span></div><div class="setup-product-meta"><span>9 steps</span><span>J–V · bending test</span></div></button>
-</section>
-<div class="section-title" id="setupContents"><div><h2>2. Confirm what the setup includes</h2><p>Each tile opens a small dedicated wizard when a change is needed.</p></div></div>
-<section class="setup-content-grid">
-  <article><span data-icon="grid"></span><div><small>Substrate</small><strong>Glass / ITO</strong><em>25 × 25 mm · rigid</em></div><button class="button small" type="button" data-action="create-type" data-create-type="substrate">Change</button></article>
-  <article><span data-icon="spark"></span><div><small>Solution recipe</small><strong>Mixed-cation 1.30 M</strong><em>DMF:DMSO 4:1</em></div><button class="button small" type="button" data-action="create-type" data-create-type="solution">Change</button></article>
-  <article><span data-icon="grid"></span><div><small>Stack</small><strong>Baseline n-i-p v2</strong><em>5 ordered layers</em></div><button class="button small" type="button" data-action="create-type" data-create-type="stack">Edit layers</button></article>
-  <article><span data-icon="flow"></span><div><small>Process</small><strong>PSC baseline v4.1</strong><em>8 ordered actions</em></div><button class="button small" type="button" data-action="create-type" data-create-type="process">Edit process</button></article>
-  <article><span data-icon="chart"></span><div><small>Measurements</small><strong>J–V, EQE, XRD</strong><em>Required evidence plan</em></div><button class="button small" type="button" data-action="toast" data-message="Measurement plan editor opened">Change</button></article>
-</section>
-<div class="section-title" id="setupFlow"><div><h2>3. Review the graphical workflow</h2><p>Add a method-specific step only when the protocol genuinely differs.</p></div><button class="button small primary" type="button" data-action="process-add-step"><span data-icon="plus"></span>Add step</button></div>
-<section class="panel"><div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="setupProcessGraph"></div><script id="setupProcessGraph" type="text/graph">direction LR
-Inputs[Substrate + solution] --> Prepare[Prepare inputs]
-Prepare --> Coat[Spin coat absorber]
+    <header class="page-header compact-header">
+      <div><span class="eyebrow">Reusable laboratory protocol</span><h1>PSC n-i-p standard</h1><p>Review the approved sequence and expose only the parameters researchers may change inside an experiment.</p></div>
+      <div class="page-actions"><span class="badge success">Approved · v4.1</span><button class="button" type="button" data-action="toast" data-message="Protocol duplicated as a draft">Duplicate as draft</button><button class="button primary" type="button" data-action="toast" data-message="Protocol draft saved">Save draft</button></div>
+    </header>
+
+    <section class="wizard-help"><span data-icon="flow"></span><div><strong>Protocol is the reusable definition</strong><p>Processing is what the researcher performs in an experiment. An action is one recorded operation inside that processing run.</p></div></section>
+
+    <nav class="template-wizard process-wizard-nav simple-steps" aria-label="Protocol sections">
+      <button class="active" data-target="protocolOverview" data-template-step type="button"><span>01</span><strong>Overview</strong><small>Purpose &amp; inputs</small></button>
+      <button data-target="protocolResources" data-template-step type="button"><span>02</span><strong>Resources</strong><small>Referenced records</small></button>
+      <button data-target="protocolSteps" data-template-step type="button"><span>03</span><strong>Processing</strong><small>Ordered actions</small></button>
+      <button data-target="protocolReview" data-template-step type="button"><span>04</span><strong>Review</strong><small>Version &amp; evidence</small></button>
+    </nav>
+
+    <div class="section-title" id="protocolOverview"><div><h2>1. Approved baseline</h2><p>The POC uses this single researcher-validated default and does not invent other experiment types.</p></div></div>
+    <section class="panel setup-review-panel"><div class="panel-body"><div class="setup-review-visual"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">FA–Cs</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><div><span class="eyebrow">PRO-PSC-NIP-041</span><h2>From prepared solution to measured device</h2><p>1 substrate definition · FA–Cs 1.2 M · 1 stack baseline · 6 processing actions · J–V, EQE and XRD evidence</p></div></div></div></section>
+
+    <div class="section-title" id="protocolResources"><div><h2>2. Referenced resources</h2><p>Shared definitions come from the Lab Cabinet; experiment-specific values remain in the experiment.</p></div></div>
+    <section class="setup-content-grid">
+      <article><span data-icon="grid"></span><div><small>Substrate</small><strong>Glass / ITO</strong><em>25 × 25 mm · approved</em></div><a class="button small" href="catalogs.html">Open resource</a></article>
+      <article><span data-icon="spark"></span><div><small>Solution</small><strong>FA–Cs 1.2 M</strong><em>SOL-081 · DMF/DMSO</em></div><a class="button small" href="solution.html">Open solution</a></article>
+      <article><span data-icon="grid"></span><div><small>Stack</small><strong>PSC n-i-p standard</strong><em>S01 · 5 ordered layers</em></div><a class="button small" href="stack.html">Open stack</a></article>
+      <article><span data-icon="flask"></span><div><small>Equipment</small><strong>Spin Coater 01</strong><em>Lab 2 · available</em></div><a class="button small" href="catalogs.html">Open equipment</a></article>
+      <article><span data-icon="chart"></span><div><small>Evidence</small><strong>J–V, EQE, XRD</strong><em>Collected during the experiment</em></div><a class="button small" href="experiment.html#data">Open data step</a></article>
+    </section>
+
+    <div class="section-title" id="protocolSteps"><div><h2>3. Processing sequence</h2><p>Actions are ordered here; actual values and deviations are recorded in PSC-2026-041.</p></div><button class="button small primary" type="button" data-action="process-add-step"><span data-icon="plus"></span>Add action</button></div>
+    <section class="panel"><div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="protocolProcessGraph"></div><script id="protocolProcessGraph" type="text/graph">direction LR
+Inputs[Substrate + SOL-081] --> Clean[Clean substrate]
+Clean --> Treat[UV-Ozone]
+Treat --> Coat[Spin coat absorber]
 Coat --> Anneal[Anneal]
-Anneal --> Device[Complete device]
-Device --> Measure[Acquire evidence]
-Measure --> Output[Samples + results]</script></div></section>
-<section class="split setup-detail-split"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Variable parameters</strong><small>Only these appear in the experiment planner</small></div></div><div class="panel-body variable-chip-list"><span>Spin speed</span><span>Annealing temperature</span><span>Antisolvent timing</span><button type="button" data-action="toast" data-message="Variable selector opened">+ Add variable</button></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Expected evidence</strong><small>Collected progressively</small></div></div><div class="panel-body evidence-grid"><span>Actual parameters</span><span>Sample IDs</span><span>Original files</span><span>Instrument metadata</span></div></article></section>
-<div class="section-title" id="setupReview"><div><h2>4. Publish the reusable setup</h2><p>A new immutable version can be selected by future experiments.</p></div></div>
-<section class="panel setup-review-panel"><div class="panel-body"><div class="setup-review-visual"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><div><span class="eyebrow">Standard n-i-p PSC</span><h2>Ready for the experiment wizard</h2><p>1 substrate · 1 solution recipe · 1 stack · 8 process steps · 3 required measurement types</p></div></div><div class="wizard-checklist"><div><span data-icon="check"></span><span><strong>Reusable references</strong><small>No physical results stored here</small></span></div><div><span data-icon="check"></span><span><strong>Experiment variables</strong><small>Three parameters available for comparisons</small></span></div><div><span data-icon="check"></span><span><strong>NOMAD mapping</strong><small>Fields will be collected during the run</small></span></div></div></div><div class="panel-footer"><a class="button" href="catalogs.html">Back to Library</a><button class="button primary" type="button" data-action="toast" data-message="Setup version 2.1 published">Publish setup v2.1</button></div></section>
+Anneal --> Finish[HTL + Au]
+Finish --> Measure[J–V + EQE + XRD]</script></div></section>
+    <section class="split setup-detail-split">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment variables</strong><small>Hidden until multiple stacks are planned</small></div></div><div class="panel-body variable-chip-list"><span>Spin speed</span><span>Annealing temperature</span><span>Antisolvent timing</span><button type="button" data-action="toast" data-message="Variable selector opened">+ Add variable</button></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Required evidence</strong><small>Collected progressively</small></div></div><div class="panel-body evidence-grid"><span>Actual parameters</span><span>Sample IDs</span><span>Original files</span><span>Instrument metadata</span></div></article>
+    </section>
+
+    <div class="section-title" id="protocolReview"><div><h2>4. Version review</h2><p>Publishing creates an immutable reusable version; it does not alter active experiments.</p></div></div>
+    <section class="panel setup-review-panel"><div class="panel-body"><div class="wizard-checklist"><div><span data-icon="check"></span><span><strong>Lab Cabinet references</strong><small>Shared definitions stay reusable</small></span></div><div><span data-icon="check"></span><span><strong>Processing boundary</strong><small>Actual values remain experiment records</small></span></div><div><span data-icon="check"></span><span><strong>NOMAD preparation</strong><small>Required fields are collected during the run</small></span></div></div></div><div class="panel-footer"><a class="button" href="catalogs.html">Back to Lab Cabinet</a><button class="button primary" type="button" data-action="toast" data-message="Protocol v4.2 published">Publish protocol v4.2</button></div></section>
   </main></div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>
 </body>
