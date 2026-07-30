@@ -672,6 +672,65 @@ document.addEventListener('DOMContentLoaded', () => {
   function nomadArchive(){return `data:\n  m_def: ../upload/raw/labflow.schema.archive.yaml#PerovskiteExperiment\n${toYaml({experiment_id:'EXP-2026-052',title:'Mixed-cation absorber optimisation',...demoGraph.definitions,...demoGraph.instances,...demoGraph.execution,...demoGraph.measurements},2)}\n`;}
   function buildNomadZip(){const manifest={created_at:new Date().toISOString(),source:'LabFlow static POC',project_id:currentProject().id,project_name:currentProject().name,experiment:'EXP-2026-052',owner_id:currentUser().id,workspace_id:currentUser().workspaceId,files:['labflow.schema.archive.yaml','experiment.archive.yaml','raw/README.md']};return X.zipStore([{name:'README.md',data:'# LabFlow NOMAD package\nGenerated locally from the static POC.\n'},{name:'labflow.schema.archive.yaml',data:nomadSchema()},{name:'experiment.archive.yaml',data:nomadArchive()},{name:'manifest.json',data:JSON.stringify(manifest,null,2)},{name:'raw/README.md',data:'Place original measurement files here. The POC only stores references.'}]);}
 
+  const solutionData = {
+    'SOL-001': {
+      id: 'SOL-001',
+      name: 'FA0.85Cs0.15PbI3 Precursor',
+      description: 'Soluzione precursore per assorbitore perovskite',
+      precursors: [
+        { name: 'FAI', formula: 'CH(NH2)2I', ratio: '0.85', concentration: '1.275 M' },
+        { name: 'CsI', formula: 'CsI', ratio: '0.15', concentration: '0.225 M' },
+        { name: 'PbI2', formula: 'PbI2', ratio: '1.0', concentration: '1.5 M' },
+      ],
+      solvents: [
+        { name: 'DMF', ratio: '4', volume: '4 mL' },
+        { name: 'DMSO', ratio: '1', volume: '1 mL' },
+      ],
+      properties: {
+        totalConcentration: '1.5 M',
+        volume: '5 mL',
+        molarRatio: 'FAI:CsI:PbI2 = 0.85:0.15:1.0',
+        solventRatio: 'DMF:DMSO 4:1 (v/v)',
+      }
+    }
+  };
+
+  function renderSolutionPage(solutionId) {
+    const data = solutionData[solutionId];
+    if (!data) { toast('Solution not found', 'danger', `No data for ${solutionId}`); return; }
+    const idEl = $('#solutionId'); if (idEl) idEl.textContent = data.id;
+    const nameEl = $('#solutionName'); if (nameEl) nameEl.textContent = data.name;
+    const descEl = $('#solutionDescription'); if (descEl) descEl.textContent = data.description;
+    const outputEl = $('#solutionOutputLabel');
+    if (outputEl) outputEl.textContent = `${data.name} ${data.properties.totalConcentration}`;
+    const inputsEl = $('#solutionInputs');
+    if (inputsEl) inputsEl.innerHTML = data.precursors.map(p => `<span>${escapeHtml(p.name)}</span>`).join('');
+    const precursorsEl = $('#solutionPrecursors');
+    if (precursorsEl) {
+      precursorsEl.innerHTML = `<thead><tr><th>Name</th><th>Formula</th><th>Ratio</th><th>Concentration</th></tr></thead><tbody>${data.precursors.map(p =>
+        `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td class="mono">${escapeHtml(p.formula)}</td><td>${escapeHtml(p.ratio)}</td><td>${escapeHtml(p.concentration)}</td></tr>`
+      ).join('')}</tbody>`;
+    }
+    const solventsEl = $('#solutionSolvents');
+    if (solventsEl) {
+      solventsEl.innerHTML = `<thead><tr><th>Name</th><th>Ratio</th><th>Volume</th></tr></thead><tbody>${data.solvents.map(s =>
+        `<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${escapeHtml(s.ratio)}</td><td>${escapeHtml(s.volume)}</td></tr>`
+      ).join('')}</tbody>`;
+    }
+    const propsEl = $('#solutionProperties');
+    if (propsEl) {
+      const p = data.properties;
+      propsEl.innerHTML = [
+        ['Concentration', p.totalConcentration],
+        ['Volume', p.volume],
+        ['Molar Ratio', p.molarRatio],
+        ['Solvent Ratio', p.solventRatio],
+      ].map(([label, value]) =>
+        `<div class="panel"><div class="panel-body"><strong>${escapeHtml(label)}</strong><br><span>${escapeHtml(value)}</span></div></div>`
+      ).join('');
+    }
+  }
+
   const processStepState={step:0,method:'Spin coating'};
   function mountProcessStepWizard(){if($('#processStepWizard'))return;const wrap=document.createElement('div');wrap.id='processStepWizard';wrap.className='overlay';wrap.hidden=true;wrap.innerHTML='<section class="modal step-wizard"><div class="panel-header"><div class="panel-title"><strong>Add a work step</strong><small>Choose the action, then enter only the values the researcher needs.</small></div><button class="icon-button" type="button" data-action="close">×</button></div><div class="create-progress" id="stepProgress"></div><div class="panel-body" id="stepWizardBody"></div><div class="panel-footer" id="stepWizardFooter"></div></section>';document.body.append(wrap);}
   function openProcessStepWizard(){processStepState.step=0;openOverlay('processStepWizard');renderProcessStepWizard();}
@@ -1068,6 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='exports')initReportImages(); if(page==='progetti'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
+  if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}
   let storedTheme = 'light'; try { storedTheme = localStorage.getItem('labflow-theme') || 'light'; } catch (_) {}
   setTheme(storedTheme);
   renderEntity(page==='flow'?'UserAccount':'IonDefinition'); renderDocumentation('overview');
