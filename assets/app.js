@@ -610,19 +610,57 @@ document.addEventListener('DOMContentLoaded', () => {
     measurements:{records:[{id:'MEAS-JV-052-03',target:'DEV-052-B04-03',method:'JV',instrument:'JV-01',metrics:{Voc_V:1.14,Jsc_mA_cm2:23.2,FF_percent:81,PCE_percent:21.4}},{id:'MEAS-EQE-052-03',target:'DEV-052-B04-03',method:'EQE',instrument:'EQE-02',metrics:{integrated_Jsc_mA_cm2:22.8}},{id:'MEAS-XRD-052-B04',target:'S-052-B04',method:'XRD',instrument:'XRD-03',metrics:{main_peak_2theta:14.12}}],files:[{name:'DEV-052-B04-03-jv.csv',role:'raw'},{name:'DEV-052-B04-03-eqe.csv',role:'raw'},{name:'S-052-B04.xye',role:'raw'}]},
     reports:{id:'LF-RPT-2026-052',status:'Draft',quality_score:.96}
   };
-  const demoStack = {
-    id: 'STK-001',
-    name: 'FA0.85Cs0.15PbI3',
-    layers: [
-      { type: 'substrate', label: 'FTO/Glass', thickness: '2.2 mm' },
-      { type: 'transport', label: 'TiO2 Compact', thickness: '30 nm' },
-      { type: 'transport', label: 'TiO2 Mesoporous', thickness: '150 nm' },
-      { type: 'absorber', label: 'FA0.85Cs0.15PbI3', thickness: '500 nm' },
-      { type: 'transport', label: 'Spiro-OMeTAD', thickness: '200 nm' },
-      { type: 'contact', label: 'Au', thickness: '80 nm' },
-    ],
-    solutions: ['SOL-001', 'SOL-002'],
-    conditions: { spinSpeed: '2000 rpm', annealTemp: '150°C', atmosphere: 'N2' }
+  const stackData = {
+    'STK-001': {
+      id: 'STK-001',
+      name: 'FA0.85Cs0.15PbI3',
+      description: 'Stack perovskite a base formamidinio/cesio per cella n-i-p',
+      dateCreated: '2026-07-15',
+      layers: [
+        { type: 'substrate', label: 'FTO/Glass', thickness: '2.2 mm' },
+        { type: 'transport', label: 'TiO2 Compact', thickness: '30 nm' },
+        { type: 'transport', label: 'TiO2 Mesoporous', thickness: '150 nm' },
+        { type: 'absorber', label: 'FA0.85Cs0.15PbI3', thickness: '500 nm' },
+        { type: 'transport', label: 'Spiro-OMeTAD', thickness: '200 nm' },
+        { type: 'contact', label: 'Au', thickness: '80 nm' },
+      ],
+      solutions: [
+        { id: 'SOL-001', name: 'FA0.85Cs0.15PbI3 Precursor', role: 'Absorber precursor', volume: '1.5 mL' },
+        { id: 'SOL-002', name: 'Spiro-OMeTAD HTL', role: 'Hole transport', volume: '1.0 mL' },
+      ],
+      materials: [
+        { name: 'FAI', formula: 'CH(NH2)2I', supplier: 'GreatCell Solar', purity: '99.99%', lot: 'FAI-2204' },
+        { name: 'CsI', formula: 'CsI', supplier: 'Sigma Aldrich', purity: '99.999%', lot: 'CSI-0312' },
+        { name: 'PbI2', formula: 'PbI2', supplier: 'TCI', purity: '99.99%', lot: 'PBI2-1187' },
+        { name: 'Spiro-OMeTAD', formula: 'C81H68N4O8', supplier: 'Merck', purity: '99.8%', lot: 'SPI-4056' },
+      ],
+      conditions: {
+        spinSpeed: '2000 rpm',
+        spinTime: '30 s',
+        annealTemp: '150 °C',
+        annealTime: '20 min',
+        atmosphere: 'N2 glovebox',
+        humidity: '< 0.1 ppm',
+      },
+      pipeline: [
+        { step: 1, name: 'Substrate cleaning', duration: '15 min', operator: 'ricercatore' },
+        { step: 2, name: 'TiO2 Compact deposition', duration: '30 min', operator: 'ricercatore' },
+        { step: 3, name: 'TiO2 Mesoporous deposition', duration: '45 min', operator: 'ricercatore' },
+        { step: 4, name: 'Perovskite spin-coating', duration: '5 min', operator: 'ricercatore' },
+        { step: 5, name: 'Perovskite annealing', duration: '30 min', operator: 'ricercatore' },
+        { step: 6, name: 'Spiro-OMeTAD deposition', duration: '5 min', operator: 'ricercatore' },
+        { step: 7, name: 'Au contact evaporation', duration: '20 min', operator: 'tecnico' },
+      ],
+      actions: [
+        { step: 1, task: 'Pulire substrate con acetone e IPA', done: true },
+        { step: 2, task: 'Preparare soluzione TiO2 Compact', done: true },
+        { step: 3, task: 'Preparare soluzione TiO2 Mesoporous', done: true },
+        { step: 4, task: 'Filtrare soluzione perovskite con filtro 0.45 µm', done: false },
+        { step: 5, task: 'Accendere hotplate a 150°C', done: false },
+        { step: 6, task: 'Preparare soluzione Spiro-OMeTAD', done: false },
+        { step: 7, task: 'Caricare substrate nell\'evaporatore', done: false },
+      ],
+    }
   };
   function selectedExport(){const out={ownership:demoGraph.ownership};$$('[data-export-part]').forEach(box=>{if(box.checked)out[box.dataset.exportPart]=demoGraph[box.dataset.exportPart];});return out;}
   function yamlScalar(v){if(v===null)return'null';if(typeof v==='number'||typeof v==='boolean')return String(v);return `'${String(v).replaceAll("'","''")}'`;}
@@ -787,6 +825,65 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
+  /* Stack page rendering */
+  function renderStackPage(stackId) {
+    const stack = stackData[stackId];
+    if (!stack) { toast('Stack not found', 'danger', `No data for ${stackId}`); return; }
+    const idEl = $('#stackId'); if (idEl) idEl.textContent = stack.id;
+    const nameEl = $('#stackName'); if (nameEl) nameEl.textContent = stack.name;
+    const descEl = $('#stackDescription'); if (descEl) descEl.textContent = stack.description;
+    renderStackVisual(stack);
+    renderStackSolutions(stack);
+    renderStackMaterials(stack);
+    renderStackConditions(stack);
+    renderStackPipeline(stack);
+    renderStackActions(stack);
+    const solCount = $('#solutionCount'); if (solCount) solCount.textContent = stack.solutions.length;
+    const matCount = $('#materialCount'); if (matCount) matCount.textContent = stack.materials.length;
+  }
+
+  function renderStackVisual(stack) {
+    const root = $('#stackVisual'); if (!root) return;
+    root.innerHTML = `<div class="layer-stack">${stack.layers.map(l =>
+      `<div class="layer-band ${l.type}"><strong>${escapeHtml(l.label)}</strong><small>${escapeHtml(l.thickness)}</small></div>`
+    ).join('')}</div>`;
+  }
+
+  function renderStackSolutions(stack) {
+    const root = $('#stackSolutions'); if (!root) return;
+    root.innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Volume</th></tr></thead><tbody>${stack.solutions.map(s =>
+      `<tr><td><span class="mono">${escapeHtml(s.id)}</span></td><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.role)}</td><td>${escapeHtml(s.volume)}</td></tr>`
+    ).join('')}</tbody></table></div>`;
+  }
+
+  function renderStackMaterials(stack) {
+    const root = $('#stackMaterials'); if (!root) return;
+    root.innerHTML = `<div class="table-wrap"><table class="data-table"><thead><tr><th>Name</th><th>Formula</th><th>Supplier</th><th>Purity</th><th>Lot</th></tr></thead><tbody>${stack.materials.map(m =>
+      `<tr><td><strong>${escapeHtml(m.name)}</strong></td><td class="mono">${escapeHtml(m.formula)}</td><td>${escapeHtml(m.supplier)}</td><td>${escapeHtml(m.purity)}</td><td class="mono">${escapeHtml(m.lot)}</td></tr>`
+    ).join('')}</tbody></table></div>`;
+  }
+
+  function renderStackConditions(stack) {
+    const root = $('#stackConditions'); if (!root) return;
+    root.innerHTML = `<div class="panel"><div class="panel-body"><dl class="key-values">${Object.entries(stack.conditions).map(([key, value]) =>
+      `<div><dt>${escapeHtml(key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()))}</dt><dd>${escapeHtml(value)}</dd></div>`
+    ).join('')}</dl></div></div>`;
+  }
+
+  function renderStackPipeline(stack) {
+    const root = $('#stackPipeline'); if (!root) return;
+    root.innerHTML = `<div class="trace-chain">${stack.pipeline.map(p =>
+      `<div class="trace-item"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.duration)} · ${escapeHtml(p.operator)}</small></div>`
+    ).join('<div class="trace-arrow">→</div>')}</div>`;
+  }
+
+  function renderStackActions(stack) {
+    const root = $('#stackActions'); if (!root) return;
+    root.innerHTML = `<div class="stack-sm">${stack.actions.map(a =>
+      `<label class="check-row"><input type="checkbox" ${a.done ? 'checked' : ''}><span><strong>Step ${a.step}</strong><small>${escapeHtml(a.task)}</small></span></label>`
+    ).join('')}</div>`;
+  }
+
   /* Events */
   document.addEventListener('click', event => {
     const button = event.target.closest('button,[data-action],.tab-button,.process-node,.entity-node,.measurement-card,.condition-card,[data-graph-node-id]'); if (!button) return;
@@ -908,7 +1005,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='process-preset'){$$('.template-preset').forEach(x=>x.classList.toggle('selected',x===button));const names={baseline:'PSC baseline',film:'Film screening',flex:'Flexible p-i-n'};$$('.process-name').forEach(x=>x.textContent=names[button.dataset.processPreset]||'Process template');toast('Starter selected','success','The process builder now uses a personal editable copy.');}
     if(action==='experiment-template'){$$('.setup-choice-card').forEach(x=>x.classList.toggle('selected',x===button));if(button.dataset.template==='custom'){location.href='pipeline.html';return;}showWizardStep(1);toast('Experiment setup selected','success','Substrate, solution, stack, process and measurements are now prefilled.');}
     if(action==='experiment-add-group'){const root=$('#experimentLanes');if(root){const code=String.fromCharCode(65+root.children.length);const item=document.createElement('article');item.className='condition-visual-card';item.innerHTML=`<span class="condition-code">${code}</span><div><small>New condition</small><strong>Set value</strong></div><div class="sample-dots labeled"><span>${code}01</span><span>${code}02</span><span>${code}03</span></div>`;root.append(item);}}
-    if(action==='add-stack-to-experiment'){const root=$('#experimentStackList');if(root&&!root.querySelector('.stack-card')){const card=document.createElement('article');card.className='stack-card panel';card.innerHTML=`<div class="stack-card-head"><strong>${escapeHtml(demoStack.name)}</strong><span class="badge info">${demoStack.id}</span></div><div class="mini-stack">${demoStack.layers.map(l=>`<span class="${l.type}">${escapeHtml(l.label.split(' ')[0])}</span>`).join('')}</div><div class="stack-card-meta"><span><b>${demoStack.layers.length}</b> layers</span><span><b>${demoStack.solutions.length}</b> solutions</span><span class="badge success">${demoStack.conditions.spinSpeed}</span></div>`;root.append(card);toast('Stack added','success',`${demoStack.name} linked to this experiment.`);}else{toast('Stack already added','info','Only one stack per experiment in this POC.');}}
+    if(action==='use-stack'){const sId=$('#stackId')?.textContent||'STK-001';location.href=`experiment.html?stack=${encodeURIComponent(sId)}`;}
+    if(action==='add-stack-to-experiment'){const s=stackData['STK-001'];const root=$('#experimentStackList');if(root&&!root.querySelector('.stack-card')){const card=document.createElement('article');card.className='stack-card panel';card.innerHTML=`<div class="stack-card-head"><strong>${escapeHtml(s.name)}</strong><span class="badge info">${s.id}</span></div><div class="mini-stack">${s.layers.map(l=>`<span class="${l.type}">${escapeHtml(l.label.split(' ')[0])}</span>`).join('')}</div><div class="stack-card-meta"><span><b>${s.layers.length}</b> layers</span><span><b>${s.solutions.length}</b> solutions</span><span class="badge success">${s.conditions.spinSpeed}</span></div>`;root.append(card);toast('Stack added','success',`${s.name} linked to this experiment.`);}else{toast('Stack already added','info','Only one stack per experiment in this POC.');}}
     if(action==='add-pipeline-step'){const root=$('#pipelineSteps');if(root){const n=root.children.length+1;const step=document.createElement('div');step.className='pipeline-step';step.innerHTML=`<span class="pipeline-step-num">${n}</span><input class="input" placeholder="Describe this step" value="Step ${n}"><select class="input"><option>Operator</option><option>Automation</option><option>Measurement</option></select><button class="icon-button small" type="button" data-action="remove-pipeline-step">×</button>`;root.append(step);toast('Pipeline step added','success',`Step ${n} added to the workflow.`);}}
     if(action==='remove-pipeline-step'){button.closest('.pipeline-step')?.remove();const steps=$$('.pipeline-step');steps.forEach((s,i)=>s.querySelector('.pipeline-step-num').textContent=i+1);}
     if(action==='run-task'){button.classList.toggle('complete');button.classList.remove('active');const tasks=$$('.run-task'),done=tasks.filter(x=>x.classList.contains('complete')).length;const badge=$('#makeProgressBadge');if(badge)badge.textContent=`${done} / ${tasks.length}`;toast(button.classList.contains('complete')?'Step completed':'Step reopened',button.classList.contains('complete')?'success':'info',button.querySelector('strong')?.textContent||'Process step');}
@@ -969,6 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
 
   mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='exports')initReportImages(); if(page==='progetti'&&location.hash==='#new')setTimeout(openProjectWizard,0);
+  if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
   let storedTheme = 'light'; try { storedTheme = localStorage.getItem('labflow-theme') || 'light'; } catch (_) {}
   setTheme(storedTheme);
   renderEntity(page==='flow'?'UserAccount':'IonDefinition'); renderDocumentation('overview');

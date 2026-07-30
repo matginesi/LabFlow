@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Stack detail">
+  <title>Stack · LabFlow</title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="stack-detail">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+
+  <div class="app-main">
+    <main class="page stack-page">
+      <header class="page-header">
+        <div>
+          <span class="eyebrow">Stack <span class="mono" id="stackId">STK-001</span></span>
+          <h1 id="stackName">FA0.85Cs0.15PbI3</h1>
+          <p id="stackDescription">Stack perovskite a base formamidinio/cesio per cella n-i-p</p>
+        </div>
+        <div class="page-actions">
+          <button class="button" type="button" data-action="edit-stack"><span data-icon="code"></span>Modifica</button>
+          <button class="button primary" type="button" data-action="use-stack"><span data-icon="flask"></span>Usa in esperimento</button>
+        </div>
+      </header>
+
+      <!-- Layer stack visual -->
+      <div class="stack-visual" id="stackVisual"></div>
+
+      <!-- Tabs -->
+      <div class="tabs" data-tabs="stack">
+        <button class="tab-button active" type="button" data-tab="solutions">Soluzioni <span class="badge" id="solutionCount">2</span></button>
+        <button class="tab-button" type="button" data-tab="materials">Materiali <span class="badge" id="materialCount">4</span></button>
+        <button class="tab-button" type="button" data-tab="conditions">Condizioni</button>
+        <button class="tab-button" type="button" data-tab="pipeline">Pipeline</button>
+        <button class="tab-button" type="button" data-tab="actions">Azioni</button>
+      </div>
+
+      <!-- Solutions tab -->
+      <div class="tab-panel active" data-tab-panel="solutions" id="stackSolutions">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Materials tab -->
+      <div class="tab-panel" data-tab-panel="materials" id="stackMaterials" hidden>
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Conditions tab -->
+      <div class="tab-panel" data-tab-panel="conditions" id="stackConditions" hidden>
+        <!-- Rendered by JS: key-value grid of conditions -->
+      </div>
+
+      <!-- Pipeline tab -->
+      <div class="tab-panel" data-tab-panel="pipeline" id="stackPipeline" hidden>
+        <!-- Rendered by JS: visual pipeline graph -->
+      </div>
+
+      <!-- Actions tab -->
+      <div class="tab-panel" data-tab-panel="actions" id="stackActions" hidden>
+        <!-- Rendered by JS: operator checklist -->
+      </div>
+    </main>
+  </div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+</body>
+</html>
