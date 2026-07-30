@@ -786,7 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='sidebar') document.body.classList.toggle('sidebar-open');
     if(action==='user-toggle'){const pop=$('#userPopover'),project=$('#projectPopover');if(project)project.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
     if(action==='project-toggle'){const pop=$('#projectPopover'),user=$('#userPopover');if(user)user.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
-    if(action==='project-select'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} if(page==='projects')location.href='project.html';else location.reload();}
+    if(action==='project-select'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} if(page==='progetti')location.href='project.html';else location.reload();}
     if(action==='project-new'){location.href='projects.html#new';}
     if(action==='project-open'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} location.href='project.html';}
     if(action==='project-wizard'){openProjectWizard();}
@@ -933,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('focusin',event=>{if(event.target.matches('[data-sheet-cell]'))selectCell(+event.target.dataset.row,+event.target.dataset.col);});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
 
-  mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='report')initReportImages(); if(page==='projects'&&location.hash==='#new')setTimeout(openProjectWizard,0);
+  mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='exports')initReportImages(); if(page==='progetti'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   let storedTheme = 'light'; try { storedTheme = localStorage.getItem('labflow-theme') || 'light'; } catch (_) {}
   setTheme(storedTheme);
   renderEntity(page==='flow'?'UserAccount':'IonDefinition'); renderDocumentation('overview');
