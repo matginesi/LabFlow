@@ -65,6 +65,36 @@
 </div>
 </aside>
 </div>
+<section class="panel" id="planStackSection">
+  <div class="panel-header">
+    <div class="panel-title"><strong>Material Stack</strong><small>Definisci gli stack di materiali per questo esperimento</small></div>
+    <button class="button small" type="button" data-action="add-stack-to-experiment"><span data-icon="plus"></span>Aggiungi stack</button>
+  </div>
+  <div class="panel-body" id="experimentStackList">
+    <!-- Stack cards rendered by JS -->
+  </div>
+</section>
+<section class="panel" id="planConditionsSection">
+  <div class="panel-header">
+    <div class="panel-title"><strong>Condizioni</strong><small>Parametri di processo per questo stack</small></div>
+  </div>
+  <div class="panel-body">
+    <div class="condition-planner" id="conditionPlanner">
+      <!-- Existing condition cards enhanced -->
+    </div>
+  </div>
+</section>
+<section class="panel" id="planPipelineSection">
+  <div class="panel-header">
+    <div class="panel-title"><strong>Pipeline & Azioni</strong><small>Sequenza operativa e checklist operatore</small></div>
+    <button class="button small" type="button" data-action="add-pipeline-step"><span data-icon="plus"></span>Aggiungi step</button>
+  </div>
+  <div class="panel-body">
+    <div class="pipeline-steps" id="pipelineSteps">
+      <!-- Pipeline steps rendered by JS -->
+    </div>
+  </div>
+</section>
 <article class="ai-inline-assist">
 <div class="ai-inline-icon"><span data-icon="spark"></span></div>
 <div class="ai-inline-copy"><span class="eyebrow">Optional AI suggestion</span><strong>Use 1000, 1500 and 2000 rpm with three replicates</strong><p>Based on the selected setup and the simulated previous experiment EXP-2026-048. This keeps one variable and gives a clear baseline, focus and upper bound.</p><div class="ai-evidence-row"><span class="badge success">Confidence 88%</span><span>Evidence: EXP-2026-048 · PSC baseline v4.1</span></div></div>

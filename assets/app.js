@@ -610,6 +610,20 @@ document.addEventListener('DOMContentLoaded', () => {
     measurements:{records:[{id:'MEAS-JV-052-03',target:'DEV-052-B04-03',method:'JV',instrument:'JV-01',metrics:{Voc_V:1.14,Jsc_mA_cm2:23.2,FF_percent:81,PCE_percent:21.4}},{id:'MEAS-EQE-052-03',target:'DEV-052-B04-03',method:'EQE',instrument:'EQE-02',metrics:{integrated_Jsc_mA_cm2:22.8}},{id:'MEAS-XRD-052-B04',target:'S-052-B04',method:'XRD',instrument:'XRD-03',metrics:{main_peak_2theta:14.12}}],files:[{name:'DEV-052-B04-03-jv.csv',role:'raw'},{name:'DEV-052-B04-03-eqe.csv',role:'raw'},{name:'S-052-B04.xye',role:'raw'}]},
     reports:{id:'LF-RPT-2026-052',status:'Draft',quality_score:.96}
   };
+  const demoStack = {
+    id: 'STK-001',
+    name: 'FA0.85Cs0.15PbI3',
+    layers: [
+      { type: 'substrate', label: 'FTO/Glass', thickness: '2.2 mm' },
+      { type: 'transport', label: 'TiO2 Compact', thickness: '30 nm' },
+      { type: 'transport', label: 'TiO2 Mesoporous', thickness: '150 nm' },
+      { type: 'absorber', label: 'FA0.85Cs0.15PbI3', thickness: '500 nm' },
+      { type: 'transport', label: 'Spiro-OMeTAD', thickness: '200 nm' },
+      { type: 'contact', label: 'Au', thickness: '80 nm' },
+    ],
+    solutions: ['SOL-001', 'SOL-002'],
+    conditions: { spinSpeed: '2000 rpm', annealTemp: '150°C', atmosphere: 'N2' }
+  };
   function selectedExport(){const out={ownership:demoGraph.ownership};$$('[data-export-part]').forEach(box=>{if(box.checked)out[box.dataset.exportPart]=demoGraph[box.dataset.exportPart];});return out;}
   function yamlScalar(v){if(v===null)return'null';if(typeof v==='number'||typeof v==='boolean')return String(v);return `'${String(v).replaceAll("'","''")}'`;}
   function toYaml(v,indent=0){const pad=' '.repeat(indent);if(Array.isArray(v))return v.map(x=>x&&typeof x==='object'?`${pad}-\n${toYaml(x,indent+2)}`:`${pad}- ${yamlScalar(x)}`).join('\n');if(v&&typeof v==='object')return Object.entries(v).map(([k,x])=>x&&typeof x==='object'?`${pad}${k}:\n${toYaml(x,indent+2)}`:`${pad}${k}: ${yamlScalar(x)}`).join('\n');return `${pad}${yamlScalar(v)}`;}
@@ -894,6 +908,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='process-preset'){$$('.template-preset').forEach(x=>x.classList.toggle('selected',x===button));const names={baseline:'PSC baseline',film:'Film screening',flex:'Flexible p-i-n'};$$('.process-name').forEach(x=>x.textContent=names[button.dataset.processPreset]||'Process template');toast('Starter selected','success','The process builder now uses a personal editable copy.');}
     if(action==='experiment-template'){$$('.setup-choice-card').forEach(x=>x.classList.toggle('selected',x===button));if(button.dataset.template==='custom'){location.href='pipeline.html';return;}showWizardStep(1);toast('Experiment setup selected','success','Substrate, solution, stack, process and measurements are now prefilled.');}
     if(action==='experiment-add-group'){const root=$('#experimentLanes');if(root){const code=String.fromCharCode(65+root.children.length);const item=document.createElement('article');item.className='condition-visual-card';item.innerHTML=`<span class="condition-code">${code}</span><div><small>New condition</small><strong>Set value</strong></div><div class="sample-dots labeled"><span>${code}01</span><span>${code}02</span><span>${code}03</span></div>`;root.append(item);}}
+    if(action==='add-stack-to-experiment'){const root=$('#experimentStackList');if(root&&!root.querySelector('.stack-card')){const card=document.createElement('article');card.className='stack-card panel';card.innerHTML=`<div class="stack-card-head"><strong>${escapeHtml(demoStack.name)}</strong><span class="badge info">${demoStack.id}</span></div><div class="mini-stack">${demoStack.layers.map(l=>`<span class="${l.type}">${escapeHtml(l.label.split(' ')[0])}</span>`).join('')}</div><div class="stack-card-meta"><span><b>${demoStack.layers.length}</b> layers</span><span><b>${demoStack.solutions.length}</b> solutions</span><span class="badge success">${demoStack.conditions.spinSpeed}</span></div>`;root.append(card);toast('Stack added','success',`${demoStack.name} linked to this experiment.`);}else{toast('Stack already added','info','Only one stack per experiment in this POC.');}}
+    if(action==='add-pipeline-step'){const root=$('#pipelineSteps');if(root){const n=root.children.length+1;const step=document.createElement('div');step.className='pipeline-step';step.innerHTML=`<span class="pipeline-step-num">${n}</span><input class="input" placeholder="Describe this step" value="Step ${n}"><select class="input"><option>Operator</option><option>Automation</option><option>Measurement</option></select><button class="icon-button small" type="button" data-action="remove-pipeline-step">×</button>`;root.append(step);toast('Pipeline step added','success',`Step ${n} added to the workflow.`);}}
+    if(action==='remove-pipeline-step'){button.closest('.pipeline-step')?.remove();const steps=$$('.pipeline-step');steps.forEach((s,i)=>s.querySelector('.pipeline-step-num').textContent=i+1);}
     if(action==='run-task'){button.classList.toggle('complete');button.classList.remove('active');const tasks=$$('.run-task'),done=tasks.filter(x=>x.classList.contains('complete')).length;const badge=$('#makeProgressBadge');if(badge)badge.textContent=`${done} / ${tasks.length}`;toast(button.classList.contains('complete')?'Step completed':'Step reopened',button.classList.contains('complete')?'success':'info',button.querySelector('strong')?.textContent||'Process step');}
     if(button.matches('[data-graph-node-id]')){graphEditorState.selected=button.dataset.graphNodeId;renderGraphEditor();}
     if(button.classList.contains('measurement-card'))button.classList.toggle('selected');
