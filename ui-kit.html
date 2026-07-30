@@ -42,6 +42,156 @@ Batch --> Run[Process run] : consumed by
 Run --> Sample[Sample] : produces
 Sample --> Result[Result] : characterised by</script></div></article>
 </section>
+<div class="section-title"><div><h2>Stack management</h2><p>Full stack detail with layer visual, solutions, materials, conditions, pipeline and actions tabs.</p></div><span class="badge success">New</span></div>
+<section class="panel">
+  <div class="panel-header"><div class="panel-title"><strong>Stack detail tabs</strong><small>Each tab manages one aspect of the material stack</small></div></div>
+  <div class="panel-body">
+    <div class="layer-stack" style="margin-bottom:12px">
+      <div class="layer-band substrate">FTO/Glass · 2.2 mm</div>
+      <div class="layer-band transport">TiO2 Compact · 30 nm</div>
+      <div class="layer-band transport">TiO2 Mesoporous · 150 nm</div>
+      <div class="layer-band absorber">FA0.85Cs0.15PbI3 · 500 nm</div>
+      <div class="layer-band transport">Spiro-OMeTAD · 200 nm</div>
+      <div class="layer-band contact">Au · 80 nm</div>
+    </div>
+    <div class="tabs" data-tabs="kit-stack">
+      <button class="tab-button active" type="button" data-tab="kit-solutions">Solutions</button>
+      <button class="tab-button" type="button" data-tab="kit-materials">Materials</button>
+      <button class="tab-button" type="button" data-tab="kit-conditions">Conditions</button>
+      <button class="tab-button" type="button" data-tab="kit-pipeline">Pipeline</button>
+      <button class="tab-button" type="button" data-tab="kit-actions">Actions</button>
+    </div>
+    <div class="tab-panel active" data-tab-panel="kit-solutions">
+      <table class="data-table">
+        <thead><tr><th>Solution</th><th>Role</th><th>Volume</th></tr></thead>
+        <tbody><tr><td class="mono">SOL-001</td><td>Absorber precursor</td><td>1.5 mL</td></tr><tr><td class="mono">SOL-002</td><td>Hole transport</td><td>1.0 mL</td></tr></tbody>
+      </table>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-materials" hidden>
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Formula</th><th>Supplier</th><th>Purity</th></tr></thead>
+        <tbody><tr><td>FAI</td><td class="mono">CH(NH2)2I</td><td>GreatCell Solar</td><td>99.99%</td></tr><tr><td>CsI</td><td class="mono">CsI</td><td>Sigma Aldrich</td><td>99.999%</td></tr><tr><td>PbI2</td><td class="mono">PbI2</td><td>TCI</td><td>99.99%</td></tr><tr><td>Spiro-OMeTAD</td><td class="mono">C81H68N4O8</td><td>Merck</td><td>99.8%</td></tr></tbody>
+      </table>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-conditions" hidden>
+      <dl class="key-values grid-2">
+        <div><dt>Spin speed</dt><dd>2000 rpm</dd></div>
+        <div><dt>Spin time</dt><dd>30 s</dd></div>
+        <div><dt>Annealing temp.</dt><dd>150 °C</dd></div>
+        <div><dt>Annealing time</dt><dd>20 min</dd></div>
+        <div><dt>Atmosphere</dt><dd>N2 glovebox</dd></div>
+        <div><dt>Humidity</dt><dd>&lt; 0.1 ppm</dd></div>
+      </dl>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-pipeline" hidden>
+      <div class="pipeline-steps">
+        <div class="process-mini wide"><span>Clean substrate</span><b>→</b><span>TiO2 Compact</span><b>→</b><span>TiO2 Meso.</span><b>→</b><span>Spin PVK</span><b>→</b><span>Anneal</span><b>→</b><span>HTL coat</span><b>→</b><span>Evaporate Au</span></div>
+      </div>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-actions" hidden>
+      <div class="stack-sm">
+        <label class="check-row"><input type="checkbox" checked><span>Clean substrate with acetone and IPA</span></label>
+        <label class="check-row"><input type="checkbox" checked><span>Prepare TiO2 Compact solution</span></label>
+        <label class="check-row"><input type="checkbox"><span>Filter perovskite solution with 0.45 µm filter</span></label>
+        <label class="check-row"><input type="checkbox"><span>Turn on hotplate at 150°C</span></label>
+        <label class="check-row"><input type="checkbox"><span>Prepare Spiro-OMeTAD solution</span></label>
+        <label class="check-row"><input type="checkbox"><span>Load substrate into evaporator</span></label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-title"><div><h2>Solution management</h2><p>Full solution detail with precursors, solvents and properties.</p></div><span class="badge success">New</span></div>
+<section class="panel">
+  <div class="panel-header"><div class="panel-title"><strong>Solution preview</strong><small>Precursors → vessel → output batch</small></div></div>
+  <div class="panel-body">
+    <div class="solution-diagram">
+      <div class="solution-inputs"><span>FAI</span><span>CsI</span><span>PbI₂</span></div>
+      <div class="solution-beaker"><i class="fill-70"></i><strong>1.5 M</strong><small>DMF:DMSO</small></div>
+      <div class="solution-output"><strong>FA0.85Cs0.15PbI3</strong><small>5 mL</small></div>
+    </div>
+    <div class="grid-2" style="margin-top:12px">
+      <div>
+        <h4 class="eyebrow">Precursors</h4>
+        <table class="data-table">
+          <thead><tr><th>Name</th><th>Ratio</th><th>Concentration</th></tr></thead>
+          <tbody><tr><td>FAI</td><td>0.85</td><td>1.275 M</td></tr><tr><td>CsI</td><td>0.15</td><td>0.225 M</td></tr><tr><td>PbI<sub>2</sub></td><td>1.0</td><td>1.5 M</td></tr></tbody>
+        </table>
+      </div>
+      <div>
+        <h4 class="eyebrow">Solvents</h4>
+        <table class="data-table">
+          <thead><tr><th>Solvent</th><th>Ratio</th><th>Volume</th></tr></thead>
+          <tbody><tr><td>DMF</td><td>4</td><td>4 mL</td></tr><tr><td>DMSO</td><td>1</td><td>1 mL</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-title"><div><h2>Material card</h2><p>Compact material identity card with supplier, purity and usage.</p></div><span class="badge success">New</span></div>
+<section class="panel">
+  <div class="panel-header"><div class="panel-title"><strong>Material detail</strong><small>Key properties at a glance</small></div></div>
+  <div class="panel-body">
+    <div class="grid-3">
+      <div class="metric"><span class="metric-label">Supplier</span><span class="metric-value mono">GreatCell Solar</span></div>
+      <div class="metric"><span class="metric-label">Purity</span><span class="metric-value mono">99.99%</span></div>
+      <div class="metric"><span class="metric-label">Lot</span><span class="metric-value mono">FAI-2204</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-title"><div><h2>NOMAD Integration</h2><p>NOMAD connection settings and import/export interface.</p></div><span class="badge success">New</span></div>
+<section class="grid grid-2">
+  <article class="panel">
+    <div class="panel-header"><div class="panel-title"><strong>NOMAD API configuration</strong><small>Repository URL and API key management</small></div></div>
+    <div class="panel-body form-grid">
+      <div class="field span-2"><label>NOMAD Repository URL</label><input class="input" value="https://nomad-lab.eu/prod/rae/api/"></div>
+      <div class="field span-2"><label>API Key</label>
+        <div class="input-group"><input class="input" type="password" value="••••••••••••••••"><button class="button small" type="button">Show</button></div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <button class="button primary" type="button">Test connection</button>
+      <button class="button" type="button">Save credentials</button>
+    </div>
+  </article>
+  <article class="panel">
+    <div class="panel-header"><div class="panel-title"><strong>Recent NOMAD uploads</strong><small>Last exports tracked per experiment</small></div></div>
+    <div class="panel-body stack-sm">
+      <div class="between"><span class="mono">EXP-2026-052</span><span class="badge success">Uploaded</span></div>
+      <div class="between"><span class="mono">EXP-2026-048</span><span class="badge success">Uploaded</span></div>
+      <div class="between"><span class="mono">EXP-2026-041</span><span class="badge warning">Pending review</span></div>
+    </div>
+  </article>
+</section>
+
+<div class="section-title"><div><h2>Account management</h2><p>User profile, preferences and data ownership tabs.</p></div><span class="badge success">New</span></div>
+<section class="panel">
+  <div class="panel-header"><div class="panel-title"><strong>Account tabs</strong><small>Profile, NOMAD Integration, Preferences, My Data</small></div></div>
+  <div class="panel-body">
+    <div class="tabs" data-tabs="kit-account">
+      <button class="tab-button active" type="button" data-tab="kit-profile">Profile</button>
+      <button class="tab-button" type="button" data-tab="kit-nomad">NOMAD Integration</button>
+      <button class="tab-button" type="button" data-tab="kit-prefs">Preferences</button>
+    </div>
+    <div class="tab-panel active" data-tab-panel="kit-profile">
+      <div class="form-grid" style="margin-top:8px">
+        <div class="field"><label>Full name</label><input class="input" value="Eleanor Wright"></div>
+        <div class="field"><label>Research role</label><input class="input" value="Principal investigator"></div>
+        <div class="field"><label>Email</label><input class="input" value="eleanor@lab.example"></div>
+        <div class="field"><label>ORCID</label><input class="input mono" value="0000-0002-1825-0097"></div>
+      </div>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-nomad" hidden>
+      <p class="small subtle" style="margin-top:8px">NOMAD repository URL and API key fields with test/save actions.</p>
+    </div>
+    <div class="tab-panel" data-tab-panel="kit-prefs" hidden>
+      <p class="small subtle" style="margin-top:8px">Theme, language, units and notification preference controls.</p>
+    </div>
+  </div>
+</section>
+
 <div class="section-title"><div><h2>AI assistance patterns</h2><p>Optional suggestions must be evidence-linked, confidence-labelled and explicitly accepted.</p></div><span class="badge violet">New</span></div><section class="grid grid-2" id="kitAiPattern">
 <article class="ai-inline-assist"><div class="ai-inline-icon"><span data-icon="spark"></span></div><div class="ai-inline-copy"><span class="eyebrow">Optional AI suggestion</span><strong>Use three conditions and three replicates</strong><p>Show a short reason, confidence and the records used as evidence.</p><div class="ai-evidence-row"><span class="badge success">Confidence 88%</span><span>EXP-048 · Setup v4.1</span></div></div><div class="ai-inline-actions"><button class="button small" type="button">Why?</button><button class="button small primary" type="button">Use suggestion</button></div></article>
 <article class="panel"><div class="panel-header"><div class="panel-title"><strong>AI output states</strong><small>Never hide uncertainty or researcher action</small></div></div><div class="panel-body stack-sm"><div class="ai-context-item"><span>1</span><div><strong>Proposed</strong><small>Not written to scientific data</small></div></div><div class="ai-context-item"><span>2</span><div><strong>Accepted or edited</strong><small>Explicit researcher action</small></div></div><div class="ai-context-item"><span>3</span><div><strong>Evidence retained</strong><small>Traceable input and source records</small></div></div></div></article>
