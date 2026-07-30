@@ -20,8 +20,8 @@
     <header class="page-header compact-header">
       <div>
         <span class="eyebrow">Optional intelligence layer</span>
-        <h1>AI assistant</h1>
-        <p>Simulated inputs and outputs for planning, file understanding, quality review, NOMAD mapping and report drafting.</p>
+        <h1>AI workspace</h1>
+        <p>Evidence-linked assistance, controlled agent workflows and semantic discovery over structured laboratory records.</p>
       </div>
       <div class="page-actions">
         <span class="badge violet">Simulation</span>
@@ -34,8 +34,9 @@
       <div><span data-icon="spark"></span><strong>Suggestions, not decisions</strong><small>Nothing is written until the researcher accepts it.</small></div>
       <div><span data-icon="check"></span><strong>Evidence shown</strong><small>Every suggestion includes sources and confidence.</small></div>
     </section>
+    <nav class="ai-workspace-nav" aria-label="AI workspace sections"><a class="active" href="#assistant">Assistant</a><a href="#analysis">Analysis workspace</a><a href="#agents">Controlled agents</a><a href="knowledge.html">Knowledge Chat</a><a href="#vision">AI vision</a></nav>
 
-    <section class="ai-layout">
+    <section class="ai-layout" id="assistant">
       <nav class="panel ai-mode-nav" aria-label="AI assistant tasks">
         <div class="panel-header"><div class="panel-title"><strong>Choose a task</strong><small>One focused request at a time</small></div></div>
         <div class="ai-mode-list">
@@ -95,6 +96,31 @@
     <section class="panel mt-12 ai-audit-panel">
       <div class="panel-header"><div class="panel-title"><strong>AI activity log</strong><small>Inputs, outputs and researcher decisions remain traceable</small></div><span class="badge success">3 reviewed</span></div>
       <div class="table-wrap"><table class="data-table"><thead><tr><th>Time</th><th>Task</th><th>Target</th><th>Suggestion</th><th>Researcher action</th></tr></thead><tbody id="aiAuditRows"><tr><td>16:12</td><td>File understanding</td><td>DEV-052-B04-03-jv.csv</td><td>Mapped voltage/current columns</td><td><span class="badge success">Accepted</span></td></tr><tr><td>15:48</td><td>Quality check</td><td>Condition C</td><td>Review roughness outlier</td><td><span class="badge warning">Flagged</span></td></tr><tr><td>14:30</td><td>NOMAD mapping</td><td>EXP-2026-052</td><td>Suggested atmosphere field</td><td><span class="badge">Edited</span></td></tr></tbody></table></div>
+    </section>
+
+    <div class="section-title" id="analysis"><div><h2>AI analysis workspace</h2><p>A structured question, inspectable evidence and a reviewable result.</p></div><span class="badge violet">Simulated</span></div>
+    <section class="ai-analysis-workspace">
+      <aside class="panel ai-analysis-setup"><div class="panel-header"><div class="panel-title"><strong>Selected context</strong><small>Explicit scope for this run</small></div></div><div class="panel-body stack-sm"><div class="ai-context-item"><span>1</span><div><strong>EXP-2026-052</strong><small>Solvent and annealing comparison</small></div></div><div class="ai-context-item"><span>2</span><div><strong>Stacks S01–S04</strong><small>12 samples · 23 datasets</small></div></div><div class="ai-context-item"><span>3</span><div><strong>Efficiency + thickness</strong><small>J–V and profilometry</small></div></div><div class="field"><label for="aiAnalysisObjective">Objective</label><textarea class="input" id="aiAnalysisObjective" name="analysis_objective" autocomplete="off" rows="4">Compare solvent and temperature, identify anomalies and explain the strongest stack.</textarea></div><div class="field"><label for="aiAnalysisMethod">Method</label><select class="input" id="aiAnalysisMethod" name="analysis_method"><option>Comparative summary + anomaly scan</option><option>Ranking with uncertainty</option><option>Reproducibility review</option></select></div><button class="button primary" type="button" data-action="ai-analysis-run">Run simulated analysis</button></div></aside>
+      <article class="panel ai-analysis-result" id="aiAnalysisResult"><div class="panel-header"><div class="panel-title"><strong>Reviewable result</strong><small>Original data remain unchanged</small></div><span class="badge warning">Draft AI</span></div><div class="ai-analysis-empty"><span data-icon="chart"></span><strong>Ready to analyse selected evidence</strong><small>The result will include sources, assumptions, confidence and limitations.</small></div></article>
+    </section>
+
+    <div class="section-title" id="agents"><div><h2>Controlled AI agents</h2><p>Bounded scientific workflows with explicit approval gates.</p></div><span class="badge info">Prototype</span></div>
+    <section class="agent-cards">
+      <button type="button" data-agent="setup"><span data-icon="flask"></span><strong>Experiment Setup Agent</strong><small>Find resources, propose a stack and flag missing fields.</small><b>3 approvals</b></button>
+      <button type="button" data-agent="intake"><span data-icon="upload"></span><strong>Data Intake Agent</strong><small>Classify files, propose units and associate stacks.</small><b>4 approvals</b></button>
+      <button type="button" data-agent="analysis"><span data-icon="chart"></span><strong>Analysis Agent</strong><small>Compare stacks, rank anomalies and suggest views.</small><b>2 approvals</b></button>
+      <button type="button" data-agent="nomad"><span data-icon="download"></span><strong>NOMAD Agent</strong><small>Validate metadata and assemble a package plan.</small><b>5 approvals</b></button>
+    </section>
+    <section class="panel agent-run-panel" id="agentRunPanel"><div class="panel-header"><div class="panel-title"><strong>Agent run</strong><small>Select a controlled workflow above</small></div><span class="badge">Not started</span></div><div class="useful-empty"><span data-icon="flow"></span><div><strong>No agent run selected</strong><small>Every proposed action will require researcher approval.</small></div></div></section>
+
+    <div class="section-title" id="search"><div><h2>Semantic research search</h2><p>Future RAG interaction simulated over structured records and approved documents.</p></div><span class="badge">Architecture-ready</span></div>
+    <section class="panel semantic-search-panel"><div class="panel-body knowledge-handoff"><span data-icon="model"></span><div><span class="eyebrow">Dedicated consultation tool</span><h3>Shared knowledge now lives in Knowledge Chat</h3><p>Search manuals, protocols, Lab Cabinet resources, experiments, approved reports and NOMAD documentation with explicit citations and human confirmation.</p></div><a class="button primary" href="knowledge.html">Open Knowledge Chat</a></div></section>
+
+    <div class="section-title" id="vision"><div><h2>AI vision and architecture</h2><p>A credible path from structured laboratory data to assistive intelligence.</p></div><span class="badge success">Portfolio overview</span></div>
+    <section class="ai-vision-grid">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data foundation</strong><small>Authoritative inputs</small></div></div><div class="panel-body stack-sm"><p>Experiments, stack snapshots, resources, processes, measurements, original files and provenance remain the source of truth.</p><div class="ai-evidence-row"><span>Structured records</span><span>Files</span><span>Human notes</span><span>Approved results</span></div></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Retrieval layer</strong><small>Planned architecture</small></div></div><div class="panel-body"><div class="rag-flow"><span>Permission scope</span><b>→</b><span>Hybrid retrieval</span><b>→</b><span>Evidence bundle</span><b>→</b><span>Model</span></div><p class="small subtle">No embeddings or vector database are implemented in this static POC.</p></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Human-in-the-loop</strong><small>Non-negotiable control</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Inspect evidence</strong><small>Sources and assumptions are visible</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Approve actions</strong><small>No important autonomous writes</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Retain provenance</strong><small>Original, AI output and human edits stay separate</small></div></div></div></article>
     </section>
   </main></div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>

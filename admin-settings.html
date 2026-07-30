@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Workspace administration settings for the LabFlow POC">
+<title>Admin Settings · LabFlow</title>
+<link href="assets/theme.css" rel="stylesheet">
+<link href="assets/app.css" rel="stylesheet">
+<script defer src="assets/exporters.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body data-page="admin-settings">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+  <header class="page-header">
+    <div><span class="eyebrow">Workspace administration · POC</span><h1>Admin Settings</h1><p>Shared rules for the research workspace. These controls are simulated and do not configure a backend.</p></div>
+    <div class="page-actions"><span class="badge warning">Admin only</span><button class="button primary" type="button" data-action="toast" data-message="Admin settings saved for this demo session"><span data-icon="save"></span>Save workspace settings</button></div>
+  </header>
+
+  <nav class="settings-level-switch" aria-label="Settings level">
+    <a href="users.html"><span data-icon="user"></span><span><strong>User settings</strong><small>Profile, defaults and personal NOMAD key</small></span></a>
+    <a class="active admin" href="admin-settings.html"><span data-icon="shield"></span><span><strong>Admin Settings</strong><small>Workspace-wide configuration</small></span></a>
+  </nav>
+
+  <section class="admin-control-strip">
+    <div><span class="admin-control-mark" data-icon="shield"></span><span><strong>Perovskite Research Lab</strong><small data-workspace-id>WS-EW-01</small></span></div>
+    <dl><div><dt>Members</dt><dd>8</dd></div><div><dt>Active experiments</dt><dd>12</dd></div><div><dt>Storage policy</dt><dd>References only</dd></div><div><dt>Last policy review</dt><dd>24 Jul 2026</dd></div></dl>
+  </section>
+
+  <div class="settings-layout">
+    <nav class="settings-section-nav" aria-label="Admin sections">
+      <a class="active" href="#workspace">Workspace</a>
+      <a href="#members">Members &amp; roles</a>
+      <a href="#conventions">Scientific conventions</a>
+      <a href="#integrations">Integrations</a>
+      <a href="#governance">Governance</a>
+    </nav>
+    <div class="settings-sections">
+      <section class="panel" id="workspace">
+        <div class="panel-header"><div class="panel-title"><strong>Workspace identity</strong><small>Name, scope and defaults shown to every researcher.</small></div><span class="badge success">Active</span></div>
+        <div class="panel-body form-grid">
+          <div class="field span-2"><label>Workspace name</label><input class="input" value="Perovskite Research Lab"></div>
+          <div class="field span-2"><label>Description</label><textarea class="input" rows="2">Shared workspace for perovskite materials, device stacks and characterisation experiments.</textarea></div>
+          <div class="field"><label>Default experiment visibility</label><select class="input"><option>Workspace members</option><option>Owner only</option></select></div>
+          <div class="field"><label>Experiment ID pattern</label><input class="input mono" value="PSC-{YEAR}-{SEQ}"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="members">
+        <div class="panel-header"><div class="panel-title"><strong>Members &amp; roles</strong><small>POC representation of workspace access.</small></div><button class="button small" type="button" data-action="toast" data-message="Invitation form opened">Invite member</button></div>
+        <div class="panel-body">
+          <div class="admin-role-table"><div class="admin-role-row head"><span>Member</span><span>Role</span><span>Scope</span><span>Status</span><span></span></div><div class="admin-role-row"><span><b>Eleanor Wright</b><small>eleanor.wright@lab.example</small></span><span>Workspace admin</span><span>All experiments</span><span class="badge success">Active</span><button class="button small" type="button">Manage</button></div><div class="admin-role-row"><span><b>Amelia Grant</b><small>amelia.grant@lab.example</small></span><span>Researcher</span><span>Owned + shared</span><span class="badge success">Active</span><button class="button small" type="button">Manage</button></div><div class="admin-role-row"><span><b>Marcus Chen</b><small>marcus.chen@lab.example</small></span><span>Reviewer</span><span>Results and reports</span><span class="badge info">Limited</span><button class="button small" type="button">Manage</button></div></div>
+        </div>
+      </section>
+
+      <section class="panel" id="conventions">
+        <div class="panel-header"><div class="panel-title"><strong>Scientific conventions</strong><small>Defaults improve consistency without blocking experiment creation.</small></div></div>
+        <div class="panel-body settings-rule-list">
+          <div><span data-icon="table"></span><span><strong>Units and notation</strong><small>SI units · °C · nm · mL · mol/L</small></span><button class="button small" type="button">Edit</button></div>
+          <div><span data-icon="model"></span><span><strong>Stack status vocabulary</strong><small>Planned · Preparing · Processed · Measured · Analysed · Excluded</small></span><button class="button small" type="button">Edit</button></div>
+          <div><span data-icon="flow"></span><span><strong>Required provenance</strong><small>Operator, source file, timestamp and applied process</small></span><button class="button small" type="button">Edit</button></div>
+          <div><span data-icon="catalog"></span><span><strong>Lab Cabinet publishing</strong><small>Review required before a resource becomes workspace-wide</small></span><button class="button small" type="button">Edit</button></div>
+        </div>
+      </section>
+
+      <section class="grid grid-2" id="integrations">
+        <article class="panel"><div class="panel-header"><div class="panel-title"><strong>NOMAD policy</strong><small>Endpoint and account keys remain separate.</small></div><span class="badge success">Enabled</span></div><div class="panel-body stack-sm"><div class="field"><label>Allowed server</label><input class="input" value="https://nomad-lab.eu/prod/v1/api/v1"></div><label class="check-row"><input type="checkbox" checked><span><strong>Require validation before export</strong><small>Warnings remain reviewable</small></span></label><label class="check-row"><input type="checkbox" checked><span><strong>Exclude personal API keys</strong><small>Always excluded from packages</small></span></label></div></article>
+        <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Optional AI policy</strong><small>AI cannot silently alter research evidence.</small></div><span class="badge violet">Optional</span></div><div class="panel-body stack-sm"><label class="check-row"><input type="checkbox" checked><span><strong>Require explicit acceptance</strong><small>Suggestions remain separate until accepted</small></span></label><label class="check-row"><input type="checkbox" checked><span><strong>Retain evidence references</strong><small>Source records stay visible</small></span></label><label class="check-row"><input type="checkbox"><span><strong>Enable external AI provider</strong><small>Unavailable in this static POC</small></span></label></div></article>
+      </section>
+
+      <section class="panel" id="governance">
+        <div class="panel-header"><div class="panel-title"><strong>Governance &amp; retention</strong><small>Policies shown for product design validation.</small></div></div>
+        <div class="panel-body form-grid">
+          <div class="field"><label>Raw file retention</label><select class="input"><option>Keep references indefinitely</option><option>5 years</option></select></div>
+          <div class="field"><label>Completed experiment editing</label><select class="input"><option>Require reopening reason</option><option>Allow admins only</option></select></div>
+          <div class="field"><label>Audit events</label><select class="input"><option>Definitions, imports and exports</option><option>All edits</option></select></div>
+          <div class="field"><label>Default licence</label><select class="input"><option>CC BY 4.0</option><option>CC0</option></select></div>
+        </div>
+        <div class="panel-footer"><span class="small subtle">No policy is enforced by the frontend POC.</span><button class="button" type="button" data-action="toast" data-message="Policy review exported as a demo record">Export policy summary</button></div>
+      </section>
+    </div>
+  </div>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

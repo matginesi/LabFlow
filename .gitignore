@@ -1,2 +1,10 @@
 .superpower/
-docs/
+docs/*
+!docs/WORKFLOW.md
+!docs/DATA_MODEL.md
+!docs/AI_ARCHITECTURE.md
+!docs/TOOLS_EXPORTS_NOMAD.md
+!docs/RESPONSIVE_AND_LIMITS.md
+!docs/ARCHITECTURE.md
+!docs/GLOSSARY.md
+!docs/DESIGN_SYSTEM.md

@@ -21,45 +21,24 @@
       <header class="page-header home-header">
         <div>
           <span class="eyebrow" data-workspace-name>Personal workspace</span>
-          <h1>Good morning, <span data-user-name>Eleanor Wright</span></h1>
-          <p><span data-user-metric="projects">3</span> active projects · <span data-user-metric="experiments">8</span> experiments · last NOMAD sync: <span id="lastNomadSync">today</span></p>
-        </div>
-        <div class="page-actions">
-          <button class="button primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span>New experiment</button>
-          <button class="button" type="button" data-action="stack-wizard"><span data-icon="model"></span>New stack</button>
+          <h1>What do you want to do?</h1>
+          <p>Start a new experiment, continue from the recommended next step, or bring existing work into LabFlow.</p>
         </div>
       </header>
 
-      <div class="grid-4" id="dashboardMetrics">
-        <div class="metric">
-          <span class="metric-label">Active experiments</span>
-          <span class="metric-value" data-user-metric="experiments">8</span>
-          <span class="metric-detail">3 in progress</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Stacks in use</span>
-          <span class="metric-value" id="stackCount">12</span>
-          <span class="metric-detail">4 different materials</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Pending exports</span>
-          <span class="metric-value" id="pendingExportCount">2</span>
-          <span class="metric-detail">1 for NOMAD</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Last NOMAD</span>
-          <span class="metric-value" id="lastNomadLabel">today</span>
-          <span class="metric-detail">EXP-2026-052</span>
-        </div>
-      </div>
+      <section class="home-entry-grid" aria-label="Primary actions">
+        <button class="home-entry-card primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span><span><small>Start</small><strong>New experiment</strong><p>Name it now; add resources and stacks progressively.</p></span><b>→</b></button>
+        <a class="home-entry-card" href="#recentWork"><span data-icon="flow"></span><span><small>Continue</small><strong>Continue your work</strong><p>Open an experiment at its recommended next step.</p></span><b>→</b></a>
+        <a class="home-entry-card" href="imports.html"><span data-icon="upload"></span><span><small>Bring work in</small><strong>Import</strong><p>Start from a file, NOMAD, archive or previous configuration.</p></span><b>→</b></a>
+      </section>
 
-      <section class="panel home-continue" aria-labelledby="continueTitle">
+      <section class="panel home-continue" id="recentWork" aria-labelledby="continueTitle">
         <div class="home-continue-main">
           <span class="home-continue-icon" data-icon="flask"></span>
           <div class="min-0">
-            <span class="eyebrow">Continue your work</span>
-            <h2 id="continueTitle" data-project-name>Mixed-cation perovskite optimisation</h2>
-            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Results review · 6 of 8 steps completed</p>
+            <span class="eyebrow">Recommended next step</span>
+            <h2 id="continueTitle">Mixed-cation deposition window</h2>
+            <p>Compare solvent systems and annealing temperatures · 4 stacks · updated today</p>
           </div>
         </div>
         <div class="home-continue-progress" aria-label="Experiment progress">
@@ -67,70 +46,43 @@
           <strong>75%</strong>
         </div>
         <div class="home-continue-actions">
-          <a class="button" href="project.html">Open project</a>
-          <a class="button primary" href="experiment.html#results">Continue experiment</a>
+          <a class="button" href="project.html#experiments">All experiments</a>
+          <a class="button primary" href="experiment.html#data">Import measurement data</a>
         </div>
       </section>
 
-      <div class="home-value-strip" style="--strip-cols: 4;">
-        <button class="quick-action" type="button" data-action="experiment-wizard">
-          <span data-icon="flask"></span>
-          <div><strong>New experiment</strong><small>Guided wizard</small></div>
-        </button>
-        <button class="quick-action" type="button" data-action="stack-wizard">
-          <span data-icon="model"></span>
-          <div><strong>New stack</strong><small>Define materials & conditions</small></div>
-        </button>
-        <button class="quick-action" type="button" data-action="quick-import">
-          <span data-icon="upload"></span>
-          <div><strong>Import data</strong><small>From file or NOMAD</small></div>
-        </button>
-        <a class="quick-action" href="report.html#nomad">
-          <span data-icon="download"></span>
-          <div><strong>Export to NOMAD</strong><small>Prepare package</small></div>
-        </a>
-      </div>
-
       <div class="section-title home-section-title">
         <div>
-          <h2>Your projects</h2>
-          <p>Open a research goal, review experiments, or start a new run.</p>
+          <h2>Continue where you left off</h2>
+          <p>Each experiment shows one recommended action.</p>
         </div>
-        <a href="projects.html">View all</a>
+        <a href="project.html#experiments">View all</a>
       </div>
-      <section class="home-project-grid" id="homeProjectList" aria-label="Your projects"></section>
+      <section class="home-project-grid" id="homeProjectList" aria-label="Your experiments"></section>
 
-      <section class="home-lower-grid">
+      <section>
         <article class="panel">
           <div class="panel-header">
-            <div class="panel-title"><strong>To do</strong><small>Actions that unblock your work</small></div>
+            <div class="panel-title"><strong>To complete</strong><small>Only work that needs your attention</small></div>
             <span class="badge warning" id="attentionCount">3</span>
           </div>
           <div class="attention-list" id="homeAttentionList"></div>
         </article>
-        <aside class="panel">
-          <div class="panel-header">
-            <div class="panel-title"><strong>Quick start</strong><small>Reuse first, create only when needed</small></div>
-          </div>
-          <div class="panel-body home-quick-actions">
-            <a class="quick-action primary" href="experiment.html">
-              <span data-icon="flask"></span>
-              <div><strong>New experiment</strong><small>Start from a saved process</small></div>
-            </a>
-            <button class="quick-action" type="button" data-action="quick-create">
-              <span data-icon="catalog"></span>
-              <div><strong>Create reusable object</strong><small>Material, solution, stack or method</small></div>
-            </button>
-            <a class="quick-action" href="catalogs.html">
-              <span data-icon="grid"></span>
-              <div><strong>Browse library</strong><small>Use something already prepared</small></div>
-            </a>
-          </div>
-        </aside>
       </section>
     </main>
   </div>
 
+  <div class="overlay" id="startExperimentModal" hidden>
+    <section class="modal minimal-experiment-modal" role="dialog" aria-modal="true" aria-labelledby="startExperimentTitle">
+      <div class="panel-header"><div class="panel-title"><strong id="startExperimentTitle">Start a new experiment</strong><small>Only two fields are needed now.</small></div><button class="icon-button" type="button" data-action="close">×</button></div>
+      <div class="panel-body stack">
+        <div class="field"><label>Experiment name</label><input class="input" id="minimalExperimentName" placeholder="e.g. Solvent and annealing comparison"></div>
+        <div class="field"><label>Short objective</label><textarea class="input" id="minimalExperimentObjective" rows="3" placeholder="What do you want to compare or learn?"></textarea></div>
+        <details class="advanced-details"><summary>Optional details</summary><div class="form-grid"><div class="field"><label>Tags</label><input class="input" placeholder="solvents, annealing"></div><div class="field"><label>Responsible researcher</label><input class="input" data-user-name value="Eleanor Wright"></div><div class="field span-2"><label>Notes</label><textarea class="input" rows="2"></textarea></div></div></details>
+      </div>
+      <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><span class="small subtle">Resources and stacks come next.</span><button class="button primary" type="button" data-action="minimal-experiment-create">Create and prepare resources</button></div>
+    </section>
+  </div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>
 </body>
 </html>

@@ -1,14 +1,13 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="Simple personal library with ready-made experiment setups" name="description"/>
-<title>Reusable Library · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"/>
-<link rel="stylesheet" href="assets/app.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Shared laboratory resources for LabFlow experiments">
+<title>Lab Cabinet · LabFlow</title>
+<link href="assets/theme.css" rel="stylesheet">
+<link href="assets/app.css" rel="stylesheet">
 <script defer src="assets/exporters.js"></script>
 <script defer src="assets/app.js"></script>
 </head>
@@ -16,31 +15,69 @@
 <header class="topbar" id="topbar"></header>
 <aside class="sidebar" id="sidebar"></aside>
 <button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
-<div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><h1>Your reusable Library</h1><p>Choose prepared setups during experiments. Open the Library only when you need to create, review or update reusable resources.</p></div><button class="button primary" data-action="quick-create" type="button"><span data-icon="plus"></span>Create with wizard</button></header>
-<section class="library-entry panel accent"><div class="panel-body"><div><span class="eyebrow">Fastest route</span><h2>Start with an experiment setup</h2><p>A setup combines the common choices. The experiment wizard asks only about variations, physical batches and actual results.</p></div><a class="button primary" href="pipeline.html">Manage experiment setups</a></div></section>
-<div class="section-title"><div><h2>Ready-made experiment setups</h2><p>Use as-is, duplicate, or customise through the setup wizard.</p></div><span class="badge success">3 recommended</span></div>
-<section class="library-setup-grid">
-<article class="library-setup-card"><header><span class="badge success">Recommended</span><strong>Standard n-i-p PSC</strong><small>Device fabrication and performance</small></header><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><dl><div><dt>Solution</dt><dd>Mixed-cation 1.30 M</dd></div><div><dt>Process</dt><dd>PSC baseline v4.1</dd></div><div><dt>Results</dt><dd>J–V, EQE, XRD</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
-<article class="library-setup-card"><header><span class="badge info">Fast screening</span><strong>Perovskite film screening</strong><small>Compare chemistry and deposition</small></header><div class="mini-stack"><span class="absorber">Perovskite film</span><span class="substrate">Glass / ITO</span></div><dl><div><dt>Solution</dt><dd>Select during experiment</dd></div><div><dt>Process</dt><dd>Film screening v3</dd></div><div><dt>Results</dt><dd>XRD, PL, AFM</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
-<article class="library-setup-card"><header><span class="badge violet">Flexible</span><strong>Flexible p-i-n device</strong><small>Low-temperature workflow</small></header><div class="mini-stack"><span class="contact">Ag</span><span class="transport">C₆₀</span><span class="absorber">PVK</span><span class="transport">NiOₓ</span><span class="substrate">PET/ITO</span></div><dl><div><dt>Solution</dt><dd>Low-temperature precursor</dd></div><div><dt>Process</dt><dd>Flexible p-i-n v2</dd></div><div><dt>Results</dt><dd>J–V, bending, stability</dd></div></dl><footer><a class="button small primary" href="experiment.html">Use in experiment</a><a class="button small" href="pipeline.html">Duplicate &amp; edit</a></footer></article>
-</section>
-<div class="section-title"><div><h2>Create or maintain one reusable object</h2><p>Each object has a short wizard. Advanced scientific fields remain optional.</p></div></div>
-<section class="catalog-wizard-grid compact-catalog-wizards">
-<button class="catalog-wizard" data-action="create-type" data-create-type="material" type="button"><span class="choice-icon" data-icon="catalog"></span><span><strong>Material</strong><small>Identity and physical lot</small></span></button>
-<button class="catalog-wizard" data-action="create-type" data-create-type="solution" type="button"><span class="choice-icon" data-icon="spark"></span><span><strong>Solution</strong><small>Recipe and prepared batch</small></span></button>
-<button class="catalog-wizard" data-action="create-type" data-create-type="substrate" type="button"><span class="choice-icon" data-icon="grid"></span><span><strong>Substrate</strong><small>Type, size and surface</small></span></button>
-<button class="catalog-wizard" data-action="create-type" data-create-type="stack" type="button"><span class="choice-icon" data-icon="grid"></span><span><strong>Stack</strong><small>Arrange material layers</small></span></button>
-<button class="catalog-wizard" data-action="create-type" data-create-type="method" type="button"><span class="choice-icon" data-icon="flow"></span><span><strong>Method</strong><small>Reusable parameter form</small></span></button>
-<button class="catalog-wizard" data-action="create-type" data-create-type="process" type="button"><span class="choice-icon" data-icon="flow"></span><span><strong>Process</strong><small>Ordered actions and evidence</small></span></button>
-</section>
-<section class="panel library-browser-simple"><div class="tabs" data-tabs=""><button class="tab-button active" data-tab="recent" type="button">Recently used</button><button class="tab-button" data-tab="solutions" type="button">Solutions</button><button class="tab-button" data-tab="stacks" type="button">Stacks</button><button class="tab-button" data-tab="materials" type="button">Materials</button></div><div class="panel-body">
-<div class="resource-list" data-tab-panel="recent"><article><span data-icon="spark"></span><div><strong>Mixed-cation precursor v5</strong><small>Solution recipe · used today</small></div><span class="badge success">Published</span><button class="button small" data-action="create-type" data-create-type="solution" type="button">Duplicate</button></article><article><span data-icon="grid"></span><div><strong>Baseline n-i-p v2</strong><small>Material stack · 5 layers</small></div><span class="badge success">Published</span><button class="button small" data-action="create-type" data-create-type="stack" type="button">Edit copy</button></article><article><span data-icon="catalog"></span><div><strong>Lead iodide · PBI2-2606</strong><small>Material lot · available</small></div><span class="badge info">99.999%</span><button class="button small" data-action="create-type" data-create-type="material" type="button">View</button></article></div>
-<div data-tab-panel="solutions" hidden=""><div class="solution-diagram"><div class="solution-inputs"><span>PbI₂</span><span>FAI</span><span>MABr</span><span>CsI</span></div><div class="solution-beaker"><i class="fill-72"></i><strong>1.30 M</strong><small>DMF:DMSO 4:1</small></div><div class="solution-output"><strong>Recipe v5</strong><small>2 ready batches</small></div></div></div>
-<div data-tab-panel="stacks" hidden=""><div class="stack-gallery-simple"><div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><strong>Baseline n-i-p</strong></div><div><div class="mini-stack"><span class="contact">Ag</span><span class="transport">C₆₀</span><span class="absorber">PVK</span><span class="transport">NiOₓ</span><span class="substrate">PET</span></div><strong>Flexible p-i-n</strong></div></div></div>
-<div data-tab-panel="materials" hidden=""><div class="resource-list"><article><span class="material-symbol">PbI₂</span><div><strong>Lead iodide</strong><small>CAS 10101-63-0 · 2 lots</small></div><span class="badge success">Available</span></article><article><span class="material-symbol">FAI</span><div><strong>Formamidinium iodide</strong><small>CAS 879643-71-7 · 1 lot</small></div><span class="badge success">Available</span></article><article><span class="material-symbol">DMF</span><div><strong>Dimethylformamide</strong><small>CAS 68-12-2 · review due</small></div><span class="badge warning">Review</span></article></div></div>
-</div></section>
+<div class="app-main"><main class="page cabinet-page">
+  <header class="page-header compact-header">
+    <div><span class="eyebrow">Perovskite Research Lab · Shared workspace</span><h1>Lab Cabinet</h1><p>Everything the laboratory uses and shares. Search, choose and link a resource to an experiment.</p></div>
+    <div class="page-actions"><button class="button" type="button" data-action="cabinet-selector" data-cabinet-category="all">Use in experiment</button><button class="button primary" type="button" data-action="cabinet-quick-create"><span data-icon="plus"></span>Add resource</button></div>
+  </header>
+
+  <section class="cabinet-search-panel">
+    <label class="cabinet-search"><span data-icon="model"></span><input id="cabinetSearch" type="search" placeholder="Search materials, solutions, instruments, protocols…" autocomplete="off"><kbd>/</kbd></label>
+    <div class="cabinet-filter-row">
+      <label>Availability <select class="input input-compact" id="cabinetAvailability"><option value="all">All</option><option value="available">Available</option><option value="warning">Needs attention</option><option value="unavailable">Unavailable</option></select></label>
+      <label>Location <select class="input input-compact" id="cabinetLocation"><option value="all">All locations</option><option value="lab-2">Lab 2</option><option value="glovebox">Glovebox room</option><option value="cabinet-a2">Cabinet A2</option><option value="substrates-b1">Drawer B1</option></select></label>
+      <label class="check-row compact"><input id="cabinetFavoritesOnly" type="checkbox"><span>Favorites</span></label>
+      <button class="button small" type="button" data-action="cabinet-clear-filters">Clear</button>
+      <span class="cabinet-result-count" id="cabinetResultCount">12 resources</span>
+    </div>
+  </section>
+
+  <nav class="cabinet-categories" aria-label="Lab Cabinet categories">
+    <button class="active" type="button" data-cabinet-filter="all"><span data-icon="grid"></span><strong>All</strong><small>12</small></button>
+    <button type="button" data-cabinet-filter="materials"><span data-icon="catalog"></span><strong>Materials &amp; substances</strong><small>3</small></button>
+    <button type="button" data-cabinet-filter="solutions"><span data-icon="flask"></span><strong>Solutions &amp; batches</strong><small>2</small></button>
+    <button type="button" data-cabinet-filter="substrates"><span data-icon="grid"></span><strong>Substrates</strong><small>1</small></button>
+    <button type="button" data-cabinet-filter="equipment"><span data-icon="settings"></span><strong>Instruments</strong><small>2</small></button>
+    <button type="button" data-cabinet-filter="processes"><span data-icon="flow"></span><strong>Processes</strong><small>1</small></button>
+    <button type="button" data-cabinet-filter="actions"><span data-icon="flow"></span><strong>Actions</strong><small>1</small></button>
+    <button type="button" data-cabinet-filter="conditions"><span data-icon="settings"></span><strong>Conditions</strong><small>1</small></button>
+    <button type="button" data-cabinet-filter="stacks"><span data-icon="model"></span><strong>Stack templates</strong><small>1</small></button>
+  </nav>
+
+  <section class="cabinet-glance-grid">
+    <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Recently used</strong><small>Fast access for the current researcher</small></div></div><div class="panel-body cabinet-mini-list"><button type="button" data-action="cabinet-open" data-resource-id="dmf"><span class="resource-dot material"></span><span><strong>DMF anhydrous</strong><small>Used today · solvent</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="spin01"><span class="resource-dot equipment"></span><span><strong>Spin Coater 01</strong><small>Used today · Lab 2</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="pipeline"><span class="resource-dot process"></span><span><strong>PSC n-i-p standard</strong><small>Used yesterday · v4.1</small></span></button></div></article>
+    <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Availability &amp; alerts</strong><small>Only items requiring attention</small></div><span class="badge warning">3</span></div><div class="panel-body cabinet-alert-list"><button type="button" data-action="cabinet-open" data-resource-id="batch081"><span class="attention-status warning"></span><span><strong>SOL-081 almost empty</strong><small>4.2 mL remaining · check before use</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="dmf"><span class="attention-status warning"></span><span><strong>DMF lot review</strong><small>Certificate review due 05 Aug</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="solar01"><span class="attention-status danger"></span><span><strong>Solar Simulator 01 in use</strong><small>Expected available at 15:30</small></span></button></div></article>
+  </section>
+
+  <div class="section-title cabinet-results-title"><div><h2 id="cabinetResultsHeading">All shared resources</h2><p>Availability is simulated; this is not an inventory or booking system.</p></div><div class="row"><button class="button small active" type="button" data-cabinet-view="cards">Cards</button><button class="button small" type="button" data-cabinet-view="table">Table</button></div></div>
+  <section class="cabinet-resource-grid" id="cabinetResourceGrid" aria-live="polite"></section>
+  <section class="panel cabinet-resource-table" id="cabinetResourceTable" hidden><div class="table-wrap"><table class="data-table"><thead><tr><th>Resource</th><th>Type</th><th>Status</th><th>Location</th><th>Uses</th><th></th></tr></thead><tbody id="cabinetResourceRows"></tbody></table></div></section>
+  <div class="useful-empty cabinet-empty" id="cabinetEmpty" hidden><span data-icon="model"></span><div><strong>No matching resources</strong><small>Change the filters or add a minimal resource and use it immediately.</small></div><button class="button primary" type="button" data-action="cabinet-quick-create">Add resource</button></div>
 </main></div>
+
+<aside class="drawer cabinet-detail-drawer" id="cabinetDetailDrawer" hidden aria-label="Resource detail">
+  <div class="panel-header"><div class="panel-title"><strong>Resource details</strong><small>Shared Lab Cabinet record</small></div><button class="icon-button" type="button" data-action="close">×</button></div>
+  <div id="cabinetDetailBody"></div>
+</aside>
+
+<div class="overlay" id="cabinetQuickCreate" hidden>
+  <section class="modal cabinet-create-modal" role="dialog" aria-modal="true" aria-labelledby="cabinetCreateTitle">
+    <div class="panel-header"><div class="panel-title"><strong id="cabinetCreateTitle">Add a resource</strong><small>Create the minimum now; complete the record later.</small></div><button class="icon-button" type="button" data-action="close">×</button></div>
+    <div class="panel-body stack">
+      <div class="form-grid">
+        <div class="field"><label>Resource type</label><select class="input" id="cabinetCreateType"><option value="substance">Substance</option><option value="material">Material</option><option value="solution">Solution</option><option value="equipment">Instrument</option><option value="action">Action</option><option value="condition">Condition</option><option value="stack">Stack template</option></select></div>
+        <div class="field"><label>Name</label><input class="input" id="cabinetCreateName" placeholder="e.g. DMF anhydrous"></div>
+        <div class="field"><label>Role or category</label><input class="input" id="cabinetCreateRole" placeholder="e.g. solvent"></div>
+        <div class="field"><label>Location <span class="subtle">optional</span></label><input class="input" id="cabinetCreateLocation" placeholder="e.g. Cabinet A2"></div>
+      </div>
+      <section class="cabinet-duplicate-check" id="cabinetDuplicateCheck"><span data-icon="info"></span><div><strong>Similar resources will appear here</strong><small>Enter a name to check deterministic demo matches.</small></div></section>
+      <fieldset class="cabinet-visibility-choice"><legend>Where should this resource be available?</legend><label><input checked name="cabinetVisibility" type="radio" value="shared"><span><strong>Share in the Lab Cabinet</strong><small>Available to other experiments in this workspace.</small></span></label><label><input name="cabinetVisibility" type="radio" value="local"><span><strong>Use only in this experiment</strong><small>Keep it as a local experiment resource.</small></span></label></fieldset>
+      <details class="advanced-details"><summary>Optional identifiers and notes</summary><div class="form-grid"><div class="field"><label>Formula or model</label><input class="input"></div><div class="field"><label>Manufacturer or lot</label><input class="input"></div><div class="field span-2"><label>Notes</label><textarea class="input" rows="2"></textarea></div></div></details>
+    </div>
+    <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><span class="small subtle">Status starts as Draft.</span><button class="button primary" type="button" data-action="cabinet-create-confirm">Create and use</button></div>
+  </section>
+</div>
+
 <div aria-live="polite" class="toast-region" id="toastRegion"></div>
 </body>
 </html>

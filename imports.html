@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Import files, manual data and NOMAD entries into LabFlow">
+<title>Imports · LabFlow</title>
+<link href="assets/theme.css" rel="stylesheet">
+<link href="assets/app.css" rel="stylesheet">
+<script defer src="assets/exporters.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body data-page="imports">
+<header class="topbar" id="topbar"></header>
+<aside class="sidebar" id="sidebar"></aside>
+<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<div class="app-main"><main class="page">
+<header class="page-header"><div><span class="eyebrow">Current experiment · EXP-2026-052</span><h1>Import data</h1><p>Bring files or NOMAD entries into an experiment, then review mapping and provenance before saving.</p></div><div class="page-actions"><a class="button" href="editors.html#workbook">Enter data manually</a><a class="button primary" href="#nomad">Import from NOMAD</a></div></header>
+
+<section class="import-method-grid" aria-label="Import methods">
+  <button class="import-method active" type="button" data-import-mode="file"><span data-icon="upload"></span><strong>File import</strong><small>CSV, Excel, JSON, images, PDF, ZIP or instrument file</small></button>
+  <a class="import-method" href="editors.html#workbook"><span data-icon="table"></span><strong>Manual entry</strong><small>Value, table, note, image, result or metadata</small></a>
+  <button class="import-method" type="button" data-import-mode="nomad"><span data-icon="download"></span><strong>NOMAD import</strong><small>Your uploads, entry ID, URL or public archive</small></button>
+</section>
+<details class="panel import-other-sources">
+  <summary class="panel-header"><div class="panel-title"><strong>Other starting points</strong><small>Reuse an archive, configuration, previous experiment or template.</small></div></summary>
+  <div class="panel-body source-choice-row"><button type="button" data-action="toast" data-message="Archive picker opened"><span data-icon="folder"></span>Archive or ZIP</button><button type="button" data-action="toast" data-message="Configuration picker opened"><span data-icon="settings"></span>Existing configuration</button><button type="button" data-action="toast" data-message="Previous experiment browser opened"><span data-icon="flask"></span>Previous experiment</button><button type="button" data-action="toast" data-message="Template browser opened"><span data-icon="grid"></span>Experiment template</button></div>
+</details>
+
+<section class="panel import-workbench" data-import-panel="file">
+  <div class="panel-header"><div class="panel-title"><strong>File import</strong><small>The original file remains distinct from extracted and edited data.</small></div><span class="badge info">Local preview</span></div>
+  <div class="panel-body">
+    <div class="import-flow-steps"><span class="active">1 · Upload</span><span>2 · Preview</span><span>3 · Map columns</span><span>4 · Destination</span><span>5 · Confirm</span></div>
+    <div class="import-stage-grid">
+      <label class="data-import-target"><span data-icon="upload"></span><strong>Select or drop a file</strong><small>CSV · XLSX · JSON · TXT · images · PDF · ZIP</small><input id="workspaceImportFile" type="file" accept=".csv,.tsv,.txt,.json,.xlsx,.xls,.pdf,.zip,image/*"></label>
+      <div class="import-destination">
+        <div class="field"><label>Destination type</label><select class="input"><option>Stack</option><option>Experiment</option><option>Action</option><option>Measurement</option><option>Result</option></select></div>
+        <div class="field"><label>Destination</label><select class="input"><option>S02 · DMF/DMSO · 100 °C</option><option>S01 · DMF/DMSO · 90 °C</option><option>EXP-2026-052 · entire experiment</option></select></div>
+        <label class="check-row"><input type="checkbox"><span><strong>Save mapping as preset</strong><small>J–V · Solar Simulator Lab 2</small></span></label>
+      </div>
+    </div>
+    <div class="data-import-preview" id="workspaceImportPreview"><div class="useful-empty"><span data-icon="file"></span><div><strong>No file selected</strong><small>Select a file to preview headers, units, excluded rows and provenance.</small></div></div></div>
+  </div>
+</section>
+
+<section class="panel import-workbench" data-import-panel="nomad" id="nomad" hidden>
+  <div class="panel-header"><div class="panel-title"><strong>Import from NOMAD</strong><small>Connection belongs to your account, not to this experiment.</small></div><a class="button small" href="users.html#nomad">Connection settings</a></div>
+  <div class="panel-body">
+    <div class="import-flow-steps"><span class="active">1 · Source</span><span>2 · Preview</span><span>3 · Destination</span><span>4 · Import</span></div>
+    <div class="form-grid">
+      <div class="field"><label>Source</label><select class="input"><option>My uploads</option><option>Entry identifier or URL</option><option>NOMAD archive</option><option>Public data</option></select></div>
+      <div class="field"><label>Search or identifier</label><input class="input" placeholder="Entry ID, URL or experiment title"></div>
+    </div>
+    <div class="nomad-source-preview"><div><span class="badge success">Connection configured</span><strong>4 uploads available</strong><small>Last checked today · key is not included in imports or exports</small></div><button class="button primary" type="button" data-action="nomad-browse">Browse entries</button></div>
+    <div id="nomadImportResults"><div class="useful-empty"><span data-icon="download"></span><div><strong>No NOMAD entry selected</strong><small>Browse your uploads or search by identifier to preview experiments, stacks and files.</small></div></div></div>
+  </div>
+</section>
+</main></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+</body>
+</html>

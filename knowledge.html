@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Shared, evidence-linked scientific knowledge search for LabFlow">
+  <title>Knowledge Chat · LabFlow</title>
+  <link href="assets/theme.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css">
+  <script defer src="assets/app.js"></script>
+</head>
+<body data-page="knowledge">
+  <header id="topbar" class="topbar"></header>
+  <aside id="sidebar" class="sidebar"></aside>
+  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
+  <div class="app-main"><main class="page knowledge-page">
+    <header class="page-header compact-header">
+      <div>
+        <span class="eyebrow">Perovskite Research Lab · shared knowledge</span>
+        <h1>Knowledge Chat</h1>
+        <p>Consult documents and structured LabFlow records with traceable evidence. Answers are simulated and always require source review.</p>
+      </div>
+      <div class="page-actions">
+        <span class="badge violet">Static RAG simulation</span>
+        <span class="badge warning">Sources required</span>
+        <button class="button primary" type="button" data-action="knowledge-add"><span data-icon="plus"></span>Add knowledge</button>
+      </div>
+    </header>
+
+    <section class="knowledge-boundary" aria-label="Tool boundaries">
+      <div><span data-icon="model"></span><strong>Knowledge Chat</strong><small>Find and verify shared knowledge</small></div>
+      <a href="ai-assistant.html#analysis"><span data-icon="chart"></span><strong>AI Analysis</strong><small>Analyse measurements and results</small></a>
+      <a href="ai-assistant.html#agents"><span data-icon="flow"></span><strong>Agents</strong><small>Run controlled multi-step workflows</small></a>
+    </section>
+
+    <nav class="knowledge-context-nav" aria-label="Knowledge context">
+      <span>Search in</span>
+      <button class="active" type="button" data-knowledge-context="all">All laboratory</button>
+      <button type="button" data-knowledge-context="documents">Documents &amp; protocols</button>
+      <button type="button" data-knowledge-context="cabinet">Lab Cabinet</button>
+      <button type="button" data-knowledge-context="experiments">Experiments</button>
+      <button type="button" data-knowledge-context="current">Current experiment</button>
+      <button type="button" data-knowledge-context="nomad">NOMAD</button>
+    </nav>
+
+    <section class="knowledge-layout">
+      <aside class="panel knowledge-library">
+        <div class="panel-header"><div class="panel-title"><strong>Shared knowledge base</strong><small id="knowledgeSourceCount">10 available sources</small></div></div>
+        <div class="knowledge-library-tools">
+          <label class="knowledge-search"><span data-icon="model"></span><input id="knowledgeSearch" class="input" type="search" placeholder="Filter title, type or tag"></label>
+        </div>
+        <div class="knowledge-source-list" id="knowledgeSourceList"></div>
+      </aside>
+
+      <section class="panel knowledge-chat-panel">
+        <div class="panel-header">
+          <div class="panel-title"><strong>Evidence-linked consultation</strong><small>PSC-2026-041 · current experiment</small></div>
+          <span class="badge success">Read only</span>
+        </div>
+        <div class="knowledge-chat" id="knowledgeChat" aria-live="polite"></div>
+        <div class="knowledge-suggestions" aria-label="Suggested questions">
+          <span>Try a question</span>
+          <button type="button" data-knowledge-prompt="Which protocol and equipment settings should I use for PSC n-i-p standard?">Protocol &amp; settings</button>
+          <button type="button" data-knowledge-prompt="What solution and solvent system were used in PSC-2026-041?">Solution used</button>
+          <button type="button" data-knowledge-prompt="Is PSC-2026-041 ready for a NOMAD export?">NOMAD readiness</button>
+          <button type="button" data-knowledge-prompt="Are there conflicting spin-coating instructions?">Check conflicts</button>
+        </div>
+        <form class="knowledge-composer" id="knowledgeForm">
+          <textarea class="input" id="knowledgePrompt" rows="2" placeholder="Ask a focused question about protocols, resources, experiments or NOMAD…" aria-label="Knowledge question"></textarea>
+          <button class="button primary" type="submit"><span data-icon="model"></span>Search evidence</button>
+        </form>
+        <footer class="knowledge-chat-foot">Static POC · demo retrieval only · no external service, LLM or vector database</footer>
+      </section>
+
+      <aside class="panel knowledge-scope-panel">
+        <div class="panel-header"><div class="panel-title"><strong>Retrieval scope</strong><small>What the answer may use</small></div></div>
+        <div class="knowledge-scope" id="knowledgeEvidenceScope"></div>
+        <div class="knowledge-safety">
+          <span data-icon="shield"></span>
+          <div><strong>Human control</strong><p>Open and inspect cited records before acting. Contextual actions always stop at confirmation.</p></div>
+        </div>
+      </aside>
+    </section>
+  </main></div>
+
+  <div class="overlay" id="knowledgeWizard" hidden>
+    <section class="modal knowledge-wizard" role="dialog" aria-modal="true" aria-labelledby="knowledgeWizardTitle">
+      <div class="panel-header"><div class="panel-title"><strong id="knowledgeWizardTitle">Add knowledge</strong><small>Shared laboratory index · simulated</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
+      <div class="knowledge-wizard-progress" id="knowledgeWizardProgress"></div>
+      <div class="knowledge-wizard-body" id="knowledgeWizardBody"></div>
+      <div class="panel-footer" id="knowledgeWizardFooter"></div>
+    </section>
+  </div>
+
+  <div class="overlay" id="knowledgeConfirm" hidden>
+    <section class="modal knowledge-confirm" role="dialog" aria-modal="true" aria-labelledby="knowledgeConfirmTitle">
+      <div class="panel-header"><div class="panel-title"><strong id="knowledgeConfirmTitle">Confirm action</strong><small>No data changes automatically</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
+      <div class="panel-body" id="knowledgeConfirmBody"></div>
+      <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><button class="button primary" type="button" data-action="knowledge-action-confirm">Confirm and continue</button></div>
+    </section>
+  </div>
+</body>
+</html>

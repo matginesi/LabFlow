@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="User account and personal data management">
-  <title>Account · LabFlow</title>
+  <title>Settings · LabFlow</title>
   <link href="assets/theme.css" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/app.css">
   <script defer src="assets/exporters.js"></script>
@@ -20,19 +20,24 @@
     <header class="page-header">
       <div>
         <span class="eyebrow" data-workspace-name>Personal workspace</span>
-        <h1>Account settings</h1>
-        <p>Profile, NOMAD integration, preferences and personal data management.</p>
+        <h1>Settings</h1>
+        <p>Your research identity, personal defaults, NOMAD connection and data controls.</p>
       </div>
       <div class="page-actions">
-        <button class="button primary" type="button" data-action="user-save"><span data-icon="save"></span>Save</button>
+        <button class="button primary" type="button" data-action="user-save"><span data-icon="save"></span>Save changes</button>
       </div>
     </header>
 
+    <nav class="settings-level-switch" aria-label="Settings level">
+      <a class="active" href="users.html"><span data-icon="user"></span><span><strong>User settings</strong><small>Only your profile and preferences</small></span></a>
+      <a href="admin-settings.html"><span data-icon="shield"></span><span><strong>Admin Settings</strong><small>Workspace-wide configuration</small></span></a>
+    </nav>
+
     <div class="tabs" data-tabs="account">
-      <button class="tab-button active" type="button" data-tab="profile">Profile</button>
-      <button class="tab-button" type="button" data-tab="nomad">NOMAD Integration</button>
+      <button class="tab-button active" type="button" data-tab="profile">Identity</button>
       <button class="tab-button" type="button" data-tab="preferences">Preferences</button>
-      <button class="tab-button" type="button" data-tab="data">My Data</button>
+      <button class="tab-button" type="button" data-tab="nomad">NOMAD connection</button>
+      <button class="tab-button" type="button" data-tab="data">Data &amp; sessions</button>
     </div>
 
     <!-- Tab: Profile -->
@@ -96,9 +101,9 @@
               <label>API Key</label>
               <div class="input-group">
                 <input class="input" type="password" id="nomadApiKey" placeholder="Enter your NOMAD API key" value="••••••••••••••••">
-                <button class="button small" type="button" data-action="nomad-toggle-key"><span data-icon="eye"></span></button>
+                <button class="button small" type="button" data-action="nomad-toggle-key" aria-label="Show or hide NOMAD API key"><span data-icon="eye"></span></button>
               </div>
-              <small class="subtle">Your API key is stored locally and never sent to third parties.</small>
+              <small class="subtle">Static POC: the masked key is held in page memory only. It is personal, never part of an experiment and never included in exports.</small>
             </div>
             <div class="field span-2">
               <label>Default upload group</label>
@@ -106,8 +111,9 @@
             </div>
           </div>
           <div class="panel-footer">
-            <button class="button primary" type="button" data-action="nomad-test-connection"><span data-icon="check"></span>Test connection</button>
-            <button class="button" type="button" data-action="nomad-save-creds"><span data-icon="save"></span>Save credentials</button>
+            <button class="button primary" type="button" data-action="nomad-test-connection"><span data-icon="check"></span>Simulate connection check</button>
+            <button class="button" type="button" data-action="nomad-save-creds"><span data-icon="save"></span>Keep for this demo session</button>
+            <button class="button" type="button" data-action="toast" data-message="NOMAD key removed from this demo session">Remove key</button>
           </div>
         </article>
 

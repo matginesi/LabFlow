@@ -5,8 +5,8 @@
 <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="Local text workbook image and chart tools" name="description"/>
-<title>Local tools · LabFlow</title>
+<meta content="Contextual scientific data tools for LabFlow experiments" name="description"/>
+<title>Scientific Tools · LabFlow</title>
 <link href="assets/theme.css" rel="stylesheet"/>
 <link rel="stylesheet" href="assets/app.css">
 <script defer src="assets/exporters.js"></script>
@@ -17,13 +17,31 @@
 <aside class="sidebar" id="sidebar"></aside>
 <button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
 <div class="app-main"><main class="page">
-<header class="page-header"><div><h1>Local tools</h1><p>Text, Markdown, multi-sheet workbook, images and scientific charts. Everything stays inside the browser.</p></div><div class="page-actions"><span class="badge success">No CDN</span><span class="badge success">No trackers</span><span class="badge info">Local files only</span></div></header>
+<header class="page-header compact-header"><div><span class="eyebrow">Scientific workbench · local POC</span><h1>Tools</h1><p>Inspect, transform, validate and visualise experiment data without losing scientific context.</p></div><div class="page-actions"><button class="button" type="button" data-action="tool-history">Recent work</button><button class="button primary" type="button" data-action="tool-context">Change context</button></div></header>
+<section class="tool-context-strip"><span data-icon="flask"></span><span><small>Experiment</small><strong>PSC-2026-041</strong></span><span><small>Stack</small><strong>S02 · DMF/DMSO · 100 °C</strong></span><span><small>File</small><strong>measurement_014.csv</strong></span><span><small>Dataset</small><strong>J–V forward scan</strong></span><span><small>Measure</small><strong>Efficiency</strong></span><a href="experiment.html#analysis">Back to analysis</a></section>
+<section class="tool-workbench-index" aria-label="Tool categories">
+  <button class="active" type="button" data-tool-category="data"><span data-icon="table"></span><span><strong>Data</strong><small>Import, map and clean</small></span><b>6</b></button>
+  <button type="button" data-tool-category="visual"><span data-icon="chart"></span><span><strong>Visualisation</strong><small>Charts and comparisons</small></span><b>5</b></button>
+  <button type="button" data-tool-category="convert"><span data-icon="flow"></span><span><strong>Conversion</strong><small>Units and formats</small></span><b>5</b></button>
+  <button type="button" data-tool-category="validate"><span data-icon="shield"></span><span><strong>Validation</strong><small>Quality and provenance</small></span><b>6</b></button>
+  <button type="button" data-tool-category="nomad"><span data-icon="download"></span><span><strong>NOMAD</strong><small>Map and preview</small></span><b>3</b></button>
+  <button type="button" data-tool-category="ai"><span data-icon="spark"></span><span><strong>AI</strong><small>Evidence-linked help</small></span><b>8</b></button>
+</section>
+<section class="tool-catalog-panel panel">
+  <div class="panel-header"><div class="panel-title"><strong id="toolCategoryTitle">Data tools</strong><small id="toolCategorySubtitle">Choose a focused operation; the selected experiment context is retained.</small></div><span class="badge success">Context attached</span></div>
+  <div class="tool-catalog-grid" id="toolCatalogGrid"></div>
+</section>
+<div class="section-title"><div><h2>Active workspace</h2><p>The selected tool opens below and reuses the same editors and export logic.</p></div><span class="badge info" id="activeToolBadge">Structured text</span></div>
 <section class="panel"><div class="tool-layout"><nav class="tool-nav" data-tool-nav=""><button class="active" data-tool="code" type="button"><span data-icon="code"></span>Structured text</button><button data-tool="markdown" type="button"><span data-icon="file"></span>Markdown</button><button data-tool="workbook" type="button"><span data-icon="table"></span>Workbook</button><button data-tool="images" type="button"><span data-icon="image"></span>Images</button><button data-tool="charts" type="button"><span data-icon="chart"></span>Charts</button><button data-tool="graphs" type="button"><span data-icon="flow"></span>Graphs</button></nav><div class="tool-content">
-<section data-tool-panel="code"><div class="editor-shell"><div class="editor-toolbar"><div class="row"><select class="input input-compact" id="codeMode"><option value="yaml">YAML</option><option value="json">JSON</option><option value="python">Python</option><option value="csv">CSV</option><option value="text">Text</option></select><button class="button small" data-action="code-load" type="button">Open file</button><input hidden="" id="codeFileInput" type="file"/></div><div class="row"><span class="small" id="codeStatus">Ready</span><button class="button small" data-action="code-validate" type="button">Validate</button><button class="button small primary" data-action="code-download" type="button">Download</button></div></div><div class="editor-area"><pre class="editor-lines" id="codeLines">1</pre><textarea class="code-input" id="codeInput" spellcheck="false">experiment:
+<section data-tool-panel="code"><div class="editor-shell scientific-text-editor">
+  <header class="text-editor-head"><div><span class="text-file-mark" data-icon="file"></span><span><strong id="codeFileName">experiment.yaml</strong><small>Structured experiment record · local working copy</small></span></div><div class="text-editor-state"><i></i><span id="codeStatus">Ready to validate</span></div></header>
+  <div class="editor-toolbar"><div class="row"><label class="editor-mode-label" for="codeMode">Format</label><select class="input input-compact" id="codeMode" name="code_format"><option value="yaml">YAML</option><option value="json">JSON</option><option value="python">Python</option><option value="csv">CSV</option><option value="text">Plain text</option></select><button class="button small" data-action="code-load" type="button">Open local file</button><input hidden="" id="codeFileInput" type="file"/></div><div class="row"><button class="button small" data-action="code-format" type="button">Format</button><button class="button small" data-action="code-copy" type="button">Copy</button><button class="button small primary" data-action="code-validate" type="button">Validate record</button></div></div>
+  <div class="scientific-editor-grid"><div class="editor-area"><pre class="editor-lines" id="codeLines">1</pre><textarea class="code-input" id="codeInput" aria-label="Structured text content" spellcheck="false">experiment:
   id: EXP-2026-052
   composition: Cs0.05FA0.78MA0.17PbI2.5Br0.5
   process_template: psc_baseline@4.1
-  status: draft</textarea></div></div></section>
+  status: draft</textarea></div><aside class="text-editor-inspector" id="codeInspector"><div><span class="eyebrow">Document</span><dl><div><dt>Lines</dt><dd>5</dd></div><div><dt>Characters</dt><dd>138</dd></div><div><dt>Format</dt><dd>YAML</dd></div></dl></div><div class="editor-check-list"><span class="done"><i></i>Readable structure</span><span><i></i>Validation not run</span><span><i></i>No file exported</span></div><div class="editor-inspector-actions"><button class="button small" data-action="code-download" type="button">Download copy</button><small>Original files are never overwritten.</small></div></aside></div>
+</div></section>
 <section data-tool-panel="markdown" hidden=""><div class="editor-toolbar toolbar-themed"><div class="row"><button class="button small" data-markdown="bold" type="button">Bold</button><button class="button small" data-markdown="heading" type="button">Heading</button><button class="button small" data-markdown="table" type="button">Table</button></div><div class="row"><button class="button small" data-action="markdown-load" type="button">Open</button><input hidden="" id="markdownFileInput" type="file"/><button class="button small primary" data-action="markdown-download" type="button">Download .md</button></div></div><div class="markdown-layout"><textarea class="input textarea-large" id="markdownInput" spellcheck="false"># Experiment note
 
 ## Objective
