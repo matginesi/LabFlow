@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-
-<html data-theme="light" lang="en">
+<html lang="en">
 <head>
+<script>document.documentElement.dataset.theme=localStorage.getItem('labflow-theme')||'light'</script>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
 <meta content="LabFlow component catalogue" name="description"/>
 <title>UI Kit · LabFlow</title>
+<link href="assets/theme.css" rel="stylesheet"/>
 <link href="assets/app.css" rel="stylesheet"/>
 <script defer="" src="assets/exporters.js"></script>
 <script defer="" src="assets/app.js"></script>
@@ -16,8 +17,58 @@
 <button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
 <div class="app-main"><main class="page">
 <header class="page-header"><div><h1>UI Kit</h1><p>The authoritative component catalogue for this static POC and the future Flask implementation.</p></div><div class="page-actions"><a class="button" href="documentation.html"><span data-icon="file"></span>Rendered documentation</a><span class="badge success">Single theme system</span></div></header>
-<div class="section-title"><div><h2>Colour and geometry</h2><p>Professional, compact and minimally rounded.</p></div></div>
-<section class="panel"><div class="panel-body"><div class="swatch-grid"><div class="swatch"><i class="swatch-accent"></i><span>Accent</span></div><div class="swatch"><i class="swatch-success"></i><span>Success</span></div><div class="swatch"><i class="swatch-warning"></i><span>Warning</span></div><div class="swatch"><i class="swatch-danger"></i><span>Danger</span></div><div class="swatch"><i class="swatch-nav"></i><span>Navigation</span></div><div class="swatch"><i class="swatch-page"></i><span>Page background</span></div></div></div></section>
+<div class="section-title"><div><h2>Color system</h2><p>Single source of truth in <code>assets/theme.css</code>. All values live under <code>:root</code> (light) and <code>html[data-theme="dark"]</code>.</p></div></div>
+<section class="grid grid-2">
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Surface &amp; background</strong><small>Page, card, navigation</small></div></div><div class="panel-body"><div class="swatch-grid">
+<div class="swatch"><i style="background:var(--bg)"></i><span>--bg</span></div>
+<div class="swatch"><i style="background:var(--surface)"></i><span>--surface</span></div>
+<div class="swatch"><i style="background:var(--surface-2)"></i><span>--surface-2</span></div>
+<div class="swatch"><i style="background:var(--surface-3)"></i><span>--surface-3</span></div>
+<div class="swatch"><i style="background:var(--nav)"></i><span>--nav</span></div>
+<div class="swatch"><i style="background:var(--nav-2)"></i><span>--nav-2</span></div>
+</div></div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Text &amp; borders</strong><small>Ink, muted, dividers</small></div></div><div class="panel-body"><div class="swatch-grid">
+<div class="swatch"><i style="background:var(--ink)"></i><span>--ink</span></div>
+<div class="swatch"><i style="background:var(--muted)"></i><span>--muted</span></div>
+<div class="swatch"><i style="background:var(--muted-2)"></i><span>--muted-2</span></div>
+<div class="swatch"><i style="background:var(--line)"></i><span>--line</span></div>
+<div class="swatch"><i style="background:var(--line-strong)"></i><span>--line-strong</span></div>
+</div></div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Semantic</strong><small>Accent, feedback, status</small></div></div><div class="panel-body"><div class="swatch-grid">
+<div class="swatch"><i style="background:var(--accent)"></i><span>--accent</span></div>
+<div class="swatch"><i style="background:var(--teal)"></i><span>--teal</span></div>
+<div class="swatch"><i style="background:var(--amber)"></i><span>--amber</span></div>
+<div class="swatch"><i style="background:var(--red)"></i><span>--red</span></div>
+<div class="swatch"><i style="background:var(--violet)"></i><span>--violet</span></div>
+</div></div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Soft variants</strong><small>Background fills</small></div></div><div class="panel-body"><div class="swatch-grid">
+<div class="swatch"><i style="background:var(--accent-soft)"></i><span>--accent-soft</span></div>
+<div class="swatch"><i style="background:var(--teal-soft)"></i><span>--teal-soft</span></div>
+<div class="swatch"><i style="background:var(--amber-soft)"></i><span>--amber-soft</span></div>
+<div class="swatch"><i style="background:var(--red-soft)"></i><span>--red-soft</span></div>
+<div class="swatch"><i style="background:var(--violet-soft)"></i><span>--violet-soft</span></div>
+</div></div></article>
+</section>
+
+<div class="section-title"><div><h2>Layout tokens</h2><p>Spacing, sizing, radii, and elevation used across all components.</p></div></div>
+<section class="grid grid-3">
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Spacing</strong><small>Gap &amp; padding</small></div></div><div class="panel-body stack-sm">
+<div class="row between"><code>--page-gap</code><span class="mono">12px</span></div>
+<div class="row between"><code>--panel-pad</code><span class="mono">12px</span></div>
+</div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Sizing</strong><small>Global dimensions</small></div></div><div class="panel-body stack-sm">
+<div class="row between"><code>--sidebar-w</code><span class="mono">210px</span></div>
+<div class="row between"><code>--topbar-h</code><span class="mono">50px</span></div>
+<div class="row between"><code>--control-h</code><span class="mono">34px</span></div>
+</div></article>
+<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Radii &amp; shadow</strong><small>Shape &amp; elevation</small></div></div><div class="panel-body stack-sm">
+<div class="row between"><code>--radius-1</code><span class="mono">2px</span></div>
+<div class="row between"><code>--radius-2</code><span class="mono">4px</span></div>
+<div class="row between"><code>--radius-3</code><span class="mono">6px</span></div>
+<div class="row between"><code>--shadow</code><span class="mono">var(--shadow)</span></div>
+<div class="row between"><code>--shadow-float</code><span class="mono">var(--shadow-float)</span></div>
+</div></article>
+</section>
 <div class="section-title"><div><h2>Core controls</h2><p>Use these components before creating new variants.</p></div></div>
 <section class="grid grid-2"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Buttons and statuses</strong><small>One standard height and restrained variants.</small></div></div><div class="panel-body stack"><div class="row wrap"><button class="button" type="button">Default</button><button class="button primary" type="button">Primary</button><button class="button danger" type="button">Danger</button><button class="button small" type="button">Small</button><button class="icon-button" type="button"><span data-icon="plus"></span></button></div><div class="row wrap"><span class="badge">Neutral</span><span class="badge info">Information</span><span class="badge success">Validated</span><span class="badge warning">Review</span><span class="badge danger">Failed</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Form controls</strong><small>Consistent labels, fields and helper text.</small></div></div><div class="panel-body form-grid"><div class="field"><label>Text input</label><input class="input" value="Sample value"/><small>Supporting information.</small></div><div class="field"><label>Select</label><select class="input"><option>Option A</option><option>Option B</option></select></div><div class="field span-2"><label>Textarea</label><textarea class="input">Longer structured note.</textarea></div></div></article></section>
 <div class="section-title"><div><h2>Domain visuals</h2><p>Primary editors must be visual before they become tables.</p></div></div>
