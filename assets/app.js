@@ -125,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     $$('[data-icon]').forEach(node => node.innerHTML = icon(node.dataset.icon));
     mountUserPopover(); mountProjectPopover(); mountScopeBar(); mountCreateWizard(); mountProjectWizard(); applyUserScope();
+    }
   }
 
   function mountUserPopover(){
