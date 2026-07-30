@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="User account and personal data management">
-  <title>User management · LabFlow</title>
+  <title>Account · LabFlow</title>
   <link rel="stylesheet" href="assets/app.css">
   <script defer src="assets/exporters.js"></script>
   <script defer src="assets/app.js"></script>
@@ -14,26 +14,299 @@
   <aside id="sidebar" class="sidebar"></aside>
   <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
   <div class="app-main"><main class="page">
-    <header class="page-header"><div><h1>User management</h1><p>Profile, preferences, sessions and explicit ownership of personal research data.</p></div><div class="page-actions"><button class="button primary" type="button" data-action="user-save"><span data-icon="save"></span>Save profile</button></div></header>
 
-    <section class="user-management-grid">
-      <article class="panel profile-card"><div class="profile-cover"></div><div class="panel-body profile-body"><button class="profile-avatar" type="button" data-action="user-avatar"><span data-user-initials>EW</span><small>Change</small></button><div><span class="eyebrow">Current account</span><h2 data-user-name>Eleanor Wright</h2><p data-user-role>Principal investigator</p><div class="row wrap"><span class="badge success">Authenticated</span><span class="badge info">Owner</span></div></div></div><div class="panel-footer"><span class="small subtle mono">User ID · <span data-user-id>USR-EW</span></span><span class="small subtle">Personal workspace only</span></div></article>
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Profile details</strong><small>Used in experiment ownership, reports and provenance.</small></div></div><div class="panel-body form-grid"><div class="field"><label>Full name</label><input class="input" data-user-name value="Eleanor Wright"></div><div class="field"><label>Research role</label><input class="input" data-user-role value="Principal investigator"></div><div class="field span-2"><label>Email</label><input class="input" type="email" data-user-email value="eleanor.wright@lab.example"></div><div class="field"><label>Affiliation</label><input class="input" value="Perovskite Research Laboratory"></div><div class="field"><label>ORCID</label><input class="input mono" value="0000-0002-1825-0097"></div><div class="field span-2"><label>Research focus</label><textarea class="input">Mixed-cation perovskites, thin-film deposition and photovoltaic device optimisation.</textarea></div></div></article>
-    </section>
+    <header class="page-header">
+      <div>
+        <span class="eyebrow" data-workspace-name>Personal workspace</span>
+        <h1>Account settings</h1>
+        <p>Profile, NOMAD integration, preferences and personal data management.</p>
+      </div>
+      <div class="page-actions">
+        <button class="button primary" type="button" data-action="user-save"><span data-icon="save"></span>Save</button>
+      </div>
+    </header>
 
-    <section class="grid grid-3 mt-12">
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Personal workspace</strong><small>Private root container</small></div><span class="badge success">Owner only</span></div><div class="panel-body stack-sm"><div class="between"><span>Name</span><strong data-workspace-name>Eleanor research workspace</strong></div><div class="between"><span>Workspace ID</span><strong class="mono" data-workspace-id>WS-EW-01</strong></div><div class="between"><span>Projects</span><strong data-user-metric="projects">3</strong></div><div class="between"><span>Visibility</span><strong>Private</strong></div><a class="button" href="projects.html">Open projects</a></div></article>
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Preferences</strong><small>Local demonstration settings</small></div></div><div class="panel-body stack-sm"><div class="field"><label>Language</label><select class="input"><option>English</option><option>Italian</option></select></div><div class="field"><label>Units</label><select class="input"><option>SI units</option><option>Laboratory defaults</option></select></div><div class="field"><label>Date format</label><select class="input"><option>DD MMM YYYY</option><option>YYYY-MM-DD</option></select></div><div class="field"><label>Default export</label><select class="input"><option>NOMAD package</option><option>Research PDF</option><option>XLSX workbook</option></select></div></div></article>
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data ownership</strong><small>What the backend must enforce</small></div><span data-icon="shield"></span></div><div class="panel-body ownership-rules"><div><span data-icon="check"></span><p><strong>Every record has an owner</strong><small>`owner_id` is mandatory.</small></p></div><div><span data-icon="check"></span><p><strong>Every record belongs to a workspace</strong><small>`workspace_id` scopes all queries.</small></p></div><div><span data-icon="check"></span><p><strong>Project records stay isolated</strong><small>`project_id` groups experiments and results.</small></p></div><div><span data-icon="check"></span><p><strong>Exports are explicit snapshots</strong><small>No hidden cross-user data.</small></p></div></div></article>
-    </section>
+    <div class="tabs" data-tabs="account">
+      <button class="tab-button active" type="button" data-tab="profile">Profile</button>
+      <button class="tab-button" type="button" data-tab="nomad">NOMAD Integration</button>
+      <button class="tab-button" type="button" data-tab="preferences">Preferences</button>
+      <button class="tab-button" type="button" data-tab="data">My Data</button>
+    </div>
 
-    <div class="section-title"><div><h2>Demo accounts</h2><p>Switching account demonstrates separate personal workspaces and project collections.</p></div><span class="badge warning">Static POC simulation</span></div>
-    <section class="panel"><div class="panel-body account-list" id="demoAccounts"></div></section>
+    <!-- Tab: Profile -->
+    <div class="tab-panel active" data-tab-panel="profile">
+      <section class="user-management-grid">
+        <article class="panel profile-card">
+          <div class="profile-cover"></div>
+          <div class="panel-body profile-body">
+            <button class="profile-avatar" type="button" data-action="user-avatar">
+              <span data-user-initials>EW</span>
+              <small>Change</small>
+            </button>
+            <div>
+              <span class="eyebrow">Current user</span>
+              <h2 data-user-name>Eleanor Wright</h2>
+              <p data-user-role>Principal investigator</p>
+              <div class="row wrap">
+                <span class="badge success">Authenticated</span>
+                <span class="badge info">Owner</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <span class="small subtle mono">User ID · <span data-user-id>USR-EW</span></span>
+            <span class="small subtle">Personal workspace only</span>
+          </div>
+        </article>
 
-    <div class="section-title"><div><h2>Active sessions</h2><p>A future backend will manage authentication, expiry and revocation.</p></div></div>
-    <section class="panel"><div class="panel-body session-list"><div class="session-row"><span data-icon="shield"></span><div><strong>Fedora workstation · current browser</strong><small>Rome, Italy · active now</small></div><span class="badge success">Current</span></div><div class="session-row"><span data-icon="shield"></span><div><strong>Laboratory workstation</strong><small>Last active 28 Jul 2026 · 17:42</small></div><button class="button small danger" type="button" data-action="user-session-revoke">Revoke</button></div></div></section>
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Profile details</strong><small>Used in experiment ownership, reports and provenance.</small></div>
+          </div>
+          <div class="panel-body form-grid">
+            <div class="field"><label>Full name</label><input class="input" data-user-name value="Eleanor Wright"></div>
+            <div class="field"><label>Research role</label><input class="input" data-user-role value="Principal investigator"></div>
+            <div class="field span-2"><label>Email</label><input class="input" type="email" data-user-email value="eleanor.wright@lab.example"></div>
+            <div class="field"><label>Affiliation</label><input class="input" value="Perovskite Research Laboratory"></div>
+            <div class="field"><label>ORCID</label><input class="input mono" value="0000-0002-1825-0097"></div>
+            <div class="field span-2"><label>Research focus</label>
+              <textarea class="input">Mixed-cation perovskites, thin-film deposition and photovoltaic device optimisation.</textarea>
+            </div>
+          </div>
+        </article>
+      </section>
+    </div>
 
-    <div class="alert warning mt-12"><span data-icon="warning"></span><div><strong>Frontend demonstration only</strong><div class="small subtle">The Flask backend must provide password handling, secure sessions, CSRF protection, authorization and owner-scoped database queries. The browser must never be trusted as the security boundary.</div></div></div>
+    <!-- Tab: NOMAD Integration -->
+    <div class="tab-panel" data-tab-panel="nomad" hidden>
+      <section class="grid grid-2">
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>NOMAD API Connection</strong><small>Link your NOMAD repository for data exchange</small></div>
+            <span class="badge" id="nomadConnectionStatus">Disconnected</span>
+          </div>
+          <div class="panel-body form-grid">
+            <div class="field span-2">
+              <label>NOMAD Repository URL</label>
+              <input class="input" type="url" id="nomadRepoUrl" value="https://nomad-lab.eu/prod/rae/api/" placeholder="https://nomad-lab.eu/prod/rae/api/">
+            </div>
+            <div class="field span-2">
+              <label>API Key</label>
+              <div class="input-group">
+                <input class="input" type="password" id="nomadApiKey" placeholder="Enter your NOMAD API key" value="••••••••••••••••">
+                <button class="button small" type="button" data-action="nomad-toggle-key"><span data-icon="eye"></span></button>
+              </div>
+              <small class="subtle">Your API key is stored locally and never sent to third parties.</small>
+            </div>
+            <div class="field span-2">
+              <label>Default upload group</label>
+              <input class="input" id="nomadUploadGroup" value="/uploads/labflow" placeholder="/uploads/labflow">
+            </div>
+          </div>
+          <div class="panel-footer">
+            <button class="button primary" type="button" data-action="nomad-test-connection"><span data-icon="check"></span>Test connection</button>
+            <button class="button" type="button" data-action="nomad-save-creds"><span data-icon="save"></span>Save credentials</button>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Recent uploads</strong><small>Last 5 packages exported to NOMAD</small></div>
+          </div>
+          <div class="panel-body">
+            <div class="stack-sm" id="nomadRecentUploads">
+              <div class="between"><span class="mono">EXP-2026-052</span><span class="small subtle">29 Jul 2026</span><span class="badge success">Uploaded</span></div>
+              <div class="between"><span class="mono">EXP-2026-048</span><span class="small subtle">22 Jul 2026</span><span class="badge success">Uploaded</span></div>
+              <div class="between"><span class="mono">EXP-2026-041</span><span class="small subtle">15 Jul 2026</span><span class="badge warning">Pending review</span></div>
+              <div class="between"><span class="mono">EXP-2026-039</span><span class="small subtle">10 Jul 2026</span><span class="badge success">Uploaded</span></div>
+              <div class="between"><span class="mono">EXP-2026-035</span><span class="small subtle">01 Jul 2026</span><span class="badge danger">Failed</span></div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <a class="button small" href="report.html#nomad"><span data-icon="download"></span>Go to NOMAD export</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel mt-12">
+        <div class="panel-header">
+          <div class="panel-title"><strong>NOMAD synchronization settings</strong><small>Configure automatic metadata mapping</small></div>
+        </div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>Auto-export on experiment completion</label>
+              <select class="input">
+                <option>Ask each time</option>
+                <option>Always export</option>
+                <option>Never auto-export</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Include raw measurement files</label>
+              <select class="input">
+                <option>Yes, all files</option>
+                <option>Metadata only</option>
+                <option>Ask each time</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Default visibility</label>
+              <select class="input">
+                <option>Private</option>
+                <option>Public</option>
+                <option>Embargo (12 months)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>License</label>
+              <select class="input">
+                <option>CC BY 4.0</option>
+                <option>CC0</option>
+                <option>MIT</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab: Preferences -->
+    <div class="tab-panel" data-tab-panel="preferences" hidden>
+      <div class="grid grid-3">
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Appearance</strong></div>
+          </div>
+          <div class="panel-body stack-sm">
+            <div class="field"><label>Theme</label>
+              <select class="input" data-action="theme-select">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System default</option>
+              </select>
+            </div>
+            <div class="field"><label>Language</label>
+              <select class="input"><option>English</option></select>
+            </div>
+            <div class="field"><label>Date format</label>
+              <select class="input"><option>DD MMM YYYY</option><option>YYYY-MM-DD</option></select>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Laboratory defaults</strong></div>
+          </div>
+          <div class="panel-body stack-sm">
+            <div class="field"><label>Units</label>
+              <select class="input"><option>SI units</option><option>Laboratory defaults</option></select>
+            </div>
+            <div class="field"><label>Default export format</label>
+              <select class="input"><option>NOMAD package</option><option>Research PDF</option><option>XLSX workbook</option></select>
+            </div>
+            <div class="field"><label>Measurement templates</label>
+              <select class="input"><option>J–V, EQE, XRD</option><option>J–V only</option><option>Full characterisation</option></select>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><strong>Notifications</strong></div>
+          </div>
+          <div class="panel-body stack-sm">
+            <label class="check-row"><input type="checkbox" checked><span>Experiment completed</span></label>
+            <label class="check-row"><input type="checkbox" checked><span>NOMAD upload confirmed</span></label>
+            <label class="check-row"><input type="checkbox"><span>NOMAD import available</span></label>
+            <label class="check-row"><input type="checkbox" checked><span>Data quality warnings</span></label>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- Tab: My Data -->
+    <div class="tab-panel" data-tab-panel="data" hidden>
+      <div class="section-title">
+        <div>
+          <h2>Your research data</h2>
+          <p>Overview of all objects created in your personal workspace.</p>
+        </div>
+      </div>
+
+      <div class="grid-4 mb-12">
+        <div class="metric">
+          <span class="metric-label">Projects</span>
+          <span class="metric-value" data-user-metric="projects">3</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Experiments</span>
+          <span class="metric-value">8</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Stacks</span>
+          <span class="metric-value">5</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Materials</span>
+          <span class="metric-value">12</span>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><strong>Data ownership rules</strong><small>How LabFlow manages your research data</small></div>
+          <span data-icon="shield"></span>
+        </div>
+        <div class="panel-body ownership-rules">
+          <div><span data-icon="check"></span><p><strong>Every record has an owner</strong><small><code>owner_id</code> is mandatory on all entities.</small></p></div>
+          <div><span data-icon="check"></span><p><strong>Scoped to workspace</strong><small><code>workspace_id</code> isolates all queries.</small></p></div>
+          <div><span data-icon="check"></span><p><strong>Project isolation</strong><small><code>project_id</code> groups experiments and results.</small></p></div>
+          <div><span data-icon="check"></span><p><strong>Explicit snapshots</strong><small>Exports never include hidden cross-user data.</small></p></div>
+          <div><span data-icon="check"></span><p><strong>Full traceability</strong><small>Every result links back to its source experiment and operator.</small></p></div>
+        </div>
+      </section>
+
+      <div class="section-title mt-12">
+        <div>
+          <h2>Demo accounts</h2>
+          <p>Switch accounts to see separate personal workspaces and project collections.</p>
+        </div>
+        <span class="badge warning">Static POC simulation</span>
+      </div>
+      <section class="panel">
+        <div class="panel-body account-list" id="demoAccounts"></div>
+      </section>
+
+      <div class="section-title mt-12">
+        <div>
+          <h2>Active sessions</h2>
+          <p>A future backend will manage authentication, expiry and revocation.</p>
+        </div>
+      </div>
+      <section class="panel">
+        <div class="panel-body session-list">
+          <div class="session-row">
+            <span data-icon="shield"></span>
+            <div><strong>Fedora workstation · current browser</strong><small>Rome, Italy · active now</small></div>
+            <span class="badge success">Current</span>
+          </div>
+          <div class="session-row">
+            <span data-icon="shield"></span>
+            <div><strong>Laboratory workstation</strong><small>Last active 28 Jul 2026 · 17:42</small></div>
+            <button class="button small danger" type="button" data-action="user-session-revoke">Revoke</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="alert warning mt-12">
+      <span data-icon="warning"></span>
+      <div><strong>Frontend demonstration only</strong>
+        <div class="small subtle">The Flask backend must provide password handling, secure sessions, CSRF protection, authorization and owner-scoped database queries. The browser must never be trusted as the security boundary.</div>
+      </div>
+    </div>
   </main></div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>
 </body>
