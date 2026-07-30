@@ -70,13 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const navigation = [
     { section: true, label: 'WORK' },
     { id: 'dashboard',  href: 'index.html',     icon: 'home',   label: 'Dashboard' },
-    { id: 'progetti',   href: 'projects.html',  icon: 'folder', label: 'Progetti' },
+  { id: 'projects',     href: 'projects.html',   icon: 'folder', label: 'Projects' },
     { section: true, label: 'RESOURCES' },
-    { id: 'catalogo',   href: 'catalogs.html',  icon: 'grid',   label: 'Catalogo' },
+  { id: 'catalogs',     href: 'catalogs.html',   icon: 'grid',   label: 'Catalog' },
     { section: true, label: 'OUTPUT' },
-    { id: 'exports',    href: 'report.html',    icon: 'download', label: 'Report / Export' },
+  { id: 'report',       href: 'report.html',     icon: 'download', label: 'Report / Export' },
     { section: true, label: 'MORE' },
-    { id: 'altro-parent', href: '#', icon: 'plus', label: 'Altro', expandable: true, children: [
+    { id: 'more-parent', href: '#', icon: 'plus', label: 'More', expandable: true, children: [
       { id: 'editors',  href: 'editors.html',       icon: 'code',   label: 'Editors' },
       { id: 'ai',       href: 'ai-assistant.html',   icon: 'spark', label: 'AI Assistant' },
       { id: 'flow',     href: 'flow.html',           icon: 'flow', label: 'Flow & Data' },
@@ -614,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'STK-001': {
       id: 'STK-001',
       name: 'FA0.85Cs0.15PbI3',
-      description: 'Stack perovskite a base formamidinio/cesio per cella n-i-p',
+      description: 'FA/Cs based perovskite stack for n-i-p cell',
       dateCreated: '2026-07-15',
       layers: [
         { type: 'substrate', label: 'FTO/Glass', thickness: '2.2 mm' },
@@ -643,22 +643,22 @@ document.addEventListener('DOMContentLoaded', () => {
         humidity: '< 0.1 ppm',
       },
       pipeline: [
-        { step: 1, name: 'Substrate cleaning', duration: '15 min', operator: 'ricercatore' },
-        { step: 2, name: 'TiO2 Compact deposition', duration: '30 min', operator: 'ricercatore' },
-        { step: 3, name: 'TiO2 Mesoporous deposition', duration: '45 min', operator: 'ricercatore' },
-        { step: 4, name: 'Perovskite spin-coating', duration: '5 min', operator: 'ricercatore' },
-        { step: 5, name: 'Perovskite annealing', duration: '30 min', operator: 'ricercatore' },
-        { step: 6, name: 'Spiro-OMeTAD deposition', duration: '5 min', operator: 'ricercatore' },
-        { step: 7, name: 'Au contact evaporation', duration: '20 min', operator: 'tecnico' },
+        { step: 1, name: 'Substrate cleaning', duration: '15 min', operator: 'researcher' },
+        { step: 2, name: 'TiO2 Compact deposition', duration: '30 min', operator: 'researcher' },
+        { step: 3, name: 'TiO2 Mesoporous deposition', duration: '45 min', operator: 'researcher' },
+        { step: 4, name: 'Perovskite spin-coating', duration: '5 min', operator: 'researcher' },
+        { step: 5, name: 'Perovskite annealing', duration: '30 min', operator: 'researcher' },
+        { step: 6, name: 'Spiro-OMeTAD deposition', duration: '5 min', operator: 'researcher' },
+        { step: 7, name: 'Au contact evaporation', duration: '20 min', operator: 'technician' },
       ],
       actions: [
-        { step: 1, task: 'Pulire substrate con acetone e IPA', done: true },
-        { step: 2, task: 'Preparare soluzione TiO2 Compact', done: true },
-        { step: 3, task: 'Preparare soluzione TiO2 Mesoporous', done: true },
-        { step: 4, task: 'Filtrare soluzione perovskite con filtro 0.45 µm', done: false },
-        { step: 5, task: 'Accendere hotplate a 150°C', done: false },
-        { step: 6, task: 'Preparare soluzione Spiro-OMeTAD', done: false },
-        { step: 7, task: 'Caricare substrate nell\'evaporatore', done: false },
+        { step: 1, task: 'Clean substrate with acetone and IPA', done: true },
+        { step: 2, task: 'Prepare TiO2 Compact solution', done: true },
+        { step: 3, task: 'Prepare TiO2 Mesoporous solution', done: true },
+        { step: 4, task: 'Filter perovskite solution with 0.45 µm filter', done: false },
+        { step: 5, task: 'Turn on hotplate at 150°C', done: false },
+        { step: 6, task: 'Prepare Spiro-OMeTAD solution', done: false },
+        { step: 7, task: 'Load substrate into evaporator', done: false },
       ],
     }
   };
@@ -676,7 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'SOL-001': {
       id: 'SOL-001',
       name: 'FA0.85Cs0.15PbI3 Precursor',
-      description: 'Soluzione precursore per assorbitore perovskite',
+      description: 'Perovskite absorber precursor solution',
       precursors: [
         { name: 'FAI', formula: 'CH(NH2)2I', ratio: '0.85', concentration: '1.275 M' },
         { name: 'CsI', formula: 'CsI', ratio: '0.15', concentration: '0.225 M' },
@@ -996,7 +996,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Type</th><th>Name</th><th>ID</th></tr></thead><tbody>${mat.usedIn.map(ref =>
             `<tr><td>${escapeHtml(ref.type)}</td><td><strong>${escapeHtml(ref.name)}</strong></td><td class="mono">${escapeHtml(ref.id)}</td></tr>`
           ).join('')}</tbody></table></div>`
-        : '<p class="subtle">Questo materiale non è ancora utilizzato in nessuno stack o soluzione.</p>';
+        : '<p class="subtle">This material is not yet used in any stack or solution.</p>';
     }
   }
 
@@ -1028,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='sidebar') document.body.classList.toggle('sidebar-open');
     if(action==='user-toggle'){const pop=$('#userPopover'),project=$('#projectPopover');if(project)project.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
     if(action==='project-toggle'){const pop=$('#projectPopover'),user=$('#userPopover');if(user)user.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
-    if(action==='project-select'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} if(page==='progetti')location.href='project.html';else location.reload();}
+    if(action==='project-select'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} if(page==='projects')location.href='project.html';else location.reload();}
     if(action==='project-new'){location.href='projects.html#new';}
     if(action==='project-open'){try{localStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} location.href='project.html';}
     if(action==='project-wizard'){openProjectWizard();}
@@ -1183,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('focusin',event=>{if(event.target.matches('[data-sheet-cell]'))selectCell(+event.target.dataset.row,+event.target.dataset.col);});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
 
-  mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='exports')initReportImages(); if(page==='progetti'&&location.hash==='#new')setTimeout(openProjectWizard,0);
+  mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='report')initReportImages(); if(page==='projects'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
   if(page==='material-detail'){const params=new URLSearchParams(location.search);const matId=params.get('material')||'FAI';renderMaterialPage(matId);}
   if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}

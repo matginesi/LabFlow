@@ -19,47 +19,45 @@
       <header class="page-header home-header">
         <div>
           <span class="eyebrow" data-workspace-name>Personal workspace</span>
-          <h1>Buongiorno, <span data-user-name>Eleanor Wright</span></h1>
-          <p><span data-user-metric="projects">3</span> progetti attivi · <span data-user-metric="experiments">8</span> esperimenti · ultima sincronizzazione NOMAD: <span id="lastNomadSync">oggi</span></p>
+          <h1>Good morning, <span data-user-name>Eleanor Wright</span></h1>
+          <p><span data-user-metric="projects">3</span> active projects · <span data-user-metric="experiments">8</span> experiments · last NOMAD sync: <span id="lastNomadSync">today</span></p>
         </div>
         <div class="page-actions">
-          <button class="button primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span>Nuovo esperimento</button>
-          <button class="button" type="button" data-action="stack-wizard"><span data-icon="model"></span>Nuovo stack</button>
+          <button class="button primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span>New experiment</button>
+          <button class="button" type="button" data-action="stack-wizard"><span data-icon="model"></span>New stack</button>
         </div>
       </header>
 
-      <!-- Metric cards -->
       <div class="grid-4" id="dashboardMetrics">
         <div class="metric">
-          <span class="metric-label">Esperimenti attivi</span>
+          <span class="metric-label">Active experiments</span>
           <span class="metric-value" data-user-metric="experiments">8</span>
-          <span class="metric-detail">3 in esecuzione</span>
+          <span class="metric-detail">3 in progress</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Stack in uso</span>
+          <span class="metric-label">Stacks in use</span>
           <span class="metric-value" id="stackCount">12</span>
-          <span class="metric-detail">4 materiali diversi</span>
+          <span class="metric-detail">4 different materials</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Export in coda</span>
+          <span class="metric-label">Pending exports</span>
           <span class="metric-value" id="pendingExportCount">2</span>
-          <span class="metric-detail">1 per NOMAD</span>
+          <span class="metric-detail">1 for NOMAD</span>
         </div>
         <div class="metric">
-          <span class="metric-label">Ultimo NOMAD</span>
-          <span class="metric-value" id="lastNomadLabel">oggi</span>
+          <span class="metric-label">Last NOMAD</span>
+          <span class="metric-value" id="lastNomadLabel">today</span>
           <span class="metric-detail">EXP-2026-052</span>
         </div>
       </div>
 
-      <!-- Continue card -->
       <section class="panel home-continue" aria-labelledby="continueTitle">
         <div class="home-continue-main">
           <span class="home-continue-icon" data-icon="flask"></span>
           <div class="min-0">
-            <span class="eyebrow">Continua il tuo lavoro</span>
+            <span class="eyebrow">Continue your work</span>
             <h2 id="continueTitle" data-project-name>Mixed-cation perovskite optimisation</h2>
-            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Revisione risultati · 6 di 8 step completati</p>
+            <p><span class="mono" data-user-recent>EXP-2026-052</span> · Results review · 6 of 8 steps completed</p>
           </div>
         </div>
         <div class="home-continue-progress" aria-label="Experiment progress">
@@ -67,66 +65,63 @@
           <strong>75%</strong>
         </div>
         <div class="home-continue-actions">
-          <a class="button" href="project.html">Apri progetto</a>
-          <a class="button primary" href="experiment.html#results">Continua esperimento</a>
+          <a class="button" href="project.html">Open project</a>
+          <a class="button primary" href="experiment.html#results">Continue experiment</a>
         </div>
       </section>
 
-      <!-- Quick actions strip -->
       <div class="home-value-strip" style="--strip-cols: 4;">
         <button class="quick-action" type="button" data-action="experiment-wizard">
           <span data-icon="flask"></span>
-          <div><strong>Nuovo esperimento</strong><small>Wizard guidato</small></div>
+          <div><strong>New experiment</strong><small>Guided wizard</small></div>
         </button>
         <button class="quick-action" type="button" data-action="stack-wizard">
           <span data-icon="model"></span>
-          <div><strong>Nuovo stack</strong><small>Definisci materiali e condizioni</small></div>
+          <div><strong>New stack</strong><small>Define materials & conditions</small></div>
         </button>
         <button class="quick-action" type="button" data-action="quick-import">
           <span data-icon="upload"></span>
-          <div><strong>Importa dati</strong><small>Da file o NOMAD</small></div>
+          <div><strong>Import data</strong><small>From file or NOMAD</small></div>
         </button>
         <a class="quick-action" href="report.html#nomad">
           <span data-icon="download"></span>
-          <div><strong>Esporta per NOMAD</strong><small>Prepara package</small></div>
+          <div><strong>Export to NOMAD</strong><small>Prepare package</small></div>
         </a>
       </div>
 
-      <!-- Projects section -->
       <div class="section-title home-section-title">
         <div>
-          <h2>I tuoi progetti</h2>
-          <p>Apri un obiettivo di ricerca, revisiona esperimenti o avvia una nuova corsa.</p>
+          <h2>Your projects</h2>
+          <p>Open a research goal, review experiments, or start a new run.</p>
         </div>
-        <a href="projects.html">Vedi tutti</a>
+        <a href="projects.html">View all</a>
       </div>
-      <section class="home-project-grid" id="homeProjectList" aria-label="I tuoi progetti"></section>
+      <section class="home-project-grid" id="homeProjectList" aria-label="Your projects"></section>
 
-      <!-- Lower grid: needs attention + quick start -->
       <section class="home-lower-grid">
         <article class="panel">
           <div class="panel-header">
-            <div class="panel-title"><strong>Da fare</strong><small>Azioni che sbloccano il tuo lavoro</small></div>
+            <div class="panel-title"><strong>To do</strong><small>Actions that unblock your work</small></div>
             <span class="badge warning" id="attentionCount">3</span>
           </div>
           <div class="attention-list" id="homeAttentionList"></div>
         </article>
         <aside class="panel">
           <div class="panel-header">
-            <div class="panel-title"><strong>Avvio rapido</strong><small>Riutilizza prima, crea solo se serve</small></div>
+            <div class="panel-title"><strong>Quick start</strong><small>Reuse first, create only when needed</small></div>
           </div>
           <div class="panel-body home-quick-actions">
             <a class="quick-action primary" href="experiment.html">
               <span data-icon="flask"></span>
-              <div><strong>Nuovo esperimento</strong><small>Parti da un processo salvato</small></div>
+              <div><strong>New experiment</strong><small>Start from a saved process</small></div>
             </a>
             <button class="quick-action" type="button" data-action="quick-create">
               <span data-icon="catalog"></span>
-              <div><strong>Crea oggetto riutilizzabile</strong><small>Materiale, soluzione, stack o metodo</small></div>
+              <div><strong>Create reusable object</strong><small>Material, solution, stack or method</small></div>
             </button>
             <a class="quick-action" href="catalogs.html">
               <span data-icon="grid"></span>
-              <div><strong>Sfoglia la libreria</strong><small>Usa qualcosa già preparato</small></div>
+              <div><strong>Browse library</strong><small>Use something already prepared</small></div>
             </a>
           </div>
         </aside>
