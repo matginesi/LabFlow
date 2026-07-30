@@ -1912,7 +1912,7 @@ body {font-size:13px}
 
 .quick-action small {color:var(--muted)}
 
-.home-value-strip {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-top:12px;border:1px solid var(--line);background:var(--line)}
+.home-value-strip {display:grid;grid-template-columns:repeat(var(--strip-cols, 3),minmax(0,1fr));gap:1px;margin-top:12px;border:1px solid var(--line);background:var(--line)}
 
 .home-value-strip>div {display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:7px;row-gap:1px;align-items:center;padding:9px 11px;background:var(--surface-2)}
 
