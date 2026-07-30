@@ -217,6 +217,26 @@ svg {display: block;}
 
 .nav-link.active .icon {color: #8fc0ef;}
 
+.nav-expandable .nav-chevron {
+  margin-left: auto;
+  transition: transform .15s;
+}
+.nav-expandable.open .nav-chevron {
+  transform: rotate(90deg);
+}
+.nav-expandable.open > .nav-link {
+  color: #fff;
+  background: var(--nav-2);
+}
+.nav-sub-list {
+  margin: 1px 0 4px;
+}
+.nav-sub-link {
+  padding-left: 32px;
+  font-size: 12.5px;
+  height: 32px;
+}
+
 .sidebar-foot {margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,.08); color: #8594a6; font-size: 11px;}
 
 .sidebar-overlay {display: none; position: fixed; inset: var(--topbar-h) 0 0; z-index: 35; border: 0; background: rgba(7,12,18,.48);}

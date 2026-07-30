@@ -68,29 +68,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   const navigation = [
-    ['WORK'],
-    ['dashboard','index.html','home','Home'],
-    ['projects','projects.html','folder','Projects'],
-    ['project','project.html','model','Current project'],
-    ['workspace','workspace.html','grid','Results'],
-    ['RESOURCES'],
-    ['catalogs','catalogs.html','catalog','Library'],
-    ['pipeline','pipeline.html','flow','Experiment setups'],
-    ['OUTPUT'],
-    ['report','report.html','report','Reports'],
-    ['exports','exports.html','download','Data exchange'],
-    ['MORE'],
-    ['editors','editors.html','code','Local tools'],
-    ['ai','ai-assistant.html','brain','AI assistant'],
-    ['docs','documentation.html','file','Documentation'],
-    ['flow','flow.html','model','Flow & data model'],
-    ['kit','ui-kit.html','table','UI kit']
+    { section: true, label: 'WORK' },
+    { id: 'dashboard',  href: 'index.html',     icon: 'home',   label: 'Dashboard' },
+    { id: 'progetti',   href: 'projects.html',  icon: 'folder', label: 'Progetti' },
+    { section: true, label: 'RESOURCES' },
+    { id: 'catalogo',   href: 'catalogs.html',  icon: 'grid',   label: 'Catalogo' },
+    { section: true, label: 'OUTPUT' },
+    { id: 'exports',    href: 'report.html',    icon: 'download', label: 'Report / Export' },
+    { section: true, label: 'MORE' },
+    { id: 'altro-parent', href: '#', icon: 'plus', label: 'Altro', expandable: true, children: [
+      { id: 'editors',  href: 'editors.html',       icon: 'code',   label: 'Editors' },
+      { id: 'ai',       href: 'ai-assistant.html',   icon: 'spark', label: 'AI Assistant' },
+      { id: 'flow',     href: 'flow.html',           icon: 'flow', label: 'Flow & Data' },
+      { id: 'docs',     href: 'documentation.html',  icon: 'info', label: 'Documentation' },
+      { id: 'users',    href: 'users.html',           icon: 'user', label: 'Account' },
+      { id: 'ui-kit',   href: 'ui-kit.html',          icon: 'grid', label: 'UI Kit' },
+    ]},
   ];
 
   function mountShell() {
     const sidebar = $('#sidebar'); const topbar = $('#topbar'); const user=currentUser(); const project=currentProject();
     if (topbar) topbar.innerHTML = `<div class="topbar-group"><button class="icon-button nav-toggle" type="button" data-action="sidebar" aria-label="Toggle navigation">${icon('menu')}</button><a class="brand" href="index.html"><span class="brand-mark">LF</span><span class="brand-copy"><strong>LabFlow</strong><small>Personal laboratory workspace</small></span></a><button class="project-context-button" type="button" data-action="project-toggle" aria-expanded="false"><span>${icon('folder')}</span><span><small>Active project</small><strong>${escapeHtml(project.name)}</strong></span>${icon('chevron')}</button></div><label class="topbar-search">${icon('model')}<input type="search" placeholder="Search this page" data-page-search></label><div class="topbar-group"><button class="button topbar-ai" type="button" data-action="ai-drawer">${icon('spark')}<span>AI</span></button><button class="button topbar-create" type="button" data-action="quick-create">${icon('plus')}<span>Create</span></button><button class="icon-button" type="button" data-action="theme" aria-label="Toggle theme">${icon('moon')}</button><button class="user-menu" type="button" data-action="user-toggle" aria-expanded="false"><span class="user-avatar">${user.initials}</span><span class="user-copy"><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.role)}</small></span>${icon('chevron')}</button></div>`;
-    if (sidebar) sidebar.innerHTML = `<nav class="sidebar-nav">${navigation.map(item => item.length === 1 ? `<div class="nav-section">${item[0]}</div>` : `<a class="nav-link ${item[0] === page ? 'active' : ''}" href="${item[1]}">${icon(item[2])}<span>${item[3]}</span></a>`).join('')}</nav><div class="sidebar-foot"><strong>${escapeHtml(user.workspace)}</strong><br><span>${escapeHtml(project.name)}</span><br>${escapeHtml(user.privateLabel)} · ${escapeHtml(user.id)}<br>No CDN · no trackers</div>`;
+    if (sidebar) {
+      const navHtml = navigation.map(item => {
+        if (item.section) {
+          return `<div class="nav-section">${item.label}</div>`;
+        }
+        if (item.expandable) {
+          const childActive = item.children.some(c => c.id === page);
+          const isOpen = childActive || item.id === page;
+          return `<div class="nav-expandable ${isOpen ? 'open' : ''}">
+            <a class="nav-link ${childActive || item.id === page ? 'active' : ''}" href="${item.href}" data-nav-toggle="${item.id}">
+              ${icon(item.icon)}<span>${item.label}</span><span class="nav-chevron">${icon('chevron')}</span>
+            </a>
+            <div class="nav-sub-list" ${!isOpen ? 'style="display:none"' : ''}>
+              ${item.children.map(child =>
+                `<a class="nav-link nav-sub-link ${child.id === page ? 'active' : ''}" href="${child.href}">${icon(child.icon)}<span>${child.label}</span></a>`
+              ).join('')}
+            </div>
+          </div>`;
+        }
+        return `<a class="nav-link ${item.id === page ? 'active' : ''}" href="${item.href}">${icon(item.icon)}<span>${item.label}</span></a>`;
+      }).join('');
+      sidebar.innerHTML = `<nav class="sidebar-nav">${navHtml}</nav><div class="sidebar-foot"><strong>${escapeHtml(user.workspace)}</strong><br><span>${escapeHtml(project.name)}</span><br>${escapeHtml(user.privateLabel)} · ${escapeHtml(user.id)}<br>No CDN · no trackers</div>`;
+      sidebar.addEventListener('click', e => {
+      const toggle = e.target.closest('[data-nav-toggle]');
+      if (toggle) {
+        e.preventDefault();
+        const expandable = toggle.closest('.nav-expandable');
+        if (expandable) {
+          expandable.classList.toggle('open');
+          const subList = expandable.querySelector('.nav-sub-list');
+          if (subList) subList.style.display = subList.style.display === 'none' ? '' : 'none';
+        }
+      }
+    });
     $$('[data-icon]').forEach(node => node.innerHTML = icon(node.dataset.icon));
     mountUserPopover(); mountProjectPopover(); mountScopeBar(); mountCreateWizard(); mountProjectWizard(); applyUserScope();
   }
