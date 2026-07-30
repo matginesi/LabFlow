@@ -1,814 +1,235 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="Rendered local Markdown documentation" name="description"/>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,"><meta name="description" content="LabFlow product and technical documentation">
 <title>Documentation · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"/>
-<link href="assets/app.css" rel="stylesheet"/>
-<script defer="" src="assets/exporters.js"></script>
-<script defer="" src="assets/app.js"></script>
+<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet">
+<script defer src="assets/app.js"></script>
 </head>
 <body data-page="docs">
-<header class="topbar" id="topbar"></header>
-<aside class="sidebar" id="sidebar"></aside>
-<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside>
+<button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
 <div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><h1>Documentation</h1><p>Simple workflow guidance and the complete data dictionary, rendered locally from Markdown.</p></div><div class="page-actions"><button class="button" data-action="docs-print" type="button">Print current section</button><a class="button primary" href="flow.html">Open visual flow</a></div></header>
-<section class="documentation-shell panel"><nav aria-label="Documentation sections" class="doc-nav"><button class="active" data-doc="overview" type="button"><strong>Overview</strong><small>Purpose and simple model</small></button><button class="" data-doc="workflows" type="button"><strong>Workflows</strong><small>Four-step researcher flow</small></button><button class="" data-doc="data" type="button"><strong>All data</strong><small>Complete data dictionary</small></button><button class="" data-doc="ui" type="button"><strong>UI guide</strong><small>Wizard and responsive rules</small></button><button data-doc="ai" type="button"><strong>AI layer</strong><small>Inputs, outputs and safeguards</small></button><button class="" data-doc="readme" type="button"><strong>POC notes</strong><small>Files and boundaries</small></button></nav><article class="markdown-body" id="documentationPreview"></article></section>
+<header class="page-header compact-header"><div><span class="eyebrow">Product and implementation reference</span><h1>Documentation</h1><p>The current LabFlow workflow, scientific records, interface rules, AI boundaries and POC limits.</p></div><div class="page-actions"><button class="button" data-action="docs-print" type="button">Print current section</button><a class="button primary" href="flow.html">Open visual model</a></div></header>
+<section class="documentation-shell panel">
+<nav class="doc-nav" aria-label="Documentation sections">
+  <button class="active" data-doc="overview" type="button"><strong>Overview</strong><small>Purpose and boundaries</small></button>
+  <button data-doc="workflows" type="button"><strong>Researcher workflow</strong><small>Eight concrete phases</small></button>
+  <button data-doc="data" type="button"><strong>Scientific records</strong><small>Definitions and actual use</small></button>
+  <button data-doc="ui" type="button"><strong>UI guide</strong><small>Shared interaction rules</small></button>
+  <button data-doc="ai" type="button"><strong>AI & knowledge</strong><small>RAG, analysis and agents</small></button>
+  <button data-doc="readme" type="button"><strong>Technical POC</strong><small>Files, runtime and limits</small></button>
+</nav>
+<article class="markdown-body" id="documentationPreview"></article>
+</section>
+
 <script id="doc-overview" type="text/markdown">
 # LabFlow Researcher Workspace
 
 ## Purpose
 
-LabFlow is a personal research workspace that makes structured laboratory work easier than disconnected notes and manual NOMAD preparation.
+LabFlow is a static interface POC for testing one credible path between a perovskite laboratory experiment and NOMAD. It helps researchers organise shared resources, concrete experimental work, evidence, analysis and outputs without exposing repository-oriented complexity.
 
-The researcher should not feel that they are managing a database. The visible model is:
+## Product scope
 
 ```graph
 direction LR
-Workspace[Personal workspace] --> Project[Project]
+Workspace[Laboratory workspace] --> Project[Project]
 Project --> Experiment[Experiment]
-Experiment --> Stacks[Choose or create stacks]
-Stacks --> Data[Run process and import data]
-Work --> Results[Results]
-Results --> Output[Report / NOMAD]
+Cabinet[Shared Lab Cabinet] --> Experiment
+Experiment --> Evidence[Data and results]
+Knowledge[Shared knowledge] --> Researcher[Researcher review]
+Evidence --> Output[Report and export]
+Output --> NOMAD[NOMAD]
 ```
 
-## The usability shortcut: Experiment Setup
+The POC deliberately offers one standard experimental workflow. It does not present invented experiment categories. Additional workflows should follow only after testing this path with researchers.
 
-A researcher repeatedly chooses the same substrate, solution, stack, process and measurements. LabFlow stores those choices once in an Experiment Setup.
+## Core principles
 
-When starting an experiment, the researcher selects a setup and enters only:
+- start from the researcher’s next task;
+- prepare solutions before defining stacks;
+- reuse shared definitions but preserve experiment-owned snapshots;
+- separate protocol from actual execution;
+- show essential fields before advanced details;
+- keep the workflow editable and non-blocking;
+- show provenance, exclusions and warnings;
+- keep NOMAD last;
+- never present simulated AI output as verified truth.
 
-- the scientific question;
-- what changes;
-- the conditions;
-- the replicates;
-- actual events and results.
+## Static boundary
 
-## Four-step Experiment Wizard
-
-1. **Choose** a ready setup or previous experiment.
-2. **Plan** the variable, conditions and replicates.
-3. **Work** through one action-focused screen.
-4. **Review results** and select a report, local export or NOMAD.
-
-## Progressive complexity
-
-Advanced data is not removed. It is revealed only when needed:
-
-- optional details use expandable sections;
-- physical lots and batches appear when the work starts;
-- instrument metadata appears when a measurement is added;
-- NOMAD mapping appears at final review and export;
-- full entity definitions remain available in the Data Model documentation.
-
-## Personal ownership
-
-Every record belongs to one user and one personal workspace. Projects, experiments, samples, measurements, files, reports and exports inherit this scope.
-
-The POC simulates this in the browser. The backend must enforce ownership in authentication, authorization and every data query.
-
-## Why researchers should use it
-
-- repeated data is selected rather than typed again;
-- samples and identifiers are generated automatically;
-- the interface always shows the next useful action;
-- files are linked to samples during the work;
-- dynamic charts and reports provide immediate value;
-- NOMAD data is assembled progressively;
-- the final export requires no manual reconstruction.
-
-## Product principles
-
-- simplicity is the primary feature;
-- reuse before create;
-- prepared setup before blank form;
-- one clear question per wizard screen;
-- one main action per page;
-- graphical representations for stacks, solutions, samples and workflows;
-- optional advanced details;
-- scientific traceability without database-oriented UX.
-
+The interface has no backend, authentication, shared persistence, database, file storage, real AI service, embeddings, vector database or NOMAD network integration. These behaviours are explicitly simulated where shown.
 </script>
+
 <script id="doc-workflows" type="text/markdown">
-# LabFlow Workflows
+# Standard researcher workflow
 
-## 1. Daily researcher flow
+`Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
 
-```graph
-direction LR
-Home[Personal home] --> Project[Open project]
-Project --> Experiment[Continue or create experiment]
-Experiment --> Stacks[Choose or create stacks]
-Stacks --> Data[Run process and import data]
-Data --> Results[Review and compare]
-Results --> Output[Report or NOMAD]
-```
+The experiment home always shows the full path, phase state and one recommended next action. Researchers may save, skip optional work or revisit a phase.
 
-The home page answers three questions only:
+## 1. Solutions
 
-1. Where was I working?
-2. Which project should I open?
-3. What needs attention now?
+Select one solvent or mixture, add solutes and optional additives, enter concentration and volume, describe preparation, then distinguish the reusable recipe from the concrete batch.
 
-## 2. Create a project
+## 2. Stacks
 
-The Project Wizard has three decisions:
+Create one stack, similar stacks or simple variants. Record ordered layers, materials, substrate, dimensions, thicknesses, solution usage, instruments, conditions, notes and sample count.
 
-1. **Choose** — research project, screening campaign or empty project.
-2. **Purpose** — enter the name and scientific objective. Preferences stay optional.
-3. **Review** — confirm the private workspace and create the project.
+## 3. Processing
 
-## 3. Create and run an experiment
+Select the reusable protocol and record what was actually performed. Spin coating and annealing show only their relevant parameters. Actual values, timestamps, deviations and evidence belong to the run.
 
-### Step 1 — Choose
+## 4. Data
 
-Start from:
+Upload a common file, enter a table/value/series manually, import, or add later. Associate data with the whole experiment, one or more stacks, a process action, measurement or result.
 
-- a recommended Experiment Setup;
-- a previous experiment;
-- another saved setup.
+## 5. Analysis
 
-A custom setup remains available, but it is not the default route.
+Compare stacks, explore linked data, create a chart, use a local tool or request optional evidence-linked AI analysis. Keep anomalies and missing data visible.
 
-### Step 2 — Plan
+## 6. Charts and report
 
-Enter only:
+Choose stacks and measurements, edit titles and units, save visualisations and build an editable report from experiment records and provenance.
 
-- experiment name;
-- scientific question;
-- variable;
-- conditions;
-- replicates.
+## 7. Export
 
-LabFlow generates sample groups and sample IDs automatically. Advanced planning details are optional.
+Generate CSV, Excel, JSON, JSONL, images, PDF, ZIP or a full archive. Review included and excluded content, version and warnings first.
 
-### Step 3 — Work
+## 8. NOMAD
 
-The researcher sees one operational screen with:
-
-- the next action;
-- a short process checklist;
-- the setup currently in use;
-- samples produced;
-- measurement progress.
-
-Actual batches, values, deviations, timestamps and files are recorded while the work is performed.
-
-### Step 4 — Results, report and NOMAD
-
-LabFlow shows:
-
-- the best condition;
-- only the missing or questionable data;
-- actions to compare results, create the report or prepare NOMAD.
-
-NOMAD terminology does not dominate the experiment flow. It appears only when preparing the output.
-
-## 4. Experiment Setup workflow
-
-An Experiment Setup combines the repeated choices:
-
-```graph
-direction LR
-Substrate --> Setup[Experiment Setup]
-Solution --> Setup
-Stack --> Setup
-Process --> Setup
-Measurements --> Setup
-Setup --> Experiment[New experiment]
-```
-
-The setup builder has three steps:
-
-1. **Choose** the closest proven setup.
-2. **Adjust** only substrate, solution, stack, work steps or measurements that differ.
-3. **Save** a reusable version.
-
-## 5. Reusable object workflow
-
-All Library objects use the same three-step pattern:
-
-```graph
-direction LR
-Start[Use preset or start blank] --> Details[Enter essentials]
-Details --> Optional[Optional advanced details]
-Optional --> Review[Review and save]
-```
-
-The user never starts with a large empty form unless explicitly requested.
-
-## 6. Work-step workflow
-
-Adding one process action requires only:
-
-1. **Choose action** — prepare, deposit, heat, measure or custom.
-2. **Essential details** — name, main value, duration and completion evidence.
-
-Inputs and outputs remain optional advanced references.
-
-## 7. Results workflow
-
-1. Select a sample or device.
-2. Choose the planned measurement.
-3. attach the original file;
-4. confirm instrument context;
-5. review values and plots;
-6. validate or flag the result;
-7. compare conditions dynamically.
-
-## 8. Report workflow
-
-The editable report is a compact three-page dossier:
-
-1. summary, question, finding and comparison;
-2. composition, solution, stack, process and conditions;
-3. results, charts, images, measurements, provenance and actions.
-
-All displayed values originate from editable report data.
-
-## 9. NOMAD workflow
-
-1. Finish the experiment review.
-2. Complete blocking fields only.
-3. Inspect the generated archive structure.
-4. generate JSON, YAML, XLSX or the NOMAD ZIP package;
-5. upload later through the future backend or a trusted explicit action.
-
+Check completeness, units, resources, stacks, processing, instruments, data, files, identifiers, provenance and mapping. Then explicitly export a package or simulate API submission. Nothing is sent automatically.
 </script>
+
 <script id="doc-data" type="text/markdown">
-# LabFlow Data Model
+# Scientific records
 
-## Reading this document
+## Shared definition versus concrete use
 
-The UI uses simple words. The data model remains structured so that records can later be saved in a database and exported to NOMAD. All objects should be serializable as JSON or YAML.
+| Shared Lab Cabinet record | Experiment-owned evidence |
+|---|---|
+| Solution recipe | Prepared solution batch |
+| Stack template | Experiment stack |
+| Protocol / pipeline | Process run |
+| Reusable action | Executed action |
+| Instrument | Instrument use and actual settings |
+| Material / substance | Lot or recorded use |
 
-The model has five data families:
+A usage snapshot preserves the referenced version, affected stacks, amount and unit, actual parameters, operator and time. Later edits to shared definitions must not rewrite history.
 
-1. ownership and organisation;
-2. reusable Library definitions;
-3. experiment planning;
-4. physical execution;
-5. evidence and output.
+## Experiment graph
 
 ```graph
 direction LR
-Ownership[User + Workspace + Project] --> Library[Reusable Library]
-Ownership --> Experiment[Experiment plan]
-Library --> Setup[Experiment Setup]
-Setup --> Experiment
-Experiment --> Physical[Runs + Samples + Devices]
-Physical --> Evidence[Measurements + Files + Results]
-Evidence --> Output[Report + NOMAD export]
+Recipe[Solution recipe] --> Batch[Prepared batch]
+Batch --> Stack[Experiment stack]
+Protocol[Protocol] --> Run[Process run]
+Stack --> Run
+Run --> Sample[Samples]
+Sample --> Measurement[Measurements]
+Measurement --> File[Original files]
+Measurement --> Result[Derived results]
+Result --> Report[Report]
+Report --> Export[Export package]
 ```
 
-# 1. Ownership and organisation
-
-## UserAccount
-
-The authenticated researcher.
-
-Important data:
-
-| Field | Meaning |
-|---|---|
-| `id` | Stable user identifier. |
-| `name` | Display name. |
-| `email` | Login/contact identity. |
-| `role` | Research role, not a scientific entity. |
-| `affiliation` | Laboratory or institution. |
-| `orcid` | Optional research identity. |
-| `preferences` | Language, units, date format and export defaults. |
-
-## Workspace
-
-The private root container for one user.
-
-| Field | Meaning |
-|---|---|
-| `id` | Workspace identifier. |
-| `owner_id` | Required UserAccount reference. |
-| `name` | Personal workspace name. |
-| `library_settings` | Defaults for reusable records. |
-| `export_settings` | NOMAD deployment and mapping preferences, excluding secrets. |
-
-A workspace contains Projects and one shared Lab Cabinet.
-
-## Project
-
-One research goal, campaign or scientific question.
-
-| Field | Meaning |
-|---|---|
-| `id` | Project identifier. |
-| `workspace_id` | Owning personal workspace. |
-| `title` | Human-readable project name. |
-| `objective` | Scientific question or decision to support. |
-| `description` | Optional context. |
-| `status` | Planning, active, review or archived. |
-| `start_date`, `end_date` | Optional project period. |
-| `tags` | Search and grouping labels. |
-| `default_setup_id` | Optional recommended Experiment Setup. |
-
-A Project contains Experiments, conclusions, Reports and ExportPackages. Experiments reference Lab Cabinet resources through explicit usage snapshots.
-
-# 2. Shared Lab Cabinet data
-
-## MaterialDefinition
-
-Chemical or functional identity independent from a purchased container.
-
-Typical fields: `id`, name, abbreviation, molecular formula, CAS number, SMILES, role tags, supplier-neutral notes and safety references.
-
-## MaterialLot
-
-A physical purchased or prepared lot.
-
-Typical fields: `id`, `material_definition_id`, supplier, catalogue number, batch/lot number, purity, received date, expiry/review date, storage condition and status.
-
-**Definition versus lot:** PbI₂ is a MaterialDefinition; bottle `PBI2-2606` is a MaterialLot.
-
-## SolutionRecipe
-
-Reusable, versioned recipe independent from one preparation.
-
-Typical fields:
-
-- `id`, name and immutable version;
-- solvent components and ratios;
-- solutes, additives and target quantities;
-- target concentration and reference volume;
-- preparation instructions;
-- handling, storage and before-use instructions;
-- optional impurities or known contaminants.
-
-## SolutionBatch
-
-The physical solution prepared from one locked recipe version.
-
-Typical fields: `id`, `recipe_id`, recipe version, prepared timestamp, prepared by, actual component lots and quantities, actual volume, deviations, storage, filtration, before-use state and expiry/review date.
-
-**Recipe versus batch:** a recipe can create many batches; an experiment records the actual batch consumed.
-
-## SubstrateDefinition
-
-Reusable substrate type such as Glass/ITO or PET/ITO.
-
-Typical fields: name, material/coating, rigidity, default dimensions, thickness, default surface roughness and cleaning recommendations.
-
-## SubstrateInstance
-
-Optional physical piece or lot used by one ProcessRun.
-
-Typical fields: identifier, definition reference, lot, actual dimensions, actual roughness, cleaning evidence and status.
-
-## LayerDefinition
-
-One layer in a reusable stack.
-
-Typical fields: order, role, material reference, target thickness, source solution or material, deposition method and optional notes.
-
-## StackDefinition
-
-An ordered visual cross-section.
-
-Typical fields: `id`, name, version, architecture (`n-i-p`, `p-i-n`, film-only), ordered LayerDefinitions, default mask, active area and device naming rule.
-
-## MethodDefinition
-
-Reusable method-specific form, for example spin coating, annealing, cleaning, evaporation or J–V acquisition.
-
-Typical fields: method type, parameter schema, default values, units, input roles, output role, validation rules and evidence requirements.
-
-## ProcessTemplate
-
-Reusable protocol with ordered StepTemplates.
-
-Typical fields: `id`, name, version, required inputs, ordered steps, default parameters, variable parameters, expected outputs and required evidence.
-
-A ProcessTemplate never stores actual results.
-
-## StepTemplate
-
-One ordered action inside a ProcessTemplate.
-
-Typical fields: order, method reference, name, instructions, default parameters, allowed variables, required input roles, output role and completion rule.
-
-## MeasurementMethod
-
-Reusable definition for a technique such as J–V, EQE, XRD, PL, thickness, SEM or AFM.
-
-Typical fields: accepted files, required acquisition metadata, expected result fields, units, optional parser and validation rules.
-
-## InstrumentDefinition
-
-Instrument identity and capabilities.
-
-Typical fields: manufacturer, model, serial number, techniques, location, calibration status and default metadata.
-
-## ExperimentSetup
-
-The usability bundle selected at the start of an experiment.
-
-| Field | Meaning |
-|---|---|
-| `id`, `name`, `version` | Stable, versioned setup identity. |
-| `substrate_definition_id` | Default substrate. |
-| `solution_recipe_id` | Default chemistry. |
-| `stack_definition_id` | Default layer architecture. |
-| `process_template_id` | Default ordered workflow. |
-| `measurement_method_ids` | Planned evidence. |
-| `recommended_variables` | Parameters suitable for comparisons. |
-| `domain_profile` | Optional perovskite or other domain extensions. |
-
-The setup stores references. It does not contain physical batches, samples or results.
-
-# 3. Experiment planning data
-
-## Experiment
-
-One planned and executed comparison inside a Project.
-
-Typical fields:
-
-- `id`, `project_id`, title, objective and status;
-- selected `experiment_setup_id` and locked version;
-- selected reusable references;
-- start/end timestamps and operator;
-- SampleGroups;
-- planned measurements;
-- notes and final conclusion.
-
-## SampleGroup
-
-One experimental condition and its replicates.
-
-Typical fields: `id`, label/code, description, replicate count, ParameterOverrides and generated Sample IDs.
-
-## ParameterOverride
-
-One value that differs from the selected setup or process default.
-
-Typical fields: parameter path/name, value, unit, scope (group, run or sample) and reason.
-
-Examples: spin speed = 1500 rpm for group B; annealing temperature = 110 °C for one run.
-
-## PlannedMeasurement
-
-The intended technique and target coverage.
-
-Typical fields: measurement method, target type (sample/device), required or optional, expected count and completion status.
-
-# 4. Physical execution data
-
-## ProcessRun
-
-Actual execution of a ProcessTemplate for one condition or replicate.
-
-Typical fields: experiment/group reference, locked template version, actual start/end time, operator, actual inputs, actual parameter values, completed steps, deviations, outputs and evidence.
-
-## StepRun
-
-Actual execution of one StepTemplate.
-
-Typical fields: status, timestamps, actual parameters, input references, output references, notes, deviations and attached evidence.
-
-## Sample
-
-Physical specimen produced by a ProcessRun.
-
-Typical fields: `id`, group, replicate index, composition, substrate instance, process run, current status, physical location and notes.
-
-## Device
-
-Device instance built from a Sample and StackDefinition.
-
-Typical fields: identifier, sample reference, stack version, mask, active area, cell index, encapsulation and status.
-
-## Observation
-
-Short human observation made during preparation or measurement.
-
-Typical fields: timestamp, author, target, category, text, severity and optional file.
-
-# 5. Evidence and result data
-
-## Measurement
-
-One contextualised acquisition linked to a Sample or Device.
-
-Typical fields: `id`, method, target, instrument, operator, acquired time, acquisition metadata, original files, status and quality notes.
-
-Examples of acquisition metadata: irradiance, mask area, scan direction, temperature, humidity, wavelength range or scan rate.
-
-## DataFile
-
-Immutable file record.
-
-Typical fields: original filename, role (raw, processed, image, attachment), MIME type, size, SHA-256 hash, parser/version, created time and storage reference.
-
-A file is evidence. It is not the same as an extracted result.
-
-## DerivedResult
-
-Metric, curve, peak, image statistic or structured result derived from files or entered manually.
-
-Typical fields: name, value or data series, unit, method version, source file references, quality flag, validation user and validation time.
-
-Examples: Voc, Jsc, FF, PCE, integrated Jsc, XRD peak position, PL maximum, thickness or AFM RMS.
-
-## Conclusion
-
-Research interpretation attached to an Experiment or Project.
-
-Typical fields: summary, recommended condition, confidence, limitations, next actions and author/time.
-
-# 6. Output data
-
-## Report
-
-Editable dossier generated from the project/experiment graph.
-
-Typical fields: template version, selected sections, editable narrative, tables, charts, images, generated time and source record references.
-
-## ExportPackage
-
-Generated collection for JSON, YAML, CSV, XLSX or NOMAD.
-
-Typical fields: format, scope, included records, manifest, checksums, validation results, generated time and generated by.
-
-## NomadUpload
-
-Optional upload attempt managed by the future backend.
-
-Typical fields: deployment, upload identifier, package reference, state, messages, created time and publication state. Authentication secrets must never be stored in exported records.
-
-# 7. Optional perovskite domain profile
-
-The small core model can accept optional perovskite fields without becoming a general ontology.
-
-Examples:
-
-- structured ABX₃ sites and ion coefficients;
-- sample type, dimensionality and band gap;
-- antisolvent volume and drop time;
-- stack architecture and active area;
-- J–V, EQE, XRD, PL, AFM and SEM metadata.
-
-These are optional extensions used by the perovskite POC, not new ownership or workflow layers.
-
-# 8. Required scoping rules for the future backend
-
-Every user-owned table or document must be reachable through:
-
-`owner_id → workspace_id → project_id` when applicable.
-
-The backend must:
-
-- authenticate the user;
-- authorize every read and write;
-- scope searches and exports;
-- prevent cross-user references;
-- preserve immutable versions used by experiments;
-- validate references before NOMAD export;
-- store secrets outside exported scientific records.
-
+## Evidence rules
+
+- Original files are evidence, not derived results.
+- Measurements add acquisition context.
+- Results reference their files, method/version and validation state.
+- Reports reference records rather than copying unexplained values.
+- Export packages record scope, inclusions, exclusions, warnings and versions.
+- AI outputs remain separate drafts and never overwrite originals.
 </script>
+
 <script id="doc-ui" type="text/markdown">
-# LabFlow UI Guide
+# UI guide
 
-## Core UX rule
+## Interaction hierarchy
 
-Every page must make the next action obvious. Showing technical completeness is secondary to helping the researcher continue the work.
+Each workflow phase has one primary action. Secondary actions support inspection or optional work. Advanced scientific fields remain expandable.
 
-## Wizard rules
+## Canonical patterns
 
-Use no more than four visible macro-steps for the primary experiment:
-
-`Resources → Stacks → Data → Analysis → Outputs → Export`
-
-Use three steps for reusable objects and setups:
-
-`Start → Details → Review`
-
-Use two steps for one work action:
-
-`Choose action → Essential details`
-
-Each step must:
-
-- ask one coherent question;
-- show only fields needed for that decision;
-- place advanced fields inside an expandable section;
-- show a visual preview when the object is spatial or sequential;
-- keep Previous and Continue in a consistent footer;
-- avoid domain-model terminology when a laboratory term is clearer.
-
-## Graphical patterns
-
-- stacks use ordered colored layers;
-- solutions use ingredients, vessel and output batch;
-- conditions use lanes/cards with generated sample IDs;
-- execution uses a numbered action list and a visible next action;
-- measurements use progress rather than database tables;
-- workflows use rendered graphs or simple connected nodes;
-- results use dynamic charts and a clear recommended condition.
-
-## Page density
-
-A page should have one primary panel. Secondary information should be compact, contextual or expandable. Avoid presenting Library, process, samples, results and NOMAD readiness simultaneously.
-
-## Report design
-
-The PDF is a three-page scientific dossier with restrained branding, readable typography, balanced use of whitespace, labelled charts and a clear conclusion. It must avoid both overcrowding and large empty regions.
+- eight-phase workflow rail with completed, current, to-do, optional and verify states;
+- next-action strip with one sentence and one control;
+- compact panels, low radii and information-bearing borders;
+- solution flow from solvent mixture to concrete batch;
+- visual ordered stack layers;
+- reusable protocol beside actual run;
+- contained data tables and explicit targets;
+- evidence citations with provenance and warnings;
+- included/excluded review before export;
+- confirmation before contextual knowledge actions.
 
 ## Responsive rules
 
-- collapse multi-column workspaces before content becomes narrow;
-- use horizontal scrolling only for local steppers, tables and layer stacks;
-- never rotate connector text;
-- stack action buttons vertically on small screens;
-- keep the current action above supporting details;
-- preserve readable charts and image captions;
-- avoid global horizontal overflow.
+Support 360–1440 px. Below 980 px the sidebar becomes a drawer. Workflow rails scroll horizontally. Tables stay in contained scrollers. Scientific grids collapse to one column without hiding context or primary actions.
 
-## Theme rules
+## Language
 
-All surfaces, text, borders, charts and generated components must use shared theme tokens. Do not introduce standalone hard-coded UI colors outside scientific visualizations and generated exports.
-
+Use laboratory terms recognised by researchers. Do not expose implementation concepts as tasks and do not ask users to select an unvalidated experiment category.
 </script>
+
 <script id="doc-ai" type="text/markdown">
-# Optional AI Layer
+# AI, Knowledge Chat and Agents
 
-## Purpose
+## Three separate tools
 
-AI is an optional assistant that reduces repetitive reading and writing. It must not replace scientific decisions, silently modify records or hide evidence.
-
-The visible interaction is deliberately simple:
-
-```graph
-direction LR
-Context[Selected LabFlow records] --> Request[Focused AI request]
-Request --> Suggestion[Suggestion + confidence]
-Suggestion --> Evidence[Evidence references]
-Evidence --> Review[Researcher review]
-Review --> Apply[Explicitly apply or reject]
-```
-
-## Where AI appears
-
-- **Experiment planning** — proposes a small comparison plan based on the selected setup and previous experiments.
-- **File understanding** — suggests measurement type, target sample, column mapping and derived values from a selected file.
-- **Quality review** — flags missing context, outliers and inconsistent measurements.
-- **Result interpretation** — drafts a short narrative from deterministic charts and selected datasets.
-- **NOMAD preparation** — proposes mappings for missing metadata and explains which fields are blocking.
-- **Report drafting** — drafts finding, interpretation and conclusion text from selected evidence.
-- **Documentation assistant** — answers questions using only the current documentation and linked project context.
-
-## Simulated input
-
-```json
-{
-  "task": "plan_experiment",
-  "scope": {
-    "user_id": "USR-EW",
-    "workspace_id": "WS-EW-01",
-    "project_id": "PRJ-MCP-01",
-    "experiment_id": "EXP-2026-052"
-  },
-  "context": [
-    "ExperimentSetup: Standard n-i-p PSC",
-    "PreviousExperiment: EXP-2026-048",
-    "VariableCandidate: spin_speed"
-  ],
-  "instruction": "Suggest a simple plan that changes only one variable."
-}
-```
-
-## Simulated output
-
-```json
-{
-  "suggestion": {
-    "variable": "spin_speed",
-    "conditions": [1000, 1500, 2000],
-    "replicates": 3
-  },
-  "confidence": 0.88,
-  "evidence": ["EXP-2026-048", "PSC baseline v4.1"],
-  "warnings": ["Confirm equipment limits before execution"],
-  "requires_approval": true
-}
-```
-
-## AI-specific data
-
-### AIRequest
-
-Stores the focused task submitted to a model.
-
-| Field | Meaning |
+| Tool | Purpose |
 |---|---|
-| `id` | Request identifier |
-| `owner_id` | Researcher who initiated the request |
-| `workspace_id` | Personal workspace scope |
-| `project_id` | Optional active project |
-| `task_type` | Planning, parsing, quality, mapping or drafting |
-| `prompt` | Researcher instruction |
-| `context_refs` | Explicit references sent to the model |
-| `created_at` | Request timestamp |
+| Knowledge Chat | Consult shared laboratory knowledge with explicit sources. |
+| AI Analysis | Interpret selected measurement and result data. |
+| Controlled Agents | Propose bounded multi-step workflow actions. |
 
-### AIResponse
+## Knowledge Chat
 
-Stores the model output before acceptance.
+The static RAG demo searches manuals, protocols, procedures, papers, technical sheets, shared notes, Lab Cabinet resources, experiments, approved reports and NOMAD documentation.
 
-| Field | Meaning |
-|---|---|
-| `id` | Response identifier |
-| `request_id` | Source AI request |
-| `model_id` | Model or provider configuration used |
-| `content` | Proposed text or structured values |
-| `confidence` | Optional model or application confidence |
-| `evidence_refs` | Records or files supporting the suggestion |
-| `warnings` | Uncertainty and blocking issues |
-| `status` | Proposed, accepted, edited or rejected |
+Every answer is marked as simulated and to verify. It includes sources, provenance, evidence, related records, limitations and conflict or insufficiency warnings. Contextual actions require confirmation.
 
-### AISuggestion
+## AI Analysis
 
-A structured change that can be reviewed and applied explicitly. Typical targets are experiment conditions, file mappings, metadata values and report fields.
+Analysis receives explicit experiment, stack, file, column, measure and filter context. Outputs show assumptions, evidence, confidence, limitations and review state.
 
-### AIActionLog
+## Controlled Agents
 
-Records who accepted, edited or rejected a suggestion and when. The original suggestion remains available for traceability.
+Agent runs expose objective, allowed inputs and actions, blocked actions, steps, proposals and approval gates. They cannot autonomously delete, publish or send requests.
 
-### ModelConfiguration
-
-Describes the future provider or local model. It may include endpoint, model name, task capabilities, context limits and privacy policy. Secrets never belong in exportable project data.
-
-## Safety and usability rules
-
-- the default mode is read and suggest;
-- every write requires an explicit researcher action;
-- the UI shows exactly which records are used as context;
-- outputs include evidence, confidence and warnings;
-- deterministic calculations and charts remain separate from AI interpretation;
-- original files are never modified;
-- AI records inherit `owner_id`, `workspace_id` and `project_id`;
-- rejected suggestions remain auditable but do not alter scientific records;
-- the product must remain fully usable with AI disabled.
-
-## Static POC boundary
-
-All AI responses in this showcase are simulated in JavaScript. No model, API, network request or secret is included. A future backend can connect a local or remote model through an explicit service while preserving the same review workflow.
-</script><script id="doc-readme" type="text/markdown">
-# LabFlow Simplicity-First POC
-
-LabFlow is a static HTML/CSS/JavaScript showcase for a personal laboratory workspace. Its main promise is simple: a researcher should find it easier to run an experiment in LabFlow and export it to NOMAD than to reconstruct the same information manually afterwards.
-
-## Visible researcher flow
-
-```graph
-direction LR
-Workspace[Personal workspace] --> Project[Open project]
-Project --> Experiment[Start experiment]
-Experiment --> Work[Make and measure]
-Data --> Results[Review and compare]
-Results --> Output[Report / NOMAD]
-```
-
-The experiment experience has four clear steps:
-
-`Resources → Stacks → Data → Analysis → Outputs → Export`
-
-Complex data still exists underneath, but the interface exposes it only when useful.
-
-## Included pages
-
-- personal dashboard and projects;
-- four-step Experiment Wizard;
-- three-step Experiment Setup builder;
-- reusable Library with short object wizards;
-- samples, results and dynamic charts;
-- editable three-page PDF report generator;
-- local tools, graph editor and Markdown renderer;
-- optional AI assistant with simulated structured inputs and reviewable outputs;
-- NOMAD data exchange demonstration;
-- complete documentation and data dictionary;
-- UI Kit.
-
-## Static POC boundary
-
-Data ownership, authentication and persistence are simulated in the browser. A future backend must enforce `owner_id`, `workspace_id` and `project_id` on every stored record and query.
-
-No CDN, tracker, remote font or automatic network request is used.
-
+No real LLM, retrieval index, embedding, vector store or agent runtime exists in this repository.
 </script>
-</main></div>
-<div aria-live="polite" class="toast-region" id="toastRegion"></div>
-</body>
-</html>
+
+<script id="doc-readme" type="text/markdown">
+# Technical POC
+
+## Runtime
+
+LabFlow is plain HTML, CSS and JavaScript with no build step or CDN. Serve the repository root with:
+
+```text
+python3 -m http.server 8765
+```
+
+Open `http://127.0.0.1:8765/`.
+
+## Shared files
+
+- `assets/theme.css`: theme tokens;
+- `assets/app.css`: layout and product components;
+- `assets/app.js`: shell, demo stores and interactions;
+- `assets/exporters.js`: browser-generated outputs;
+- `ui-kit.html`: canonical visual components;
+- `docs/`: maintained product and technical reference.
+
+## Security and integration limits
+
+The visible user/workspace scope is not authorization. API keys must never be shipped in static JavaScript. A production implementation requires a secure backend for authentication, permissions, persistence, files, audit history, external APIs and secrets.
+
+NOMAD import/upload, AI, RAG, agent execution and shared knowledge persistence are simulations. Browser-generated downloads are local POC artefacts and not a guarantee of scientific or NOMAD completeness.
+</script>
+</main></div><div class="toast-region" id="toastRegion" aria-live="polite"></div>
+</body></html>

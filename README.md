@@ -8,7 +8,12 @@ requiring the researcher to work directly inside a complex repository platform.
 
 ## Primary workflow
 
-`Start or continue → Resources → Stacks → Data → Analysis → Outputs → Export → NOMAD`
+The POC currently offers one standard laboratory experiment workflow:
+
+`Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
+
+It intentionally avoids invented experiment types. Additional workflows should
+be added only after this path has been tested with researchers.
 
 An experiment may contain many stacks. Each stack records its layers, materials,
 solution usage, conditions, executed process, files, measurements and results.
@@ -33,7 +38,7 @@ Editing an experiment snapshot does not silently change the shared Lab Cabinet d
 - editable reports and local PDF, Excel, CSV, JSON, YAML, image and ZIP exports;
 - simulated NOMAD import, validation, packaging and upload;
 - optional contextual AI demonstrations;
-- evidence-linked AI analysis, controlled agent runs and simulated semantic search;
+- shared evidence-linked Knowledge Chat, AI analysis and controlled agent runs;
 - human approval states separating original data, AI output and researcher edits;
 - local tools, technical documentation and a shared UI Kit.
 
@@ -50,12 +55,13 @@ Editing an experiment snapshot does not silently change the shared Lab Cabinet d
 | Tools | `editors.html` |
 | User settings and NOMAD account | `users.html` |
 | Workspace administration | `admin-settings.html` |
-| AI workspace, agents and semantic search | `ai-assistant.html` |
+| Shared RAG knowledge consultation | `knowledge.html` |
+| AI data analysis and controlled agents | `ai-assistant.html` |
 | Documentation | `documentation.html`, `docs/` |
 | UI Kit | `ui-kit.html` |
 
-Legacy or specialist demonstrations remain available, including Projects, Flow &
-Data, setup/pipeline builders and the data-exchange page.
+Specialist demonstrations remain available, including the visual data model,
+pipeline builder and compatibility data-exchange page.
 
 ## Run locally
 

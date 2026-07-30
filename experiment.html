@@ -1,200 +1,149 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<link href="data:," rel="icon"/>
-<meta content="Simple four-step guided experiment workspace" name="description"/>
-<title>Guided experiment · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"/>
-<link href="assets/app.css" rel="stylesheet"/>
-<script defer="" src="assets/exporters.js"></script>
-<script defer="" src="assets/app.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,"><meta name="description" content="Standard laboratory experiment workflow">
+<title>Experiment PSC-2026-041 · LabFlow</title>
+<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet">
+<script defer src="assets/exporters.js"></script><script defer src="assets/app.js"></script>
 </head>
 <body data-page="experiment">
-<header class="topbar" id="topbar"></header>
-<aside class="sidebar" id="sidebar"></aside>
-<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+<header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside>
+<button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
 <div class="app-main"><main class="page">
 <header class="page-header compact-header experiment-page-head">
-<div><span class="eyebrow">Experiment · PSC-2026-041</span><h1>Solvent and annealing comparison</h1><p>Compare DMF/DMSO and DMF/NMP across four perovskite stacks.</p></div>
-<div class="page-actions"><a class="button" href="project.html">Back to project</a><button class="button" data-action="toast" data-message="Experiment draft saved" type="button">Save draft</button></div>
+  <div><span class="eyebrow">Experiment · PSC-2026-041</span><h1>Solvent and annealing comparison</h1><p>Standard laboratory workflow · prepare solutions, build stacks, record work and export verified evidence.</p></div>
+  <div class="page-actions"><a class="button" href="project.html">Back to project</a><button class="button" data-action="toast" data-message="Experiment draft saved" type="button">Save draft</button></div>
 </header>
+
+<section class="standard-workflow-note"><span data-icon="flask"></span><div><strong>One workflow to validate with researchers</strong><small>This POC follows the laboratory’s current process. Other workflows can be added after real user feedback.</small></div><span class="badge info">Editable · not blocking</span></section>
+
 <nav class="experiment-context-nav" aria-label="Experiment sections">
-  <a class="active" href="#resources">Overview</a>
-  <a href="#resources">Resources</a>
-  <a href="#stacks">Stacks <span>2</span></a>
-  <a href="#data">Data <span>23</span></a>
-  <a href="#analysis">Analysis</a>
-  <a href="#outputs">Results</a>
-  <a href="report.html">Reports</a>
-  <a href="#export">Export</a>
-  <a href="report.html#nomad">NOMAD</a>
+  <a class="active" href="#solutions">Solutions</a><a href="#stacks">Stacks</a><a href="#processing">Processing</a><a href="#data">Data</a><a href="#analysis">Analysis</a><a href="#outputs">Charts &amp; report</a><a href="#export">Export</a><a href="#nomad">NOMAD</a>
 </nav>
-<article class="experiment-next-action"><span><small>Recommended next step</small><strong>Select the materials, solutions and process you plan to use.</strong></span><button class="button small" type="button" data-action="wizard-next">Skip for now</button><button class="button primary" type="button" data-action="wizard-resources">Prepare resources</button></article>
-<section aria-label="Experiment guide" class="simple-wizard-nav simple-wizard-nav-6" data-wizard-nav="">
-<button class="active" data-wizard-step="0" type="button"><span>1</span><strong>Resources</strong><small>Select or create</small></button>
-<button data-wizard-step="1" type="button"><span>2</span><strong>Stacks</strong><small>Build variants</small></button>
-<button data-wizard-step="2" type="button"><span>3</span><strong>Data</strong><small>Add evidence</small></button>
-<button data-wizard-step="3" type="button"><span>4</span><strong>Analysis</strong><small>Compare stacks</small></button>
-<button data-wizard-step="4" type="button"><span>5</span><strong>Outputs</strong><small>Results & report</small></button>
-<button data-wizard-step="5" type="button"><span>6</span><strong>Export</strong><small>Save or NOMAD</small></button>
-</section>
-<div class="wizard-progress-track"><span id="wizardProgressFill" style="width:16.67%"></span></div>
-<section class="panel wizard-shell simple-experiment-wizard" data-wizard="">
-<div class="panel-body">
-<section data-wizard-label="Prepare experimental resources" data-wizard-panel="0">
-<div class="wizard-stage-head"><span class="stage-number">01</span><div><h2>What will you use in this experiment?</h2><p>Select only what you already know. You can add or replace resources while creating a stack.</p></div></div>
-<div class="experiment-resource-grid">
-  <article><span data-icon="catalog"></span><div><strong>Materials & substrates</strong><small>Glass/ITO · SnO₂ · Spiro-OMeTAD · Au</small><div><span class="badge success">4 selected</span></div></div><footer><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials">Search Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials" data-cabinet-create="true">Create new</button></footer></article>
-  <article><span data-icon="flask"></span><div><strong>Solutions & substances</strong><small>FA-Cs 1.2 M · DMF/DMSO · batch SOL-081</small><div><span class="badge success">2 selected</span></div></div><footer><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="solutions">Search Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="solutions" data-cabinet-create="true">Create new</button></footer></article>
-  <article><span data-icon="flow"></span><div><strong>Process & actions</strong><small>PSC standard · spin coating · annealing</small><div><span class="badge info">Ready to copy</span></div></div><footer><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="processes">Search Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="processes" data-cabinet-create="true">Create new</button></footer></article>
-  <article><span data-icon="settings"></span><div><strong>Conditions</strong><small>N₂ glovebox · 90 °C and 100 °C</small><div><span class="badge warning">Review later</span></div></div><footer><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="conditions">Search Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="conditions" data-cabinet-create="true">Create new</button></footer></article>
-</div>
-<div class="resource-selection-summary"><span><strong>Resources selected for this experiment</strong><small>Local snapshots: changes here will not alter the shared Lab Cabinet record.</small></span><button class="button small" type="button" data-action="toast" data-message="Resources copied from EXP-2026-048">Copy from another experiment</button><button class="button small" type="button" data-action="wizard-next">Continue to stacks</button></div>
-</section>
-<section data-wizard-label="Plan the comparison" data-wizard-panel="1" hidden="">
-<div class="wizard-stage-head"><span class="stage-number">02</span><div><h2>What do you want to compare?</h2><p>Enter one variable and the conditions. Samples are generated automatically.</p></div></div>
-<div class="simple-plan-grid">
-<div class="panel clean-subpanel">
-<div class="panel-body form-grid compact-form">
-<div class="field span-2"><label>Experiment name</label><input class="input" value="Absorber spin-speed window"/></div>
-<div class="field span-2"><label>Scientific question</label><textarea class="input" rows="2">Which spin speed gives the best balance between film thickness and device efficiency?</textarea></div>
-<div class="field"><label>Variable</label><select class="input"><option>Spin speed</option><option>Annealing temperature</option><option>Solution concentration</option><option>Custom parameter</option></select></div>
-<div class="field"><label>Replicates</label><select class="input"><option>2</option><option selected="">3</option><option>4</option><option>6</option></select></div>
-<details class="advanced-details span-2"><summary>Advanced planning details</summary><div class="form-grid"><div class="field"><label>Sample ID pattern</label><input class="input mono" value="{group}{replicate}"/></div><div class="field"><label>Randomise run order</label><select class="input"><option>Yes</option><option>No</option></select></div></div></details>
-</div>
-</div>
-<aside class="condition-planner">
-<div class="condition-planner-head"><div><strong>Three conditions</strong><small>3 samples each · 9 total</small></div><button class="button small" data-action="experiment-add-group" type="button">Add condition</button></div>
-<div class="condition-visual-list" id="experimentLanes">
-<article class="condition-visual-card"><span class="condition-code">A</span><div><small>Baseline</small><strong>1000 rpm</strong></div><div class="sample-dots labeled"><span>A01</span><span>A02</span><span>A03</span></div></article>
-<article class="condition-visual-card focus"><span class="condition-code">B</span><div><small>Focus</small><strong>1500 rpm</strong></div><div class="sample-dots labeled"><span>B01</span><span>B02</span><span>B03</span></div></article>
-<article class="condition-visual-card"><span class="condition-code">C</span><div><small>Upper bound</small><strong>2000 rpm</strong></div><div class="sample-dots labeled"><span>C01</span><span>C02</span><span>C03</span></div></article>
-</div>
-</aside>
-</div>
-<section class="panel" id="planStackSection">
-  <div class="panel-header">
-            <div class="panel-title"><strong>Stacks in this experiment</strong><small>Each stack keeps its solutions, solutes, materials, conditions, pipeline and actions together.</small></div>
-            <button class="button small" type="button" data-action="add-stack-to-experiment"><span data-icon="plus"></span>Add stack</button>
-  </div>
-  <div class="panel-body" id="experimentStackList">
-    <article class="stack-card panel"><div class="stack-card-head"><strong>n-i-p PSC baseline</strong><span class="badge info">STK-001</span></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><div class="stack-card-meta"><span><b>6</b> layers</span><span><b>2</b> solutions</span><a href="stack.html">Manage all details</a></div></article>
-    <article class="stack-card panel"><div class="stack-card-head"><strong>Film-only reference</strong><span class="badge">STK-REF</span></div><div class="mini-stack"><span class="absorber">PVK</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><div class="stack-card-meta"><span><b>3</b> layers</span><span><b>1</b> solution</span><a href="stack.html">Manage all details</a></div></article>
-  </div>
-  <div class="panel-body stack-table-section">
-    <div class="stack-command-bar"><label><input type="checkbox" data-stack-select-all> Select all</label><span id="stackSelectionCount">0 selected</span><button class="button small" type="button" data-action="stack-bulk-process">Apply process</button><button class="button small" type="button" data-action="stack-bulk-condition">Change condition</button><button class="button small" type="button" data-action="stack-bulk-compare">Compare</button></div>
-    <div class="table-wrap"><table class="data-table experiment-stack-table"><thead><tr><th></th><th>Stack</th><th>Structure</th><th>Solution</th><th>Process</th><th>Variant</th><th>Status</th><th>Data</th><th>Result</th><th></th></tr></thead><tbody id="experimentStackRows">
-      <tr><td><input type="checkbox" data-stack-select></td><td><div class="cell-main"><strong>S01</strong><small>Baseline 90 °C</small></div></td><td>ITO / SnO₂ / PVK / HTL / Au</td><td>DMF/DMSO</td><td>PSC standard</td><td>90 °C</td><td><span class="badge success">Measured</span></td><td>6 files</td><td><strong>19.8%</strong></td><td><button class="button small" type="button" data-action="stack-duplicate">Duplicate</button></td></tr>
-      <tr><td><input type="checkbox" data-stack-select></td><td><div class="cell-main"><strong>S02</strong><small>Focus 100 °C</small></div></td><td>ITO / SnO₂ / PVK / HTL / Au</td><td>DMF/DMSO</td><td>PSC standard</td><td>100 °C</td><td><span class="badge warning">Processing</span></td><td>4 files</td><td><strong>21.4%</strong></td><td><button class="button small" type="button" data-action="stack-duplicate">Duplicate</button></td></tr>
-    </tbody></table></div>
-  </div>
-</section>
-<details class="panel variant-builder">
-  <summary class="panel-header"><div class="panel-title"><strong>Generate stack variants</strong><small>Create a simple experimental matrix without changing the Lab Cabinet template.</small></div><span class="badge info">Simulation</span></summary>
-  <div class="panel-body">
-    <div class="variant-controls"><div class="field"><label>Parameter A</label><select class="input"><option>Solvent system</option><option>Cs concentration</option><option>Annealing temperature</option></select></div><div class="field"><label>Values</label><input class="input" value="DMF/DMSO, DMF/NMP"></div><div class="field"><label>Parameter B</label><select class="input"><option>Annealing temperature</option><option>None</option></select></div><div class="field"><label>Values</label><input class="input" value="90 °C, 100 °C"></div></div>
-    <div class="variant-matrix" id="variantMatrix"><span>S01<br><b>DMF/DMSO · 90 °C</b></span><span>S02<br><b>DMF/DMSO · 100 °C</b></span><span>S03<br><b>DMF/NMP · 90 °C</b></span><span>S04<br><b>DMF/NMP · 100 °C</b></span></div>
-  </div>
-  <div class="panel-footer"><label class="check-row"><input type="checkbox" checked><span>Keep as experiment-only copies</span></label><button class="button" type="button" data-action="toast" data-message="Variant preset saved to Lab Cabinet">Save as stack template</button><button class="button primary" type="button" data-action="stack-generate-variants">Generate 4 stacks</button></div>
-</details>
-<section class="panel" id="planConditionsSection">
-  <div class="panel-header">
-            <div class="panel-title"><strong>Conditions</strong><small>Process parameters for this stack</small></div>
-  </div>
-  <div class="panel-body">
-    <div class="condition-planner" id="conditionPlanner">
-      <div class="resource-summary-grid"><a href="solution.html"><strong>2 solutions</strong><small>DMF/DMSO precursor · Spiro HTL</small></a><a href="material.html"><strong>6 solutes & materials</strong><small>FAI, CsI, PbI₂, MACl and layers</small></a><a href="stack.html#conditions"><strong>3 conditions</strong><small>1000 · 1500 · 2000 rpm</small></a></div>
-    </div>
-  </div>
-</section>
-<section class="panel" id="planPipelineSection">
-  <div class="panel-header">
-            <div class="panel-title"><strong>Pipeline & Actions</strong><small>Process sequence and operator checklist</small></div>
-            <button class="button small" type="button" data-action="add-pipeline-step"><span data-icon="plus"></span>Add step</button>
-  </div>
-  <div class="panel-body">
-    <div class="pipeline-steps" id="pipelineSteps">
-      <div class="pipeline-step"><span class="pipeline-step-num">1</span><strong>Prepare solutions</strong><small>Recipe and physical batch</small><span class="badge success">Ready</span></div>
-      <div class="pipeline-step"><span class="pipeline-step-num">2</span><strong>Deposit stack</strong><small>Layer actions and actual conditions</small><span class="badge warning">Active</span></div>
-      <div class="pipeline-step"><span class="pipeline-step-num">3</span><strong>Measure and attach data</strong><small>J–V, EQE, XRD and images</small><span class="badge">Planned</span></div>
-    </div>
-  </div>
-</section>
-<article class="ai-inline-assist">
-<div class="ai-inline-icon"><span data-icon="spark"></span></div>
-<div class="ai-inline-copy"><span class="eyebrow">Optional AI suggestion</span><strong>Use 1000, 1500 and 2000 rpm with three replicates</strong><p>Based on the selected setup and the simulated previous experiment EXP-2026-048. This keeps one variable and gives a clear baseline, focus and upper bound.</p><div class="ai-evidence-row"><span class="badge success">Confidence 88%</span><span>Evidence: EXP-2026-048 · PSC baseline v4.1</span></div></div>
-<div class="ai-inline-actions"><button class="button small" data-action="ai-explain-plan" type="button">Why?</button><button class="button small primary" data-action="ai-apply-plan" type="button">Use suggestion</button></div>
-</article></section>
-<section data-wizard-label="Run the work" data-wizard-panel="2" hidden="">
-<div class="wizard-stage-head"><span class="stage-number">03</span><div><h2>Do the work, one action at a time</h2><p>LabFlow shows the next action and records only what actually happened.</p></div></div>
-<article class="next-action-card">
-<div class="next-action-status"><span>Next</span><strong>Prepare the solution batch</strong><small>Use recipe Mixed-cation 1.30 M</small></div>
-<div class="next-action-needs"><span class="badge warning">Batch required</span><strong>SOL-0719-B</strong><small>5 mL · filter before use</small></div>
-<button class="button primary" data-action="run-task" type="button">Mark complete</button>
+
+<article class="experiment-next-action" id="experimentNextAction">
+  <span><small>Next step</small><strong id="experimentNextText">Complete the solution preparation.</strong></span>
+  <button class="button primary" type="button" data-action="wizard-next" id="experimentNextButton">Prepare solutions</button>
 </article>
-<div class="work-board-simple">
-<section class="panel work-process-panel">
-<div class="panel-header"><div class="panel-title"><strong>Process</strong><small>Click a step when it is complete</small></div><span class="badge info" id="makeProgressBadge">2 / 6</span></div>
-<div class="panel-body simple-run-list">
-<button class="run-task complete" data-action="run-task" type="button"><span>1</span><div><strong>Prepare substrates</strong><small>Glass / ITO · cleaning complete</small></div><b>Done</b></button>
-<button class="run-task complete" data-action="run-task" type="button"><span>2</span><div><strong>Deposit ETL</strong><small>SnO₂ · anneal at 150 °C</small></div><b>Done</b></button>
-<button class="run-task active" data-action="run-task" type="button"><span>3</span><div><strong>Prepare solution batch</strong><small>Select the physical batch used today</small></div><b>Now</b></button>
-<button class="run-task" data-action="run-task" type="button"><span>4</span><div><strong>Deposit absorber</strong><small>Apply A, B and C spin-speed conditions</small></div><b>Next</b></button>
-<button class="run-task" data-action="run-task" type="button"><span>5</span><div><strong>Complete devices</strong><small>HTL and Au contact</small></div><b>Later</b></button>
-<button class="run-task" data-action="run-task" type="button"><span>6</span><div><strong>Measure samples</strong><small>J–V, EQE and XRD</small></div><b>Later</b></button>
-</div>
+
+<section class="experiment-workflow-rail" data-wizard-nav aria-label="Standard experimental workflow">
+  <button class="active" data-wizard-step="0" type="button"><span>1</span><strong>Solutions</strong><small>In progress</small></button>
+  <button data-wizard-step="1" type="button"><span>2</span><strong>Stacks</strong><small>To do</small></button>
+  <button data-wizard-step="2" type="button"><span>3</span><strong>Processing</strong><small>To do</small></button>
+  <button data-wizard-step="3" type="button"><span>4</span><strong>Data</strong><small>To do</small></button>
+  <button data-wizard-step="4" type="button"><span>5</span><strong>Analysis</strong><small>To do</small></button>
+  <button data-wizard-step="5" type="button"><span>6</span><strong>Charts &amp; report</strong><small>To do</small></button>
+  <button data-wizard-step="6" type="button"><span>7</span><strong>Export</strong><small>Optional</small></button>
+  <button data-wizard-step="7" type="button"><span>8</span><strong>NOMAD</strong><small>To verify</small></button>
 </section>
-<aside class="work-summary-column">
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Setup in use</strong><small>Change only when needed</small></div><a class="button small" href="pipeline.html">Open</a></div><div class="panel-body setup-at-a-glance"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">ETL</span><span class="substrate">ITO</span></div><dl><div><dt>Solution</dt><dd>SOL-0719-B</dd></div><div><dt>Process</dt><dd>PSC baseline v4.1</dd></div><div><dt>Variable</dt><dd>Spin speed</dd></div></dl></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Samples and measurements</strong><small>Created from the plan</small></div></div><div class="panel-body measurement-progress-simple"><div><span>Samples produced</span><strong>6 / 9</strong><progress max="9" value="6"></progress></div><div><span>J–V</span><strong>5 / 9</strong><progress max="9" value="5"></progress></div><div><span>EQE</span><strong>3 / 9</strong><progress max="9" value="3"></progress></div><div><span>XRD</span><strong>6 / 9</strong><progress max="9" value="6"></progress></div></div></article>
-</aside>
+<div class="wizard-progress-track"><span id="wizardProgressFill" style="width:12.5%"></span></div>
+
+<section class="panel wizard-shell standard-experiment-wizard" data-wizard>
+<div class="panel-body">
+  <section data-wizard-label="Prepare solutions" data-wizard-panel="0">
+    <div class="wizard-stage-head"><span class="stage-number">01</span><div><h2>Prepare the solutions first</h2><p>Start with the information available today. Chemical details can be completed later.</p></div></div>
+    <div class="solution-flow-strip"><span class="active">Solvent or mixture</span><b>→</b><span>Solutes</span><b>→</b><span>Additives</span><b>→</b><span>Concentration</span><b>→</b><span>Batch</span><b>→</b><span>Review</span></div>
+    <div class="solution-prep-layout">
+      <section class="panel clean-subpanel">
+        <div class="panel-header"><div class="panel-title"><strong>FA-Cs 1.2 M</strong><small>Reusable recipe · draft changes</small></div><span class="badge warning">In progress</span></div>
+        <div class="panel-body form-grid compact-form">
+          <div class="field span-2"><label>Solvent or mixture</label><div class="input-action"><select class="input"><option>DMF / DMSO</option><option>DMF</option></select><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials">Lab Cabinet</button><button class="button small" type="button" data-action="cabinet-selector" data-cabinet-category="materials" data-cabinet-create="true">Create solvent</button></div></div>
+          <div class="field"><label>DMF ratio</label><input class="input" value="80 %"></div><div class="field"><label>DMSO ratio</label><input class="input" value="20 %"></div>
+          <div class="field span-2"><label>Solutes</label><div class="token-input"><span>FAI ×</span><span>PbI₂ ×</span><span>CsI ×</span><button type="button" data-action="toast" data-message="Solute selector opened">+ Add solute</button></div></div>
+          <div class="field span-2"><label>Additives <small>optional</small></label><div class="token-input"><span>MACl · 5 mol% ×</span><button type="button" data-action="toast" data-message="Additive selector opened">+ Add additive</button></div></div>
+          <div class="field"><label>Target concentration</label><input class="input" value="1.2 M"></div><div class="field"><label>Total volume</label><input class="input" value="5.0 mL"></div>
+          <div class="field span-2"><label>Preparation notes</label><textarea class="input" rows="2">Dissolve at 60 °C, stir for 30 min and filter before use.</textarea></div>
+          <details class="advanced-details span-2"><summary>Advanced chemical details</summary><div class="form-grid"><div class="field"><label>Appearance</label><input class="input" value="Clear amber"></div><div class="field"><label>Filter</label><input class="input" value="0.45 µm PTFE"></div><div class="field"><label>Storage</label><input class="input" value="N₂ glovebox · dark"></div><div class="field"><label>Expected stability</label><input class="input" value="48 h"></div></div></details>
+        </div>
+      </section>
+      <aside class="panel batch-card">
+        <div class="panel-header"><div class="panel-title"><strong>Concrete preparation</strong><small>Physical batch used in this experiment</small></div></div>
+        <div class="panel-body"><span class="batch-id">SOL-081</span><dl class="key-values"><div><dt>Prepared by</dt><dd>Eleanor Wright</dd></div><div><dt>Date</dt><dd>30 Jul 2026</dd></div><div><dt>Initial volume</dt><dd>5.0 mL</dd></div><div><dt>Remaining</dt><dd>4.2 mL</dd></div></dl><label class="check-row"><input type="checkbox" checked><span>Save FA-Cs 1.2 M as reusable recipe</span></label><button class="button primary w-100" type="button" data-action="solution-prep-complete">Complete preparation</button></div>
+      </aside>
+    </div>
+  </section>
+
+  <section data-wizard-label="Define stacks" data-wizard-panel="1" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">02</span><div><h2>Build the stacks that use this solution</h2><p>Create one stack, similar stacks or simple variants. No DOE system is required.</p></div></div>
+    <div class="stack-mode-switch"><button class="active" type="button">One stack</button><button type="button">Similar stacks</button><button type="button">Variants</button></div>
+    <section class="panel"><div class="panel-header"><div class="panel-title"><strong>Stacks in PSC-2026-041</strong><small>Structure, solution, process and samples stay together</small></div><button class="button small" type="button" data-action="add-stack-to-experiment"><span data-icon="plus"></span>Add stack</button></div>
+      <div class="panel-body" id="experimentStackList">
+        <article class="stack-card panel"><div class="stack-card-head"><strong>S01 · n-i-p PSC baseline</strong><span class="badge success">3 samples</span></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div><dt>Substrate</dt><dd>25 × 25 mm</dd></div><div><dt>Variant</dt><dd>90 °C</dd></div></dl><a class="button small" href="stack.html">Edit layers and details</a></article>
+        <article class="stack-card panel"><div class="stack-card-head"><strong>S02 · n-i-p PSC baseline</strong><span class="badge info">3 samples</span></div><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">PVK</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="stack-essentials"><div><dt>Solution</dt><dd>FA-Cs 1.2 M · SOL-081</dd></div><div><dt>Applied</dt><dd>100 µL</dd></div><div><dt>Substrate</dt><dd>25 × 25 mm</dd></div><div><dt>Variant</dt><dd>100 °C</dd></div></dl><a class="button small" href="stack.html">Edit layers and details</a></article>
+      </div>
+    </section>
+    <details class="panel variant-builder"><summary class="panel-header"><div class="panel-title"><strong>Create simple variants</strong><small>Change solution, material, thickness, temperature, duration or one process parameter.</small></div><span class="badge info">Optional</span></summary><div class="panel-body variant-controls"><div class="field"><label>Parameter</label><select class="input"><option>Annealing temperature</option><option>Solution</option><option>Thickness</option></select></div><div class="field"><label>Values</label><input class="input" value="90 °C, 100 °C"></div><button class="button primary" type="button" data-action="stack-generate-variants">Preview variants</button></div></details>
+  </section>
+
+  <section data-wizard-label="Configure processing" data-wizard-panel="2" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">03</span><div><h2>Configure and record the processing</h2><p>The reusable protocol is separate from the work actually performed on each stack.</p></div></div>
+    <section class="process-definition-split">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Reusable protocol</strong><small>PSC n-i-p standard · v4.1</small></div><span class="badge success">Approved</span></div><div class="panel-body"><p class="subtle">Cleaning → UV-Ozone → spin coating → annealing → HTL → Au evaporation</p><a class="button small" href="pipeline.html">Open protocol</a></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Actual run</strong><small>PSC-2026-041 · S01 and S02</small></div><span class="badge warning">2 / 6 recorded</span></div><div class="panel-body"><p class="subtle">Operator values, timestamps, instruments and deviations belong here.</p><button class="button small primary" type="button" data-action="toast" data-message="Actual work log opened">Record work</button></div></article>
+    </section>
+    <div class="processing-action-list">
+      <article><span>01</span><div><strong>Substrate cleaning</strong><small>Acetone · IPA · sonication</small></div><span class="badge success">Recorded</span></article>
+      <article><span>02</span><div><strong>UV-Ozone treatment</strong><small>15 min · UV-Ozone 01</small></div><span class="badge success">Recorded</span></article>
+      <article class="active"><span>03</span><div><strong>Spin coating</strong><small>4,000 rpm · 30 s · 2,000 rpm/s · 100 µL · Spin Coater 01 · N₂</small></div><button class="button small" type="button" data-action="toast" data-message="Spin coating parameters opened">Edit values</button></article>
+      <article><span>04</span><div><strong>Annealing</strong><small>S01 90 °C · S02 100 °C · 30 min · Hot Plate 02 · natural cooling</small></div><button class="button small" type="button" data-action="toast" data-message="Annealing parameters opened">Edit values</button></article>
+      <article><span>05</span><div><strong>HTL coating and Au evaporation</strong><small>Planned · record actual values after execution</small></div><span class="badge">To do</span></article>
+    </div>
+  </section>
+
+  <section data-wizard-label="Add data" data-wizard-panel="3" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">04</span><div><h2>Add data to the right experimental object</h2><p>Upload, enter manually, import or continue later. Always choose what the data describe.</p></div></div>
+    <div class="data-destination-bar"><label>Associate with <select class="input"><option>Stack S02</option><option>Whole experiment</option><option>Stacks S01 and S02</option><option>Spin coating run</option><option>J–V measurement</option><option>Saved result</option></select></label></div>
+    <div class="data-method-grid">
+      <label><input id="experimentDataFile" type="file" accept=".csv,.xlsx,.xls,.json,image/*,.pdf,.zip,.txt"><span data-icon="upload"></span><strong>Upload file</strong><small>CSV, Excel, JSON, image, PDF, ZIP or instrument file</small></label>
+      <a href="editors.html#workbook"><span data-icon="table"></span><strong>Enter manually</strong><small>Table, single value or data series</small></a>
+      <a href="imports.html"><span data-icon="download"></span><strong>Import</strong><small>Preview, map and retain provenance</small></a>
+      <button type="button" data-action="wizard-next"><span data-icon="save"></span><strong>Add later</strong><small>Continue without blocking the experiment</small></button>
+    </div>
+    <div class="data-import-preview" id="experimentDataPreview"><span class="subtle">No file selected. Existing: 10 files linked to S01 and S02.</span></div>
+  </section>
+
+  <section data-wizard-label="Analyse results" data-wizard-panel="4" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">05</span><div><h2>Analyse data already linked to the stacks</h2><p>Start from the four common actions; tools and AI remain optional.</p></div></div>
+    <div class="analysis-action-grid">
+      <a class="finish-action-card primary" href="workspace.html#comparisons"><span data-icon="chart"></span><div><strong>Compare stacks</strong><small>S01 vs S02 · PCE and uniformity</small></div></a>
+      <a class="finish-action-card" href="workspace.html"><span data-icon="table"></span><div><strong>Explore data</strong><small>Metrics, missing values and anomalies</small></div></a>
+      <a class="finish-action-card" href="editors.html#chart"><span data-icon="chart"></span><div><strong>Create chart</strong><small>Choose stacks, measures and units</small></div></a>
+      <a class="finish-action-card" href="editors.html"><span data-icon="code"></span><div><strong>Use a tool</strong><small>Validation, mapping or conversion</small></div></a>
+      <a class="finish-action-card ai-secondary" href="ai-assistant.html#analysis"><span data-icon="spark"></span><div><strong>Analyse with AI</strong><small>Evidence-linked, reviewable suggestion</small></div></a>
+    </div>
+    <div class="analysis-findings-strip"><div><small>Best stack</small><strong>S02 · 21.4% PCE</strong></div><div><small>Process difference</small><strong>100 °C vs 90 °C</strong></div><div><small>Missing</small><strong>1 J–V measurement</strong></div><div><small>Anomaly</small><strong>C03 roughness · review</strong></div></div>
+  </section>
+
+  <section data-wizard-label="Create charts and report" data-wizard-panel="5" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">06</span><div><h2>Create charts and build the report</h2><p>The report starts from experiment records, linked evidence and saved visualisations.</p></div></div>
+    <div class="report-workflow-grid">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Saved visualisation</strong><small>PCE comparison · S01 and S02</small></div><span class="badge success">Ready</span></div><div class="panel-body"><div class="mini-bars"><i style="height:70%"></i><i style="height:88%"></i></div><div class="row wrap"><a class="button small" href="editors.html#chart">Edit title &amp; units</a><button class="button small" type="button" data-action="toast" data-message="Chart added to report">Add to report</button></div></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment report</strong><small>Objective through NOMAD status</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Solutions, materials and stacks</strong><small>Included with provenance</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Processing, data and chart</strong><small>Included</small></div></div><div><span data-icon="warning"></span><div><strong>Conclusion</strong><small>Needs researcher review</small></div></div></div><div class="panel-footer"><a class="button primary" href="report.html">Create report draft</a></div></article>
+    </div>
+  </section>
+
+  <section data-wizard-label="Save and export" data-wizard-panel="6" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">07</span><div><h2>Save and export</h2><p>Inspect exactly what is included, excluded and versioned before generating files.</p></div></div>
+    <div class="export-review-grid">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Included</strong><small>Experiment archive · version 0.8</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>2 stacks · 6 samples</strong><small>Definitions and actual use</small></div></div><div class="done"><span data-icon="check"></span><div><strong>10 files · 3 datasets</strong><small>Originals and provenance</small></div></div><div class="done"><span data-icon="check"></span><div><strong>1 result · 1 chart · report draft</strong><small>Current saved versions</small></div></div></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Excluded or incomplete</strong><small>Visible before export</small></div></div><div class="panel-body simple-check-list"><div><span data-icon="warning"></span><div><strong>C03 J–V file</strong><small>Not available</small></div></div><div><span data-icon="warning"></span><div><strong>Draft solvent note</strong><small>Excluded because not approved</small></div></div></div></article>
+    </div>
+    <div class="export-format-row"><button>CSV</button><button>Excel</button><button>JSON</button><button>JSONL</button><button>Images</button><button>PDF</button><button>ZIP</button><button class="active">Full archive</button></div>
+    <a class="button primary" href="report.html#export">Open Export Center</a>
+  </section>
+
+  <section data-wizard-label="Prepare NOMAD" data-wizard-panel="7" hidden>
+    <div class="wizard-stage-head"><span class="stage-number">08</span><div><h2>Prepare NOMAD last</h2><p>Validate the experiment first, then choose between a package and a simulated API submission.</p></div></div>
+    <div class="nomad-readiness-grid">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Readiness check</strong><small>11 areas inspected</small></div><span class="badge warning">86% ready</span></div><div class="panel-body nomad-check-matrix"><span class="done">Completeness</span><span class="done">Materials</span><span class="done">Substances</span><span class="done">Solutions</span><span class="done">Stacks</span><span class="done">Processing</span><span class="warning">Units</span><span class="warning">Instruments</span><span class="done">Data &amp; files</span><span class="done">Identifiers</span><span class="warning">Mapping</span></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Open issues</strong><small>Correct, explain or ask for assistance</small></div></div><div class="panel-body nomad-issue-list"><div><span class="badge warning">Unit</span><strong>Illuminated area is missing</strong><button class="button small">Correct</button><button class="button small" data-action="toast" data-message="Explanation opened">Explain</button></div><div><span class="badge warning">Instrument</span><strong>Confirm Spin Coater 01 identifier</strong><button class="button small">Correct</button><a class="button small" href="ai-assistant.html#assistant">AI assist</a></div></div></article>
+    </div>
+    <div class="nomad-paths"><a href="report.html#nomad"><span data-icon="download"></span><strong>Export NOMAD package</strong><small>Generate and inspect files locally</small></a><a href="report.html#nomad"><span data-icon="flow"></span><strong>Send through NOMAD API</strong><small>Separate simulated action using the user API key</small></a></div>
+  </section>
 </div>
-<article class="panel experiment-data-entry">
-<div class="panel-header"><div class="panel-title"><strong>Data entry and import</strong><small>Add a common file or edit measurements manually. Nothing leaves the browser in this POC.</small></div><span class="badge info">CSV · TSV · JSON · TXT · images</span></div>
-<div class="panel-body data-entry-grid"><label class="data-import-target"><span data-icon="upload"></span><strong>Select a data file</strong><small>Preview columns before attaching them to a sample.</small><input id="experimentDataFile" type="file" accept=".csv,.tsv,.txt,.json,image/*"></label><div class="data-entry-actions"><a class="button primary" href="editors.html#workbook">Enter or edit a table</a><a class="button" href="workspace.html#measurements">Review imported data</a></div><div class="data-import-preview" id="experimentDataPreview"><span class="subtle">No file selected.</span></div></div>
-</article></section>
-<section data-wizard-label="Analyse and compare" data-wizard-panel="3" hidden>
-<div class="wizard-stage-head"><span class="stage-number">04</span><div><h2>Your data are ready for analysis</h2><p>Start with a guided comparison. Tools and AI remain optional.</p></div></div>
-<div class="analysis-path">
-  <div><span>1</span><strong>Choose stacks</strong><small>S01 · S02 · S03 · S04</small></div>
-  <div><span>2</span><strong>Choose measure</strong><small>Power conversion efficiency</small></div>
-  <div><span>3</span><strong>Choose view</strong><small>Comparison bars</small></div>
-  <div><span>4</span><strong>Save result</strong><small>Keep provenance</small></div>
-</div>
-<div class="analysis-action-grid">
-  <a class="finish-action-card primary" href="workspace.html#comparisons"><span data-icon="chart"></span><div><strong>Compare the four stacks</strong><small>Recommended simple analysis</small></div></a>
-  <a class="finish-action-card" href="editors.html#chart"><span data-icon="chart"></span><div><strong>Create a graph</strong><small>Choose title, units and format</small></div></a>
-  <a class="finish-action-card" href="editors.html"><span data-icon="code"></span><div><strong>Use a tool</strong><small>Validation, conversion or mapping</small></div></a>
-  <button class="finish-action-card ai-secondary" type="button" data-action="ai-analyse-charts"><span data-icon="spark"></span><div><strong>Analyse with AI</strong><small>Optional, evidence-linked suggestion</small></div></button>
-</div>
+<div class="panel-footer wizard-footer"><button class="button" data-action="wizard-prev" disabled type="button">Previous</button><span class="small subtle" id="wizardStatus">Step 1 of 8 · Prepare solutions</span><button class="button primary" data-action="wizard-next" type="button">Continue to stacks</button></div>
 </section>
-<section data-wizard-label="Generate results and report" data-wizard-panel="4" hidden>
-<div class="wizard-stage-head"><span class="stage-number">05</span><div><h2>Turn the analysis into useful outputs</h2><p>Save selected metrics, graphs and conclusions, then generate a report automatically.</p></div></div>
-<div class="finish-summary-simple">
-  <article class="best-result-card"><span class="eyebrow">Saved result</span><strong>S02 · 100 °C</strong><div><span><b>21.4%</b>PCE</span><span><b>392 nm</b>Thickness</span><span><b>13.7 nm</b>Roughness</span></div><p>DMF/DMSO at 100 °C provides the best performance–uniformity balance.</p></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Report contents</strong><small>Built from experiment records, not a blank document.</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Objective, resources and four stacks</strong><small>Ready</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Process, data and comparison graph</strong><small>Ready</small></div></div><div><span data-icon="warning"></span><div><strong>Conclusion</strong><small>Review before export</small></div></div></div><div class="panel-footer"><a class="button primary" href="report.html">Generate report</a><a class="button" href="report.html">Customise</a></div></article>
-</div>
-</section>
-<section data-wizard-label="Save and export" data-wizard-panel="5" hidden="">
-<div class="wizard-stage-head"><span class="stage-number">06</span><div><h2>Save or export the experiment</h2><p>NOMAD is one destination alongside reports, data, graphs and portable files.</p></div></div>
-<div class="finish-summary-simple">
-<article class="best-result-card"><span class="eyebrow">Best condition</span><strong>1500 rpm</strong><div><span><b>21.4%</b>PCE</span><span><b>392 nm</b>Thickness</span><span><b>13.7 nm</b>Roughness</span></div><p>Condition B gives the best balance of performance and film uniformity.</p></article>
-<article class="panel finish-check-panel"><div class="panel-header"><div class="panel-title"><strong>What still needs attention?</strong><small>Only two items before final export</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Materials and process</strong><small>Complete</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Samples and files</strong><small>Complete</small></div></div><div><span data-icon="warning"></span><div><strong>One J–V measurement</strong><small>Sample C03</small></div><button class="button small">Complete</button></div><div><span data-icon="warning"></span><div><strong>Final metadata review</strong><small>3 optional NOMAD fields</small></div><button class="button small">Review</button></div></div></article>
-</div>
-<div class="finish-actions-simple">
-<button class="finish-action-card" type="button" data-action="toast" data-message="Experiment saved as a POC draft"><span data-icon="save"></span><div><strong>Save experiment</strong><small>Keep working later</small></div></button>
-<a class="finish-action-card" href="report.html#export"><span data-icon="download"></span><div><strong>Export files</strong><small>Excel, CSV, JSON, ZIP, report and images</small></div></a>
-<a class="finish-action-card primary" href="report.html#nomad"><span data-icon="download"></span><div><strong>Prepare for NOMAD</strong><small>Validate, package or simulate API send</small></div></a>
-</div>
-</section>
-</div>
-<div class="panel-footer wizard-footer"><button class="button" data-action="wizard-prev" disabled="" type="button">Previous</button><span class="small subtle" id="wizardStatus">Step 1 of 6 · Prepare experimental resources</span><button class="button primary" data-action="wizard-next" type="button">Continue to stacks</button></div>
-</section>
-</main></div>
-<div aria-live="polite" class="toast-region" id="toastRegion"></div>
-</body>
-</html>
+</main></div><div class="toast-region" id="toastRegion" aria-live="polite"></div>
+</body></html>

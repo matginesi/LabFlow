@@ -1,83 +1,68 @@
-# LabFlow interface analysis
+# LabFlow interface and codebase analysis
 
-## Product goal
+## Product objective
 
-LabFlow is a frontend-only proof of concept for moving a perovskite experiment from
-planning to structured results and a NOMAD-ready package. It does not authenticate,
-persist server-side data or call NOMAD.
+LabFlow is a frontend-only proof of concept for testing one standard perovskite
+laboratory workflow from solution preparation to a NOMAD-ready package. It is
+designed to collect researcher feedback, not to model every experiment family.
 
-## What was already present
+## Current information architecture
 
-- A reusable material, solution, stack, method and process catalogue
-- Experiment planning and execution views
-- Editable result tables, charts, images and report fields
-- Browser-generated JSON, CSV, Excel, YAML, PDF and NOMAD ZIP files
-- Simulated NOMAD import and upload flows
-- A UI kit, documentation, visual data model and optional AI demonstrations
+The primary operational destinations are Workspace, Experiments, Lab Cabinet,
+Imports, Reports, Tools and NOMAD. Knowledge Chat and AI workspace are
+specialist tools. Documentation, UI Kit, user settings and administration are
+system areas.
 
-## Problem found
+The standard experiment path is:
 
-The capabilities were organised around implementation concepts: Projects, Catalog,
-Editors, Flow and AI. A researcher had to infer where to go next, and stack resources
-looked detached from the experiment. Import, editing, reporting and NOMAD were separate
-destinations without a visible end-to-end path.
+`Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
 
-## Interface decision
+No experiment-type selector is required.
 
-The primary path is now:
+## Important product decisions
 
-`Workspace → Experiment → Stacks → Data → Results & report → NOMAD`
+- Start with solution preparation.
+- Support multiple stacks and simple variants without a DOE system.
+- Separate reusable definitions from concrete use.
+- Separate protocol from actual processing.
+- Keep data attached to explicit experimental targets.
+- Make report and export useful before NOMAD.
+- Keep NOMAD last and separate package creation from API submission.
+- Keep Knowledge Chat, AI Analysis and Agents distinct.
+- Require human confirmation for simulated knowledge actions.
 
-Projects remain useful as optional research organisation. The sidebar now separates
-operational work, specialist functions and system/demo resources. It does not expose
-one navigation item for every scientific entity.
+## Repository structure
 
-Within an experiment, a stack is the operational bundle that connects ordered layers
-to solutions, solutes/materials, conditions, pipeline steps and researcher actions.
-Multiple stacks may be linked to the same experiment.
+- Static HTML pages provide canonical product areas and specialist details.
+- `assets/theme.css` contains shared theme tokens.
+- `assets/app.css` contains components and responsive layout.
+- `assets/app.js` mounts the shell, demo data and delegated interactions.
+- `assets/exporters.js` builds local browser downloads.
+- `docs/` contains concise source documentation.
+- `documentation.html` presents an in-product documentation summary.
+- `ui-kit.html` is the component reference.
 
-## Repository inventory and disposition
+The monolithic JavaScript is a maintenance risk, but splitting it into a
+framework application is outside the current POC goal. New work should preserve
+shared helpers and avoid page-specific visual themes.
 
-- 19 static HTML pages share the shell mounted by `assets/app.js`.
-- `assets/theme.css` owns tokens and light/dark themes; `assets/app.css` owns layout
-  and component patterns.
-- `catalogs.html` is the shared Lab Cabinet: search, categories, availability,
-  resource detail, usage history and minimal creation.
-- `imports.html` is the dedicated import entry point.
-- `workspace.html` remains the data/result comparison workspace.
-- `report.html` owns report building, local export and experiment NOMAD validation.
-- `users.html#nomad` owns the personal NOMAD connection.
-- `editors.html` remains Tools; `ai-assistant.html` remains an optional specialist demo.
-- `projects.html` is retained as optional research organisation.
-- `exports.html` is retained as a specialist/compatibility data-exchange demo rather
-  than duplicated in primary navigation.
-- `flow.html`, `documentation.html` and `ui-kit.html` remain technical demonstrations.
+## Demonstrated capabilities
 
-The existing JavaScript is intentionally not split into a framework application.
-Its monolithic size is a maintenance risk, but a broad module refactor would add risk
-without improving this static POC. New work therefore reuses the delegated listeners,
-escaping helpers, export utilities, demo charts and existing component renderers.
+- guided eight-phase experiment;
+- solution recipe and batch preparation;
+- multi-stack management and variants;
+- reusable protocol versus actual run;
+- local import preview and manual data entry;
+- comparisons, charts, reports and local exports;
+- NOMAD validation/package/API simulations;
+- shared evidence-linked Knowledge Chat;
+- optional AI Analysis and controlled agents;
+- responsive compact UI and reusable UI Kit.
 
-CSS consolidation was similarly targeted. New patterns use existing tokens, borders,
-spacing and responsive breakpoints. No second theme or utility framework was added.
+## Explicit limitations
 
-## Lab Cabinet interaction model
+There is no backend, real security, persistent shared workspace, file storage,
+database, LLM, embedding service, vector store or NOMAD connection.
 
-The cabinet stores shared laboratory definitions and lightweight availability
-signals; it is deliberately not an inventory or booking system. Selecting a cabinet
-record from an experiment creates a traceable experiment usage/snapshot. The snapshot
-may hold stack IDs, quantities, parameters and actual conditions without mutating the
-shared definition.
-
-The experiment resource picker stays in context, groups favorites and recent records,
-prevents unavailable equipment from being selected, and offers a minimal “create and
-use” path with duplicate checking and shared-versus-local visibility.
-
-## POC boundaries
-
-- Data files are previewed locally; they are not uploaded.
-- Manual editing uses the local workbook/report editors.
-- Exports are generated in the browser.
-- NOMAD browsing and upload are explicit simulations.
-- API keys stay in page memory. A real integration requires a secure backend and must
-  never embed credentials in static JavaScript.
+The POC is successful when researchers can complete the path, understand what
+each record represents, identify friction and provide actionable feedback.

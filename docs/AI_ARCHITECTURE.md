@@ -1,14 +1,60 @@
-# AI and agent architecture
+# AI, RAG and agent architecture
 
-LabFlow treats AI as an optional interpretation layer over authoritative data:
+## Separation of responsibilities
 
-`Permission scope → retrieval → evidence bundle → model → draft → human review`
+LabFlow exposes three distinct concepts:
 
-The POC implements selected context, structured demo input, evidence,
-confidence, limitations and accept/edit/reject states. Model execution and
-retrieval are simulated locally.
+| Surface | Purpose | Must not become |
+| --- | --- | --- |
+| Knowledge Chat | Search and consult shared laboratory knowledge. | Uncited scientific authority. |
+| AI Analysis | Interpret selected measurements and results. | Automatic modification of source data. |
+| Controlled Agents | Propose bounded multi-step workflow actions. | Autonomous execution without approval. |
 
-Controlled agents expose objective, allowed and blocked actions, steps,
-proposals and approval gates. They cannot delete, publish or send API requests.
-A future RAG layer may combine structured filters with approved reports, notes,
-protocols and file metadata while enforcing workspace permissions.
+All three are static simulations.
+
+## Knowledge Chat
+
+`knowledge.html` represents a shared laboratory RAG interface. Its demo
+knowledge base contains manuals, protocols, procedures, papers, technical
+sheets, shared notes, Lab Cabinet resources, experiments, approved reports and
+NOMAD documentation.
+
+Each source exposes title, type, provenance, tags, status, date and linked
+record/file. Retrieval contexts are all laboratory, documents and protocols,
+Lab Cabinet, experiments, current experiment and NOMAD.
+
+Every simulated answer includes:
+
+- a “simulated synthesis / to verify” state;
+- numbered citations and provenance;
+- evidence used and related records;
+- deterministic retrieval scores;
+- conflict or insufficiency warnings;
+- contextual actions behind explicit confirmation.
+
+The Add Knowledge wizard accepts a simulated file, Cabinet resource, protocol,
+experiment, report or shared note. It only creates an in-memory record.
+
+## AI Analysis
+
+AI Analysis operates on explicit experiment, stack, file, column, measure and
+filter context. Output includes assumptions, findings, anomalies, missing data,
+evidence, confidence, limitations and review state.
+
+Original measurements remain authoritative. Suggestions can be accepted,
+edited or rejected but must not silently replace evidence.
+
+## Controlled Agents
+
+An agent run shows objective, allowed inputs, permitted and blocked actions,
+steps, proposals, evidence and approval gates. Delete, publish and external API
+actions are blocked in the demo.
+
+## Future implementation boundary
+
+A real implementation would require permission-scoped retrieval, document
+parsing, embeddings or another retrieval index, model execution, prompt and
+model versioning, audit logs, evaluation, secure tool execution and human
+approval persistence.
+
+None of those services exists in this repository.

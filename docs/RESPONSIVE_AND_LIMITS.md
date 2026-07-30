@@ -1,10 +1,33 @@
 # Responsive behaviour and POC limits
 
-The supported design range is 360–1440 px. Desktop uses a stable compact
-sidebar; mobile uses a dismissible drawer. Tables use contained horizontal
-scroll. Cards, forms, tool catalogs, evidence and agent runs collapse to one
-column. Drawers use internal scrolling and approach full width on mobile.
+## Responsive behaviour
 
-This repository has no backend, database, authentication, real shared
-persistence, LLM, vector store or NOMAD network integration. AI, agent,
-semantic-search and NOMAD API execution are explicitly simulated.
+The supported design range is 360–1440 px.
+
+- Desktop uses a stable compact sidebar and multi-column workspaces.
+- Below 980 px the sidebar becomes a dismissible drawer.
+- Workflow and context rails scroll horizontally instead of compressing labels.
+- Tables remain inside contained horizontal scrollers.
+- Forms and two-column scientific comparisons collapse to one column.
+- Modals and drawers use internal scrolling and near-full mobile width.
+- Primary actions remain visible and controls keep usable touch targets.
+
+## Functional limits
+
+This repository has no backend, database, authentication, authorization,
+multi-user persistence, file storage, LLM, embedding service, vector database
+or NOMAD network integration.
+
+Simulated features include:
+
+- AI responses, analysis and anomaly detection;
+- controlled agent execution;
+- RAG retrieval and source scoring;
+- binary-file mapping where no local parser exists;
+- NOMAD import, validation submission and API upload;
+- shared workspace synchronisation.
+
+Browser-generated CSV, JSON, YAML, SVG and selected report/archive outputs are
+real local downloads. Their scientific completeness remains demo-level.
+
+Never place real API keys or sensitive laboratory data in this static POC.

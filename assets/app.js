@@ -88,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function mountShell() {
     const sidebar = $('#sidebar'); const topbar = $('#topbar'); const user=currentUser(); const project=currentProject();
+    const main=$('main');if(main&&!main.id)main.id='main-content';
+    if(!$('.skip-link'))document.body.insertAdjacentHTML('afterbegin','<a class="skip-link" href="#main-content">Skip to main content</a>');
     const navActive=id=>(id===page&&!(page==='report'&&location.hash==='#nomad'))||(id==='nomad'&&page==='report'&&location.hash==='#nomad');
     if (topbar) topbar.innerHTML = `<div class="topbar-group"><button class="icon-button nav-toggle" type="button" data-action="sidebar" aria-label="Toggle navigation">${icon('menu')}</button><a class="brand" href="index.html"><span class="brand-mark">LF</span><span class="brand-copy"><strong>LabFlow</strong><small>Research workspace</small></span></a><button class="project-context-button" type="button" data-action="project-toggle" aria-expanded="false"><span>${icon('folder')}</span><span><small>Research context</small><strong>${escapeHtml(project.name)}</strong></span>${icon('chevron')}</button></div><label class="topbar-search">${icon('model')}<input type="search" placeholder="Search this page" data-page-search></label><div class="topbar-group"><button class="button topbar-create" type="button" data-action="quick-create">${icon('plus')}<span>Create</span></button><button class="icon-button" type="button" data-action="theme" aria-label="Toggle theme">${icon(document.documentElement.dataset.theme==='dark'?'sun':'moon')}</button><button class="user-menu" type="button" data-action="user-toggle" aria-expanded="false"><span class="user-avatar">${user.initials}</span><span class="user-copy"><strong>${escapeHtml(user.name)}</strong><small>${escapeHtml(user.role)}</small></span>${icon('chevron')}</button></div>`;
     if (sidebar) {
@@ -197,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stack:{label:'Material stack',copy:'Ordered layers and source materials',icon:'grid'},
     method:{label:'Method',copy:'Reusable parameter form',icon:'flow'},
     process:{label:'Process template',copy:'Ordered protocol and evidence',icon:'flow'},
-    experiment:{label:'Experiment',copy:'Run a process with sample variations',icon:'flask'}
+    experiment:{label:'New experiment',copy:'Use the standard laboratory workflow, starting from solutions',icon:'flask'}
   };
   function mountCreateWizard(){
     if($('#createWizard')) return;
@@ -223,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function createStepFields(type,step){
     const base={project:['New research project','PRJ-NEW','Planning'],material:['Lead iodide','PbI₂','10101-63-0'],solution:['Mixed-cation precursor','1.30','5'],substrate:['Glass / ITO','25 × 25','1.8'],stack:['Baseline n-i-p','n-i-p','STACK-NIP-01'],method:['Spin coating','Deposition','METHOD-SC-01'],process:['PSC baseline','4.2','Device'],experiment:['New optimisation','3','6']}[type];
+    if(step===0&&type==='experiment')return `<div class="starter-choice"><button class="starter-card active" type="button"><span class="badge success">Standard</span><strong>Laboratory experimental workflow</strong><small>Solutions → stacks → processing → data → analysis → report → export → NOMAD.</small></button></div><div class="alert info"><span>${icon('info')}</span><div><strong>No experiment type required</strong><div class="small subtle">Other workflows can be added after validation with researchers.</div></div></div>`;
     if(step===0)return `<div class="starter-choice"><button class="starter-card active" type="button" data-starter="preset"><span class="badge success">Fastest</span><strong>Start from a ready preset</strong><small>Use a reviewed object and customise a copy.</small></button><button class="starter-card" type="button" data-starter="blank"><span class="badge">Blank</span><strong>Start from scratch</strong><small>Use only when no existing object matches.</small></button></div>${createPreview(type)}`;
     if(step===1){
       if(type==='project')return `<div class="form-grid"><div class="field span-2"><label>Project name</label><input class="input" value="${base[0]}"></div><div class="field"><label>Project ID</label><input class="input mono" value="${base[1]}"></div><div class="field"><label>Status</label><select class="input"><option>${base[2]}</option><option>Active</option><option>Review</option></select></div><div class="field span-2"><label>Research objective</label><textarea class="input">Describe the scientific goal in one clear paragraph.</textarea></div></div>`;
@@ -230,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(type==='solution')return `<div class="form-grid"><div class="field span-2"><label>Recipe name</label><input class="input" value="${base[0]}"></div><div class="field"><label>Target concentration</label><div class="input-group"><input class="input" value="${base[1]}"><span class="input-suffix">M</span></div></div><div class="field"><label>Total volume</label><div class="input-group"><input class="input" value="${base[2]}"><span class="input-suffix">mL</span></div></div><div class="field"><label>Primary solvent</label><select class="input"><option>DMF</option><option>DMSO</option><option>GBL</option></select></div><div class="field"><label>Secondary solvent</label><select class="input"><option>DMSO</option><option>None</option></select></div></div>`;
       if(type==='stack')return `<div class="form-grid"><div class="field span-2"><label>Stack name</label><input class="input" value="${base[0]}"></div><div class="field"><label>Architecture</label><select class="input"><option>${base[1]}</option><option>p-i-n</option><option>Film only</option></select></div><div class="field"><label>Identifier</label><input class="input mono" value="${base[2]}"></div><div class="field span-2"><label>Expected output</label><select class="input"><option>Photovoltaic device</option><option>Film sample</option></select></div></div>`;
       if(type==='process')return `<div class="form-grid"><div class="field span-2"><label>Process name</label><input class="input" value="${base[0]}"></div><div class="field"><label>New version</label><input class="input" value="${base[1]}"></div><div class="field"><label>Expected output</label><select class="input"><option>${base[2]}</option><option>Film</option><option>Solution</option></select></div><div class="field span-2"><label>Purpose</label><textarea class="input">Reusable baseline for mixed-cation perovskite devices.</textarea></div></div>`;
-      if(type==='experiment')return `<div class="form-grid"><div class="field span-2"><label>Experiment name</label><input class="input" value="${base[0]}"></div><div class="field"><label>Sample groups</label><input class="input" type="number" value="${base[1]}"></div><div class="field"><label>Replicates per group</label><input class="input" type="number" value="${base[2]}"></div><div class="field span-2"><label>Process</label><select class="input"><option>PSC baseline v4.1</option><option>Film screening v2.2</option></select></div></div>`;
+      if(type==='experiment')return `<div class="form-grid"><div class="field span-2"><label>Experiment name</label><input class="input" value="${base[0]}"></div><div class="field span-2"><label>Objective</label><textarea class="input" rows="3">Describe what you want to prepare, compare or learn.</textarea></div><div class="field"><label>Experiment ID</label><input class="input mono" value="PSC-2026-NEW"></div><div class="field"><label>Status</label><select class="input"><option>Draft</option><option>In progress</option></select></div></div>`;
       return `<div class="form-grid"><div class="field span-2"><label>Name</label><input class="input" value="${base[0]}"></div><div class="field"><label>Category</label><input class="input" value="${base[1]}"></div><div class="field"><label>Identifier</label><input class="input mono" value="${base[2]}"></div><div class="field span-2"><label>Notes</label><textarea class="input">Optional implementation notes.</textarea></div></div>`;
     }
     if(step===2){
@@ -525,22 +528,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const meter=$('#wizardProgressFill'); if(meter)meter.style.width=`${((wizardStep+1)/panels.length)*100}%`;
     const prev=$('.wizard-footer [data-action="wizard-prev"]'); if(prev)prev.disabled=wizardStep===0;
     const next = $('.wizard-footer [data-action="wizard-next"]');
-    if(next){const labels=['Continue to stacks','Continue to data','Continue to analysis','Continue to outputs','Continue to export','Finished'];next.textContent=labels[wizardStep]||'Continue';next.disabled=wizardStep===panels.length-1;}
-    location.hash = ['resources','stacks','data','analysis','outputs','export'][wizardStep] || '';
+    const labels=['Continue to stacks','Continue to processing','Continue to data','Continue to analysis','Continue to charts & report','Continue to export','Continue to NOMAD','Workflow complete'];
+    if(next){next.textContent=labels[wizardStep]||'Continue';next.disabled=wizardStep===panels.length-1;}
+    const nextTexts=['Complete the solution preparation.','Create the stacks that will use this solution.','Record the processing actually performed.','Add measurement data to the stacks.','Compare results from the linked stack data.','Create charts and review the report draft.','Inspect archive contents before export.','Resolve the remaining NOMAD readiness issues.'];
+    const topLabels=['Complete preparation','Create stacks','Record processing','Add data','Compare stacks','Create report','Review export','Review NOMAD issues'];
+    const topText=$('#experimentNextText'),topButton=$('#experimentNextButton');
+    if(topText)topText.textContent=nextTexts[wizardStep];if(topButton){topButton.textContent=topLabels[wizardStep];topButton.dataset.action=wizardStep===0?'solution-prep-complete':wizardStep===panels.length-1?'toast':'wizard-next';topButton.dataset.message=wizardStep===panels.length-1?'NOMAD readiness issues opened':'';topButton.disabled=false;}
+    location.hash = ['solutions','stacks','processing','data','analysis','outputs','export','nomad'][wizardStep] || '';
     requestAnimationFrame(()=>renderGraphContainers(panels[wizardStep]));
   }
 
-  let setupWizardStep=0;
-  function showSetupWizardStep(index){
-    const panels=$$('[data-setup-panel]');if(!panels.length)return;
-    setupWizardStep=Math.max(0,Math.min(index,panels.length-1));
-    panels.forEach((panel,i)=>panel.hidden=i!==setupWizardStep);
-    $$('[data-setup-step]').forEach(button=>{const i=Number(button.dataset.setupStep);button.classList.toggle('active',i===setupWizardStep);button.classList.toggle('complete',i<setupWizardStep);});
-    const meter=$('#setupProgressFill');if(meter)meter.style.width=`${((setupWizardStep+1)/panels.length)*100}%`;
-    const status=$('#setupWizardStatus');if(status)status.textContent=['Step 1 of 3 · Choose a starting point','Step 2 of 3 · Adjust only what differs','Step 3 of 3 · Review and save'][setupWizardStep];
-    const prev=$('[data-action="setup-prev"]');if(prev)prev.disabled=setupWizardStep===0;
-    const next=$('[data-action="setup-next"]');if(next){next.textContent=['Continue to adjust','Continue to review','Setup ready'][setupWizardStep];next.disabled=setupWizardStep===panels.length-1;}
-  }
   function updateAbxFormula() {
     const siteText = site => $$(`[data-ion-list="${site}"] .ion-row`).map(row => {
       const name = $('[data-ion-name]', row)?.value || ''; const coeff = Number($('[data-ion-coeff]', row)?.value || 0);
@@ -1118,11 +1115,140 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* Shared Knowledge Chat — deterministic static RAG simulation */
+  const knowledgeSources = [
+    {id:'KB-001',title:'Spin Coater 01 · user manual',type:'Manual',group:'documents',origin:'Manufacturer · Lab equipment archive',tags:['spin coating','equipment'],status:'Approved',date:'12 Jun 2026',link:'spin-coater-01-manual.pdf',href:'catalogs.html',icon:'file'},
+    {id:'KB-002',title:'PSC n-i-p standard · v4.1',type:'Protocol',group:'documents',origin:'Perovskite Research Lab · Protocol group',tags:['n-i-p','baseline'],status:'Approved',date:'18 Jul 2026',link:'PRO-PSC-NIP-041',href:'pipeline.html',icon:'flow'},
+    {id:'KB-003',title:'Glovebox preparation and transfer',type:'Procedure',group:'documents',origin:'Safety & operations team',tags:['glovebox','safety'],status:'Approved',date:'02 May 2026',link:'SOP-GBX-012.pdf',href:'documentation.html',icon:'shield'},
+    {id:'KB-004',title:'Solvent engineering for FA–Cs perovskites',type:'Paper',group:'documents',origin:'Shared paper library · DOI record',tags:['FA-Cs','solvents'],status:'Reviewed',date:'27 Apr 2026',link:'paper-solvent-engineering.pdf',href:'documentation.html',icon:'file'},
+    {id:'KB-005',title:'FA-Cs 1.2 M · solution specification',type:'Technical sheet',group:'cabinet',origin:'Lab Cabinet · Solutions',tags:['FA-Cs','1.2 M','DMF/DMSO'],status:'In use',date:'29 Jul 2026',link:'SOL-FACS-120',href:'solution.html',icon:'flask'},
+    {id:'KB-006',title:'DMF/DMSO handling notes',type:'Shared note',group:'documents',origin:'Perovskite Research Lab · Shared notes',tags:['DMF','DMSO','handling'],status:'Needs review',date:'30 Jul 2026',link:'NOTE-SOLV-018.md',href:'editors.html#markdown',icon:'file'},
+    {id:'KB-007',title:'Spin Coater 01',type:'Lab Cabinet resource',group:'cabinet',origin:'Lab Cabinet · Equipment',tags:['spin coater','available'],status:'Available',date:'31 Jul 2026',link:'EQ-SPIN-01',href:'catalogs.html',icon:'grid'},
+    {id:'KB-008',title:'PSC-2026-041 · antisolvent screening',type:'Experiment',group:'current',origin:'Experiments · Perovskite Research Lab',tags:['PSC-2026-041','FA-Cs'],status:'In progress',date:'30 Jul 2026',link:'PSC-2026-041',href:'experiment.html',icon:'flask'},
+    {id:'KB-009',title:'PSC-2026-041 · approved interim report',type:'Approved report',group:'experiments',origin:'Reports · Scientific review',tags:['PSC-2026-041','validated'],status:'Approved',date:'31 Jul 2026',link:'RPT-PSC-041',href:'report.html',icon:'report'},
+    {id:'KB-010',title:'NOMAD solar-cell schema & export guide',type:'NOMAD documentation',group:'nomad',origin:'NOMAD documentation snapshot',tags:['NOMAD','export','metadata'],status:'Current',date:'25 Jul 2026',link:'NOMAD-SCHEMA-2026-07',href:'report.html#nomad',icon:'download'}
+  ];
+  const knowledgeContextLabels={all:'All laboratory',documents:'Documents & protocols',cabinet:'Lab Cabinet',experiments:'Experiments',current:'Current experiment',nomad:'NOMAD'};
+  let knowledgeContext='all', knowledgeWizardState={step:0,kind:'File',title:'',type:'Manual',tags:'',origin:'Perovskite Research Lab',link:''}, pendingKnowledgeAction='';
+
+  function knowledgeVisible(source){
+    if(knowledgeContext==='all')return true;
+    if(knowledgeContext==='experiments')return source.group==='experiments'||source.group==='current';
+    return source.group===knowledgeContext;
+  }
+  function renderKnowledgeSources(){
+    const root=$('#knowledgeSourceList'); if(!root)return;
+    const query=($('#knowledgeSearch')?.value||'').trim().toLowerCase();
+    const items=knowledgeSources.filter(source=>knowledgeVisible(source)&&[source.title,source.type,source.origin,...source.tags].join(' ').toLowerCase().includes(query));
+    $('#knowledgeSourceCount').textContent=`${items.length} ${items.length===1?'source':'sources'} in scope`;
+    root.innerHTML=items.length?items.map(source=>`<article class="knowledge-source-card">
+      <div class="knowledge-source-kind">${icon(source.icon)}<span>${escapeHtml(source.type)}</span><b>${escapeHtml(source.id)}</b></div>
+      <strong>${escapeHtml(source.title)}</strong><small>${escapeHtml(source.origin)}</small>
+      <div class="knowledge-source-tags">${source.tags.map(tag=>`<span>${escapeHtml(tag)}</span>`).join('')}</div>
+      <footer><span class="badge ${source.status==='Approved'||source.status==='Current'||source.status==='Available'?'success':source.status==='Needs review'?'warning':'info'}">${escapeHtml(source.status)}</span><time>${escapeHtml(source.date)}</time><button type="button" data-action="knowledge-context-action" data-knowledge-action="Open source" data-source="${source.id}">Open</button></footer>
+      <div class="knowledge-linked">${icon('file')}<span>${escapeHtml(source.link)}</span></div>
+    </article>`).join(''):`<div class="useful-empty"><span>${icon('model')}</span><div><strong>No matching source</strong><small>Change context or remove part of the filter.</small></div></div>`;
+    renderKnowledgeScope(items);
+  }
+  function renderKnowledgeScope(items=knowledgeSources.filter(knowledgeVisible)){
+    const root=$('#knowledgeEvidenceScope'); if(!root)return;
+    const groups=[...new Set(items.map(item=>item.type))];
+    root.innerHTML=`<div class="knowledge-scope-current"><span class="eyebrow">Active context</span><strong>${escapeHtml(knowledgeContextLabels[knowledgeContext])}</strong><small>${items.length} eligible records · workspace shared</small></div>
+      <dl><div><dt>Laboratory</dt><dd>Perovskite Research Lab</dd></div><div><dt>Experiment</dt><dd>PSC-2026-041</dd></div><div><dt>Permissions</dt><dd>Read shared + current</dd></div><div><dt>Types</dt><dd>${escapeHtml(groups.slice(0,4).join(', '))}${groups.length>4?'…':''}</dd></div></dl>
+      <div class="knowledge-index-note"><strong>Retrieval simulation</strong><p>Keyword and context rules select demo records. No embeddings or vector index are running.</p></div>`;
+  }
+  function knowledgeCitation(source,number,reason,score){
+    return `<article class="knowledge-citation"><span>${String(number).padStart(2,'0')}</span><div><strong>${escapeHtml(source.title)}</strong><small>${escapeHtml(source.type)} · ${escapeHtml(source.origin)}</small><p>${escapeHtml(reason)}</p><button type="button" data-action="knowledge-context-action" data-knowledge-action="Open source" data-source="${source.id}">${escapeHtml(source.link)}</button></div><b>${score}%</b></article>`;
+  }
+  function knowledgeAction(label,source=''){
+    return `<button class="button small" type="button" data-action="knowledge-context-action" data-knowledge-action="${escapeHtml(label)}" data-source="${escapeHtml(source)}">${escapeHtml(label)}</button>`;
+  }
+  function answerKnowledge(question){
+    const q=question.toLowerCase(); let ids=[],summary='',evidence=[],warning='',actions=[];
+    if(/nomad|export/.test(q)){
+      ids=['KB-010','KB-008','KB-009']; summary='PSC-2026-041 is close to export readiness, but it should not be sent yet. The approved interim report supports the experiment identity and validated result set; the NOMAD guide still requires explicit units and an equipment association for the spin-coating step.';
+      evidence=['Experiment PSC-2026-041 is identified and linked to the approved report.','FA-Cs 1.2 M and DMF/DMSO are traceable through the experiment record.','Spin Coater 01 is named, but its NOMAD equipment reference is not confirmed.'];
+      warning='Insufficient metadata: confirm coating speed units, sample identifiers and the Spin Coater 01 equipment reference before export.';
+      actions=[['Open experiment','KB-008'],['Add to report','KB-009'],['Start NOMAD check','KB-010']];
+    } else if(/conflict|contradict|different/.test(q)){
+      ids=['KB-002','KB-001','KB-006']; summary='Two instructions should be reconciled before use. Protocol PSC n-i-p standard v4.1 specifies 4,000 rpm for 30 s, while the shared DMF/DMSO note describes a 3,500 rpm trial. The equipment manual only confirms that both settings are within the Spin Coater 01 operating range; it does not validate the scientific choice.';
+      evidence=['Protocol v4.1 is approved and is the governing baseline.','The shared note is newer but marked “Needs review”.','The manual supports equipment limits, not process efficacy.'];
+      warning='Source conflict: do not merge the 3,500 rpm note into the approved protocol without protocol-owner review.';
+      actions=[['Open protocol','KB-002'],['Open source','KB-006'],['Compare stacks','KB-008']];
+    } else if(/solution|solvent|dmf|dmso/.test(q)){
+      ids=['KB-005','KB-008','KB-009','KB-006']; summary='PSC-2026-041 uses the Lab Cabinet solution FA-Cs 1.2 M with a DMF/DMSO solvent system. The experiment and approved interim report agree on the linked solution record; the shared handling note adds practical guidance but remains unapproved.';
+      evidence=['Solution specification identifies FA-Cs at 1.2 M and DMF/DMSO.','Experiment PSC-2026-041 links the same solution snapshot.','Approved report preserves the validated provenance chain.'];
+      warning='Handling guidance from NOTE-SOLV-018 is supplementary and still needs review.';
+      actions=[['Open resource','KB-005'],['Open experiment','KB-008'],['Add to report','KB-009']];
+    } else if(/protocol|setting|spin|equipment|standard/.test(q)){
+      ids=['KB-002','KB-001','KB-007','KB-005']; summary='Use PSC n-i-p standard v4.1 as the governing procedure and Spin Coater 01 as the linked equipment resource. The protocol specifies the process sequence; the manufacturer manual supplies operating limits and safety details. FA-Cs 1.2 M is the matching Lab Cabinet solution for the current experiment.';
+      evidence=['Approved protocol: 4,000 rpm for 30 s, with antisolvent timing defined in the process step.','Spin Coater 01 manual confirms the operating range and lid interlock check.','Lab Cabinet marks Spin Coater 01 as available and FA-Cs 1.2 M as in use.'];
+      actions=[['Open protocol','KB-002'],['Open resource','KB-007'],['Open experiment','KB-008']];
+    } else {
+      ids=knowledgeSources.filter(knowledgeVisible).slice(0,2).map(item=>item.id); summary='The selected knowledge scope does not contain enough direct evidence to answer this question reliably. Try naming an experiment, protocol, resource or NOMAD field.';
+      evidence=['No source explicitly matches all concepts in the question.'];
+      warning='Insufficient sources: this simulated answer is intentionally withheld rather than presented as verified knowledge.';
+      actions=[['Open source',ids[0]||'KB-002']];
+    }
+    let sources=ids.map(id=>knowledgeSources.find(source=>source.id===id)).filter(Boolean).filter(knowledgeVisible);
+    if(!sources.length){sources=knowledgeSources.filter(knowledgeVisible).slice(0,2);warning='The relevant records are outside the selected context. Expand the retrieval scope to verify this question.';}
+    const root=$('#knowledgeChat'); if(!root)return;
+    root.innerHTML=`<div class="knowledge-question"><span>Researcher</span><p>${escapeHtml(question)}</p></div>
+      <article class="knowledge-answer">
+        <header><div><span class="eyebrow">Simulated synthesis · to verify</span><h2>${escapeHtml(summary)}</h2></div><span class="badge violet">RAG demo</span></header>
+        ${warning?`<div class="knowledge-warning">${icon('warning')}<div><strong>Review required</strong><p>${escapeHtml(warning)}</p></div></div>`:''}
+        <section class="knowledge-evidence"><h3>Evidence used</h3><ol>${evidence.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ol></section>
+        <section class="knowledge-citations"><div class="knowledge-section-label"><strong>Sources used</strong><span>${sources.length} retrieved in ${escapeHtml(knowledgeContextLabels[knowledgeContext])}</span></div>${sources.map((source,index)=>knowledgeCitation(source,index+1,index===0?'Primary match for the question.':'Corroborating context and provenance.',Math.max(82,96-index*5))).join('')}</section>
+        <section class="knowledge-related"><div><strong>Related items</strong><span>${sources.map(source=>source.link).join(' · ')}</span></div><div class="knowledge-actions">${actions.map(action=>knowledgeAction(action[0],action[1])).join('')}</div></section>
+        <footer><span>Generated by labflow-rag-demo-v1 · deterministic demo rules</span><span>31 Jul 2026 · no record changed</span></footer>
+      </article>`;
+    root.scrollTop=0;
+  }
+  function renderKnowledgeWelcome(){
+    const root=$('#knowledgeChat'); if(!root)return;
+    root.innerHTML=`<div class="knowledge-welcome"><span class="knowledge-mark">${icon('model')}</span><span class="eyebrow">Evidence before answers</span><h2>Ask the laboratory knowledge, not a black box.</h2><p>Each simulated response shows the records used, why they match, their provenance and what still needs human verification.</p><div><span>10 shared demo sources</span><span>6 selectable contexts</span><span>0 automatic changes</span></div></div>`;
+  }
+  function openKnowledgeConfirmation(label,sourceId){
+    const source=knowledgeSources.find(item=>item.id===sourceId); pendingKnowledgeAction=label;
+    $('#knowledgeConfirmTitle').textContent=`Confirm: ${label}`;
+    $('#knowledgeConfirmBody').innerHTML=`<div class="knowledge-confirm-summary">${icon('shield')}<div><span class="eyebrow">Controlled contextual action</span><h3>${escapeHtml(label)}</h3><p>${source?`Target: ${escapeHtml(source.title)} (${escapeHtml(source.link)}).`:'Review the selected response context.'} This static POC will only simulate the next step.</p></div></div><div class="alert info"><span>${icon('info')}</span><div><strong>Nothing happens automatically</strong><small>No scientific data, report or NOMAD record will be changed or sent.</small></div></div>`;
+    openOverlay('knowledgeConfirm');
+  }
+  function renderKnowledgeWizard(){
+    const steps=['Choose source','Describe','Preview','Confirm'];
+    $('#knowledgeWizardProgress').innerHTML=steps.map((label,index)=>`<span class="${index===knowledgeWizardState.step?'active':index<knowledgeWizardState.step?'done':''}"><b>${index+1}</b>${label}</span>`).join('');
+    const body=$('#knowledgeWizardBody'),footer=$('#knowledgeWizardFooter'),state=knowledgeWizardState;
+    if(state.step===0)body.innerHTML=`<span class="eyebrow">1 · Choose file or resource</span><h2>What do you want to share?</h2><div class="knowledge-kind-grid">${['File','Lab Cabinet resource','Protocol','Experiment','Report','Shared note'].map((kind,index)=>`<button class="${state.kind===kind?'active':''}" type="button" data-knowledge-kind="${kind}">${icon(['file','grid','flow','flask','report','file'][index])}<strong>${kind}</strong><small>${kind==='File'?'PDF, DOCX, TXT or common file':kind==='Shared note'?'Write a laboratory note':`Link an existing ${kind.toLowerCase()}`}</small></button>`).join('')}</div>`;
+    if(state.step===1)body.innerHTML=`<span class="eyebrow">2 · Describe</span><h2>Make the source findable</h2><div class="form-grid"><label class="field span-2"><span>Title</span><input class="input" id="knowledgeWizardTitleInput" value="${escapeHtml(state.title)}" placeholder="e.g. Spin coating troubleshooting guide"></label><label class="field"><span>Type</span><select class="input" id="knowledgeWizardType">${['Manual','Protocol','Procedure','Paper','Technical sheet','Shared note','Lab Cabinet resource','Experiment','Approved report','NOMAD documentation'].map(type=>`<option ${state.type===type?'selected':''}>${type}</option>`).join('')}</select></label><label class="field"><span>Tags</span><input class="input" id="knowledgeWizardTags" value="${escapeHtml(state.tags)}" placeholder="spin coating, baseline"></label><label class="field"><span>Provenance</span><input class="input" id="knowledgeWizardOrigin" value="${escapeHtml(state.origin)}"></label><label class="field"><span>Linked file or resource</span><input class="input" id="knowledgeWizardLink" value="${escapeHtml(state.link)}" placeholder="${state.kind==='File'?'Choose a demo filename':'Select an existing record ID'}"></label></div>${state.kind==='File'?'<label class="knowledge-file-drop"><input id="knowledgeWizardFile" type="file"><span data-icon="upload"></span><strong>Choose a local file</strong><small>The static POC only reads its name; it uploads nothing.</small></label>':''}`;
+    if(state.step===2)body.innerHTML=`<span class="eyebrow">3 · Preview</span><h2>Review before sharing</h2><article class="knowledge-preview-card"><div><span class="badge info">${escapeHtml(state.type)}</span><span class="badge warning">Draft</span></div><h3>${escapeHtml(state.title||'Untitled knowledge')}</h3><dl><div><dt>Source</dt><dd>${escapeHtml(state.kind)}</dd></div><div><dt>Provenance</dt><dd>${escapeHtml(state.origin)}</dd></div><div><dt>Tags</dt><dd>${escapeHtml(state.tags||'No tags')}</dd></div><div><dt>Linked item</dt><dd>${escapeHtml(state.link||'Not selected')}</dd></div></dl><p>This record will be added to the in-memory demo index for the current session.</p></article>`;
+    if(state.step===3)body.innerHTML=`<div class="knowledge-wizard-success">${icon('check')}<span class="eyebrow">Knowledge added to demo</span><h2>${escapeHtml(state.title)}</h2><p>The source is visible in the shared knowledge list. No file was uploaded and nothing was persisted.</p></div>`;
+    footer.innerHTML=state.step===3?`<button class="button primary" type="button" data-action="close">Done</button>`:`<button class="button" type="button" data-action="${state.step?'knowledge-wizard-back':'close'}">${state.step?'Back':'Cancel'}</button><button class="button primary" type="button" data-action="${state.step===2?'knowledge-wizard-confirm':'knowledge-wizard-next'}">${state.step===2?'Confirm addition':'Continue'}</button>`;
+    $$('[data-icon]',body).forEach(node=>node.innerHTML=icon(node.dataset.icon));
+  }
+  function syncKnowledgeWizard(){
+    const state=knowledgeWizardState;
+    if($('#knowledgeWizardTitleInput'))state.title=$('#knowledgeWizardTitleInput').value.trim();
+    if($('#knowledgeWizardType'))state.type=$('#knowledgeWizardType').value;
+    if($('#knowledgeWizardTags'))state.tags=$('#knowledgeWizardTags').value;
+    if($('#knowledgeWizardOrigin'))state.origin=$('#knowledgeWizardOrigin').value;
+    if($('#knowledgeWizardLink'))state.link=$('#knowledgeWizardLink').value;
+  }
+
   /* Events */
   document.addEventListener('click', event => {
     const button = event.target.closest('button,[data-action],.tab-button,.process-node,.entity-node,.measurement-card,.condition-card,[data-graph-node-id]'); if (!button) return;
     const action = button.dataset.action;
+    if(button.matches('[data-knowledge-context]')){knowledgeContext=button.dataset.knowledgeContext;$$('[data-knowledge-context]').forEach(item=>item.classList.toggle('active',item===button));renderKnowledgeSources();renderKnowledgeWelcome();}
+    if(button.matches('[data-knowledge-prompt]')){const input=$('#knowledgePrompt');if(input)input.value=button.dataset.knowledgePrompt;answerKnowledge(button.dataset.knowledgePrompt);}
+    if(button.matches('[data-knowledge-kind]')){knowledgeWizardState.kind=button.dataset.knowledgeKind;$$('[data-knowledge-kind]').forEach(item=>item.classList.toggle('active',item===button));}
+    if(action==='knowledge-add'){knowledgeWizardState={step:0,kind:'File',title:'',type:'Manual',tags:'',origin:'Perovskite Research Lab',link:''};renderKnowledgeWizard();openOverlay('knowledgeWizard');}
+    if(action==='knowledge-wizard-next'){syncKnowledgeWizard();if(knowledgeWizardState.step===1&&!knowledgeWizardState.title){toast('Title required','warning','Add a clear title before previewing this source.');return;}knowledgeWizardState.step=Math.min(2,knowledgeWizardState.step+1);renderKnowledgeWizard();}
+    if(action==='knowledge-wizard-back'){syncKnowledgeWizard();knowledgeWizardState.step=Math.max(0,knowledgeWizardState.step-1);renderKnowledgeWizard();}
+    if(action==='knowledge-wizard-confirm'){syncKnowledgeWizard();const state=knowledgeWizardState;knowledgeSources.unshift({id:`KB-${String(knowledgeSources.length+1).padStart(3,'0')}`,title:state.title,type:state.type,group:state.type.includes('NOMAD')?'nomad':state.type.includes('Experiment')||state.type.includes('report')?'experiments':state.type.includes('Cabinet')?'cabinet':'documents',origin:state.origin,tags:state.tags.split(',').map(tag=>tag.trim()).filter(Boolean),status:'Draft',date:'31 Jul 2026',link:state.link||'Demo link pending',href:'#',icon:'file'});knowledgeWizardState.step=3;renderKnowledgeWizard();renderKnowledgeSources();}
+    if(action==='knowledge-context-action')openKnowledgeConfirmation(button.dataset.knowledgeAction||'Open source',button.dataset.source);
+    if(action==='knowledge-action-confirm'){closeOverlay($('#knowledgeConfirm'));toast(`${pendingKnowledgeAction} ready`,'success','Confirmed demo action only; no laboratory data was modified.');}
     if(action==='ai-drawer')openOverlay('aiDrawer');
+    if(action==='solution-prep-complete'){button.textContent='Preparation complete';button.disabled=true;button.closest('.batch-card')?.querySelector('.badge')?.classList.replace('warning','success');toast('Solution preparation complete','success','Recipe FA-Cs 1.2 M and concrete batch SOL-081 are ready for the stacks.');setTimeout(()=>showWizardStep(1),350);}
     if(button.matches('[data-ai-mode]')){aiState.mode=button.dataset.aiMode;aiState.lastInput=null;aiState.lastOutput=null;const prompt=$('#aiPrompt');if(prompt)prompt.value=aiModes[aiState.mode].prompts[0];renderAIPage();}
     if(button.matches('[data-ai-prompt]')){const prompt=$('#aiPrompt');if(prompt){prompt.value=button.dataset.aiPrompt;prompt.focus();}aiState.lastInput=aiInput(aiState.mode,button.dataset.aiPrompt);renderAIPage();}
     if(action==='ai-run')runAI();
@@ -1133,8 +1259,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='ai-copy-output'){navigator.clipboard?.writeText($('#aiOutputPreview')?.textContent||'');toast('Output copied','success','Structured simulated output copied.');}
     if(action==='ai-drawer-prompt'){const input=$('#aiDrawerPrompt');if(input)input.value=button.dataset.prompt;}
     if(action==='ai-drawer-run'){const box=$('.ai-drawer-answer');const q=$('#aiDrawerPrompt')?.value.trim()||'What should I do next?';const [,answer]=contextualAIResponse();if(box)box.innerHTML=`<span class="eyebrow">Simulated answer</span><p><strong>${escapeHtml(q)}</strong></p><p>${escapeHtml(answer)}</p><div class="ai-evidence-row"><span class="badge success">Evidence linked</span><span>Current page · ${escapeHtml(currentProject().id)}</span></div>`;}
-    if(action==='ai-explain-plan')toast('Why this plan?','info','It changes one parameter, spans the previous useful window and keeps the sample count manageable.');
-    if(action==='ai-apply-plan'){button.textContent='Suggestion applied';button.disabled=true;toast('Plan suggestion applied','success','Conditions and replicates remain editable before execution.');}
     if(action==='ai-parse-file'){const root=$('#aiFileResult');if(root){root.hidden=false;root.innerHTML=`<div class="ai-file-mapping"><span class="badge success">96% confidence</span><strong>J–V measurement detected</strong><dl><div><dt>Target</dt><dd>DEV-052-B04-03</dd></div><div><dt>Columns</dt><dd>voltage_V · current_density_mA_cm²</dd></div><div><dt>Derived</dt><dd>Voc 1.14 V · Jsc 23.2 · FF 81.0% · PCE 21.4%</dd></div><div><dt>Warning</dt><dd>Confirm illuminated area</dd></div></dl><div class="row wrap"><button class="button small" type="button" data-action="ai-reject-file">Reject</button><button class="button small primary" type="button" data-action="ai-accept-file">Review and attach</button></div></div>`;} }
     if(action==='ai-accept-file')toast('File mapping accepted','success','Simulated measurement is ready for final validation.');
     if(action==='ai-reject-file'){const root=$('#aiFileResult');if(root)root.hidden=true;toast('File suggestion rejected','info','The original file remains unchanged.');}
@@ -1146,7 +1270,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='ai-analysis-run'){const root=$('#aiAnalysisResult');if(root)root.innerHTML=`<div class="panel-header"><div class="panel-title"><strong>Reviewable result</strong><small>EXP-2026-052 · generated just now</small></div><span class="badge warning">Draft AI</span></div><div class="panel-body stack"><div class="ai-result-head"><span class="badge success">Confidence 86%</span><strong>Stack S02 has the strongest performance–uniformity balance.</strong></div><div class="ai-analysis-findings"><div><span>01</span><p><strong>Difference</strong>S02 reaches 21.4% PCE, 1.8 points above S01 with the same solution family.</p></div><div><span>02</span><p><strong>Anomaly</strong>C06 roughness is 2.4σ above its group and should be reviewed, not removed automatically.</p></div><div><span>03</span><p><strong>Suggested view</strong>Scatter PCE versus thickness, coloured by annealing temperature.</p></div></div><div class="ai-evidence-manifest"><strong>Evidence manifest</strong><dl><div><dt>Stacks</dt><dd>S01–S04</dd></div><div><dt>Files</dt><dd>12 J–V CSV · 4 thickness tables</dd></div><div><dt>Columns</dt><dd>pce_pct · thickness_nm · temperature_C</dd></div><div><dt>Assumption</dt><dd>Validated rows only</dd></div><div><dt>Limitation</dt><dd>One missing C03 measurement</dd></div><div><dt>Model</dt><dd>labflow-analysis-demo-v1</dd></div></dl></div><div class="ai-response-actions"><button class="button small" type="button" data-action="ai-reject">Reject</button><button class="button small" type="button" data-action="ai-edit">Edit note</button><button class="button small primary" type="button" data-action="ai-accept">Approve result</button></div></div>`;}
     if(button.matches('[data-agent]')){const names={setup:'Experiment Setup Agent',intake:'Data Intake Agent',analysis:'Analysis Agent',nomad:'NOMAD Agent'},root=$('#agentRunPanel'),name=names[button.dataset.agent]||'Agent';$$('[data-agent]').forEach(item=>item.classList.toggle('active',item===button));if(root)root.innerHTML=`<div class="panel-header"><div class="panel-title"><strong>${name}</strong><small>Run AGT-2026-018 · simulated</small></div><span class="badge warning">Awaiting approval</span></div><div class="agent-run-grid"><section><span class="eyebrow">Objective</span><strong>Prepare EXP-2026-052 using only selected workspace data.</strong><dl><div><dt>Allowed inputs</dt><dd>Experiment, stacks, selected files</dd></div><div><dt>Allowed actions</dt><dd>Read, compare, propose</dd></div><div><dt>Blocked actions</dt><dd>Delete, publish, send API request</dd></div></dl></section><ol><li class="done"><b>Inspect context</b><small>12 records and 23 files read</small></li><li class="done"><b>Validate evidence</b><small>2 warnings retained</small></li><li class="active"><b>Propose actions</b><small>Researcher review required</small></li><li><b>Apply selected</b><small>Not started</small></li></ol><section class="agent-proposals"><label><input type="checkbox" checked><span><strong>Associate 4 J–V files with S02</strong><small>Evidence: filename + manifest</small></span></label><label><input type="checkbox"><span><strong>Suggest missing illumination unit</strong><small>Confidence 91% · method JV-01</small></span></label><label><input type="checkbox"><span><strong>Create validation note</strong><small>No scientific data changed</small></span></label></section></div><div class="panel-footer"><button class="button" type="button" data-action="toast" data-message="Agent proposals rejected">Reject</button><button class="button" type="button" data-action="toast" data-message="Agent proposals opened for editing">Edit</button><button class="button primary" type="button" data-action="agent-apply">Apply selected</button></div>`;}
     if(action==='agent-apply'){toast('Selected proposals applied','success','Two reviewable changes were recorded with evidence and human approval.');button.disabled=true;button.textContent='Applied';}
-    if(action==='semantic-search'){const root=$('#semanticResults'),q=$('#semanticQuery')?.value.trim();if(!q){toast('Enter a research question','warning','Search needs a question or filter.');return;}if(root)root.innerHTML=`<div class="semantic-answer"><div><span class="badge violet">Simulated retrieval</span><strong>S02 and S04 exceeded 20% PCE; both used batch SOL-081.</strong><p>S02 is the strongest match because it combines SnO₂, SOL-081 and 100 °C annealing with 21.4% PCE. S04 matches the material and batch but has wider device variation.</p></div><div class="semantic-source-list"><a href="experiment.html#analysis"><span>Experiment</span><strong>EXP-2026-052</strong><small>Matched stack results and temperature</small><b>96%</b></a><a href="solution.html"><span>Solution batch</span><strong>SOL-081</strong><small>Linked to S02 and S04 usage snapshots</small><b>91%</b></a><a href="report.html"><span>Approved report</span><strong>RPT-2026-052</strong><small>Matched validated PCE table</small><b>88%</b></a></div><footer><small>Retrieval reason: SnO₂ + PCE &gt; 20% + solution usage · permission scope ${escapeHtml(currentProject().id)}</small><button class="button small" type="button" data-action="toast" data-message="Search evidence exported">Export evidence</button></footer></div>`;}
     if(action==='sidebar') document.body.classList.toggle('sidebar-open');
     if(action==='user-toggle'){const pop=$('#userPopover'),project=$('#projectPopover');if(project)project.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
     if(action==='project-toggle'){const pop=$('#projectPopover'),user=$('#userPopover');if(user)user.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
@@ -1204,10 +1327,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(button.classList.contains('entity-node')) renderEntity(button.dataset.entity);
     if(button.matches('[data-flow-focus]')) { $$('[data-flow-focus]').forEach(b=>b.classList.toggle('active',b===button)); const map=$('#modelMap'); if(map){const target={composition:'PerovskiteComposition',chemistry:'SolutionRecipe',process:'ProcessTemplate',device:'StackDefinition',measurement:'Measurement',result:'DerivedResult'}[button.dataset.flowFocus];renderEntity(target);} }
     if(button.matches('[data-template-step]')){$$('[data-template-step]').forEach(b=>b.classList.toggle('active',b===button));const target=document.getElementById(button.dataset.target);target?.scrollIntoView({behavior:'smooth',block:'start'});}
-    if(button.matches('[data-setup-step]'))showSetupWizardStep(Number(button.dataset.setupStep));
-    if(action==='setup-prev')showSetupWizardStep(setupWizardStep-1);
-    if(action==='setup-next')showSetupWizardStep(setupWizardStep+1);
-    if(action==='setup-finish'){showSetupWizardStep(2);toast('Setup ready','success','Future experiments can use it in one click.');}
     if(button.classList.contains('process-node')) { $$('.process-node').forEach(n=>n.classList.toggle('active',n===button));renderProcessInspector(button.dataset.processNode); }
     if(action==='process-add-step')openProcessStepWizard();
     if(action==='process-validate') toast('Template validation','warning','One output role is still undefined in the demo.');
@@ -1269,17 +1388,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='nomad-save-creds'){toast('Kept for this demo session','success','The POC does not persist or transmit the API key.');}
     if(action==='preset-use'){toast('Preset added to Lab Cabinet','success','A shared reference is ready for the next experiment.');}
     if(action==='process-preset'){$$('.template-preset').forEach(x=>x.classList.toggle('selected',x===button));const names={baseline:'PSC baseline',film:'Film screening',flex:'Flexible p-i-n'};$$('.process-name').forEach(x=>x.textContent=names[button.dataset.processPreset]||'Process template');toast('Starter selected','success','The process builder now uses a personal editable copy.');}
-    if(action==='experiment-template'){$$('.setup-choice-card').forEach(x=>x.classList.toggle('selected',x===button));if(button.dataset.template==='custom'){location.href='pipeline.html';return;}showWizardStep(1);toast('Experiment setup selected','success','Substrate, solution, stack, process and measurements are now prefilled.');}
-    if(action==='experiment-add-group'){const root=$('#experimentLanes');if(root){const code=String.fromCharCode(65+root.children.length);const item=document.createElement('article');item.className='condition-visual-card';item.innerHTML=`<span class="condition-code">${code}</span><div><small>New condition</small><strong>Set value</strong></div><div class="sample-dots labeled"><span>${code}01</span><span>${code}02</span><span>${code}03</span></div>`;root.append(item);}}
     if(action==='edit-material'){toast('Edit material','info','Material editing will open in a future form view.');}
     if(action==='use-stack'){const sId=$('#stackId')?.textContent||'STK-001';location.href=`experiment.html?stack=${encodeURIComponent(sId)}`;}
     if(action==='add-stack-to-experiment'){const s=stackData['STK-001'];const root=$('#experimentStackList');if(root){const n=root.querySelectorAll('.stack-card').length+1;const card=document.createElement('article');card.className='stack-card panel';card.innerHTML=`<div class="stack-card-head"><strong>${escapeHtml(s.name)} · variant ${n}</strong><span class="badge info">STK-${String(n).padStart(3,'0')}</span></div><div class="mini-stack">${s.layers.map(l=>`<span class="${l.type}">${escapeHtml(l.label.split(' ')[0])}</span>`).join('')}</div><div class="stack-card-meta"><span><b>${s.layers.length}</b> layers</span><span><b>${s.solutions.length}</b> solutions</span><a href="stack.html">Manage all details</a></div>`;root.append(card);toast('Stack added','success',`A new stack variant is linked to this experiment.`);}}
-    if(action==='stack-duplicate'){const row=button.closest('tr'),root=$('#experimentStackRows');if(row&&root){const copy=row.cloneNode(true),n=root.children.length+1;copy.querySelector('.cell-main strong').textContent=`S${String(n).padStart(2,'0')}`;copy.querySelector('.cell-main small').textContent='Local copy · review';copy.querySelector('.badge').className='badge info';copy.querySelector('.badge').textContent='Planned';copy.querySelector('[data-stack-select]').checked=false;root.append(copy);toast('Stack duplicated','success','The copy belongs to this experiment; the Library template is unchanged.');}}
-    if(action==='stack-generate-variants'){const root=$('#experimentStackRows');if(root){const variants=[['S03','DMF/NMP','90 °C'],['S04','DMF/NMP','100 °C']];variants.forEach(([id,solution,temp])=>{if([...root.rows].some(row=>row.cells[1]?.textContent.includes(id)))return;const row=document.createElement('tr');row.innerHTML=`<td><input type="checkbox" data-stack-select></td><td><div class="cell-main"><strong>${id}</strong><small>Generated variant</small></div></td><td>ITO / SnO₂ / PVK / HTL / Au</td><td>${solution}</td><td>PSC standard</td><td>${temp}</td><td><span class="badge info">Planned</span></td><td>0 files</td><td>—</td><td><button class="button small" type="button" data-action="stack-duplicate">Duplicate</button></td>`;root.append(row);});toast('Variants generated','success','Four experiment-only stacks are ready.');}}
-    if(action?.startsWith('stack-bulk-')){const count=$$('[data-stack-select]:checked').length;if(!count){toast('Select stacks first','warning','Choose one or more stack rows.');}else{const label={ 'stack-bulk-process':'Process applied','stack-bulk-condition':'Condition editor opened','stack-bulk-compare':'Comparison prepared'}[action];toast(label,'success',`${count} stacks selected.`);if(action==='stack-bulk-compare')location.href='workspace.html#comparisons';}}
+    if(action==='stack-generate-variants')toast('Variant preview ready','success','S01 at 90 °C and S02 at 100 °C remain experiment-only variants.');
     if(action==='add-pipeline-step'){const root=$('#pipelineSteps');if(root){const n=root.children.length+1;const step=document.createElement('div');step.className='pipeline-step';step.innerHTML=`<span class="pipeline-step-num">${n}</span><input class="input" placeholder="Describe this step" value="Step ${n}"><select class="input"><option>Operator</option><option>Automation</option><option>Measurement</option></select><button class="icon-button small" type="button" data-action="remove-pipeline-step">×</button>`;root.append(step);toast('Pipeline step added','success',`Step ${n} added to the workflow.`);}}
     if(action==='remove-pipeline-step'){button.closest('.pipeline-step')?.remove();const steps=$$('.pipeline-step');steps.forEach((s,i)=>s.querySelector('.pipeline-step-num').textContent=i+1);}
-    if(action==='run-task'){button.classList.toggle('complete');button.classList.remove('active');const tasks=$$('.run-task'),done=tasks.filter(x=>x.classList.contains('complete')).length;const badge=$('#makeProgressBadge');if(badge)badge.textContent=`${done} / ${tasks.length}`;toast(button.classList.contains('complete')?'Step completed':'Step reopened',button.classList.contains('complete')?'success':'info',button.querySelector('strong')?.textContent||'Process step');}
     if(button.matches('[data-graph-node-id]')){graphEditorState.selected=button.dataset.graphNodeId;renderGraphEditor();}
     if(button.classList.contains('measurement-card'))button.classList.toggle('selected');
     if(action==='docs-print')window.print();
@@ -1302,6 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('input', event => {
+    if(event.target.id==='knowledgeSearch')renderKnowledgeSources();
     if(event.target.matches('[data-page-search]'))filterPage(event.target);
     if(event.target.id==='cabinetSearch')renderCabinet();
     if(event.target.id==='cabinetSelectorSearch')renderCabinetSelector();
@@ -1329,9 +1444,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if(event.target.matches('[data-report-image-field]')){reportData.images[+event.target.dataset.index][event.target.dataset.reportImageField]=event.target.value;renderReport();}
   });
   document.addEventListener('change', event => {
+    if(event.target.id==='knowledgeWizardFile'){const file=event.target.files?.[0];if(file){knowledgeWizardState.link=file.name;if(!knowledgeWizardState.title)knowledgeWizardState.title=file.name.replace(/\.[^.]+$/,'');}}
     if(event.target.matches('#cabinetAvailability,#cabinetLocation,#cabinetFavoritesOnly'))renderCabinet();
-    if(event.target.matches('[data-stack-select-all]'))$$('[data-stack-select]').forEach(box=>box.checked=event.target.checked);
-    if(event.target.matches('[data-stack-select-all],[data-stack-select]')){const count=$$('[data-stack-select]:checked').length,target=$('#stackSelectionCount');if(target)target.textContent=`${count} selected`;}
     if(event.target.id==='graphPreset'){const preset=graphPresets[event.target.value]||graphPresets.experiment;if($('#graphSource'))$('#graphSource').value=preset;if($('#graphDirection'))$('#graphDirection').value=parseGraphDsl(preset).direction;graphEditorState.selected=null;renderGraphEditor();}
     if(event.target.id==='graphDirection'&&$('#graphSource')){const source=$('#graphSource').value;$('#graphSource').value=/^direction\s+(LR|TB)$/im.test(source)?source.replace(/^direction\s+(LR|TB)$/im,`direction ${event.target.value}`):`direction ${event.target.value}\n${source}`;renderGraphEditor();}
     if(event.target.id==='codeFileInput')readTextFile(event.target.files?.[0],$('#codeInput'));
@@ -1342,17 +1456,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if(event.target.matches('[data-report-image-input]')){const file=event.target.files?.[0],index=+event.target.dataset.reportImageInput;if(file){const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{reportImageCache.set(index,img);reportData.images[index].filename=file.name;renderReportArrays();renderReport();toast('Report image updated','success',file.name);};img.src=String(reader.result);};reader.readAsDataURL(file);}}
   });
   document.addEventListener('pointerdown',event=>{const user=$('#userPopover'),project=$('#projectPopover');if(user&&!user.hidden&&!event.target.closest('#userPopover,.user-menu,[data-action="user-toggle"]'))user.hidden=true;if(project&&!project.hidden&&!event.target.closest('#projectPopover,.project-context-button,[data-action="project-toggle"]'))project.hidden=true;});
+  document.addEventListener('submit',event=>{if(event.target.id==='knowledgeForm'){event.preventDefault();const question=$('#knowledgePrompt')?.value.trim();if(!question){toast('Question required','warning','Ask a focused question to search the selected context.');return;}answerKnowledge(question);}});
   document.addEventListener('focusin',event=>{if(event.target.matches('[data-sheet-cell]'))selectCell(+event.target.dataset.row,+event.target.dataset.col);});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
-  window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(page==='experiment'){const step={setup:0,resources:0,stacks:1,data:2,analysis:3,outputs:4,results:4,export:5}[key];if(Number.isInteger(step)&&step!==wizardStep)showWizardStep(step);return;}const tabButton=$(`[data-tab="${key}"]`);if(tabButton)activateTab(tabButton);});
+  window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(page==='experiment'){const step={setup:0,resources:0,solutions:0,stacks:1,processing:2,process:2,data:3,analysis:4,outputs:5,results:5,export:6,nomad:7}[key];if(Number.isInteger(step)&&step!==wizardStep)showWizardStep(step);return;}const tabButton=$(`[data-tab="${key}"]`);if(tabButton)activateTab(tabButton);});
 
-  mountShell(); mountAIDrawer(); mountProcessStepWizard(); mountCabinetSelector(); renderCabinet(); renderToolCatalog(); if(page==='report')initReportImages(); if(page==='projects'&&location.hash==='#new')setTimeout(openProjectWizard,0);
+  mountShell(); mountAIDrawer(); mountProcessStepWizard(); mountCabinetSelector(); renderCabinet(); renderToolCatalog(); renderKnowledgeSources(); renderKnowledgeWelcome(); if(page==='report')initReportImages(); if(page==='projects'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
   if(page==='material-detail'){const params=new URLSearchParams(location.search);const matId=params.get('material')||'FAI';renderMaterialPage(matId);}
   if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}
   renderEntity(page==='flow'?'UserAccount':'IonDefinition'); renderDocumentation('overview');
   renderProcessInspector('composition');
-  const hashToStep={choose:0,start:0,setup:0,resources:0,plan:1,stacks:1,materials:0,process:1,work:2,run:2,data:2,analysis:3,outputs:4,results:4,review:4,finish:5,export:5};showWizardStep(hashToStep[location.hash.slice(1)]??0);showSetupWizardStep(0);
+  const hashToStep={choose:0,start:0,setup:0,resources:0,solutions:0,plan:1,stacks:1,materials:0,process:2,processing:2,work:2,run:2,data:3,analysis:4,outputs:5,results:5,review:5,finish:6,export:6,nomad:7};showWizardStep(hashToStep[location.hash.slice(1)]??0);
   updateAbxFormula(); renderAIPage(); renderDemoCharts(); renderDynamicCharts(); renderGraphContainers(); updateCodeEditor(); syncMarkdown(); renderWorkbook(); initDemoImage(); renderChartBuilder(); renderGraphEditor(); renderReportEditor(); renderReport();
   const initialTab=location.hash.slice(1);const tab=$(`[data-tab="${initialTab}"]`);if(tab)activateTab(tab);
   if(page==='imports'&&location.hash==='#nomad')document.querySelector('[data-import-mode="nomad"]')?.click();

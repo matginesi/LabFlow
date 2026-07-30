@@ -1,26 +1,105 @@
 # Data model
 
-`Workspace` owns Projects and shared `LabResource` records. A `Project` contains
-Experiments. Each Experiment contains stacks, resource usages, process runs,
-samples, measurements, files, results, reports and export packages.
+## Model goals
 
-`ExperimentResourceUsage` keeps `resource_ref`, `stack_ids`, amount, unit,
-parameters, actual conditions, `used_at` and a snapshot of relevant definition
-fields. It separates shared definitions from historical evidence.
+The model supports one validated workflow without inventing experiment
+categories. It separates reusable definitions from what was physically used or
+performed, and keeps every result traceable to evidence.
 
-## AI-ready records
+## Ownership and organisation
 
-`AIAnalysis`: id, workspace/experiment/stack scope, source refs, analysis type,
-prompt, model, parameters, outputs, evidence, confidence, limitations, status,
-author and timestamps.
+`Laboratory / Workspace → Project → Experiment`
 
-`AIOutput`: analysis reference, type, content, structured data, sources, status,
-human edits, approval and provenance.
+- **Laboratory / Workspace** contains shared knowledge and Lab Cabinet records.
+- **Project** groups related experiments, reports and exports.
+- **Experiment** is one concrete research activity using the standard workflow.
 
-`AgentDefinition`: purpose, allowed inputs/actions, approval gates, outputs and
-version. `AgentRun`: objective, scoped inputs, steps, proposals, evidence,
-approvals, outputs, status and timestamps.
+The static POC only simulates this scope. A backend must enforce it.
 
-`SemanticIndexEntry` is planned metadata for source reference, summary,
-embedding version and creation time. No embeddings are implemented in the POC.
-AI outputs never overwrite original measurements.
+## Shared definitions and concrete use
+
+| Shared definition | Concrete experiment record |
+| --- | --- |
+| Material or substance | Material lot or recorded use |
+| Solution recipe | Prepared solution batch |
+| Stack template | Experiment stack |
+| Protocol / pipeline | Process run |
+| Reusable action | Executed action |
+| Instrument | Instrument use and actual settings |
+| Condition definition | Actual condition |
+
+An experiment stores a usage snapshot containing the referenced resource,
+affected stacks, amount and unit, actual parameters, time, operator and the
+relevant definition version. Later Lab Cabinet edits must not change historical
+evidence silently.
+
+## Standard experiment graph
+
+```text
+Experiment
+├── SolutionRecipe
+│   └── SolutionBatch
+├── ExperimentStack (one or more)
+│   ├── ordered layers
+│   ├── materials and substrate
+│   └── solution usage
+├── ProcessRun
+│   └── ExecutedAction
+├── Sample
+├── Measurement
+│   ├── DataFile
+│   └── DerivedResult
+├── SavedVisualisation
+├── Report
+└── ExportPackage / NomadPackage
+```
+
+## Essential records
+
+### SolutionRecipe
+
+Name, version, solvents and ratios, solutes, additives, target concentration,
+reference volume, preparation instructions, storage and optional advanced
+chemistry.
+
+### SolutionBatch
+
+Recipe version, actual component lots and quantities, prepared by and at,
+actual volume, deviations, filtration, storage, remaining amount and state.
+
+### ExperimentStack
+
+Code, sample count, ordered layers, layer roles, materials, substrate,
+dimensions, thicknesses, solution and quantity applied, instruments,
+conditions, notes and optional source template.
+
+### ProcessRun and ExecutedAction
+
+Protocol version, target stacks, actual sequence, timestamps, operator,
+instruments, atmosphere, actual method-specific parameters, deviations, inputs,
+outputs and evidence.
+
+### DataFile, Measurement and DerivedResult
+
+The original file remains evidence. A measurement adds acquisition context. A
+derived result stores a value, series or statistic with unit, source references,
+method/version and validation state.
+
+### Report and ExportPackage
+
+A report stores selected sections, editable narrative, charts and source
+references. An export package records scope, format, included and excluded
+records, version, warnings, manifest and checksums.
+
+## AI and knowledge records
+
+- **KnowledgeSource**: title, type, provenance, tags, status, date and linked
+  file/resource.
+- **KnowledgeAnswer**: question, selected scope, cited sources, evidence,
+  conflicts, insufficiency warning and generated timestamp.
+- **AIAnalysis**: data scope, source references, analysis request, output,
+  confidence, assumptions, limitations and review status.
+- **AgentRun**: bounded objective, permitted inputs/actions, steps, proposals,
+  evidence and approval decisions.
+
+AI-derived records never overwrite original data.
