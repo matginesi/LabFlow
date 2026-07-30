@@ -943,6 +943,63 @@ document.addEventListener('DOMContentLoaded', () => {
     ).join('')}</div>`;
   }
 
+  const materialData = {
+    FAI: {
+      id: 'MAT-FAI', name: 'FAI', formula: 'CH(NH2)2I', lot: 'FAI-2204',
+      supplier: 'GreatCell Solar', purity: '99.99%', storage: 'N2 glovebox, dark, RT',
+      cas: '879643-71-7', role: 'Precursor',
+      usedIn: [
+        { type: 'Stack', name: 'FA0.85Cs0.15PbI3', id: 'STK-001' },
+        { type: 'Solution', name: 'Mixed-cation precursor v5', id: 'REC-MIX-05' },
+        { type: 'Solution', name: 'FA0.85Cs0.15PbI3 Precursor', id: 'SOL-001' },
+      ]
+    },
+    PbI2: {
+      id: 'MAT-PBI2', name: 'PbI2', formula: 'PbI2', lot: 'PBI2-1187',
+      supplier: 'TCI', purity: '99.99%', storage: 'N2 glovebox, dark, RT',
+      cas: '10101-63-0', role: 'Precursor',
+      usedIn: [
+        { type: 'Stack', name: 'FA0.85Cs0.15PbI3', id: 'STK-001' },
+        { type: 'Solution', name: 'Mixed-cation precursor v5', id: 'REC-MIX-05' },
+      ]
+    },
+    CsI: {
+      id: 'MAT-CSI', name: 'CsI', formula: 'CsI', lot: 'CSI-0312',
+      supplier: 'Sigma Aldrich', purity: '99.999%', storage: 'Desiccator, RT',
+      cas: '7789-17-5', role: 'Precursor',
+      usedIn: [
+        { type: 'Stack', name: 'FA0.85Cs0.15PbI3', id: 'STK-001' },
+      ]
+    },
+    'Spiro-OMeTAD': {
+      id: 'MAT-SPIRO', name: 'Spiro-OMeTAD', formula: 'C81H68N4O8', lot: 'SPI-4056',
+      supplier: 'Merck', purity: '99.8%', storage: 'N2 glovebox, dark, 4 °C',
+      cas: '', role: 'HTL',
+      usedIn: [
+        { type: 'Stack', name: 'FA0.85Cs0.15PbI3', id: 'STK-001' },
+      ]
+    }
+  };
+
+  function renderMaterialPage(materialId) {
+    const mat = materialData[materialId];
+    if (!mat) { toast('Material not found', 'danger', `No data for ${materialId}`); return; }
+    const nameEl = $('#materialName'); if (nameEl) nameEl.textContent = mat.name;
+    const formulaEl = $('#materialFormula'); if (formulaEl) formulaEl.innerHTML = `${escapeHtml(mat.formula)} · <span class="mono">${escapeHtml(mat.lot)}</span>`;
+    const lotEl = $('#materialLot'); if (lotEl) lotEl.textContent = mat.lot;
+    const supplierEl = $('#materialSupplier'); if (supplierEl) supplierEl.textContent = mat.supplier;
+    const purityEl = $('#materialPurity'); if (purityEl) purityEl.textContent = mat.purity;
+    const storageEl = $('#materialStorage'); if (storageEl) storageEl.textContent = mat.storage;
+    const usedInEl = $('#materialUsedIn');
+    if (usedInEl) {
+      usedInEl.innerHTML = mat.usedIn.length
+        ? `<div class="table-wrap"><table class="data-table"><thead><tr><th>Type</th><th>Name</th><th>ID</th></tr></thead><tbody>${mat.usedIn.map(ref =>
+            `<tr><td>${escapeHtml(ref.type)}</td><td><strong>${escapeHtml(ref.name)}</strong></td><td class="mono">${escapeHtml(ref.id)}</td></tr>`
+          ).join('')}</tbody></table></div>`
+        : '<p class="subtle">Questo materiale non è ancora utilizzato in nessuno stack o soluzione.</p>';
+    }
+  }
+
   /* Events */
   document.addEventListener('click', event => {
     const button = event.target.closest('button,[data-action],.tab-button,.process-node,.entity-node,.measurement-card,.condition-card,[data-graph-node-id]'); if (!button) return;
@@ -1064,6 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(action==='process-preset'){$$('.template-preset').forEach(x=>x.classList.toggle('selected',x===button));const names={baseline:'PSC baseline',film:'Film screening',flex:'Flexible p-i-n'};$$('.process-name').forEach(x=>x.textContent=names[button.dataset.processPreset]||'Process template');toast('Starter selected','success','The process builder now uses a personal editable copy.');}
     if(action==='experiment-template'){$$('.setup-choice-card').forEach(x=>x.classList.toggle('selected',x===button));if(button.dataset.template==='custom'){location.href='pipeline.html';return;}showWizardStep(1);toast('Experiment setup selected','success','Substrate, solution, stack, process and measurements are now prefilled.');}
     if(action==='experiment-add-group'){const root=$('#experimentLanes');if(root){const code=String.fromCharCode(65+root.children.length);const item=document.createElement('article');item.className='condition-visual-card';item.innerHTML=`<span class="condition-code">${code}</span><div><small>New condition</small><strong>Set value</strong></div><div class="sample-dots labeled"><span>${code}01</span><span>${code}02</span><span>${code}03</span></div>`;root.append(item);}}
+    if(action==='edit-material'){toast('Edit material','info','Material editing will open in a future form view.');}
     if(action==='use-stack'){const sId=$('#stackId')?.textContent||'STK-001';location.href=`experiment.html?stack=${encodeURIComponent(sId)}`;}
     if(action==='add-stack-to-experiment'){const s=stackData['STK-001'];const root=$('#experimentStackList');if(root&&!root.querySelector('.stack-card')){const card=document.createElement('article');card.className='stack-card panel';card.innerHTML=`<div class="stack-card-head"><strong>${escapeHtml(s.name)}</strong><span class="badge info">${s.id}</span></div><div class="mini-stack">${s.layers.map(l=>`<span class="${l.type}">${escapeHtml(l.label.split(' ')[0])}</span>`).join('')}</div><div class="stack-card-meta"><span><b>${s.layers.length}</b> layers</span><span><b>${s.solutions.length}</b> solutions</span><span class="badge success">${s.conditions.spinSpeed}</span></div>`;root.append(card);toast('Stack added','success',`${s.name} linked to this experiment.`);}else{toast('Stack already added','info','Only one stack per experiment in this POC.');}}
     if(action==='add-pipeline-step'){const root=$('#pipelineSteps');if(root){const n=root.children.length+1;const step=document.createElement('div');step.className='pipeline-step';step.innerHTML=`<span class="pipeline-step-num">${n}</span><input class="input" placeholder="Describe this step" value="Step ${n}"><select class="input"><option>Operator</option><option>Automation</option><option>Measurement</option></select><button class="icon-button small" type="button" data-action="remove-pipeline-step">×</button>`;root.append(step);toast('Pipeline step added','success',`Step ${n} added to the workflow.`);}}
@@ -1127,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   mountShell(); mountAIDrawer(); mountProcessStepWizard(); if(page==='exports')initReportImages(); if(page==='progetti'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
+  if(page==='material-detail'){const params=new URLSearchParams(location.search);const matId=params.get('material')||'FAI';renderMaterialPage(matId);}
   if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}
   let storedTheme = 'light'; try { storedTheme = localStorage.getItem('labflow-theme') || 'light'; } catch (_) {}
   setTheme(storedTheme);
