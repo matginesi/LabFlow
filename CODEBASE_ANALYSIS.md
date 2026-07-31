@@ -1,70 +1,107 @@
-# LabFlow interface and codebase analysis
+# LabFlow codebase revision report
 
-## Product objective
+## Implemented product model
 
-LabFlow is a frontend-only proof of concept for testing one standard perovskite
-laboratory workflow from solution preparation to a NOMAD-ready package. It is
-designed to collect researcher feedback, not to model every experiment family.
+The proof of concept now follows one canonical operational hierarchy:
 
-## Current information architecture
+`User → Workspace → Process → Experiment`
 
-The primary operational destinations are Workspace, Experiments, Lab Cabinet,
-Imports, Reports, Tools and NOMAD. Knowledge Assistant and AI Analysis & Agents are
-specialist tools. Documentation, UI Kit, user settings and administration are
-system areas.
+- **Workspace** is the researcher-owned operating context.
+- **Process** is a versioned scientific workflow definition.
+- **Experiment** is one concrete execution of a Process.
+- **Project** is an optional cross-cutting grouping and is never required.
+- **Lab Cabinet** contains reusable definitions and physical inventory resources.
 
-The standard experiment path is:
+The word **Process** no longer means protocol. Protocols are reusable resources
+that can be selected by Process steps and executed as concrete Processing Runs.
 
-`Solutions → Stacks → Processing → Data → Analysis → Charts & report → Export → NOMAD`
+## Main implementation changes
 
-No experiment-type selector is required.
+### Process and experiment navigation
 
-## Important product decisions
+- added a dedicated Process directory;
+- turned the former Pipeline page into a Process detail page;
+- added an autonomous Experiment directory;
+- added current-Process context to the shell;
+- changed experiment creation to `Select Process → Name & objective → Starting configuration`;
+- retained Projects as optional research context.
 
-- Start with solution preparation.
-- Support multiple stacks and simple variants without a DOE system.
-- Separate reusable definitions from concrete use.
-- Separate protocol from actual processing.
-- Keep data attached to explicit experimental targets.
-- Make report and export useful before NOMAD.
-- Keep NOMAD last and separate package creation from API submission.
-- Keep Knowledge Assistant, AI Analysis and Agents distinct.
-- Require human confirmation for simulated knowledge actions.
+### Scientific workflow
 
-## Repository structure
+The standard Process path is:
 
-- Static HTML pages provide canonical product areas and specialist details.
-- `assets/theme.css` contains shared theme tokens.
-- `assets/app.css` contains components and responsive layout.
-- `assets/app.js` mounts the shell, demo data and delegated interactions.
-- `assets/exporters.js` builds local browser downloads.
-- `docs/` contains concise source documentation.
-- `documentation.html` presents an in-product documentation summary.
-- `ui-kit.html` is the component reference.
-- the topbar search provides a shared local fuzzy index and optional in-page
-  filtering; Documentation and Lab Cabinet add domain-specific search.
+`Solutions → Stacks & samples → Processing → Data → Analysis → Charts & report → Export → NOMAD`
 
-The monolithic JavaScript is a maintenance risk, but splitting it into a
-framework application is outside the current POC goal. New work should preserve
-shared helpers and avoid page-specific visual themes.
+A Process defines phases, default resources, expected measurements, required
+evidence and a NOMAD mapping profile. An Experiment stores actual values,
+deviations, files, samples and reviewed outputs.
 
-## Demonstrated capabilities
+### Solutions and solvents
 
-- guided eight-phase experiment;
-- solution recipe and batch preparation;
-- multi-stack management and variants;
-- reusable protocol versus actual run;
-- local import preview and manual data entry;
-- comparisons, charts, reports and local exports;
-- NOMAD validation/package/API simulations;
-- shared evidence-linked Knowledge Assistant;
-- optional AI Analysis and controlled agents;
-- responsive compact UI and reusable UI Kit.
+The solution model now distinguishes:
 
-## Explicit limitations
+- `SolventDefinition` and mixture components;
+- `SolutionRecipe` as a reusable formulation;
+- `SolutionBatch` as a physical preparation;
+- actual material lots, masses, volumes, operator, date, atmosphere,
+  filtration, remaining quantity and deviations.
 
-There is no backend, real security, persistent shared workspace, file storage,
-database, LLM, embedding service, vector store or NOMAD connection.
+The graphical solvent editor supports multiple components and calculates the
+mixture ratio and nominal component volumes from the total volume.
 
-The POC is successful when researchers can complete the path, understand what
-each record represents, identify friction and provide actionable feedback.
+### Stacks and samples
+
+The stack model now distinguishes:
+
+- `StackTemplate` as a reusable ordered definition;
+- `ExperimentStack` as a versioned snapshot or experiment-specific variant;
+- `StackLayer` with role, material, thickness, source and method;
+- `Sample` as the stable physical identity generated from a concrete stack;
+- processing history and measurements attached to sample IDs.
+
+The graphical stack editor supports layer selection, addition, ordering,
+duplication, removal and editing without requiring a DOE system.
+
+### Data model and documentation
+
+The source documentation now includes explicit records for:
+
+- `ProcessDefinition`;
+- `WorkflowStepDefinition`;
+- `ExperimentStep`;
+- `FileRecord` with raw/processed/image/instrument/report/AI roles;
+- reusable definition snapshots and concrete evidence;
+- stable IDs, units, provenance, validation and human/AI origin;
+- NOMAD mapping without allowing NOMAD to dictate the researcher interface.
+
+### Maintainability
+
+New workflow-specific behavior and styling are isolated in:
+
+- `assets/workflow-domain.js`;
+- `assets/workflow.css`.
+
+The legacy `assets/app.js` and `assets/app.css` remain large because this is a
+static POC, but new domain behavior is no longer added exclusively to those two
+files. This is an incremental split rather than an unnecessary framework rewrite.
+
+## Canonical terminology
+
+| Term | Meaning |
+|---|---|
+| Process | Versioned definition of a family of laboratory work |
+| Protocol | Reusable ordered method available as a resource |
+| Processing Run | Actual execution of a protocol or action sequence |
+| Solution Recipe | Reusable formulation |
+| Solution Batch | Physical solution prepared from a recipe |
+| Stack Template | Reusable ordered layer structure |
+| Experiment Stack | Snapshot or variant used in one experiment |
+| Sample | Stable physical specimen or device identity |
+| Project | Optional grouping of related experiments |
+
+## Remaining production boundaries
+
+This repository intentionally remains a static proof of concept. It has no real
+backend, database, authentication, authorization, shared file storage, AI service,
+RAG index or NOMAD API connection. Browser storage and generated downloads are
+demonstrations, not durable scientific records.

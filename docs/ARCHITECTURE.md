@@ -1,90 +1,58 @@
 # POC architecture
 
-## Purpose
-
-LabFlow is a static, multi-page interface proof of concept for testing a
-researcher workflow between laboratory work and NOMAD. It demonstrates
-information architecture, interaction patterns and browser-side outputs. It is
-not a production application.
-
 ## Product architecture
 
 ```text
 Researcher
-    ↓
+  ↓
 Workspace
-    ├── Lab Cabinet ── reusable resources ──┐
-    └── Experiment ←────────────────────────┘
-            ↓
-       Scientific workflow
-            ↓
-          Report
-            ↓
-          Export
-            ↓
-          NOMAD
+  ├── Lab Cabinet ── reusable definitions / physical resources
+  ├── Processes ───── versioned scientific workflows
+  │      └── Experiments ── concrete execution and evidence
+  └── Projects ────── optional experiment grouping
+               ↓
+          Reports / Export / NOMAD
 ```
 
-Projects may group related experiments, but remain optional.
+## Frontend modules
 
-## Runtime
+- `assets/theme.css`: tokens and light/dark themes.
+- `assets/app.css`: shared shell and existing component library.
+- `assets/workflow.css`: Process directory/detail, experiment directory, solvent builder and stack builder.
+- `assets/exporters.js`: browser-generated files.
+- `assets/workflow-domain.js`: Process/Experiment demo records and graphical domain interactions.
+- `assets/app.js`: shell and remaining POC interactions.
 
-- semantic HTML pages;
-- `assets/theme.css` for tokens and light/dark themes;
-- `assets/app.css` for shared layouts and components;
-- `assets/app.js` for the shell, demo stores and interactions;
-- `assets/exporters.js` for browser-generated files;
-- no framework, build step, CDN or server route.
+The workflow module is a first low-risk separation from the original monolithic files. No framework or build step is introduced.
 
-The repository root can be served by any static HTTP server or GitHub Pages.
+## Canonical destinations
 
-## Product areas
+| Area | Page |
+| --- | --- |
+| Workspace | `index.html` |
+| Processes | `processes.html`, `pipeline.html` |
+| Experiments | `experiments.html`, `experiment.html` |
+| Solutions | `solution.html` |
+| Stacks | `stack.html` |
+| Lab Cabinet | `catalogs.html` |
+| Results | `workspace.html` |
+| Imports | `imports.html` |
+| Reports / Export / NOMAD | `report.html` |
+| Optional Projects | `projects.html`, `project.html` |
+| Tools | `editors.html` |
+| AI / Knowledge | `ai-assistant.html`, `knowledge.html` |
+| Documentation | `documentation.html`, `docs/` |
 
-| Area | Canonical page | Responsibility |
-| --- | --- | --- |
-| Workspace | `index.html` | Resume work, see attention items and create an experiment. |
-| Experiments | `project.html`, `experiment.html` | Follow the standard eight-phase workflow. |
-| Lab Cabinet | `catalogs.html` | Shared reusable laboratory resources. |
-| Imports | `imports.html` | Preview and map files or NOMAD records. |
-| Data workspace | `workspace.html` | Inspect measurements, results and comparisons. |
-| Tools | `editors.html` | Local editing, validation, conversion and visualisation. |
-| Reports and export | `report.html` | Build reports and generate local output packages. |
-| NOMAD | `report.html#nomad` | Validate, package and simulate explicit submission. |
-| Knowledge Assistant | `knowledge.html` | Consult shared knowledge with cited evidence. |
-| AI Analysis & Agents | `ai-assistant.html` | Analyse data and demonstrate controlled agents. |
-| Settings | `users.html` | User preferences and personal NOMAD connection. |
-| Administration | `admin-settings.html` | Workspace-level POC settings. |
-| Documentation | `documentation.html`, `docs/` | Product, model and implementation guidance. |
-| UI Kit | `ui-kit.html` | Canonical component examples. |
+## State
 
-Specialist detail pages remain deep links. They should not become competing
-top-level workflows.
+The static POC stores selected user, Process and optional Project in `localStorage`. This is an interface simulation, not a security boundary.
 
-## State and interaction model
+A production backend must enforce:
 
-Demo state lives in JavaScript memory or `localStorage` where explicitly noted.
-Delegated event handlers support pages that render content dynamically. Data is
-not shared between browsers or users.
-
-The shell exposes a user, workspace and project context for credibility. These
-are interface demonstrations, not security boundaries.
-
-The shared search component combines optional filtering of visible
-`data-filter-item` records with a small fuzzy-matched index of canonical
-destinations. Documentation also indexes its embedded manual sections. All
-searching runs locally and contains only demo content.
-
-## Architectural boundaries
-
-The POC does not contain:
-
-- authentication or authorization;
-- backend persistence or multi-user synchronisation;
-- file storage;
-- a database or API;
-- real LLM, embeddings, vector search or autonomous agents;
-- real NOMAD import or submission;
-- secure secret storage.
-
-A future backend must enforce ownership, permissions, immutable provenance,
-file integrity, secret management and every external network request.
+- workspace ownership and permissions;
+- immutable published versions;
+- experiment snapshots;
+- file integrity and object storage;
+- provenance and audit logs;
+- secure secrets and external API calls;
+- concurrent editing and validation.

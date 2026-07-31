@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Personal laboratory workspace">
   <title>Workspace home · LabFlow</title>
   <link href="assets/theme.css" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/workflow.css">
   <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/workflow-domain.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="dashboard">
@@ -25,6 +27,8 @@
           <p>Start a new experiment, continue from the recommended next step, or bring existing work into LabFlow.</p>
         </div>
       </header>
+
+      <section class="process-context-strip"><div><span>Current process</span><strong data-process-name>Perovskite solar cell fabrication — n-i-p</strong></div><div class="row wrap"><span class="badge success" data-process-status>Active</span><a class="button small" href="pipeline.html">Open process</a><a class="button small" href="processes.html">Switch</a></div></section>
 
       <section class="home-entry-grid" aria-label="Primary actions">
         <button class="home-entry-card primary" type="button" data-action="experiment-wizard"><span data-icon="flask"></span><span><small>Start</small><strong>New experiment</strong><p>Name it now; add resources and stacks progressively.</p></span><b>→</b></button>
@@ -46,7 +50,7 @@
           <strong>75%</strong>
         </div>
         <div class="home-continue-actions">
-          <a class="button" href="project.html#experiments">All experiments</a>
+          <a class="button" href="experiments.html">All experiments</a>
           <a class="button primary" href="experiment.html#data">Import measurement data</a>
         </div>
       </section>
@@ -56,7 +60,7 @@
           <h2>Continue where you left off</h2>
           <p>Each experiment shows one recommended action.</p>
         </div>
-        <a href="project.html#experiments">View all</a>
+        <a href="experiments.html">View all</a>
       </div>
       <section class="home-project-grid" id="homeProjectList" aria-label="Your experiments"></section>
 
@@ -74,13 +78,25 @@
 
   <div class="overlay" id="startExperimentModal" hidden>
     <section class="modal minimal-experiment-modal" role="dialog" aria-modal="true" aria-labelledby="startExperimentTitle">
-      <div class="panel-header"><div class="panel-title"><strong id="startExperimentTitle">Start a new experiment</strong><small>Only two fields are needed now.</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
-      <div class="panel-body stack">
-        <div class="field"><label>Experiment name</label><input class="input" id="minimalExperimentName" placeholder="e.g. Solvent and annealing comparison"></div>
-        <div class="field"><label>Short objective</label><textarea class="input" id="minimalExperimentObjective" rows="3" placeholder="What do you want to compare or learn?"></textarea></div>
-        <details class="advanced-details"><summary>Optional details</summary><div class="form-grid"><div class="field"><label>Tags</label><input class="input" placeholder="solvents, annealing"></div><div class="field"><label>Responsible researcher</label><input class="input" data-user-name value="Eleanor Wright"></div><div class="field span-2"><label>Notes</label><textarea class="input" rows="2"></textarea></div></div></details>
+      <div class="panel-header"><div class="panel-title"><strong id="startExperimentTitle">Start a new experiment</strong><small>Select the process first; concrete records belong to the experiment.</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
+      <div class="experiment-create-progress"><span data-experiment-create-progress>1 · Process</span><span data-experiment-create-progress>2 · Objective</span><span data-experiment-create-progress>3 · Starting point</span></div>
+      <div class="panel-body">
+        <section data-experiment-create-panel="0">
+          <div class="process-choice-grid">
+            <label class="process-choice-card"><input type="radio" name="experiment_process" value="psc-nip" checked><strong>PSC fabrication · n-i-p</strong><small>Solutions, devices, characterisation and NOMAD</small></label>
+            <label class="process-choice-card"><input type="radio" name="experiment_process" value="film-screen"><strong>Thin-film screening</strong><small>Films without complete device requirements</small></label>
+            <label class="process-choice-card"><input type="radio" name="experiment_process" value="flex-pin"><strong>Flexible pilot · p-i-n</strong><small>Low-temperature constrained workflow</small></label>
+          </div>
+        </section>
+        <section data-experiment-create-panel="1" hidden>
+          <div class="form-grid"><div class="field span-2"><label>Experiment name</label><input class="input" id="minimalExperimentName" placeholder="e.g. Solvent and annealing comparison"></div><div class="field span-2"><label>Short objective</label><textarea class="input" id="minimalExperimentObjective" rows="3" placeholder="What do you want to compare or learn?"></textarea></div><div class="field"><label>Optional project</label><select class="input"><option>No project</option><option>Mixed-cation perovskite optimisation</option><option>Flexible p-i-n pilot</option></select></div><div class="field"><label>Responsible researcher</label><input class="input" data-user-name value="Eleanor Wright"></div></div>
+        </section>
+        <section data-experiment-create-panel="2" hidden>
+          <div class="starting-choice-grid"><label class="starting-choice-card"><input type="radio" name="experiment_start" value="defaults" data-label="Process defaults" checked><strong>Use process defaults</strong><small>Snapshot recommended recipes, stack template, protocols and expected measurements.</small></label><label class="starting-choice-card"><input type="radio" name="experiment_start" value="previous" data-label="Copy previous experiment"><strong>Copy previous experiment</strong><small>Reuse configuration, never previous concrete evidence.</small></label><label class="starting-choice-card"><input type="radio" name="experiment_start" value="blank" data-label="Empty execution"><strong>Start empty</strong><small>Keep the process phases but select all resources manually.</small></label></div>
+          <div class="experiment-create-summary" id="experimentCreateSummary"></div>
+        </section>
       </div>
-      <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><span class="small subtle">Resources and stacks come next.</span><button class="button primary" type="button" data-action="minimal-experiment-create">Create and prepare resources</button></div>
+      <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><button class="button" type="button" data-action="experiment-create-prev" hidden>Previous</button><button class="button primary" type="button" data-action="experiment-create-next">Continue</button><button class="button primary" type="button" data-action="minimal-experiment-create" hidden>Create experiment</button></div>
     </section>
   </div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>

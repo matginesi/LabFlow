@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Shared laboratory resources for LabFlow experiments">
 <title>Lab Cabinet · LabFlow</title>
 <link href="assets/theme.css" rel="stylesheet">
 <link href="assets/app.css" rel="stylesheet">
+<link href="assets/workflow.css" rel="stylesheet">
 <script defer src="assets/exporters.js"></script>
-<script defer src="assets/app.js"></script>
+<script defer src="assets/workflow-domain.js"></script>
+  <script defer src="assets/app.js"></script>
 </head>
 <body data-page="catalogs">
 <header class="topbar" id="topbar"></header>
@@ -38,11 +40,13 @@
     <button type="button" data-cabinet-filter="solutions"><span data-icon="flask"></span><strong>Solutions &amp; batches</strong><small>2</small></button>
     <button type="button" data-cabinet-filter="substrates"><span data-icon="grid"></span><strong>Substrates</strong><small>1</small></button>
     <button type="button" data-cabinet-filter="equipment"><span data-icon="settings"></span><strong>Instruments</strong><small>2</small></button>
-    <button type="button" data-cabinet-filter="processes"><span data-icon="flow"></span><strong>Processes</strong><small>1</small></button>
+    <button type="button" data-cabinet-filter="protocols"><span data-icon="flow"></span><strong>Protocols</strong><small>1</small></button>
     <button type="button" data-cabinet-filter="actions"><span data-icon="flow"></span><strong>Actions</strong><small>1</small></button>
     <button type="button" data-cabinet-filter="conditions"><span data-icon="settings"></span><strong>Conditions</strong><small>1</small></button>
     <button type="button" data-cabinet-filter="stacks"><span data-icon="model"></span><strong>Stack templates</strong><small>1</small></button>
   </nav>
+
+  <section class="panel"><div class="panel-body"><div class="grid-2"><div><div class="cabinet-section-divider">Reusable definitions</div><p class="subtle">Materials, substances, recipes, substrate definitions, stack templates, protocols, actions, instruments and conditions.</p></div><div><div class="cabinet-section-divider">Physical inventory and evidence</div><p class="subtle">Material lots, prepared solution batches, substrate pieces and instrument instances. Concrete experiment use is stored as a snapshot.</p></div></div></div></section>
 
   <section class="cabinet-glance-grid">
     <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Recently used</strong><small>Fast access for the current researcher</small></div></div><div class="panel-body cabinet-mini-list"><button type="button" data-action="cabinet-open" data-resource-id="dmf"><span class="resource-dot material"></span><span><strong>DMF anhydrous</strong><small>Used today · solvent</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="spin01"><span class="resource-dot equipment"></span><span><strong>Spin Coater 01</strong><small>Used today · Lab 2</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="pipeline"><span class="resource-dot process"></span><span><strong>PSC n-i-p standard</strong><small>Used yesterday · v4.1</small></span></button></div></article>
@@ -65,7 +69,7 @@
     <div class="panel-header"><div class="panel-title"><strong id="cabinetCreateTitle">Add a resource</strong><small>Create the minimum now; complete the record later.</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
     <div class="panel-body stack">
       <div class="form-grid">
-        <div class="field"><label>Resource type</label><select class="input" id="cabinetCreateType"><option value="substance">Substance</option><option value="material">Material</option><option value="solution">Solution</option><option value="equipment">Instrument</option><option value="action">Action</option><option value="condition">Condition</option><option value="stack">Stack template</option></select></div>
+        <div class="field"><label>Resource type</label><select class="input" id="cabinetCreateType"><option value="substance">Substance</option><option value="material">Material</option><option value="solution">Solution</option><option value="equipment">Instrument</option><option value="action">Action</option><option value="condition">Condition</option><option value="stack">Stack template</option><option value="protocol">Protocol</option></select></div>
         <div class="field"><label>Name</label><input class="input" id="cabinetCreateName" placeholder="e.g. DMF anhydrous"></div>
         <div class="field"><label>Role or category</label><input class="input" id="cabinetCreateRole" placeholder="e.g. solvent"></div>
         <div class="field"><label>Location <span class="subtle">optional</span></label><input class="input" id="cabinetCreateLocation" placeholder="e.g. Cabinet A2"></div>

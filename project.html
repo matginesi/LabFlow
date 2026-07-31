@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Simple active research project workspace">
   <title>Current project · LabFlow</title>
   <link href="assets/theme.css" rel="stylesheet"/>
   <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/workflow.css">
   <script defer src="assets/exporters.js"></script>
+  <script defer src="assets/workflow-domain.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="project">
@@ -16,27 +18,27 @@
   <aside id="sidebar" class="sidebar"></aside>
   <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
   <div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><span class="eyebrow mono" data-project-id>PRJ-MCP-01</span><h1 data-project-name>Mixed-cation perovskite optimisation</h1><p data-project-description>Project description</p></div><div class="page-actions"><a class="button" href="projects.html">All projects</a><a class="button primary" href="experiment.html"><span data-icon="plus"></span>New experiment</a></div></header>
+<header class="page-header compact-header"><div><span class="eyebrow mono" data-project-id>PRJ-MCP-01</span><h1 data-project-name>Mixed-cation perovskite optimisation</h1><p data-project-description>Project description</p></div><div class="page-actions"><a class="button" href="projects.html">All projects</a><a class="button primary" href="experiments.html#new"><span data-icon="plus"></span>New experiment</a></div></header>
 <div class="tabs" data-tabs="project">
 <button class="tab-button active" type="button" data-tab="overview">Overview</button>
           <button class="tab-button" type="button" data-tab="experiments">Experiments <span class="badge" data-project-experiment-count>4</span></button>
 </div>
 
 <div class="tab-panel active" data-tab-panel="overview">
-  <section class="project-focus-card panel accent"><div class="project-focus-main"><div><span class="badge success" data-project-status>Active</span><span class="badge">Optional project container</span></div><h2>Continue the current experiment</h2><p>Projects group related work, but the experiment remains the main place where researchers prepare, process, analyse and export.</p><div class="project-actions"><a class="button primary" href="experiment.html#processing">Continue PSC-2026-041</a><a class="button" href="workspace.html#comparisons">View results</a><a class="button" href="report.html">Open report</a></div></div><div class="project-progress-simple"><div><span style="width:72%"></span></div><strong data-project-progress>72%</strong><small>Project progress</small><div class="project-progress-meta"><span><b data-project-experiments>5</b> experiments</span><span><b data-project-samples>24</b> samples</span></div></div></section>
+  <section class="project-focus-card panel accent"><div class="project-focus-main"><div><span class="badge success" data-project-status>Active</span><span class="badge">Optional project container</span></div><h2>Continue the current experiment</h2><p>Projects only group related work. Each experiment still belongs to a versioned Process, which defines its workflow, expected evidence and default resources.</p><div class="project-actions"><a class="button primary" href="experiment.html#processing">Continue PSC-2026-041</a><a class="button" href="workspace.html#comparisons">View results</a><a class="button" href="report.html">Open report</a></div></div><div class="project-progress-simple"><div><span style="width:72%"></span></div><strong data-project-progress>72%</strong><small>Project progress</small><div class="project-progress-meta"><span><b data-project-experiments>5</b> experiments</span><span><b data-project-samples>24</b> samples</span></div></div></section>
   <div class="project-clean-grid">
     <section><div class="section-title compact"><div><h2>Research path</h2><p>A visual plan, not another database view.</p></div></div><article class="panel"><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="projectPathGraph"></div><script id="projectPathGraph" type="text/graph">direction LR
   Baseline[Baseline devices] --> Window[Spin-speed window] : current
   Window --> Refine[Refine chemistry] : next
   Refine --> Compare[Comparative analysis]
   Compare --> NOMAD[Report and NOMAD]</script></div></article></section>
-    <section><div class="section-title compact"><div><h2>Current experiment preparation</h2><p>The shared resources selected for the latest run.</p></div></div><article class="panel setup-summary-compact"><div class="panel-body"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">FA–Cs</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="key-values"><div><dt>Protocol</dt><dd>PSC n-i-p standard</dd></div><div><dt>Solution</dt><dd>FA–Cs 1.2 M · SOL-081</dd></div><div><dt>Equipment</dt><dd>Spin Coater 01</dd></div><div><dt>Measurements</dt><dd>J–V, EQE, XRD</dd></div></dl><a class="button small" href="experiment.html#solutions">Open experiment</a></div></article></section>
+    <section><div class="section-title compact"><div><h2>Current experiment preparation</h2><p>The shared resources selected for the latest run.</p></div></div><article class="panel setup-summary-compact"><div class="panel-body"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">FA–Cs</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="key-values"><div><dt>Process</dt><dd>PSC fabrication · n-i-p v2.0</dd></div><div><dt>Protocol</dt><dd>PSC n-i-p standard v4.1</dd></div><div><dt>Solution</dt><dd>FA–Cs 1.2 M · SOL-081</dd></div><div><dt>Equipment</dt><dd>Spin Coater 01</dd></div><div><dt>Measurements</dt><dd>J–V, EQE, XRD</dd></div></dl><a class="button small" href="experiment.html#solutions">Open experiment</a></div></article></section>
   </div>
   <section class="project-attention-strip"><div><span data-icon="warning"></span><span><strong>Next useful action</strong><small>Complete 15 planned datasets in PSC-2026-041.</small></span></div><a class="button small primary" href="workspace.html#measurements">Complete measurements</a></section>
 </div>
 
 <div class="tab-panel" data-tab-panel="experiments" hidden>
-  <div class="section-title"><div><h2>Experiments</h2><p>The project is a short history of questions, runs and decisions.</p></div><a href="experiment.html">Start next experiment</a></div>
+  <div class="section-title"><div><h2>Experiments</h2><p>The project is a short history of questions, runs and decisions.</p></div><a href="experiments.html#new">Start next experiment</a></div>
   <section class="panel"><div class="panel-body experiment-project-list" id="projectExperiments"></div></section>
 </div>
   </main></div>

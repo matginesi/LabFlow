@@ -1,34 +1,24 @@
 # Glossary
 
-- **Workspace**: the active research context containing experiments, access to
-  shared laboratory resources, reports, knowledge and preferences.
-- **Project**: optional organisational container for related experiments.
-- **Experiment**: one concrete research activity following the standard
-  laboratory workflow; it is not an invented experiment category.
-- **Lab Cabinet**: shared reusable definitions, recipes, instruments,
-  protocols, actions and lightweight availability information.
-- **Solution recipe**: versioned preparation definition.
-- **Solution batch**: physical preparation made from a locked recipe version.
-- **Stack template**: reusable ordered material-layer definition.
-- **Experiment stack**: stack used in one experiment, including samples,
-  solution use and actual conditions.
-- **Protocol**: reusable ordered definition of laboratory processing.
-- **Processing**: the experiment phase in which laboratory work is performed
-  and recorded.
-- **Processing run**: one concrete execution of a protocol.
-- **Executed action**: one operation inside processing, with values and
-  evidence.
-- **Usage snapshot**: experiment-owned record preserving how a shared resource
-  was used at that time.
-- **Evidence**: records, files, measurements or metrics supporting a statement.
-- **Result**: a value, series, statistic or interpretation derived from
-  identified evidence and carrying a validation state.
-- **Report**: editable scientific narrative assembled from selected experiment
-  records, results, charts and provenance.
+- **Workspace**: user-owned root containing Processes, the Lab Cabinet, Experiments and optional Projects.
+- **Process**: versioned laboratory workflow defining phases, defaults, expected evidence, measurements and NOMAD mapping.
+- **Workflow Step Definition**: one reusable phase inside a Process.
+- **Experiment**: one concrete execution of exactly one Process version.
+- **Experiment Step**: concrete state, inputs, outputs, deviations and evidence for one workflow phase.
+- **Project**: optional grouping of related Experiments, potentially across different Processes.
+- **Lab Cabinet**: reusable scientific definitions plus lightweight physical-resource and availability records.
+- **Protocol**: reusable ordered processing procedure used by a Process phase; not a synonym for Process.
+- **Solution Recipe**: versioned target composition and preparation definition.
+- **Solution Batch**: physical preparation with locked recipe version, actual lots, quantities and provenance.
+- **Solvent Mixture Basis**: explicit ratio basis such as v/v, w/w or molar fraction.
+- **Stack Template**: reusable ordered material-layer definition.
+- **Experiment Stack**: concrete stack snapshot with samples, sources, dimensions, conditions and variants.
+- **Sample**: physical specimen produced inside an Experiment Stack and targeted by measurements.
+- **Processing Run**: concrete execution of a Protocol.
+- **Usage Snapshot**: immutable record preserving the selected definition version and actual use.
+- **FileRecord**: original or derived file linked to explicit experimental targets and provenance.
+- **Measurement**: acquisition context linking target, method, instrument and files.
+- **Derived Result**: value, series or statistic with sources, method/version, unit and validation state.
+- **Report**: editable narrative assembled from selected evidence.
 - **Export**: explicit generation of a scoped local file or package.
-- **Provenance**: source, version, transformation, author and decision trace.
-- **Knowledge Assistant**: simulated RAG consultation over shared laboratory sources.
-- **AI Analysis**: optional interpretation of selected experimental data.
-- **Controlled agent**: bounded multi-step proposal flow with approval gates.
-- **NOMAD package**: locally prepared export bundle.
-- **NOMAD API submission**: separate explicit action that is only simulated.
+- **NOMAD Mapping Profile**: Process-level mapping expectations completed with Experiment evidence.

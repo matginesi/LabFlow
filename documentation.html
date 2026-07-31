@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"</script>
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="data:,">
@@ -9,6 +9,8 @@
   <title>User Manual · LabFlow</title>
   <link href="assets/theme.css" rel="stylesheet">
   <link href="assets/app.css" rel="stylesheet">
+<link href="assets/workflow.css" rel="stylesheet">
+  <script defer src="assets/workflow-domain.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="docs">
@@ -69,11 +71,13 @@ LabFlow is an AI-ready laboratory workflow platform concept. It helps researcher
 ```graph
 direction LR
 User[Researcher] --> Workspace[Workspace]
+Workspace --> Process[Process definition]
+Process --> Experiment[Experiment]
 Workspace --> Cabinet[Lab Cabinet]
-Workspace --> Experiment[Experiment]
 Cabinet --> Experiment : resources
-Experiment --> Workflow[Scientific workflow]
-Workflow --> Report[Report]
+Workspace --> Project[Optional project]
+Project --> Experiment : groups
+Experiment --> Report[Report]
 Report --> Export[Export]
 Export --> NOMAD[NOMAD]
 ```
@@ -92,7 +96,7 @@ Export --> NOMAD[NOMAD]
 
 ## Start here
 
-Open the Workspace. Choose **New experiment**, **Continue your work** or **Import**. Projects are optional organisational containers, not a prerequisite.
+Open the Workspace. Choose a **Process**, then create or continue an **Experiment**. A Process defines the scientific path, expected evidence and default resources. Projects remain optional organisational containers and are never a prerequisite.
 
 ### Demo scenario
 
@@ -119,7 +123,7 @@ The sequence is recommended and non-blocking. Save a draft, skip optional work o
 
 ## Creating an experiment
 
-The creation wizard asks for name and goal, then solutions, then stacks. Conditions, replicates, automatic sample IDs and AI suggestions appear only after adding another stack.
+The creation wizard first selects a Process, then asks for the experiment name and objective, then chooses a starting configuration: Process defaults, a previous experiment or an empty setup. Solutions, stacks, conditions and expected evidence are subsequently edited inside the Experiment. Projects can be attached later as optional research context.
 
 ## Processing is not a protocol
 
@@ -127,15 +131,19 @@ A **protocol** is the reusable ordered definition. **Processing** records what a
     </script>
 
     <script id="doc-cabinet" type="text/markdown">
-# Workspace, projects and Lab Cabinet
+# Workspace, Processes, projects and Lab Cabinet
 
 ## Workspace
 
-The Workspace is the researcher’s operating context. It contains experiments, shared Lab Cabinet resources, knowledge, reports and settings. The static POC displays ownership context but does not enforce real permissions.
+The Workspace is the researcher’s operating context. Its central operational hierarchy is `Workspace → Process → Experiment`. It also contains shared Lab Cabinet resources, optional projects, knowledge, reports and settings. The static POC displays ownership context but does not enforce real permissions.
+
+## Processes
+
+A Process is a versioned workflow definition for a family of laboratory work. It defines phases, default resources, expected measurements, required evidence and a NOMAD mapping profile. An Experiment is one concrete execution of that Process.
 
 ## Projects
 
-A Project optionally groups related experiments under one research goal. Researchers can start an experiment without creating a project first.
+A Project optionally groups experiments under one research goal, including experiments from different Processes. Researchers can start an experiment without creating a Project first.
 
 ## Lab Cabinet
 
@@ -175,8 +183,10 @@ The Lab Cabinet is search-first. Search for the resource you need, inspect its s
 
 ```graph
 direction LR
-Workspace[Workspace] --> Experiment[Experiment]
-Experiment --> Stack[Stack]
+Workspace[Workspace] --> Process[Process definition]
+Process --> Experiment[Experiment]
+Experiment --> Step[Experiment steps]
+Step --> Stack[Stacks & samples]
 Stack --> Processing[Processing]
 Processing --> Data[Data & measurements]
 Data --> Results[Results]
@@ -188,7 +198,7 @@ A usage snapshot preserves the selected definition version, affected stacks, amo
 
 ## Stack
 
-A stack is an ordered material structure inside an experiment. It links layers, roles, materials, substrate, solution usage, conditions and samples. `S01` and `S02` are the two demo stacks.
+A Stack Template is a reusable ordered material definition. An Experiment Stack is its versioned snapshot or a newly built variant inside one experiment. Each layer records role, material, thickness, source definition or batch and creation/deposition method. Physical Samples receive stable IDs and remain linked to the exact stack variant and processing history. `S01` and `S02` are the two demo experiment stacks.
 
 ## Data, results and reports
 

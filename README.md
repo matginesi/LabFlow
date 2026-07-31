@@ -1,213 +1,196 @@
 # LabFlow
 
-> An AI-ready laboratory workflow platform that helps researchers turn experimental work into structured, reusable and NOMAD-ready scientific records.
+> A workflow-first laboratory platform concept for turning experimental work into structured, reusable, AI-ready and NOMAD-ready evidence.
 
-**Static proof of concept · Perovskite Research Lab · No backend · No external services**
+**Static proof of concept · Perovskite research · No backend · No external services**
 
-[Open the workspace](index.html) · [Read the user manual](documentation.html) · [Explore the UI Kit](ui-kit.html) · [Review the architecture](docs/ARCHITECTURE.md)
+[Open the workspace](index.html) · [Browse processes](processes.html) · [Open the demo experiment](experiment.html) · [Read the manual](documentation.html)
 
----
+## Core model
 
-## The laboratory workflow is the product
+LabFlow is organised around one simple operational hierarchy:
 
-LabFlow explores a simple question:
-
-> Can a researcher document an experiment as part of doing the work—not as a separate repository task at the end?
-
-The interface starts with familiar laboratory decisions: prepare solutions, build material stacks, record processing, add data, interpret results and prepare a report. Structured records, provenance, AI context and NOMAD mappings grow behind that workflow.
-
-```mermaid
-flowchart LR
-    A[Solutions] --> B[Stacks]
-    B --> C[Processing]
-    C --> D[Data]
-    D --> E[Analysis]
-    E --> F[Charts & Report]
-    F --> G[Export]
-    G --> H[NOMAD]
+```text
+User
+└── Workspace
+    ├── Lab Cabinet
+    ├── Processes
+    │   └── Experiments
+    └── Projects (optional)
+        └── references experiments
 ```
 
-The current POC validates one workflow. It intentionally does not invent additional experiment types before researchers have tested this path.
+- A **Workspace** owns the researcher's reusable definitions and records.
+- A **Process** defines a versioned laboratory workflow: phases, default resources, expected evidence, expected measurements and interoperability mapping.
+- An **Experiment** is one concrete execution of exactly one Process.
+- A **Project** is an optional cross-process grouping around a research question. It is never required to start work.
+- The **Lab Cabinet** stores reusable definitions and physical inventory references used by Processes and Experiments.
 
-## Why LabFlow
+This distinction removes a previous ambiguity: a Process is not a protocol. A protocol is one reusable Lab Cabinet resource that can be used by one or more Process phases.
 
-Laboratory information is often split across notebooks, instrument files, spreadsheets, shared drives, personal conventions and repository forms. This creates repeated typing and weakens the link between a scientific result and the work that produced it.
+## The researcher workflow
 
-LabFlow keeps those relationships visible:
+The current perovskite Process uses eight recommended, non-blocking phases:
 
-| Researcher need | LabFlow response |
+```text
+Solutions
+→ Stacks & samples
+→ Processing
+→ Data
+→ Analysis
+→ Charts & report
+→ Export
+→ NOMAD
+```
+
+The Process defines those phases. The Experiment records their concrete execution through batches, stack instances, samples, process runs, measurements, files, results, deviations and approvals.
+
+## Definition versus evidence
+
+The central data-model rule is that reusable definitions are never confused with physical or executed records.
+
+| Reusable definition | Concrete evidence |
 | --- | --- |
-| Reuse a known solvent, protocol or instrument | Search the shared **Lab Cabinet** |
-| Compare material structures | Keep multiple **stacks** inside one experiment |
-| Preserve what actually happened | Separate reusable **protocols** from recorded **processing** |
-| Understand a result later | Link data, measurements, files and provenance |
-| Use AI without hiding uncertainty | Show scope, evidence, confidence and approval |
-| Prepare interoperable records | Validate exports before the final **NOMAD** step |
+| Solution recipe | Prepared solution batch |
+| Solvent/substance definition | Physical lot and actual quantity |
+| Stack template | Experiment stack and samples |
+| Protocol | Processing run and executed actions |
+| Instrument definition | Instrument instance/use and actual settings |
+| Workflow step definition | Experiment step with status and evidence |
 
-## One coherent system
+Editing a shared definition later must never silently rewrite historical experiments. Every concrete use retains a versioned usage snapshot.
 
-```mermaid
-flowchart TB
-    U[Researcher] --> W[Workspace]
-    W --> C[Lab Cabinet]
-    W --> E[Experiments]
-    C -. reusable resources .-> E
-    E --> P[Scientific workflow]
-    P --> R[Report]
-    R --> X[Export]
-    X --> N[NOMAD]
+## Processes
 
-    K[Knowledge Assistant] -. cited knowledge .-> U
-    A[AI Analysis] -. reviewable interpretation .-> P
-    G[AI Agents] -. guided proposals .-> P
-```
+A Process contains:
 
-Projects remain available as optional containers for related experiments. They are not required to begin work.
+- stable ID and published version;
+- ordered workflow-step definitions;
+- default recipes, stack templates, protocols, instruments and conditions;
+- expected inputs, outputs and evidence;
+- expected measurements;
+- NOMAD mapping profile;
+- experiments that execute the Process.
 
-## Design principles
+The Process page is [`pipeline.html`](pipeline.html) for backward URL compatibility, but it now represents a complete Process definition rather than a protocol editor.
 
-- **Workflow-first** — the primary navigation follows what researchers do.
-- **Researcher-first** — laboratory language appears before data-model terminology.
-- **Progressive complexity** — essential fields come first; variants and advanced planning appear only when needed.
-- **Reusable resources** — shared definitions reduce repeated entry.
-- **Concrete evidence** — experiment-owned snapshots preserve what was actually used.
-- **Reproducibility and provenance** — results remain linked to processing, measurements and original files.
-- **Human-in-the-loop AI** — AI proposes; researchers inspect, edit, accept or reject.
-- **NOMAD interoperability** — export readiness is collected progressively and validated explicitly.
+## Solutions and solvents
+
+The solution workflow is explicitly divided into:
+
+1. **Solvent mixture** — identities, mixture basis, ratios and calculated component volumes.
+2. **Solutes and additives** — target quantities, concentration and concentration basis.
+3. **Preparation definition** — reusable order, temperature, time, filter and storage instructions.
+4. **Concrete batch** — actual lots, weighed quantities, volumes, operator, timestamps, environment, deviations and remaining amount.
+
+The graphical solvent editor validates the mixture ratio and recalculates component volumes from the selected reference volume. A recipe stores target composition; a batch stores what was physically prepared.
+
+## Stacks and samples
+
+The graphical stack builder represents an ordered cross-section from substrate to top contact. Every layer records:
+
+- role;
+- material;
+- thickness;
+- definition, lot or solution-batch source;
+- deposition or creation method;
+- order within the structure.
+
+A reusable Stack Template becomes an Experiment Stack when selected. The experiment instance then adds concrete substrate identity, samples, solution usage, dimensions, variant parameters, deviations and execution evidence.
+
+Simple variants are supported without introducing a full design-of-experiments system.
 
 ## Lab Cabinet
 
-The Lab Cabinet is the searchable shared resource space for the laboratory.
+The Lab Cabinet is divided conceptually into two families.
 
-```text
-Workspace
-└── Lab Cabinet
-    ├── Materials and substances
-    ├── Solution recipes and prepared batches
-    ├── Substrates and stack templates
-    ├── Equipment
-    ├── Conditions
-    ├── Protocols
-    └── Reusable actions
-```
+### Reusable definitions
 
-An experiment links a resource and retains a usage snapshot. Editing the shared definition later must not silently rewrite historical evidence.
+- materials and substances;
+- solution recipes;
+- substrate definitions;
+- stack templates;
+- protocols and reusable actions;
+- instrument definitions;
+- condition definitions.
 
-## AI-ready by design
+### Physical inventory and evidence references
 
-LabFlow separates three purposes that are often collapsed into one generic assistant.
+- material lots;
+- prepared solution batches;
+- substrate pieces;
+- instrument instances;
+- lightweight availability information.
 
-| Capability | Job | Control boundary |
+Processes select defaults from the Lab Cabinet. Experiments create immutable usage snapshots and actual evidence.
+
+## AI readiness
+
+AI is not required for the POC to work. The data model is prepared for future AI by using:
+
+- stable identifiers;
+- explicit units;
+- structured provenance;
+- human/AI origin;
+- source references;
+- validation and review states;
+- separation between raw data, processed data, human notes and AI outputs.
+
+LabFlow keeps three AI purposes separate:
+
+| Surface | Purpose | Boundary |
 | --- | --- | --- |
-| **Knowledge Assistant** | Find and verify shared laboratory knowledge | Answers cite sources and flag conflicts or insufficient evidence |
-| **AI Analysis** | Interpret selected experimental data | Original measurements remain authoritative |
-| **AI Agents** | Guide bounded multi-step workflows | Every proposed action passes through approval |
+| Knowledge Assistant | Retrieve and cite shared knowledge | Must show evidence and insufficiency |
+| AI Analysis | Interpret selected experimental data | Never overwrites measurements |
+| Controlled Agents | Propose bounded multi-step actions | Explicit approval before application |
 
-```mermaid
-flowchart LR
-    K[Knowledge Assistant<br/>find information] --> H[Researcher review]
-    A[AI Analysis<br/>analyse selected data] --> H
-    G[AI Agents<br/>propose workflow actions] --> H
-    H --> D[Explicit apply / edit / reject]
-```
+The repository contains only interface simulations—no LLM, embeddings, vector database or autonomous runtime.
 
-These interfaces are credible simulations. The repository contains no LLM, embeddings, vector database or autonomous agent runtime.
+## NOMAD readiness
 
-## Scientific data model
-
-The central distinction is between a reusable definition and its concrete experimental use.
-
-| Shared Lab Cabinet definition | Experiment-owned record |
-| --- | --- |
-| Solution recipe | Prepared solution batch |
-| Stack template | Experiment stack |
-| Protocol | Processing run |
-| Reusable action | Executed action |
-| Instrument | Instrument use and actual settings |
-| Material or substance | Lot or recorded use |
-
-```mermaid
-flowchart LR
-    W[Workspace] --> E[Experiment]
-    E --> S[Stack]
-    S --> P[Processing]
-    P --> D[Data & Measurements]
-    D --> R[Results]
-    R --> RP[Report]
-    RP --> X[Export / NOMAD package]
-```
-
-See [Data Model](docs/DATA_MODEL.md) for records, ownership and provenance rules.
-
-## NOMAD integration
-
-NOMAD is the final explicit stage—not a scattered download button.
+NOMAD remains the final explicit phase:
 
 ```text
-Report → Export review → Prepare NOMAD → Send through NOMAD API
+Experiment evidence → Report → Export review → NOMAD package or explicit API action
 ```
 
-The POC demonstrates local package generation, readiness checks, metadata warnings, a simulated personal API connection and a separate NOMAD import path. It never sends a network request.
+The Process defines expected mapping and evidence. The Experiment supplies concrete records. The POC validates completeness, units, resources, stacks, processing, instruments, files, identifiers and provenance before package generation.
 
-## What you can explore
+## Main pages
 
-- Workspace with recommended next actions
-- Three-step experiment creation
-- Solution recipe and physical batch preparation
-- Multi-stack experiment management and optional variants
-- Protocol definition versus recorded processing
-- Common file import and manual data entry
-- Sample, measurement and result comparison
-- Local chart and scientific utility tools
-- Editable reports and browser-generated exports
-- NOMAD package, import and API simulations
-- Shared evidence-linked Knowledge Assistant
-- AI Analysis and controlled AI Agents
-- User Settings, Admin Settings, Documentation and UI Kit
-
-## Current scenario
-
-Every principal demonstration uses one coherent laboratory story:
-
-| Context | Demo record |
+| Page | Responsibility |
 | --- | --- |
-| Laboratory | Perovskite Research Lab |
-| Experiment | `PSC-2026-041` |
-| Solution | `FA–Cs 1.2 M` · `SOL-081` · DMF/DMSO |
-| Stacks | `S01` and `S02` |
-| Equipment | Spin Coater 01 |
-| Protocol | PSC n-i-p standard · v4.1 |
-| Output | Editable report and NOMAD export |
+| `index.html` | Workspace, current Process and recommended actions |
+| `processes.html` | Process directory |
+| `pipeline.html` | Process definition detail |
+| `experiments.html` | Experiment directory grouped by Process |
+| `experiment.html` | Eight-phase concrete experiment workflow |
+| `solution.html` | Graphical recipe, solvent and batch detail |
+| `stack.html` | Graphical ordered-layer builder |
+| `catalogs.html` | Lab Cabinet definitions and physical resources |
+| `workspace.html` | Samples, measurements and comparisons |
+| `report.html` | Report, export and NOMAD preparation |
+| `projects.html` / `project.html` | Optional research grouping |
+| `imports.html` | Local import and mapping |
+| `editors.html` | Deterministic scientific tools |
+| `knowledge.html` | Evidence-linked knowledge simulation |
+| `ai-assistant.html` | AI Analysis and controlled-agent simulations |
+| `documentation.html` | In-app manual |
+| `ui-kit.html` | Interface components |
 
-## Why a static prototype
-
-The absence of a backend is deliberate. Before investing in production infrastructure, this repository tests:
-
-- whether the workflow matches laboratory practice;
-- whether researchers understand each record;
-- whether progressive disclosure keeps the interface usable;
-- whether the data model supports provenance and interoperability;
-- where AI assistance is useful and where human review is essential;
-- whether NOMAD preparation can feel like a natural final step.
-
-The POC has **no backend, authentication, authorization, database, shared persistence, file storage, real AI or real NOMAD connection**. Visible accounts, API keys, retrieval, agent runs and external submissions are simulations.
-
-## Architecture
+## Frontend architecture
 
 ```text
 Static HTML pages
-       │
-       ├── assets/theme.css      design tokens and themes
-       ├── assets/app.css        shared layout and components
-       ├── assets/app.js         shell, demo state and interactions
-       └── assets/exporters.js   local browser-generated files
+├── assets/theme.css            tokens and themes
+├── assets/app.css              shared shell and legacy components
+├── assets/workflow.css         Process, solution and stack module styles
+├── assets/exporters.js         browser-generated files
+├── assets/workflow-domain.js   Process/experiment data and graphical builders
+└── assets/app.js               shell and remaining POC interactions
 ```
 
-- Plain semantic HTML, CSS and JavaScript
-- No framework or build step
-- No CDN dependency
-- Relative URLs compatible with GitHub Pages
-- Demo state stored in memory or `localStorage` where stated
+The new workflow module prevents further growth of the original monolithic files while retaining a framework-free, no-build static prototype.
 
 ## Run locally
 
@@ -217,68 +200,8 @@ python3 -m http.server 8765
 
 Open `http://127.0.0.1:8765/`.
 
-## Repository map
+## Static POC boundaries
 
-| Path | Purpose |
-| --- | --- |
-| `index.html` | Workspace and primary researcher actions |
-| `experiment.html` | Standard eight-phase experiment workflow |
-| `catalogs.html` | Search-first Lab Cabinet |
-| `workspace.html` | Data, measurements and comparisons |
-| `report.html` | Report, export and NOMAD preparation |
-| `knowledge.html` | Shared Knowledge Assistant |
-| `ai-assistant.html` | AI Analysis and AI Agents |
-| `editors.html` | Laboratory tools |
-| `documentation.html` | In-app user manual |
-| `ui-kit.html` | Canonical interface components |
-| `docs/` | Focused product and technical references |
+The repository has no production authentication, authorization, database, shared persistence, secure file storage, background jobs, real AI, or real NOMAD connection. `localStorage` is used only to simulate user, Process and optional Project context.
 
-## Documentation
-
-| Guide | Audience |
-| --- | --- |
-| [User manual](documentation.html) | Researchers and evaluators |
-| [Researcher workflow](docs/WORKFLOW.md) | Researchers and product collaborators |
-| [Architecture](docs/ARCHITECTURE.md) | Developers and technical reviewers |
-| [Data model](docs/DATA_MODEL.md) | Scientific data and backend designers |
-| [AI architecture](docs/AI_ARCHITECTURE.md) | AI, product and safety reviewers |
-| [Tools, exports and NOMAD](docs/TOOLS_EXPORTS_NOMAD.md) | Integration and interoperability reviewers |
-| [Design system](docs/DESIGN_SYSTEM.md) | UI contributors |
-| [Responsive behaviour and limits](docs/RESPONSIVE_AND_LIMITS.md) | Developers and QA |
-| [Glossary](docs/GLOSSARY.md) | Everyone |
-
-## Status and roadmap
-
-### Implemented in the static POC
-
-- Complete navigable interface
-- Coherent perovskite demonstration data
-- Browser-side interactions and selected local exports
-- Responsive desktop and mobile layouts
-- Human-controlled AI and NOMAD simulations
-
-### Future production work
-
-1. Validate the workflow with laboratory researchers.
-2. Refine domain records and NOMAD mappings from feedback.
-3. Design authentication, permissions and workspace governance.
-4. Add durable storage, file integrity and audit history.
-5. Implement secure NOMAD import and submission services.
-6. Evaluate real retrieval, models and agent tools with permission boundaries.
-7. Add automated accessibility, integration and scientific validation tests.
-
-## Screenshots
-
-| Workspace | Experiment workflow | Knowledge Assistant |
-| --- | --- | --- |
-| _Screenshot placeholder_ | _Screenshot placeholder_ | _Screenshot placeholder_ |
-
-Screenshots are intentionally left as replaceable placeholders until the researcher validation flow stabilises.
-
-## Limitations
-
-Do not use this repository to store sensitive laboratory data or real API keys. Browser-generated exports demonstrate interaction and structure; they are not guarantees of scientific correctness, regulatory compliance or NOMAD acceptance.
-
-## License
-
-No license file is currently included. Add an explicit license before distributing or accepting external contributions.
+A production backend must enforce ownership, versioning, immutable provenance, file integrity, permissions, secret management and all external network actions.

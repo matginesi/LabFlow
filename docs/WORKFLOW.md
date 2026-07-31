@@ -1,105 +1,102 @@
 # Researcher workflow
 
-## Product decision
+## Operational hierarchy
 
-The POC exposes one predefined laboratory workflow. It does not ask the
-researcher to choose an invented experiment type. The goal is to let
-researchers test one credible end-to-end path and provide feedback before
-additional workflows are designed.
+```text
+User → Workspace → Process → Experiment
+```
 
-`Solutions → Stacks → Processing → Data → Analysis → Charts & Report → Export → NOMAD`
+A Project may optionally group experiments, including experiments from different Processes. It is never an execution prerequisite.
 
-The Workspace is the entry point and an Experiment owns the workflow. Projects
-are optional containers rather than a required first step.
+## Process definition
 
-The sequence is recommended, editable and non-blocking. A researcher may save a
-draft, skip an optional activity or return to an earlier phase.
+A Process defines:
 
-## 1. Prepare solutions
+- ordered workflow phases;
+- default reusable resources;
+- required and optional inputs;
+- expected outputs and evidence;
+- expected measurements;
+- NOMAD mapping profile.
 
-The experiment begins with one or more solution preparations:
+The current validated Process follows:
 
-`Solvent or mixture → Solutes → Optional additives → Concentration and quantity → Concrete batch → Review`
+`Solutions → Stacks & samples → Processing → Data → Analysis → Charts & report → Export → NOMAD`
 
-Essential fields appear first. Advanced chemical properties remain expandable.
-Researchers can select shared substances from the Lab Cabinet or create a
-minimal missing record without knowing every property.
+The sequence is recommended and non-blocking. An Experiment creates an `ExperimentStep` instance for each Process step and records its actual state, inputs, outputs, deviations and evidence.
 
-The interface distinguishes the reusable recipe from the physical batch.
-The recipe is read visually as solvents, solutes, additives, concentration and
-volume. Detailed fields stay in a secondary editor. Stacks are shown as ordered
-material layers and compared side by side; processing is shown as a timeline;
-files retain a visible connection to the stack, device or measurement they
-describe.
+## 1. Solutions
 
-## 2. Define stacks
+### Recipe definition
 
-Create one stack, several similar stacks or simple variants. Each experiment
-stack can record code, sample count, ordered layers, roles, materials,
-substrate, dimensions, thicknesses, solution and amount used, instruments,
-conditions and notes.
+`Solvent mixture → Solutes → Optional additives → Concentration basis → Reference volume → Preparation instructions`
 
-Variants may change a solution, concentration, material, dimension, thickness,
-temperature, duration or process parameter. This is not a DOE system.
+The solvent mixture must explicitly store:
 
-## 3. Configure and record processing
+- substance identity;
+- mixture basis such as v/v, w/w, molar fraction or absolute quantity;
+- target ratio;
+- calculated target quantity;
+- reference total volume or mass.
 
-Select or edit the reusable protocol, then record the work actually executed on
-the stacks. Method-specific forms show only relevant values.
+### Concrete batch
 
-Examples:
+The physical batch stores:
 
-- spin coating: speed, duration, acceleration, volume, delay, instrument and
-  atmosphere;
-- annealing: temperature, duration, ramp, atmosphere, instrument and cooling.
+- locked recipe version;
+- physical material lots;
+- target and actual quantities;
+- operator and timestamps;
+- atmosphere, temperature and stirring;
+- filtration evidence;
+- storage and remaining amount;
+- deviations and observations.
 
-Actual timestamps, values, deviations and evidence belong to the process run,
-not the reusable protocol.
+## 2. Stacks and samples
 
-## 4. Add data
+A Stack Template is an ordered reusable layer definition. An Experiment Stack snapshots that definition and adds:
 
-Primary actions are Upload file, Enter manually, Import and Add later. Supported
-demonstrations include CSV, Excel, JSON, images, PDF, ZIP, instrument files,
-tables, single values and series.
+- concrete substrate;
+- sample identifiers;
+- layer source materials or solution batches;
+- actual dimensions and thicknesses;
+- deposition methods;
+- variant parameters;
+- deviations.
 
-Data must be associated with its target: whole experiment, one or more stacks,
-an executed action, a measurement or a saved result.
+Simple variants may change one or more explicit parameters without introducing a full DOE subsystem.
 
-## 5. Analyse results
+## 3. Processing
 
-Analysis starts from data linked to the selected stacks. The researcher can
-compare stacks, explore data, create a chart, use a tool or request optional AI
-analysis.
+A protocol is a reusable Lab Cabinet resource used by the Process. A processing run is concrete experiment evidence.
 
-The interface highlights metrics, anomalies, missing data and differences
-between solutions, materials, conditions and processing.
+Each run records timestamps, operator, target stacks/samples, instrument use, actual parameters, inputs, outputs and deviations.
 
-## 6. Create charts and report
+## 4. Data
 
-Choose stacks, measurements, titles and units; compare series; save a
-visualisation; and add it to the report.
+Files and manually entered data must be associated with a clear target:
 
-The report may include objective, solutions, materials, stacks, processing,
-conditions, data, charts, results, notes, files, provenance and NOMAD status.
-Generated narrative remains an editable draft.
+- whole experiment;
+- Experiment Step;
+- processing run or executed action;
+- stack or sample;
+- measurement;
+- result.
 
-## 7. Save and export
+Original files remain immutable evidence. Parsed and processed forms reference the original.
 
-Export is separate from NOMAD. Formats represented in the POC include CSV,
-Excel, JSON, JSONL, images, PDF, ZIP and a complete experiment archive.
+## 5. Analysis
 
-Before export, the researcher sees included and excluded records, files, stacks,
-data, results, version and warnings.
+Analysis begins from explicitly selected evidence. Results store source references, method/version, value or series, unit and validation state.
 
-## 8. Prepare NOMAD
+## 6. Charts and report
 
-NOMAD is the final phase. Validate completeness, units, resources, stacks,
-processing, instruments, data, files, identifiers, provenance and mappings.
+Saved visualisations retain selected records, axes, units, filters and source references. Reports assemble editable narrative from structured evidence.
 
-Then choose one explicit path:
+## 7. Export
 
-- export a NOMAD package;
-- simulate submission through the NOMAD API.
+Export shows included and excluded records, warnings, package version, manifest and checksums before generating local output.
 
-Errors and warnings remain inspectable and correctable. Nothing is submitted
-automatically.
+## 8. NOMAD
+
+The Process provides the mapping profile; the Experiment provides concrete data. Readiness checks cover completeness, units, resources, stack structure, processing, instruments, files, identifiers and provenance.
