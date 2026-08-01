@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="icon" href="data:,">
   <meta name="description" content="LabFlow progressive user manual and implementation guide">
   <title>User Manual · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet">
+  
+  
+
   <link href="assets/app.css" rel="stylesheet">
-<link href="assets/workflow.css" rel="stylesheet">
-  <script defer src="assets/workflow-domain.js"></script>
+  
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/docs-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="docs">
@@ -20,13 +24,13 @@
   <div class="app-main"><main class="page documentation-page">
     <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>›</span><span>User manual</span></nav>
     <header class="page-header compact-header">
-      <div><span class="eyebrow">LabFlow user manual</span><h1>From laboratory work to reusable evidence</h1><p>Understand the platform progressively: start with the researcher workflow, then inspect records, AI boundaries and technical decisions.</p></div>
-      <div class="page-actions"><button class="button" data-action="docs-print" type="button">Print section</button><a class="button primary" href="experiment.html">Open demo experiment</a></div>
+      <div><span class="eyebrow">Product definition &amp; technical manual</span><h1>From research intent to reusable evidence</h1><p>Understand what LabFlow validates, how the Project workflow works, what the code implements and where the static POC deliberately stops.</p></div>
+      <div class="page-actions"><button class="button" data-action="docs-print" type="button">Print section</button><a class="button primary" href="project.html">Open Project workspace</a></div>
     </header>
 
     <section class="docs-hero-map" aria-label="LabFlow workflow overview">
       <button class="active" type="button" data-doc="overview"><span>01</span><strong>Understand</strong><small>Purpose</small></button>
-      <button type="button" data-doc="workflow"><span>02</span><strong>Experiment</strong><small>8 phases</small></button>
+      <button type="button" data-doc="workflow"><span>02</span><strong>Work</strong><small>Pipeline steps</small></button>
       <button type="button" data-doc="cabinet"><span>03</span><strong>Reuse</strong><small>Lab Cabinet</small></button>
       <button type="button" data-doc="records"><span>04</span><strong>Trace</strong><small>Data model</small></button>
       <button type="button" data-doc="ai"><span>05</span><strong>Assist</strong><small>Human control</small></button>
@@ -49,7 +53,7 @@
         <button data-doc="nomad" type="button"><strong>Reports &amp; NOMAD</strong><small>Review before submission</small></button>
         <button data-doc="interface" type="button"><strong>Interface guide</strong><small>Search, states and responsive UX</small></button>
         <button data-doc="poc" type="button"><strong>Static POC</strong><small>Architecture and limits</small></button>
-        <div class="doc-nav-links"><a href="docs/GLOSSARY.md">Glossary</a><a href="README.md">Project README</a><a href="ui-kit.html">UI Kit</a></div>
+        <div class="doc-nav-links"><button type="button" data-doc-file="docs/PROJECT_DEFINITION.md">Project definition</button><button type="button" data-doc-file="docs/ARCHITECTURE.md">Architecture</button><button type="button" data-doc-file="docs/DESIGN_SYSTEM.md">Design system</button><button type="button" data-doc-file="docs/UI_STANDARDS.md">UI standards</button><button type="button" data-doc-file="docs/GLOSSARY.md">Glossary</button><button type="button" data-doc-file="README.md">Technical README</button><a href="ui-kit.html">UI Kit</a></div>
       </nav>
       <article class="markdown-body" id="documentationPreview" tabindex="-1"></article>
       <footer class="docs-pagination">
@@ -62,22 +66,24 @@
     <script id="doc-overview" type="text/markdown">
 # What is LabFlow?
 
-LabFlow is an AI-ready laboratory workflow platform concept. It helps researchers document an experiment while doing the work, produce structured and reusable evidence, and prepare interoperable outputs without starting from repository forms.
+LabFlow is a Project-centred laboratory workspace concept. It helps researchers capture experimental context while doing the work, connect evidence to analysis, and prepare interoperable outputs without starting from repository forms.
 
 > This repository is a static proof of concept for validating workflow, scientific usability, data relationships, AI integration and NOMAD preparation with real laboratory users.
+
+It is also an inspectable implementation demonstration: plain local HTML, CSS and JavaScript; no backend, CDN, tracker or cookie; and no durable scientific data.
 
 ## The platform in one map
 
 ```graph
 direction LR
 User[Researcher] --> Workspace[Workspace]
-Workspace --> Process[Process definition]
-Process --> Experiment[Experiment]
+Workspace --> Project[Project]
+Project --> Pipeline[Pipeline]
+Pipeline --> Steps[Revisitable steps]
 Workspace --> Cabinet[Lab Cabinet]
-Cabinet --> Experiment : resources
-Workspace --> Project[Optional project]
-Project --> Experiment : groups
-Experiment --> Report[Report]
+Cabinet --> Project : snapshots
+Steps --> Evidence[Scientific evidence]
+Evidence --> Report[Report]
 Report --> Export[Export]
 Export --> NOMAD[NOMAD]
 ```
@@ -88,7 +94,7 @@ Export --> NOMAD[NOMAD]
 |---|---|
 | Workflow-first | The interface follows laboratory work rather than repository structure. |
 | Researcher-first | Familiar scientific language appears before implementation terms. |
-| Progressive complexity | Advanced planning appears only when the researcher needs it. |
+| Progressive Data Capture | Ask only for essential information now; reveal recommended or advanced context when it becomes useful. |
 | Reusable resources | Shared definitions reduce repeated entry. |
 | Provenance | Results remain connected to processing, measurements and files. |
 | Human-in-the-loop AI | Suggestions show evidence and require review. |
@@ -96,7 +102,11 @@ Export --> NOMAD[NOMAD]
 
 ## Start here
 
-Open the Workspace. Choose a **Process**, then create or continue an **Experiment**. A Process defines the scientific path, expected evidence and default resources. Projects remain optional organisational containers and are never a prerequisite.
+Open the Dashboard and continue a **Project**, or create one and select a **Pipeline**. CHOSE provides five connected research steps; Quick Experiment provides three independent steps. The Project remembers progress only for the current browser-tab session.
+
+## Who it is for and how success is judged
+
+Researchers use the flow; PIs review evidence; lab managers evaluate reusable definitions and future policy; developers inspect the production direction. The POC succeeds when a reviewer can understand `Workspace → Project → Pipeline → Step`, ingest and connect heterogeneous evidence, distinguish real behavior from simulation, and verify the privacy boundary without implementation guidance.
 
 ### Demo scenario
 
@@ -106,24 +116,31 @@ Perovskite Research Lab uses experiment `PSC-2026-041`, solution `FA–Cs 1.2 M`
     <script id="doc-workflow" type="text/markdown">
 # Researcher workflow
 
-`Solutions → Stacks → Processing → Data → Analysis → Charts & Report → Export → NOMAD`
+`Materials & Solutions → Stack & Fabrication → Data Ingest → Analysis → Report & Export`
 
 The sequence is recommended and non-blocking. Save a draft, skip optional work or revisit a phase.
 
 | Phase | Researcher task | Record produced |
 |---|---|---|
-| 1 · Solutions | Define solvents, solutes, additives and preparation | Recipe + physical batch |
-| 2 · Stacks | Order layers and connect materials | One or more experiment stacks |
-| 3 · Processing | Perform and record laboratory actions | Processing run + actual values |
-| 4 · Data | Upload, enter manually or import | Files, tables and measurement context |
-| 5 · Analysis | Compare stacks and inspect anomalies | Reviewable findings |
-| 6 · Charts & Report | Save visualisations and scientific narrative | Editable report |
-| 7 · Export | Review scope, exclusions and formats | Local package |
-| 8 · NOMAD | Resolve readiness issues and choose a path | NOMAD package or simulated API request |
+| 1 · Materials & Solutions | Define or reuse recipes and material context | Structured definitions + Project snapshots |
+| 2 · Stack & Fabrication | Build variants, samples and actual processing context | Stacks + fabrication evidence |
+| 3 · Data Ingest | Choose or detect JV, Dark JV, IPCE, UV/VIS or Stability; preview, map and validate the source | Typed Measurements + provenance metadata |
+| 4 · Analysis | Compare conditions and record conclusions | Traceable comparisons + findings |
+| 5 · Report & Export | Select evidence, inspect readiness and generate locally | Report + CSV/JSON + NOMAD-ready view |
 
-## Creating an experiment
+## Creating a Project
 
-The creation wizard first selects a Process, then asks for the experiment name and objective, then chooses a starting configuration: Process defaults, a previous experiment or an empty setup. Solutions, stacks, conditions and expected evidence are subsequently edited inside the Experiment. Projects can be attached later as optional research context.
+The creation wizard asks for Project identity and Pipeline. CHOSE opens at Materials & Solutions and keeps all five steps revisitable. Quick uses Plan, Record and Share with its own data shape. Detailed Experiment records remain compatibility views for execution-level concepts.
+
+## Measurement-first ingest
+
+The scientific meaning comes before the file extension. LabFlow treats **Measurement Type** and **File Format** as separate concepts: a JV can arrive as CSV, TXT or DAT; a UV/VIS spectrum can arrive as generic XY text. The POC gives first-class treatment to **JV, Dark JV, IPCE, UV/VIS and Stability**, plus generic evidence. Deterministic rules use filenames, headers, units and table structure to suggest a type, and the researcher can always correct the suggestion.
+
+The visible ingest flow is `Add data → Detect → Preview → Map → Validate → Attach`. CSV, TSV, TXT, DAT and common XY text are the strongest local parsing path. JSON-family, XML and simple YAML can be inspected when their structure is suitable. Complex spreadsheets, scientific containers, documents, images, archives and binary instrument formats remain honestly labelled as **Structure inspected**, **Metadata only** or **Raw evidence** instead of pretending they were parsed. No file is uploaded or durably stored.
+
+## Progressive Data Capture
+
+Fields are treated as **Required**, **Recommended** or **Advanced**. LabFlow reuses context that is already available and distinguishes values that are **user-entered, imported, inherited, inferred or calculated**. Missing recommended metadata does not block the workflow: it appears later as a contextual improvement when it becomes useful for comparison, reproducibility, provenance or NOMAD readiness.
 
 ## Processing is not a protocol
 
@@ -131,19 +148,19 @@ A **protocol** is the reusable ordered definition. **Processing** records what a
     </script>
 
     <script id="doc-cabinet" type="text/markdown">
-# Workspace, Processes, projects and Lab Cabinet
+# Workspace, Projects, Pipelines and Lab Cabinet
 
 ## Workspace
 
-The Workspace is the researcher’s operating context. Its central operational hierarchy is `Workspace → Process → Experiment`. It also contains shared Lab Cabinet resources, optional projects, knowledge, reports and settings. The static POC displays ownership context but does not enforce real permissions.
+The Workspace is the researcher’s operating context. Its central hierarchy is `Workspace → Project → Pipeline → Steps`. It also contains generic Lab Cabinet, knowledge, AI and scientific tools. The static POC keeps Project and step state only in `sessionStorage` and does not enforce real permissions.
 
-## Processes
+## Pipelines
 
-A Process is a versioned workflow definition for a family of laboratory work. It defines phases, default resources, expected measurements, required evidence and a NOMAD mapping profile. An Experiment is one concrete execution of that Process.
+A Pipeline is the workflow definition selected by a Project. In a production model it would be versioned and declare expected evidence, measurements and mappings. Process and Experiment remain compatibility/domain concepts, not primary navigation roots.
 
 ## Projects
 
-A Project optionally groups experiments under one research goal, including experiments from different Processes. Researchers can start an experiment without creating a Project first.
+A Project is the primary, session-scoped unit of work. CHOSE guides Materials & Solutions, Stack & Fabrication, Data Ingest, Analysis, and Report & Export including NOMAD. Earlier steps always remain revisitable.
 
 ## Lab Cabinet
 
@@ -169,6 +186,8 @@ The Lab Cabinet is search-first. Search for the resource you need, inspect its s
 # Scientific records
 
 ## Reusable versus experiment-owned
+
+A **Dataset** is the data itself. A **Measurement** is the scientific meaning attached to those data: type, target, conditions, source, provenance and any derived metrics. This lets the interface show `JV · Sample S03-A` instead of reducing the experiment to filenames.
 
 | Lab Cabinet definition | Concrete experiment record |
 |---|---|
@@ -255,7 +274,7 @@ Build the scientific story from experiment records, saved charts, files and prov
 
 ## Export
 
-Generate represented formats including CSV, Excel, JSON, JSONL, YAML, images, PDF, ZIP and a full experiment archive. Before generation, inspect scope, included and excluded records, warnings and version.
+The broad export centre represents CSV, Excel, JSON/JSONL, YAML, images, PDF, ZIP and archive paths. The implemented CHOSE step generates local JSON and CSV and supports print-to-report. Labels distinguish real local generation from represented or simulated formats.
 
 ## NOMAD
 
@@ -285,6 +304,10 @@ The top search uses one shared component. It filters visible page records when a
 - Empty states explain the next useful action.
 - Tables remain inside horizontal scrollers.
 
+## Canonical page grammar
+
+Every route reuses the same shell, 1480 px outer frame, tokenised page padding, header, breadcrumb, panels, forms, tables, toolbars, buttons and responsive breakpoints. Nested records show their breadcrumb before the page header; top-level Workspace destinations begin directly with the header. Feature pages keep their own scientific visualisations inside these shared boundaries. `ui-kit.html` is the rendered component reference, `docs/DESIGN_SYSTEM.md` defines ownership and `docs/UI_STANDARDS.md` defines page/layout rules.
+
 ## Responsive behaviour
 
 The design supports 360–1440 px. Below 980 px the sidebar becomes a drawer. Workflow rails scroll horizontally, grids collapse and modals use internal scrolling without hiding primary actions.
@@ -297,7 +320,7 @@ Pages include a skip link, semantic controls, keyboard focus, labelled icon butt
     <script id="doc-poc" type="text/markdown">
 # Why this repository is a static POC
 
-The static architecture is a deliberate validation step, not an unfinished backend.
+The static architecture is a deliberate validation instrument, not an implied production backend.
 
 ## What it validates
 
@@ -318,10 +341,11 @@ The static architecture is a deliberate validation step, not an unfinished backe
 | Real AI or RAG | Models, retrieval, evaluation and audit |
 | Real agent runtime | Secure tools and persisted approvals |
 | Real NOMAD connection | Secret handling, network requests and retries |
+| Production parsers for every recognised format | Sandboxed workers, validation and parser provenance |
 
 ## Runtime
 
-LabFlow uses plain HTML, CSS and JavaScript without a framework, build step or CDN. Serve the repository root with `python3 -m http.server 8765` or publish it on GitHub Pages.
+LabFlow uses plain HTML, CSS and JavaScript without a framework, build step or CDN. Scientific state is temporary `sessionStorage`; the first load of every new browser-tab session clears saved scientific records, while navigation and reloads inside that tab retain current work. Static empty Project shells are interface fixtures, not saved evidence. Only appearance/account-display preferences may use `localStorage`. It creates no cookies, includes no trackers and sends no files or telemetry. It is intended for direct static publication on GitHub Pages. Pipeline YAML and step fragments are compiled into a generated browser bundle, so the runtime does not need `fetch()` or a local launcher.
 
 Never enter real API keys or sensitive laboratory data in this POC.
     </script>

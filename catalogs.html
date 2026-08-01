@@ -1,87 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
+<!DOCTYPE html><html lang="en"><head><link rel="icon" href="data:,">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Shared laboratory resources for LabFlow experiments">
-<title>Lab Cabinet · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet">
-<link href="assets/app.css" rel="stylesheet">
-<link href="assets/workflow.css" rel="stylesheet">
-<script defer src="assets/exporters.js"></script>
-<script defer src="assets/workflow-domain.js"></script>
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Reusable resources for LabFlow Projects"><title>Lab Cabinet · LabFlow</title>
+
+<link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script><script defer src="assets/cabinet-store.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
-</head>
-<body data-page="catalogs">
-<header class="topbar" id="topbar"></header>
-<aside class="sidebar" id="sidebar"></aside>
-<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
+</head><body data-page="catalogs"><header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside><button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
 <div class="app-main"><main class="page cabinet-page">
-  <header class="page-header compact-header">
-    <div><span class="eyebrow">Perovskite Research Lab · Shared workspace</span><h1>Lab Cabinet</h1><p>Everything the laboratory uses and shares. Search, choose and link a resource to an experiment.</p></div>
-    <div class="page-actions"><button class="button" type="button" data-action="cabinet-selector" data-cabinet-category="all">Use in experiment</button><button class="button primary" type="button" data-action="cabinet-quick-create"><span data-icon="plus"></span>Add resource</button></div>
-  </header>
-
-  <section class="cabinet-search-panel">
-    <label class="cabinet-search"><span data-icon="model"></span><input id="cabinetSearch" type="search" placeholder="Search materials, solutions, instruments, protocols…" autocomplete="off"><kbd>/</kbd></label>
-    <div class="cabinet-filter-row">
-      <label>Availability <select class="input input-compact" id="cabinetAvailability"><option value="all">All</option><option value="available">Available</option><option value="warning">Needs attention</option><option value="unavailable">Unavailable</option></select></label>
-      <label>Location <select class="input input-compact" id="cabinetLocation"><option value="all">All locations</option><option value="lab-2">Lab 2</option><option value="glovebox">Glovebox room</option><option value="cabinet-a2">Cabinet A2</option><option value="substrates-b1">Drawer B1</option></select></label>
-      <label class="check-row compact"><input id="cabinetFavoritesOnly" type="checkbox"><span>Favorites</span></label>
-      <button class="button small" type="button" data-action="cabinet-clear-filters">Clear</button>
-      <span class="cabinet-result-count" id="cabinetResultCount">12 resources</span>
-    </div>
-  </section>
-
-  <nav class="cabinet-categories" aria-label="Lab Cabinet categories">
-    <button class="active" type="button" data-cabinet-filter="all"><span data-icon="grid"></span><strong>All</strong><small>12</small></button>
-    <button type="button" data-cabinet-filter="materials"><span data-icon="catalog"></span><strong>Materials &amp; substances</strong><small>3</small></button>
-    <button type="button" data-cabinet-filter="solutions"><span data-icon="flask"></span><strong>Solutions &amp; batches</strong><small>2</small></button>
-    <button type="button" data-cabinet-filter="substrates"><span data-icon="grid"></span><strong>Substrates</strong><small>1</small></button>
-    <button type="button" data-cabinet-filter="equipment"><span data-icon="settings"></span><strong>Instruments</strong><small>2</small></button>
-    <button type="button" data-cabinet-filter="protocols"><span data-icon="flow"></span><strong>Protocols</strong><small>1</small></button>
-    <button type="button" data-cabinet-filter="actions"><span data-icon="flow"></span><strong>Actions</strong><small>1</small></button>
-    <button type="button" data-cabinet-filter="conditions"><span data-icon="settings"></span><strong>Conditions</strong><small>1</small></button>
-    <button type="button" data-cabinet-filter="stacks"><span data-icon="model"></span><strong>Stack templates</strong><small>1</small></button>
-  </nav>
-
-  <section class="panel"><div class="panel-body"><div class="grid-2"><div><div class="cabinet-section-divider">Reusable definitions</div><p class="subtle">Materials, substances, recipes, substrate definitions, stack templates, protocols, actions, instruments and conditions.</p></div><div><div class="cabinet-section-divider">Physical inventory and evidence</div><p class="subtle">Material lots, prepared solution batches, substrate pieces and instrument instances. Concrete experiment use is stored as a snapshot.</p></div></div></div></section>
-
-  <section class="cabinet-glance-grid">
-    <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Recently used</strong><small>Fast access for the current researcher</small></div></div><div class="panel-body cabinet-mini-list"><button type="button" data-action="cabinet-open" data-resource-id="dmf"><span class="resource-dot material"></span><span><strong>DMF anhydrous</strong><small>Used today · solvent</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="spin01"><span class="resource-dot equipment"></span><span><strong>Spin Coater 01</strong><small>Used today · Lab 2</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="pipeline"><span class="resource-dot process"></span><span><strong>PSC n-i-p standard</strong><small>Used yesterday · v4.1</small></span></button></div></article>
-    <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Availability &amp; alerts</strong><small>Only items requiring attention</small></div><span class="badge warning">3</span></div><div class="panel-body cabinet-alert-list"><button type="button" data-action="cabinet-open" data-resource-id="batch081"><span class="attention-status warning"></span><span><strong>SOL-081 almost empty</strong><small>4.2 mL remaining · check before use</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="dmf"><span class="attention-status warning"></span><span><strong>DMF lot review</strong><small>Certificate review due 05 Aug</small></span></button><button type="button" data-action="cabinet-open" data-resource-id="solar01"><span class="attention-status danger"></span><span><strong>Solar Simulator 01 in use</strong><small>Expected available at 15:30</small></span></button></div></article>
-  </section>
-
-  <div class="section-title cabinet-results-title"><div><h2 id="cabinetResultsHeading">All shared resources</h2><p>Availability is simulated; this is not an inventory or booking system.</p></div><div class="row"><button class="button small active" type="button" data-cabinet-view="cards">Cards</button><button class="button small" type="button" data-cabinet-view="table">Table</button></div></div>
-  <section class="cabinet-resource-grid" id="cabinetResourceGrid" aria-live="polite"></section>
-  <section class="panel cabinet-resource-table" id="cabinetResourceTable" hidden><div class="table-wrap"><table class="data-table"><thead><tr><th>Resource</th><th>Type</th><th>Status</th><th>Location</th><th>Uses</th><th></th></tr></thead><tbody id="cabinetResourceRows"></tbody></table></div></section>
-  <div class="useful-empty cabinet-empty" id="cabinetEmpty" hidden><span data-icon="model"></span><div><strong>No matching resources</strong><small>Change the filters or add a minimal resource and use it immediately.</small></div><button class="button primary" type="button" data-action="cabinet-quick-create">Add resource</button></div>
+<header class="page-header compact-header"><div><span class="eyebrow">Workspace resource library</span><h1>Lab Cabinet</h1><p>Manage reusable materials, solutions, stacks, protocols and instruments independently from any current Project.</p></div><div class="page-actions"><button class="button primary" type="button" data-action="cabinet-quick-create"><span data-icon="plus"></span>Add resource</button></div></header>
+<section class="cabinet-search-panel"><label class="cabinet-search"><span data-icon="model"></span><input id="cabinetSearch" type="search" placeholder="Search resources…" autocomplete="off"><kbd>/</kbd></label><div class="cabinet-filter-row"><label class="check-row compact"><input id="cabinetFavoritesOnly" type="checkbox"><span>Favorites</span></label><button class="button small" type="button" data-action="cabinet-clear-filters">Clear</button><span class="cabinet-result-count" id="cabinetResultCount"></span></div></section>
+<nav class="cabinet-categories" aria-label="Lab Cabinet categories"><button class="active" type="button" data-cabinet-filter="all"><strong>All</strong><small>0</small></button><button type="button" data-cabinet-filter="materials"><strong>Materials</strong><small>0</small></button><button type="button" data-cabinet-filter="solutions"><strong>Solutions</strong><small>0</small></button><button type="button" data-cabinet-filter="substrates"><strong>Substrates</strong><small>0</small></button><button type="button" data-cabinet-filter="stacks"><strong>Stacks</strong><small>0</small></button><button type="button" data-cabinet-filter="protocols"><strong>Protocols</strong><small>0</small></button><button type="button" data-cabinet-filter="instruments"><strong>Instruments</strong><small>0</small></button></nav>
+<div class="section-title cabinet-results-title"><div><h2 id="cabinetResultsHeading">Resources</h2><p>Choose a reusable definition or add one to a Project.</p></div></div><section class="cabinet-resource-grid" id="cabinetResourceGrid" aria-live="polite"></section><div class="useful-empty cabinet-empty" id="cabinetEmpty" hidden><span data-icon="model"></span><div><strong>No matching resources</strong><small>Change the search or add a reusable resource.</small></div><button class="button primary" type="button" data-action="cabinet-quick-create">Add resource</button></div>
 </main></div>
-
-<aside class="drawer cabinet-detail-drawer" id="cabinetDetailDrawer" hidden aria-label="Resource detail">
-  <div class="panel-header"><div class="panel-title"><strong>Resource details</strong><small>Shared Lab Cabinet record</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
-  <div id="cabinetDetailBody"></div>
-</aside>
-
-<div class="overlay" id="cabinetQuickCreate" hidden>
-  <section class="modal cabinet-create-modal" role="dialog" aria-modal="true" aria-labelledby="cabinetCreateTitle">
-    <div class="panel-header"><div class="panel-title"><strong id="cabinetCreateTitle">Add a resource</strong><small>Create the minimum now; complete the record later.</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div>
-    <div class="panel-body stack">
-      <div class="form-grid">
-        <div class="field"><label>Resource type</label><select class="input" id="cabinetCreateType"><option value="substance">Substance</option><option value="material">Material</option><option value="solution">Solution</option><option value="equipment">Instrument</option><option value="action">Action</option><option value="condition">Condition</option><option value="stack">Stack template</option><option value="protocol">Protocol</option></select></div>
-        <div class="field"><label>Name</label><input class="input" id="cabinetCreateName" placeholder="e.g. DMF anhydrous"></div>
-        <div class="field"><label>Role or category</label><input class="input" id="cabinetCreateRole" placeholder="e.g. solvent"></div>
-        <div class="field"><label>Location <span class="subtle">optional</span></label><input class="input" id="cabinetCreateLocation" placeholder="e.g. Cabinet A2"></div>
-      </div>
-      <section class="cabinet-duplicate-check" id="cabinetDuplicateCheck"><span data-icon="info"></span><div><strong>Similar resources will appear here</strong><small>Enter a name to check deterministic demo matches.</small></div></section>
-      <fieldset class="cabinet-visibility-choice"><legend>Where should this resource be available?</legend><label><input checked name="cabinetVisibility" type="radio" value="shared"><span><strong>Share in the Lab Cabinet</strong><small>Available to other experiments in this workspace.</small></span></label><label><input name="cabinetVisibility" type="radio" value="local"><span><strong>Use only in this experiment</strong><small>Keep it as a local experiment resource.</small></span></label></fieldset>
-      <details class="advanced-details"><summary>Optional identifiers and notes</summary><div class="form-grid"><div class="field"><label>Formula or model</label><input class="input"></div><div class="field"><label>Manufacturer or lot</label><input class="input"></div><div class="field span-2"><label>Notes</label><textarea class="input" rows="2"></textarea></div></div></details>
-    </div>
-    <div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><span class="small subtle">Status starts as Draft.</span><button class="button primary" type="button" data-action="cabinet-create-confirm">Create and use</button></div>
-  </section>
-</div>
-
-<div aria-live="polite" class="toast-region" id="toastRegion"></div>
-</body>
-</html>
+<aside class="drawer cabinet-detail-drawer" id="cabinetDetailDrawer" hidden aria-label="Resource detail"><div class="panel-header"><div class="panel-title"><strong>Resource details</strong><small>Reusable Lab Cabinet resource</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div><div id="cabinetDetailBody"></div></aside>
+<div class="overlay" id="cabinetQuickCreate" hidden><section class="modal cabinet-create-modal" role="dialog" aria-modal="true" aria-labelledby="cabinetCreateTitle"><div class="panel-header"><div class="panel-title"><strong id="cabinetCreateTitle">Add a resource</strong><small>Save a reusable definition.</small></div><button class="icon-button" type="button" data-action="close" aria-label="Close">×</button></div><div class="panel-body stack"><input type="hidden" id="cabinetEditId"><div class="form-grid"><div class="field"><label>Resource type</label><select class="input" id="cabinetCreateType"><option value="materials">Material</option><option value="solutions">Solution</option><option value="substrates">Substrate</option><option value="stacks">Stack</option><option value="protocols">Protocol</option><option value="instruments">Instrument</option></select></div><div class="field"><label>Name</label><input class="input" id="cabinetCreateName" placeholder="Resource name"></div><div class="field"><label>Role</label><input class="input" id="cabinetCreateRole" placeholder="e.g. solvent"></div><div class="field"><label>Description</label><input class="input" id="cabinetCreateDescription" placeholder="What is it reused for?"></div></div><div class="cabinet-duplicate-check" id="cabinetDuplicateCheck"><span data-icon="info"></span><div><strong>Similar resources</strong><small>Enter a name to compare existing records.</small></div></div><div class="form-grid" id="cabinetSpecificFields"></div></div><div class="panel-footer"><button class="button" type="button" data-action="close">Cancel</button><button class="button primary" type="button" data-action="cabinet-create-confirm">Save resource</button></div></section></div>
+<div aria-live="polite" class="toast-region" id="toastRegion"></div></body></html>

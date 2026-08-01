@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Material detail">
   <title>Material · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/app.css">
-  <link rel="stylesheet" href="assets/workflow.css">
-  <script defer src="assets/exporters.js"></script>
-  <script defer src="assets/workflow-domain.js"></script>
+  
+  
+  
+  <link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="material-detail">
@@ -20,6 +23,7 @@
 
   <div class="app-main">
     <main class="page material-page">
+      <nav class="project-breadcrumb" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>/</span><a href="catalogs.html">Lab Cabinet</a><span>/</span><strong>Material</strong></nav>
       <header class="page-header">
         <div>
           <span class="eyebrow">Material</span>

@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="data:,"><meta name="description" content="Standard laboratory experiment workflow">
 <title>Experiment PSC-2026-041 · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet">
-<link href="assets/workflow.css" rel="stylesheet">
-<script defer src="assets/exporters.js"></script><script defer src="assets/workflow-domain.js"></script>
+
+
+<link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  
+  <script defer src="assets/compatibility-domain.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="experiment">
 <header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside>
 <button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
 <div class="app-main"><main class="page">
+<section class="standard-workflow-note compatibility-notice" aria-label="Compatibility view"><span data-icon="info"></span><div><strong>Compatibility view</strong><small>This page preserves earlier Process/Experiment concepts for reference only. The primary LabFlow workflow is Workspace → Project → Pipeline → Step.</small></div><a class="button small" href="projects.html">Return to Projects</a></section>
+
+<nav class="project-breadcrumb" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>/</span><a href="experiments.html">Experiments</a><span>/</span><strong>PSC-2026-041</strong></nav>
 <header class="page-header compact-header experiment-page-head">
   <div><span class="eyebrow">Experiment · PSC-2026-041</span><h1>Solvent and annealing comparison</h1><p>Concrete execution of <strong data-process-short-name>PSC fabrication · n-i-p</strong> · definitions are snapshotted, actual work remains experiment-owned.</p></div>
   <div class="page-actions"><a class="button" href="pipeline.html">Back to process</a><a class="button" href="experiments.html">All experiments</a><button class="button" data-action="toast" data-message="Experiment draft saved" type="button">Save draft</button></div>

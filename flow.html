@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
+  <link rel="icon" href="data:,">
   <meta charset="utf-8">
+<script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="LabFlow hierarchy, scientific workflow and evidence model">
+  <meta name="description" content="LabFlow workspace, project, pipeline and scientific data model">
   <title>Flow &amp; data · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet">
   <link href="assets/app.css" rel="stylesheet">
-  <link href="assets/workflow.css" rel="stylesheet">
   <script defer src="assets/exporters.js"></script>
-  <script defer src="assets/workflow-domain.js"></script>
+  
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="flow">
@@ -20,92 +21,68 @@
   <div class="app-main"><main class="page">
     <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>›</span><span>Flow &amp; data</span></nav>
     <header class="page-header compact-header">
-      <div><span class="eyebrow">Product model</span><h1>How LabFlow works</h1><p>A simple researcher hierarchy on top, versioned definitions and traceable experimental evidence underneath.</p></div>
-      <div class="page-actions"><a class="button" href="processes.html">Browse processes</a><a class="button primary" href="documentation.html">Read documentation</a></div>
+      <div><span class="eyebrow">Canonical product model</span><h1>One workflow, one mental model</h1><p>LabFlow is organised around the researcher, their Workspace, their Projects and the Pipeline selected by each Project.</p></div>
+      <div class="page-actions"><a class="button" href="ui-kit.html">UI Kit</a><a class="button primary" href="documentation.html">Read documentation</a></div>
     </header>
 
     <section class="panel flow-hero-simple">
-      <div class="panel-header"><div class="panel-title"><strong>The operational hierarchy</strong><small>The Process is the reusable scientific path; the Experiment is one concrete execution.</small></div><span class="badge success">Canonical model</span></div>
+      <div class="panel-header"><div class="panel-title"><strong>The only primary hierarchy</strong><small>Everything visible in the main navigation must fit this model.</small></div><span class="badge success">Canonical</span></div>
       <div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="coreHierarchyGraph"></div><script id="coreHierarchyGraph" type="text/graph">direction LR
-User[Researcher] --> Workspace[Workspace]
-Workspace --> Process[Process definition]
-Process --> Experiment[Experiment execution]
+User[User] --> Workspace[Workspace]
+Workspace --> Project[Project]
+Project --> Pipeline[Pipeline]
+Pipeline --> Step[Step]
+Step --> Data[Project Data]
 Workspace --> Cabinet[Lab Cabinet]
-Cabinet --> Experiment : resources
-Workspace --> Project[Optional project]
-Project --> Experiment : groups</script></div>
+Workspace --> Tools[Common Tools]
+Workspace --> Knowledge[Knowledge / RAG]
+Workspace --> AI[AI Assistant]</script></div>
     </section>
 
     <section class="panel process-definition-callout">
       <div class="panel-body">
-        <div><span class="eyebrow mono">PROCESS DEFINITION</span><h2>One stable path, many experiments</h2><p>A Process defines phases, defaults, expected measurements, required evidence and NOMAD mapping. It does not contain actual measurements or overwrite experimental history.</p></div>
-        <div class="process-phase-strip"><span>Solutions</span><b>→</b><span>Stacks &amp; samples</span><b>→</b><span>Processing</span><b>→</b><span>Data</span><b>→</b><span>Analysis</span><b>→</b><span>Report</span><b>→</b><span>Export</span><b>→</b><span>NOMAD</span></div>
+        <div><span class="eyebrow mono">PROJECT WORKFLOW</span><h2>The Project is where laboratory work happens</h2><p>A Project selects one Pipeline. Its steps create and update structured Project data. A researcher can revisit earlier steps without creating another navigation hierarchy.</p></div>
+        <div class="process-phase-strip"><span>Workspace</span><b>→</b><span>Project</span><b>→</b><span>Pipeline</span><b>→</b><span>Step</span><b>→</b><span>Project Data</span></div>
       </div>
     </section>
 
-    <div class="section-title"><div><h2>From formulation to physical evidence</h2><p>Definitions are reusable; batches, samples and runs record what actually happened.</p></div><span class="badge info">Definition → snapshot → evidence</span></div>
-    <section class="research-workflow" aria-label="Research workflow">
-      <article class="research-workflow-step">
-        <header><span>01</span><div><strong>Compose the solvent system</strong><small>Reusable recipe</small></div></header>
-        <p>Select one or more solvents. Record ratio basis, grade, supplier and constraints rather than storing an unexplained text label.</p>
-        <div class="ratio-graphic" aria-label="DMF 80 percent, DMSO 20 percent"><span style="--ratio:80">DMF 80</span><span style="--ratio:20">DMSO 20</span></div>
-        <dl><div><dt>Definition</dt><dd>Solvent mixture</dd></div><div><dt>Validation</dt><dd>Ratios total 100%</dd></div></dl>
-        <a href="solution.html">Open solution builder</a>
-      </article>
-      <article class="research-workflow-step">
-        <header><span>02</span><div><strong>Prepare a physical batch</strong><small>Experiment evidence</small></div></header>
-        <p>Instantiate the recipe with actual lots, weighed masses, final volume, operator, time, atmosphere, filtration and deviations.</p>
-        <div class="formula-graphic"><div><span>FAI</span><i></i><strong>1.00 eq</strong></div><div><span>PbI₂</span><i></i><strong>1.05 eq</strong></div><div><span>Actual</span><i></i><strong>SOL-081</strong></div></div>
-        <dl><div><dt>Definition</dt><dd>SolutionRecipe</dd></div><div><dt>Actual</dt><dd>SolutionBatch</dd></div></dl>
-        <a href="solution.html#batch">Review batch evidence</a>
-      </article>
-      <article class="research-workflow-step">
-        <header><span>03</span><div><strong>Build the ordered stack</strong><small>Template and experiment variant</small></div></header>
-        <p>Each layer links a role, material, thickness, source definition or batch, and deposition or creation method.</p>
-        <div class="technical-stack" aria-label="Five-layer device stack"><span>Au <b>80 nm</b></span><span>HTL <b>180 nm</b></span><span>Perovskite <b>400 nm</b></span><span>ETL <b>30 nm</b></span><span>Glass / ITO <b>1.1 mm</b></span></div>
-        <dl><div><dt>Reusable</dt><dd>StackTemplate</dd></div><div><dt>Concrete</dt><dd>ExperimentStack</dd></div></dl>
-        <a href="stack.html">Open graphical stack builder</a>
-      </article>
-      <article class="research-workflow-step actual-step">
-        <header><span>04</span><div><strong>Execute and trace</strong><small>Samples, runs and evidence</small></div></header>
-        <p>Create stable sample IDs and preserve actual protocol values, deviations, instrument use, files, measurements and reviewed results.</p>
-        <div class="evidence-graphic"><span>Run</span><i></i><span>Sample</span><i></i><span>Measure</span><i></i><span>Result</span></div>
-        <dl><div><dt>History</dt><dd>Immutable snapshots</dd></div><div><dt>Output</dt><dd>Report / NOMAD</dd></div></dl>
-        <a href="experiment.html">Open experiment</a>
-      </article>
+    <div class="section-title"><div><h2>CHOSE showcase Pipeline</h2><p>The default perovskite workflow demonstrates the full POC while remaining file-driven and replaceable.</p></div><span class="badge success">5 steps</span></div>
+    <section class="research-workflow" aria-label="CHOSE pipeline">
+      <article class="research-workflow-step"><header><span>01</span><div><strong>Materials &amp; Solutions</strong><small>Prepare structured chemistry</small></div></header><p>Create or reuse solvents, solutes, materials and solution recipes with useful preparation metadata.</p><dl><div><dt>Inputs</dt><dd>Cabinet resources</dd></div><div><dt>Outputs</dt><dd>Project solution snapshots</dd></div></dl><a href="project.html?step=materials">Open Step 1</a></article>
+      <article class="research-workflow-step"><header><span>02</span><div><strong>Stack &amp; Fabrication</strong><small>Build the physical structure</small></div></header><p>Compose ordered material layers, sample IDs and the fabrication sequence used by the Project.</p><dl><div><dt>Inputs</dt><dd>Solutions and materials</dd></div><div><dt>Outputs</dt><dd>Stacks and samples</dd></div></dl><a href="project.html?step=stack">Open Step 2</a></article>
+      <article class="research-workflow-step"><header><span>03</span><div><strong>Data Ingest</strong><small>Capture raw evidence</small></div></header><p>Import or enter measurements while preserving source files, mapping, units and provenance.</p><dl><div><dt>Inputs</dt><dd>Files and instruments</dd></div><div><dt>Outputs</dt><dd>Typed Measurements</dd></div></dl><a href="project.html?step=data">Open Step 3</a></article>
+      <article class="research-workflow-step"><header><span>04</span><div><strong>Analysis</strong><small>Interpret results</small></div></header><p>Compare measurements, visualise trends and record explicit researcher conclusions.</p><dl><div><dt>Inputs</dt><dd>Measurements</dd></div><div><dt>Outputs</dt><dd>Results and conclusions</dd></div></dl><a href="project.html?step=analysis">Open Step 4</a></article>
+      <article class="research-workflow-step actual-step"><header><span>05</span><div><strong>Report &amp; Export</strong><small>Publish traceable output</small></div></header><p>Assemble the Project report, local exports and a NOMAD-ready package without implying a backend submission service.</p><dl><div><dt>Inputs</dt><dd>Project evidence</dd></div><div><dt>Outputs</dt><dd>Report and export package</dd></div></dl><a href="project.html?step=export">Open Step 5</a></article>
     </section>
 
-    <div class="section-title"><div><h2>Definitions versus actual records</h2><p>The distinction that protects reuse and historical truth.</p></div></div>
-    <section class="split-equal concept-comparison">
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Reusable definitions</strong><small>Versioned in Process or Lab Cabinet</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="definitionGraph"></div><script id="definitionGraph" type="text/graph">direction TB
-Process[Process definition] --> Step[Workflow step definition]
-Recipe[Solution recipe] --> Batch[Prepared batch] : instantiated as
-Stack[Stack template] --> Variant[Experiment stack] : snapshotted as
-Protocol[Protocol definition] --> Run[Processing run] : executed as</script></div></article>
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment evidence</strong><small>Belongs to one concrete execution</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="evidenceGraph"></div><script id="evidenceGraph" type="text/graph">direction TB
-Experiment[Experiment] --> Step[Experiment step]
-Step --> Sample[Physical sample]
-Sample --> Measurement[Measurement]
-Measurement --> File[Original file]
-File --> Result[Derived result]
-Result --> Report[Reviewed report]</script></div></article>
-    </section>
-
-    <div class="section-title"><div><h2>The five data families</h2><p>A compact model that remains extensible for different laboratories, NOMAD and future AI.</p></div></div>
+    <div class="section-title"><div><h2>Minimal data model</h2><p>Structured enough for a future backend, NOMAD mapping and AI, but intentionally small for the POC.</p></div></div>
     <section class="data-family-grid">
-      <article><span class="data-family-number">1</span><div><strong>Ownership and scope</strong><p>User and Workspace identify ownership. Project is an optional grouping and never replaces Process.</p><small>UserAccount · Workspace · Project</small></div></article>
-      <article><span class="data-family-number">2</span><div><strong>Workflow definitions</strong><p>Versioned Processes and workflow steps define what an experiment expects without storing actual results.</p><small>ProcessDefinition · WorkflowStepDefinition</small></div></article>
-      <article><span class="data-family-number">3</span><div><strong>Reusable resources</strong><p>Definitions and physical inventory are distinct and searchable.</p><small>Material · MaterialLot · SolutionRecipe · Protocol · Instrument</small></div></article>
-      <article><span class="data-family-number">4</span><div><strong>Experimental execution</strong><p>Snapshots record actual preparation, stack variants, samples, actions, parameters and deviations.</p><small>Experiment · ExperimentStep · SolutionBatch · ExperimentStack · ProcessRun · Sample</small></div></article>
-      <article><span class="data-family-number">5</span><div><strong>Evidence and outputs</strong><p>Files retain type and provenance; results remain linked to source evidence and validation state.</p><small>FileRecord · Measurement · DerivedResult · Report · ExportPackage</small></div></article>
+      <article><span class="data-family-number">1</span><div><strong>Ownership</strong><p>Who owns the work and where it lives.</p><small>User · Workspace</small></div></article>
+      <article><span class="data-family-number">2</span><div><strong>Project workflow</strong><p>The scientific objective and the ordered method used to work on it.</p><small>Project · Pipeline · PipelineStep · ProjectData</small></div></article>
+      <article><span class="data-family-number">3</span><div><strong>CHOSE chemistry</strong><p>Reusable and project-specific chemistry needed by the perovskite Pipeline.</p><small>Material · Solvent · Solute · Solution</small></div></article>
+      <article><span class="data-family-number">4</span><div><strong>Structure &amp; evidence</strong><p>The physical stack and the measurements generated from laboratory work.</p><small>Stack · Measurement · Result</small></div></article>
+      <article><span class="data-family-number">5</span><div><strong>Outputs &amp; future AI</strong><p>Human-reviewed outputs stay distinguishable from machine-generated assistance.</p><small>Report · AIRecord</small></div></article>
     </section>
 
-    <section class="panel"><div class="panel-header"><div class="panel-title"><strong>AI and NOMAD remain optional consumers</strong><small>The core workflow works without either service.</small></div></div><div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="consumerGraph"></div><script id="consumerGraph" type="text/graph">direction LR
-Records[Structured records] --> Researcher[Researcher workflow]
-Records --> NOMAD[NOMAD mapping and export]
-Records --> AI[Future AI assistance]
+    <section class="split-equal concept-comparison">
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Project data chain</strong><small>Each step creates evidence for the next one.</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="projectDataGraph"></div><script id="projectDataGraph" type="text/graph">direction TB
+Solution[Solution] --> Stack[Stack]
+Stack --> Measurement[Measurement]
+Measurement --> Result[Result]
+Result --> Report[Report]</script></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data provenance</strong><small>Do not mix source data, human interpretation and AI output.</small></div></div><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="provenanceGraph"></div><script id="provenanceGraph" type="text/graph">direction TB
+Raw[Raw data] --> Processed[Processed data]
+Processed --> Human[Human result / note]
+Processed --> AI[AIRecord]
 AI --> Review[Human review]
-Review --> Records : approved additions</script><div class="ai-flow-note"><span data-icon="info"></span><p>Raw data, processed data, human notes and AI outputs remain explicitly distinguishable. Stable identifiers, units and provenance make later mapping possible without redesigning the user model.</p></div></div></section>
+Review --> Human</script></div></article>
+    </section>
+
+    <section class="panel"><div class="panel-header"><div class="panel-title"><strong>Pipeline extension contract</strong><small>A new laboratory adds a workflow without changing the LabFlow shell.</small></div></div><div class="panel-body"><div class="graph-stage graph-feature" data-graph-ref="extensionGraph"></div><script id="extensionGraph" type="text/graph">direction LR
+YAML[pipeline.yaml] --> StepA[step/index.html]
+YAML --> StepB[optional step.js]
+StepA --> Shell[Shared LabFlow UI]
+StepB --> Shell</script><div class="ai-flow-note"><span data-icon="info"></span><p>The YAML defines order and metadata. HTML defines the step surface. Optional step JavaScript may add domain behaviour; all visual styling comes from the shared UI Kit design system behind <code>assets/app.css</code>.</p></div></div></section>
   </main></div>
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 </body>

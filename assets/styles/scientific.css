@@ -1,0 +1,288 @@
+/**
+ * LABFLOW SHARED SCIENTIFIC VISUALS
+ * =================================
+ * Domain-specific visualisations used by Pipeline steps and scientific object
+ * views. They are global assets, not step/page stylesheets.
+ */
+.solution-diagram { margin: 0; }
+.stack-specimen { max-width: 680px; margin-inline: auto; }
+.trace-chain { min-width: 0; }
+.step-feature .metric-value { font-size: 20px; }
+.step-feature .package-tree { margin: 0; }
+
+/* Scientific builders keep their own visual semantics while reusing UI Kit
+   controls for every interactive element. */
+.pipeline-fragment :where(button, input, select, textarea) { font-family: var(--font-body); }
+.pipeline-fragment .tool-step-head { border-radius: var(--radius-3); }
+.pipeline-fragment .record-card { border-radius: var(--radius-3); }
+
+/* 2D scientific builders ---------------------------------------------------
+ * LabFlow uses flat diagrams for scientific structure. Thickness, order and
+ * composition are encoded with size, position and labels — never perspective,
+ * skew or faux 3D shadows.
+ */
+.solution-workbench {
+  grid-template-columns: minmax(360px, .9fr) minmax(0, 1.1fr);
+}
+.solution-live-stage {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.solution-live-stage::before { display: none; }
+.solution-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line);
+}
+.solution-map-head > div:first-child { min-width: 0; display: grid; gap: 3px; }
+.solution-map-head strong { font-size: 17px; }
+.solution-map-head small { color: var(--muted); }
+.solution-map-total { min-width: 112px; display: grid; gap: 2px; text-align: right; }
+.solution-map-total span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.solution-map-total b { font-size: 13px; }
+.solution-map-section { display: grid; gap: 7px; }
+.solution-map-label { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.solution-map-label strong { font-size: 11.5px; }
+.solution-map-label small { color: var(--muted); font-size: 10px; }
+.solution-composition-bar {
+  min-height: 54px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+}
+.solution-composition-bar > span {
+  flex: var(--share) 1 0;
+  min-width: 58px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 8px;
+  border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  background: color-mix(in srgb, var(--liquid) 22%, var(--surface));
+  box-shadow: inset 0 4px 0 var(--liquid);
+}
+.solution-composition-bar > span:last-child { border-right: 0; }
+.solution-composition-bar b { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.solution-composition-bar small { color: var(--muted); font-size: 10px; }
+.solution-empty-segment { width: 100%; flex: 1 1 100% !important; box-shadow: none !important; color: var(--muted); }
+.solution-solute-list { display: flex; flex-wrap: wrap; gap: 6px; min-height: 34px; }
+.solution-solute-list > span {
+  min-width: 92px;
+  display: grid;
+  gap: 1px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  border-radius: var(--radius-2);
+  background: var(--surface);
+}
+.solution-solute-list > span b { font-size: 11px; }
+.solution-solute-list > span small, .solution-solute-list > em { color: var(--muted); font-size: 10px; font-style: normal; }
+.solution-map-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+.solution-map-summary > span { display: grid; gap: 1px; padding: 8px; background: var(--surface); }
+.solution-map-summary b { font-size: 12px; }
+.solution-map-summary small { color: var(--muted); font-size: 10px; }
+
+.stack-stage { background: var(--surface-2); }
+.stack-live {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0;
+  padding: 14px;
+  perspective: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.stack-live > .stack-band,
+.stack-band {
+  width: 100%;
+  min-height: var(--layer-size, 38px);
+  margin: -1px 0 0;
+  display: grid !important;
+  grid-template-columns: 7px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+}
+.stack-live > .stack-band:hover { transform: none !important; filter: none !important; }
+.stack-band-edge { width: 4px; height: 72%; }
+.stack-band > div { min-width: 0; }
+.stack-band > div strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stack-axis { margin-top: 8px; }
+.mini-stack-vertical { gap: 0; padding: 7px; background: var(--surface-2); }
+.mini-stack-vertical span { margin: -1px 0 0 !important; border-radius: 0 !important; box-shadow: none !important; background: var(--surface) !important; }
+.project-chart rect { filter: none !important; }
+
+@media (max-width: 1050px) {
+  .solution-workbench { grid-template-columns: 1fr; }
+  .solution-live-stage { border-right: 0; border-bottom: 1px solid var(--line); }
+}
+@media (max-width: 620px) {
+  .solution-map-head { flex-direction: column; }
+  .solution-map-total { text-align: left; }
+  .solution-map-summary { grid-template-columns: 1fr; }
+  .solution-composition-bar { overflow-x: auto; }
+}
+
+/* Project Pipeline step rail ---------------------------------------------
+ * One horizontal progress rail: number/check, concise title and state. Long
+ * descriptions belong to the active Step header below, not inside every tab.
+ */
+.pipeline-rail { --pipeline-accent: var(--accent); }
+.pipeline-identity { border-left: 4px solid var(--pipeline-accent); }
+.pipeline-stepper {
+  --pipeline-accent: var(--accent);
+  --pipeline-step-count: 5;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--pipeline-step-count),minmax(0,1fr));
+  gap: 0;
+  padding: 12px 18px 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.pipeline-step {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 82px;
+  padding: 0 7px 8px;
+  border: 0;
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+}
+/* Each Step owns the connector arriving from the previous Step. This makes
+ * the rail work for any Pipeline length without hard-coded geometry. */
+.pipeline-step:not(:first-child)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 16px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--line-strong);
+}
+.pipeline-step.complete:not(:first-child)::before,
+.pipeline-step.current:not(:first-child)::before { background: var(--pipeline-accent); }
+.pipeline-step:hover { background: color-mix(in srgb,var(--pipeline-accent) 6%,var(--surface)); }
+.pipeline-step-index {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--muted);
+  font: 800 10px/1 var(--mono);
+  box-shadow: 0 0 0 5px var(--surface);
+}
+.pipeline-step-copy { display: grid; gap: 2px; min-width: 0; width: 100%; }
+.pipeline-step-copy i { color: var(--muted); font: 800 10px/1 var(--mono); font-style: normal; letter-spacing: .08em; }
+.pipeline-step-copy strong { overflow: hidden; color: var(--ink); font-size: 11px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.pipeline-step-state { color: var(--muted); font: 750 10px/1 var(--font-utility); letter-spacing: .05em; text-transform: uppercase; }
+.pipeline-step.active { background: color-mix(in srgb,var(--pipeline-accent) 7%,var(--surface)); box-shadow: inset 0 -3px var(--pipeline-accent); transform: none; }
+.pipeline-step.active .pipeline-step-index,
+.pipeline-step.current .pipeline-step-index { border-color: var(--pipeline-accent); color: var(--pipeline-accent); }
+.pipeline-step.active .pipeline-step-index { background: var(--pipeline-accent); color: #fff; box-shadow: 0 0 0 5px color-mix(in srgb,var(--pipeline-accent) 12%,var(--surface)); }
+.pipeline-step.active .pipeline-step-state,
+.pipeline-step.current .pipeline-step-state { color: var(--pipeline-accent); }
+.pipeline-step.complete .pipeline-step-index { border-color: var(--pipeline-accent); background: var(--pipeline-accent); color: #fff; font-size: 0; }
+.pipeline-step.complete .pipeline-step-index::before { content: "✓"; font-size: 12px; }
+.pipeline-stage-header .eyebrow { color: var(--pipeline-accent); }
+.pipeline-fragment[data-pipeline-step] .tool-step-head { border-left-color: var(--pipeline-accent); }
+@media (max-width: 900px) {
+  .pipeline-stepper { display: flex; gap: 4px; overflow-x: auto; padding-inline: 10px; }
+  .pipeline-step::before { display:none; }
+  .pipeline-step { min-width: 132px; min-height: 72px; }
+}
+
+/* Materials & Solutions overview ----------------------------------------- */
+.materials-overview,
+.stack-overview-strip {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.materials-overview > span,
+.stack-overview-strip > span {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-top: 2px solid var(--pipeline-accent,var(--accent));
+  background: var(--surface);
+}
+.materials-overview b,.stack-overview-strip b { font-size: 17px; line-height: 1; }
+.materials-overview small,.stack-overview-strip small { color: var(--muted); font-size: 10px; }
+.solution-record { min-height: 0; display:grid; gap:10px; }
+.solution-record-head { display:flex; align-items:start; justify-content:space-between; gap:8px; }
+.solution-record-head h4 { margin:2px 0 0; font-size:14px; }
+.solution-record-meta { display:flex; flex-wrap:wrap; gap:6px; }
+.solution-record-meta span { padding:4px 6px; border:1px solid var(--line); background:var(--surface-2); font-size:10px; }
+.solution-record-composition { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center; }
+.solution-record-bar { display:flex; min-height:32px; overflow:hidden; border:1px solid var(--line); background:var(--surface-2); }
+.solution-record-bar span { min-width:22px; flex-basis:0; flex-grow:var(--share,1); display:grid; place-items:center; padding:3px 5px; border-right:1px solid color-mix(in srgb,var(--ink) 10%,transparent); background:color-mix(in srgb,var(--pipeline-accent,var(--accent)) var(--tone,8%),var(--surface)); font-size:10px; font-weight:750; }
+.solution-record-bar span:last-child { border-right:0; }
+.solution-record-solutes { display:flex; flex-wrap:wrap; gap:4px; }
+.solution-record-solutes span { padding:3px 6px; border-left:3px solid var(--pipeline-accent,var(--accent)); background:var(--surface-2); font-size:10px; }
+.project-material-shelf > div { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:6px; }
+.project-material-shelf > div > span { display:grid; grid-template-columns:26px minmax(0,1fr); gap:1px 7px; align-items:center; padding:7px 8px; border:1px solid var(--line); background:var(--surface); }
+.project-material-shelf > div > span i { grid-row:1/3; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:color-mix(in srgb,var(--pipeline-accent,var(--accent)) 12%,var(--surface)); color:var(--pipeline-accent,var(--accent)); font-style:normal; }
+.project-material-shelf > div > span small { color:var(--muted); font-size:10px; }
+
+/* Stack records ----------------------------------------------------------- */
+.stack-record { min-height:0; display:grid; gap:9px; }
+.stack-record-head { display:flex; justify-content:space-between; align-items:start; gap:8px; }
+.stack-record-head h4 { margin:2px 0 0; font-size:14px; }
+.stack-record-cross-section { display:flex; flex-direction:column-reverse; gap:0; padding:7px; border:1px solid var(--line); background:var(--surface-2); }
+.stack-record-cross-section span { display:flex; justify-content:space-between; gap:8px; min-height:26px; padding:5px 7px; margin-top:-1px; border:1px solid var(--line); background:var(--surface); font-size:10px; }
+.stack-record-cross-section span.absorber { border-left:4px solid var(--pipeline-accent,var(--accent)); }
+.stack-record-cross-section span.transport { border-left:4px solid var(--teal); }
+.stack-record-cross-section span.contact { border-left:4px solid var(--amber); }
+.stack-record-cross-section span.substrate { border-left:4px solid var(--muted); }
+.stack-record-process { display:flex; flex-wrap:wrap; gap:4px; }
+.stack-record-process span { padding:3px 6px; border:1px solid var(--line); background:var(--surface-2); font-size:10px; }
+.layer-editor { align-items:end; }
+.layer-editor::before { content:attr(data-layer-number); align-self:center; display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:color-mix(in srgb,var(--pipeline-accent,var(--accent)) 12%,var(--surface)); color:var(--pipeline-accent,var(--accent)); font:800 10px var(--mono); }
+@media (max-width:760px){.materials-overview,.stack-overview-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.solution-record-composition{grid-template-columns:1fr}.solution-record-bar{overflow:auto}}
+
+/* UI Kit-only pipeline identity examples use the real shared custom properties. */
+.pipeline-demo-chose{--pipeline-accent:#2d7a70;--pipeline-accent-soft:rgba(45,122,112,.12)}
+.pipeline-demo-quick{--pipeline-accent:#a76128;--pipeline-accent-soft:rgba(167,97,40,.12)}
+.pipeline-demo-progress{--pipeline-step-count:5}

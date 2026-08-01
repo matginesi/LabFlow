@@ -1,0 +1,44 @@
+id: chose
+name: CHOSE Perovskite Workflow
+shortName: CHOSE
+accent: "#2d7a70"
+accentName: Laboratory teal
+version: 1
+description: Guided perovskite laboratory workflow from materials to a traceable report and NOMAD package
+
+steps:
+  - id: materials
+    title: Materials & Solutions
+    description: Prepare solvents, solutes and reusable solution recipes
+    inputs: Cabinet recipes · material identities
+    outputs: Project solution snapshots
+    html: steps/materials/index.html
+    js: steps/materials/step.js
+  - id: stack
+    title: Stack & Fabrication
+    description: Define device stacks, deposition and fabrication information
+    inputs: Saved solutions · stack templates
+    outputs: Stacks · samples · fabrication trace
+    html: steps/stack/index.html
+    js: steps/stack/step.js
+  - id: data
+    title: Data Ingest
+    description: Add measurements while preserving raw files and provenance
+    inputs: Files · samples · instruments
+    outputs: Typed Measurements · provenance
+    html: steps/data/index.html
+    js: steps/data/step.js
+  - id: analysis
+    title: Analysis
+    description: Explore, compare and interpret project results
+    inputs: Typed Measurements
+    outputs: Measurement comparison · researcher conclusion
+    html: steps/analysis/index.html
+    js: steps/analysis/step.js
+  - id: export
+    title: Report & Export
+    description: Generate reports, exports and NOMAD-ready data
+    inputs: Project evidence · Measurement provenance
+    outputs: Report · archive · NOMAD package
+    html: steps/export/index.html
+    js: steps/export/step.js

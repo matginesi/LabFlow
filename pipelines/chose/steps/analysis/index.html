@@ -1,0 +1,19 @@
+<section class="tool-step" id="analysisTool">
+  <header class="tool-step-head"><div><h3>Analyse scientific Measurements</h3><p>Work with JV, Dark JV, IPCE, UV/VIS and Stability semantics rather than generic filenames.</p></div><span class="badge">AI suggestions remain simulated</span></header>
+  <div class="analysis-measurement-path"><span class="done">Measurement</span><i>→</i><span class="active">Comparison</span><i>→</i><span>Finding</span><i>→</i><span>Researcher conclusion</span></div>
+  <section class="panel analysis-controls measurement-analysis-controls">
+    <div class="field"><label>Measurement type</label><select class="input" data-analysis-type></select></div>
+    <div class="field" data-analysis-metric-field hidden><label>Metric to compare</label><select class="input" data-analysis-metric></select></div>
+    <div class="analysis-selected-measurements"><strong>Select Measurements</strong><div class="measurement-analysis-list" data-analysis-measurements></div></div>
+  </section>
+  <aside class="contextual-request analysis-context-request" data-analysis-request hidden></aside>
+  <div class="analysis-layout measurement-analysis-layout"><section class="panel"><div class="panel-header"><div class="panel-title"><strong data-analysis-title>Scientific comparison</strong><small data-analysis-chart-note>Selected Project evidence</small></div></div><div class="panel-body"><svg class="project-chart measurement-comparison-chart" data-analysis-chart viewBox="0 0 760 330" role="img" aria-label="Measurement comparison"></svg><div class="measurement-chart-legend" data-analysis-legend></div></div></section><section class="panel"><div class="panel-header"><div class="panel-title"><strong>Measurement summary</strong><small data-analysis-count></small></div></div><div class="panel-body analysis-measurement-summary" data-analysis-summary></div></section></div>
+  <section class="panel"><div class="panel-header"><div class="panel-title"><strong>Evidence used</strong><small>Scientific meaning, target and provenance remain visible.</small></div></div><div class="table-wrap"><table class="data-table" data-analysis-table></table></div></section>
+  <form class="panel conclusion-editor" data-analysis-form><div class="field"><label>Researcher conclusion / annotation</label><textarea class="input" name="text" rows="3" placeholder="What do these Measurements support?"></textarea></div><div class="row wrap"><button class="button" type="button" data-analysis-ai>Simulate data-aware draft interpretation</button><button class="button primary" type="submit">Save human conclusion</button></div><small data-analysis-ai-note></small></form>
+  <section class="analysis-ai-roadmap" aria-label="Optional future AI extensions">
+    <div><span class="badge violet">LLM</span><strong>Explain this comparison</strong><small>Draft a cited interpretation from the selected measurements; researcher edits before saving.</small></div>
+    <div><span class="badge success">ML</span><strong>Predict / rank</strong><small>Enable regression or ranking when a Project has enough comparable structured runs.</small></div>
+    <div><span class="badge warning">DL</span><strong>Image morphology</strong><small>Optional extension for labelled microscopy or imaging datasets, not a default dependency.</small></div>
+    <div><span class="badge info">Agent</span><strong>Suggest next run</strong><small>Score only user-approved candidate conditions and return a reviewable proposal.</small></div>
+  </section>
+</section>

@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Graphical material stack builder"><title>Stack builder · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet"><link href="assets/workflow.css" rel="stylesheet">
-<script defer src="assets/exporters.js"></script><script defer src="assets/workflow-domain.js"></script><script defer src="assets/app.js"></script>
+
+<link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
+  <script defer src="assets/app.js"></script>
 </head>
 <body data-page="stack-detail">
 <header id="topbar" class="topbar"></header><aside id="sidebar" class="sidebar"></aside><button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
 <div class="app-main"><main class="page stack-page">
+<nav class="project-breadcrumb" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>/</span><a href="catalogs.html">Lab Cabinet</a><span>/</span><strong>Stack template</strong></nav>
 <header class="page-header"><div><span class="eyebrow">Stack template <span class="mono" id="stackId">STK-001</span></span><h1 id="stackName">FA0.85Cs0.15PbI3</h1><p id="stackDescription">FA/Cs based perovskite stack for n-i-p cell</p></div><div class="page-actions"><a class="button" href="catalogs.html">Lab Cabinet</a><button class="button" type="button" data-action="edit-stack"><span data-icon="code"></span>Edit definition</button><button class="button primary" type="button" data-action="use-stack"><span data-icon="flask"></span>Use in experiment</button></div></header>
 <section class="standard-workflow-note"><span data-icon="grid"></span><div><strong>Template and experiment stack are separate</strong><small>This reusable ordered-layer definition can be selected by a Process. An experiment creates S01/S02 snapshots with concrete samples, batches, dimensions, methods and deviations.</small></div><span class="badge success">Template v2</span></section>
 

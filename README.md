@@ -1,207 +1,295 @@
 # LabFlow
 
-> A workflow-first laboratory platform concept for turning experimental work into structured, reusable, AI-ready and NOMAD-ready evidence.
+## Static deployment
 
-**Static proof of concept · Perovskite research · No backend · No external services**
+LabFlow is a zero-backend static POC designed to be published directly on **GitHub Pages**. There is no local server script, build system, package manager or runtime dependency.
 
-[Open the workspace](index.html) · [Browse processes](processes.html) · [Open the demo experiment](experiment.html) · [Read the manual](documentation.html)
+Pipeline YAML files and step HTML remain the canonical authoring sources. For browser use they are mirrored into the generated `assets/pipeline-bundle.js`, so the runtime performs no `fetch()` calls and does not depend on CORS. After changing a Pipeline source, refresh the generated bundle with:
 
-## Core model
+```bash
+python3 tools/sync_pipeline_bundle.py
+python3 tools/validate_poc.py
+```
 
-LabFlow is organised around one simple operational hierarchy:
+The generated bundle must be committed together with the source changes. It is checked automatically by the validator and must never be edited by hand.
+
+> A static project-centred laboratory workspace POC for turning experimental work into structured, reusable, AI-ready and NOMAD-ready evidence.
+
+**Vanilla HTML + CSS + JavaScript · No backend · No cookies · No trackers · No CDN dependency**
+
+## Product model
+
+LabFlow has one primary mental model:
 
 ```text
 User
 └── Workspace
+    ├── Projects
+    │   └── Project
+    │       ├── Pipeline
+    │       │   └── Steps
+    │       └── Project Data
     ├── Lab Cabinet
-    ├── Processes
-    │   └── Experiments
-    └── Projects (optional)
-        └── references experiments
+    ├── Knowledge & RAG
+    ├── AI Assistant
+    └── Common Tools
 ```
 
-- A **Workspace** owns the researcher's reusable definitions and records.
-- A **Process** defines a versioned laboratory workflow: phases, default resources, expected evidence, expected measurements and interoperability mapping.
-- An **Experiment** is one concrete execution of exactly one Process.
-- A **Project** is an optional cross-process grouping around a research question. It is never required to start work.
-- The **Lab Cabinet** stores reusable definitions and physical inventory references used by Processes and Experiments.
+A researcher opens the Workspace, creates or continues a Project and follows that Project's Pipeline. Samples, files, measurements, results and future deeper Experiment/run records belong to Project data; they are not a second navigation hierarchy.
 
-This distinction removes a previous ambiguity: a Process is not a protocol. A protocol is one reusable Lab Cabinet resource that can be used by one or more Process phases.
+Older Process/Experiment pages remain only as compatibility/detail views and are intentionally absent from the primary sidebar and global search.
 
-## The researcher workflow
+## CHOSE showcase Pipeline
 
-The current perovskite Process uses eight recommended, non-blocking phases:
+CHOSE is the default Pipeline and the main demonstration of the product:
 
 ```text
-Solutions
-→ Stacks & samples
-→ Processing
-→ Data
-→ Analysis
-→ Charts & report
-→ Export
-→ NOMAD
+1. Materials & Solutions
+2. Stack & Fabrication
+3. Data Ingest
+4. Analysis
+5. Report & Export
 ```
 
-The Process defines those phases. The Experiment records their concrete execution through batches, stack instances, samples, process runs, measurements, files, results, deviations and approvals.
+The five steps are revisitable. Earlier work becomes structured input for later work rather than being entered again.
 
-## Definition versus evidence
+### Step 1 — Materials & Solutions
 
-The central data-model rule is that reusable definitions are never confused with physical or executed records.
+Create or reuse materials, solvents, solutes and solutions. A Project can use Lab Cabinet resources as snapshots and continue editing its own structured working data.
 
-| Reusable definition | Concrete evidence |
-| --- | --- |
-| Solution recipe | Prepared solution batch |
-| Solvent/substance definition | Physical lot and actual quantity |
-| Stack template | Experiment stack and samples |
-| Protocol | Processing run and executed actions |
-| Instrument definition | Instrument instance/use and actual settings |
-| Workflow step definition | Experiment step with status and evidence |
+### Step 2 — Stack & Fabrication
 
-Editing a shared definition later must never silently rewrite historical experiments. Every concrete use retains a versioned usage snapshot.
+Build ordered perovskite/device stacks, sample identifiers and fabrication context with graphical tools and normal text/number inputs.
 
-## Processes
+### Step 3 — Data Ingest
 
-A Process contains:
+Import or manually enter scientific evidence. Measurement meaning is separated from source file format; provenance, mapping and validation remain visible.
 
-- stable ID and published version;
-- ordered workflow-step definitions;
-- default recipes, stack templates, protocols, instruments and conditions;
-- expected inputs, outputs and evidence;
-- expected measurements;
-- NOMAD mapping profile;
-- experiments that execute the Process.
+### Step 4 — Analysis
 
-The Process page is [`pipeline.html`](pipeline.html) for backward URL compatibility, but it now represents a complete Process definition rather than a protocol editor.
+Compare compatible Measurements, visualise results and record explicit researcher conclusions. Future ML/DL/LLM tools can consume the same Project data without changing the product model.
 
-## Solutions and solvents
+### Step 5 — Report & Export
 
-The solution workflow is explicitly divided into:
+Assemble a traceable Project report, local exports and a NOMAD-ready package. The POC may simulate external submission; it never implies a real backend connection.
 
-1. **Solvent mixture** — identities, mixture basis, ratios and calculated component volumes.
-2. **Solutes and additives** — target quantities, concentration and concentration basis.
-3. **Preparation definition** — reusable order, temperature, time, filter and storage instructions.
-4. **Concrete batch** — actual lots, weighed quantities, volumes, operator, timestamps, environment, deviations and remaining amount.
+## Quick Workflow
 
-The graphical solvent editor validates the mixture ratio and recalculates component volumes from the selected reference volume. A recipe stores target composition; a batch stores what was physically prepared.
+`Plan → Record → Share`
 
-## Stacks and samples
+This smaller Pipeline exists to prove that LabFlow is not hardcoded to CHOSE. It has its own YAML definition, step HTML and behaviour.
 
-The graphical stack builder represents an ordered cross-section from substrate to top contact. Every layer records:
+## Pipeline contract
 
-- role;
-- material;
-- thickness;
-- definition, lot or solution-batch source;
-- deposition or creation method;
-- order within the structure.
+Pipeline metadata has one source of truth:
 
-A reusable Stack Template becomes an Experiment Stack when selected. The experiment instance then adds concrete substrate identity, samples, solution usage, dimensions, variant parameters, deviations and execution evidence.
+```text
+pipelines/<pipeline-id>/pipeline.yaml
+```
 
-Simple variants are supported without introducing a full design-of-experiments system.
+A Pipeline folder may contain:
+
+```text
+pipeline.yaml
+optional pipeline.js
+steps/
+└── <step-id>/
+    ├── index.html
+    └── optional step.js
+```
+
+The YAML declares the ordered steps, titles, descriptions, inputs, outputs and asset paths. `assets/app.js` does **not** contain a second copy of CHOSE/Quick metadata.
+
+For GitHub Pages, `tools/sync_pipeline_bundle.py` generates `assets/pipeline-bundle.js` from the canonical YAML + step HTML. The browser reads that generated static bundle, so no runtime `fetch()` is required. Optional step JavaScript is loaded on demand. A pipeline-wide JavaScript file may provide shared behaviour, but it must not embed copies of step HTML.
+
+## CSS contract
+
+Every root page loads exactly one global stylesheet:
+
+```html
+<link href="assets/app.css" rel="stylesheet">
+```
+
+`assets/app.css` is the manifest. The modules it imports collectively own:
+
+- themes and palettes;
+- typography and spacing tokens;
+- topbar/sidebar/application shell;
+- page headers and breadcrumbs;
+- buttons, inputs, forms and tables;
+- panels, cards, states, drawers and modals;
+- Common Tools and Project/Pipeline chrome;
+- responsive behaviour;
+- compatibility-view styling.
+
+`assets/app.css` is the only stylesheet linked by HTML. It is a manifest for shared modules under `assets/styles/`: tokens, base, layout, shell, components, shared feature patterns, scientific visuals, utilities and responsive rules. There are no page-specific or Pipeline-step stylesheets.
+
+`ui-kit.html` is the live component reference, `docs/DESIGN_SYSTEM.md` is the design-system contract and `docs/UI_STANDARDS.md` is the page-layout checklist.
+
+## Minimal data model
+
+### Core
+
+- User
+- Workspace
+- Project
+- Pipeline
+- PipelineStep
+- ProjectData
+
+### CHOSE
+
+- Material
+- Solvent
+- Solute
+- Solution
+- Stack
+
+### Evidence and outputs
+
+- Measurement
+- Result
+- Report
+- AIRecord
+
+AIRecord is intentionally separate from human results and notes. Raw data, processed data, human interpretation and machine-generated output must remain distinguishable.
+
+See [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
+
+## Workspace-wide tools
+
+These do not create a second workflow:
+
+- Lab Cabinet
+- Knowledge & RAG
+- AI Assistant
+- Common Tools for text, data/spreadsheets, images, charts and graphs
+
+A Common Tool may receive a Project identifier explicitly when Project context is useful.
 
 ## Lab Cabinet
 
-The Lab Cabinet is divided conceptually into two families.
+The Lab Cabinet contains reusable materials, solutions, substrates, stacks, protocols and instruments. The POC ships with useful demo resources such as DMF, DMSO, PbI₂, FAI, SnO₂, a FA–Cs solution, a reference n-i-p stack and laboratory instruments.
 
-### Reusable definitions
+Selecting a reusable resource copies a snapshot into Project data so later Cabinet changes do not silently alter Project history.
 
-- materials and substances;
-- solution recipes;
-- substrate definitions;
-- stack templates;
-- protocols and reusable actions;
-- instrument definitions;
-- condition definitions.
+## POC state and privacy
 
-### Physical inventory and evidence references
+Scientific edits and Project progress use browser `sessionStorage`. The POC is deliberately non-durable. Theme/palette preferences may use `localStorage`.
 
-- material lots;
-- prepared solution batches;
-- substrate pieces;
-- instrument instances;
-- lightweight availability information.
+The repository does not implement:
 
-Processes select defaults from the Lab Cabinet. Experiments create immutable usage snapshots and actual evidence.
+- a backend/database;
+- authentication or authorization;
+- cookie infrastructure;
+- real persistent file storage;
+- a real LLM/RAG runtime;
+- a real NOMAD network integration;
+- a production parser for every recognised laboratory format.
 
-## AI readiness
-
-AI is not required for the POC to work. The data model is prepared for future AI by using:
-
-- stable identifiers;
-- explicit units;
-- structured provenance;
-- human/AI origin;
-- source references;
-- validation and review states;
-- separation between raw data, processed data, human notes and AI outputs.
-
-LabFlow keeps three AI purposes separate:
-
-| Surface | Purpose | Boundary |
-| --- | --- | --- |
-| Knowledge Assistant | Retrieve and cite shared knowledge | Must show evidence and insufficiency |
-| AI Analysis | Interpret selected experimental data | Never overwrites measurements |
-| Controlled Agents | Propose bounded multi-step actions | Explicit approval before application |
-
-The repository contains only interface simulations—no LLM, embeddings, vector database or autonomous runtime.
-
-## NOMAD readiness
-
-NOMAD remains the final explicit phase:
-
-```text
-Experiment evidence → Report → Export review → NOMAD package or explicit API action
-```
-
-The Process defines expected mapping and evidence. The Experiment supplies concrete records. The POC validates completeness, units, resources, stacks, processing, instruments, files, identifiers and provenance before package generation.
+Do not enter real credentials or confidential laboratory data.
 
 ## Main pages
 
-| Page | Responsibility |
+| Page | Role |
 | --- | --- |
-| `index.html` | Workspace, current Process and recommended actions |
-| `processes.html` | Process directory |
-| `pipeline.html` | Process definition detail |
-| `experiments.html` | Experiment directory grouped by Process |
-| `experiment.html` | Eight-phase concrete experiment workflow |
-| `solution.html` | Graphical recipe, solvent and batch detail |
-| `stack.html` | Graphical ordered-layer builder |
-| `catalogs.html` | Lab Cabinet definitions and physical resources |
-| `workspace.html` | Samples, measurements and comparisons |
-| `report.html` | Report, export and NOMAD preparation |
-| `projects.html` / `project.html` | Optional research grouping |
-| `imports.html` | Local import and mapping |
-| `editors.html` | Deterministic scientific tools |
-| `knowledge.html` | Evidence-linked knowledge simulation |
-| `ai-assistant.html` | AI Analysis and controlled-agent simulations |
-| `documentation.html` | In-app manual |
-| `ui-kit.html` | Interface components |
+| `index.html` | My Workspace: create/continue Projects |
+| `projects.html` | Project directory |
+| `project.html` | Primary Project Pipeline workspace |
+| `workspace.html` | Project Data overview |
+| `catalogs.html` | Lab Cabinet |
+| `knowledge.html` | Knowledge & RAG surface |
+| `ai-assistant.html` | AI helper/analysis demonstrations |
+| `editors.html` | Common Tools |
+| `documentation.html` | In-app documentation |
+| `ui-kit.html` | Shared UI component reference |
+| `users.html` | Personal settings |
+| `admin-settings.html` | Future workspace-policy concepts |
 
-## Frontend architecture
+Advanced ingest/report pages remain available from the relevant Project workflow but do not appear as parallel primary workflow stages in the sidebar.
+
+## Compatibility pages
+
+These are retained temporarily to preserve useful scientific UI/concepts:
+
+- `processes.html`
+- `pipeline.html`
+- `experiments.html`
+- `experiment.html`
+
+They show a compatibility notice and must not become the primary product hierarchy again.
+
+## Repository structure
 
 ```text
-Static HTML pages
-├── assets/theme.css            tokens and themes
-├── assets/app.css              shared shell and legacy components
-├── assets/workflow.css         Process, solution and stack module styles
-├── assets/exporters.js         browser-generated files
-├── assets/workflow-domain.js   Process/experiment data and graphical builders
-└── assets/app.js               shell and remaining POC interactions
+LabFlow/
+├── index.html
+├── projects.html
+├── project.html
+├── workspace.html
+├── catalogs.html
+├── knowledge.html
+├── ai-assistant.html
+├── editors.html
+├── documentation.html
+├── ui-kit.html
+├── assets/
+│   ├── app.css                 single stylesheet entry point / manifest
+│   ├── styles/                 shared design system modules
+│   │   ├── tokens.css
+│   │   ├── base.css
+│   │   ├── layout.css
+│   │   ├── components.css
+│   │   ├── shell.css
+│   │   ├── feature-foundations.css
+│   │   ├── feature-workflows.css
+│   │   ├── feature-workspace.css
+│   │   ├── feature-reports-ai.css
+│   │   ├── feature-scientific-workbench.css
+│   │   ├── scientific.css
+│   │   ├── utilities.css
+│   │   └── responsive.css
+│   ├── app.js                  shared shell and POC behaviour
+│   ├── pipeline-bundle.js      generated static Pipeline metadata + step fragments
+│   ├── pipeline-loader.js      tiny runtime adapter; no network/file fetch
+│   ├── project-store.js        Project-scoped session data helpers
+│   ├── cabinet-store.js        reusable resources + Project snapshots
+│   ├── compatibility-domain.js quarantined Process/Experiment demo model
+│   ├── measurement-types.js    measurement semantics
+│   └── exporters.js            local export helpers
+├── pipelines/
+│   ├── chose/
+│   │   ├── pipeline.yaml
+│   │   └── steps/
+│   │       ├── materials/
+│   │       ├── stack/
+│   │       ├── data/
+│   │       ├── analysis/
+│   │       └── export/
+│   └── quick/
+│       ├── pipeline.yaml
+│       ├── pipeline.js
+│       └── steps/
+├── docs/
+├── AGENTS.md
+└── tools/validate_poc.py
 ```
 
-The new workflow module prevents further growth of the original monolithic files while retaining a framework-free, no-build static prototype.
+## Preview and publish
 
-## Run locally
+No Bash launcher or application server is part of LabFlow. The repository is intended to be served as ordinary static files by GitHub Pages. Because Pipeline metadata and step fragments are bundled at authoring time, the browser runtime makes no request to load YAML or HTML fragments.
 
-```sh
-python3 -m http.server 8765
-```
+For Pipeline edits, run only the maintenance checks shown above before committing.
 
-Open `http://127.0.0.1:8765/`.
+## Documentation
 
-## Static POC boundaries
-
-The repository has no production authentication, authorization, database, shared persistence, secure file storage, background jobs, real AI, or real NOMAD connection. `localStorage` is used only to simulate user, Process and optional Project context.
-
-A production backend must enforce ownership, versioning, immutable provenance, file integrity, permissions, secret management and all external network actions.
+- [`CONSOLIDATION_NOTES.md`](CONSOLIDATION_NOTES.md) — what was consolidated and why
+- [`docs/PROJECT_DEFINITION.md`](docs/PROJECT_DEFINITION.md)
+- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
+- [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
+- [`docs/UI_STANDARDS.md`](docs/UI_STANDARDS.md)
+- [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md)
+- [`docs/TOOLS_EXPORTS_NOMAD.md`](docs/TOOLS_EXPORTS_NOMAD.md)
+- [`docs/RESPONSIVE_AND_LIMITS.md`](docs/RESPONSIVE_AND_LIMITS.md)

@@ -1,15 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Reusable solution recipe and concrete batch"><title>Solution recipe · LabFlow</title>
-<link href="assets/theme.css" rel="stylesheet"><link href="assets/app.css" rel="stylesheet"><link href="assets/workflow.css" rel="stylesheet">
-<script defer src="assets/exporters.js"></script><script defer src="assets/workflow-domain.js"></script><script defer src="assets/app.js"></script>
+
+<link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
+  <script defer src="assets/app.js"></script>
 </head>
 <body data-page="solution-detail">
 <header id="topbar" class="topbar"></header><aside id="sidebar" class="sidebar"></aside><button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
 <div class="app-main"><main class="page solution-page">
+<nav class="project-breadcrumb" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>/</span><a href="catalogs.html">Lab Cabinet</a><span>/</span><strong>Solution recipe</strong></nav>
 <header class="page-header"><div><span class="eyebrow">Reusable solution recipe <span class="mono" id="solutionId">SOL-001</span></span><h1 id="solutionName">FA0.85Cs0.15PbI3 Precursor</h1><p id="solutionDescription">Perovskite absorber precursor solution</p></div><div class="page-actions"><a class="button" href="catalogs.html">Lab Cabinet</a><button class="button" type="button" data-action="edit-solution"><span data-icon="code"></span>Edit recipe</button><button class="button primary" type="button" data-action="toast" data-message="New concrete batch started from the locked recipe">Prepare new batch</button></div></header>
 <section class="standard-workflow-note"><span data-icon="flask"></span><div><strong>Recipe and batch are different records</strong><small>The recipe defines composition and preparation. A batch locks the recipe version and adds real lots, quantities, operator, timestamps, storage and deviations.</small></div><span class="badge success">Version 5 · approved</span></section>
 

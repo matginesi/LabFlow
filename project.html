@@ -1,47 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Simple active research project workspace">
-  <title>Current project · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/app.css">
-  <link rel="stylesheet" href="assets/workflow.css">
-  <script defer src="assets/exporters.js"></script>
-  <script defer src="assets/workflow-domain.js"></script>
-  <script defer src="assets/app.js"></script>
-</head>
-<body data-page="project">
-  <header id="topbar" class="topbar"></header>
-  <aside id="sidebar" class="sidebar"></aside>
-  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
-  <div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><span class="eyebrow mono" data-project-id>PRJ-MCP-01</span><h1 data-project-name>Mixed-cation perovskite optimisation</h1><p data-project-description>Project description</p></div><div class="page-actions"><a class="button" href="projects.html">All projects</a><a class="button primary" href="experiments.html#new"><span data-icon="plus"></span>New experiment</a></div></header>
-<div class="tabs" data-tabs="project">
-<button class="tab-button active" type="button" data-tab="overview">Overview</button>
-          <button class="tab-button" type="button" data-tab="experiments">Experiments <span class="badge" data-project-experiment-count>4</span></button>
-</div>
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><meta name="description" content="Project pipeline workspace"><title>LabFlow — Project</title>
 
-<div class="tab-panel active" data-tab-panel="overview">
-  <section class="project-focus-card panel accent"><div class="project-focus-main"><div><span class="badge success" data-project-status>Active</span><span class="badge">Optional project container</span></div><h2>Continue the current experiment</h2><p>Projects only group related work. Each experiment still belongs to a versioned Process, which defines its workflow, expected evidence and default resources.</p><div class="project-actions"><a class="button primary" href="experiment.html#processing">Continue PSC-2026-041</a><a class="button" href="workspace.html#comparisons">View results</a><a class="button" href="report.html">Open report</a></div></div><div class="project-progress-simple"><div><span style="width:72%"></span></div><strong data-project-progress>72%</strong><small>Project progress</small><div class="project-progress-meta"><span><b data-project-experiments>5</b> experiments</span><span><b data-project-samples>24</b> samples</span></div></div></section>
-  <div class="project-clean-grid">
-    <section><div class="section-title compact"><div><h2>Research path</h2><p>A visual plan, not another database view.</p></div></div><article class="panel"><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="projectPathGraph"></div><script id="projectPathGraph" type="text/graph">direction LR
-  Baseline[Baseline devices] --> Window[Spin-speed window] : current
-  Window --> Refine[Refine chemistry] : next
-  Refine --> Compare[Comparative analysis]
-  Compare --> NOMAD[Report and NOMAD]</script></div></article></section>
-    <section><div class="section-title compact"><div><h2>Current experiment preparation</h2><p>The shared resources selected for the latest run.</p></div></div><article class="panel setup-summary-compact"><div class="panel-body"><div class="mini-stack"><span class="contact">Au</span><span class="transport">HTL</span><span class="absorber">FA–Cs</span><span class="transport">SnO₂</span><span class="substrate">ITO</span></div><dl class="key-values"><div><dt>Process</dt><dd>PSC fabrication · n-i-p v2.0</dd></div><div><dt>Protocol</dt><dd>PSC n-i-p standard v4.1</dd></div><div><dt>Solution</dt><dd>FA–Cs 1.2 M · SOL-081</dd></div><div><dt>Equipment</dt><dd>Spin Coater 01</dd></div><div><dt>Measurements</dt><dd>J–V, EQE, XRD</dd></div></dl><a class="button small" href="experiment.html#solutions">Open experiment</a></div></article></section>
-  </div>
-  <section class="project-attention-strip"><div><span data-icon="warning"></span><span><strong>Next useful action</strong><small>Complete 15 planned datasets in PSC-2026-041.</small></span></div><a class="button small primary" href="workspace.html#measurements">Complete measurements</a></section>
-</div>
-
-<div class="tab-panel" data-tab-panel="experiments" hidden>
-  <div class="section-title"><div><h2>Experiments</h2><p>The project is a short history of questions, runs and decisions.</p></div><a href="experiments.html#new">Start next experiment</a></div>
-  <section class="panel"><div class="panel-body experiment-project-list" id="projectExperiments"></div></section>
-</div>
-  </main></div>
-  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
-</body>
-</html>
+<link href="assets/app.css" rel="stylesheet"><script defer src="assets/demo-projects.js"></script>
+<script defer src="assets/cabinet-store.js"></script>
+<script defer src="assets/measurement-types.js"></script>
+<script defer src="assets/project-insights.js"></script>
+<script defer src="assets/exporters.js"></script><script defer src="assets/project-store.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
+  <script defer src="assets/app.js"></script></head>
+<body data-page="project"><header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside><button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
+<div class="app-main"><main class="page"><nav class="project-breadcrumb" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>/</span><strong data-project-name>Project</strong><span>/</span><span data-step-context>Pipeline</span></nav><header class="page-header compact-header project-header"><div><span class="eyebrow mono" data-project-id>PRJ-MCP-01</span><h1 data-project-name>Mixed-cation perovskite optimisation</h1><p><span class="badge success">CHOSE</span> · <strong data-project-status>Active</strong> · <span data-project-updated>Updated today</span></p></div><div class="page-actions"><a class="button" href="index.html">My Workspace</a><button class="icon-button" type="button" data-action="toast" data-message="Project actions: rename, duplicate or archive" aria-label="Project actions">•••</button></div></header>
+<div class="pipeline-workspace"><aside class="panel pipeline-rail"><div class="pipeline-identity"><span class="badge success">CHOSE</span><div><strong>Project pipeline</strong><small>The selected scientific method; every Step remains revisitable.</small></div><small>Session-only progress</small></div><nav class="pipeline-stepper" id="pipelineStepper" aria-label="CHOSE pipeline steps"></nav></aside><section class="pipeline-stage"><header class="pipeline-stage-header"><div class="pipeline-stage-copy"><span class="eyebrow" id="pipelineStepEyebrow">Step 1 of 5</span><h2 id="pipelineStepTitle">Materials &amp; Solutions</h2><p id="pipelineStepDescription">Prepare solvents, solutes and solutions.</p></div><dl class="pipeline-stage-facts"><div><dt>Inputs</dt><dd id="pipelineStepInputs">Project context</dd></div><div><dt>Outputs</dt><dd id="pipelineStepOutputs">Structured evidence</dd></div><div><dt>Status</dt><dd id="pipelineStepStatus">In progress</dd></div></dl><div class="pipeline-stage-actions"><button class="button small" type="button" data-action="pipeline-prev">Previous step</button><button class="button small primary" type="button" data-action="pipeline-next">Save &amp; continue</button></div></header><div class="pipeline-fragment" id="pipelineStepContent"><div class="pipeline-loading">Loading pipeline step…</div></div></section></div>
+<section class="project-insight-board" id="projectInsights" aria-label="Project data quality"></section><section class="project-data-chain" aria-label="Scientific data chain"><header><strong>How context becomes evidence</strong><small>Earlier work is inherited downstream; it is not entered again.</small></header><div id="projectDataChain"></div></section></main></div><div class="toast-region" id="toastRegion" aria-live="polite"></div></body></html>

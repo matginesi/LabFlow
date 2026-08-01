@@ -1,0 +1,33 @@
+<section class="tool-step" id="materialsTool">
+  <header class="tool-step-head"><div><span class="eyebrow">Compose · reuse · preserve</span><h3>Materials &amp; Solutions</h3><p>Choose known substances from the Lab Cabinet or compose a project recipe visually.</p></div><div class="row wrap"><button class="button" type="button" data-action="cabinet-selector" data-cabinet-category="materials">Choose material</button><button class="button" type="button" data-action="cabinet-selector" data-cabinet-category="solutions">Choose solution</button><button class="button primary" type="button" data-materials-new>+ Create solution</button></div></header>
+  <div class="materials-overview" data-materials-overview></div>
+  <section class="project-material-shelf" data-project-materials hidden><header><span class="eyebrow">Selected from Cabinet</span><strong>Project substances</strong></header><div data-project-material-list></div></section>
+  <div class="record-grid" data-materials-list></div>
+  <div class="useful-empty" data-materials-empty><strong>No Project solutions yet</strong><small>Create one here; it becomes structured input for Stack &amp; Fabrication.</small></div>
+  <form class="panel tool-editor progressive-editor" data-materials-editor hidden>
+    <div class="panel-header"><div class="panel-title"><strong data-solution-editor-title>Solution Builder</strong><small>Essential composition first · experimental detail when useful</small></div><button class="icon-button" type="button" data-materials-close aria-label="Close">×</button></div>
+    <div class="solution-workbench">
+      <section class="solution-live-stage" aria-label="Live solution composition" data-solution-visual></section>
+      <div class="panel-body form-grid">
+      <div class="field span-2 required-field"><label>Name <span class="field-level">Required</span></label><input class="input" name="name" required></div>
+      <div class="field recommended-field"><label>Concentration <span class="field-level">Recommended</span></label><input class="input" name="concentration" placeholder="1.2 M"><small>Useful for reproducibility and comparison.</small></div>
+      <div class="field recommended-field"><label>Total volume <span class="field-level">Recommended</span></label><div class="compound-input"><input class="input" type="number" min="0" step="0.1" name="totalVolume"><select class="input" name="volumeUnit"><option>mL</option><option>µL</option><option>L</option></select></div></div>
+      </div>
+    </div>
+    <div class="component-columns progressive-components">
+      <section class="component-well solvent-well"><header><div><span class="component-symbol">∿</span><strong>Solvent phase</strong><small>Liquid carrier · ratio by volume</small></div><button class="button small" type="button" data-add-solvent>Add solvent</button></header><div data-solvent-list></div></section>
+      <section class="component-well solute-well"><header><div><span class="component-symbol">◇</span><strong>Solutes &amp; additives</strong><small>Dissolved species · target amount</small></div><button class="button small" type="button" data-add-solute>Add solute</button></header><div data-solute-list></div></section>
+    </div>
+    <datalist id="cabinetSolvents"></datalist><datalist id="cabinetSolutes"></datalist>
+    <details class="progressive-details progressive-block">
+      <summary>Recommended preparation details <span>Optional · useful later</span></summary>
+      <div class="progressive-detail-body form-grid">
+        <div class="field recommended-field"><label>Preparation <span class="field-level">Recommended</span></label><textarea class="input" name="preparation" rows="3" placeholder="Mixing, stirring, heating, filtering…"></textarea><small>Helps reproduce the solution without blocking creation.</small></div>
+        <div class="field"><label>Handling / before use</label><textarea class="input" name="handling" rows="3" placeholder="Filter, warm, age, protect from light…"></textarea></div>
+        <div class="field span-2"><label>Storage</label><input class="input" name="storage" placeholder="e.g. N₂ glovebox · dark · room temperature"></div>
+      </div>
+    </details>
+    <details class="progressive-details progressive-block"><summary>Advanced metadata <span>Only when needed</span></summary><div class="progressive-detail-body form-grid"><div class="field span-2"><label>Notes</label><textarea class="input" name="notes" rows="2"></textarea></div><label class="check-row span-2"><input type="checkbox" name="saveCabinet"><span><strong>Save also to Lab Cabinet</strong><small>The Project keeps its own session snapshot.</small></span></label></div></details>
+    <div class="panel-footer"><span class="subtle">Required composition is enough to continue. Recommended details remain editable later.</span><button class="button primary" type="submit">Save solution</button></div>
+  </form>
+</section>

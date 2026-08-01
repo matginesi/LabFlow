@@ -1,11 +1,13 @@
 # Glossary
 
-- **Workspace**: user-owned root containing Processes, the Lab Cabinet, Experiments and optional Projects.
-- **Process**: versioned laboratory workflow defining phases, defaults, expected evidence, measurements and NOMAD mapping.
+- **Workspace**: the user's operating context containing Projects and generic shared capabilities.
+- **Process**: compatibility/domain term for a versioned workflow definition; a Pipeline is the primary POC navigation concept.
 - **Workflow Step Definition**: one reusable phase inside a Process.
-- **Experiment**: one concrete execution of exactly one Process version.
+- **Experiment**: detailed scientific execution record inside a Project; retained as a compatibility view in this POC.
 - **Experiment Step**: concrete state, inputs, outputs, deviations and evidence for one workflow phase.
-- **Project**: optional grouping of related Experiments, potentially across different Processes.
+- **Project**: primary research unit that selects a Pipeline, stores session progress and contains relevant scientific records.
+- **Pipeline**: selectable, readable filesystem definition of a Project workflow; CHOSE and Quick are implemented independently.
+- **Step**: revisitable stage of a Pipeline; guidance rather than a rigid lock.
 - **Lab Cabinet**: reusable scientific definitions plus lightweight physical-resource and availability records.
 - **Protocol**: reusable ordered processing procedure used by a Process phase; not a synonym for Process.
 - **Solution Recipe**: versioned target composition and preparation definition.
@@ -16,9 +18,12 @@
 - **Sample**: physical specimen produced inside an Experiment Stack and targeted by measurements.
 - **Processing Run**: concrete execution of a Protocol.
 - **Usage Snapshot**: immutable record preserving the selected definition version and actual use.
-- **FileRecord**: original or derived file linked to explicit experimental targets and provenance.
+- **FileRecord**: original or derived file identity linked to explicit targets and provenance; the POC does not durably retain file bytes.
 - **Measurement**: acquisition context linking target, method, instrument and files.
 - **Derived Result**: value, series or statistic with sources, method/version, unit and validation state.
 - **Report**: editable narrative assembled from selected evidence.
 - **Export**: explicit generation of a scoped local file or package.
 - **NOMAD Mapping Profile**: Process-level mapping expectations completed with Experiment evidence.
+- **Settings**: personal identity, appearance, research defaults, session connection and privacy preferences.
+- **Admin Settings**: future workspace-wide membership, convention, integration and governance policy controls; not enforced in the POC.
+- **Session-only state**: temporary browser-tab state held in `sessionStorage` and discarded when the tab session ends.

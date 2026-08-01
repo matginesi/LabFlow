@@ -1,0 +1,28 @@
+id: quick
+name: Quick Workflow
+shortName: Quick
+accent: "#a76128"
+accentName: Rapid amber
+version: 1
+description: A simple three-step workflow demonstrating that LabFlow pipelines are replaceable
+js: pipeline.js
+
+steps:
+  - id: plan
+    title: Plan
+    description: Define the question, sample and measurement
+    inputs: Research question
+    outputs: Conditions · measurement plan
+    html: steps/plan/index.html
+  - id: record
+    title: Record
+    description: Capture what happened and attach evidence
+    inputs: Plan · local evidence
+    outputs: Values · notes · evidence links
+    html: steps/record/index.html
+  - id: share
+    title: Share
+    description: Write the result and choose an export
+    inputs: Recorded values
+    outputs: Conclusion · compact export
+    html: steps/share/index.html

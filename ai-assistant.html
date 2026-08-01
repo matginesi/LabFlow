@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <meta name="description" content="Simulated AI data analysis and guided agent workflows for LabFlow">
   <title>AI Analysis &amp; Agents · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/app.css">
-  <link rel="stylesheet" href="assets/workflow.css">
-  <script defer src="assets/exporters.js"></script>
-  <script defer src="assets/workflow-domain.js"></script>
+  
+  
+  
+  <link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="ai">
@@ -22,8 +23,8 @@
     <header class="page-header compact-header">
       <div>
         <span class="eyebrow">Optional intelligence layer</span>
-        <h1>AI Analysis &amp; Agents</h1>
-        <p>Analyse selected data or run a guided multi-step workflow. Knowledge retrieval stays in the dedicated Knowledge Assistant.</p>
+        <h1>LabFlow AI Copilot</h1>
+        <p>Analyse explicitly selected records, retrieve cited knowledge and run bounded workflows from one transparent AI layer.</p>
       </div>
       <div class="page-actions">
         <span class="badge violet">Simulation</span>
@@ -31,10 +32,25 @@
       </div>
     </header>
 
+    <section class="ai-capability-grid" aria-label="AI capabilities">
+      <a href="#assistant"><span data-icon="spark"></span><strong>Scoped chat</strong><small>Ask across selected records and knowledge</small><b>Explicit context</b></a>
+      <a href="#analysis"><span data-icon="chart"></span><strong>Data copilot</strong><small>Compare, explain and flag anomalies</small><b>10 datasets</b></a>
+      <a href="knowledge.html"><span data-icon="model"></span><strong>Knowledge RAG</strong><small>Retrieve, rerank and cite evidence</small><b>10 sources</b></a>
+      <a href="#agents"><span data-icon="flow"></span><strong>Workflow agents</strong><small>Propose multi-step actions with gates</small><b>4 agents</b></a>
+    </section>
+    <section class="ai-briefing-flow" aria-label="AI context flow"><div><span data-icon="table"></span><small>Selected records</small><strong>Explicit input</strong></div><i>+</i><div><span data-icon="file"></span><small>Knowledge Base</small><strong>Approved sources</strong></div><i>→</i><div class="active"><span data-icon="spark"></span><small>Scoped AI context</small><strong>Evidence bundle</strong></div><i>→</i><div><span data-icon="check"></span><small>Researcher</small><strong>Review &amp; approve</strong></div></section>
+
     <section class="ai-principle-strip" aria-label="AI interaction principles">
       <div><span data-icon="lock"></span><strong>Scoped context</strong><small>Only the active user, project and selected records.</small></div>
       <div><span data-icon="spark"></span><strong>Suggestions, not decisions</strong><small>Nothing is written until the researcher accepts it.</small></div>
       <div><span data-icon="check"></span><strong>Evidence shown</strong><small>Every suggestion includes sources and confidence.</small></div>
+    </section>
+    <section class="ai-future-strip" aria-label="Practical future AI extensions">
+      <article><span class="badge violet">LLM</span><strong>Scientific copilot</strong><small>Explain selected evidence, draft methods/findings and answer cited questions.</small><b>Small adapter</b></article>
+      <article><span class="badge info">Agentic</span><strong>Bounded workflow agent</strong><small>Prepare imports, validate missing metadata and propose next actions behind approval gates.</small><b>Tool orchestration</b></article>
+      <article><span class="badge success">ML</span><strong>Tabular prediction</strong><small>Regression, ranking and anomaly detection once enough comparable structured runs exist.</small><b>Project datasets</b></article>
+      <article><span class="badge warning">DL</span><strong>Images &amp; spectra</strong><small>Optional morphology or spectral models only when labelled data justify the complexity.</small><b>Future module</b></article>
+      <article><span class="badge">Active learning</span><strong>Next-run suggestions</strong><small>Rank a bounded set of experiment conditions while the researcher keeps final control.</small><b>Design-space helper</b></article>
     </section>
     <nav class="ai-workspace-nav" aria-label="AI specialist sections"><a class="active" href="#assistant">Focused suggestions</a><a href="#analysis">AI Analysis</a><a href="#agents">AI Agents</a><a href="knowledge.html">Knowledge Assistant</a><a href="#vision">Architecture</a></nav>
 
@@ -42,7 +58,8 @@
       <nav class="panel ai-mode-nav" aria-label="AI assistant tasks">
         <div class="panel-header"><div class="panel-title"><strong>Choose a task</strong><small>One focused request at a time</small></div></div>
         <div class="ai-mode-list">
-          <button class="active" type="button" data-ai-mode="plan"><span data-icon="flask"></span><span><strong>Plan an experiment</strong><small>Suggest conditions and replicates</small></span></button>
+          <button class="active" type="button" data-ai-mode="chat"><span data-icon="spark"></span><span><strong>Ask with context</strong><small>Chat across selected data and cited knowledge</small></span></button>
+          <button type="button" data-ai-mode="plan"><span data-icon="flask"></span><span><strong>Plan Project work</strong><small>Suggest conditions and replicates</small></span></button>
           <button type="button" data-ai-mode="files"><span data-icon="file"></span><span><strong>Understand a file</strong><small>Extract columns and measurement values</small></span></button>
           <button type="button" data-ai-mode="quality"><span data-icon="shield"></span><span><strong>Check data quality</strong><small>Find outliers, gaps and inconsistencies</small></span></button>
           <button type="button" data-ai-mode="nomad"><span data-icon="download"></span><span><strong>Prepare NOMAD metadata</strong><small>Suggest mappings and missing fields</small></span></button>
@@ -52,19 +69,19 @@
 
       <section class="panel ai-conversation-panel">
         <div class="panel-header">
-          <div class="panel-title"><strong id="aiModeTitle">Plan an experiment</strong><small id="aiModeSubtitle">Use the active protocol and prior experiments as context.</small></div>
-          <span class="badge info" id="aiModeBadge">Experiment copilot</span>
+          <div class="panel-title"><strong id="aiModeTitle">Plan Project work</strong><small id="aiModeSubtitle">Use the active Pipeline, Project records and approved evidence as context.</small></div>
+          <span class="badge info" id="aiModeBadge">Project planning copilot</span>
         </div>
         <div class="ai-context-ribbon">
           <span><b>User</b> <span data-user-name>Eleanor Wright</span></span>
-          <span><b>Project</b> <span data-project-id>PRJ-MCP-01</span></span>
-          <span><b>Experiment</b> PSC-2026-041</span>
+          <span><b>Project</b> <span data-project-id>No Project attached</span></span>
+          <span><b>Evidence</b> Demo selection</span>
           <span><b>Mode</b> Read + suggest</span>
         </div>
         <div class="ai-chat" id="aiChat" aria-live="polite"></div>
         <div class="ai-quick-prompts" id="aiQuickPrompts"></div>
         <div class="ai-composer">
-          <textarea class="input" id="aiPrompt" rows="3" aria-label="AI prompt">Suggest a simple experiment plan that changes only spin speed and reuses the current protocol.</textarea>
+          <textarea class="input" id="aiPrompt" rows="3" aria-label="AI prompt">Suggest a simple Project plan that changes only spin speed and reuses the current protocol.</textarea>
           <div class="ai-composer-actions">
             <span class="small subtle">Static POC · no request leaves the browser</span>
             <button class="button primary" type="button" data-action="ai-run"><span data-icon="spark"></span>Generate suggestion</button>
@@ -111,7 +128,7 @@
 
     <div class="section-title" id="agents"><div><span class="eyebrow">Purpose 2 · Guided workflows</span><h2>AI Agents</h2><p>Run bounded multi-step workflows with explicit approval gates.</p></div><span class="badge info">Prototype</span></div>
     <section class="agent-cards">
-      <button type="button" data-agent="setup"><span data-icon="flask"></span><strong>Experiment Preparation Agent</strong><small>Find resources, propose a stack and flag missing fields.</small><b>3 approvals</b></button>
+      <button type="button" data-agent="setup"><span data-icon="flask"></span><strong>Project Preparation Agent</strong><small>Find resources, propose a stack and flag missing fields.</small><b>3 approvals</b></button>
       <button type="button" data-agent="intake"><span data-icon="upload"></span><strong>Data Intake Agent</strong><small>Classify files, propose units and associate stacks.</small><b>4 approvals</b></button>
       <button type="button" data-agent="analysis"><span data-icon="chart"></span><strong>Analysis Agent</strong><small>Compare stacks, rank anomalies and suggest views.</small><b>2 approvals</b></button>
       <button type="button" data-agent="nomad"><span data-icon="download"></span><strong>NOMAD Agent</strong><small>Validate metadata and assemble a package plan.</small><b>5 approvals</b></button>
@@ -119,11 +136,11 @@
     <section class="panel agent-run-panel" id="agentRunPanel"><div class="panel-header"><div class="panel-title"><strong>Agent run</strong><small>Select a controlled workflow above</small></div><span class="badge">Not started</span></div><div class="useful-empty"><span data-icon="flow"></span><div><strong>No agent run selected</strong><small>Every proposed action will require researcher approval.</small></div></div></section>
 
     <div class="section-title" id="search"><div><span class="eyebrow">Separate purpose · Find information</span><h2>Knowledge Assistant</h2><p>Consult shared records and approved documents in the dedicated evidence-linked interface.</p></div><span class="badge">Dedicated page</span></div>
-    <section class="panel knowledge-handoff-panel"><div class="panel-body knowledge-handoff"><span data-icon="model"></span><div><span class="eyebrow">Dedicated consultation tool</span><h3>Shared knowledge now lives in Knowledge Assistant</h3><p>Search manuals, protocols, Lab Cabinet resources, experiments, approved reports and NOMAD documentation with explicit citations and human confirmation.</p></div><a class="button primary" href="knowledge.html">Open Knowledge Assistant</a></div></section>
+    <section class="panel knowledge-handoff-panel"><div class="panel-body knowledge-handoff"><span data-icon="model"></span><div><span class="eyebrow">Dedicated consultation tool</span><h3>Shared knowledge now lives in Knowledge Assistant</h3><p>Search manuals, protocols, Lab Cabinet resources, Project records, approved reports and NOMAD documentation with explicit citations and human confirmation.</p></div><a class="button primary" href="knowledge.html">Open Knowledge Assistant</a></div></section>
 
     <div class="section-title" id="vision"><div><h2>AI vision and architecture</h2><p>A credible path from structured laboratory data to assistive intelligence.</p></div><span class="badge success">Portfolio overview</span></div>
     <section class="ai-vision-grid">
-      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data foundation</strong><small>Authoritative inputs</small></div></div><div class="panel-body stack-sm"><p>Experiments, stack snapshots, resources, processes, measurements, original files and provenance remain the source of truth.</p><div class="ai-evidence-row"><span>Structured records</span><span>Files</span><span>Human notes</span><span>Approved results</span></div></div></article>
+      <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data foundation</strong><small>Authoritative inputs</small></div></div><div class="panel-body stack-sm"><p>Projects, Pipeline outputs, stack snapshots, resources, measurements, original files and provenance remain the source of truth.</p><div class="ai-evidence-row"><span>Structured records</span><span>Files</span><span>Human notes</span><span>Approved results</span></div></div></article>
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Retrieval layer</strong><small>Planned architecture</small></div></div><div class="panel-body"><div class="rag-flow"><span>Permission scope</span><b>→</b><span>Hybrid retrieval</span><b>→</b><span>Evidence bundle</span><b>→</b><span>Model</span></div><p class="small subtle">No embeddings or vector database are implemented in this static POC.</p></div></article>
       <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Human-in-the-loop</strong><small>Non-negotiable control</small></div></div><div class="panel-body simple-check-list"><div class="done"><span data-icon="check"></span><div><strong>Inspect evidence</strong><small>Sources and assumptions are visible</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Approve actions</strong><small>No important autonomous writes</small></div></div><div class="done"><span data-icon="check"></span><div><strong>Retain provenance</strong><small>Original, AI output and human edits stay separate</small></div></div></div></article>
     </section>

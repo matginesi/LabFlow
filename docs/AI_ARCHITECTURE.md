@@ -39,7 +39,8 @@ Every simulated answer includes:
 - contextual actions behind explicit confirmation.
 
 The Add Knowledge wizard accepts a simulated file, Cabinet resource, protocol,
-experiment, report or shared note. It only creates an in-memory record.
+Project/experiment, report or shared note. It only creates temporary frontend
+state and does not build a real retrieval index.
 
 ## AI Analysis
 
@@ -64,3 +65,11 @@ model versioning, audit logs, evaluation, secure tool execution and human
 approval persistence.
 
 None of those services exists in this repository.
+
+## Project boundary and privacy
+
+Knowledge, AI Analysis and Controlled Agents are generic capabilities. When
+invoked from a Project they must expose that Project scope explicitly and must
+not silently mix another Project's evidence. The static demonstrations make no
+model or retrieval network request, load no CDN code, set no cookies and send no
+telemetry.

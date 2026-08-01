@@ -44,13 +44,13 @@
 
   function getCurrentProcess(userKey = 'default') {
     let key = processes[0].key;
-    try { key = localStorage.getItem(`labflow-process-${userKey}`) || key; } catch (_) {}
+    try { key = sessionStorage.getItem(`labflow-process-${userKey}`) || key; } catch (_) {}
     return processes.find(item => item.key === key) || processes[0];
   }
 
   function setCurrentProcess(key, userKey = 'default') {
     if (!processes.some(item => item.key === key)) return;
-    try { localStorage.setItem(`labflow-process-${userKey}`, key); } catch (_) {}
+    try { sessionStorage.setItem(`labflow-process-${userKey}`, key); } catch (_) {}
   }
 
   window.LabFlowDomain = { processes, experiments, getCurrentProcess, setCurrentProcess };

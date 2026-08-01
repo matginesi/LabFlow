@@ -11,8 +11,13 @@ The supported design range is 360–1440 px.
 - Forms and two-column scientific comparisons collapse to one column.
 - Modals and drawers use internal scrolling and near-full mobile width.
 - Primary actions remain visible and controls keep usable touch targets.
+- All canonical pages use the shared 1480 px outer frame and tokenised page
+  padding. Narrower reading surfaces constrain an inner column rather than
+  redefining page edges.
 - Shared search results stay within the viewport and documentation navigation
   becomes a horizontally scrollable contents rail.
+- Personal Settings and Admin Settings collapse their shared section rail to a
+  horizontal scroller, then stack forms and policy cards on small screens.
 
 ## Functional limits
 
@@ -31,5 +36,11 @@ Simulated features include:
 
 Browser-generated CSV, JSON, YAML, SVG and selected report/archive outputs are
 real local downloads. Their scientific completeness remains demo-level.
+
+Scientific state is stored only in the tab session. Appearance/account display
+preferences may remain in `localStorage`. The app sets no cookies, includes no
+trackers or analytics, uses no CDN resources and does not upload selected files.
+The first load in every new browser-tab session clears saved scientific state;
+reloads and navigation within that same tab retain current work.
 
 Never place real API keys or sensitive laboratory data in this static POC.

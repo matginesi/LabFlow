@@ -1,102 +1,101 @@
 # Researcher workflow
 
-## Operational hierarchy
+## Canonical hierarchy
 
 ```text
-User → Workspace → Process → Experiment
+User → Workspace → Project → Pipeline → Step
 ```
 
-A Project may optionally group experiments, including experiments from different Processes. It is never an execution prerequisite.
+This is the only primary product hierarchy. A researcher opens a Workspace, creates or continues a Project, and works through the Project's selected Pipeline. Detailed scientific records such as measurements, samples, runs or future experiment entities live **inside Project data**; they are not another competing navigation hierarchy.
 
-## Process definition
+## CHOSE showcase Pipeline
 
-A Process defines:
+CHOSE is the default and most complete Pipeline:
 
-- ordered workflow phases;
-- default reusable resources;
-- required and optional inputs;
-- expected outputs and evidence;
-- expected measurements;
-- NOMAD mapping profile.
+```text
+1. Materials & Solutions
+2. Stack & Fabrication
+3. Data Ingest
+4. Analysis
+5. Report & Export
+```
 
-The current validated Process follows:
+The steps are recommended, revisitable and non-blocking. Each step consumes existing Project context and creates structured data for later steps.
 
-`Solutions → Stacks & samples → Processing → Data → Analysis → Charts & report → Export → NOMAD`
+### 1. Materials & Solutions
 
-The sequence is recommended and non-blocking. An Experiment creates an `ExperimentStep` instance for each Process step and records its actual state, inputs, outputs, deviations and evidence.
+Create or reuse:
 
-## 1. Solutions
+- Material
+- Solvent
+- Solute
+- Solution
 
-### Recipe definition
+A Solution stores a useful composition first, followed by optional preparation, handling, storage and provenance metadata. Reusable records may come from the Lab Cabinet; the Project receives a snapshot so later Cabinet edits do not silently rewrite Project history.
 
-`Solvent mixture → Solutes → Optional additives → Concentration basis → Reference volume → Preparation instructions`
+### 2. Stack & Fabrication
 
-The solvent mixture must explicitly store:
+Create one or more ordered Stacks. Each Stack can contain layers, material references, thickness, fabrication operations, sample/device identifiers, atmosphere and instrumentation metadata.
 
-- substance identity;
-- mixture basis such as v/v, w/w, molar fraction or absolute quantity;
-- target ratio;
-- calculated target quantity;
-- reference total volume or mass.
+### 3. Data Ingest
 
-### Concrete batch
+The workflow is measurement-first rather than extension-first:
 
-The physical batch stores:
+```text
+Add data → Detect → Preview → Map → Validate → Attach
+```
 
-- locked recipe version;
-- physical material lots;
-- target and actual quantities;
-- operator and timestamps;
-- atmosphere, temperature and stirring;
-- filtration evidence;
-- storage and remaining amount;
-- deviations and observations.
+The Project preserves source identity and provenance. File format is technical metadata; scientific meaning is represented by a Measurement type such as JV, Dark JV, IPCE, UV/VIS, Stability or generic/manual evidence.
 
-## 2. Stacks and samples
+### 4. Analysis
 
-A Stack Template is an ordered reusable layer definition. An Experiment Stack snapshots that definition and adds:
+Select Project Measurements, compare compatible evidence, visualise trends and store explicit researcher conclusions. Future AI/ML tools may consume the same structured data without replacing human results.
 
-- concrete substrate;
-- sample identifiers;
-- layer source materials or solution batches;
-- actual dimensions and thicknesses;
-- deposition methods;
-- variant parameters;
-- deviations.
+### 5. Report & Export
 
-Simple variants may change one or more explicit parameters without introducing a full DOE subsystem.
+Assemble Project evidence into a report, local data exports and a NOMAD-ready package. The static POC may simulate readiness and submission actions but does not imply a backend or external service.
 
-## 3. Processing
+## Quick Workflow
 
-A protocol is a reusable Lab Cabinet resource used by the Process. A processing run is concrete experiment evidence.
+The second demonstration Pipeline intentionally proves that LabFlow is not hardcoded to CHOSE:
 
-Each run records timestamps, operator, target stacks/samples, instrument use, actual parameters, inputs, outputs and deviations.
+```text
+Plan → Record → Share
+```
 
-## 4. Data
+Its metadata and step order come from `pipelines/quick/pipeline.yaml`. Its HTML lives in the corresponding `steps/` folders and its pipeline-wide JavaScript contains behaviour only, never copies of the HTML.
 
-Files and manually entered data must be associated with a clear target:
+## Pipeline file contract
 
-- whole experiment;
-- Experiment Step;
-- processing run or executed action;
-- stack or sample;
-- measurement;
-- result.
+A Pipeline folder may contain:
 
-Original files remain immutable evidence. Parsed and processed forms reference the original.
+```text
+pipelines/<pipeline-id>/
+├── pipeline.yaml
+├── optional pipeline.js
+└── steps/
+    └── <step-id>/
+        ├── index.html
+        └── optional step.js
+```
 
-## 5. Analysis
+`pipeline.yaml` is the human-edited source of truth for name, description, ordered steps, inputs, outputs and asset paths. `assets/pipeline-bundle.js` is the only allowed mirror because it is generated deterministically from YAML + step HTML and checked by the validator. `app.js` must never contain another hand-maintained Pipeline definition.
 
-Analysis begins from explicitly selected evidence. Results store source references, method/version, value or series, unit and validation state.
+## Workspace tools versus Project tools
 
-## 6. Charts and report
+Workspace-wide tools remain available independently from a Project:
 
-Saved visualisations retain selected records, axes, units, filters and source references. Reports assemble editable narrative from structured evidence.
+- Lab Cabinet
+- Knowledge & RAG
+- AI Assistant
+- Common Tools: text/data/image/chart/graph utilities
 
-## 7. Export
+Pipeline-specific tools belong to a Project Step and operate on that Project's data. A common tool may receive explicit Project context, but it does not become a second workflow.
 
-Export shows included and excluded records, warnings, package version, manifest and checksums before generating local output.
+## Session lifecycle
 
-## 8. NOMAD
+This is a static POC. Scientific edits and Pipeline progress use session-scoped browser state. Appearance preferences may persist locally. No cookie infrastructure, backend account system or SaaS administration layer is implied.
 
-The Process provides the mapping profile; the Experiment provides concrete data. Readiness checks cover completeness, units, resources, stack structure, processing, instruments, files, identifiers and provenance.
+## Compatibility views
+
+Older Process and Experiment pages remain temporarily available as compatibility/detail views so useful scientific UI is not discarded. They are deliberately absent from the main navigation and global search. New product work must not use them as the primary hierarchy.

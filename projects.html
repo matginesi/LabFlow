@@ -1,35 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Personal research project portfolio">
-  <title>Projects · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="assets/app.css">
-  <link rel="stylesheet" href="assets/workflow.css">
-  <script defer src="assets/exporters.js"></script>
-  <script defer src="assets/workflow-domain.js"></script>
-  <script defer src="assets/app.js"></script>
-</head>
-<body data-page="projects">
-  <header id="topbar" class="topbar"></header>
-  <aside id="sidebar" class="sidebar"></aside>
-  <button class="sidebar-overlay" type="button" data-action="close-sidebar" aria-label="Close navigation"></button>
-  <div class="app-main"><main class="page">
-<header class="page-header compact-header"><div><span class="eyebrow">Optional research context</span><h1>Your projects</h1><p>Projects group related experiments for a research goal. They never define the laboratory workflow and are not required to create an experiment.</p></div><button class="button primary" type="button" data-action="project-wizard"><span data-icon="folder"></span>New project</button></header>
-<section class="panel simple-concept-strip"><div class="panel-body"><div class="graph-stage graph-compact" data-graph-ref="projectSimpleGraph"></div><script id="projectSimpleGraph" type="text/graph">direction LR
-Workspace[Personal workspace] --> Process[Process] : defines
-Process --> Experiment[Experiments] : instantiates
-Workspace --> Project[Optional project] : may contain
-Project --> Experiment : groups
-Experiment --> Results[Samples and results]
-Results --> Output[Report / NOMAD]</script><p><strong>Lab Cabinet resources are offered inside the wizards.</strong> Researchers do not need to manage the data model before starting work.</p></div></section>
-<div class="section-title"><div><h2>Active and recent projects</h2><p>Each card shows the next useful action.</p></div><span class="badge success"><span data-user-metric="projects">3</span> personal projects</span></div>
-<section class="project-grid" id="projectList"></section>
-<section class="empty-project-cta panel"><div><span data-icon="plus"></span><div><strong>Need an optional container?</strong><small>Create a project only when several experiments need the same research context.</small></div></div><button class="button" type="button" data-action="project-wizard">Create project</button></section>
-  </main></div>
-  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
-</body>
-</html>
+<!DOCTYPE html><html lang="en"><head><link rel="icon" href="data:,">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Research projects"><title>Projects · LabFlow</title><link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
+  <script defer src="assets/app.js"></script></head><body data-page="projects"><header class="topbar" id="topbar"></header><aside class="sidebar" id="sidebar"></aside><button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button><div class="app-main"><main class="page"><header class="page-header compact-header"><div><span class="eyebrow">Workspace projects</span><h1>Your projects</h1><p>Each project owns a scientific Pipeline and remembers where the work should continue.</p></div><button class="button primary" type="button" data-action="project-wizard"><span data-icon="plus"></span>New project</button></header><section class="panel project-model-strip"><div><strong>Workspace</strong><span>→</span><strong>Project</strong><span>→</span><strong>CHOSE Pipeline</strong><span>→</span><strong>5 steps</strong></div><small>Samples, runs, measurements and results remain available inside the project.</small></section><div class="section-title"><div><h2>Active and recent projects</h2><p>Continue from the current step or revisit any completed step.</p></div><span class="badge success"><span data-user-metric="projects">3</span> projects</span></div><section class="project-grid" id="projectList"></section></main></div><div class="toast-region" id="toastRegion" aria-live="polite"></div></body></html>

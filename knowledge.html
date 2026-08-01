@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>try{document.documentElement.dataset.theme=localStorage.getItem("labflow-theme")||"light"}catch(_){document.documentElement.dataset.theme="light"}</script>
-  <meta charset="utf-8">
+<meta charset="utf-8">
+<script src="assets/theme-init.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <meta name="description" content="Shared, evidence-linked scientific knowledge search for LabFlow">
   <title>Knowledge Assistant · LabFlow</title>
-  <link href="assets/theme.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css">
-  <link rel="stylesheet" href="assets/workflow.css">
-  <script defer src="assets/workflow-domain.js"></script>
+  
+  
+  
+  <link href="assets/app.css" rel="stylesheet">
+  <script defer src="assets/pipeline-bundle.js"></script>
+  <script defer src="assets/pipeline-loader.js"></script>
   <script defer src="assets/app.js"></script>
 </head>
 <body data-page="knowledge">
@@ -31,6 +33,8 @@
       </div>
     </header>
 
+    <section class="rag-status-flow" aria-label="RAG retrieval pipeline"><div class="done"><span data-icon="lock"></span><small>Permission scope</small><strong>Workspace sources</strong></div><i>→</i><div class="done"><span data-icon="model"></span><small>Hybrid retrieval</small><strong>10 sources</strong></div><i>→</i><div><span data-icon="flow"></span><small>Reranking</small><strong>Evidence bundle</strong></div><i>→</i><div><span data-icon="spark"></span><small>Answer</small><strong>Citations required</strong></div><i>→</i><div class="approval"><span data-icon="check"></span><small>Human review</small><strong>No autonomous writes</strong></div></section>
+
     <section class="knowledge-boundary" aria-label="Tool boundaries">
       <div><span data-icon="model"></span><strong>Knowledge Assistant</strong><small>Find and verify shared knowledge</small></div>
       <a href="ai-assistant.html#analysis"><span data-icon="chart"></span><strong>AI Analysis</strong><small>Analyse measurements and results</small></a>
@@ -42,8 +46,8 @@
       <button class="active" type="button" data-knowledge-context="all">All laboratory</button>
       <button type="button" data-knowledge-context="documents">Documents &amp; protocols</button>
       <button type="button" data-knowledge-context="cabinet">Lab Cabinet</button>
-      <button type="button" data-knowledge-context="experiments">Experiments</button>
-      <button type="button" data-knowledge-context="current">Current experiment</button>
+      <button type="button" data-knowledge-context="projects">Projects</button>
+      <button type="button" data-knowledge-context="current">Current Project</button>
       <button type="button" data-knowledge-context="nomad">NOMAD</button>
     </nav>
 
@@ -58,7 +62,7 @@
 
       <section class="panel knowledge-chat-panel">
         <div class="panel-header">
-          <div class="panel-title"><strong>Evidence-linked consultation</strong><small>PSC-2026-041 · current experiment</small></div>
+          <div class="panel-title"><strong>Evidence-linked consultation</strong><small>Shared, indexed demonstration sources</small></div>
           <span class="badge success">Read only</span>
         </div>
         <div class="knowledge-chat" id="knowledgeChat" aria-live="polite"></div>
@@ -70,7 +74,7 @@
           <button type="button" data-knowledge-prompt="Are there conflicting spin-coating instructions?">Check conflicts</button>
         </div>
         <form class="knowledge-composer" id="knowledgeForm">
-          <textarea class="input" id="knowledgePrompt" rows="2" placeholder="Ask a focused question about protocols, resources, experiments or NOMAD…" aria-label="Knowledge question"></textarea>
+          <textarea class="input" id="knowledgePrompt" rows="2" placeholder="Ask a focused question about protocols, resources, Projects or NOMAD…" aria-label="Knowledge question"></textarea>
           <button class="button primary" type="submit"><span data-icon="model"></span>Search evidence</button>
         </form>
         <footer class="knowledge-chat-foot">Static POC · demo retrieval only · no external service, LLM or vector database</footer>
