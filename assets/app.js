@@ -760,6 +760,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     target.innerHTML = `<div class="form-grid">${data.fields.map(([label,value],index) => `<div class="field ${index > 3 ? 'span-2' : ''}"><label>${escapeHtml(label)}</label><input class="input" value="${escapeHtml(value)}"></div>`).join('')}<div class="field span-2"><label>Execution note</label><textarea class="input">This field becomes a template instruction. Actual execution evidence is recorded in ProcessRun.</textarea></div></div>`;
   }
 
+  /* Solvent and stack builders (migrated from compatibility-domain.js) */
+  function solventRows(root) { return $$('[data-solvent-row]', root); }
+  function updateSolventBuilder(root = document) {
+    const editor = $('[data-solvent-editor]', root) || (root.matches?.('[data-solvent-editor]') ? root : null);
+    if (!editor) return;
+    const totalVolume = Number($('[data-solution-total-volume]', editor)?.value || 5);
+    const rows = solventRows(editor);
+    const ratios = rows.map(row => Math.max(0, Number($('[data-solvent-ratio]', row)?.value || 0)));
+    const total = ratios.reduce((sum, value) => sum + value, 0);
+    rows.forEach((row, index) => {
+      const ratio = ratios[index];
+      const normalized = total > 0 ? ratio / total : 0;
+      const volume = $('[data-solvent-volume]', row);
+      if (volume) volume.textContent = `${(totalVolume * normalized).toFixed(2)} mL`;
+      const band = $('[data-solvent-band]', row);
+      if (band) band.style.setProperty('--ratio', `${Math.max(3, normalized * 100)}%`);
+    });
+    const status = $('[data-solvent-status]', editor);
+    if (status) {
+      status.className = `badge ${Math.abs(total - 100) < 0.01 ? 'success' : 'warning'}`;
+      status.textContent = Math.abs(total - 100) < 0.01 ? '100% · valid mixture' : `${total.toFixed(1)}% · adjust ratios`;
+    }
+    const visual = $('[data-solvent-visual]', editor);
+    if (visual) visual.innerHTML = rows.map((row, index) => {
+      const name = $('[data-solvent-name]', row)?.value || `Solvent ${index + 1}`;
+      const normalized = total > 0 ? ratios[index] / total * 100 : 0;
+      return `<span style="--ratio:${Math.max(4, normalized)}%"><b>${escapeHtml(name)}</b><small>${normalized.toFixed(0)}% · ${(totalVolume * normalized / 100).toFixed(2)} mL</small></span>`;
+    }).join('');
+  }
+  function addSolventRow(editor) {
+    const list = $('[data-solvent-list]', editor);
+    if (!list) return;
+    const row = document.createElement('div');
+    row.className = 'solvent-component-row';
+    row.dataset.solventRow = '';
+    row.innerHTML = `<span class="solvent-swatch" data-solvent-band></span><label><small>Solvent</small><input class="input" data-solvent-name value="GBL"></label><label><small>Ratio % v/v</small><input class="input" type="number" min="0" max="100" step="1" data-solvent-ratio value="0"></label><span class="solvent-calculated" data-solvent-volume>0.00 mL</span><button class="icon-button small" type="button" data-action="solvent-remove" aria-label="Remove solvent">×</button>`;
+    list.append(row);
+    updateSolventBuilder(editor);
+  }
+  const stackBuilder = {
+    selected: 3,
+    layers: [
+      { type: 'substrate', role: 'Substrate', material: 'Glass / ITO', thickness: '1.1 mm', source: 'SUB-ITO-025', method: 'Cleaning + UV-Ozone' },
+      { type: 'transport', role: 'Electron transport layer', material: 'SnO₂', thickness: '30 nm', source: 'SOL-SNO2-014', method: 'Spin coating' },
+      { type: 'absorber', role: 'Absorber', material: 'FA–Cs perovskite', thickness: '400 nm', source: 'SOL-081', method: 'Spin coating + annealing' },
+      { type: 'transport', role: 'Hole transport layer', material: 'Spiro-OMeTAD', thickness: '180 nm', source: 'SOL-HTL-012', method: 'Spin coating' },
+      { type: 'contact', role: 'Back contact', material: 'Au', thickness: '80 nm', source: 'MAT-AU-03', method: 'Thermal evaporation' }
+    ]
+  };
+  function renderStackBuilder() {
+    const root = $('#stackBuilder');
+    if (!root) return;
+    const ordered = [...stackBuilder.layers].reverse();
+    root.innerHTML = `<div class="stack-builder-canvas"><div class="stack-builder-scale"><span>Top contact</span><span>Substrate</span></div><div class="stack-builder-layers">${ordered.map((layer, visualIndex) => {
+      const index = stackBuilder.layers.length - visualIndex - 1;
+      return `<button type="button" class="stack-builder-layer ${layer.type} ${index === stackBuilder.selected ? 'selected' : ''}" data-action="stack-select-layer" data-layer-index="${index}"><span>${String(index + 1).padStart(2, '0')}</span><span><strong>${escapeHtml(layer.material)}</strong><small>${escapeHtml(layer.role)} · ${escapeHtml(layer.method)}</small></span><b>${escapeHtml(layer.thickness)}</b></button>`;
+    }).join('')}</div></div>`;
+    const layer = stackBuilder.layers[stackBuilder.selected] || stackBuilder.layers[0];
+    const form = $('#stackLayerEditor');
+    if (form && layer) {
+      form.innerHTML = `<div class="panel-header"><div class="panel-title"><strong>Selected layer ${stackBuilder.selected + 1}</strong><small>Every layer links material, source and deposition evidence.</small></div><span class="badge info">${escapeHtml(layer.type)}</span></div><div class="panel-body form-grid compact-form"><div class="field"><label>Role</label><input class="input" data-stack-field="role" value="${escapeHtml(layer.role)}"></div><div class="field"><label>Material</label><input class="input" data-stack-field="material" value="${escapeHtml(layer.material)}"></div><div class="field"><label>Thickness</label><input class="input" data-stack-field="thickness" value="${escapeHtml(layer.thickness)}"></div><div class="field"><label>Definition / batch</label><input class="input mono" data-stack-field="source" value="${escapeHtml(layer.source)}"></div><div class="field span-2"><label>Deposition or creation method</label><input class="input" data-stack-field="method" value="${escapeHtml(layer.method)}"></div></div><div class="panel-footer stack-layer-actions"><button class="button small" type="button" data-action="stack-layer-down">Move toward substrate</button><button class="button small" type="button" data-action="stack-layer-up">Move toward top</button><button class="button small" type="button" data-action="stack-layer-duplicate">Duplicate</button><button class="button small danger" type="button" data-action="stack-layer-remove">Remove</button></div>`;
+    }
+    const count = $('#stackBuilderCount');
+    if (count) count.textContent = `${stackBuilder.layers.length} ordered layers`;
+  }
+  function modifySelectedLayer(direction) {
+    const index = stackBuilder.selected;
+    const next = index + direction;
+    if (next < 0 || next >= stackBuilder.layers.length) return;
+    [stackBuilder.layers[index], stackBuilder.layers[next]] = [stackBuilder.layers[next], stackBuilder.layers[index]];
+    stackBuilder.selected = next;
+    renderStackBuilder();
+  }
+
   /* Wizard and ABX3 */
   let wizardStep = 0;
   function showWizardStep(index) {
@@ -1743,6 +1817,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(action==='report-docx')X.download(X.buildDocx(reportDocxData()),'application/vnd.openxmlformats-officedocument.wordprocessingml.document','labflow-project-report.docx');
     if(action==='report-pdf'){toast('Building PDF','info','Rendering three clear A4 pages locally.');requestAnimationFrame(()=>{X.download(X.buildPdfFromCanvases(createReportPdfPages()),'application/pdf','labflow-project-report.pdf');toast('PDF exported','success','Three clear A4 pages generated from editable data, charts and images.');});}
     if(action==='experiment-archive'){const archive={manifest:{format:'LabFlow project archive',version:'1.3',generated_at:new Date().toISOString(),author:currentUser().name,project:'PRJ-MCP-01',warnings:['2 columns without units','1 instrument association pending']},contents:['project.json','stacks/','materials/','solutions/','process/','data/','results/','charts/','reports/','files/','provenance/','nomad-mapping/']};X.download(JSON.stringify(archive,null,2),'application/json','project-PRJ-MCP-01-manifest.json');toast('Archive manifest generated','success','Static POC: the manifest represents the complete ZIP structure and exclusions.');}
+    if (action === 'solvent-add') addSolventRow(button.closest('[data-solvent-editor]'));
+    if (action === 'solvent-remove') { const editor = button.closest('[data-solvent-editor]'); button.closest('[data-solvent-row]')?.remove(); updateSolventBuilder(editor); }
+    if (action === 'stack-select-layer') { stackBuilder.selected = Number(button.dataset.layerIndex); renderStackBuilder(); }
+    if (action === 'stack-add-layer') { const type = button.dataset.layerType || 'transport'; stackBuilder.layers.push({ type, role: type === 'contact' ? 'Contact' : 'Functional layer', material: 'New material', thickness: '—', source: 'Select resource', method: 'Select method' }); stackBuilder.selected = stackBuilder.layers.length - 1; renderStackBuilder(); }
+    if (action === 'stack-layer-up') modifySelectedLayer(1);
+    if (action === 'stack-layer-down') modifySelectedLayer(-1);
+    if (action === 'stack-layer-duplicate') { stackBuilder.layers.splice(stackBuilder.selected + 1, 0, { ...stackBuilder.layers[stackBuilder.selected] }); stackBuilder.selected += 1; renderStackBuilder(); }
+    if (action === 'stack-layer-remove' && stackBuilder.layers.length > 1) { stackBuilder.layers.splice(stackBuilder.selected, 1); stackBuilder.selected = Math.min(stackBuilder.selected, stackBuilder.layers.length - 1); renderStackBuilder(); }
   });
 
   document.addEventListener('input', event => {
@@ -1775,6 +1857,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(event.target.matches('[data-report-array]')){reportData[event.target.dataset.reportArray][+event.target.dataset.row][+event.target.dataset.col]=event.target.value;renderReport();}
     if(event.target.matches('[data-report-action]')){reportData.narrative.actions[+event.target.dataset.reportAction]=event.target.value;renderReport();}
     if(event.target.matches('[data-report-image-field]')){reportData.images[+event.target.dataset.index][event.target.dataset.reportImageField]=event.target.value;renderReport();}
+    if (event.target.matches('[data-solvent-ratio],[data-solvent-name],[data-solution-total-volume]')) updateSolventBuilder(event.target.closest('[data-solvent-editor]'));
+    if (event.target.matches('[data-stack-field]')) {
+      const layer = stackBuilder.layers[stackBuilder.selected];
+      if (layer) {
+        layer[event.target.dataset.stackField] = event.target.value;
+        const selected = $('[data-action="stack-select-layer"].selected');
+        if (selected) {
+          const strong = $('strong', selected);
+          const small = $('small', selected);
+          const thickness = $('b', selected);
+          if (strong) strong.textContent = layer.material;
+          if (small) small.textContent = `${layer.role} · ${layer.method}`;
+          if (thickness) thickness.textContent = layer.thickness;
+        }
+      }
+    }
   });
   document.addEventListener('keydown',event=>{if(event.key==='/'&&!event.ctrlKey&&!event.metaKey&&!/input|textarea|select/i.test(document.activeElement?.tagName||'')){event.preventDefault();$('[data-page-search]')?.focus();}if(event.key==='Escape'){const results=$('#globalSearchResults');if(results)results.hidden=true;$('[data-page-search]')?.setAttribute('aria-expanded','false');}});
   document.addEventListener('click',event=>{if(!event.target.closest('.topbar-search,#globalSearchResults')){const results=$('#globalSearchResults');if(results)results.hidden=true;$('[data-page-search]')?.setAttribute('aria-expanded','false');}});
@@ -1814,6 +1912,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}
   renderEntity(page==='flow'?'UserAccount':'IonDefinition'); if(page==='docs'){const docHash=location.hash.slice(1);if(docHash.startsWith('file='))renderDocumentationFile(decodeURIComponent(docHash.slice(5)));else renderDocumentation(docHash||'overview');}
   renderProcessInspector('composition');
+  $$('[data-solvent-editor]').forEach(editor => updateSolventBuilder(editor));
+  renderStackBuilder();
   const hashToStep={choose:0,start:0,setup:0,resources:0,solutions:0,plan:1,stacks:1,materials:0,process:2,processing:2,work:2,run:2,data:3,analysis:4,outputs:5,results:5,review:5,finish:6,export:6,nomad:7};showWizardStep(hashToStep[location.hash.slice(1)]??0);
   updateAbxFormula(); renderAIPage(); renderDemoCharts(); renderDynamicCharts(); renderGraphContainers(); updateCodeEditor(); syncMarkdown(); renderWorkbook(); initDemoImage(); renderChartBuilder(); renderGraphEditor(); renderReportEditor(); renderReport();
   const initialTab=location.hash.slice(1);const tab=$(`[data-tab="${initialTab}"]`);if(tab)activateTab(tab);
