@@ -201,7 +201,7 @@ body {font-size:13px}
 
 .preset-card p,.stack-definition p,.process-preset p {margin:3px 0 0;color:var(--muted);font-size:11px}
 
-.solution-vessel .liquid {width:88px;height:74px;display:grid;align-content:end;gap:2px;padding:9px;border:2px solid var(--accent);border-top:0;background:linear-gradient(to top,rgba(37,99,168,.28) 0 72%,transparent 72%);clip-path:polygon(8% 0,92% 0,100% 100%,0 100%)}
+.solution-vessel .liquid {width:88px;height:74px;display:grid;align-content:end;gap:2px;padding:9px;border:2px solid var(--accent);border-top:0;background:linear-gradient(to top,color-mix(in srgb,var(--accent) 28%,transparent) 0 72%,transparent 72%);clip-path:polygon(8% 0,92% 0,100% 100%,0 100%)}
 
 .solution-vessel .liquid span {font-size:10px;text-align:center}
 
@@ -241,7 +241,7 @@ body {font-size:13px}
 
 .solution-beaker {width:110px;height:130px;position:relative;display:grid;align-content:end;justify-items:center;padding:12px;margin:auto;border:3px solid var(--accent);border-top:0;clip-path:polygon(12% 0,88% 0,100% 100%,0 100%);overflow:hidden}
 
-.solution-beaker i {position:absolute;inset:auto 0 0;background:rgba(37,99,168,.26)}
+.solution-beaker i {position:absolute;inset:auto 0 0;background:color-mix(in srgb,var(--accent) 26%,transparent)}
 
 .solution-beaker strong,.solution-beaker small {position:relative;z-index:1}
 
