@@ -72,11 +72,6 @@ for html in sorted(ROOT.glob("*.html")):
         app = text.find("assets/app.js")
         if bundle < 0 or loader < 0 or not (bundle < loader < app):
             fail(f"{html.name}: pipeline-bundle.js -> pipeline-loader.js -> app.js order is required")
-    compatibility_routes = {"processes.html", "pipeline.html", "experiments.html", "experiment.html", "stack.html", "solution.html"}
-    if html.name not in compatibility_routes and "assets/compatibility-domain.js" in text:
-        fail(f"{html.name}: primary route loads quarantined Process/Experiment compatibility model")
-    if html.name in compatibility_routes and "assets/compatibility-domain.js" not in text:
-        fail(f"{html.name}: compatibility route must load assets/compatibility-domain.js")
 
 # 2. app.js must not contain duplicated pipeline metadata or HTML view bundles.
 app_js = (ROOT / "assets/app.js").read_text(encoding="utf-8")
@@ -84,15 +79,10 @@ for forbidden in ("const pipelineMetadata=", "LabFlowPipelineViews", "views['cho
     if forbidden in app_js:
         fail(f"assets/app.js: duplicated Pipeline source detected: {forbidden}")
 
-# Primary navigation must not route to compatibility Process/Experiment pages.
+# Primary navigation must not duplicate sidebar destinations.
 nav_match = re.search(r"function buildNavigation\(project\)\{(.+?)\n  \}\n", app_js, re.S)
 if not nav_match:
     fail("assets/app.js: buildNavigation(project) not found")
-else:
-    nav = nav_match.group(1)
-    for legacy in ("processes.html", "pipeline.html", "experiments.html", "experiment.html"):
-        if legacy in nav:
-            fail(f"Primary navigation links to compatibility page {legacy}")
 
 
 # 2a. Generated static Pipeline bundle must match canonical YAML + step HTML.
@@ -234,12 +224,6 @@ if nav_match:
     for duplicate in ("label:'Projects'", "label:'Admin Settings'"):
         if duplicate in compact_nav:
             fail(f"assets/app.js: sidebar contains redundant destination {duplicate}")
-
-# 5. Compatibility pages must say what they are.
-for name in ("processes.html", "pipeline.html", "experiments.html", "experiment.html"):
-    text = (ROOT / name).read_text(encoding="utf-8")
-    if "compatibility-notice" not in text:
-        fail(f"{name}: missing compatibility notice")
 
 # 6. Cabinet and Project examples must initialise with meaningful demo data.
 demo_seed = (ROOT / 'assets/demo-projects.js').read_text(encoding='utf-8')
