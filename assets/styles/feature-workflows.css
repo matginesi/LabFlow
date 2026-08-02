@@ -20,7 +20,6 @@
 
 .scope-meta>.mono {font-size:10px;color:var(--muted)}
 
-.eyebrow {color:var(--accent);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
 
 .optional {color:var(--muted);font-size:10px;font-weight:500}
 
@@ -523,7 +522,6 @@ body {font-size:13px}
 
 .report-cover-head {grid-template-columns:1fr;gap:12px;min-height:150px}
 
-.report-cover {background:linear-gradient(160deg,#1a2c42 0 26%,#fff 26% 100%)}
 
 .report-meta-grid,.report-kpis {grid-template-columns:repeat(2,minmax(0,1fr))}
 

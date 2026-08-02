@@ -274,7 +274,6 @@
 
 /* Researcher-first workflow */
 .experiment-home-card .home-project-folder {color:var(--blue);}
-#experimentStackList {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
 .stack-card {display:grid;gap:8px;padding:10px;border-radius:var(--radius-1);}
 .stack-card-head,.stack-card-meta {display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .stack-card-head strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
