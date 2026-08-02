@@ -13,7 +13,7 @@ This file is the non-negotiable implementation contract for coding agents workin
 7. **CHOSE is the showcase Pipeline.** Preserve and improve the five steps: Materials & Solutions; Stack & Fabrication; Data Ingest; Analysis; Report & Export.
 8. **Workspace tools are not another workflow.** Lab Cabinet, Knowledge & RAG, AI Assistant and Common Tools remain shared utilities. Project-specific tools belong to Pipeline steps.
 9. **UI Kit is the UI ground truth.** HTML pages link only `assets/app.css`, which imports the shared modules in `assets/styles/`. Page-specific and Pipeline-step CSS files are forbidden. Reusable shell, layout, controls and scientific visuals must be promoted to the shared design system. Structural inline styles are forbidden; inline values are allowed only for genuinely data-driven values such as progress widths, chart values or scientific ratios.
-10. **Do not delete useful capability casually.** Older Process/Experiment pages are compatibility/detail views. Their demo model is quarantined in `assets/compatibility-domain.js` and must not be loaded by primary routes. They may be simplified or eventually removed only after useful concepts are intentionally migrated.
+10. **Do not delete useful capability casually.** Legacy Process/Experiment compatibility pages were removed after migrating their useful concepts (solvent/stack builders) to the primary codebase. Remove capability only after intentional migration.
 11. **Keep data backend-ready without overengineering.** Stable IDs, explicit units, provenance and clear structures matter; a giant production schema does not belong in the POC.
 12. **AI and NOMAD are optional consumers.** Core laboratory work must remain usable without AI or a NOMAD service.
 
