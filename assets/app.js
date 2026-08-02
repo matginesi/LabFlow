@@ -1576,7 +1576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if(scoped){target.searchParams.set('project',selected);target.searchParams.delete('step');location.href=`${target.pathname.split('/').pop()}${target.search}${target.hash}`;}
       else location.reload();
     }
-    if(action==='project-new'){location.href='projects.html#new';}
+    if(action==='project-new'){location.href='index.html#new';}
     if(action==='project-open'){try{sessionStorage.setItem(projectStoreKey(),button.dataset.project);}catch(_){} location.href=`project.html?project=${encodeURIComponent(button.dataset.project)}`;}
     if(action==='project-open-current')location.href=`project.html?project=${encodeURIComponent(currentProject().key)}`;
     if(action==='workspace-open')location.href='index.html';
@@ -1808,7 +1808,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
   window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(page==='experiment'){const step={setup:0,resources:0,solutions:0,stacks:1,processing:2,process:2,data:3,analysis:4,outputs:5,results:5,export:6,nomad:7}[key];if(Number.isInteger(step)&&step!==wizardStep)showWizardStep(step);return;}if(page==='docs'&&key.startsWith('file=')){renderDocumentationFile(decodeURIComponent(key.slice(5)));return;}if(page==='docs'&&documentationOrder.includes(key)){renderDocumentation(key);return;}const tabButton=$(`[data-tab="${key}"]`);if(tabButton)activateTab(tabButton);});
 
-  mountShell(); mountGlobalSearch(); mountUnifiedSearch(); mountAIDrawer(); mountProcessStepWizard(); mountCabinetSelector(); renderCabinet(); renderToolsContext(); renderToolCatalog(); renderKnowledgeSources(); renderKnowledgeWelcome(); initProjectPipeline(); setPalette(document.documentElement.dataset.palette||'blue'); if(page==='report')initReportImages(); if(page==='projects'&&location.hash==='#new')setTimeout(openProjectWizard,0);
+  mountShell(); mountGlobalSearch(); mountUnifiedSearch(); mountAIDrawer(); mountProcessStepWizard(); mountCabinetSelector(); renderCabinet(); renderToolsContext(); renderToolCatalog(); renderKnowledgeSources(); renderKnowledgeWelcome(); initProjectPipeline(); setPalette(document.documentElement.dataset.palette||'blue'); if(page==='report')initReportImages(); if(page==='dashboard'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
   if(page==='material-detail'){const params=new URLSearchParams(location.search);const matId=params.get('material')||'FAI';renderMaterialPage(matId);}
   if(page==='solution-detail'){const params=new URLSearchParams(location.search);const solutionId=params.get('solution')||'SOL-001';renderSolutionPage(solutionId);}
