@@ -41,7 +41,7 @@ User
 - `assets/measurement-types.js` — measurement semantics and deterministic mapping helpers.
 - `assets/exporters.js` — local browser export helpers.
 
-Older scientific modules may remain for compatibility views, but they must not define a second application shell or navigation hierarchy.
+Lab Cabinet detail views and shared scientific utilities must not define a second application shell or navigation hierarchy.
 
 ## Pipeline architecture
 
@@ -93,6 +93,6 @@ The POC uses browser session state for scientific work. The intended future back
 
 The frontend data shape should remain machine-readable and stable enough to map into that backend without redesigning the UX.
 
-## Compatibility pages
+## Run records and Lab Cabinet detail views
 
-`processes.html`, `pipeline.html`, `experiments.html` and `experiment.html` are retained temporarily as compatibility/detail pages. They are not linked from the primary sidebar or global search and must show a visible compatibility notice. Their old Process/Experiment demo data is quarantined in `assets/compatibility-domain.js`, which is loaded only by those compatibility routes.
+Concrete execution records (runs, samples, measurements, results) live in Project data and are surfaced by the Project Data overview (`workspace.html`). The shared Lab Cabinet detail views `stack.html` and `solution.html` hold the solvent and stack builders, which live in `assets/app.js`.

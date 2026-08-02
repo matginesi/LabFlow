@@ -37,7 +37,7 @@ User
 
 A researcher opens the Workspace, creates or continues a Project and follows that Project's Pipeline. Samples, files, measurements, results and future deeper Experiment/run records belong to Project data; they are not a second navigation hierarchy.
 
-Older Process/Experiment pages remain only as compatibility/detail views and are intentionally absent from the primary sidebar and global search.
+Run and Experiment records are Project data, surfaced by the Project Data overview (`workspace.html`); there are no separate Process/Experiment pages.
 
 ## CHOSE showcase Pipeline
 
@@ -207,18 +207,11 @@ Do not enter real credentials or confidential laboratory data.
 
 Advanced ingest/report pages remain available from the relevant Project workflow but do not appear as parallel primary workflow stages in the sidebar.
 
-## Compatibility pages
+## Run records and Lab Cabinet detail views
 
-These are retained temporarily to preserve useful scientific UI/concepts:
+Execution/run records (samples, measurements, results) live in Project data and are surfaced by the Project Data overview (`workspace.html`); they are not a separate navigation hierarchy.
 
-- `processes.html`
-- `pipeline.html`
-- `experiments.html`
-- `experiment.html`
-- `stack.html`
-- `solution.html`
-
-They show a compatibility notice and must not become the primary product hierarchy again.
+`stack.html` and `solution.html` remain as shared Lab Cabinet detail views holding the solvent and stack builders.
 
 ## Repository structure
 
@@ -254,7 +247,6 @@ LabFlow/
 │   ├── pipeline-loader.js      tiny runtime adapter; no network/file fetch
 │   ├── project-store.js        Project-scoped session data helpers
 │   ├── cabinet-store.js        reusable resources + Project snapshots
-│   ├── compatibility-domain.js quarantined Process/Experiment demo model
 │   ├── measurement-types.js    measurement semantics
 │   └── exporters.js            local export helpers
 ├── pipelines/
