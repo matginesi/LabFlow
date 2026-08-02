@@ -72,7 +72,7 @@ for html in sorted(ROOT.glob("*.html")):
         app = text.find("assets/app.js")
         if bundle < 0 or loader < 0 or not (bundle < loader < app):
             fail(f"{html.name}: pipeline-bundle.js -> pipeline-loader.js -> app.js order is required")
-    compatibility_routes = {"processes.html", "pipeline.html", "experiments.html", "experiment.html"}
+    compatibility_routes = {"processes.html", "pipeline.html", "experiments.html", "experiment.html", "stack.html", "solution.html"}
     if html.name not in compatibility_routes and "assets/compatibility-domain.js" in text:
         fail(f"{html.name}: primary route loads quarantined Process/Experiment compatibility model")
     if html.name in compatibility_routes and "assets/compatibility-domain.js" not in text:
