@@ -83,10 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   currentUser().projects.forEach(hydrateProjectState);
   function touchCurrentProject(){const project=currentProject();project.updated='Just now';project.updatedAt=new Date().toISOString();try{sessionStorage.setItem(`labflow-project-state-${currentUserKey}-${project.key}`,JSON.stringify({pipeline:project.pipeline||'chose',currentStep:project.currentStep||0,pipelineCompleted:Boolean(project.pipelineCompleted),steps:project.steps,updatedAt:project.updatedAt}));}catch(_){} }
   const domain=window.LabFlowDomain||{};
-  const currentProcess=()=>{
-    const requested=page==='process'?new URLSearchParams(location.search).get('process'):null;
-    return (requested&&domain.processes?.find(item=>item.key===requested))||domain.getCurrentProcess?.(currentUserKey)||{id:'PROC-PSC-NIP',key:'psc-nip',name:'Perovskite solar cell fabrication — n-i-p',shortName:'PSC fabrication · n-i-p',status:'Active',version:'2.0'};
-  };
+  const currentProcess=()=>domain.getCurrentProcess?.(currentUserKey)||{id:'PROC-PSC-NIP',key:'psc-nip',name:'Perovskite solar cell fabrication — n-i-p',shortName:'PSC fabrication · n-i-p',status:'Active',version:'2.0'};
 
 
   function buildNavigation(project){
@@ -164,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
     $$('[data-icon]').forEach(node => node.innerHTML = icon(node.dataset.icon));
-    mountUserPopover(); mountProjectPopover(); mountProcessPopover(); mountPalettePopover(); mountScopeBar(); mountCreateWizard(); mountProjectWizard(); applyUserScope(); scopeProjectLinks(); applyContextCopy();
+    mountUserPopover(); mountProjectPopover(); mountPalettePopover(); mountScopeBar(); mountCreateWizard(); mountProjectWizard(); applyUserScope(); scopeProjectLinks(); applyContextCopy();
     }
   }
 
@@ -188,14 +185,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     pop=document.createElement('section'); pop.id='projectPopover'; pop.className='project-popover'; pop.hidden=true;
     const items=currentUser().projects.map(project=>{const meta=projectPipeline(project),selected=project.key===currentProject().key;return `<button type="button" class="project-option ${selected?'active':''}" data-action="project-select" data-project="${escapeHtml(project.key)}" style="${pipelineStyle(meta)}"><span class="project-option-icon">${icon('folder')}</span><span><strong>${escapeHtml(project.name)}</strong><small>${escapeHtml(meta.shortName)} · ${project.pipelineCompleted?'Completed':`Step ${(Number(project.currentStep)||0)+1}/${meta.steps.length}`}</small></span><span class="pipeline-dot" aria-hidden="true"></span>${selected?'<span class="badge success">Selected</span>':''}</button>`}).join('');
     pop.innerHTML=`<div class="user-popover-head"><strong>Switch Project</strong><small>Select the Project you want to continue. Shared tools remain detached unless you explicitly open them with Project context.</small></div>${items}<div class="popover-actions"><a class="button small" href="index.html">My Workspace</a><button class="button small primary" type="button" data-action="project-wizard">New Project</button></div>`;
-    document.body.append(pop);
-  }
-
-  function mountProcessPopover(){
-    let pop=$('#processPopover'); if(pop) pop.remove();
-    pop=document.createElement('section'); pop.id='processPopover'; pop.className='project-popover'; pop.hidden=true;
-    const items=(domain.processes||[]).map(process=>`<button type="button" class="project-option ${process.key===currentProcess().key?'active':''}" data-action="process-select" data-process="${process.key}"><span class="project-option-icon">${icon('flow')}</span><span><strong>${escapeHtml(process.name)}</strong><small>${process.experiments} experiments · v${escapeHtml(process.version)}</small></span>${process.key===currentProcess().key?'<span class="badge success">Current</span>':''}</button>`).join('');
-    pop.innerHTML=`<div class="user-popover-head"><strong>Compatibility processes</strong><small>Detailed Process definitions remain available for legacy scientific records.</small></div>${items}<div class="popover-actions"><a class="button small" href="processes.html">Open Pipelines catalogue</a><a class="button small primary" href="index.html">My Workspace</a></div>`;
     document.body.append(pop);
   }
 
@@ -388,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function mountGlobalSearch(){const input=$('input[name="global_search"]');if(input){input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','false');input.setAttribute('aria-controls','globalSearchResults');}let results=$('#globalSearchResults');if(results)return;results=document.createElement('section');results.id='globalSearchResults';results.className='global-search-results';results.hidden=true;results.setAttribute('aria-live','polite');$('#topbar')?.append(results);}
   function renderGlobalSearch(input){
     mountGlobalSearch();const root=$('#globalSearchResults'),query=input.value.trim(),filterItems=$$('[data-filter-item]');
-    const localInput={catalogs:'#cabinetSearch',knowledge:'#knowledgeSearch',docs:'#documentationSearch',dashboard:'#workspaceProjectSearch',processes:'#processSearch',experiments:'#experimentSearch'}[page];
+    const localInput={catalogs:'#cabinetSearch',knowledge:'#knowledgeSearch',docs:'#documentationSearch',dashboard:'#workspaceProjectSearch'}[page];
     const proxy=localInput?$(localInput):null;if(proxy&&proxy.value!==input.value){proxy.value=input.value;if(page==='catalogs')renderCabinet();if(page==='knowledge')renderKnowledgeSources();if(page==='docs')searchDocumentation(input.value);if(page==='dashboard')renderDashboard();}
     if(filterItems.length){const localQuery=normaliseSearch(query);filterItems.forEach(item=>item.hidden=Boolean(query&&!normaliseSearch(item.textContent).includes(localQuery)));}
     if(!query){root.hidden=true;input.setAttribute('aria-expanded','false');return;}
@@ -398,7 +387,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function mountUnifiedSearch(){
-    const selectors=['#cabinetSearch','#knowledgeSearch','#documentationSearch','#processSearch','#experimentSearch'];
+    const selectors=['#cabinetSearch','#knowledgeSearch','#documentationSearch'];
     selectors.forEach(selector=>{const input=$(selector);if(!input)return;const container=input.closest('label')||input.closest('.field');if(container)container.classList.add('unified-search-source');input.tabIndex=-1;input.setAttribute('aria-hidden','true');});
   }
 
@@ -760,7 +749,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     target.innerHTML = `<div class="form-grid">${data.fields.map(([label,value],index) => `<div class="field ${index > 3 ? 'span-2' : ''}"><label>${escapeHtml(label)}</label><input class="input" value="${escapeHtml(value)}"></div>`).join('')}<div class="field span-2"><label>Execution note</label><textarea class="input">This field becomes a template instruction. Actual execution evidence is recorded in ProcessRun.</textarea></div></div>`;
   }
 
-  /* Solvent and stack builders (migrated from compatibility-domain.js) */
+  /* Solvent and stack builders (migrated from the removed compatibility domain) */
   function solventRows(root) { return $$('[data-solvent-row]', root); }
   function updateSolventBuilder(root = document) {
     const editor = $('[data-solvent-editor]', root) || (root.matches?.('[data-solvent-editor]') ? root : null);
@@ -834,28 +823,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderStackBuilder();
   }
 
-  /* Wizard and ABX3 */
-  let wizardStep = 0;
-  function showWizardStep(index) {
-    const panels = $$('[data-wizard-panel]'); if (!panels.length) return;
-    wizardStep = Math.max(0, Math.min(index, panels.length - 1));
-    panels.forEach((panel,i) => panel.hidden = i !== wizardStep);
-    $$('[data-wizard-step]').forEach(button => {const i=Number(button.dataset.wizardStep);button.classList.toggle('active',i===wizardStep);button.classList.toggle('complete',i<wizardStep);button.setAttribute('aria-current',i===wizardStep?'step':'false');});
-    const label=panels[wizardStep]?.dataset.wizardLabel||`Step ${wizardStep+1}`;
-    $('#wizardStatus') && ($('#wizardStatus').textContent = `Step ${wizardStep + 1} of ${panels.length} · ${label}`);
-    const meter=$('#wizardProgressFill'); if(meter)meter.style.width=`${((wizardStep+1)/panels.length)*100}%`;
-    const prev=$('.wizard-footer [data-action="wizard-prev"]'); if(prev)prev.disabled=wizardStep===0;
-    const next = $('.wizard-footer [data-action="wizard-next"]');
-    const labels=['Continue to stacks','Continue to processing','Continue to data','Continue to analysis','Continue to charts & report','Continue to export','Continue to NOMAD','Workflow complete'];
-    if(next){next.textContent=labels[wizardStep]||'Continue';next.disabled=wizardStep===panels.length-1;}
-    const nextTexts=['Complete the solution preparation.','Create the stacks that will use this solution.','Record the processing actually performed.','Add measurement data to the stacks.','Compare results from the linked stack data.','Create charts and review the report draft.','Inspect archive contents before export.','Resolve the remaining NOMAD readiness issues.'];
-    const topLabels=['Complete preparation','Create stacks','Record processing','Add data','Compare stacks','Create report','Review export','Review NOMAD issues'];
-    const topText=$('#experimentNextText'),topButton=$('#experimentNextButton');
-    if(topText)topText.textContent=nextTexts[wizardStep];if(topButton){topButton.textContent=topLabels[wizardStep];topButton.dataset.action=wizardStep===0?'solution-prep-complete':wizardStep===panels.length-1?'toast':'wizard-next';topButton.dataset.message=wizardStep===panels.length-1?'NOMAD readiness issues opened':'';topButton.disabled=false;}
-    location.hash = ['solutions','stacks','processing','data','analysis','outputs','export','nomad'][wizardStep] || '';
-    requestAnimationFrame(()=>renderGraphContainers(panels[wizardStep]));
-  }
-
+  /* ABX3 formula editor */
   function updateAbxFormula() {
     const siteText = site => $$(`[data-ion-list="${site}"] .ion-row`).map(row => {
       const name = $('[data-ion-name]', row)?.value || ''; const coeff = Number($('[data-ion-coeff]', row)?.value || 0);
@@ -1614,7 +1582,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(action==='knowledge-context-action')openKnowledgeConfirmation(button.dataset.knowledgeAction||'Open source',button.dataset.source);
     if(action==='knowledge-action-confirm'){closeOverlay($('#knowledgeConfirm'));toast(`${pendingKnowledgeAction} ready`,'success','Confirmed demo action only; no laboratory data was modified.');}
     if(action==='ai-drawer')openOverlay('aiDrawer');
-    if(action==='solution-prep-complete'){button.textContent='Preparation complete';button.disabled=true;button.closest('.batch-card')?.querySelector('.badge')?.classList.replace('warning','success');toast('Solution preparation complete','success','Recipe FA-Cs 1.2 M and concrete batch SOL-081 are ready for the stacks.');setTimeout(()=>showWizardStep(1),350);}
     if(button.matches('[data-ai-mode]')){aiState.mode=button.dataset.aiMode;aiState.lastInput=null;aiState.lastOutput=null;const prompt=$('#aiPrompt');if(prompt)prompt.value=aiModes[aiState.mode].prompts[0];renderAIPage();}
     if(button.matches('[data-ai-prompt]')){const prompt=$('#aiPrompt');if(prompt){prompt.value=button.dataset.aiPrompt;prompt.focus();}aiState.lastInput=aiInput(aiState.mode,button.dataset.aiPrompt);renderAIPage();}
     if(action==='ai-run')runAI();
@@ -1640,9 +1607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(action==='palette-toggle'){const pop=$('#palettePopover');if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
     if(action==='user-toggle'){const pop=$('#userPopover'),project=$('#projectPopover');if(project)project.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
     if(action==='project-toggle'){const pop=$('#projectPopover'),user=$('#userPopover'),palette=$('#palettePopover');if(user)user.hidden=true;if(palette)palette.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
-    if(action==='process-toggle'){const pop=$('#processPopover'),user=$('#userPopover');if(user)user.hidden=true;if(pop){pop.hidden=!pop.hidden;button.setAttribute('aria-expanded',String(!pop.hidden));}}
-    if(action==='process-select'){domain.setCurrentProcess?.(button.dataset.process,currentUserKey);if(page==='process')location.href=`pipeline.html?process=${encodeURIComponent(button.dataset.process)}`;else location.reload();}
-    if(action==='process-new'){location.href='processes.html#new';}
+    if(action==='process-select'){domain.setCurrentProcess?.(button.dataset.process,currentUserKey);location.reload();}
     if(action==='project-select'){
       const selected=button.dataset.project;if(!selected)return;
       try{sessionStorage.setItem(projectStoreKey(),selected);}catch(_){}
@@ -1670,8 +1635,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(action==='palette')setPalette(button.dataset.palette);
     if(action==='admin-palette-save'){const config={default_palette:$('#adminDefaultPalette')?.value||'blue',force_palette:Boolean($('#adminForcePalette')?.checked)};try{localStorage.setItem('labflow-admin-appearance',JSON.stringify(config))}catch(_){};setPalette(config.default_palette);toast('Appearance policy saved','success',config.force_palette?'The workspace palette is now fixed.':'Researchers may choose their color theme.');}
     if(action==='project-wizard'){openProjectWizard();}
-    if(action==='experiment-wizard'){const modal=$('#startExperimentModal');if(modal)openOverlay('startExperimentModal');else location.href='experiment.html';}
-    if(action==='minimal-experiment-create'){const name=$('#minimalExperimentName')?.value.trim(),objective=$('#minimalExperimentObjective')?.value.trim(),processKey=$('input[name="experiment_process"]:checked')?.value,start=$('input[name="experiment_start"]:checked')?.value||'defaults';if(!processKey){toast('Select a process','warning','Every experiment belongs to one process definition.');return;}if(!name||!objective){toast('Name and objective required','warning','Add the two essential fields to create the experiment.');return;}domain.setCurrentProcess?.(processKey,currentUserKey);toast('Experiment created','success','Process defaults were snapshotted; concrete batches, stacks and runs now belong to the experiment.');setTimeout(()=>location.href=`experiment.html?process=${encodeURIComponent(processKey)}&start=${encodeURIComponent(start)}`,350);}
     if(action==='stack-wizard'){location.href='stack.html?new';}
     if(action==='quick-import'){location.href='imports.html';}
     if(button.matches('[data-import-mode]')){const mode=button.dataset.importMode;$$('[data-import-panel]').forEach(panel=>panel.hidden=panel.dataset.importPanel!==mode);$$('[data-import-mode]').forEach(item=>item.classList.toggle('active',item===button));if(mode==='nomad')location.hash='nomad';}
@@ -1716,7 +1679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(action==='create-choose')renderCreateChooser();
     if(action==='create-prev'){createWizardState.step=Math.max(0,createWizardState.step-1);renderCreateForm();}
     if(action==='create-next'){createWizardState.step=Math.min(2,createWizardState.step+1);renderCreateForm();}
-    if(action==='create-complete'){const type=button.dataset.createType;const target=type==='project'?'project.html':type==='experiment'?'experiment.html':'catalogs.html';toast(type==='project'?'Project created':type==='experiment'?'Experiment wizard ready':'Lab Cabinet resource created','success',type==='project'?'Opening the new project workspace.':type==='experiment'?'Opening the full guided experiment.':'Saved in the shared Lab Cabinet context.');setTimeout(()=>{location.href=target;},260);}
+    if(action==='create-complete'){const type=button.dataset.createType;const target=type==='project'?'project.html':'catalogs.html';toast(type==='project'?'Project created':'Lab Cabinet resource created','success',type==='project'?'Opening the new project workspace.':'Saved in the shared Lab Cabinet context.');setTimeout(()=>{location.href=target;},260);}
     if(action==='close-sidebar') document.body.classList.remove('sidebar-open');
     if(action==='theme') setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
     if(action==='open') openOverlay(button.dataset.target);
@@ -1729,11 +1692,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(button.classList.contains('process-node')) { $$('.process-node').forEach(n=>n.classList.toggle('active',n===button));renderProcessInspector(button.dataset.processNode); }
     if(action==='process-add-step')openProcessStepWizard();
     if(action==='process-validate') toast('Template validation','warning','One output role is still undefined in the demo.');
-    if(button.matches('[data-wizard-step]')) showWizardStep(Number(button.dataset.wizardStep));
-    if(action==='wizard-prev') showWizardStep(wizardStep-1);
-    if(action==='wizard-next'){const panels=$$('[data-wizard-panel]');if(wizardStep<panels.length-1)showWizardStep(wizardStep+1);else{toast('Experiment review complete','success','Choose comparison, report or NOMAD from the finish screen.');}}
-    if(action==='wizard-resources') showWizardStep(0);
-    if(action==='experiment-review'){showWizardStep($$('[data-wizard-panel]').length-1);toast('Review opened','info','Check completeness, ownership and NOMAD mapping.');}
     if(action==='add-ion') addIon(button.dataset.site);
     if(action==='remove-ion'){button.closest('.ion-row')?.remove();updateAbxFormula();}
     if(action==='add-condition'){const grid=$('#conditionGrid');if(grid){const n=grid.children.length+1;const card=document.createElement('article');card.className='condition-card selected';card.innerHTML=`<header><div><h3>Condition ${String.fromCharCode(64+n)}</h3><p>New condition</p></div><span class="badge">3 samples</span></header><dl class="key-values"><div><dt>Spin speed</dt><dd>1500 rpm</dd></div><div><dt>Duration</dt><dd>30 s</dd></div><div><dt>Antisolvent</dt><dd>Not set</dd></div><div><dt>Annealing</dt><dd>100 °C · 30 min</dd></div></dl>`;grid.append(card);}}
@@ -1891,7 +1849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(event.target.id==='workspaceImportFile'){const file=event.target.files?.[0],root=$('#workspaceImportPreview');if(file&&root){const ext=file.name.split('.').pop().toLowerCase(),textLike=['csv','tsv','txt','json'].includes(ext);if(!textLike){root.innerHTML=`<div class="data-preview-head"><div><strong>${escapeHtml(file.name)}</strong><small>Original file · ${(file.size/1024).toFixed(1)} KB</small></div><span class="badge warning">Mapping required</span></div><div class="import-provenance-grid"><span><b>Detected type</b>${escapeHtml(ext.toUpperCase()||file.type||'File')}</span><span><b>Extracted data</b>Preview simulated</span><span><b>Transformations</b>None</span><span><b>Excluded rows</b>0</span></div><div class="alert info"><span>${icon('info')}</span><div><strong>Original preserved</strong><small>Binary parsing is represented as a POC step; no file leaves this browser.</small></div></div>`;return;}const reader=new FileReader();reader.onload=()=>{try{const raw=String(reader.result||'');let rows;if(ext==='json'){const data=JSON.parse(raw),list=Array.isArray(data)?data:[data],keys=[...new Set(list.flatMap(item=>Object.keys(item||{})))];rows=[keys,...list.slice(0,5).map(item=>keys.map(key=>item?.[key]??''))];}else{const delimiter=ext==='tsv'?'\t':raw.includes(',')?',':'\t';rows=raw.trim().split(/\r?\n/).slice(0,6).map(line=>line.split(delimiter));}root.innerHTML=`<div class="data-preview-head"><div><strong>${escapeHtml(file.name)}</strong><small>Original file · no transformations applied</small></div><span class="badge success">Preview ready</span></div><div class="table-wrap"><table class="data-table"><tbody>${rows.map((row,i)=>`<tr>${row.map(cell=>`<${i?'td':'th'}>${escapeHtml(String(cell))}</${i?'td':'th'}>`).join('')}</tr>`).join('')}</tbody></table></div><div class="import-provenance-grid"><span><b>Units</b>Detect or assign</span><span><b>Excluded rows</b>0</span><span><b>Destination</b>S02</span><span><b>Provenance</b>Original retained</span></div><div class="row"><button class="button small" type="button" data-action="toast" data-message="Column mapping opened">Map columns & units</button><button class="button small primary" type="button" data-action="toast" data-message="Import saved as a reviewable draft">Confirm import</button></div>`;}catch(_){root.innerHTML='<div class="alert danger"><strong>Preview failed</strong><small>Check the file structure or attach it as an unparsed original.</small></div>';}};reader.readAsText(file);}}
     if(event.target.matches('[data-report-image-input]')){const file=event.target.files?.[0],index=+event.target.dataset.reportImageInput;if(file){const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{reportImageCache.set(index,img);reportData.images[index].filename=file.name;renderReportArrays();renderReport();toast('Report image updated','success',file.name);};img.src=String(reader.result);};reader.readAsDataURL(file);}}
   });
-  document.addEventListener('pointerdown',event=>{const user=$('#userPopover'),project=$('#projectPopover'),process=$('#processPopover'),palette=$('#palettePopover');if(user&&!user.hidden&&!event.target.closest('#userPopover,.user-menu,[data-action="user-toggle"]'))user.hidden=true;if(project&&!project.hidden&&!event.target.closest('#projectPopover,.project-context-button,[data-action="project-toggle"]'))project.hidden=true;if(process&&!process.hidden&&!event.target.closest('#processPopover,[data-action="process-toggle"]'))process.hidden=true;if(palette&&!palette.hidden&&!event.target.closest('#palettePopover,[data-action="palette-toggle"]'))palette.hidden=true;});
+  document.addEventListener('pointerdown',event=>{const user=$('#userPopover'),project=$('#projectPopover'),palette=$('#palettePopover');if(user&&!user.hidden&&!event.target.closest('#userPopover,.user-menu,[data-action="user-toggle"]'))user.hidden=true;if(project&&!project.hidden&&!event.target.closest('#projectPopover,.project-context-button,[data-action="project-toggle"]'))project.hidden=true;if(palette&&!palette.hidden&&!event.target.closest('#palettePopover,[data-action="palette-toggle"]'))palette.hidden=true;});
   document.addEventListener('submit',event=>{if(event.target.id==='knowledgeForm'){event.preventDefault();const question=$('#knowledgePrompt')?.value.trim();if(!question){toast('Question required','warning','Ask a focused question to search the selected context.');return;}answerKnowledge(question);}});
   /* Advanced ingest intercepts the legacy single-file preview and presents a batch manifest. */
   document.addEventListener('change',event=>{
@@ -1904,7 +1862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   },true);
   document.addEventListener('focusin',event=>{if(event.target.matches('[data-sheet-cell]'))selectCell(+event.target.dataset.row,+event.target.dataset.col);});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'){document.body.classList.remove('sidebar-open');$$('.overlay:not([hidden]),.drawer:not([hidden])').forEach(closeOverlay);}});
-  window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(page==='experiment'){const step={setup:0,resources:0,solutions:0,stacks:1,processing:2,process:2,data:3,analysis:4,outputs:5,results:5,export:6,nomad:7}[key];if(Number.isInteger(step)&&step!==wizardStep)showWizardStep(step);return;}if(page==='docs'&&key.startsWith('file=')){renderDocumentationFile(decodeURIComponent(key.slice(5)));return;}if(page==='docs'&&documentationOrder.includes(key)){renderDocumentation(key);return;}if(page==='dashboard'&&key==='new'){openProjectWizard();return;}const tabButton=$(`[data-tab="${key}"]`);if(tabButton)activateTab(tabButton);});
+  window.addEventListener('hashchange',()=>{const key=location.hash.slice(1);if(page==='docs'&&key.startsWith('file=')){renderDocumentationFile(decodeURIComponent(key.slice(5)));return;}if(page==='docs'&&documentationOrder.includes(key)){renderDocumentation(key);return;}if(page==='dashboard'&&key==='new'){openProjectWizard();return;}const tabButton=$(`[data-tab="${key}"]`);if(tabButton)activateTab(tabButton);});
 
   mountShell(); mountGlobalSearch(); mountUnifiedSearch(); mountAIDrawer(); mountProcessStepWizard(); mountCabinetSelector(); renderCabinet(); renderToolsContext(); renderToolCatalog(); renderKnowledgeSources(); renderKnowledgeWelcome(); initProjectPipeline(); setPalette(document.documentElement.dataset.palette||'blue'); if(page==='report')initReportImages(); if(page==='dashboard'&&location.hash==='#new')setTimeout(openProjectWizard,0);
   if(page==='stack-detail'){const params=new URLSearchParams(location.search);const stackId=params.get('stack')||'STK-001';renderStackPage(stackId);}
@@ -1914,7 +1872,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderProcessInspector('composition');
   $$('[data-solvent-editor]').forEach(editor => updateSolventBuilder(editor));
   renderStackBuilder();
-  const hashToStep={choose:0,start:0,setup:0,resources:0,solutions:0,plan:1,stacks:1,materials:0,process:2,processing:2,work:2,run:2,data:3,analysis:4,outputs:5,results:5,review:5,finish:6,export:6,nomad:7};showWizardStep(hashToStep[location.hash.slice(1)]??0);
   updateAbxFormula(); renderAIPage(); renderDemoCharts(); renderDynamicCharts(); renderGraphContainers(); updateCodeEditor(); syncMarkdown(); renderWorkbook(); initDemoImage(); renderChartBuilder(); renderGraphEditor(); renderReportEditor(); renderReport();
   const initialTab=location.hash.slice(1);const tab=$(`[data-tab="${initialTab}"]`);if(tab)activateTab(tab);
   if(page==='imports'&&location.hash==='#nomad')document.querySelector('[data-import-mode="nomad"]')?.click();
