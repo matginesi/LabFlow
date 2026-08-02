@@ -194,7 +194,6 @@ Do not enter real credentials or confidential laboratory data.
 | Page | Role |
 | --- | --- |
 | `index.html` | My Workspace: create/continue Projects |
-| `projects.html` | Project directory |
 | `project.html` | Primary Project Pipeline workspace |
 | `workspace.html` | Project Data overview |
 | `catalogs.html` | Lab Cabinet |
@@ -216,6 +215,8 @@ These are retained temporarily to preserve useful scientific UI/concepts:
 - `pipeline.html`
 - `experiments.html`
 - `experiment.html`
+- `stack.html`
+- `solution.html`
 
 They show a compatibility notice and must not become the primary product hierarchy again.
 
@@ -224,7 +225,6 @@ They show a compatibility notice and must not become the primary product hierarc
 ```text
 LabFlow/
 ├── index.html
-├── projects.html
 ├── project.html
 ├── workspace.html
 ├── catalogs.html
