@@ -37,6 +37,8 @@
   --red-soft: #fdebed;
   --violet: #6f55a7;
   --violet-soft: #f0ebfb;
+  --info: #2b69aa;
+  --info-soft: #e8f1fb;
   --on-accent: #ffffff;
 
   /* Typography */
@@ -56,6 +58,7 @@
   --radius-1: 3px;
   --radius-2: 5px;
   --radius-3: 7px;
+  --radius-md: var(--radius-3);
   --control-h: 34px;
   --control-h-sm: 28px;
   --control-h-lg: 40px;
@@ -81,6 +84,12 @@
   --shadow: 0 1px 2px rgba(18, 31, 48, .06);
   --shadow-float: 0 16px 40px rgba(18, 31, 48, .18);
   --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+
+  /* Panel alias */
+  --panel: var(--surface);
+
+  /* Scientific stack layers */
+  --stack-contact: #c79b42;
 
   /* Charts and editors */
   --chart-bg: #ffffff;
@@ -147,6 +156,8 @@ html[data-theme="dark"] {
   --red-soft: #4c252b;
   --violet: #b39ce2;
   --violet-soft: #352b4b;
+  --info: #8cb4dd;
+  --info-soft: #20395c;
   --shadow: none;
   --shadow-float: 0 18px 44px rgba(0, 0, 0, .42);
   --chart-bg: #18212c;
