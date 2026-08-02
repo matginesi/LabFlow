@@ -88,8 +88,14 @@ Remove from `app.js`:
 - Wizard actions: `experiment-wizard`, `minimal-experiment-create` (app.js:1599-1600),
   `create-complete` experiment target, `wizard-*` actions (app.js:1658-1662),
   `solution-prep-complete` (app.js:1543), `process-select` (process branch), `process-new`,
-  `use-stack` (app.js:1719).
+  `add-stack-to-experiment` (app.js:1720), `stack-generate-variants` (app.js:1721).
 - The `experiment.html`-only `#startExperimentModal` logic (all in `compatibility-domain.js`).
+
+### 2.6a Re-target `use-stack` (kept page action)
+
+`use-stack` is triggered by the `stack.html` "Use in experiment" button. Re-target it from
+`experiment.html?stack=…` (app.js:1719) to `workspace.html?project=…` (Project Data) so the
+kept page still routes into the primary workflow.
 
 ### 2.5 KB sources re-target (app.js:1412, 1418, 1419)
 
@@ -115,6 +121,9 @@ Remove from `app.js`:
 - Any `page==='experiments'`/`page==='process'`/`page==='processes'` handling in shell/search
   is dead once pages are gone; remove the leftover branches that reference removed pages
   (e.g. `processSearch`/`experimentSearch` in local search inputs, app.js:391, 401).
+- `stackData['STK-001']` (app.js:972) is consumed only by the removed `add-stack-to-experiment`
+  action; defer its data cleanup to Phase B (unified demo data) unless the reference disappears
+  with the action.
 
 ## 4. Validator (`tools/validate_poc.py`)
 
