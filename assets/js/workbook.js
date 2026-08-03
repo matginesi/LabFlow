@@ -23,237 +23,445 @@
     const last = column(Math.max(...rows.map((values) => values.length), 1));
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="${config.showGridLines === false ? 0 : 1}"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews>${widthXml}<sheetFormatPr defaultRowHeight="18"/><sheetData>${rows.map((values, index) => row(values, index + 1, index === 0, config)).join("")}</sheetData>${filter && rows.length > 1 ? `<autoFilter ref="A1:${last}${rows.length}"/>` : ""}<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
   };
-  const pdfSafe = (value) => String(value ?? "").normalize("NFKD").replace(/[^\x20-\x7e]/g, "").replace(/([\\()])/g, "\\$1");
-  const pdfRgb = (hex) => [0, 2, 4].map((index) => (parseInt(hex.slice(index, index + 2), 16) / 255).toFixed(3)).join(" ");
-  const pdfText = (value, x, y, size = 10, bold = false, colour = "0.12 0.16 0.22") => `${colour} rg BT /F${bold ? 2 : 1} ${size} Tf ${x} ${y} Td (${pdfSafe(value)}) Tj ET`;
-  const pdfLines = (value, width = 82) => {
-    const words = pdfSafe(value).split(/\s+/);
+  const pdfAscii = (value) => String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[–—]/g, "-")
+    .replace(/[·•]/g, "|")
+    .replace(/[^\x20-\x7e]/g, "")
+    .replace(/([\\()])/g, "\\$1");
+  const pdfRgb = (hex) => {
+    const value = String(hex || "000000").replace("#", "");
+    return [0, 2, 4].map((index) => (parseInt(value.slice(index, index + 2), 16) / 255).toFixed(3)).join(" ");
+  };
+  const pdfTextWidth = (value, size, bold = false) => pdfAscii(value).length * size * (bold ? 0.56 : 0.50);
+  const pdfWrap = (value, width, size, bold = false, maxLines = 99) => {
+    const words = pdfAscii(value).split(/\s+/).filter(Boolean);
     const lines = [];
     let line = "";
-    words.forEach((word) => { const next = line ? `${line} ${word}` : word; if (next.length > width && line) { lines.push(line); line = word; } else line = next; });
+    words.forEach((word) => {
+      const candidate = line ? `${line} ${word}` : word;
+      if (line && pdfTextWidth(candidate, size, bold) > width) { lines.push(line); line = word; }
+      else line = candidate;
+    });
     if (line) lines.push(line);
-    return lines;
+    if (lines.length > maxLines) {
+      const clipped = lines.slice(0, maxLines);
+      clipped[maxLines - 1] = `${clipped[maxLines - 1].replace(/\s+\S*$/, "")}...`;
+      return clipped;
+    }
+    return lines.length ? lines : [""];
   };
-  function editablePdfRaw(project, data, options = {}) {
-    const encoder = new TextEncoder();
-    const palette = E.palettes[options.palette] || E.palettes.blue;
-    const accent = pdfRgb(palette.hex);
-    const dark = pdfRgb(palette.dark);
-    const report = options.report || {};
-    const sections = new Set(report.sections || ["summary", "methods", "results", "ai", "conclusions", "provenance"]);
-    const chartMetric = ["pce", "stability", "hysteresis"].includes(report.chartMetric) ? report.chartMetric : "pce";
-    const chartMeta = {pce:["PCE", "%"], stability:["STABILITY", "%"], hysteresis:["HYSTERESIS", "%"]}[chartMetric];
-    const findings = options.findings || [];
-    const best = data.reduce((current, item) => current.pce > item.pce ? current : item);
-    const mean = (key) => data.reduce((sum, item) => sum + Number(item[key] || 0), 0) / Math.max(1, data.length);
-    const pages = [];
-    const fields = [];
-    const addField = (page, name, value, rect, config = {}) => {
-      fields.push({ page, name, value: pdfSafe(value), rect, multiline: Boolean(config.multiline), size: config.size || 8, align: config.align || 0 });
+  function buildReportDocument(project, data, options = {}) {
+    const report = { ...(options.report || {}) };
+    const rows = (data || []).map((row) => ({ ...row }));
+    const sections = Array.isArray(report.sections) ? [...report.sections] : ["summary", "methods", "results", "ai", "conclusions", "provenance"];
+    const best = rows.length ? [...rows].sort((a, b) => Number(b.pce) - Number(a.pce))[0] : {};
+    const mean = {};
+    ["voc", "jsc", "ff", "pce", "stability", "hysteresis"].forEach((key) => {
+      mean[key] = rows.length ? rows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / rows.length : 0;
+    });
+    const metric = ["pce", "stability", "hysteresis"].includes(report.chartMetric) ? report.chartMetric : "pce";
+    const metricLabels = { pce: ["PCE", "%"], stability: ["Stability", "%"], hysteresis: ["Hysteresis", "%"] };
+    const metricValues = rows.map((row) => Number(row[metric] || 0));
+    const padding = metric === "pce" ? 0.5 : 1;
+    const minValue = metricValues.length ? Math.min(...metricValues) - padding : 0;
+    const maxValue = metricValues.length ? Math.max(...metricValues) + padding : 1;
+    return {
+      project,
+      report,
+      rows,
+      sections,
+      sectionSet: new Set(sections),
+      best,
+      mean,
+      metric,
+      metricLabel: metricLabels[metric][0],
+      metricSuffix: metricLabels[metric][1],
+      minValue,
+      maxValue,
+      metricRange: maxValue - minValue || 1,
+      findings: [...(options.findings || [])],
+      experiments: [...(options.experiments || [])].filter((item) => !item.project || item.project === project.id),
+      knowledgeCount: (options.knowledge || []).length,
+      solution: [
+        ["DMF", "Primary solvent", "1.60 mL", "80% v/v"],
+        ["DMSO", "Co-solvent", "0.40 mL", "20% v/v"],
+        ["FAI", "A-site solute", "365.3 mg", "90 mol%"],
+        ["MAI", "A-site solute", "39.7 mg", "10 mol%"],
+        ["PbI2", "Lead halide", "1152.5 mg", "1.00 eq"]
+      ],
+      stackLayers: options.stackLayers || [
+        { material: "Glass / ITO", role: "Substrate", thickness: "1.1 mm" },
+        { material: "SnO2", role: "ETL", thickness: "30 nm" },
+        { material: "FA0.90MA0.10PbI3", role: "Absorber", thickness: "620 nm" },
+        { material: "Spiro-OMeTAD", role: "HTL", thickness: "180 nm" },
+        { material: "Au", role: "Contact", thickness: "80 nm" }
+      ],
+      quality: [
+        ["1 ERROR", "Device count mismatch"],
+        ["2 WARNINGS", "Annealing unit and solution provenance"],
+        ["BOUNDARY", "No causal claim from incomplete metadata"]
+      ],
+      sources: ["batch_B03_forward.csv", "process_metadata.yaml", "SOL-B04", "STK-003/v2"]
     };
-    const linesAt = (commands, value, x, y, width = 82, size = 9, leading = 12, colour = "0.12 0.16 0.22", maxLines = 99) => {
-      const lines = pdfLines(value, width).slice(0, maxLines);
-      lines.forEach((line, index) => commands.push(pdfText(line, x, y - index * leading, size, false, colour)));
-    };
-    const rect = (commands, x, y, width, height, fill, stroke = null, lineWidth = 0.7) => {
-      commands.push(`${fill} rg ${x} ${y} ${width} ${height} re f`);
-      if (stroke) commands.push(`${stroke} RG ${lineWidth} w ${x} ${y} ${width} ${height} re S`);
-    };
-    const frame = (number, title) => [
-      "1 1 1 rg 0 0 595 842 re f",
-      `${dark} rg 0 806 595 36 re f`,
-      `${accent} rg 0 806 8 36 re f`,
-      pdfText("LABFLOW", 38, 819, 9, true, "1 1 1"),
-      pdfText(title, 104, 819, 9, true, "0.82 0.87 0.93"),
-      pdfText(report.reportCode || project.id, 455, 819, 8, false, "0.75 0.82 0.90"),
-      pdfText(`Page ${number} of 4`, 500, 22, 7, false, "0.38 0.43 0.51"),
-      `${accent} rg 38 40 509 2 re f`
-    ];
-
-    let commands = [
-      "1 1 1 rg 0 0 595 842 re f",
-      `${dark} rg 0 552 595 290 re f`,
-      `${accent} rg 0 552 11 290 re f`,
-      pdfText(`LABFLOW / ${(report.reportType || "Scientific project report").toUpperCase()} / ${report.reportCode || project.id}`, 48, 790, 9, true, accent),
-      pdfText(report.title || project.name, 48, 738, 25, true, "1 1 1"),
-      pdfText(report.subtitle || "Scientific project report", 48, 706, 11, false, "0.80 0.86 0.93")
-    ];
-    linesAt(commands, sections.has("summary") ? (report.executiveSummary || project.objective) : "Executive Summary excluded by the report author.", 48, 666, 72, 9.5, 14, "0.88 0.92 0.97", 6);
-    commands.push(pdfText(`${report.laboratory || options.user?.laboratory || "Laboratory"} | ${report.author || options.user?.name || project.owner} | ${report.reportDate || ""}`, 48, 576, 8.5, false, "0.76 0.82 0.90"), pdfText(`Keywords: ${report.keywords || ""}`, 48, 560, 7, false, "0.68 0.76 0.86"));
-    const kpis = [
-      ["BEST PCE", `${best.pce.toFixed(2)}%`, best.sample],
-      ["MEAN PCE", `${mean("pce").toFixed(2)}%`, `${data.length} samples`],
-      ["STABILITY", `${best.stability}%`, "best retained"],
-      ["MEAN VOC", `${mean("voc").toFixed(2)} V`, "cohort"],
+  }
+  class ReportPdfPage {
+    constructor(palette, number, title, report) {
+      this.commands = [];
+      this.palette = palette;
+      this.number = number;
+      this.report = report;
+      this.accent = pdfRgb(palette.strong || palette.hex);
+      this.dark = pdfRgb(palette.dark);
+      this.text = "0.12 0.16 0.22";
+      this.muted = "0.38 0.43 0.51";
+      this.rule = "0.83 0.86 0.90";
+      this.soft = "0.96 0.97 0.98";
+      this.white = "1 1 1";
+      this.rect(0, 0, 595, 842, this.white);
+      if (number > 1) this.runningHeader(title);
+    }
+    y(top, size = 0) { return 842 - top - size; }
+    rect(x, top, width, height, fill, stroke = null, lineWidth = 0.6) {
+      const y = 842 - top - height;
+      if (fill) this.commands.push(`${fill} rg ${x} ${y} ${width} ${height} re f`);
+      if (stroke) this.commands.push(`${stroke} RG ${lineWidth} w ${x} ${y} ${width} ${height} re S`);
+    }
+    line(x1, top1, x2, top2, colour = this.rule, width = 0.7) {
+      this.commands.push(`${colour} RG ${width} w ${x1} ${842 - top1} m ${x2} ${842 - top2} l S`);
+    }
+    textAt(value, x, top, size = 9, font = "F1", colour = this.text, align = "left") {
+      const safe = pdfAscii(value);
+      let tx = x;
+      if (align !== "left") {
+        const width = pdfTextWidth(safe, size, font === "F2");
+        if (align === "right") tx -= width;
+        if (align === "center") tx -= width / 2;
+      }
+      this.commands.push(`${colour} rg BT /${font} ${size} Tf ${tx.toFixed(2)} ${this.y(top, size).toFixed(2)} Td (${safe}) Tj ET`);
+    }
+    wrapped(value, x, top, width, size = 9, leading = 12, font = "F1", colour = this.text, maxLines = 99) {
+      const lines = pdfWrap(value, width, size, font === "F2", maxLines);
+      lines.forEach((line, index) => this.textAt(line, x, top + index * leading, size, font, colour));
+      return top + lines.length * leading;
+    }
+    circle(cx, topCenter, radius, fill, stroke = null, lineWidth = 0.6) {
+      const cy = 842 - topCenter;
+      const k = radius * 0.5522847498;
+      const path = `${cx + radius} ${cy} m ${cx + radius} ${cy + k} ${cx + k} ${cy + radius} ${cx} ${cy + radius} c ${cx - k} ${cy + radius} ${cx - radius} ${cy + k} ${cx - radius} ${cy} c ${cx - radius} ${cy - k} ${cx - k} ${cy - radius} ${cx} ${cy - radius} c ${cx + k} ${cy - radius} ${cx + radius} ${cy - k} ${cx + radius} ${cy} c`;
+      if (fill) this.commands.push(`${fill} rg ${path} f`);
+      if (stroke) this.commands.push(`${stroke} RG ${lineWidth} w ${path} S`);
+    }
+    brandMark(x, top, scale = 1, light = false) {
+      const ink = light ? this.white : this.dark;
+      const flow = this.accent;
+      this.line(x + 9 * scale, top + 2 * scale, x + 20 * scale, top + 2 * scale, ink, 2.1 * scale);
+      this.line(x + 12 * scale, top + 3 * scale, x + 12 * scale, top + 11 * scale, ink, 1.6 * scale);
+      this.line(x + 17 * scale, top + 3 * scale, x + 17 * scale, top + 11 * scale, ink, 1.6 * scale);
+      this.line(x + 12 * scale, top + 11 * scale, x + 5 * scale, top + 25 * scale, ink, 1.8 * scale);
+      this.line(x + 17 * scale, top + 11 * scale, x + 24 * scale, top + 25 * scale, ink, 1.8 * scale);
+      this.line(x + 5 * scale, top + 25 * scale, x + 24 * scale, top + 25 * scale, ink, 1.8 * scale);
+      this.line(x + 8 * scale, top + 20 * scale, x + 21 * scale, top + 20 * scale, flow, 1.5 * scale);
+      this.circle(x + 14.5 * scale, top + 15.5 * scale, 1.7 * scale, flow);
+      this.circle(x + 10 * scale, top + 20 * scale, 1.35 * scale, flow);
+      this.circle(x + 19 * scale, top + 20 * scale, 1.35 * scale, flow);
+    }
+    section(index, eyebrow, title, top, meta = "") {
+      this.textAt(`${String(index).padStart(2, "0")}  |  ${eyebrow.toUpperCase()}`, 38, top, 7, "F2", this.accent);
+      this.textAt(title, 38, top + 14, 16, "F2", this.dark);
+      if (meta) this.textAt(meta, 547, top + 17, 7.5, "F1", this.muted, "right");
+      this.line(38, top + 38, 547, top + 38, this.rule, 0.7);
+      return top + 50;
+    }
+    excluded(name, top) {
+      this.rect(38, top, 509, 54, this.soft, this.rule);
+      this.textAt(`${name} EXCLUDED BY THE AUTHOR`, 50, top + 14, 8.5, "F2", this.dark);
+      this.textAt("Enable the section in the Report Composer to include it in every output.", 50, top + 31, 7.5, "F1", this.muted);
+      return top + 66;
+    }
+    runningHeader(title) {
+      this.textAt(`LABFLOW  |  ${this.report.reportCode || "REPORT"}`, 38, 22, 7.5, "F2", this.accent);
+      this.textAt(title, 547, 22, 7.5, "F2", this.dark, "right");
+      this.line(38, 38, 547, 38, this.accent, 1.2);
+    }
+    footer(left) {
+      this.line(38, 815, 547, 815, this.rule, 0.6);
+      this.textAt(left, 38, 821, 6.7, "F1", this.muted);
+      this.textAt(`${String(this.number).padStart(2, "0")} / 04`, 547, 821, 7.4, "F2", this.accent, "right");
+    }
+  }
+  function drawKpis(page, model, top) {
+    const cards = [
+      ["BEST PCE", `${Number(model.best.pce || 0).toFixed(2)}%`, model.best.sample || "-"],
+      ["MEAN PCE", `${model.mean.pce.toFixed(2)}%`, `${model.rows.length} samples`],
+      ["STABILITY", `${Number(model.best.stability || 0).toFixed(0)}%`, "best retained"],
+      ["MEAN VOC", `${model.mean.voc.toFixed(2)} V`, "cohort"],
       ["OPEN ISSUES", "3", "quality review"]
     ];
-    kpis.forEach(([label, value, detail], index) => {
-      const x = 38 + index * 103;
-      rect(commands, x, 458, 96, 70, index === 0 ? "0.93 0.97 0.98" : "0.96 0.97 0.99", "0.84 0.87 0.91");
-      commands.push(`${accent} rg ${x} 525 96 3 re f`, pdfText(label, x + 8, 505, 6.5, true, "0.32 0.38 0.46"), pdfText(value, x + 8, 480, 15, true, index === 0 ? accent : "0.12 0.16 0.22"), pdfText(detail, x + 8, 466, 6.5, false, "0.38 0.43 0.51"));
+    const gap = 6;
+    const width = (509 - gap * 4) / 5;
+    cards.forEach(([label, value, detail], index) => {
+      const x = 38 + index * (width + gap);
+      page.rect(x, top, width, 62, index === 0 ? "0.93 0.97 0.98" : page.soft, page.rule);
+      page.rect(x, top, width, 3, page.accent);
+      page.textAt(label, x + 8, top + 12, 6.5, "F2", page.muted);
+      page.textAt(value, x + 8, top + 27, 14, "F2", index === 0 ? page.accent : page.dark);
+      page.textAt(detail, x + 8, top + 48, 6.5, "F1", page.muted);
     });
-    commands.push(pdfText("EDITABLE REPORT IDENTITY", 38, 420, 8, true, accent), pdfText("Title", 48, 394, 7, true), pdfText("Author / laboratory", 48, 344, 7, true), pdfText("Approval state", 304, 344, 7, true), pdfText("Executive summary", 48, 289, 7, true));
-    addField(0, "report.title", report.title || project.name, [48, 360, 547, 388], { size: 10 });
-    addField(0, "report.author", `${report.author || options.user?.name || project.owner} | ${report.laboratory || options.user?.laboratory || "Laboratory"}`, [48, 310, 292, 338], { size: 7 });
-    addField(0, "report.approval", report.approval || "Pending researcher approval", [304, 310, 547, 338], { size: 7 });
-    addField(0, "report.executive_summary", sections.has("summary") ? (report.executiveSummary || project.objective) : "Executive Summary excluded by the report author.", [48, 150, 547, 282], { multiline: true, size: 8.5 });
-    rect(commands, 38, 75, 509, 48, "0.95 0.97 0.99");
-    commands.push(pdfText("PROJECT", 48, 108, 6.5, true, accent), pdfText(project.id, 48, 91, 9, true), pdfText("PIPELINE", 190, 108, 6.5, true, accent), pdfText(project.pipeline, 190, 91, 9, true), pdfText("EVIDENCE", 330, 108, 6.5, true, accent), pdfText(`${project.files} files | ${project.measurements} measurements | ${project.findings} findings`, 330, 91, 8, true));
-    commands.push(pdfText("Page 1 of 4", 500, 22, 7, false, "0.38 0.43 0.51"), `${accent} rg 38 40 509 2 re f`);
-    pages.push(commands.join("\n"));
-
-    commands = frame(2, "MATERIALS, PROCESS AND EXPERIMENT COVERAGE");
-    if (sections.has("methods")) {
-    commands.push(pdfText("Research context", 38, 770, 17, true), pdfText("Objectives", 38, 742, 7, true, accent), pdfText("Methodology", 38, 632, 7, true, accent));
-    addField(1, "report.objectives", report.objectives || project.objective, [38, 654, 547, 731], { multiline: true, size: 8.5 });
-    addField(1, "report.methodology", report.methodology || "Structured preparation, mapped JV measurements and deterministic comparative analysis.", [38, 544, 547, 621], { multiline: true, size: 8.5 });
-    if (report.includeQualityReview !== false) commands.push(pdfText("QUALITY REVIEW: 1 error | 2 warnings | causal interpretation remains blocked until provenance is complete", 38, 526, 6.5, true, accent));
-    commands.push(pdfText("Solution composition | SOL-B04", 38, 512, 12, true, accent));
-    const solution = [["DMF", "Primary solvent", "1.60 mL", "80% v/v"], ["DMSO", "Co-solvent", "0.40 mL", "20% v/v"], ["FAI", "A-site solute", "365.3 mg", "90 mol%"], ["MAI", "A-site solute", "39.7 mg", "10 mol%"], ["PbI2", "Lead halide", "1152.5 mg", "1.00 eq"]];
-    rect(commands, 38, 468, 509, 22, dark);
-    ["COMPONENT", "FUNCTION", "QUANTITY", "COMPOSITION"].forEach((label, index) => commands.push(pdfText(label, [46, 145, 345, 442][index], 476, 6.5, true, "1 1 1")));
-    solution.forEach((item, index) => {
-      const rowY = 445 - index * 24;
-      if (index % 2 === 0) rect(commands, 38, rowY, 509, 22, "0.96 0.97 0.99");
-      commands.push(pdfText(item[0], 46, rowY + 8, 7.5, true, accent), pdfText(item[1], 145, rowY + 8, 7.2), pdfText(item[2], 345, rowY + 8, 7.2, true), pdfText(item[3], 442, rowY + 8, 7.2));
-    });
-    commands.push(pdfText("Device stack | STK-003/v2", 38, 310, 12, true, accent));
-    const stack = [["05", "Au", "Back contact", "80 nm"], ["04", "Spiro-OMeTAD", "Hole transport", "180 nm"], ["03", "FA/MA perovskite", "Photoactive absorber", "540 nm"], ["02", "SnO2", "Electron transport", "32 nm"], ["01", "Glass / FTO", "Substrate + front contact", "2.2 mm"]];
-    stack.forEach((item, index) => {
-      const rowY = 278 - index * 29;
-      rect(commands, 38, rowY, 509, 25, index === 2 ? accent : index % 2 ? "0.92 0.94 0.97" : "0.96 0.97 0.99");
-      const colour = index === 2 ? "1 1 1" : "0.12 0.16 0.22";
-      commands.push(pdfText(item[0], 48, rowY + 9, 7, true, index === 2 ? "1 1 1" : accent), pdfText(item[1], 82, rowY + 9, 8, true, colour), pdfText(item[2], 270, rowY + 9, 7, false, colour), pdfText(item[3], 478, rowY + 9, 7, true, colour));
-    });
-    commands.push(pdfText("Experiment coverage", 38, 120, 12, true, accent));
-    [["EXP-041", "S01-S03", "100 C / 30 min", "6 measurements", "Reviewed"], ["EXP-052", "S04-S05", "105 C / 25 min", "4 measurements", "Reviewed"], ["EXP-067", "S06-S08", "100 / unit missing", "24 imported", "Review"]].forEach((item, index) => {
-      const rowY = 88 - index * 19;
-      commands.push(pdfText(item[0], 38, rowY, 7, true, accent), pdfText(item[1], 105, rowY, 7), pdfText(item[2], 185, rowY, 7), pdfText(item[3], 330, rowY, 7), pdfText(item[4], 470, rowY, 7, true));
-    });
-    } else {
-      commands.push(pdfText("Materials, Process & Experiments", 38, 770, 17, true), pdfText("Section excluded by the report author.", 38, 742, 9, false, "0.38 0.43 0.51"));
-    }
-    pages.push(commands.join("\n"));
-
-    commands = frame(3, "COMPLETE RESULTS AND MEASUREMENT RECORD");
-    if (sections.has("results")) {
-    commands.push(pdfText("Complete JV result table", 38, 770, 17, true), pdfText("Every displayed source-aligned value remains editable in this exported copy.", 38, 748, 7.5, false, "0.38 0.43 0.51"));
-    if (report.includeFullTable !== false) {
-    const positions = [38, 74, 158, 193, 238, 291, 336, 384, 452];
-    const widths = [34, 82, 33, 43, 51, 43, 46, 66, 95];
-    const keys = ["sample", "formulation", "batch", "voc", "jsc", "ff", "pce", "stability", "hysteresis"];
-    const labels = ["SAMPLE", "FORMULATION", "BATCH", "VOC", "JSC", "FF", "PCE", "STABILITY", "HYSTERESIS"];
-    rect(commands, 38, 708, 509, 24, dark);
-    labels.forEach((label, index) => commands.push(pdfText(label, positions[index] + 3, 716, index === 1 ? 5.6 : 5.8, true, "1 1 1")));
-    data.forEach((item, index) => {
-      const rowY = 678 - index * 31;
-      const values = [item.sample, item.formulation, item.batch, item.voc, item.jsc, item.ff, item.pce, item.stability, item.hysteresis];
-      values.forEach((value, colIndex) => addField(2, `measurements.${index + 1}.${keys[colIndex]}`, value, [positions[colIndex], rowY, positions[colIndex] + widths[colIndex], rowY + 27], { size: colIndex === 1 ? 5.7 : 6.5, align: colIndex >= 3 ? 1 : 0 }));
-    });
-    } else {
-      commands.push(pdfText("Complete measurement table excluded by the author.", 38, 708, 8, false, "0.38 0.43 0.51"));
-    }
-    commands.push(pdfText(`${chartMeta[0]} comparison`, 38, 414, 12, true, accent), pdfText("All samples | export-time deterministic snapshot", 150, 414, 7, false, "0.38 0.43 0.51"));
-    const chartPadding = chartMetric === "pce" ? 0.5 : 1;
-    const minPce = Math.min(...data.map((item) => Number(item[chartMetric]))) - chartPadding;
-    const maxPce = Math.max(...data.map((item) => Number(item[chartMetric]))) + chartPadding;
-    const rangePce = maxPce - minPce || 1;
-    data.forEach((item, index) => {
-      const barY = 379 - index * 25;
-      const barWidth = Math.max(10, ((Number(item[chartMetric]) - minPce) / rangePce) * 365);
-      rect(commands, 82, barY, 365, 12, "0.92 0.94 0.97");
-      rect(commands, 82, barY, barWidth, 12, accent);
-      commands.push(pdfText(item.sample, 38, barY + 3, 7, true), pdfText(`${Number(item[chartMetric]).toFixed(2)}${chartMeta[1]}`, 465, barY + 3, 7, true));
-    });
-    const stats = [["MEAN PCE", `${mean("pce").toFixed(2)}%`], ["MEAN VOC", `${mean("voc").toFixed(2)} V`], ["MEAN FF", `${mean("ff").toFixed(1)}%`], ["BEST STABILITY", `${best.stability}%`]];
-    stats.forEach(([label, value], index) => {
-      const x = 38 + index * 128;
-      rect(commands, x, 95, 117, 55, index === 0 ? "0.93 0.97 0.98" : "0.96 0.97 0.99", "0.84 0.87 0.91");
-      commands.push(pdfText(label, x + 8, 130, 6.5, true, accent), pdfText(value, x + 8, 108, 13, true));
-    });
-    linesAt(commands, report.resultsNarrative || `Leader: ${best.sample} at ${best.pce.toFixed(2)}% PCE. No row is silently excluded from the report.`, 38, 70, 100, 7.2, 9, "0.38 0.43 0.51", 3);
-    } else {
-      commands.push(pdfText("Results & Data", 38, 770, 17, true), pdfText("Section excluded by the report author.", 38, 742, 9, false, "0.38 0.43 0.51"));
-    }
-    pages.push(commands.join("\n"));
-
-    commands = frame(4, "FINDINGS, RESEARCHER DECISION AND PROVENANCE");
-    commands.push(pdfText("Evidence-linked findings", 38, 770, 17, true), pdfText("Simulated AI remains advisory and separate from researcher-authored conclusions.", 38, 748, 7.5, false, "0.38 0.43 0.51"));
-    let findingY = 714;
-    if (sections.has("ai")) findings.forEach((finding, index) => {
-      rect(commands, 38, findingY - 38, 509, 44, index % 2 ? "0.97 0.98 0.99" : "0.94 0.97 0.98");
-      commands.push(`${accent} rg 38 ${findingY - 38} 4 44 re f`, pdfText(String(finding.score), 50, findingY - 9, 11, true, accent), pdfText(finding.title, 90, findingY - 5, 8, true), pdfText(report.includeEvidence === false ? `Status: ${finding.status}` : `Evidence: ${finding.evidence} | Status: ${finding.status}`, 90, findingY - 28, 6.5, false, "0.38 0.43 0.51"));
-      findingY -= 50;
-    });
-    else commands.push(pdfText("Evidence-Linked Findings excluded by the report author.", 38, 700, 8, false, "0.38 0.43 0.51"));
-    if (sections.has("custom")) {
-      commands.push(pdfText(`CUSTOM AUTHOR SECTION | ${report.customTitle || "Additional researcher notes"}`, 38, 542, 7, true, accent));
-      addField(3, "report.custom_author_section", report.customBody || "No custom text entered.", [38, 470, 547, 530], { multiline: true, size: 7.5 });
-    }
-    if (sections.has("conclusions")) {
-    commands.push(pdfText("EDITABLE RESEARCHER DECISION", 38, 450, 8, true, accent), pdfText("Conclusions", 38, 426, 7, true), pdfText("Limitations", 38, 298, 7, true), pdfText("Approval / signature state", 38, 184, 7, true));
-    addField(3, "report.conclusions", report.conclusions || "Pending researcher conclusion.", [38, 316, 547, 416], { multiline: true, size: 8.5 });
-    addField(3, "report.limitations", report.limitations || "No limitations entered.", [38, 202, 547, 288], { multiline: true, size: 8.5 });
-    addField(3, "report.approval_final", report.approval || "Pending researcher approval", [38, 151, 547, 177], { size: 8 });
-    linesAt(commands, report.discussion || "", 310, 426, 45, 6.8, 9, "0.38 0.43 0.51", 4);
-    } else commands.push(pdfText("Discussion, Conclusions & Limitations excluded by the report author.", 38, 430, 8, false, "0.38 0.43 0.51"));
-    if (sections.has("provenance")) {
-    commands.push(pdfText("PROVENANCE CLASSES", 38, 125, 7, true, accent));
-    [["RAW", "Local source-aligned measurements"], ["CALCULATED", "Deterministic KPI and comparisons"], ["RESEARCHER", "Objectives, conclusions and approval"], ["AI", "Simulated advice requiring review"]].forEach(([label, detail], index) => {
-      const x = 38 + (index % 2) * 256;
-      const y = 98 - Math.floor(index / 2) * 30;
-      rect(commands, x, y, 248, 25, "0.96 0.97 0.99");
-      commands.push(pdfText(label, x + 8, y + 9, 6.5, true, accent), pdfText(detail, x + 70, y + 9, 6.5));
-    });
-    if (report.includeSourceAppendix !== false) commands.push(pdfText("SOURCES: batch_B03_forward.csv | process_metadata.yaml | SOL-B04 | STK-003/v2", 38, 47, 6.2, false, "0.38 0.43 0.51"));
-    } else commands.push(pdfText("Provenance & Approval excluded by the report author.", 38, 110, 8, false, "0.38 0.43 0.51"));
-    pages.push(commands.join("\n"));
-
-    const objects = [];
-    objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-    objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
-    let objectId = 5;
-    const pageIds = pages.map(() => objectId++);
-    const contentIds = pages.map(() => objectId++);
-    const fieldIds = fields.map(() => objectId++);
-    const appearanceIds = fields.map(() => objectId++);
-    fields.forEach((field, index) => {
-      const [x0, y0, x1, y1] = field.rect;
-      const width = x1 - x0;
-      const height = y1 - y0;
-      const inset = 4;
-      const approxChars = Math.max(5, Math.floor((width - inset * 2) / (field.size * 0.52)));
-      const lines = field.multiline ? pdfLines(field.value, approxChars).slice(0, Math.max(1, Math.floor((height - 8) / (field.size + 3)))) : [field.value];
-      const appearance = [`0.985 0.990 0.996 rg 0 0 ${width} ${height} re f`, `${accent} RG 0.65 w 0.5 0.5 ${width - 1} ${height - 1} re S`];
-      lines.forEach((line, lineIndex) => {
-        const lineWidth = line.length * field.size * 0.52;
-        const tx = field.align === 1 ? Math.max(inset, (width - lineWidth) / 2) : inset;
-        appearance.push(pdfText(line, tx, height - field.size - 5 - lineIndex * (field.size + 3), field.size));
-      });
-      const stream = appearance.join("\n");
-      objects[appearanceIds[index]] = `<< /Type /XObject /Subtype /Form /BBox [0 0 ${width} ${height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`;
-      objects[fieldIds[index]] = `<< /Type /Annot /Subtype /Widget /FT /Tx /T (${pdfSafe(field.name)}) /TU (${pdfSafe(field.name)}) /V (${field.value}) /DV (${field.value}) /Rect [${field.rect.join(" ")}] /P ${pageIds[field.page]} 0 R /F 4 /Ff ${field.multiline ? 4096 : 0} /Q ${field.align} /DA (/F1 ${field.size} Tf 0.12 0.16 0.22 rg) /MK << /BC [${accent}] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N ${appearanceIds[index]} 0 R >> >>`;
-    });
-    pages.forEach((content, index) => {
-      const annotations = fields.map((field, fieldIndex) => field.page === index ? `${fieldIds[fieldIndex]} 0 R` : "").filter(Boolean);
-      objects[pageIds[index]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentIds[index]} 0 R${annotations.length ? ` /Annots [${annotations.join(" ")}]` : ""} >>`;
-      objects[contentIds[index]] = `<< /Length ${encoder.encode(content).length} >>\nstream\n${content}\nendstream`;
-    });
-    objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
-    objects[1] = `<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [${fieldIds.map((id) => `${id} 0 R`).join(" ")}] /DR << /Font << /F1 3 0 R /F2 4 0 R >> >> /DA (/F1 8 Tf 0.12 0.16 0.22 rg) /NeedAppearances false >> >>`;
-    let pdf = "%PDF-1.7\n%LabFlow-compact-fillable\n";
-    const offsets = [0];
-    for (let id = 1; id < objects.length; id += 1) {
-      offsets[id] = encoder.encode(pdf).length;
-      pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`;
-    }
-    const xref = encoder.encode(pdf).length;
-    pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`;
-    for (let id = 1; id < objects.length; id += 1) pdf += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`;
-    pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-    return encoder.encode(pdf);
+    return top + 74;
   }
-
+  function drawSimpleTable(page, rows, headers, widths, top, options = {}) {
+    const x = options.x || 38;
+    const headerHeight = options.headerHeight || 22;
+    const rowHeight = options.rowHeight || 19;
+    const fontSize = options.fontSize || 7;
+    const total = widths.reduce((sum, width) => sum + width, 0);
+    page.rect(x, top, total, headerHeight, page.dark);
+    let cursor = x;
+    headers.forEach((header, index) => {
+      page.textAt(header, cursor + 5, top + 7, options.headerFontSize || 6.3, "F2", page.white);
+      cursor += widths[index];
+    });
+    rows.forEach((row, rowIndex) => {
+      const y = top + headerHeight + rowIndex * rowHeight;
+      page.rect(x, y, total, rowHeight, rowIndex % 2 ? page.soft : page.white, page.rule, 0.35);
+      let cellX = x;
+      row.forEach((value, columnIndex) => {
+        const align = options.numeric?.includes(columnIndex) ? "right" : "left";
+        const tx = align === "right" ? cellX + widths[columnIndex] - 5 : cellX + 5;
+        page.textAt(value, tx, y + 6, fontSize, columnIndex === 0 ? "F2" : "F1", columnIndex === options.highlightColumn ? page.accent : page.text, align);
+        cellX += widths[columnIndex];
+      });
+    });
+    return top + headerHeight + rows.length * rowHeight;
+  }
+  function pageOne(model, palette) {
+    const { report, project, sectionSet } = model;
+    const page = new ReportPdfPage(palette, 1, "", report);
+    page.rect(0, 0, 595, 190, page.dark);
+    page.rect(0, 0, 8, 190, page.accent);
+    page.brandMark(38, 24, 1.15, true);
+    page.textAt("LabFlow", 76, 29, 15, "F2", page.white);
+    page.textAt(`${(report.reportType || "Scientific project report").toUpperCase()}  |  ${report.reportCode || project.id}`, 76, 50, 7.2, "F2", page.accent);
+    const titleLines = pdfWrap(report.title || project.name, 450, 25, true, 2);
+    titleLines.forEach((line, index) => page.textAt(line, 38, 82 + index * 29, 25, "F2", page.white));
+    const subtitleTop = 88 + titleLines.length * 29;
+    page.wrapped(report.subtitle || "Scientific project report", 38, subtitleTop, 430, 10.5, 14, "F1", "0.82 0.87 0.93", 2);
+    page.textAt(`${report.laboratory || "Laboratory"}  |  ${report.author || project.owner || "Author"}`, 38, 166, 7.8, "F1", "0.76 0.82 0.90");
+    page.textAt(report.reportDate || "", 547, 28, 7.5, "F1", "0.76 0.82 0.90", "right");
+    page.textAt(report.approval || "Pending approval", 547, 166, 7.5, "F2", page.white, "right");
+    page.rect(38, 207, 509, 29, page.soft, page.rule);
+    page.textAt("KEYWORDS", 49, 217, 6.5, "F2", page.accent);
+    page.textAt(report.keywords || "", 104, 217, 7.3, "F1", page.muted);
+    let top = page.section(1, "Executive snapshot", "Decision-ready project summary", 254, project.id);
+    if (sectionSet.has("summary")) {
+      top = page.wrapped(report.executiveSummary || project.objective, 38, top, 509, 9.4, 13.2, "F1", page.text, 6) + 7;
+      page.rect(38, top, 509, 68, page.soft, page.rule);
+      page.textAt("RESEARCH OBJECTIVES", 50, top + 12, 6.8, "F2", page.accent);
+      page.wrapped(report.objectives || project.objective, 50, top + 29, 485, 8.1, 11.2, "F1", page.text, 3);
+      top += 80;
+      top = drawKpis(page, model, top);
+      page.rect(38, top, 509, 40, page.white, page.rule);
+      page.textAt("PROJECT", 49, top + 9, 6.2, "F2", page.accent);
+      page.textAt(project.id, 49, top + 22, 7.6, "F2", page.dark);
+      page.textAt("PIPELINE", 190, top + 9, 6.2, "F2", page.accent);
+      page.textAt(project.pipeline || "-", 190, top + 22, 7.6, "F2", page.dark);
+      page.textAt("EVIDENCE", 330, top + 9, 6.2, "F2", page.accent);
+      page.textAt(`${project.files || 0} files | ${project.measurements || 0} measurements | ${project.findings || 0} findings`, 330, top + 22, 7.1, "F2", page.dark);
+    } else page.excluded("Executive Summary", top);
+    page.footer(`${report.organisation || "Organisation"}  |  Generated from the current Report Composer state`);
+    return page.commands.join("\n");
+  }
+  function pageTwo(model, palette) {
+    const { report, sectionSet, stackLayers, experiments, quality } = model;
+    const page = new ReportPdfPage(palette, 2, "MATERIALS, PROCESS AND EXPERIMENT COVERAGE", report);
+    let top = page.section(2, "Materials & process", "Traceable preparation and device architecture", 60, `${experiments.length} experiments`);
+    if (!sectionSet.has("methods")) {
+      page.excluded("Materials, Process & Experiments", top);
+      page.footer(`${report.author || "Author"} | ${report.reportDate || ""} | Generated from Composer`);
+      return page.commands.join("\n");
+    }
+    top = page.wrapped(report.methodology || "", 38, top, 509, 8.8, 12, "F1", page.text, 5) + 10;
+    page.rect(38, top, 247, 157, page.soft, page.rule);
+    page.textAt("SOLUTION REVIEW  |  SOL-B04", 49, top + 12, 8, "F2", page.dark);
+    page.rect(49, top + 34, 176, 15, page.accent);
+    page.rect(225, top + 34, 44, 15, "0.20 0.44 0.76");
+    page.textAt("DMF 80%", 54, top + 38, 6.4, "F2", page.white);
+    page.textAt("DMSO 20%", 266, top + 38, 6.1, "F2", page.white, "right");
+    [["Target", "FA0.90MA0.10PbI3"], ["Volume", "2.00 mL"], ["Molarity", "1.25 M"], ["Status", "Reviewed"]].forEach(([label, value], index) => {
+      page.textAt(label.toUpperCase(), 49, top + 64 + index * 20, 6.1, "F2", page.muted);
+      page.textAt(value, 115, top + 64 + index * 20, 7.5, "F2", page.dark);
+    });
+    page.rect(300, top, 247, 157, page.soft, page.rule);
+    page.textAt("STACK REVIEW  |  STK-003/V2", 311, top + 12, 8, "F2", page.dark);
+    stackLayers.forEach((layer, index) => {
+      const y = top + 35 + index * 21;
+      page.rect(311, y, 225, 17, index === 2 ? page.accent : page.white, page.rule);
+      page.textAt(layer.material, 318, y + 5, 7, "F2", index === 2 ? page.white : page.dark);
+      page.textAt(layer.thickness, 529, y + 5, 6.7, "F1", index === 2 ? page.white : page.muted, "right");
+    });
+    page.textAt("n-i-p reference architecture", 311, top + 145, 6.3, "F1", page.muted);
+    top += 171;
+    if (report.includeExperiments && experiments.length) {
+      page.textAt("EXPERIMENT COVERAGE", 38, top, 7, "F2", page.accent);
+      top += 15;
+      const gap = 7, width = (509 - gap * 2) / 3;
+      experiments.slice(0, 3).forEach((experiment, index) => {
+        const x = 38 + index * (width + gap);
+        page.rect(x, top, width, 78, page.white, page.rule);
+        page.textAt(experiment.id, x + 9, top + 10, 7, "F2", page.accent);
+        page.wrapped((experiment.samples || []).join(" | "), x + 9, top + 27, width - 18, 7.1, 9, "F2", page.dark, 2);
+        page.wrapped(`${experiment.process || "-"} | ${experiment.annealing?.value ?? "-"}${experiment.annealing?.unit || " unit missing"} | ${experiment.measurements || 0} measurements`, x + 9, top + 49, width - 18, 6.2, 8, "F1", page.muted, 3);
+      });
+      top += 91;
+    }
+    if (report.includeQualityReview) {
+      page.textAt("DATA-QUALITY REVIEW", 38, top, 7, "F2", page.accent);
+      top += 14;
+      const gap = 6, width = (509 - gap * 2) / 3;
+      quality.forEach(([label, detail], index) => {
+        const x = 38 + index * (width + gap);
+        page.rect(x, top, width, 52, page.soft, page.rule);
+        page.textAt(label, x + 8, top + 10, 6.8, "F2", index === 0 ? "0.76 0.18 0.20" : page.accent);
+        page.wrapped(detail, x + 8, top + 25, width - 16, 6.5, 8.5, "F1", page.muted, 3);
+      });
+    }
+    page.footer(`${report.author || "Author"} | ${report.reportDate || ""} | Generated from the current Report Composer state`);
+    return page.commands.join("\n");
+  }
+  function pageThree(model, palette) {
+    const { report, rows, sectionSet, metric, metricLabel, metricSuffix, minValue, metricRange } = model;
+    const page = new ReportPdfPage(palette, 3, "COMPLETE RESULTS AND MEASUREMENT RECORD", report);
+    let top = page.section(3, "Complete results", "Device performance and source-aligned data", 60, `${rows.length} samples | 9 fields`);
+    if (!sectionSet.has("results")) {
+      page.excluded("Results & Data", top);
+      page.footer(`Researcher-reviewed data | ${report.approval || "Pending approval"}`);
+      return page.commands.join("\n");
+    }
+    page.rect(38, top, 509, 178, page.soft, page.rule);
+    page.textAt(`${metricLabel.toUpperCase()} BY SAMPLE`, 50, top + 13, 8.2, "F2", page.dark);
+    page.textAt("Complete included cohort | deterministic snapshot", 50, top + 29, 6.7, "F1", page.muted);
+    rows.forEach((row, index) => {
+      const y = top + 50 + index * 15;
+      const value = Number(row[metric] || 0);
+      const ratio = Math.max(0.02, Math.min(1, (value - minValue) / metricRange));
+      page.textAt(row.sample, 50, y, 6.6, "F2", page.dark);
+      page.rect(82, y + 1, 365, 7, "0.88 0.90 0.93");
+      page.rect(82, y + 1, 365 * ratio, 7, page.accent);
+      page.textAt(`${value.toFixed(2)}${metricSuffix}`, 530, y, 6.8, "F2", page.dark, "right");
+    });
+    top += 192;
+    if (report.includeFullTable) {
+      const tableRows = rows.map((row) => [row.sample, row.formulation, row.batch, Number(row.voc).toFixed(2), Number(row.jsc).toFixed(1), Number(row.ff).toFixed(1), Number(row.pce).toFixed(2), `${Number(row.stability).toFixed(0)}%`, `${Number(row.hysteresis).toFixed(1)}%`]);
+      top = drawSimpleTable(page, tableRows, ["SAMPLE", "FORMULATION", "BATCH", "VOC", "JSC", "FF", "PCE", "STAB.", "HYST."], [40, 82, 42, 45, 45, 43, 45, 50, 57], top, { fontSize: 5.7, headerFontSize: 5.5, rowHeight: 19, numeric: [3,4,5,6,7,8], highlightColumn: 6 });
+      top += 14;
+    }
+    page.rect(38, top, 509, 92, page.soft, page.rule);
+    page.textAt("RESEARCHER INTERPRETATION", 50, top + 12, 7, "F2", page.accent);
+    page.wrapped(report.resultsNarrative || "", 50, top + 30, 485, 8.1, 11.5, "F1", page.text, 5);
+    page.footer(`Researcher-reviewed data | ${report.approval || "Pending approval"}`);
+    return page.commands.join("\n");
+  }
+  function pageFour(model, palette) {
+    const { report, sectionSet, findings, project, sources, knowledgeCount } = model;
+    const page = new ReportPdfPage(palette, 4, "FINDINGS, RESEARCHER DECISION AND PROVENANCE", report);
+    let top = page.section(4, "Evidence-linked findings", "Advisory review with explicit boundaries", 60, `${findings.length} findings`);
+    if (sectionSet.has("ai")) {
+      const cols = 2, gap = 7, width = (509 - gap) / cols;
+      const itemHeight = 68;
+      findings.slice(0, 6).forEach((finding, index) => {
+        const col = index % cols, row = Math.floor(index / cols);
+        const x = 38 + col * (width + gap), y = top + row * (itemHeight + 6);
+        page.rect(x, y, width, itemHeight, page.soft, page.rule);
+        page.rect(x, y, 3, itemHeight, page.accent);
+        page.textAt(String(finding.score ?? "-"), x + 10, y + 9, 11.5, "F2", page.accent);
+        page.textAt(String(finding.status || "review").toUpperCase(), x + width - 8, y + 10, 5.8, "F2", page.muted, "right");
+        page.wrapped(finding.title || "Finding", x + 10, y + 25, width - 20, 7, 8.6, "F2", page.dark, 2);
+        page.wrapped(finding.detail || "", x + 10, y + 43, width - 20, 6.1, 7.5, "F1", page.text, 2);
+        if (report.includeEvidence) page.textAt(`${finding.evidence || "Evidence pending"} | Simulated AI`, x + 10, y + 59, 5.2, "F3", page.muted);
+      });
+      top += Math.ceil(Math.min(findings.length, 6) / 2) * (itemHeight + 6) + 2;
+    } else top = page.excluded("Evidence-Linked Findings", top);
+    top = page.section(5, "Researcher decision", "Interpretation and scientific boundaries", top, report.approval || "Pending approval");
+    if (sectionSet.has("conclusions")) {
+      const gap = 7, width = (509 - gap * 2) / 3;
+      [["DISCUSSION", report.discussion], ["CONCLUSIONS", report.conclusions], ["LIMITATIONS", report.limitations]].forEach(([label, value], index) => {
+        const x = 38 + index * (width + gap);
+        page.rect(x, top, width, 82, page.soft, page.rule);
+        page.textAt(label, x + 8, top + 10, 6.5, "F2", page.accent);
+        page.wrapped(value || "", x + 8, top + 26, width - 16, 6.2, 8.1, "F1", page.text, 6);
+      });
+      top += 94;
+    } else top = page.excluded("Discussion, Conclusions & Limitations", top);
+    if (sectionSet.has("custom")) {
+      page.rect(38, top, 509, 52, page.soft, page.rule);
+      page.rect(38, top, 3, 52, page.accent);
+      page.textAt(report.customTitle || "Custom author section", 50, top + 10, 7, "F2", page.accent);
+      page.wrapped(report.customBody || "No custom text entered.", 50, top + 27, 485, 6.8, 8.7, "F1", page.text, 2);
+      top += 62;
+    }
+    top = page.section(sectionSet.has("custom") ? 7 : 6, "Provenance & approval", "Evidence classes and final state", top);
+    if (sectionSet.has("provenance")) {
+      const prov = [["RAW", "Local source-aligned measurements"], ["CALCULATED", "Deterministic KPI and comparisons"], ["RESEARCHER", "Objectives, interpretation and approval"], ["AI", "Simulated advisory findings requiring review"]];
+      prov.forEach(([label, detail], index) => {
+        const col = index % 2, row = Math.floor(index / 2), width = 250, x = 38 + col * 259, y = top + row * 30;
+        page.rect(x, y, width, 25, page.soft, page.rule);
+        page.textAt(label, x + 7, y + 8, 6.1, "F2", page.accent);
+        page.textAt(detail, x + 58, y + 8, 5.8, "F1", page.muted);
+      });
+      top += 64;
+      if (report.includeSourceAppendix) {
+        page.rect(38, top, 509, 42, page.soft, page.rule);
+        page.textAt("SOURCE APPENDIX", 49, top + 9, 6.2, "F2", page.accent);
+        page.textAt(sources.join(" | "), 49, top + 22, 6, "F1", page.muted);
+        page.textAt(`${project.files || 0} project files | ${project.measurements || 0} measurements | ${knowledgeCount} linked knowledge items`, 49, top + 33, 6, "F1", page.muted);
+        top += 50;
+      }
+      page.rect(38, top, 509, 29, page.white, page.rule);
+      page.textAt("APPROVAL STATE", 49, top + 9, 6.2, "F2", page.muted);
+      page.textAt(report.approval || "Pending researcher approval", 536, top + 9, 6.8, "F2", page.dark, "right");
+    } else page.excluded("Provenance & Approval", top);
+    page.footer(`${report.laboratory || "Laboratory"} | ${report.reportCode || project.id} | Generated from the current Report Composer state`);
+    return page.commands.join("\n");
+  }
+  function reportPdfRaw(project, data, options = {}) {
+    const model = buildReportDocument(project, data, options);
+    const palette = E.palettes[options.palette] || E.palettes.blue;
+    const streams = [pageOne(model, palette), pageTwo(model, palette), pageThree(model, palette), pageFour(model, palette)];
+    const encoder = new TextEncoder();
+    const objects = [];
+    const add = (value) => { objects.push(value); return objects.length; };
+    const catalogRef = add("");
+    const pagesRef = add("");
+    const font1 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+    const font2 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+    const font3 = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>");
+    const pageRefs = [];
+    streams.forEach((stream) => {
+      const bytes = encoder.encode(stream);
+      const streamRef = add(`<< /Length ${bytes.length} >>\nstream\n${stream}\nendstream`);
+      pageRefs.push(add(`<< /Type /Page /Parent ${pagesRef} 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1} 0 R /F2 ${font2} 0 R /F3 ${font3} 0 R >> >> /Contents ${streamRef} 0 R >>`));
+    });
+    const cleanInfo = (value) => pdfAscii(value).replace(/\\([\\()])/g, "$1");
+    const infoRef = add(`<< /Title (${pdfSafeInfo(cleanInfo(model.report.title || project.name))}) /Author (${pdfSafeInfo(cleanInfo(model.report.author || project.owner || ""))}) /Subject (${pdfSafeInfo(cleanInfo(model.report.reportType || "LabFlow scientific report"))}) /Creator (LabFlow Report Composer) /Producer (LabFlow Unified Report Composer PDF Engine v2) >>`);
+    objects[catalogRef - 1] = `<< /Type /Catalog /Pages ${pagesRef} 0 R /PageLayout /OneColumn >>`;
+    objects[pagesRef - 1] = `<< /Type /Pages /Count ${pageRefs.length} /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] >>`;
+    const chunks = [encoder.encode("%PDF-1.7\n%LabFlow\n")];
+    const offsets = [0];
+    let offset = chunks[0].length;
+    objects.forEach((body, index) => {
+      const chunk = encoder.encode(`${index + 1} 0 obj\n${body}\nendobj\n`);
+      offsets.push(offset); chunks.push(chunk); offset += chunk.length;
+    });
+    const xrefOffset = offset;
+    const xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((value) => `${String(value).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objects.length + 1} /Root ${catalogRef} 0 R /Info ${infoRef} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    chunks.push(encoder.encode(xref));
+    const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+    const output = new Uint8Array(total); let cursor = 0;
+    chunks.forEach((chunk) => { output.set(chunk, cursor); cursor += chunk.length; });
+    return output;
+  }
+  const pdfSafeInfo = (value) => String(value || "").replace(/([\\()])/g, "\\$1");
   function workbookRaw(project, data, options = {}) {
     const palette = E.palettes[options.palette] || E.palettes.blue;
     const findings = options.findings || [];
@@ -412,8 +620,9 @@
   E.genericWorkbook = (sheets, palette) => new Blob([genericWorkbookRaw(sheets, palette)], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   E.genericDocxRaw = genericDocxRaw;
   E.genericDocx = (input, palette) => new Blob([genericDocxRaw(input, palette)], {type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
-  E.editablePdfRaw = editablePdfRaw;
-  E.reportPdf = (project, data, options) => new Blob([editablePdfRaw(project, data, options)], { type: "application/pdf" });
+  E.buildReportDocument = buildReportDocument;
+  E.reportPdfRaw = reportPdfRaw;
+  E.reportPdf = (project, data, options = {}) => new Blob([reportPdfRaw(project, data, options)], { type: "application/pdf" });
   E.editableDocxRaw = editableDocxRaw;
   E.reportDocx = (project, data, options) => new Blob([editableDocxRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
   E.reportXlsx = (project, data, options) => new Blob([workbookRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -422,7 +631,7 @@
       { name: "project.yaml", data: E.projectYaml(project, pipeline) },
       { name: "data/measurements.jsonl", data: E.jsonl(project, data) },
       { name: "data/measurements.csv", data: E.csv(data) },
-      { name: "report/scientific-report.pdf", data: editablePdfRaw(project, data, options) },
+      { name: "report/scientific-report.pdf", data: reportPdfRaw(project, data, options) },
       { name: "report/editable-report.docx", data: editableDocxRaw(project, data, options) },
       { name: "report/analysis-workbook.xlsx", data: workbookRaw(project, data, options) },
       { name: "knowledge/linked-context.yaml", data: (options.knowledge || []).map((item) => `- id: ${item.id}\n  type: "${item.type}"\n  title: "${item.title.replace(/"/g, '\\"')}"\n  status: "${item.status}"`).join("\n") + "\n" },

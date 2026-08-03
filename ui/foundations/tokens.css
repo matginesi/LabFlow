@@ -1,7 +1,10 @@
 :root{
-  --font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Arial,sans-serif;
-  --reading:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
-  --mono:"SFMono-Regular",Consolas,monospace;
+  --font-ui:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI Variable Text","Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --font-display:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI Variable Display","Segoe UI",ui-sans-serif,system-ui,sans-serif;
+  --font-report:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --reading:"Charis SIL","Source Serif 4","Noto Serif","Iowan Old Style",Georgia,serif;
+  --mono:"Adwaita Mono","Cascadia Code","JetBrains Mono","Noto Sans Mono","SFMono-Regular",Consolas,monospace;
+  --font:var(--font-ui);
   --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13.5px;--fs-md:15px;--fs-lg:18px;--fs-xl:22px;--fs-2xl:32px;
   --lh-tight:1.2;--lh-base:1.48;--lh-reading:1.64;
   --r1:2px;--r2:4px;--r3:6px;

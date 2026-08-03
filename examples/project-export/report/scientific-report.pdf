@@ -1,10 +1,10 @@
 %PDF-1.7
-%LabFlow-compact-fillable
+%LabFlow
 1 0 obj
-<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [13 0 R 14 0 R 15 0 R 16 0 R 17 0 R 18 0 R 19 0 R 20 0 R 21 0 R 22 0 R 23 0 R 24 0 R 25 0 R 26 0 R 27 0 R 28 0 R 29 0 R 30 0 R 31 0 R 32 0 R 33 0 R 34 0 R 35 0 R 36 0 R 37 0 R 38 0 R 39 0 R 40 0 R 41 0 R 42 0 R 43 0 R 44 0 R 45 0 R 46 0 R 47 0 R 48 0 R 49 0 R 50 0 R 51 0 R 52 0 R 53 0 R 54 0 R 55 0 R 56 0 R 57 0 R 58 0 R 59 0 R 60 0 R 61 0 R 62 0 R 63 0 R 64 0 R 65 0 R 66 0 R 67 0 R 68 0 R 69 0 R 70 0 R 71 0 R 72 0 R 73 0 R 74 0 R 75 0 R 76 0 R 77 0 R 78 0 R 79 0 R 80 0 R 81 0 R 82 0 R 83 0 R 84 0 R 85 0 R 86 0 R 87 0 R 88 0 R 89 0 R 90 0 R 91 0 R 92 0 R 93 0 R 94 0 R] /DR << /Font << /F1 3 0 R /F2 4 0 R >> >> /DA (/F1 8 Tf 0.12 0.16 0.22 rg) /NeedAppearances false >> >>
+<< /Type /Catalog /Pages 2 0 R /PageLayout /OneColumn >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [5 0 R 6 0 R 7 0 R 8 0 R] /Count 4 >>
+<< /Type /Pages /Count 4 /Kids [7 0 R 9 0 R 11 0 R 13 0 R] >>
 endobj
 3 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
@@ -13,1383 +13,472 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
 endobj
 5 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R /Annots [13 0 R 14 0 R 15 0 R 16 0 R] >>
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>
 endobj
 6 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R /Annots [17 0 R 18 0 R] >>
-endobj
-7 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R /Annots [19 0 R 20 0 R 21 0 R 22 0 R 23 0 R 24 0 R 25 0 R 26 0 R 27 0 R 28 0 R 29 0 R 30 0 R 31 0 R 32 0 R 33 0 R 34 0 R 35 0 R 36 0 R 37 0 R 38 0 R 39 0 R 40 0 R 41 0 R 42 0 R 43 0 R 44 0 R 45 0 R 46 0 R 47 0 R 48 0 R 49 0 R 50 0 R 51 0 R 52 0 R 53 0 R 54 0 R 55 0 R 56 0 R 57 0 R 58 0 R 59 0 R 60 0 R 61 0 R 62 0 R 63 0 R 64 0 R 65 0 R 66 0 R 67 0 R 68 0 R 69 0 R 70 0 R 71 0 R 72 0 R 73 0 R 74 0 R 75 0 R 76 0 R 77 0 R 78 0 R 79 0 R 80 0 R 81 0 R 82 0 R 83 0 R 84 0 R 85 0 R 86 0 R 87 0 R 88 0 R 89 0 R 90 0 R] >>
-endobj
-8 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 12 0 R /Annots [91 0 R 92 0 R 93 0 R 94 0 R] >>
-endobj
-9 0 obj
-<< /Length 3006 >>
+<< /Length 5499 >>
 stream
 1 1 1 rg 0 0 595 842 re f
-0.051 0.157 0.157 rg 0 552 595 290 re f
-0.157 0.678 0.655 rg 0 552 11 290 re f
-0.157 0.678 0.655 rg BT /F2 9 Tf 48 790 Td (LABFLOW / SCIENTIFIC PROJECT REPORT / PRJ-2026-014-R01) Tj ET
-1 1 1 rg BT /F2 25 Tf 48 738 Td (Mixed-Cation Validation Report) Tj ET
-0.80 0.86 0.93 rg BT /F1 11 Tf 48 706 Td (Editable local report test) Tj ET
-0.88 0.92 0.97 rg BT /F1 9.5 Tf 48 666 Td (The leading formulation remains FA0.90MA0.10.) Tj ET
-0.76 0.82 0.90 rg BT /F1 8.5 Tf 48 576 Td (CHOSE  Centre for Hybrid and Organic Solar Energy | Matteo Ginesi | 2026-08-03) Tj ET
-0.68 0.76 0.86 rg BT /F1 7 Tf 48 560 Td (Keywords: perovskite, mixed-cation, validation) Tj ET
-0.93 0.97 0.98 rg 38 458 96 70 re f
-0.84 0.87 0.91 RG 0.7 w 38 458 96 70 re S
-0.157 0.678 0.655 rg 38 525 96 3 re f
-0.32 0.38 0.46 rg BT /F2 6.5 Tf 46 505 Td (BEST PCE) Tj ET
-0.157 0.678 0.655 rg BT /F2 15 Tf 46 480 Td (21.28%) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 46 466 Td (S08) Tj ET
-0.96 0.97 0.99 rg 141 458 96 70 re f
-0.84 0.87 0.91 RG 0.7 w 141 458 96 70 re S
-0.157 0.678 0.655 rg 141 525 96 3 re f
-0.32 0.38 0.46 rg BT /F2 6.5 Tf 149 505 Td (MEAN PCE) Tj ET
-0.12 0.16 0.22 rg BT /F2 15 Tf 149 480 Td (19.79%) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 149 466 Td (8 samples) Tj ET
-0.96 0.97 0.99 rg 244 458 96 70 re f
-0.84 0.87 0.91 RG 0.7 w 244 458 96 70 re S
-0.157 0.678 0.655 rg 244 525 96 3 re f
-0.32 0.38 0.46 rg BT /F2 6.5 Tf 252 505 Td (STABILITY) Tj ET
-0.12 0.16 0.22 rg BT /F2 15 Tf 252 480 Td (95%) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 252 466 Td (best retained) Tj ET
-0.96 0.97 0.99 rg 347 458 96 70 re f
-0.84 0.87 0.91 RG 0.7 w 347 458 96 70 re S
-0.157 0.678 0.655 rg 347 525 96 3 re f
-0.32 0.38 0.46 rg BT /F2 6.5 Tf 355 505 Td (MEAN VOC) Tj ET
-0.12 0.16 0.22 rg BT /F2 15 Tf 355 480 Td (1.09 V) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 355 466 Td (cohort) Tj ET
-0.96 0.97 0.99 rg 450 458 96 70 re f
-0.84 0.87 0.91 RG 0.7 w 450 458 96 70 re S
-0.157 0.678 0.655 rg 450 525 96 3 re f
-0.32 0.38 0.46 rg BT /F2 6.5 Tf 458 505 Td (OPEN ISSUES) Tj ET
-0.12 0.16 0.22 rg BT /F2 15 Tf 458 480 Td (3) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 458 466 Td (quality review) Tj ET
-0.157 0.678 0.655 rg BT /F2 8 Tf 38 420 Td (EDITABLE REPORT IDENTITY) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 48 394 Td (Title) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 48 344 Td (Author / laboratory) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 304 344 Td (Approval state) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 48 289 Td (Executive summary) Tj ET
-0.95 0.97 0.99 rg 38 75 509 48 re f
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 48 108 Td (PROJECT) Tj ET
-0.12 0.16 0.22 rg BT /F2 9 Tf 48 91 Td (PRJ-2026-014) Tj ET
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 190 108 Td (PIPELINE) Tj ET
-0.12 0.16 0.22 rg BT /F2 9 Tf 190 91 Td (chose) Tj ET
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 330 108 Td (EVIDENCE) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 330 91 Td (28 files | 18 measurements | 7 findings) Tj ET
-0.38 0.43 0.51 rg BT /F1 7 Tf 500 22 Td (Page 1 of 4) Tj ET
-0.157 0.678 0.655 rg 38 40 509 2 re f
+0.051 0.157 0.157 rg 0 652 595 190 re f
+0.031 0.498 0.482 rg 0 652 8 190 re f
+1 1 1 RG 2.415 w 48.35 815.7 m 61 815.7 l S
+1 1 1 RG 1.8399999999999999 w 51.8 814.55 m 51.8 805.35 l S
+1 1 1 RG 1.8399999999999999 w 57.55 814.55 m 57.55 805.35 l S
+1 1 1 RG 2.07 w 51.8 805.35 m 43.75 789.25 l S
+1 1 1 RG 2.07 w 57.55 805.35 m 65.6 789.25 l S
+1 1 1 RG 2.07 w 43.75 789.25 m 65.6 789.25 l S
+0.031 0.498 0.482 RG 1.7249999999999999 w 47.2 795 m 62.15 795 l S
+0.031 0.498 0.482 rg 56.629999999999995 800.175 m 56.629999999999995 801.254716685859 55.754716685858995 802.13 54.675 802.13 c 53.595283314141 802.13 52.72 801.254716685859 52.72 800.175 c 52.72 799.0952833141409 53.595283314141 798.2199999999999 54.675 798.2199999999999 c 55.754716685858995 798.2199999999999 56.629999999999995 799.0952833141409 56.629999999999995 800.175 c f
+0.031 0.498 0.482 rg 51.0525 795 m 51.0525 795.8574220740645 50.3574220740645 796.5525 49.5 796.5525 c 48.6425779259355 796.5525 47.9475 795.8574220740645 47.9475 795 c 47.9475 794.1425779259355 48.6425779259355 793.4475 49.5 793.4475 c 50.3574220740645 793.4475 51.0525 794.1425779259355 51.0525 795 c f
+0.031 0.498 0.482 rg 61.402499999999996 795 m 61.402499999999996 795.8574220740645 60.707422074064496 796.5525 59.849999999999994 796.5525 c 58.99257792593549 796.5525 58.29749999999999 795.8574220740645 58.29749999999999 795 c 58.29749999999999 794.1425779259355 58.99257792593549 793.4475 59.849999999999994 793.4475 c 60.707422074064496 793.4475 61.402499999999996 794.1425779259355 61.402499999999996 795 c f
+1 1 1 rg BT /F2 15 Tf 76.00 798.00 Td (LabFlow) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.2 Tf 76.00 784.80 Td (SCIENTIFIC PROJECT REPORT  |  PRJ-2026-014-R01) Tj ET
+1 1 1 rg BT /F2 25 Tf 38.00 735.00 Td (Mixed-Cation Validation Report) Tj ET
+0.82 0.87 0.93 rg BT /F1 10.5 Tf 38.00 714.50 Td (Editable local report test) Tj ET
+0.76 0.82 0.90 rg BT /F1 7.8 Tf 38.00 668.20 Td (CHOSE - Centre for Hybrid and Organic Solar Energy  |  Matteo Ginesi) Tj ET
+0.76 0.82 0.90 rg BT /F1 7.5 Tf 509.50 806.50 Td (2026-08-03) Tj ET
+1 1 1 rg BT /F2 7.5 Tf 429.40 668.50 Td (Pending researcher signature) Tj ET
+0.96 0.97 0.98 rg 38 606 509 29 re f
+0.83 0.86 0.90 RG 0.6 w 38 606 509 29 re S
+0.031 0.498 0.482 rg BT /F2 6.5 Tf 49.00 618.50 Td (KEYWORDS) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.3 Tf 104.00 617.70 Td (perovskite, mixed-cation, validation) Tj ET
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 581.00 Td (01  |  EXECUTIVE SNAPSHOT) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 558.00 Td (Decision-ready project summary) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.5 Tf 502.00 563.50 Td (PRJ-2026-014) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 550 m 547 550 l S
+0.12 0.16 0.22 rg BT /F1 9.4 Tf 38.00 528.60 Td (The leading formulation remains FA0.90MA0.10.) Tj ET
+0.96 0.97 0.98 rg 38 449.79999999999995 509 68 re f
+0.83 0.86 0.90 RG 0.6 w 38 449.79999999999995 509 68 re S
+0.031 0.498 0.482 rg BT /F2 6.8 Tf 50.00 499.00 Td (RESEARCH OBJECTIVES) Tj ET
+0.12 0.16 0.22 rg BT /F1 8.1 Tf 50.00 480.70 Td (Compare MA/FA ratios and identify the most stable high-efficiency device stack.) Tj ET
+0.93 0.97 0.98 rg 38 375.8 97 62 re f
+0.83 0.86 0.90 RG 0.6 w 38 375.8 97 62 re S
+0.031 0.498 0.482 rg 38 434.8 97 3 re f
+0.38 0.43 0.51 rg BT /F2 6.5 Tf 46.00 419.30 Td (BEST PCE) Tj ET
+0.031 0.498 0.482 rg BT /F2 14 Tf 46.00 396.80 Td (21.28%) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 46.00 383.30 Td (S08) Tj ET
+0.96 0.97 0.98 rg 141 375.8 97 62 re f
+0.83 0.86 0.90 RG 0.6 w 141 375.8 97 62 re S
+0.031 0.498 0.482 rg 141 434.8 97 3 re f
+0.38 0.43 0.51 rg BT /F2 6.5 Tf 149.00 419.30 Td (MEAN PCE) Tj ET
+0.051 0.157 0.157 rg BT /F2 14 Tf 149.00 396.80 Td (19.79%) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 149.00 383.30 Td (8 samples) Tj ET
+0.96 0.97 0.98 rg 244 375.8 97 62 re f
+0.83 0.86 0.90 RG 0.6 w 244 375.8 97 62 re S
+0.031 0.498 0.482 rg 244 434.8 97 3 re f
+0.38 0.43 0.51 rg BT /F2 6.5 Tf 252.00 419.30 Td (STABILITY) Tj ET
+0.051 0.157 0.157 rg BT /F2 14 Tf 252.00 396.80 Td (95%) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 252.00 383.30 Td (best retained) Tj ET
+0.96 0.97 0.98 rg 347 375.8 97 62 re f
+0.83 0.86 0.90 RG 0.6 w 347 375.8 97 62 re S
+0.031 0.498 0.482 rg 347 434.8 97 3 re f
+0.38 0.43 0.51 rg BT /F2 6.5 Tf 355.00 419.30 Td (MEAN VOC) Tj ET
+0.051 0.157 0.157 rg BT /F2 14 Tf 355.00 396.80 Td (1.09 V) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 355.00 383.30 Td (cohort) Tj ET
+0.96 0.97 0.98 rg 450 375.8 97 62 re f
+0.83 0.86 0.90 RG 0.6 w 450 375.8 97 62 re S
+0.031 0.498 0.482 rg 450 434.8 97 3 re f
+0.38 0.43 0.51 rg BT /F2 6.5 Tf 458.00 419.30 Td (OPEN ISSUES) Tj ET
+0.051 0.157 0.157 rg BT /F2 14 Tf 458.00 396.80 Td (3) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 458.00 383.30 Td (quality review) Tj ET
+1 1 1 rg 38 323.8 509 40 re f
+0.83 0.86 0.90 RG 0.6 w 38 323.8 509 40 re S
+0.031 0.498 0.482 rg BT /F2 6.2 Tf 49.00 348.60 Td (PROJECT) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.6 Tf 49.00 334.20 Td (PRJ-2026-014) Tj ET
+0.031 0.498 0.482 rg BT /F2 6.2 Tf 190.00 348.60 Td (PIPELINE) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.6 Tf 190.00 334.20 Td (chose) Tj ET
+0.031 0.498 0.482 rg BT /F2 6.2 Tf 330.00 348.60 Td (EVIDENCE) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.1 Tf 330.00 334.70 Td (28 files | 18 measurements | 7 findings) Tj ET
+0.83 0.86 0.90 RG 0.6 w 38 27 m 547 27 l S
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 38.00 14.30 Td (University of Rome Tor Vergata  |  Generated from the current Report Composer state) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.4 Tf 517.99 13.60 Td (01 / 04) Tj ET
 endstream
 endobj
-10 0 obj
-<< /Length 4763 >>
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 5119 >>
 stream
 1 1 1 rg 0 0 595 842 re f
-0.051 0.157 0.157 rg 0 806 595 36 re f
-0.157 0.678 0.655 rg 0 806 8 36 re f
-1 1 1 rg BT /F2 9 Tf 38 819 Td (LABFLOW) Tj ET
-0.82 0.87 0.93 rg BT /F2 9 Tf 104 819 Td (MATERIALS, PROCESS AND EXPERIMENT COVERAGE) Tj ET
-0.75 0.82 0.90 rg BT /F1 8 Tf 455 819 Td (PRJ-2026-014-R01) Tj ET
-0.38 0.43 0.51 rg BT /F1 7 Tf 500 22 Td (Page 2 of 4) Tj ET
-0.157 0.678 0.655 rg 38 40 509 2 re f
-0.12 0.16 0.22 rg BT /F2 17 Tf 38 770 Td (Research context) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 742 Td (Objectives) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 632 Td (Methodology) Tj ET
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 38 526 Td (QUALITY REVIEW: 1 error | 2 warnings | causal interpretation remains blocked until provenance is complete) Tj ET
-0.157 0.678 0.655 rg BT /F2 12 Tf 38 512 Td (Solution composition | SOL-B04) Tj ET
-0.051 0.157 0.157 rg 38 468 509 22 re f
-1 1 1 rg BT /F2 6.5 Tf 46 476 Td (COMPONENT) Tj ET
-1 1 1 rg BT /F2 6.5 Tf 145 476 Td (FUNCTION) Tj ET
-1 1 1 rg BT /F2 6.5 Tf 345 476 Td (QUANTITY) Tj ET
-1 1 1 rg BT /F2 6.5 Tf 442 476 Td (COMPOSITION) Tj ET
-0.96 0.97 0.99 rg 38 445 509 22 re f
-0.157 0.678 0.655 rg BT /F2 7.5 Tf 46 453 Td (DMF) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 145 453 Td (Primary solvent) Tj ET
-0.12 0.16 0.22 rg BT /F2 7.2 Tf 345 453 Td (1.60 mL) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 442 453 Td (80% v/v) Tj ET
-0.157 0.678 0.655 rg BT /F2 7.5 Tf 46 429 Td (DMSO) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 145 429 Td (Co-solvent) Tj ET
-0.12 0.16 0.22 rg BT /F2 7.2 Tf 345 429 Td (0.40 mL) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 442 429 Td (20% v/v) Tj ET
-0.96 0.97 0.99 rg 38 397 509 22 re f
-0.157 0.678 0.655 rg BT /F2 7.5 Tf 46 405 Td (FAI) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 145 405 Td (A-site solute) Tj ET
-0.12 0.16 0.22 rg BT /F2 7.2 Tf 345 405 Td (365.3 mg) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 442 405 Td (90 mol%) Tj ET
-0.157 0.678 0.655 rg BT /F2 7.5 Tf 46 381 Td (MAI) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 145 381 Td (A-site solute) Tj ET
-0.12 0.16 0.22 rg BT /F2 7.2 Tf 345 381 Td (39.7 mg) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 442 381 Td (10 mol%) Tj ET
-0.96 0.97 0.99 rg 38 349 509 22 re f
-0.157 0.678 0.655 rg BT /F2 7.5 Tf 46 357 Td (PbI2) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 145 357 Td (Lead halide) Tj ET
-0.12 0.16 0.22 rg BT /F2 7.2 Tf 345 357 Td (1152.5 mg) Tj ET
-0.12 0.16 0.22 rg BT /F1 7.2 Tf 442 357 Td (1.00 eq) Tj ET
-0.157 0.678 0.655 rg BT /F2 12 Tf 38 310 Td (Device stack | STK-003/v2) Tj ET
-0.96 0.97 0.99 rg 38 278 509 25 re f
-0.157 0.678 0.655 rg BT /F2 7 Tf 48 287 Td (05) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 82 287 Td (Au) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 270 287 Td (Back contact) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 478 287 Td (80 nm) Tj ET
-0.92 0.94 0.97 rg 38 249 509 25 re f
-0.157 0.678 0.655 rg BT /F2 7 Tf 48 258 Td (04) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 82 258 Td (Spiro-OMeTAD) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 270 258 Td (Hole transport) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 478 258 Td (180 nm) Tj ET
-0.157 0.678 0.655 rg 38 220 509 25 re f
-1 1 1 rg BT /F2 7 Tf 48 229 Td (03) Tj ET
-1 1 1 rg BT /F2 8 Tf 82 229 Td (FA/MA perovskite) Tj ET
-1 1 1 rg BT /F1 7 Tf 270 229 Td (Photoactive absorber) Tj ET
-1 1 1 rg BT /F2 7 Tf 478 229 Td (540 nm) Tj ET
-0.92 0.94 0.97 rg 38 191 509 25 re f
-0.157 0.678 0.655 rg BT /F2 7 Tf 48 200 Td (02) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 82 200 Td (SnO2) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 270 200 Td (Electron transport) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 478 200 Td (32 nm) Tj ET
-0.96 0.97 0.99 rg 38 162 509 25 re f
-0.157 0.678 0.655 rg BT /F2 7 Tf 48 171 Td (01) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 82 171 Td (Glass / FTO) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 270 171 Td (Substrate + front contact) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 478 171 Td (2.2 mm) Tj ET
-0.157 0.678 0.655 rg BT /F2 12 Tf 38 120 Td (Experiment coverage) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 88 Td (EXP-041) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 105 88 Td (S01-S03) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 185 88 Td (100 C / 30 min) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 330 88 Td (6 measurements) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 470 88 Td (Reviewed) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 69 Td (EXP-052) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 105 69 Td (S04-S05) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 185 69 Td (105 C / 25 min) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 330 69 Td (4 measurements) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 470 69 Td (Reviewed) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 50 Td (EXP-067) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 105 50 Td (S06-S08) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 185 50 Td (100 / unit missing) Tj ET
-0.12 0.16 0.22 rg BT /F1 7 Tf 330 50 Td (24 imported) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 470 50 Td (Review) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.5 Tf 38.00 812.50 Td (LABFLOW  |  PRJ-2026-014-R01) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 370.60 812.50 Td (MATERIALS, PROCESS AND EXPERIMENT COVERAGE) Tj ET
+0.031 0.498 0.482 RG 1.2 w 38 804 m 547 804 l S
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 775.00 Td (02  |  MATERIALS & PROCESS) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 752.00 Td (Traceable preparation and device architecture) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.5 Tf 498.25 757.50 Td (3 experiments) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 744 m 547 744 l S
+0.12 0.16 0.22 rg BT /F1 8.8 Tf 38.00 723.20 Td (Versioned preparation, mapped JV data and deterministic comparison.) Tj ET
+0.96 0.97 0.98 rg 38 553 247 157 re f
+0.83 0.86 0.90 RG 0.6 w 38 553 247 157 re S
+0.051 0.157 0.157 rg BT /F2 8 Tf 49.00 690.00 Td (SOLUTION REVIEW  |  SOL-B04) Tj ET
+0.031 0.498 0.482 rg 49 661 176 15 re f
+0.20 0.44 0.76 rg 225 661 44 15 re f
+1 1 1 rg BT /F2 6.4 Tf 54.00 665.60 Td (DMF 80%) Tj ET
+1 1 1 rg BT /F2 6.1 Tf 238.67 665.90 Td (DMSO 20%) Tj ET
+0.38 0.43 0.51 rg BT /F2 6.1 Tf 49.00 639.90 Td (TARGET) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 115.00 638.50 Td (FA0.90MA0.10PbI3) Tj ET
+0.38 0.43 0.51 rg BT /F2 6.1 Tf 49.00 619.90 Td (VOLUME) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 115.00 618.50 Td (2.00 mL) Tj ET
+0.38 0.43 0.51 rg BT /F2 6.1 Tf 49.00 599.90 Td (MOLARITY) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 115.00 598.50 Td (1.25 M) Tj ET
+0.38 0.43 0.51 rg BT /F2 6.1 Tf 49.00 579.90 Td (STATUS) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 115.00 578.50 Td (Reviewed) Tj ET
+0.96 0.97 0.98 rg 300 553 247 157 re f
+0.83 0.86 0.90 RG 0.6 w 300 553 247 157 re S
+0.051 0.157 0.157 rg BT /F2 8 Tf 311.00 690.00 Td (STACK REVIEW  |  STK-003/V2) Tj ET
+1 1 1 rg 311 658 225 17 re f
+0.83 0.86 0.90 RG 0.6 w 311 658 225 17 re S
+0.051 0.157 0.157 rg BT /F2 7 Tf 318.00 663.00 Td (Glass / ITO) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 508.90 663.30 Td (1.1 mm) Tj ET
+1 1 1 rg 311 637 225 17 re f
+0.83 0.86 0.90 RG 0.6 w 311 637 225 17 re S
+0.051 0.157 0.157 rg BT /F2 7 Tf 318.00 642.00 Td (SnO2) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 512.25 642.30 Td (30 nm) Tj ET
+0.031 0.498 0.482 rg 311 616 225 17 re f
+0.83 0.86 0.90 RG 0.6 w 311 616 225 17 re S
+1 1 1 rg BT /F2 7 Tf 318.00 621.00 Td (FA0.90MA0.10PbI3) Tj ET
+1 1 1 rg BT /F1 6.7 Tf 508.90 621.30 Td (620 nm) Tj ET
+1 1 1 rg 311 595 225 17 re f
+0.83 0.86 0.90 RG 0.6 w 311 595 225 17 re S
+0.051 0.157 0.157 rg BT /F2 7 Tf 318.00 600.00 Td (Spiro-OMeTAD) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 508.90 600.30 Td (180 nm) Tj ET
+1 1 1 rg 311 574 225 17 re f
+0.83 0.86 0.90 RG 0.6 w 311 574 225 17 re S
+0.051 0.157 0.157 rg BT /F2 7 Tf 318.00 579.00 Td (Au) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 512.25 579.30 Td (80 nm) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.3 Tf 311.00 558.70 Td (n-i-p reference architecture) Tj ET
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 532.00 Td (EXPERIMENT COVERAGE) Tj ET
+1 1 1 rg 38 446 165 78 re f
+0.83 0.86 0.90 RG 0.6 w 38 446 165 78 re S
+0.031 0.498 0.482 rg BT /F2 7 Tf 47.00 507.00 Td (EXP-041) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.1 Tf 47.00 489.90 Td (S01 | S02 | S03) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.2 Tf 47.00 468.80 Td (CHOSE Standard v2 | 100C | 6 measurements) Tj ET
+1 1 1 rg 210 446 165 78 re f
+0.83 0.86 0.90 RG 0.6 w 210 446 165 78 re S
+0.031 0.498 0.482 rg BT /F2 7 Tf 219.00 507.00 Td (EXP-052) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.1 Tf 219.00 489.90 Td (S04 | S05) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.2 Tf 219.00 468.80 Td (CHOSE Standard v2 | 105C | 4 measurements) Tj ET
+1 1 1 rg 382 446 165 78 re f
+0.83 0.86 0.90 RG 0.6 w 382 446 165 78 re S
+0.031 0.498 0.482 rg BT /F2 7 Tf 391.00 507.00 Td (EXP-067) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.1 Tf 391.00 489.90 Td (S06 | S07 | S08) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.2 Tf 391.00 468.80 Td (CHOSE Standard v2 | 100 unit missing | 24) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.2 Tf 391.00 460.80 Td (measurements) Tj ET
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 426.00 Td (DATA-QUALITY REVIEW) Tj ET
+0.96 0.97 0.98 rg 38 367 165.66666666666666 52 re f
+0.83 0.86 0.90 RG 0.6 w 38 367 165.66666666666666 52 re S
+0.76 0.18 0.20 rg BT /F2 6.8 Tf 46.00 402.20 Td (1 ERROR) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 46.00 387.50 Td (Device count mismatch) Tj ET
+0.96 0.97 0.98 rg 209.66666666666666 367 165.66666666666666 52 re f
+0.83 0.86 0.90 RG 0.6 w 209.66666666666666 367 165.66666666666666 52 re S
+0.031 0.498 0.482 rg BT /F2 6.8 Tf 217.67 402.20 Td (2 WARNINGS) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 217.67 387.50 Td (Annealing unit and solution provenance) Tj ET
+0.96 0.97 0.98 rg 381.3333333333333 367 165.66666666666666 52 re f
+0.83 0.86 0.90 RG 0.6 w 381.3333333333333 367 165.66666666666666 52 re S
+0.031 0.498 0.482 rg BT /F2 6.8 Tf 389.33 402.20 Td (BOUNDARY) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.5 Tf 389.33 387.50 Td (No causal claim from incomplete metadata) Tj ET
+0.83 0.86 0.90 RG 0.6 w 38 27 m 547 27 l S
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 38.00 14.30 Td (Matteo Ginesi | 2026-08-03 | Generated from the current Report Composer state) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.4 Tf 517.99 13.60 Td (02 / 04) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 8720 >>
+stream
+1 1 1 rg 0 0 595 842 re f
+0.031 0.498 0.482 rg BT /F2 7.5 Tf 38.00 812.50 Td (LABFLOW  |  PRJ-2026-014-R01) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 383.20 812.50 Td (COMPLETE RESULTS AND MEASUREMENT RECORD) Tj ET
+0.031 0.498 0.482 RG 1.2 w 38 804 m 547 804 l S
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 775.00 Td (03  |  COMPLETE RESULTS) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 752.00 Td (Device performance and source-aligned data) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.5 Tf 472.00 757.50 Td (8 samples | 9 fields) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 744 m 547 744 l S
+0.96 0.97 0.98 rg 38 554 509 178 re f
+0.83 0.86 0.90 RG 0.6 w 38 554 509 178 re S
+0.051 0.157 0.157 rg BT /F2 8.2 Tf 50.00 710.80 Td (PCE BY SAMPLE) Tj ET
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 50.00 696.30 Td (Complete included cohort | deterministic snapshot) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 675.40 Td (S01) Tj ET
+0.88 0.90 0.93 rg 82 674 365 7 re f
+0.031 0.498 0.482 rg 82 674 169.8882113821137 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 675.20 Td (19.15%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 660.40 Td (S02) Tj ET
+0.88 0.90 0.93 rg 82 659 365 7 re f
+0.031 0.498 0.482 rg 82 659 244.81707317073167 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 660.20 Td (20.16%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 645.40 Td (S03) Tj ET
+0.88 0.90 0.93 rg 82 644 365 7 re f
+0.031 0.498 0.482 rg 82 644 154.30894308943098 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 645.20 Td (18.94%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 630.40 Td (S04) Tj ET
+0.88 0.90 0.93 rg 82 629 365 7 re f
+0.031 0.498 0.482 rg 82 629 314.55284552845535 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 630.20 Td (21.10%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 615.40 Td (S05) Tj ET
+0.88 0.90 0.93 rg 82 614 365 7 re f
+0.031 0.498 0.482 rg 82 614 225.5284552845527 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 615.20 Td (19.90%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 600.40 Td (S06) Tj ET
+0.88 0.90 0.93 rg 82 599 365 7 re f
+0.031 0.498 0.482 rg 82 599 37.093495934959336 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 600.20 Td (17.36%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 585.40 Td (S07) Tj ET
+0.88 0.90 0.93 rg 82 584 365 7 re f
+0.031 0.498 0.482 rg 82 584 265.589430894309 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 585.20 Td (20.44%) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.6 Tf 50.00 570.40 Td (S08) Tj ET
+0.88 0.90 0.93 rg 82 569 365 7 re f
+0.031 0.498 0.482 rg 82 569 327.9065040650407 7 re f
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 507.15 570.20 Td (21.28%) Tj ET
+0.051 0.157 0.157 rg 38 518 449 22 re f
+1 1 1 rg BT /F2 5.5 Tf 43.00 527.50 Td (SAMPLE) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 83.00 527.50 Td (FORMULATION) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 165.00 527.50 Td (BATCH) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 207.00 527.50 Td (VOC) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 252.00 527.50 Td (JSC) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 297.00 527.50 Td (FF) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 340.00 527.50 Td (PCE) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 385.00 527.50 Td (STAB.) Tj ET
+1 1 1 rg BT /F2 5.5 Tf 435.00 527.50 Td (HYST.) Tj ET
+1 1 1 rg 38 499 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 499 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 506.30 Td (S01) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 506.30 Td (FA0.85MA0.15) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 506.30 Td (B01) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 506.30 Td (1.08) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 506.30 Td (22.7) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 506.30 Td (78.1) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 506.30 Td (19.15) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 506.30 Td (89%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 506.30 Td (3.2%) Tj ET
+0.96 0.97 0.98 rg 38 480 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 480 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 487.30 Td (S02) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 487.30 Td (FA0.85MA0.15) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 487.30 Td (B01) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 487.30 Td (1.10) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 487.30 Td (23.2) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 487.30 Td (79.0) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 487.30 Td (20.16) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 487.30 Td (91%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 487.30 Td (2.8%) Tj ET
+1 1 1 rg 38 461 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 461 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 468.30 Td (S03) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 468.30 Td (FA0.80MA0.20) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 468.30 Td (B02) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 468.30 Td (1.07) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 468.30 Td (22.9) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 468.30 Td (77.3) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 468.30 Td (18.94) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 468.30 Td (85%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 468.30 Td (4.1%) Tj ET
+0.96 0.97 0.98 rg 38 442 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 442 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 449.30 Td (S04) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 449.30 Td (FA0.90MA0.10) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 449.30 Td (B03) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 449.30 Td (1.12) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 449.30 Td (23.5) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 449.30 Td (80.2) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 449.30 Td (21.10) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 449.30 Td (94%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 449.30 Td (2.1%) Tj ET
+1 1 1 rg 38 423 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 423 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 430.30 Td (S05) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 430.30 Td (FA0.90MA0.10) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 430.30 Td (B03) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 430.30 Td (1.09) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 430.30 Td (23.0) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 430.30 Td (79.4) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 430.30 Td (19.90) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 430.30 Td (92%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 430.30 Td (2.5%) Tj ET
+0.96 0.97 0.98 rg 38 404 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 404 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 411.30 Td (S06) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 411.30 Td (FA0.75MA0.25) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 411.30 Td (B04) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 411.30 Td (1.05) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 411.30 Td (21.8) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 411.30 Td (75.8) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 411.30 Td (17.36) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 411.30 Td (78%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 411.30 Td (5.9%) Tj ET
+1 1 1 rg 38 385 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 385 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 392.30 Td (S07) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 392.30 Td (FA0.85MA0.15) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 392.30 Td (B05) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 392.30 Td (1.11) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 392.30 Td (23.1) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 392.30 Td (79.7) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 392.30 Td (20.44) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 392.30 Td (90%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 392.30 Td (2.7%) Tj ET
+0.96 0.97 0.98 rg 38 366 449 19 re f
+0.83 0.86 0.90 RG 0.35 w 38 366 449 19 re S
+0.12 0.16 0.22 rg BT /F2 5.7 Tf 43.00 373.30 Td (S08) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 83.00 373.30 Td (FA0.90MA0.10) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 165.00 373.30 Td (B06) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 230.60 373.30 Td (1.13) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 275.60 373.30 Td (23.4) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 318.60 373.30 Td (80.5) Tj ET
+0.031 0.498 0.482 rg BT /F1 5.7 Tf 360.75 373.30 Td (21.28) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 416.45 373.30 Td (95%) Tj ET
+0.12 0.16 0.22 rg BT /F1 5.7 Tf 470.60 373.30 Td (1.9%) Tj ET
+0.96 0.97 0.98 rg 38 260 509 92 re f
+0.83 0.86 0.90 RG 0.6 w 38 260 509 92 re S
+0.031 0.498 0.482 rg BT /F2 7 Tf 50.00 333.00 Td (RESEARCHER INTERPRETATION) Tj ET
+0.12 0.16 0.22 rg BT /F1 8.1 Tf 50.00 313.90 Td (S08 remains the current performance leader.) Tj ET
+0.83 0.86 0.90 RG 0.6 w 38 27 m 547 27 l S
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 38.00 14.30 Td (Researcher-reviewed data | Pending researcher signature) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.4 Tf 517.99 13.60 Td (03 / 04) Tj ET
 endstream
 endobj
 11 0 obj
-<< /Length 3729 >>
-stream
-1 1 1 rg 0 0 595 842 re f
-0.051 0.157 0.157 rg 0 806 595 36 re f
-0.157 0.678 0.655 rg 0 806 8 36 re f
-1 1 1 rg BT /F2 9 Tf 38 819 Td (LABFLOW) Tj ET
-0.82 0.87 0.93 rg BT /F2 9 Tf 104 819 Td (COMPLETE RESULTS AND MEASUREMENT RECORD) Tj ET
-0.75 0.82 0.90 rg BT /F1 8 Tf 455 819 Td (PRJ-2026-014-R01) Tj ET
-0.38 0.43 0.51 rg BT /F1 7 Tf 500 22 Td (Page 3 of 4) Tj ET
-0.157 0.678 0.655 rg 38 40 509 2 re f
-0.12 0.16 0.22 rg BT /F2 17 Tf 38 770 Td (Complete JV result table) Tj ET
-0.38 0.43 0.51 rg BT /F1 7.5 Tf 38 748 Td (Every displayed source-aligned value remains editable in this exported copy.) Tj ET
-0.051 0.157 0.157 rg 38 708 509 24 re f
-1 1 1 rg BT /F2 5.8 Tf 41 716 Td (SAMPLE) Tj ET
-1 1 1 rg BT /F2 5.6 Tf 77 716 Td (FORMULATION) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 161 716 Td (BATCH) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 196 716 Td (VOC) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 241 716 Td (JSC) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 294 716 Td (FF) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 339 716 Td (PCE) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 387 716 Td (STABILITY) Tj ET
-1 1 1 rg BT /F2 5.8 Tf 455 716 Td (HYSTERESIS) Tj ET
-0.157 0.678 0.655 rg BT /F2 12 Tf 38 414 Td (PCE comparison) Tj ET
-0.38 0.43 0.51 rg BT /F1 7 Tf 150 414 Td (All samples | export-time deterministic snapshot) Tj ET
-0.92 0.94 0.97 rg 82 379 365 12 re f
-0.157 0.678 0.655 rg 82 379 169.8882113821137 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 382 Td (S01) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 382 Td (19.15%) Tj ET
-0.92 0.94 0.97 rg 82 354 365 12 re f
-0.157 0.678 0.655 rg 82 354 244.81707317073167 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 357 Td (S02) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 357 Td (20.16%) Tj ET
-0.92 0.94 0.97 rg 82 329 365 12 re f
-0.157 0.678 0.655 rg 82 329 154.30894308943098 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 332 Td (S03) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 332 Td (18.94%) Tj ET
-0.92 0.94 0.97 rg 82 304 365 12 re f
-0.157 0.678 0.655 rg 82 304 314.55284552845535 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 307 Td (S04) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 307 Td (21.10%) Tj ET
-0.92 0.94 0.97 rg 82 279 365 12 re f
-0.157 0.678 0.655 rg 82 279 225.5284552845527 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 282 Td (S05) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 282 Td (19.90%) Tj ET
-0.92 0.94 0.97 rg 82 254 365 12 re f
-0.157 0.678 0.655 rg 82 254 37.093495934959336 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 257 Td (S06) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 257 Td (17.36%) Tj ET
-0.92 0.94 0.97 rg 82 229 365 12 re f
-0.157 0.678 0.655 rg 82 229 265.589430894309 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 232 Td (S07) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 232 Td (20.44%) Tj ET
-0.92 0.94 0.97 rg 82 204 365 12 re f
-0.157 0.678 0.655 rg 82 204 327.9065040650407 12 re f
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 207 Td (S08) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 465 207 Td (21.28%) Tj ET
-0.93 0.97 0.98 rg 38 95 117 55 re f
-0.84 0.87 0.91 RG 0.7 w 38 95 117 55 re S
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 46 130 Td (MEAN PCE) Tj ET
-0.12 0.16 0.22 rg BT /F2 13 Tf 46 108 Td (19.79%) Tj ET
-0.96 0.97 0.99 rg 166 95 117 55 re f
-0.84 0.87 0.91 RG 0.7 w 166 95 117 55 re S
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 174 130 Td (MEAN VOC) Tj ET
-0.12 0.16 0.22 rg BT /F2 13 Tf 174 108 Td (1.09 V) Tj ET
-0.96 0.97 0.99 rg 294 95 117 55 re f
-0.84 0.87 0.91 RG 0.7 w 294 95 117 55 re S
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 302 130 Td (MEAN FF) Tj ET
-0.12 0.16 0.22 rg BT /F2 13 Tf 302 108 Td (78.8%) Tj ET
-0.96 0.97 0.99 rg 422 95 117 55 re f
-0.84 0.87 0.91 RG 0.7 w 422 95 117 55 re S
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 430 130 Td (BEST STABILITY) Tj ET
-0.12 0.16 0.22 rg BT /F2 13 Tf 430 108 Td (95%) Tj ET
-0.38 0.43 0.51 rg BT /F1 7.2 Tf 38 70 Td (S08 remains the current performance leader.) Tj ET
-endstream
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 10 0 R >>
 endobj
 12 0 obj
-<< /Length 3649 >>
+<< /Length 7347 >>
 stream
 1 1 1 rg 0 0 595 842 re f
-0.051 0.157 0.157 rg 0 806 595 36 re f
-0.157 0.678 0.655 rg 0 806 8 36 re f
-1 1 1 rg BT /F2 9 Tf 38 819 Td (LABFLOW) Tj ET
-0.82 0.87 0.93 rg BT /F2 9 Tf 104 819 Td (FINDINGS, RESEARCHER DECISION AND PROVENANCE) Tj ET
-0.75 0.82 0.90 rg BT /F1 8 Tf 455 819 Td (PRJ-2026-014-R01) Tj ET
-0.38 0.43 0.51 rg BT /F1 7 Tf 500 22 Td (Page 4 of 4) Tj ET
-0.157 0.678 0.655 rg 38 40 509 2 re f
-0.12 0.16 0.22 rg BT /F2 17 Tf 38 770 Td (Evidence-linked findings) Tj ET
-0.38 0.43 0.51 rg BT /F1 7.5 Tf 38 748 Td (Simulated AI remains advisory and separate from researcher-authored conclusions.) Tj ET
-0.94 0.97 0.98 rg 38 676 509 44 re f
-0.157 0.678 0.655 rg 38 676 4 44 re f
-0.157 0.678 0.655 rg BT /F2 11 Tf 50 705 Td (96) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 90 709 Td (FA0.90MA0.10 is the strongest candidate) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 90 686 Td (Evidence: S04, S08  7 metrics | Status: accepted) Tj ET
-0.97 0.98 0.99 rg 38 626 509 44 re f
-0.157 0.678 0.655 rg 38 626 4 44 re f
-0.157 0.678 0.655 rg BT /F2 11 Tf 50 655 Td (91) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 90 659 Td (S06 is a multi-metric outlier) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 90 636 Td (Evidence: S06  IQR + robust z | Status: review) Tj ET
-0.94 0.97 0.98 rg 38 576 509 44 re f
-0.157 0.678 0.655 rg 38 576 4 44 re f
-0.157 0.678 0.655 rg BT /F2 11 Tf 50 605 Td (88) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 90 609 Td (Batch effect is smaller than formulation effect) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 90 586 Td (Evidence: Grouped comparison | Status: accepted) Tj ET
-0.97 0.98 0.99 rg 38 526 509 44 re f
-0.157 0.678 0.655 rg 38 526 4 44 re f
-0.157 0.678 0.655 rg BT /F2 11 Tf 50 555 Td (84) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 90 559 Td (Stability and hysteresis are inversely associated) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 90 536 Td (Evidence: Spearman preview | Status: review) Tj ET
-0.94 0.97 0.98 rg 38 476 509 44 re f
-0.157 0.678 0.655 rg 38 476 4 44 re f
-0.157 0.678 0.655 rg BT /F2 11 Tf 50 505 Td (78) Tj ET
-0.12 0.16 0.22 rg BT /F2 8 Tf 90 509 Td (Two metadata gaps limit reproducibility) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.5 Tf 90 486 Td (Evidence: Process records | Status: action) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 542 Td (CUSTOM AUTHOR SECTION | Additional notes) Tj ET
-0.157 0.678 0.655 rg BT /F2 8 Tf 38 450 Td (EDITABLE RESEARCHER DECISION) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 426 Td (Conclusions) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 298 Td (Limitations) Tj ET
-0.12 0.16 0.22 rg BT /F2 7 Tf 38 184 Td (Approval / signature state) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.8 Tf 310 426 Td (The current cohort supports validation but) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.8 Tf 310 417 Td (not causal inference.) Tj ET
-0.157 0.678 0.655 rg BT /F2 7 Tf 38 125 Td (PROVENANCE CLASSES) Tj ET
-0.96 0.97 0.99 rg 38 98 248 25 re f
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 46 107 Td (RAW) Tj ET
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 108 107 Td (Local source-aligned measurements) Tj ET
-0.96 0.97 0.99 rg 294 98 248 25 re f
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 302 107 Td (CALCULATED) Tj ET
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 364 107 Td (Deterministic KPI and comparisons) Tj ET
-0.96 0.97 0.99 rg 38 68 248 25 re f
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 46 77 Td (RESEARCHER) Tj ET
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 108 77 Td (Objectives, conclusions and approval) Tj ET
-0.96 0.97 0.99 rg 294 68 248 25 re f
-0.157 0.678 0.655 rg BT /F2 6.5 Tf 302 77 Td (AI) Tj ET
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 364 77 Td (Simulated advice requiring review) Tj ET
-0.38 0.43 0.51 rg BT /F1 6.2 Tf 38 47 Td (SOURCES: batch_B03_forward.csv | process_metadata.yaml | SOL-B04 | STK-003/v2) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.5 Tf 38.00 812.50 Td (LABFLOW  |  PRJ-2026-014-R01) Tj ET
+0.051 0.157 0.157 rg BT /F2 7.5 Tf 362.20 812.50 Td (FINDINGS, RESEARCHER DECISION AND PROVENANCE) Tj ET
+0.031 0.498 0.482 RG 1.2 w 38 804 m 547 804 l S
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 775.00 Td (04  |  EVIDENCE-LINKED FINDINGS) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 752.00 Td (Advisory review with explicit boundaries) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.5 Tf 509.50 757.50 Td (5 findings) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 744 m 547 744 l S
+0.96 0.97 0.98 rg 38 664 251 68 re f
+0.83 0.86 0.90 RG 0.6 w 38 664 251 68 re S
+0.031 0.498 0.482 rg 38 664 3 68 re f
+0.031 0.498 0.482 rg BT /F2 11.5 Tf 48.00 711.50 Td (96) Tj ET
+0.38 0.43 0.51 rg BT /F2 5.8 Tf 255.02 716.20 Td (ACCEPTED) Tj ET
+0.051 0.157 0.157 rg BT /F2 7 Tf 48.00 700.00 Td (FA0.90MA0.10 is the strongest candidate) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 48.00 682.90 Td (S04 and S08 lead both PCE and stability, with the lowest hysteresis.) Tj ET
+0.38 0.43 0.51 rg BT /F3 5.2 Tf 48.00 667.80 Td (S04, S08 | 7 metrics | Simulated AI) Tj ET
+0.96 0.97 0.98 rg 296 664 251 68 re f
+0.83 0.86 0.90 RG 0.6 w 296 664 251 68 re S
+0.031 0.498 0.482 rg 296 664 3 68 re f
+0.031 0.498 0.482 rg BT /F2 11.5 Tf 306.00 711.50 Td (91) Tj ET
+0.38 0.43 0.51 rg BT /F2 5.8 Tf 519.51 716.20 Td (REVIEW) Tj ET
+0.051 0.157 0.157 rg BT /F2 7 Tf 306.00 700.00 Td (S06 is a multi-metric outlier) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 306.00 682.90 Td (PCE, fill factor and stability are jointly below the robust cohort range;) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 306.00 675.40 Td (review fabrication notes before exclusion.) Tj ET
+0.38 0.43 0.51 rg BT /F3 5.2 Tf 306.00 667.80 Td (S06 | IQR + robust z | Simulated AI) Tj ET
+0.96 0.97 0.98 rg 38 590 251 68 re f
+0.83 0.86 0.90 RG 0.6 w 38 590 251 68 re S
+0.031 0.498 0.482 rg 38 590 3 68 re f
+0.031 0.498 0.482 rg BT /F2 11.5 Tf 48.00 637.50 Td (88) Tj ET
+0.38 0.43 0.51 rg BT /F2 5.8 Tf 255.02 642.20 Td (ACCEPTED) Tj ET
+0.051 0.157 0.157 rg BT /F2 7 Tf 48.00 626.00 Td (Batch effect is smaller than formulation effect) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 48.00 608.90 Td (Within-batch variation is limited compared with the shift between) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 48.00 601.40 Td (formulations.) Tj ET
+0.38 0.43 0.51 rg BT /F3 5.2 Tf 48.00 593.80 Td (Grouped comparison | Simulated AI) Tj ET
+0.96 0.97 0.98 rg 296 590 251 68 re f
+0.83 0.86 0.90 RG 0.6 w 296 590 251 68 re S
+0.031 0.498 0.482 rg 296 590 3 68 re f
+0.031 0.498 0.482 rg BT /F2 11.5 Tf 306.00 637.50 Td (84) Tj ET
+0.38 0.43 0.51 rg BT /F2 5.8 Tf 519.51 642.20 Td (REVIEW) Tj ET
+0.051 0.157 0.157 rg BT /F2 7 Tf 306.00 626.00 Td (Stability and hysteresis are inversely associated) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 306.00 608.90 Td (Lower hysteresis appears in the most stable devices; the sample count does) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 306.00 601.40 Td (not support a causal claim.) Tj ET
+0.38 0.43 0.51 rg BT /F3 5.2 Tf 306.00 593.80 Td (Spearman preview | Simulated AI) Tj ET
+0.96 0.97 0.98 rg 38 516 251 68 re f
+0.83 0.86 0.90 RG 0.6 w 38 516 251 68 re S
+0.031 0.498 0.482 rg 38 516 3 68 re f
+0.031 0.498 0.482 rg BT /F2 11.5 Tf 48.00 563.50 Td (78) Tj ET
+0.38 0.43 0.51 rg BT /F2 5.8 Tf 261.51 568.20 Td (ACTION) Tj ET
+0.051 0.157 0.157 rg BT /F2 7 Tf 48.00 552.00 Td (Two metadata gaps limit reproducibility) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 48.00 534.90 Td (Humidity during coating and elapsed time before annealing are missing for) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.1 Tf 48.00 527.40 Td (B04 and B05.) Tj ET
+0.38 0.43 0.51 rg BT /F3 5.2 Tf 48.00 519.80 Td (Process records | Simulated AI) Tj ET
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 501.00 Td (05  |  RESEARCHER DECISION) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 478.00 Td (Interpretation and scientific boundaries) Tj ET
+0.38 0.43 0.51 rg BT /F1 7.5 Tf 442.00 483.50 Td (Pending researcher signature) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 470 m 547 470 l S
+0.96 0.97 0.98 rg 38 376 165 82 re f
+0.83 0.86 0.90 RG 0.6 w 38 376 165 82 re S
+0.031 0.498 0.482 rg BT /F2 6.5 Tf 46.00 441.50 Td (DISCUSSION) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.2 Tf 46.00 425.80 Td (The current cohort supports validation but not) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.2 Tf 46.00 417.70 Td (causal inference.) Tj ET
+0.96 0.97 0.98 rg 210 376 165 82 re f
+0.83 0.86 0.90 RG 0.6 w 210 376 165 82 re S
+0.031 0.498 0.482 rg BT /F2 6.5 Tf 218.00 441.50 Td (CONCLUSIONS) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.2 Tf 218.00 425.80 Td (S04 and S08 proceed to validation; S06 remains) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.2 Tf 218.00 417.70 Td (under review.) Tj ET
+0.96 0.97 0.98 rg 382 376 165 82 re f
+0.83 0.86 0.90 RG 0.6 w 382 376 165 82 re S
+0.031 0.498 0.482 rg BT /F2 6.5 Tf 390.00 441.50 Td (LIMITATIONS) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.2 Tf 390.00 425.80 Td (Small demonstration cohort; no causal inference.) Tj ET
+0.96 0.97 0.98 rg 38 312 509 52 re f
+0.83 0.86 0.90 RG 0.6 w 38 312 509 52 re S
+0.031 0.498 0.482 rg 38 312 3 52 re f
+0.031 0.498 0.482 rg BT /F2 7 Tf 50.00 347.00 Td (Additional notes) Tj ET
+0.12 0.16 0.22 rg BT /F1 6.8 Tf 50.00 330.20 Td (The author requested one additional validation run.) Tj ET
+0.031 0.498 0.482 rg BT /F2 7 Tf 38.00 295.00 Td (07  |  PROVENANCE & APPROVAL) Tj ET
+0.051 0.157 0.157 rg BT /F2 16 Tf 38.00 272.00 Td (Evidence classes and final state) Tj ET
+0.83 0.86 0.90 RG 0.7 w 38 264 m 547 264 l S
+0.96 0.97 0.98 rg 38 227 250 25 re f
+0.83 0.86 0.90 RG 0.6 w 38 227 250 25 re S
+0.031 0.498 0.482 rg BT /F2 6.1 Tf 45.00 237.90 Td (RAW) Tj ET
+0.38 0.43 0.51 rg BT /F1 5.8 Tf 96.00 238.20 Td (Local source-aligned measurements) Tj ET
+0.96 0.97 0.98 rg 297 227 250 25 re f
+0.83 0.86 0.90 RG 0.6 w 297 227 250 25 re S
+0.031 0.498 0.482 rg BT /F2 6.1 Tf 304.00 237.90 Td (CALCULATED) Tj ET
+0.38 0.43 0.51 rg BT /F1 5.8 Tf 355.00 238.20 Td (Deterministic KPI and comparisons) Tj ET
+0.96 0.97 0.98 rg 38 197 250 25 re f
+0.83 0.86 0.90 RG 0.6 w 38 197 250 25 re S
+0.031 0.498 0.482 rg BT /F2 6.1 Tf 45.00 207.90 Td (RESEARCHER) Tj ET
+0.38 0.43 0.51 rg BT /F1 5.8 Tf 96.00 208.20 Td (Objectives, interpretation and approval) Tj ET
+0.96 0.97 0.98 rg 297 197 250 25 re f
+0.83 0.86 0.90 RG 0.6 w 297 197 250 25 re S
+0.031 0.498 0.482 rg BT /F2 6.1 Tf 304.00 207.90 Td (AI) Tj ET
+0.38 0.43 0.51 rg BT /F1 5.8 Tf 355.00 208.20 Td (Simulated advisory findings requiring review) Tj ET
+0.96 0.97 0.98 rg 38 146 509 42 re f
+0.83 0.86 0.90 RG 0.6 w 38 146 509 42 re S
+0.031 0.498 0.482 rg BT /F2 6.2 Tf 49.00 172.80 Td (SOURCE APPENDIX) Tj ET
+0.38 0.43 0.51 rg BT /F1 6 Tf 49.00 160.00 Td (batch_B03_forward.csv | process_metadata.yaml | SOL-B04 | STK-003/v2) Tj ET
+0.38 0.43 0.51 rg BT /F1 6 Tf 49.00 149.00 Td (28 project files | 18 measurements | 6 linked knowledge items) Tj ET
+1 1 1 rg 38 109 509 29 re f
+0.83 0.86 0.90 RG 0.6 w 38 109 509 29 re S
+0.38 0.43 0.51 rg BT /F2 6.2 Tf 49.00 122.80 Td (APPROVAL STATE) Tj ET
+0.051 0.157 0.157 rg BT /F2 6.8 Tf 429.38 122.20 Td (Pending researcher signature) Tj ET
+0.83 0.86 0.90 RG 0.6 w 38 27 m 547 27 l S
+0.38 0.43 0.51 rg BT /F1 6.7 Tf 38.00 14.30 Td (CHOSE - Centre for Hybrid and Organic Solar Energy | PRJ-2026-014-R01 | Generated from the current Report Composer state) Tj ET
+0.031 0.498 0.482 rg BT /F2 7.4 Tf 517.99 13.60 Td (04 / 04) Tj ET
 endstream
 endobj
 13 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.title) /TU (report.title) /V (Mixed-Cation Validation Report) /DV (Mixed-Cation Validation Report) /Rect [48 360 547 388] /P 5 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 10 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 95 0 R >> >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 12 0 R >>
 endobj
 14 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.author) /TU (report.author) /V (Matteo Ginesi | CHOSE  Centre for Hybrid and Organic Solar Energy) /DV (Matteo Ginesi | CHOSE  Centre for Hybrid and Organic Solar Energy) /Rect [48 310 292 338] /P 5 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 96 0 R >> >>
-endobj
-15 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.approval) /TU (report.approval) /V (Pending researcher signature) /DV (Pending researcher signature) /Rect [304 310 547 338] /P 5 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 97 0 R >> >>
-endobj
-16 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.executive_summary) /TU (report.executive_summary) /V (The leading formulation remains FA0.90MA0.10.) /DV (The leading formulation remains FA0.90MA0.10.) /Rect [48 150 547 282] /P 5 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 8.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 98 0 R >> >>
-endobj
-17 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.objectives) /TU (report.objectives) /V (Compare MA/FA ratios and identify the most stable high-efficiency device stack.) /DV (Compare MA/FA ratios and identify the most stable high-efficiency device stack.) /Rect [38 654 547 731] /P 6 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 8.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 99 0 R >> >>
-endobj
-18 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.methodology) /TU (report.methodology) /V (Versioned preparation, mapped JV data and deterministic comparison.) /DV (Versioned preparation, mapped JV data and deterministic comparison.) /Rect [38 544 547 621] /P 6 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 8.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 100 0 R >> >>
-endobj
-19 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.sample) /TU (measurements.1.sample) /V (S01) /DV (S01) /Rect [38 678 72 705] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 101 0 R >> >>
-endobj
-20 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.formulation) /TU (measurements.1.formulation) /V (FA0.85MA0.15) /DV (FA0.85MA0.15) /Rect [74 678 156 705] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 102 0 R >> >>
-endobj
-21 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.batch) /TU (measurements.1.batch) /V (B01) /DV (B01) /Rect [158 678 191 705] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 103 0 R >> >>
-endobj
-22 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.voc) /TU (measurements.1.voc) /V (1.08) /DV (1.08) /Rect [193 678 236 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 104 0 R >> >>
-endobj
-23 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.jsc) /TU (measurements.1.jsc) /V (22.7) /DV (22.7) /Rect [238 678 289 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 105 0 R >> >>
-endobj
-24 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.ff) /TU (measurements.1.ff) /V (78.1) /DV (78.1) /Rect [291 678 334 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 106 0 R >> >>
-endobj
-25 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.pce) /TU (measurements.1.pce) /V (19.15) /DV (19.15) /Rect [336 678 382 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 107 0 R >> >>
-endobj
-26 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.stability) /TU (measurements.1.stability) /V (89) /DV (89) /Rect [384 678 450 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 108 0 R >> >>
-endobj
-27 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.1.hysteresis) /TU (measurements.1.hysteresis) /V (3.2) /DV (3.2) /Rect [452 678 547 705] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 109 0 R >> >>
-endobj
-28 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.sample) /TU (measurements.2.sample) /V (S02) /DV (S02) /Rect [38 647 72 674] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 110 0 R >> >>
-endobj
-29 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.formulation) /TU (measurements.2.formulation) /V (FA0.85MA0.15) /DV (FA0.85MA0.15) /Rect [74 647 156 674] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 111 0 R >> >>
-endobj
-30 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.batch) /TU (measurements.2.batch) /V (B01) /DV (B01) /Rect [158 647 191 674] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 112 0 R >> >>
-endobj
-31 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.voc) /TU (measurements.2.voc) /V (1.1) /DV (1.1) /Rect [193 647 236 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 113 0 R >> >>
-endobj
-32 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.jsc) /TU (measurements.2.jsc) /V (23.2) /DV (23.2) /Rect [238 647 289 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 114 0 R >> >>
-endobj
-33 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.ff) /TU (measurements.2.ff) /V (79) /DV (79) /Rect [291 647 334 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 115 0 R >> >>
-endobj
-34 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.pce) /TU (measurements.2.pce) /V (20.16) /DV (20.16) /Rect [336 647 382 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 116 0 R >> >>
-endobj
-35 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.stability) /TU (measurements.2.stability) /V (91) /DV (91) /Rect [384 647 450 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 117 0 R >> >>
-endobj
-36 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.2.hysteresis) /TU (measurements.2.hysteresis) /V (2.8) /DV (2.8) /Rect [452 647 547 674] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 118 0 R >> >>
-endobj
-37 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.sample) /TU (measurements.3.sample) /V (S03) /DV (S03) /Rect [38 616 72 643] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 119 0 R >> >>
-endobj
-38 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.formulation) /TU (measurements.3.formulation) /V (FA0.80MA0.20) /DV (FA0.80MA0.20) /Rect [74 616 156 643] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 120 0 R >> >>
-endobj
-39 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.batch) /TU (measurements.3.batch) /V (B02) /DV (B02) /Rect [158 616 191 643] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 121 0 R >> >>
-endobj
-40 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.voc) /TU (measurements.3.voc) /V (1.07) /DV (1.07) /Rect [193 616 236 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 122 0 R >> >>
-endobj
-41 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.jsc) /TU (measurements.3.jsc) /V (22.9) /DV (22.9) /Rect [238 616 289 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 123 0 R >> >>
-endobj
-42 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.ff) /TU (measurements.3.ff) /V (77.3) /DV (77.3) /Rect [291 616 334 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 124 0 R >> >>
-endobj
-43 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.pce) /TU (measurements.3.pce) /V (18.94) /DV (18.94) /Rect [336 616 382 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 125 0 R >> >>
-endobj
-44 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.stability) /TU (measurements.3.stability) /V (85) /DV (85) /Rect [384 616 450 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 126 0 R >> >>
-endobj
-45 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.3.hysteresis) /TU (measurements.3.hysteresis) /V (4.1) /DV (4.1) /Rect [452 616 547 643] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 127 0 R >> >>
-endobj
-46 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.sample) /TU (measurements.4.sample) /V (S04) /DV (S04) /Rect [38 585 72 612] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 128 0 R >> >>
-endobj
-47 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.formulation) /TU (measurements.4.formulation) /V (FA0.90MA0.10) /DV (FA0.90MA0.10) /Rect [74 585 156 612] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 129 0 R >> >>
-endobj
-48 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.batch) /TU (measurements.4.batch) /V (B03) /DV (B03) /Rect [158 585 191 612] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 130 0 R >> >>
-endobj
-49 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.voc) /TU (measurements.4.voc) /V (1.12) /DV (1.12) /Rect [193 585 236 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 131 0 R >> >>
-endobj
-50 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.jsc) /TU (measurements.4.jsc) /V (23.5) /DV (23.5) /Rect [238 585 289 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 132 0 R >> >>
-endobj
-51 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.ff) /TU (measurements.4.ff) /V (80.2) /DV (80.2) /Rect [291 585 334 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 133 0 R >> >>
-endobj
-52 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.pce) /TU (measurements.4.pce) /V (21.1) /DV (21.1) /Rect [336 585 382 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 134 0 R >> >>
-endobj
-53 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.stability) /TU (measurements.4.stability) /V (94) /DV (94) /Rect [384 585 450 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 135 0 R >> >>
-endobj
-54 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.4.hysteresis) /TU (measurements.4.hysteresis) /V (2.1) /DV (2.1) /Rect [452 585 547 612] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 136 0 R >> >>
-endobj
-55 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.sample) /TU (measurements.5.sample) /V (S05) /DV (S05) /Rect [38 554 72 581] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 137 0 R >> >>
-endobj
-56 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.formulation) /TU (measurements.5.formulation) /V (FA0.90MA0.10) /DV (FA0.90MA0.10) /Rect [74 554 156 581] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 138 0 R >> >>
-endobj
-57 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.batch) /TU (measurements.5.batch) /V (B03) /DV (B03) /Rect [158 554 191 581] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 139 0 R >> >>
-endobj
-58 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.voc) /TU (measurements.5.voc) /V (1.09) /DV (1.09) /Rect [193 554 236 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 140 0 R >> >>
-endobj
-59 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.jsc) /TU (measurements.5.jsc) /V (23) /DV (23) /Rect [238 554 289 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 141 0 R >> >>
-endobj
-60 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.ff) /TU (measurements.5.ff) /V (79.4) /DV (79.4) /Rect [291 554 334 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 142 0 R >> >>
-endobj
-61 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.pce) /TU (measurements.5.pce) /V (19.9) /DV (19.9) /Rect [336 554 382 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 143 0 R >> >>
-endobj
-62 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.stability) /TU (measurements.5.stability) /V (92) /DV (92) /Rect [384 554 450 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 144 0 R >> >>
-endobj
-63 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.5.hysteresis) /TU (measurements.5.hysteresis) /V (2.5) /DV (2.5) /Rect [452 554 547 581] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 145 0 R >> >>
-endobj
-64 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.sample) /TU (measurements.6.sample) /V (S06) /DV (S06) /Rect [38 523 72 550] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 146 0 R >> >>
-endobj
-65 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.formulation) /TU (measurements.6.formulation) /V (FA0.75MA0.25) /DV (FA0.75MA0.25) /Rect [74 523 156 550] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 147 0 R >> >>
-endobj
-66 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.batch) /TU (measurements.6.batch) /V (B04) /DV (B04) /Rect [158 523 191 550] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 148 0 R >> >>
-endobj
-67 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.voc) /TU (measurements.6.voc) /V (1.05) /DV (1.05) /Rect [193 523 236 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 149 0 R >> >>
-endobj
-68 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.jsc) /TU (measurements.6.jsc) /V (21.8) /DV (21.8) /Rect [238 523 289 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 150 0 R >> >>
-endobj
-69 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.ff) /TU (measurements.6.ff) /V (75.8) /DV (75.8) /Rect [291 523 334 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 151 0 R >> >>
-endobj
-70 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.pce) /TU (measurements.6.pce) /V (17.36) /DV (17.36) /Rect [336 523 382 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 152 0 R >> >>
-endobj
-71 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.stability) /TU (measurements.6.stability) /V (78) /DV (78) /Rect [384 523 450 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 153 0 R >> >>
-endobj
-72 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.6.hysteresis) /TU (measurements.6.hysteresis) /V (5.9) /DV (5.9) /Rect [452 523 547 550] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 154 0 R >> >>
-endobj
-73 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.sample) /TU (measurements.7.sample) /V (S07) /DV (S07) /Rect [38 492 72 519] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 155 0 R >> >>
-endobj
-74 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.formulation) /TU (measurements.7.formulation) /V (FA0.85MA0.15) /DV (FA0.85MA0.15) /Rect [74 492 156 519] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 156 0 R >> >>
-endobj
-75 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.batch) /TU (measurements.7.batch) /V (B05) /DV (B05) /Rect [158 492 191 519] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 157 0 R >> >>
-endobj
-76 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.voc) /TU (measurements.7.voc) /V (1.11) /DV (1.11) /Rect [193 492 236 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 158 0 R >> >>
-endobj
-77 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.jsc) /TU (measurements.7.jsc) /V (23.1) /DV (23.1) /Rect [238 492 289 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 159 0 R >> >>
-endobj
-78 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.ff) /TU (measurements.7.ff) /V (79.7) /DV (79.7) /Rect [291 492 334 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 160 0 R >> >>
-endobj
-79 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.pce) /TU (measurements.7.pce) /V (20.44) /DV (20.44) /Rect [336 492 382 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 161 0 R >> >>
-endobj
-80 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.stability) /TU (measurements.7.stability) /V (90) /DV (90) /Rect [384 492 450 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 162 0 R >> >>
-endobj
-81 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.7.hysteresis) /TU (measurements.7.hysteresis) /V (2.7) /DV (2.7) /Rect [452 492 547 519] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 163 0 R >> >>
-endobj
-82 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.sample) /TU (measurements.8.sample) /V (S08) /DV (S08) /Rect [38 461 72 488] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 164 0 R >> >>
-endobj
-83 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.formulation) /TU (measurements.8.formulation) /V (FA0.90MA0.10) /DV (FA0.90MA0.10) /Rect [74 461 156 488] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 5.7 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 165 0 R >> >>
-endobj
-84 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.batch) /TU (measurements.8.batch) /V (B06) /DV (B06) /Rect [158 461 191 488] /P 7 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 166 0 R >> >>
-endobj
-85 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.voc) /TU (measurements.8.voc) /V (1.13) /DV (1.13) /Rect [193 461 236 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 167 0 R >> >>
-endobj
-86 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.jsc) /TU (measurements.8.jsc) /V (23.4) /DV (23.4) /Rect [238 461 289 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 168 0 R >> >>
-endobj
-87 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.ff) /TU (measurements.8.ff) /V (80.5) /DV (80.5) /Rect [291 461 334 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 169 0 R >> >>
-endobj
-88 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.pce) /TU (measurements.8.pce) /V (21.28) /DV (21.28) /Rect [336 461 382 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 170 0 R >> >>
-endobj
-89 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.stability) /TU (measurements.8.stability) /V (95) /DV (95) /Rect [384 461 450 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 171 0 R >> >>
-endobj
-90 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (measurements.8.hysteresis) /TU (measurements.8.hysteresis) /V (1.9) /DV (1.9) /Rect [452 461 547 488] /P 7 0 R /F 4 /Ff 0 /Q 1 /DA (/F1 6.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 172 0 R >> >>
-endobj
-91 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.custom_author_section) /TU (report.custom_author_section) /V (The author requested one additional validation run.) /DV (The author requested one additional validation run.) /Rect [38 470 547 530] /P 8 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 7.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 173 0 R >> >>
-endobj
-92 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.conclusions) /TU (report.conclusions) /V (S04 and S08 proceed to validation; S06 remains under review.) /DV (S04 and S08 proceed to validation; S06 remains under review.) /Rect [38 316 547 416] /P 8 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 8.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 174 0 R >> >>
-endobj
-93 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.limitations) /TU (report.limitations) /V (Small demonstration cohort; no causal inference.) /DV (Small demonstration cohort; no causal inference.) /Rect [38 202 547 288] /P 8 0 R /F 4 /Ff 4096 /Q 0 /DA (/F1 8.5 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 175 0 R >> >>
-endobj
-94 0 obj
-<< /Type /Annot /Subtype /Widget /FT /Tx /T (report.approval_final) /TU (report.approval_final) /V (Pending researcher signature) /DV (Pending researcher signature) /Rect [38 151 547 177] /P 8 0 R /F 4 /Ff 0 /Q 0 /DA (/F1 8 Tf 0.12 0.16 0.22 rg) /MK << /BC [0.157 0.678 0.655] /BG [0.985 0.990 0.996] >> /BS << /W 0.65 /S /S >> /AP << /N 176 0 R >> >>
-endobj
-95 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 499 28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 162 >>
-stream
-0.985 0.990 0.996 rg 0 0 499 28 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 498 27 re S
-0.12 0.16 0.22 rg BT /F1 10 Tf 4 13 Td (Mixed-Cation Validation Report) Tj ET
-endstream
-endobj
-96 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 244 28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 196 >>
-stream
-0.985 0.990 0.996 rg 0 0 244 28 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 243 27 re S
-0.12 0.16 0.22 rg BT /F1 7 Tf 4 16 Td (Matteo Ginesi | CHOSE  Centre for Hybrid and Organic Solar Energy) Tj ET
-endstream
-endobj
-97 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 243 28] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 159 >>
-stream
-0.985 0.990 0.996 rg 0 0 243 28 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 242 27 re S
-0.12 0.16 0.22 rg BT /F1 7 Tf 4 16 Td (Pending researcher signature) Tj ET
-endstream
-endobj
-98 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 499 132] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 183 >>
-stream
-0.985 0.990 0.996 rg 0 0 499 132 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 498 131 re S
-0.12 0.16 0.22 rg BT /F1 8.5 Tf 4 118.5 Td (The leading formulation remains FA0.90MA0.10.) Tj ET
-endstream
-endobj
-99 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 77] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 214 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 77 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 76 re S
-0.12 0.16 0.22 rg BT /F1 8.5 Tf 4 63.5 Td (Compare MA/FA ratios and identify the most stable high-efficiency device stack.) Tj ET
-endstream
-endobj
-100 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 77] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 202 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 77 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 76 re S
-0.12 0.16 0.22 rg BT /F1 8.5 Tf 4 63.5 Td (Versioned preparation, mapped JV data and deterministic comparison.) Tj ET
-endstream
-endobj
-101 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S01) Tj ET
-endstream
-endobj
-102 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.85MA0.15) Tj ET
-endstream
-endobj
-103 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B01) Tj ET
-endstream
-endobj
-104 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.08) Tj ET
-endstream
-endobj
-105 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (22.7) Tj ET
-endstream
-endobj
-106 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (78.1) Tj ET
-endstream
-endobj
-107 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (19.15) Tj ET
-endstream
-endobj
-108 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (89) Tj ET
-endstream
-endobj
-109 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (3.2) Tj ET
-endstream
-endobj
-110 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S02) Tj ET
-endstream
-endobj
-111 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.85MA0.15) Tj ET
-endstream
-endobj
-112 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B01) Tj ET
-endstream
-endobj
-113 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 16.43 15.5 Td (1.1) Tj ET
-endstream
-endobj
-114 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (23.2) Tj ET
-endstream
-endobj
-115 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.12 15.5 Td (79) Tj ET
-endstream
-endobj
-116 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (20.16) Tj ET
-endstream
-endobj
-117 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (91) Tj ET
-endstream
-endobj
-118 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (2.8) Tj ET
-endstream
-endobj
-119 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S03) Tj ET
-endstream
-endobj
-120 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.80MA0.20) Tj ET
-endstream
-endobj
-121 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B02) Tj ET
-endstream
-endobj
-122 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.07) Tj ET
-endstream
-endobj
-123 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (22.9) Tj ET
-endstream
-endobj
-124 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (77.3) Tj ET
-endstream
-endobj
-125 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (18.94) Tj ET
-endstream
-endobj
-126 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (85) Tj ET
-endstream
-endobj
-127 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (4.1) Tj ET
-endstream
-endobj
-128 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S04) Tj ET
-endstream
-endobj
-129 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.90MA0.10) Tj ET
-endstream
-endobj
-130 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B03) Tj ET
-endstream
-endobj
-131 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.12) Tj ET
-endstream
-endobj
-132 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (23.5) Tj ET
-endstream
-endobj
-133 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (80.2) Tj ET
-endstream
-endobj
-134 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 16.240000000000002 15.5 Td (21.1) Tj ET
-endstream
-endobj
-135 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (94) Tj ET
-endstream
-endobj
-136 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (2.1) Tj ET
-endstream
-endobj
-137 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S05) Tj ET
-endstream
-endobj
-138 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.90MA0.10) Tj ET
-endstream
-endobj
-139 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B03) Tj ET
-endstream
-endobj
-140 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.09) Tj ET
-endstream
-endobj
-141 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 22.12 15.5 Td (23) Tj ET
-endstream
-endobj
-142 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (79.4) Tj ET
-endstream
-endobj
-143 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 16.240000000000002 15.5 Td (19.9) Tj ET
-endstream
-endobj
-144 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (92) Tj ET
-endstream
-endobj
-145 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (2.5) Tj ET
-endstream
-endobj
-146 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S06) Tj ET
-endstream
-endobj
-147 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.75MA0.25) Tj ET
-endstream
-endobj
-148 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B04) Tj ET
-endstream
-endobj
-149 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.05) Tj ET
-endstream
-endobj
-150 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (21.8) Tj ET
-endstream
-endobj
-151 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (75.8) Tj ET
-endstream
-endobj
-152 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (17.36) Tj ET
-endstream
-endobj
-153 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (78) Tj ET
-endstream
-endobj
-154 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (5.9) Tj ET
-endstream
-endobj
-155 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S07) Tj ET
-endstream
-endobj
-156 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.85MA0.15) Tj ET
-endstream
-endobj
-157 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B05) Tj ET
-endstream
-endobj
-158 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.11) Tj ET
-endstream
-endobj
-159 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (23.1) Tj ET
-endstream
-endobj
-160 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (79.7) Tj ET
-endstream
-endobj
-161 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (20.44) Tj ET
-endstream
-endobj
-162 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (90) Tj ET
-endstream
-endobj
-163 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (2.7) Tj ET
-endstream
-endobj
-164 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 34 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 34 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 33 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (S08) Tj ET
-endstream
-endobj
-165 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 82 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 145 >>
-stream
-0.985 0.990 0.996 rg 0 0 82 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 81 26 re S
-0.12 0.16 0.22 rg BT /F1 5.7 Tf 4 16.3 Td (FA0.90MA0.10) Tj ET
-endstream
-endobj
-166 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 33 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 136 >>
-stream
-0.985 0.990 0.996 rg 0 0 33 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 32 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 4 15.5 Td (B06) Tj ET
-endstream
-endobj
-167 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (1.13) Tj ET
-endstream
-endobj
-168 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 51 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 154 >>
-stream
-0.985 0.990 0.996 rg 0 0 51 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 50 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 18.740000000000002 15.5 Td (23.4) Tj ET
-endstream
-endobj
-169 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 43 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 141 >>
-stream
-0.985 0.990 0.996 rg 0 0 43 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 42 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.74 15.5 Td (80.5) Tj ET
-endstream
-endobj
-170 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 46 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 155 >>
-stream
-0.985 0.990 0.996 rg 0 0 46 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 45 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 14.549999999999999 15.5 Td (21.28) Tj ET
-endstream
-endobj
-171 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 66 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 139 >>
-stream
-0.985 0.990 0.996 rg 0 0 66 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 65 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 29.62 15.5 Td (95) Tj ET
-endstream
-endobj
-172 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 95 27] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 140 >>
-stream
-0.985 0.990 0.996 rg 0 0 95 27 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 94 26 re S
-0.12 0.16 0.22 rg BT /F1 6.5 Tf 42.43 15.5 Td (1.9) Tj ET
-endstream
-endobj
-173 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 60] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 186 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 60 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 59 re S
-0.12 0.16 0.22 rg BT /F1 7.5 Tf 4 47.5 Td (The author requested one additional validation run.) Tj ET
-endstream
-endobj
-174 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 100] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 196 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 100 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 99 re S
-0.12 0.16 0.22 rg BT /F1 8.5 Tf 4 86.5 Td (S04 and S08 proceed to validation; S06 remains under review.) Tj ET
-endstream
-endobj
-175 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 86] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 183 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 86 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 85 re S
-0.12 0.16 0.22 rg BT /F1 8.5 Tf 4 72.5 Td (Small demonstration cohort; no causal inference.) Tj ET
-endstream
-endobj
-176 0 obj
-<< /Type /XObject /Subtype /Form /BBox [0 0 509 26] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length 159 >>
-stream
-0.985 0.990 0.996 rg 0 0 509 26 re f
-0.157 0.678 0.655 RG 0.65 w 0.5 0.5 508 25 re S
-0.12 0.16 0.22 rg BT /F1 8 Tf 4 13 Td (Pending researcher signature) Tj ET
-endstream
+<< /Title (Mixed-Cation Validation Report) /Author (Matteo Ginesi) /Subject (Scientific project report) /Creator (LabFlow Report Composer) /Producer (LabFlow Unified Report Composer PDF Engine v2) >>
 endobj
 xref
-0 177
+0 15
 0000000000 65535 f 
-0000000035 00000 n 
-0000000782 00000 n 
-0000000857 00000 n 
-0000000927 00000 n 
-0000001002 00000 n 
-0000001176 00000 n 
-0000001337 00000 n 
-0000001988 00000 n 
-0000002163 00000 n 
-0000005221 00000 n 
-0000010037 00000 n 
-0000013819 00000 n 
-0000017521 00000 n 
-0000017875 00000 n 
-0000018300 00000 n 
-0000018656 00000 n 
-0000019068 00000 n 
-0000019534 00000 n 
-0000019979 00000 n 
-0000020298 00000 n 
-0000020646 00000 n 
-0000020965 00000 n 
-0000021282 00000 n 
-0000021599 00000 n 
-0000021914 00000 n 
-0000022233 00000 n 
-0000022558 00000 n 
-0000022887 00000 n 
-0000023206 00000 n 
-0000023554 00000 n 
-0000023873 00000 n 
-0000024188 00000 n 
-0000024505 00000 n 
-0000024816 00000 n 
-0000025135 00000 n 
-0000025460 00000 n 
-0000025789 00000 n 
-0000026108 00000 n 
-0000026456 00000 n 
-0000026775 00000 n 
-0000027092 00000 n 
-0000027409 00000 n 
-0000027724 00000 n 
-0000028043 00000 n 
-0000028368 00000 n 
-0000028697 00000 n 
-0000029016 00000 n 
-0000029364 00000 n 
-0000029683 00000 n 
-0000030000 00000 n 
-0000030317 00000 n 
-0000030632 00000 n 
-0000030949 00000 n 
-0000031274 00000 n 
-0000031603 00000 n 
-0000031922 00000 n 
-0000032270 00000 n 
-0000032589 00000 n 
-0000032906 00000 n 
-0000033219 00000 n 
-0000033534 00000 n 
-0000033851 00000 n 
-0000034176 00000 n 
-0000034505 00000 n 
-0000034824 00000 n 
-0000035172 00000 n 
-0000035491 00000 n 
-0000035808 00000 n 
-0000036125 00000 n 
-0000036440 00000 n 
-0000036759 00000 n 
-0000037084 00000 n 
-0000037413 00000 n 
-0000037732 00000 n 
-0000038080 00000 n 
-0000038399 00000 n 
-0000038716 00000 n 
-0000039033 00000 n 
-0000039348 00000 n 
-0000039667 00000 n 
-0000039992 00000 n 
-0000040321 00000 n 
-0000040640 00000 n 
-0000040988 00000 n 
-0000041307 00000 n 
-0000041624 00000 n 
-0000041941 00000 n 
-0000042256 00000 n 
-0000042575 00000 n 
-0000042900 00000 n 
-0000043229 00000 n 
-0000043662 00000 n 
-0000044093 00000 n 
-0000044500 00000 n 
-0000044868 00000 n 
-0000045180 00000 n 
-0000045526 00000 n 
-0000045835 00000 n 
-0000046169 00000 n 
-0000046533 00000 n 
-0000046886 00000 n 
-0000047172 00000 n 
-0000047467 00000 n 
-0000047753 00000 n 
-0000048044 00000 n 
-0000048348 00000 n 
-0000048639 00000 n 
-0000048944 00000 n 
-0000049233 00000 n 
-0000049523 00000 n 
-0000049809 00000 n 
-0000050104 00000 n 
-0000050390 00000 n 
-0000050680 00000 n 
-0000050984 00000 n 
-0000051273 00000 n 
-0000051578 00000 n 
-0000051867 00000 n 
-0000052157 00000 n 
-0000052443 00000 n 
-0000052738 00000 n 
-0000053024 00000 n 
-0000053315 00000 n 
-0000053619 00000 n 
-0000053910 00000 n 
-0000054215 00000 n 
-0000054504 00000 n 
-0000054794 00000 n 
-0000055080 00000 n 
-0000055375 00000 n 
-0000055661 00000 n 
-0000055952 00000 n 
-0000056256 00000 n 
-0000056547 00000 n 
-0000056851 00000 n 
-0000057140 00000 n 
-0000057430 00000 n 
-0000057716 00000 n 
-0000058011 00000 n 
-0000058297 00000 n 
-0000058588 00000 n 
-0000058877 00000 n 
-0000059168 00000 n 
-0000059472 00000 n 
-0000059761 00000 n 
-0000060051 00000 n 
-0000060337 00000 n 
-0000060632 00000 n 
-0000060918 00000 n 
-0000061209 00000 n 
-0000061513 00000 n 
-0000061804 00000 n 
-0000062109 00000 n 
-0000062398 00000 n 
-0000062688 00000 n 
-0000062974 00000 n 
-0000063269 00000 n 
-0000063555 00000 n 
-0000063846 00000 n 
-0000064150 00000 n 
-0000064441 00000 n 
-0000064746 00000 n 
-0000065035 00000 n 
-0000065325 00000 n 
-0000065611 00000 n 
-0000065906 00000 n 
-0000066192 00000 n 
-0000066483 00000 n 
-0000066787 00000 n 
-0000067078 00000 n 
-0000067383 00000 n 
-0000067672 00000 n 
-0000067962 00000 n 
-0000068299 00000 n 
-0000068647 00000 n 
-0000068981 00000 n 
+0000000018 00000 n 
+0000000090 00000 n 
+0000000167 00000 n 
+0000000237 00000 n 
+0000000312 00000 n 
+0000000390 00000 n 
+0000005941 00000 n 
+0000006087 00000 n 
+0000011258 00000 n 
+0000011404 00000 n 
+0000020177 00000 n 
+0000020325 00000 n 
+0000027725 00000 n 
+0000027873 00000 n 
 trailer
-<< /Size 177 /Root 1 0 R >>
+<< /Size 15 /Root 1 0 R /Info 14 0 R >>
 startxref
-69291
+28089
 %%EOF

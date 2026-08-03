@@ -15,6 +15,7 @@ const options = {
   user: LabFlowData.user,
   findings: LabFlowData.aiFindings,
   knowledge: LabFlowData.knowledge,
+  experiments: LabFlowData.experiments,
   report: {
     title: "Mixed-Cation Validation Report",
     subtitle: "Editable local report test",
@@ -51,7 +52,6 @@ const files = {
   "report.docx": LabFlowExport.reportDocx(project, LabFlowData.demoDataset, options),
   "report.xlsx": LabFlowExport.reportXlsx(project, LabFlowData.demoDataset, options),
   "project.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, false, options),
-  "nomad-preview.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, true, options),
   "generic-workbook.xlsx": LabFlowExport.genericWorkbook([
     { name: "Samples", rows: [["Sample", "PCE"], ["S08", "21.28"]] },
     { name: "Metadata", rows: [["Field", "Value"], ["Project", project.id]] },
@@ -73,9 +73,11 @@ for (const [name, blob] of Object.entries(files)) {
   }
   if (name === "report.pdf") {
     assert.match(packageText, /%PDF-1\.7/);
+    assert.match(packageText, /LabFlow Unified Report Composer PDF Engine v2/);
     assert.match(packageText, /Mixed-Cation Validation Report/);
-    assert.match(packageText, /CUSTOM AUTHOR SECTION/);
+    assert.match(packageText, /Additional notes/);
     assert.match(packageText, /batch_B03_forward\.csv/);
+    assert.doesNotMatch(packageText, /editablePdfRaw|EDITABLE REPORT IDENTITY/);
   }
   if (name === "report.docx") {
     assert.match(packageText, /Solution Review/);
@@ -87,6 +89,9 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /word\/settings\.xml/);
     assert.match(packageText, /CoverTitle/);
   }
+  if (name === "project.zip") {
+    for (const entry of ["scientific-report.pdf", "editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
+  }
   if (name === "report.xlsx") {
     for (const sheet of ["Dashboard", "Project", "Solutions", "Stack", "Raw Data", "Processed Data", "Analysis", "AI Findings", "Provenance", "Export Manifest"]) assert.match(packageText, new RegExp(`name="${sheet}"`));
     assert.match(packageText, /<f>MAX\(&apos;Raw Data&apos;!G2:G9\)<\/f>/);
@@ -96,8 +101,9 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /FFFFF3D6/);
     assert.match(packageText, /FFE8F7EE/);
   }
-  if (name === "project.zip") {
-    for (const entry of ["scientific-report.pdf", "editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
-  }
 }
+const workbookSource = readFileSync(new URL("../assets/js/workbook.js", import.meta.url), "utf8");
+assert.doesNotMatch(workbookSource, /editablePdfRaw|pdfText\(|65 fillable|foreignObject|report-pdf-staging/);
+assert.match(workbookSource, /reportPdfRaw/);
+assert.match(workbookSource, /buildReportDocument/);
 console.log(output);
