@@ -18,27 +18,46 @@ const options = {
   report: {
     title: "Mixed-Cation Validation Report",
     subtitle: "Editable local report test",
+    reportType: "Scientific project report",
+    reportCode: "PRJ-2026-014-R01",
+    keywords: "perovskite, mixed-cation, validation",
+    author: LabFlowData.user.name,
+    laboratory: LabFlowData.user.laboratory,
+    organisation: LabFlowData.user.organisation,
+    reportDate: "2026-08-03",
     executiveSummary: "The leading formulation remains FA0.90MA0.10.",
     objectives: project.objective,
     methodology: "Versioned preparation, mapped JV data and deterministic comparison.",
+    resultsNarrative: "S08 remains the current performance leader.",
+    discussion: "The current cohort supports validation but not causal inference.",
     conclusions: "S04 and S08 proceed to validation; S06 remains under review.",
     limitations: "Small demonstration cohort; no causal inference.",
-    approval: "Pending researcher signature"
+    customTitle: "Additional notes",
+    customBody: "The author requested one additional validation run.",
+    approval: "Pending researcher signature",
+    chartMetric: "pce",
+    includeFullTable: true,
+    includeExperiments: true,
+    includeEvidence: true,
+    includeSourceAppendix: true,
+    includeQualityReview: true,
+    sections: ["summary", "methods", "results", "ai", "conclusions", "custom", "provenance"]
   }
 };
 const output = "/tmp/labflow-export-test";
 mkdirSync(output, { recursive: true });
 const files = {
+  "report.pdf": LabFlowExport.reportPdf(project, LabFlowData.demoDataset, options),
   "report.docx": LabFlowExport.reportDocx(project, LabFlowData.demoDataset, options),
   "report.xlsx": LabFlowExport.reportXlsx(project, LabFlowData.demoDataset, options),
   "project.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, false, options),
-  "nomad-preview.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, true, options)
-  ,"generic-workbook.xlsx": LabFlowExport.genericWorkbook([
+  "nomad-preview.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, true, options),
+  "generic-workbook.xlsx": LabFlowExport.genericWorkbook([
     { name: "Samples", rows: [["Sample", "PCE"], ["S08", "21.28"]] },
     { name: "Metadata", rows: [["Field", "Value"], ["Project", project.id]] },
     { name: "Review", rows: [["Status"], ["Pending"]] }
-  ], "green")
-  ,"generic-document.docx": LabFlowExport.genericDocx({ title: "Working note", subtitle: "Export test", body: "# Finding\nS08 remains the lead sample." }, "green")
+  ], "green"),
+  "generic-document.docx": LabFlowExport.genericDocx({ title: "Working note", subtitle: "Export test", body: "# Finding\nS08 remains the lead sample." }, "green")
 };
 for (const [name, blob] of Object.entries(files)) {
   const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -52,14 +71,21 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /word\/document\.xml/);
     assert.match(packageText, /Working note/);
   }
+  if (name === "report.pdf") {
+    assert.match(packageText, /%PDF-1\.7/);
+    assert.match(packageText, /Mixed-Cation Validation Report/);
+    assert.match(packageText, /CUSTOM AUTHOR SECTION/);
+    assert.match(packageText, /batch_B03_forward\.csv/);
+  }
   if (name === "report.docx") {
-    assert.match(packageText, /TOC \\o/);
     assert.match(packageText, /Solution Review/);
-    assert.match(packageText, /Stack Review/);
-    assert.match(packageText, /Provenance &amp; Approval/);
+    assert.match(packageText, /Device Stack/);
+    assert.match(packageText, /Provenance and Approval/);
+    assert.match(packageText, /Additional notes/);
     assert.match(packageText, /<w:sdt>/);
     assert.match(packageText, /report\.conclusions/);
     assert.match(packageText, /word\/settings\.xml/);
+    assert.match(packageText, /CoverTitle/);
   }
   if (name === "report.xlsx") {
     for (const sheet of ["Dashboard", "Project", "Solutions", "Stack", "Raw Data", "Processed Data", "Analysis", "AI Findings", "Provenance", "Export Manifest"]) assert.match(packageText, new RegExp(`name="${sheet}"`));
@@ -71,7 +97,7 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /FFE8F7EE/);
   }
   if (name === "project.zip") {
-    for (const entry of ["editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
+    for (const entry of ["scientific-report.pdf", "editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
   }
 }
 console.log(output);

@@ -112,7 +112,7 @@ def render(page: str, title: str, description: str) -> str:
       <div class="global-search" id="global-search">
         {icon("search")}
         <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, steps, knowledge and tools…">
-        <kbd>⌘ K</kbd><div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
+<div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
       </div>
       <div class="topbar-right">
         <span class="badge top-status" title="Static local proof of concept">LOCAL POC</span>

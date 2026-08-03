@@ -76,7 +76,7 @@ The report preview and exporters share the same structured project representatio
 7. validation issues, limitations and approvals;
 8. export manifest and identifiers.
 
-PDF is produced through **Print / Save PDF** from the current Report Composer preview. LabFlow clones the visible report DOM after applying the latest in-memory edits, then prints that same title, selected sections, text, data tables, charts, findings, conclusions, limitations, provenance and approval. There is no second hard-coded PDF layout and no separate PDF form model.
+PDF is generated as a **native downloadable file** from the current Report Composer state. The exporter consumes the same title, publication metadata, selected sections, text, data tables, chart configuration, findings, custom author section, conclusions, limitations, provenance and approval used by the four-page preview. It does not invoke the browser print dialog.
 
 DOCX is an editable native package. Researcher-owned narrative sections use labelled content controls, while the report includes cover metadata, KPI, solution and stack reviews, experiment coverage, full measurement columns, findings and provenance. Its table of contents and document fields are marked for refresh when opened.
 
@@ -84,7 +84,7 @@ XLSX contains ten named sheets: Dashboard, Project, Solutions, Stack, Raw Data, 
 
 ### Editing contract
 
-- Edit the report inside the Report Composer; Print / Save PDF captures the exact current preview.
+- Edit the report inside the Report Composer; native PDF and DOCX consume the current in-memory report state and selected sections.
 - PDF is a final reading artifact and is not a second editing surface.
 - DOCX content controls identify researcher-authored sections without locking the rest of the document.
 - XLSX formulas derive dashboard and processed values from the `Raw Data` sheet; edit the highlighted cells, then recalculate before review.

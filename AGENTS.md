@@ -28,7 +28,7 @@ These rules apply to the whole repository.
 - Update the relevant canonical document whenever behavior, contracts or validation change. Remove obsolete documentation rather than leaving competing guidance.
 - A change is not complete until the superseded implementation has been removed and the affected documentation has been updated.
 - Rebuild checked-in bundles after editing pipeline YAML or Markdown docs, then run the commands in `docs/VALIDATION_CHECKLIST.md`.
-- Verify that Print / Save PDF reproduces the current Report Composer preview, and verify DOCX and the ten-sheet XLSX package structurally and visually after exporter changes.
+- Verify that native PDF and professional DOCX consume the current Report Composer state, respect selected sections and author text, and pass structural and visual rendering checks after exporter changes.
 ## Static delivery performance
 
 - Root pages load `ui/labflow.bundle.css` and `assets/js/runtime.js` to avoid a large request waterfall on GitHub Pages.

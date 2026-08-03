@@ -4,7 +4,7 @@ Use this checklist after changes to behavior, data contracts, pipelines, documen
 
 ## Automated checks
 
-Run the repository’s static validator and the local export package test. The static validator checks entry pages, required local assets, canonical-source parity, light defaults, privacy constraints and internal links. The export test inspects generated DOCX, XLSX and ZIP structures; PDF parity is verified in the browser because it is printed from the visible Report Composer DOM.
+Run the repository’s static validator and the local export package test. The static validator checks entry pages, required local assets, canonical-source parity, light defaults, privacy constraints and internal links. The export test inspects generated PDF, DOCX, XLSX and ZIP structures; PDF and DOCX are also rendered to page images for visual inspection.
 
 ```bash
 node tools/test_exports.mjs
@@ -92,7 +92,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 ## Export inspection
 
-- Modify the Report Composer title, narrative fields and included sections, then choose Print / Save PDF. Confirm the browser print preview reproduces the visible report composition, data table, charts, findings and current approval state.
+- Modify the Report Composer title, publication metadata, narrative fields, custom section and included sections. Generate PDF and DOCX, then confirm both contain the same report state, data table, selected chart metric, findings, source appendix and approval.
 - Generate DOCX, XLSX and ZIP from the project.
 - Open the DOCX, update its table of contents, edit each researcher content-control type and inspect headings and tables.
 - Open and recalculate all ten XLSX sheets in an Office-compatible application. Confirm pale amber input cells, pale green formula cells, frozen headers, filters and updated Dashboard values after a Raw Data edit.

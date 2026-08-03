@@ -16,7 +16,7 @@ LabFlow joins work that is usually scattered across notes, spreadsheets and isol
 - deterministic analysis, validation and comparison views;
 - Ask LabFlow for evidence-led questions, inspection and action previews;
 - local TXT, Markdown, LaTeX, YAML, JSON, spreadsheet, DOCX and diagram tools;
-- PDF output printed directly from the current Report Composer preview, plus structured editable DOCX, a ten-sheet formula-driven XLSX workbook and transparent ZIP packages;
+- a native downloadable PDF generated from the current Report Composer state, a professionally formatted editable DOCX, a ten-sheet formula-driven XLSX workbook and transparent ZIP packages;
 - a non-transmitting NOMAD readiness preview.
 
 ```mermaid
