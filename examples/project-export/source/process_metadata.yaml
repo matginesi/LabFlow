@@ -1,0 +1,11 @@
+batch_id: B03
+operator: Matteo Ginesi
+glovebox:
+  oxygen_ppm: 0.4
+  water_ppm: 0.6
+annealing:
+  temperature_c: 105
+  duration_min: 25
+missing_fields:
+  - coating_humidity
+  - elapsed_time_before_annealing

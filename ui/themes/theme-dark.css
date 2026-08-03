@@ -1,0 +1,10 @@
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --shell:color-mix(in srgb,#050910 78%,var(--accent2));--shell2:color-mix(in srgb,#09111c 72%,var(--accent2));--shell3:color-mix(in srgb,#101a28 66%,var(--accent2));
+  --shell-line:color-mix(in srgb,#314159 62%,var(--accent));
+  --bg:#0b1018;--surface:#151d29;--surface2:#1a2331;--surface3:#212c3b;
+  --text:#f2f5f9;--muted:#c2cad6;--subtle:#919db0;--line:#293547;--line2:#3a475a;
+  --shadow:0 12px 28px rgba(0,0,0,.24);--accent-text:color-mix(in srgb,var(--accent) 62%,#fff);
+  --button-bg:var(--surface);--button-hover:var(--surface3);--button-border:var(--line2);--button-text:var(--text);
+  --primary-bg:color-mix(in srgb,var(--accent2) 76%,#000);--primary-hover:color-mix(in srgb,var(--accent2) 86%,#000);
+}

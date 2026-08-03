@@ -1,0 +1,29 @@
+schema: labflow.project.v1
+id: "PRJ-2026-014"
+name: "Mixed-cation perovskite optimisation"
+pipeline: "chose"
+pipeline_version: 1
+status: "active"
+progress: 78
+owner: "Matteo Ginesi"
+objective: "Compare MA/FA ratios and identify the most stable high-efficiency device stack."
+counts:
+  samples: 12
+  measurements: 18
+  findings: 7
+steps:
+  - id: "solutions"
+    status: completed
+    output: "Structured solution batches and recipes"
+  - id: "stack"
+    status: completed
+    output: "Device stacks and sample identifiers"
+  - id: "ingest"
+    status: completed
+    output: "Validated measurement datasets"
+  - id: "analysis-report"
+    status: completed
+    output: "Validated findings, comparisons, charts and report packages"
+  - id: "export"
+    status: available
+    output: "Project and NOMAD export bundles"

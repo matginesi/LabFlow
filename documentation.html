@@ -1,355 +1,72 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light" data-palette="blue" data-density="compact">
 <head>
-<meta charset="utf-8">
-<script src="assets/theme-init.js"></script>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="data:,">
-  <meta name="description" content="LabFlow progressive user manual and implementation guide">
-  <title>User Manual · LabFlow</title>
-  
-  
-
-  <link href="assets/app.css" rel="stylesheet">
-  
-  <script defer src="assets/pipeline-bundle.js"></script>
-  <script defer src="assets/docs-bundle.js"></script>
-  <script defer src="assets/pipeline-loader.js"></script>
-  <script defer src="assets/app.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Curated LabFlow product, workflow, interface and validation guidance.">
+  <meta name="theme-color" content="#0c1119">
+  <title>Documentation · LabFlow</title>
+  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
+  <script src="ui/theme-controller.js"></script>
+  <link rel="stylesheet" href="ui/foundations/tokens.css">
+  <link rel="stylesheet" href="ui/themes/theme-base.css">
+  <link rel="stylesheet" href="ui/themes/theme-dark.css">
+  <link rel="stylesheet" href="ui/themes/theme-light.css">
+  <link rel="stylesheet" href="ui/themes/palettes.css">
+  <link rel="stylesheet" href="ui/foundations/base.css">
+  <link rel="stylesheet" href="ui/layout/shell.css">
+  <link rel="stylesheet" href="ui/components/core.css">
+  <link rel="stylesheet" href="ui/components/scientific.css">
+  <link rel="stylesheet" href="ui/components/knowledge-tools.css">
+  <link rel="stylesheet" href="ui/foundations/utilities.css">
+  <link rel="stylesheet" href="ui/layout/responsive.css">
 </head>
-<body data-page="docs">
-  <header class="topbar" id="topbar"></header>
-  <aside class="sidebar" id="sidebar"></aside>
-  <button class="sidebar-overlay" data-action="close-sidebar" type="button" aria-label="Close navigation"></button>
-  <div class="app-main"><main class="page documentation-page">
-    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Workspace</a><span>›</span><span>User manual</span></nav>
-    <header class="page-header compact-header">
-      <div><span class="eyebrow">Product definition &amp; technical manual</span><h1>From research intent to reusable evidence</h1><p>Understand what LabFlow validates, how the Project workflow works, what the code implements and where the static POC deliberately stops.</p></div>
-      <div class="page-actions"><button class="button" data-action="docs-print" type="button">Print section</button><a class="button primary" href="project.html">Open Project workspace</a></div>
+<body data-page="documentation">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell" id="app">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand-row"><a class="brand" href="index.html">
+        <img class="brand-mark" src="assets/brand/logo-mark.svg" width="32" height="32" alt="">
+        <span class="brand-copy"><strong>Lab<span>Flow</span></strong><span>Research workspace</span></span>
+      </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation"><svg class="icon icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="sidebar-scroll">
+        <div class="nav-label">Research</div>
+        <nav class="nav" aria-label="Research workspace"><a class="nav-link" href="index.html"><svg class="icon icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Workspace</span></a><a class="nav-link" href="cabinet.html"><svg class="icon icon-cabinet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v6H4zM5 9h14v12H5zM9 13h6"/></svg><span>Lab Cabinet</span></a><a class="nav-link" href="knowledge.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Knowledge</span></a><a class="nav-link" href="tools.html"><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4-1 11-11-3-3L5 16zM14 7l3 3"/></svg><span>Tools</span></a><a class="nav-link" href="settings.html"><svg class="icon icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15l2 2-4 4-2-2a8 8 0 0 1-6 0l-2 2-4-4 2-2a8 8 0 0 1 0-6L3 7l4-4 2 2a8 8 0 0 1 6 0l2-2 4 4-2 2a8 8 0 0 1 0 6Z"/></svg><span>Settings</span></a></nav>
+        <div class="nav-label">Reference</div>
+        <nav class="nav" aria-label="Product reference"><a class="nav-link active" aria-current="page" href="documentation.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Documentation</span></a><a class="nav-link" href="ui-kit.html"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg><span>UI Kit</span></a></nav>
+      </div>
+      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button></div>
+    </aside>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation"><svg class="icon icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <a class="mobile-brand" href="index.html" aria-label="LabFlow Workspace"><img src="assets/brand/logo-mark.svg" width="22" height="22" alt=""><span>Documentation</span></a>
+        <span class="topbar-page-title" id="topbar-page-title">Documentation</span>
+      </div>
+      <div class="global-search" id="global-search">
+        <svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg>
+        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, steps, knowledge and tools…">
+        <kbd>⌘ K</kbd><div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-accent top-status">Local POC · No cloud sync</span>
+        <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search"><svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg></button>
+        <button class="top-user" data-action="profile" type="button"><span class="avatar">MG</span><span class="top-user-copy"><strong>Matteo Ginesi</strong><span>Advanced Photovoltaics</span></span></button>
+      </div>
     </header>
-
-    <section class="docs-hero-map" aria-label="LabFlow workflow overview">
-      <button class="active" type="button" data-doc="overview"><span>01</span><strong>Understand</strong><small>Purpose</small></button>
-      <button type="button" data-doc="workflow"><span>02</span><strong>Work</strong><small>Pipeline steps</small></button>
-      <button type="button" data-doc="cabinet"><span>03</span><strong>Reuse</strong><small>Lab Cabinet</small></button>
-      <button type="button" data-doc="records"><span>04</span><strong>Trace</strong><small>Data model</small></button>
-      <button type="button" data-doc="ai"><span>05</span><strong>Assist</strong><small>Human control</small></button>
-      <button type="button" data-doc="nomad"><span>06</span><strong>Share</strong><small>NOMAD</small></button>
-    </section>
-
-    <section class="docs-search-panel">
-      <label><span data-icon="model"></span><input class="input" id="documentationSearch" type="search" name="documentation_search" autocomplete="off" placeholder="Search workspace, stack, processing, AI or NOMAD…"><kbd>/</kbd></label>
-      <div id="documentationSearchResults" class="docs-search-results" hidden></div>
-    </section>
-
-    <section class="documentation-shell panel">
-      <nav class="doc-nav" aria-label="Manual contents">
-        <span class="doc-nav-label">Contents</span>
-        <button class="active" data-doc="overview" type="button"><strong>What is LabFlow?</strong><small>Purpose, scope and principles</small></button>
-        <button data-doc="workflow" type="button"><strong>Researcher workflow</strong><small>Solutions through NOMAD</small></button>
-        <button data-doc="cabinet" type="button"><strong>Workspace &amp; Lab Cabinet</strong><small>Shared and optional context</small></button>
-        <button data-doc="records" type="button"><strong>Scientific records</strong><small>Stacks, processing and evidence</small></button>
-        <button data-doc="ai" type="button"><strong>AI &amp; knowledge</strong><small>3 distinct purposes</small></button>
-        <button data-doc="nomad" type="button"><strong>Reports &amp; NOMAD</strong><small>Review before submission</small></button>
-        <button data-doc="interface" type="button"><strong>Interface guide</strong><small>Search, states and responsive UX</small></button>
-        <button data-doc="poc" type="button"><strong>Static POC</strong><small>Architecture and limits</small></button>
-        <div class="doc-nav-links"><button type="button" data-doc-file="docs/PROJECT_DEFINITION.md">Project definition</button><button type="button" data-doc-file="docs/ARCHITECTURE.md">Architecture</button><button type="button" data-doc-file="docs/DESIGN_SYSTEM.md">Design system</button><button type="button" data-doc-file="docs/UI_STANDARDS.md">UI standards</button><button type="button" data-doc-file="docs/GLOSSARY.md">Glossary</button><button type="button" data-doc-file="README.md">Technical README</button><a href="ui-kit.html">UI Kit</a></div>
-      </nav>
-      <article class="markdown-body" id="documentationPreview" tabindex="-1"></article>
-      <footer class="docs-pagination">
-        <button class="button" id="docsPrevious" data-action="docs-page" data-direction="-1" type="button">← Previous</button>
-        <span id="docsPosition">1 of 8</span>
-        <button class="button primary" id="docsNext" data-action="docs-page" data-direction="1" type="button">Next →</button>
-      </footer>
-    </section>
-
-    <script id="doc-overview" type="text/markdown">
-# What is LabFlow?
-
-LabFlow is a Project-centred laboratory workspace concept. It helps researchers capture experimental context while doing the work, connect evidence to analysis, and prepare interoperable outputs without starting from repository forms.
-
-> This repository is a static proof of concept for validating workflow, scientific usability, data relationships, AI integration and NOMAD preparation with real laboratory users.
-
-It is also an inspectable implementation demonstration: plain local HTML, CSS and JavaScript; no backend, CDN, tracker or cookie; and no durable scientific data.
-
-## The platform in one map
-
-```graph
-direction LR
-User[Researcher] --> Workspace[Workspace]
-Workspace --> Project[Project]
-Project --> Pipeline[Pipeline]
-Pipeline --> Steps[Revisitable steps]
-Workspace --> Cabinet[Lab Cabinet]
-Cabinet --> Project : snapshots
-Steps --> Evidence[Scientific evidence]
-Evidence --> Report[Report]
-Report --> Export[Export]
-Export --> NOMAD[NOMAD]
-```
-
-## Design principles
-
-| Principle | What it changes |
-|---|---|
-| Workflow-first | The interface follows laboratory work rather than repository structure. |
-| Researcher-first | Familiar scientific language appears before implementation terms. |
-| Progressive Data Capture | Ask only for essential information now; reveal recommended or advanced context when it becomes useful. |
-| Reusable resources | Shared definitions reduce repeated entry. |
-| Provenance | Results remain connected to processing, measurements and files. |
-| Human-in-the-loop AI | Suggestions show evidence and require review. |
-| NOMAD interoperability | Readiness is collected progressively and validated explicitly. |
-
-## Start here
-
-Open the Dashboard and continue a **Project**, or create one and select a **Pipeline**. CHOSE provides five connected research steps; Quick Experiment provides three independent steps. The Project remembers progress only for the current browser-tab session.
-
-## Who it is for and how success is judged
-
-Researchers use the flow; PIs review evidence; lab managers evaluate reusable definitions and future policy; developers inspect the production direction. The POC succeeds when a reviewer can understand `Workspace → Project → Pipeline → Step`, ingest and connect heterogeneous evidence, distinguish real behavior from simulation, and verify the privacy boundary without implementation guidance.
-
-### Demo scenario
-
-Perovskite Research Lab uses experiment `PSC-2026-041`, solution `FA–Cs 1.2 M` / `SOL-081`, stacks `S01` and `S02`, Spin Coater 01 and protocol PSC n-i-p standard v4.1.
-    </script>
-
-    <script id="doc-workflow" type="text/markdown">
-# Researcher workflow
-
-`Materials & Solutions → Stack & Fabrication → Data Ingest → Analysis → Report & Export`
-
-The sequence is recommended and non-blocking. Save a draft, skip optional work or revisit a phase.
-
-| Phase | Researcher task | Record produced |
-|---|---|---|
-| 1 · Materials & Solutions | Define or reuse recipes and material context | Structured definitions + Project snapshots |
-| 2 · Stack & Fabrication | Build variants, samples and actual processing context | Stacks + fabrication evidence |
-| 3 · Data Ingest | Choose or detect JV, Dark JV, IPCE, UV/VIS or Stability; preview, map and validate the source | Typed Measurements + provenance metadata |
-| 4 · Analysis | Compare conditions and record conclusions | Traceable comparisons + findings |
-| 5 · Report & Export | Select evidence, inspect readiness and generate locally | Report + CSV/JSON + NOMAD-ready view |
-
-## Creating a Project
-
-The creation wizard asks for Project identity and Pipeline. CHOSE opens at Materials & Solutions and keeps all five steps revisitable. Quick uses Plan, Record and Share with its own data shape. Detailed Experiment records remain compatibility views for execution-level concepts.
-
-## Measurement-first ingest
-
-The scientific meaning comes before the file extension. LabFlow treats **Measurement Type** and **File Format** as separate concepts: a JV can arrive as CSV, TXT or DAT; a UV/VIS spectrum can arrive as generic XY text. The POC gives first-class treatment to **JV, Dark JV, IPCE, UV/VIS and Stability**, plus generic evidence. Deterministic rules use filenames, headers, units and table structure to suggest a type, and the researcher can always correct the suggestion.
-
-The visible ingest flow is `Add data → Detect → Preview → Map → Validate → Attach`. CSV, TSV, TXT, DAT and common XY text are the strongest local parsing path. JSON-family, XML and simple YAML can be inspected when their structure is suitable. Complex spreadsheets, scientific containers, documents, images, archives and binary instrument formats remain honestly labelled as **Structure inspected**, **Metadata only** or **Raw evidence** instead of pretending they were parsed. No file is uploaded or durably stored.
-
-## Progressive Data Capture
-
-Fields are treated as **Required**, **Recommended** or **Advanced**. LabFlow reuses context that is already available and distinguishes values that are **user-entered, imported, inherited, inferred or calculated**. Missing recommended metadata does not block the workflow: it appears later as a contextual improvement when it becomes useful for comparison, reproducibility, provenance or NOMAD readiness.
-
-## Processing is not a protocol
-
-A **protocol** is the reusable ordered definition. **Processing** records what actually happened: operator, time, instrument, parameters, deviations and evidence. An **action** is one operation inside that run.
-    </script>
-
-    <script id="doc-cabinet" type="text/markdown">
-# Workspace, Projects, Pipelines and Lab Cabinet
-
-## Workspace
-
-The Workspace is the researcher’s operating context. Its central hierarchy is `Workspace → Project → Pipeline → Steps`. It also contains generic Lab Cabinet, knowledge, AI and scientific tools. The static POC keeps Project and step state only in `sessionStorage` and does not enforce real permissions.
-
-## Pipelines
-
-A Pipeline is the workflow definition selected by a Project. In a production model it would be versioned and declare expected evidence, measurements and mappings. Process and Experiment remain compatibility/domain concepts, not primary navigation roots.
-
-## Projects
-
-A Project is the primary, session-scoped unit of work. CHOSE guides Materials & Solutions, Stack & Fabrication, Data Ingest, Analysis, and Report & Export including NOMAD. Earlier steps always remain revisitable.
-
-## Lab Cabinet
-
-```graph
-direction TB
-Workspace[Workspace] --> Cabinet[Lab Cabinet]
-Cabinet --> Materials[Materials & substances]
-Cabinet --> Solutions[Solutions]
-Cabinet --> Equipment[Equipment]
-Cabinet --> Stacks[Stack templates]
-Cabinet --> Protocols[Protocols]
-Cabinet --> Conditions[Conditions & actions]
-```
-
-The Lab Cabinet is search-first. Search for the resource you need, inspect its status and provenance, then link it to the experiment. Lab Cabinet resources are shared definitions; concrete use belongs to the experiment.
-
-### Example
-
-`FA–Cs 1.2 M` is a reusable recipe. `SOL-081` is the physical solution batch prepared for `PSC-2026-041`.
-    </script>
-
-    <script id="doc-records" type="text/markdown">
-# Scientific records
-
-## Reusable versus experiment-owned
-
-A **Dataset** is the data itself. A **Measurement** is the scientific meaning attached to those data: type, target, conditions, source, provenance and any derived metrics. This lets the interface show `JV · Sample S03-A` instead of reducing the experiment to filenames.
-
-| Lab Cabinet definition | Concrete experiment record |
-|---|---|
-| Solution recipe | Prepared solution batch |
-| Stack template | Experiment stack |
-| Protocol | Processing run |
-| Reusable action | Executed action |
-| Instrument | Instrument use and actual settings |
-| Material or substance | Lot or recorded use |
-
-## Evidence chain
-
-```graph
-direction LR
-Workspace[Workspace] --> Process[Process definition]
-Process --> Experiment[Experiment]
-Experiment --> Step[Experiment steps]
-Step --> Stack[Stacks & samples]
-Stack --> Processing[Processing]
-Processing --> Data[Data & measurements]
-Data --> Results[Results]
-Results --> Report[Report]
-Report --> Export[Export]
-```
-
-A usage snapshot preserves the selected definition version, affected stacks, amounts, actual parameters, operator and time. Later Lab Cabinet edits must not silently change historical evidence.
-
-## Stack
-
-A Stack Template is a reusable ordered material definition. An Experiment Stack is its versioned snapshot or a newly built variant inside one experiment. Each layer records role, material, thickness, source definition or batch and creation/deposition method. Physical Samples receive stable IDs and remain linked to the exact stack variant and processing history. `S01` and `S02` are the two demo experiment stacks.
-
-## Data, results and reports
-
-Original files remain evidence. Measurements add acquisition context. Results identify source files, method/version, unit and validation state. Reports select and explain those records without turning unexplained copied values into truth.
-    </script>
-
-    <script id="doc-ai" type="text/markdown">
-# AI and shared knowledge
-
-LabFlow separates three purposes.
-
-| Surface | Purpose | Researcher control |
-|---|---|---|
-| Knowledge Assistant | Find and verify shared information | Inspect sources, conflicts and insufficiency warnings |
-| AI Analysis | Analyse selected experimental data | Review assumptions, evidence and limitations |
-| AI Agents | Execute guided multi-step proposals | Approve each selected action |
-
-```graph
-direction LR
-Knowledge[Knowledge Assistant] --> Review[Researcher review]
-Analysis[AI Analysis] --> Review
-Agents[AI Agents] --> Review
-Review --> Decision[Accept, edit or reject]
-```
-
-## Knowledge Assistant
-
-The static RAG demonstration searches manuals, protocols, papers, technical sheets, shared notes, Lab Cabinet resources, experiments, approved reports and NOMAD documentation. Answers remain linked to numbered sources and never appear as unverified truth.
-
-## AI Analysis
-
-AI Analysis works from explicit experiment, stack, file, column and measure context. It shows findings, anomalies, assumptions, confidence and limitations while leaving original measurements unchanged.
-
-## AI Agents
-
-Agents represent bounded workflows. They expose their objective, allowed inputs, blocked actions, steps and approval gates. The POC cannot autonomously delete, publish or send an API request.
-    </script>
-
-    <script id="doc-nomad" type="text/markdown">
-# Reports, export and NOMAD
-
-```graph
-direction LR
-Evidence[Experiment evidence] --> Report[Editable report]
-Report --> Export[Export review]
-Export --> Prepare[Prepare NOMAD]
-Prepare --> Package[NOMAD package]
-Prepare --> API[Simulated API send]
-```
-
-## Report
-
-Build the scientific story from experiment records, saved charts, files and provenance. AI-assisted narrative remains an editable draft.
-
-## Export
-
-The broad export centre represents CSV, Excel, JSON/JSONL, YAML, images, PDF, ZIP and archive paths. The implemented CHOSE step generates local JSON and CSV and supports print-to-report. Labels distinguish real local generation from represented or simulated formats.
-
-## NOMAD
-
-NOMAD is the final explicit phase. Readiness checks cover completeness, units, resources, stacks, processing, instruments, files, identifiers, provenance and mappings.
-
-Choose one path:
-
-1. Generate and inspect a local NOMAD package.
-2. Simulate an explicit submission through the user’s NOMAD API connection.
-
-Import from NOMAD remains a separate preview-and-map workflow. The static POC never transmits credentials or data.
-    </script>
-
-    <script id="doc-interface" type="text/markdown">
-# Interface guide
-
-## Search
-
-The top search uses one shared component. It filters visible page records when available and suggests relevant destinations across experiments, Lab Cabinet resources, reports, tools, settings, results and documentation.
-
-## States and actions
-
-- One primary action communicates the current next step.
-- Badges always include text; colour is supplementary.
-- Advanced scientific fields use expandable sections.
-- Destructive or contextual actions require confirmation.
-- Empty states explain the next useful action.
-- Tables remain inside horizontal scrollers.
-
-## Canonical page grammar
-
-Every route reuses the same shell, 1480 px outer frame, tokenised page padding, header, breadcrumb, panels, forms, tables, toolbars, buttons and responsive breakpoints. Nested records show their breadcrumb before the page header; top-level Workspace destinations begin directly with the header. Feature pages keep their own scientific visualisations inside these shared boundaries. `ui-kit.html` is the rendered component reference, `docs/DESIGN_SYSTEM.md` defines ownership and `docs/UI_STANDARDS.md` defines page/layout rules.
-
-## Responsive behaviour
-
-The design supports 360–1440 px. Below 980 px the sidebar becomes a drawer. Workflow rails scroll horizontally, grids collapse and modals use internal scrolling without hiding primary actions.
-
-## Accessibility baseline
-
-Pages include a skip link, semantic controls, keyboard focus, labelled icon buttons and reduced-motion support. This POC still requires a complete production accessibility audit.
-    </script>
-
-    <script id="doc-poc" type="text/markdown">
-# Why this repository is a static POC
-
-The static architecture is a deliberate validation instrument, not an implied production backend.
-
-## What it validates
-
-- researcher workflow and information hierarchy;
-- progressive disclosure and scientific usability;
-- reusable versus concrete data relationships;
-- provenance and export review;
-- credible AI boundaries;
-- NOMAD preparation as a natural final phase.
-
-## What is not implemented
-
-| Not present | Production responsibility |
-|---|---|
-| Backend or database | Durable records, transactions and APIs |
-| Authentication or authorization | Identity, permissions and workspace isolation |
-| File storage | Integrity, retention and access control |
-| Real AI or RAG | Models, retrieval, evaluation and audit |
-| Real agent runtime | Secure tools and persisted approvals |
-| Real NOMAD connection | Secret handling, network requests and retries |
-| Production parsers for every recognised format | Sandboxed workers, validation and parser provenance |
-
-## Runtime
-
-LabFlow uses plain HTML, CSS and JavaScript without a framework, build step or CDN. Scientific state is temporary `sessionStorage`; the first load of every new browser-tab session clears saved scientific records, while navigation and reloads inside that tab retain current work. Static empty Project shells are interface fixtures, not saved evidence. Only appearance/account-display preferences may use `localStorage`. It creates no cookies, includes no trackers and sends no files or telemetry. It is intended for direct static publication on GitHub Pages. Pipeline YAML and step fragments are compiled into a generated browser bundle, so the runtime does not need `fetch()` or a local launcher.
-
-Never enter real API keys or sensitive laboratory data in this POC.
-    </script>
-  </main></div>
-  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+    <main class="main" id="main-content"><div class="content" id="page-content"><div class="page-bootstrap" aria-hidden="true"><span></span><strong>Documentation</strong><i></i><i></i></div></div></main>
+  </div>
+  <div id="global-overlays"></div>
+  <div class="modal-backdrop" id="modal" hidden></div>
+  <script defer src="assets/js/settings-bundle.js"></script>
+  <script defer src="assets/js/data.js"></script>
+  <script defer src="assets/js/pipeline-bundle.js"></script>
+  <script defer src="assets/js/exporters.js"></script>
+  <script defer src="assets/js/state.js"></script>
+  <script defer src="assets/js/docs-bundle.js"></script>
+  <script defer src="assets/js/diagrams.js"></script>
+  <script defer src="assets/js/app.js"></script>
 </body>
 </html>

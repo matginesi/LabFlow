@@ -1,43 +1,31 @@
-# LabFlow agent contract
+# LabFlow agent instructions
 
-This file is the non-negotiable implementation contract for coding agents working on the static POC.
+These rules apply to the whole repository.
 
-## Product constitution
-
-1. **LabFlow is a static POC, not a SaaS.** Use vanilla HTML, CSS and JavaScript. Do not add frameworks, cookie infrastructure, analytics, trackers or unnecessary platform layers.
-2. **There is one global UI.** Every root page loads `assets/app.css`. Shared controls, cards, forms, headers, shell and navigation must never be reimplemented page-by-page.
-3. **There is one primary mental model:** `User → Workspace → Project → Pipeline → Step`.
-4. **Project is the primary unit of scientific work.** Detailed samples, runs, measurements, results and future Experiment records live inside Project data.
-5. **Pipeline metadata is authored in YAML.** Do not duplicate CHOSE/Quick names, ordered steps, descriptions, inputs or outputs by hand in `app.js` or another manifest. `assets/pipeline-bundle.js` is the sole exception because it is generated from YAML + step HTML by `tools/sync_pipeline_bundle.py` and validator-checked.
-6. **Step HTML has one source.** Do not copy step HTML into JavaScript fallback strings.
-7. **CHOSE is the showcase Pipeline.** Preserve and improve the five steps: Materials & Solutions; Stack & Fabrication; Data Ingest; Analysis; Report & Export.
-8. **Workspace tools are not another workflow.** Lab Cabinet, Knowledge & RAG, AI Assistant and Common Tools remain shared utilities. Project-specific tools belong to Pipeline steps.
-9. **UI Kit is the UI ground truth.** HTML pages link only `assets/app.css`, which imports the shared modules in `assets/styles/`. Page-specific and Pipeline-step CSS files are forbidden. Reusable shell, layout, controls and scientific visuals must be promoted to the shared design system. Structural inline styles are forbidden; inline values are allowed only for genuinely data-driven values such as progress widths, chart values or scientific ratios.
-10. **Do not delete useful capability casually.** Legacy Process/Experiment compatibility pages were removed after migrating their useful concepts (solvent/stack builders) to the primary codebase. Remove capability only after intentional migration.
-11. **Keep data backend-ready without overengineering.** Stable IDs, explicit units, provenance and clear structures matter; a giant production schema does not belong in the POC.
-12. **AI and NOMAD are optional consumers.** Core laboratory work must remain usable without AI or a NOMAD service.
-
-## Before finishing any change
-
-Run:
-
-```bash
-python3 tools/validate_poc.py
-```
-
-Then validate the static repository and check at minimum:
-
-- `index.html`
-- `project.html`
-- `project.html?step=stack`
-- `project.html?step=data`
-- `catalogs.html`
-- `editors.html`
-- `ui-kit.html`
-
-Do not consider a change complete if the browser console contains application errors.
-
-
-## UI review requirement
-
-Before changing layout or reusable UI, read `ui-kit.html`, `docs/DESIGN_SYSTEM.md` and `docs/UI_STANDARDS.md`. Scientific graphics are 2D; normal controls use the global compact dimensions; the sidebar must not accumulate duplicate context or administrative links.
+- Analyse the relevant pages, references, data and documentation before modifying them.
+- Reuse an existing UI block or extend an allowed variant before creating a new block. Keep the UI Kit aligned whenever the product UI changes.
+- Keep the product a static vanilla HTML/CSS/JavaScript POC. Do not add a backend, application framework, CDN runtime dependency or mandatory build step.
+- Do not create mock APIs, repositories, service layers or connected controls that imply a backend exists.
+- Do not add cookies, browser persistence APIs, PWA manifests, service workers, trackers, analytics, telemetry or automatic external requests.
+- Keep secrets and real credentials out of source, runtime state, exports and examples. NOMAD controls remain a local, non-transmitting demonstration.
+- Store mutable UI state only in JavaScript memory. Reloading a page must restore checked-in defaults.
+- Treat `settings.yaml` as the configuration source and rebuild `assets/js/settings-bundle.js` after editing it. The default content theme is light; the shell remains dark.
+- Keep global search local, ephemeral and keyboard/mobile accessible. Never retain queries or introduce network-backed search.
+- Reuse the shared shell, components, tools and pipeline views. Pipeline files describe workflow; they do not duplicate markup or visual systems.
+- Every new page must use the checked-in shared Application Shell and the documented Page Composition Contract. Keep breadcrumb, header, actions, summary, tabs and toolbar in their canonical order rather than positioning them arbitrarily.
+- Document and render a recurring layout variant in the UI Kit before using it. Do not create one-off page widths or page-specific header, summary or toolbar systems.
+- Never reconstruct the complete application shell after `DOMContentLoaded`. Do not hide first paint with opacity, a global fade or page-entry animation, and do not introduce a SPA or simulated navigation to avoid full-page loads.
+- Remove superseded shell, layout, header, summary and responsive CSS after a migration. Verify first paint and repeated cross-page navigation at desktop, tablet and mobile widths.
+- Keep demonstration records in the checked-in data source and access them through small, recognizable functions when rendering or interaction code would otherwise depend on their physical location.
+- Keep Solution Builder/Review and Stack Builder/Review structured, reusable and synchronized with report/export representations.
+- Theme components consume semantic tokens. Keep foundations, theme variants, palettes, components and layout separated under `ui/`.
+- Product-facing Documentation and UI Kit views must not expose raw source/configuration file links or behave like file browsers.
+- Preserve the distinction among raw data, derived results, researcher statements and AI suggestions. AI output requires visible provenance and human control.
+- Preserve the domain flow User → Workspace → Project → Process → Experiment; a pipeline step organizes work but does not replace record identity or provenance.
+- Never create parallel files or names such as `old`, `new`, `v2` or `final` for an implementation. Replace the active implementation and remove the superseded one after verifying references.
+- Do not leave broken pages, empty primary actions, dead listeners, console errors or undocumented visual variants.
+- Prefer simple functions, explicit initialization and readable duplication over an internal framework or premature abstraction.
+- Update the relevant canonical document whenever behavior, contracts or validation change. Remove obsolete documentation rather than leaving competing guidance.
+- A change is not complete until the superseded implementation has been removed and the affected documentation has been updated.
+- Rebuild checked-in bundles after editing pipeline YAML or Markdown docs, then run the commands in `docs/VALIDATION_CHECKLIST.md`.
+- Verify native PDF, DOCX and ten-sheet XLSX packages structurally and visually after exporter changes.

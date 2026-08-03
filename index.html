@@ -1,53 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
-
+<!doctype html>
+<html lang="en" data-theme="light" data-palette="blue" data-density="compact">
 <head>
   <meta charset="utf-8">
-<script src="assets/theme-init.js"></script>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="data:,">
-  <meta name="description" content="Project-centred laboratory workspace">
-  <title>LabFlow — My Workspace</title>
-  
-  
-  
-  <link href="assets/app.css" rel="stylesheet"><script defer src="assets/exporters.js"></script>
-  <script defer src="assets/demo-projects.js"></script>
-  
-  <script defer src="assets/pipeline-bundle.js"></script>
-  <script defer src="assets/pipeline-loader.js"></script>
-  <script defer src="assets/app.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="LabFlow static research workspace for structured laboratory projects, AI-assisted analysis and NOMAD-ready export.">
+  <meta name="theme-color" content="#0c1119">
+  <title>Workspace · LabFlow</title>
+  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
+  <script src="ui/theme-controller.js"></script>
+  <link rel="stylesheet" href="ui/foundations/tokens.css">
+  <link rel="stylesheet" href="ui/themes/theme-base.css">
+  <link rel="stylesheet" href="ui/themes/theme-dark.css">
+  <link rel="stylesheet" href="ui/themes/theme-light.css">
+  <link rel="stylesheet" href="ui/themes/palettes.css">
+  <link rel="stylesheet" href="ui/foundations/base.css">
+  <link rel="stylesheet" href="ui/layout/shell.css">
+  <link rel="stylesheet" href="ui/components/core.css">
+  <link rel="stylesheet" href="ui/components/scientific.css">
+  <link rel="stylesheet" href="ui/components/knowledge-tools.css">
+  <link rel="stylesheet" href="ui/foundations/utilities.css">
+  <link rel="stylesheet" href="ui/layout/responsive.css">
 </head>
-
-<body data-page="dashboard">
-  <header class="topbar" id="topbar"></header>
-  <aside class="sidebar" id="sidebar"></aside><button class="sidebar-overlay" data-action="close-sidebar" type="button"
-    aria-label="Close navigation"></button>
-  <div class="app-main">
-    <main class="page home-page">
-      <header class="page-header home-header">
-        <div><span class="eyebrow" data-workspace-name>Personal workspace</span>
-          <h1>My Workspace</h1>
-          <p>Continue your projects or start a new one.</p>
-        </div><button class="button primary" type="button" data-action="project-wizard"><span
-            data-icon="plus"></span>New project</button>
-      </header>
-      <section class="workspace-model" aria-label="How LabFlow is organised">
-        <article><span>01 · Scope</span><strong>Workspace</strong><p>Your private research area. It contains projects and controls ownership.</p></article><i aria-hidden="true">›</i>
-        <article><span>02 · Context</span><strong>Project</strong><p>One scientific objective with its samples, data, decisions and report.</p></article><i aria-hidden="true">›</i>
-        <article><span>03 · Method</span><strong>Pipeline</strong><p>The ordered workflow selected for that project.</p></article><i aria-hidden="true">›</i>
-        <article><span>04 · Action</span><strong>Step</strong><p>A focused task that saves structured work before you continue.</p></article>
-      </section>
-      <section class="workspace-indicators" aria-label="Workspace summary"><div><strong data-workspace-total>4</strong><span>Projects</span></div><div><strong data-workspace-active>3</strong><span>Active</span></div><div><strong data-workspace-completed>1</strong><span>Completed</span></div></section>
-      <div class="section-title home-section-title">
-        <div>
-          <h2>Projects</h2>
-        </div><div class="workspace-project-controls"><label class="workspace-project-search"><span data-icon="model"></span><input id="workspaceProjectSearch" type="search" placeholder="Search projects..." aria-label="Search projects"></label><div class="project-filter-row" role="group" aria-label="Filter projects"><button class="active" type="button" data-project-filter="all">All</button><button type="button" data-project-filter="Active">Active</button><button type="button" data-project-filter="Completed">Completed</button></div></div>
+<body data-page="workspace">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell" id="app">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand-row"><a class="brand" href="index.html">
+        <img class="brand-mark" src="assets/brand/logo-mark.svg" width="32" height="32" alt="">
+        <span class="brand-copy"><strong>Lab<span>Flow</span></strong><span>Research workspace</span></span>
+      </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation"><svg class="icon icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="sidebar-scroll">
+        <div class="nav-label">Research</div>
+        <nav class="nav" aria-label="Research workspace"><a class="nav-link active" aria-current="page" href="index.html"><svg class="icon icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Workspace</span></a><a class="nav-link" href="cabinet.html"><svg class="icon icon-cabinet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v6H4zM5 9h14v12H5zM9 13h6"/></svg><span>Lab Cabinet</span></a><a class="nav-link" href="knowledge.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Knowledge</span></a><a class="nav-link" href="tools.html"><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4-1 11-11-3-3L5 16zM14 7l3 3"/></svg><span>Tools</span></a><a class="nav-link" href="settings.html"><svg class="icon icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15l2 2-4 4-2-2a8 8 0 0 1-6 0l-2 2-4-4 2-2a8 8 0 0 1 0-6L3 7l4-4 2 2a8 8 0 0 1 6 0l2-2 4 4-2 2a8 8 0 0 1 0 6Z"/></svg><span>Settings</span></a></nav>
+        <div class="nav-label">Reference</div>
+        <nav class="nav" aria-label="Product reference"><a class="nav-link" href="documentation.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Documentation</span></a><a class="nav-link" href="ui-kit.html"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg><span>UI Kit</span></a></nav>
       </div>
-      <section class="home-project-grid" id="homeProjectList" aria-label="Recent projects"></section>
-    </main>
+      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button></div>
+    </aside>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation"><svg class="icon icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <a class="mobile-brand" href="index.html" aria-label="LabFlow Workspace"><img src="assets/brand/logo-mark.svg" width="22" height="22" alt=""><span>Workspace</span></a>
+        <span class="topbar-page-title" id="topbar-page-title">Workspace</span>
+      </div>
+      <div class="global-search" id="global-search">
+        <svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg>
+        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, steps, knowledge and tools…">
+        <kbd>⌘ K</kbd><div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-accent top-status">Local POC · No cloud sync</span>
+        <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search"><svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg></button>
+        <button class="top-user" data-action="profile" type="button"><span class="avatar">MG</span><span class="top-user-copy"><strong>Matteo Ginesi</strong><span>Advanced Photovoltaics</span></span></button>
+      </div>
+    </header>
+    <main class="main" id="main-content"><div class="content" id="page-content"><div class="page-bootstrap" aria-hidden="true"><span></span><strong>Workspace</strong><i></i><i></i></div></div></main>
   </div>
-  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div id="global-overlays"></div>
+  <div class="modal-backdrop" id="modal" hidden></div>
+  <script defer src="assets/js/settings-bundle.js"></script>
+  <script defer src="assets/js/data.js"></script>
+  <script defer src="assets/js/pipeline-bundle.js"></script>
+  <script defer src="assets/js/exporters.js"></script>
+  <script defer src="assets/js/state.js"></script>
+  <script defer src="assets/js/docs-bundle.js"></script>
+  <script defer src="assets/js/app.js"></script>
 </body>
-
 </html>

@@ -1,28 +1,32 @@
 id: quick
-name: Quick Workflow
-shortName: Quick
-accent: "#a76128"
-accentName: Rapid amber
-version: 1
-description: A simple three-step workflow demonstrating that LabFlow pipelines are replaceable
-js: pipeline.js
-
+name: Quick Measurement Review
+version: 1.0
+status: example
+description: A small example pipeline proving that LabFlow can host focused workflows without changing the application shell.
+project_type: generic-measurement
+accent: violet
 steps:
   - id: plan
     title: Plan
-    description: Define the question, sample and measurement
-    inputs: Research question
-    outputs: Conditions · measurement plan
-    html: steps/plan/index.html
-  - id: record
-    title: Record
-    description: Capture what happened and attach evidence
-    inputs: Plan · local evidence
-    outputs: Values · notes · evidence links
-    html: steps/record/index.html
-  - id: share
-    title: Share
-    description: Write the result and choose an export
-    inputs: Recorded values
-    outputs: Conclusion · compact export
-    html: steps/share/index.html
+    short_title: Plan
+    view: quick-plan
+    description: Define the question, sample and expected evidence.
+    output: Review plan
+  - id: data
+    title: Add Data
+    short_title: Data
+    view: quick-data
+    description: Add a compact table or local measurement file.
+    output: Review dataset
+  - id: report
+    title: Report
+    short_title: Report
+    view: quick-report
+    description: Summarise findings with one chart and a researcher conclusion.
+    output: Review report
+  - id: export
+    title: Export
+    short_title: Export
+    view: export
+    description: Download a portable project bundle or NOMAD-ready preview.
+    output: Portable export bundle

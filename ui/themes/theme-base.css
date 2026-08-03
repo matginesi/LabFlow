@@ -1,0 +1,14 @@
+:root{
+  color-scheme:dark;
+  --shell:#0c1119;--shell2:#111824;--shell3:#171f2c;--shell-line:#273243;
+  --shell-text:#f5f7fb;--shell-muted:#93a0b2;--shell-link:#aeb9c8;
+  --success:#42c990;--warning:#f0b84b;--danger:#ef6d78;--info:#63b8f5;
+  --on-accent:#fff;--accent-solid:color-mix(in srgb,var(--accent2) 72%,#000);--overlay:rgba(0,0,0,.58);--overlay-strong:rgba(4,7,12,.75);
+  --report-paper:#fff;--report-text:#17202d;--report-heading:#101826;--report-muted:#495667;
+  --report-cover:#101827;--report-cover2:#17243a;--report-line:#d7dfe9;
+  --report-strong:#132037;--report-soft:#f2f5f8;--report-badge:#ffffff12;
+  --report-badge-line:#ffffff44;--report-shadow:0 12px 34px rgba(0,0,0,.2);
+  --material-substrate:#7b8ba3;--material-etl:#3b9bc2;--material-absorber:#c58a2b;--material-htl:#8b68c9;--material-contact:#b5a15a;--material-interface:#68879a;
+  --solution-dmf:#397aa8;--solution-dmso:#63a8c2;--solution-fai:#c78a2a;--solution-mai:#9b72c8;--solution-pbi:#6f7d91;
+  --text-primary:var(--text);--text-secondary:var(--muted);--border:var(--line);
+}

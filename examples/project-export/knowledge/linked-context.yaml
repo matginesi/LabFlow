@@ -1,0 +1,24 @@
+- id: KB-SOP-014
+  type: "SOP"
+  title: "Perovskite precursor preparation"
+  status: "approved"
+- id: KB-SOP-021
+  type: "SOP"
+  title: "JV measurement and scan protocol"
+  status: "approved"
+- id: KB-GUIDE-008
+  type: "Guide"
+  title: "NOMAD metadata mapping guide"
+  status: "review"
+- id: KB-NOTE-032
+  type: "Research note"
+  title: "Recurring low-fill-factor signatures"
+  status: "working"
+- id: KB-PAPER-104
+  type: "Literature"
+  title: "Mixed-cation stability reference set"
+  status: "approved"
+- id: KB-EQUIP-003
+  type: "Equipment"
+  title: "Keithley 2450 configuration"
+  status: "approved"

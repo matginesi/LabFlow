@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LabFlow">
+  <defs><linearGradient id="lf-bg" x1="7" y1="5" x2="57" y2="59" gradientUnits="userSpaceOnUse"><stop stop-color="#4C7DFF"/><stop offset="1" stop-color="#1746C4"/></linearGradient><linearGradient id="lf-flow" x1="15" y1="15" x2="50" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF"/><stop offset="1" stop-color="#D9E5FF"/></linearGradient></defs>
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#lf-bg)"/>
+  <path d="M18 15v31.5h27" fill="none" stroke="url(#lf-flow)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M31 17h16M31 17v17h13" fill="none" stroke="#FFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="18" cy="15" r="3" fill="#75E4FF"/><circle cx="45" cy="46.5" r="3" fill="#75E4FF"/>
+</svg>

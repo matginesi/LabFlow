@@ -1,287 +1,103 @@
 # LabFlow
 
-## Static deployment
+LabFlow is a static research workspace designed by **Matteo Ginesi** to make laboratory projects easier to plan, inspect, compare and report. The proof of concept runs from checked-in HTML, CSS and JavaScript, uses no CDN, sends no automatic request and retains no browser state after reload.
 
-LabFlow is a zero-backend static POC designed to be published directly on **GitHub Pages**. There is no local server script, build system, package manager or runtime dependency.
+It is an interactive product showcase, not a production application. It demonstrates the information model, reusable interface blocks, scientific review patterns and export contracts with a small checked-in dataset. It does not contain a server, database, real authentication, connected AI provider, remote upload or collaboration infrastructure.
 
-Pipeline YAML files and step HTML remain the canonical authoring sources. For browser use they are mirrored into the generated `assets/pipeline-bundle.js`, so the runtime performs no `fetch()` calls and does not depend on CORS. After changing a Pipeline source, refresh the generated bundle with:
+## What the product demonstrates
 
-```bash
-python3 tools/sync_pipeline_bundle.py
-python3 tools/validate_poc.py
+LabFlow joins work that is usually scattered across notes, spreadsheets and isolated tools:
+
+- a workspace containing multiple research projects;
+- reusable pipelines with revisitable, state-aware steps;
+- a Lab Cabinet for materials, solutions, stacks, mappings and analyses;
+- structured Solution and Stack Builder/Review interfaces;
+- Smart Import with explicit field mapping, units and provenance;
+- deterministic analysis, validation and comparison views;
+- Ask LabFlow for evidence-led questions, inspection and action previews;
+- local TXT, Markdown, LaTeX, YAML, JSON, spreadsheet, DOCX and diagram tools;
+- native six-page PDF with 65 fillable form fields, structured editable DOCX and ten-sheet formula-driven XLSX output plus transparent ZIP packages;
+- a non-transmitting NOMAD readiness preview.
+
+```mermaid
+flowchart LR
+  A[Workspace] --> B[Project]
+  B --> C[Pipeline step]
+  C --> D[Evidence and results]
+  D --> E[Researcher review]
+  E --> F[Report and export]
+  B --> G[Lab Cabinet]
+  G --> C
 ```
 
-The generated bundle must be committed together with the source changes. It is checked automatically by the validator and must never be edited by hand.
+The included CHOSE scenario follows a mixed-cation perovskite campaign through solution preparation, device stack definition, experiment records, JV ingestion, analysis and reporting. A shorter measurement-review pipeline demonstrates that the shared shell and scientific components are reusable.
 
-> A static project-centred laboratory workspace POC for turning experimental work into structured, reusable, AI-ready and NOMAD-ready evidence.
+## Product principles
 
-**Vanilla HTML + CSS + JavaScript · No backend · No cookies · No trackers · No CDN dependency**
+Evidence remains visible. LabFlow distinguishes raw measurements, calculated results, researcher statements, validation findings and AI suggestions. Suggested actions are previews until a person confirms them; confidence describes source matching and never replaces scientific judgement.
 
-## Product model
+Privacy is structural. Mutable state exists only in JavaScript memory. Reload restores checked-in defaults. The application uses no cookies, browser persistence, service workers, trackers, telemetry or network-backed search. Demonstration credentials are never retained or included in exports.
 
-LabFlow has one primary mental model:
+The interface uses a dark laboratory shell around light content by default. Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses the operating system’s local UI font stack; icons and diagrams are inline SVG assets rendered locally.
+
+## Explore the POC
+
+Open `index.html` in a modern browser. The checked-in bundles allow direct local use without installing dependencies or starting a service.
+
+Each root entry page already contains the shared sidebar, topbar and content shell, so the first document is useful before JavaScript renders page-specific content. An optional repository maintenance helper keeps those eight static entry documents aligned; running it is never required to open or use the POC.
+
+A useful walkthrough is:
+
+1. Open Workspace and enter `PRJ-2026-014`.
+2. Review the pipeline context, Solution Builder and Stack Builder.
+3. Inspect Smart Import and the deterministic data-quality issues.
+4. Ask a relationship question in Ask LabFlow and inspect its evidence graph.
+5. Open Tools, render a workflow in Diagram Studio and download the SVG.
+6. Review the report, XLSX structure and local export package.
+
+Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through results with the arrow keys, confirm with Enter and close with Escape.
+
+## Configuration and checked-in sources
+
+`settings.yaml` is the canonical configuration source. `pipelines/` contains canonical workflow definitions. Documentation and both kinds of YAML have checked-in browser snapshots so the application remains request-free when opened from disk. When a canonical source changes, refresh its corresponding snapshot and complete the validation checklist.
+
+`examples/` is intentionally retained. It contains a standalone theme integration page and inspectable sample export packages used to verify that generated artifacts remain understandable outside the application.
+
+## How the POC is organised
+
+The runtime follows one deliberately small boundary:
 
 ```text
-User
-└── Workspace
-    ├── Projects
-    │   └── Project
-    │       ├── Pipeline
-    │       │   └── Steps
-    │       └── Project Data
-    ├── Lab Cabinet
-    ├── Knowledge & RAG
-    ├── AI Assistant
-    └── Common Tools
+checked-in demo records
+        ↓
+small data access functions
+        ↓
+shared render blocks and page interactions
 ```
 
-A researcher opens the Workspace, creates or continues a Project and follows that Project's Pipeline. Samples, files, measurements, results and future deeper Experiment/run records belong to Project data; they are not a second navigation hierarchy.
+`assets/js/data.js` owns the illustrative records and exposes `LabFlowDataSource` for common lookups. Rendering code does not need to know how a future source obtains the same stable entities. This is only a replacement seam and does not imply connected or speculative infrastructure.
 
-Run and Experiment records are Project data, surfaced by the Project Data overview (`workspace.html`); there are no separate Process/Experiment pages.
+The essential directories are:
 
-## CHOSE showcase Pipeline
+- `assets/js/` — demo data, in-memory state, shared rendering, focused Tools/Knowledge modules, diagrams and local exporters;
+- `ui/` — semantic theme tokens, theme variants, shared components and responsive layout;
+- `pipelines/` — canonical workflow definitions, not page templates;
+- `docs/` — the small set of canonical product, UI, data, assistant/export and validation documents;
+- `examples/` — standalone theme and export fixtures used for inspection;
+- root HTML files — complete static entry points with the shared shell already checked in.
 
-CHOSE is the default Pipeline and the main demonstration of the product:
-
-```text
-1. Materials & Solutions
-2. Stack & Fabrication
-3. Data Ingest
-4. Analysis
-5. Report & Export
-```
-
-The five steps are revisitable. Earlier work becomes structured input for later work rather than being entered again.
-
-### Step 1 — Materials & Solutions
-
-Create or reuse materials, solvents, solutes and solutions. A Project can use Lab Cabinet resources as snapshots and continue editing its own structured working data.
-
-### Step 2 — Stack & Fabrication
-
-Build ordered perovskite/device stacks, sample identifiers and fabrication context with graphical tools and normal text/number inputs.
-
-### Step 3 — Data Ingest
-
-Import or manually enter scientific evidence. Measurement meaning is separated from source file format; provenance, mapping and validation remain visible.
-
-### Step 4 — Analysis
-
-Compare compatible Measurements, visualise results and record explicit researcher conclusions. Future ML/DL/LLM tools can consume the same Project data without changing the product model.
-
-### Step 5 — Report & Export
-
-Assemble a traceable Project report, local exports and a NOMAD-ready package. The POC may simulate external submission; it never implies a real backend connection.
-
-## Quick Workflow
-
-`Plan → Record → Share`
-
-This smaller Pipeline exists to prove that LabFlow is not hardcoded to CHOSE. It has its own YAML definition, step HTML and behaviour.
-
-## Pipeline contract
-
-Pipeline metadata has one source of truth:
-
-```text
-pipelines/<pipeline-id>/pipeline.yaml
-```
-
-A Pipeline folder may contain:
-
-```text
-pipeline.yaml
-optional pipeline.js
-steps/
-└── <step-id>/
-    ├── index.html
-    └── optional step.js
-```
-
-The YAML declares the ordered steps, titles, descriptions, inputs, outputs and asset paths. `assets/app.js` does **not** contain a second copy of CHOSE/Quick metadata.
-
-For GitHub Pages, `tools/sync_pipeline_bundle.py` generates `assets/pipeline-bundle.js` from the canonical YAML + step HTML. The browser reads that generated static bundle, so no runtime `fetch()` is required. Optional step JavaScript is loaded on demand. A pipeline-wide JavaScript file may provide shared behaviour, but it must not embed copies of step HTML.
-
-## CSS contract
-
-Every root page loads exactly one global stylesheet:
-
-```html
-<link href="assets/app.css" rel="stylesheet">
-```
-
-`assets/app.css` is the manifest. The modules it imports collectively own:
-
-- themes and palettes;
-- typography and spacing tokens;
-- topbar/sidebar/application shell;
-- page headers and breadcrumbs;
-- buttons, inputs, forms and tables;
-- panels, cards, states, drawers and modals;
-- Common Tools and Project/Pipeline chrome;
-- responsive behaviour;
-- compatibility-view styling.
-
-`assets/app.css` is the only stylesheet linked by HTML. It is a manifest for shared modules under `assets/styles/`: tokens, base, layout, shell, components, shared feature patterns, scientific visuals, utilities and responsive rules. There are no page-specific or Pipeline-step stylesheets.
-
-`ui-kit.html` is the live component reference, `docs/DESIGN_SYSTEM.md` is the design-system contract and `docs/UI_STANDARDS.md` is the page-layout checklist.
-
-## Minimal data model
-
-### Core
-
-- User
-- Workspace
-- Project
-- Pipeline
-- PipelineStep
-- ProjectData
-
-### CHOSE
-
-- Material
-- Solvent
-- Solute
-- Solution
-- Stack
-
-### Evidence and outputs
-
-- Measurement
-- Result
-- Report
-- AIRecord
-
-AIRecord is intentionally separate from human results and notes. Raw data, processed data, human interpretation and machine-generated output must remain distinguishable.
-
-See [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md).
-
-## Workspace-wide tools
-
-These do not create a second workflow:
-
-- Lab Cabinet
-- Knowledge & RAG
-- AI Assistant
-- Common Tools for text, data/spreadsheets, images, charts and graphs
-
-A Common Tool may receive a Project identifier explicitly when Project context is useful.
-
-## Lab Cabinet
-
-The Lab Cabinet contains reusable materials, solutions, substrates, stacks, protocols and instruments. The POC ships with useful demo resources such as DMF, DMSO, PbI₂, FAI, SnO₂, a FA–Cs solution, a reference n-i-p stack and laboratory instruments.
-
-Selecting a reusable resource copies a snapshot into Project data so later Cabinet changes do not silently alter Project history.
-
-## POC state and privacy
-
-Scientific edits and Project progress use browser `sessionStorage`. The POC is deliberately non-durable. Theme/palette preferences may use `localStorage`.
-
-The repository does not implement:
-
-- a backend/database;
-- authentication or authorization;
-- cookie infrastructure;
-- real persistent file storage;
-- a real LLM/RAG runtime;
-- a real NOMAD network integration;
-- a production parser for every recognised laboratory format.
-
-Do not enter real credentials or confidential laboratory data.
-
-## Main pages
-
-| Page | Role |
-| --- | --- |
-| `index.html` | My Workspace: create/continue Projects |
-| `project.html` | Primary Project Pipeline workspace |
-| `workspace.html` | Project Data overview |
-| `catalogs.html` | Lab Cabinet |
-| `knowledge.html` | Knowledge & RAG surface |
-| `ai-assistant.html` | AI helper/analysis demonstrations |
-| `editors.html` | Common Tools |
-| `documentation.html` | In-app documentation |
-| `ui-kit.html` | Shared UI component reference |
-| `users.html` | Personal settings |
-| `admin-settings.html` | Future workspace-policy concepts |
-
-Advanced ingest/report pages remain available from the relevant Project workflow but do not appear as parallel primary workflow stages in the sidebar.
-
-## Run records and Lab Cabinet detail views
-
-Execution/run records (samples, measurements, results) live in Project data and are surfaced by the Project Data overview (`workspace.html`); they are not a separate navigation hierarchy.
-
-`stack.html` and `solution.html` remain as shared Lab Cabinet detail views holding the solvent and stack builders.
-
-## Repository structure
-
-```text
-LabFlow/
-├── index.html
-├── project.html
-├── workspace.html
-├── catalogs.html
-├── knowledge.html
-├── ai-assistant.html
-├── editors.html
-├── documentation.html
-├── ui-kit.html
-├── assets/
-│   ├── app.css                 single stylesheet entry point / manifest
-│   ├── styles/                 shared design system modules
-│   │   ├── tokens.css
-│   │   ├── base.css
-│   │   ├── layout.css
-│   │   ├── components.css
-│   │   ├── shell.css
-│   │   ├── feature-foundations.css
-│   │   ├── feature-workflows.css
-│   │   ├── feature-workspace.css
-│   │   ├── feature-reports-ai.css
-│   │   ├── feature-scientific-workbench.css
-│   │   ├── scientific.css
-│   │   ├── utilities.css
-│   │   └── responsive.css
-│   ├── app.js                  shared shell and POC behaviour
-│   ├── pipeline-bundle.js      generated static Pipeline metadata + step fragments
-│   ├── pipeline-loader.js      tiny runtime adapter; no network/file fetch
-│   ├── project-store.js        Project-scoped session data helpers
-│   ├── cabinet-store.js        reusable resources + Project snapshots
-│   ├── measurement-types.js    measurement semantics
-│   └── exporters.js            local export helpers
-├── pipelines/
-│   ├── chose/
-│   │   ├── pipeline.yaml
-│   │   └── steps/
-│   │       ├── materials/
-│   │       ├── stack/
-│   │       ├── data/
-│   │       ├── analysis/
-│   │       └── export/
-│   └── quick/
-│       ├── pipeline.yaml
-│       ├── pipeline.js
-│       └── steps/
-├── docs/
-├── AGENTS.md
-└── tools/validate_poc.py
-```
-
-## Preview and publish
-
-No Bash launcher or application server is part of LabFlow. The repository is intended to be served as ordinary static files by GitHub Pages. Because Pipeline metadata and step fragments are bundled at authoring time, the browser runtime makes no request to load YAML or HTML fragments.
-
-For Pipeline edits, run only the maintenance checks shown above before committing.
+The UI Kit is the visual source of truth. A block belongs there only when the application uses it; shared blocks should be extended before page-specific CSS is introduced.
 
 ## Documentation
 
-- [`CONSOLIDATION_NOTES.md`](CONSOLIDATION_NOTES.md) — what was consolidated and why
-- [`docs/PROJECT_DEFINITION.md`](docs/PROJECT_DEFINITION.md)
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
-- [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
-- [`docs/UI_STANDARDS.md`](docs/UI_STANDARDS.md)
-- [`docs/AI_ARCHITECTURE.md`](docs/AI_ARCHITECTURE.md)
-- [`docs/TOOLS_EXPORTS_NOMAD.md`](docs/TOOLS_EXPORTS_NOMAD.md)
-- [`docs/RESPONSIVE_AND_LIMITS.md`](docs/RESPONSIVE_AND_LIMITS.md)
+- [Project model and architecture](docs/PROJECT.md)
+- [UI and interaction guidelines](docs/UI_UX_GUIDELINES.md)
+- [Pipelines, records and provenance](docs/PIPELINES_AND_DATA.md)
+- [Lab Assistant, diagrams, reports and export](docs/AI_REPORTS_AND_EXPORT.md)
+- [Theme integration](docs/THEME_INTEGRATION.md)
+- [Validation checklist](docs/VALIDATION_CHECKLIST.md)
+- Example artifacts are described inside the retained `examples/` package.
+
+## Status and authorship
+
+LabFlow is a non-production proof of concept. Its records, identities, scientific values and integrations are illustrative. Product concept, direction and authorship: **Matteo Ginesi**.

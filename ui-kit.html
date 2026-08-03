@@ -1,343 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light" data-palette="blue" data-density="compact">
 <head>
-<link rel="icon" href="data:,">
-<meta charset="utf-8"/>
-<script src="assets/theme-init.js"></script>
-<meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta content="LabFlow component catalogue" name="description"/>
-<title>UI Kit · LabFlow</title>
-
-
-  
-  
-<link href="assets/app.css" rel="stylesheet"><script defer="" src="assets/exporters.js"></script>
-
-  <script defer src="assets/pipeline-bundle.js"></script>
-  <script defer src="assets/pipeline-loader.js"></script>
-  <script defer="" src="assets/app.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="LabFlow interface components, page composition patterns and responsive states.">
+  <meta name="theme-color" content="#0c1119">
+  <title>UI Kit · LabFlow</title>
+  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
+  <script src="ui/theme-controller.js"></script>
+  <link rel="stylesheet" href="ui/foundations/tokens.css">
+  <link rel="stylesheet" href="ui/themes/theme-base.css">
+  <link rel="stylesheet" href="ui/themes/theme-dark.css">
+  <link rel="stylesheet" href="ui/themes/theme-light.css">
+  <link rel="stylesheet" href="ui/themes/palettes.css">
+  <link rel="stylesheet" href="ui/foundations/base.css">
+  <link rel="stylesheet" href="ui/layout/shell.css">
+  <link rel="stylesheet" href="ui/components/core.css">
+  <link rel="stylesheet" href="ui/components/scientific.css">
+  <link rel="stylesheet" href="ui/components/knowledge-tools.css">
+  <link rel="stylesheet" href="ui/foundations/utilities.css">
+  <link rel="stylesheet" href="ui/layout/responsive.css">
 </head>
 <body data-page="ui-kit">
-<header class="topbar" id="topbar"></header>
-<aside class="sidebar" id="sidebar"></aside>
-<button aria-label="Close navigation" class="sidebar-overlay" data-action="close-sidebar" type="button"></button>
-<div class="app-main"><main class="page">
-<header class="page-header"><div><span class="eyebrow">Design system · v2.0</span><h1>UI Kit</h1><p>The ground truth for every reusable LabFlow component. Pages and Pipelines compose this system; they do not redefine it.</p></div><div class="page-actions"><a class="button" href="documentation.html"><span data-icon="file"></span>Rendered documentation</a><a class="button" href="docs/UI_STANDARDS.md"><span data-icon="info"></span>UI standards</a><span class="badge success">GROUND TRUTH · shared UI</span></div></header>
-<div class="section-title"><div><h2>Canonical page anatomy</h2><p>Every route shares this frame. Feature modules may change the content area, never the shell grammar.</p></div><span class="badge info">Required</span></div>
-<section class="grid grid-3">
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>1 · Context</strong><small>Shell and navigation</small></div></div><div class="panel-body stack-sm"><div class="row between"><code>.topbar</code><span class="badge">Global</span></div><div class="row between"><code>.sidebar</code><span class="badge">Global</span></div><div class="row between"><code>.project-breadcrumb</code><span class="badge">When nested</span></div></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>2 · Page identity</strong><small>One title and action group</small></div></div><div class="panel-body stack-sm"><div class="row between"><code>.page-header</code><span class="badge">Required</span></div><div class="row between"><code>.eyebrow</code><span class="badge">Context</span></div><div class="row between"><code>.page-actions</code><span class="badge">0–3 actions</span></div></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>3 · Working surface</strong><small>Shared structure, specific content</small></div></div><div class="panel-body stack-sm"><div class="row between"><code>.section-title</code><span class="badge">Section</span></div><div class="row between"><code>.panel</code><span class="badge">Container</span></div><div class="row between"><code>.toolbar</code><span class="badge">Controls</span></div></div></article>
-</section>
-<section class="panel mt-12"><div class="panel-header"><div class="panel-title"><strong>Shared grammar map</strong><small>Use these primitives before adding feature CSS.</small></div><span class="badge success">One manifest · shared by every route</span></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Area</th><th>Canonical pattern</th><th>Rule</th><th>Responsive behaviour</th></tr></thead><tbody><tr><td>Layout</td><td><code>.app-main &gt; main.page</code></td><td>One 1480 px frame and tokenised page padding</td><td>Sidebar collapses at 760 px; content grids collapse progressively</td></tr><tr><td>Header</td><td><code>.page-header</code></td><td>Context rail, title, description and right-aligned actions</td><td>Single column below 760 px</td></tr><tr><td>Cards</td><td><code>.panel</code> / <code>.record-card</code></td><td>Shared border, 7 px radius and subtle surface shadow</td><td>Grids collapse without changing card anatomy</td></tr><tr><td>Forms</td><td><code>.field</code> / <code>.form-grid</code></td><td>34 px controls, 12 px grid rhythm, explicit help text</td><td>Single column below 620 px</td></tr><tr><td>Native controls</td><td><code>input</code> / <code>select</code> / <code>textarea</code></td><td>Shared safety net when dynamic markup has no component class</td><td>Never falls back to browser-default styling</td></tr><tr><td>Tables</td><td><code>.table-wrap &gt; .data-table</code></td><td>Shared cells, utility headers and local overflow</td><td>Table scroll stays inside its panel</td></tr><tr><td>Toolbar</td><td><code>.toolbar</code></td><td>40 px minimum surface, controls grouped by task</td><td>Wraps and stretches below 760 px</td></tr><tr><td>States</td><td><code>.badge</code> / <code>.alert</code></td><td>Accent means action; semantic colors mean state</td><td>Meaning never depends on color alone</td></tr></tbody></table></div></section>
-<div class="section-title"><div><h2>Implementation ownership</h2><p>UI Kit defines what the interface is; the shared CSS modules define where each rule is implemented.</p></div><span class="badge success">No route CSS</span></div>
-<section class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>Shared module</th><th>Owns</th><th>Rule</th></tr></thead><tbody><tr><td><code>tokens.css</code></td><td>Theme, palettes, typography, spacing, dimensions</td><td>No component selectors</td></tr><tr><td><code>layout.css</code></td><td>Page frame, headers, grids, stacks</td><td>No button/form styling</td></tr><tr><td><code>components.css</code></td><td>Buttons, forms, panels, tables, states, tabs</td><td>One geometry everywhere</td></tr><tr><td><code>shell.css</code></td><td>Topbar, sidebar, brand, global search, account/palette surfaces</td><td>One application shell</td></tr><tr><td><code>feature-*.css</code></td><td>Shared workbench and domain compositions</td><td>May compose primitives, never redefine them</td></tr><tr><td><code>scientific.css</code></td><td>Scientific-only visual semantics</td><td>No alternate UI system</td></tr><tr><td><code>responsive.css</code></td><td>Canonical breakpoints</td><td>No page-specific responsive fork</td></tr></tbody></table></div></section>
-<div class="section-title"><div><h2>Core sizing contract</h2><p>These measurements are authoritative. If a page looks different, the page is wrong — not the UI Kit.</p></div><span class="badge info">Do not override locally</span></div>
-<section class="ui-contract-grid">
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Typography</strong><small>One hierarchy everywhere</small></div></div><div class="panel-body ui-type-scale"><div><code>Page title</code><h1>27 px</h1></div><div><code>Section</code><h2>20 px</h2></div><div><code>Panel title</code><strong>13 px</strong></div><div><code>Body</code><span>13.5 px</span></div><div><code>Utility</code><small>11 px</small></div></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Buttons</strong><small>34 px standard · 28 px small</small></div></div><div class="panel-body ui-contract-sample"><div class="ui-control-line"><button class="button primary" type="button"><span data-icon="plus"></span>Primary</button><button class="button" type="button">Standard</button></div><div class="ui-control-line"><button class="button small" type="button">Small</button><button class="icon-button" type="button" aria-label="Example icon"><span data-icon="settings"></span></button></div><span class="ui-contract-measure">Same height, radius, icon box and text weight on every route.</span></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Form controls</strong><small>Native or .input → same result</small></div></div><div class="panel-body ui-contract-sample"><label class="field"><span>Text input</span><input placeholder="Canonical input"></label><label class="field"><span>Select</span><select><option>Canonical select</option></select></label><label class="field"><span>Textarea</span><textarea placeholder="Canonical textarea"></textarea></label></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Shell geometry</strong><small>Shared navigation frame</small></div></div><div class="panel-body stack-sm"><div class="between"><span>Topbar</span><code>56 px</code></div><div class="between"><span>Sidebar</span><code>244 px</code></div><div class="between"><span>Nav item</span><code>34 px</code></div><div class="between"><span>Icon box</span><code>16–18 px</code></div><div class="between"><span>Panel radius</span><code>7 px</code></div><div class="alert info"><div><strong>Rule</strong><small>Feature CSS cannot alter these measurements. Scrollbars are themed globally and inherited by every overflow surface.</small></div></div></div></article>
-</section>
-<div class="section-title"><div><h2>Color system</h2><p>UI Kit is the visual ground truth; <code>assets/app.css</code> is the single implementation entry point. Mode and palette are independent; Blue remains the fallback.</p></div><div class="palette-choice-row"><button type="button" data-action="palette" data-palette="blue"><i class="palette-dot blue"></i>Blue</button><button type="button" data-action="palette" data-palette="red"><i class="palette-dot red"></i>Red</button><button type="button" data-action="palette" data-palette="green"><i class="palette-dot green"></i>Green</button><button type="button" data-action="palette" data-palette="violet"><i class="palette-dot violet"></i>Violet</button></div></div>
-<section class="grid grid-2">
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Surface &amp; background</strong><small>Page, card, navigation</small></div></div><div class="panel-body"><div class="swatch-grid">
-<div class="swatch"><i class="swatch-color bg"></i><span>--bg</span></div>
-<div class="swatch"><i class="swatch-color surface"></i><span>--surface</span></div>
-<div class="swatch"><i class="swatch-color surface-2"></i><span>--surface-2</span></div>
-<div class="swatch"><i class="swatch-color surface-3"></i><span>--surface-3</span></div>
-<div class="swatch"><i class="swatch-color nav"></i><span>--nav</span></div>
-<div class="swatch"><i class="swatch-color nav-2"></i><span>--nav-2</span></div>
-</div></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Text &amp; borders</strong><small>Ink, muted, dividers</small></div></div><div class="panel-body"><div class="swatch-grid">
-<div class="swatch"><i class="swatch-color ink"></i><span>--ink</span></div>
-<div class="swatch"><i class="swatch-color muted"></i><span>--muted</span></div>
-<div class="swatch"><i class="swatch-color muted-2"></i><span>--muted-2</span></div>
-<div class="swatch"><i class="swatch-color line"></i><span>--line</span></div>
-<div class="swatch"><i class="swatch-color line-strong"></i><span>--line-strong</span></div>
-</div></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Semantic</strong><small>Accent, feedback, status</small></div></div><div class="panel-body"><div class="swatch-grid">
-<div class="swatch"><i class="swatch-color accent"></i><span>--accent</span></div>
-<div class="swatch"><i class="swatch-color teal"></i><span>--teal</span></div>
-<div class="swatch"><i class="swatch-color amber"></i><span>--amber</span></div>
-<div class="swatch"><i class="swatch-color red"></i><span>--red</span></div>
-<div class="swatch"><i class="swatch-color violet"></i><span>--violet</span></div>
-</div></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Soft variants</strong><small>Background fills</small></div></div><div class="panel-body"><div class="swatch-grid">
-<div class="swatch"><i class="swatch-color accent-soft"></i><span>--accent-soft</span></div>
-<div class="swatch"><i class="swatch-color teal-soft"></i><span>--teal-soft</span></div>
-<div class="swatch"><i class="swatch-color amber-soft"></i><span>--amber-soft</span></div>
-<div class="swatch"><i class="swatch-color red-soft"></i><span>--red-soft</span></div>
-<div class="swatch"><i class="swatch-color violet-soft"></i><span>--violet-soft</span></div>
-</div></div></article>
-</section>
-
-<div class="section-title"><div><h2>Layout tokens</h2><p>Spacing, sizing, radii, and elevation used across all components.</p></div></div>
-<section class="grid grid-3">
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Spacing</strong><small>Gap &amp; padding</small></div></div><div class="panel-body stack-sm">
-<div class="row between"><code>--page-gap</code><span class="mono">12px</span></div>
-<div class="row between"><code>--panel-pad</code><span class="mono">12px</span></div>
-<div class="row between"><code>--space-1…5</code><span class="mono">4 · 8 · 12 · 16 · 24px</span></div>
-</div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Sizing</strong><small>Global dimensions</small></div></div><div class="panel-body stack-sm">
-<div class="row between"><code>--sidebar-w</code><span class="mono">210px</span></div>
-<div class="row between"><code>--topbar-h</code><span class="mono">50px</span></div>
-<div class="row between"><code>--control-h</code><span class="mono">34px</span></div>
-<div class="row between"><code>--font-body</code><span class="mono">UI sans</span></div>
-<div class="row between"><code>--font-display</code><span class="mono">Narrow display</span></div>
-</div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Radii &amp; shadow</strong><small>Shape &amp; elevation</small></div></div><div class="panel-body stack-sm">
-<div class="row between"><code>--radius-1</code><span class="mono">2px</span></div>
-<div class="row between"><code>--radius-2</code><span class="mono">4px</span></div>
-<div class="row between"><code>--radius-3</code><span class="mono">6px</span></div>
-<div class="row between"><code>--shadow</code><span class="mono">var(--shadow)</span></div>
-<div class="row between"><code>--shadow-float</code><span class="mono">var(--shadow-float)</span></div>
-</div></article>
-</section>
-<div class="section-title"><div><h2>Core controls</h2><p>Use these components before creating new variants.</p></div></div>
-<section class="grid grid-2"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Buttons and statuses</strong><small>One standard height and restrained variants.</small></div></div><div class="panel-body stack"><div class="row wrap"><button class="button" type="button">Default</button><button class="button primary" type="button">Primary</button><button class="button danger" type="button">Danger</button><button class="button small" type="button">Small</button><button class="icon-button" type="button" aria-label="Add item"><span data-icon="plus"></span></button></div><div class="row wrap"><span class="badge">Neutral</span><span class="badge info">Information</span><span class="badge success">Validated</span><span class="badge warning">Review</span><span class="badge danger">Failed</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Form controls</strong><small>Consistent labels, fields and helper text.</small></div></div><div class="panel-body form-grid"><div class="field"><label>Text input</label><input class="input" value="Sample value"/><small>Supporting information.</small></div><div class="field"><label>Select</label><select class="input"><option>Option A</option><option>Option B</option></select></div><div class="field span-2"><label>Textarea</label><textarea class="input">Longer structured note.</textarea></div></div></article></section>
-<div class="section-title"><div><h2>Shared search</h2><p>Use one compact search language across product areas, then add domain filters beneath it when needed.</p></div><span class="badge success">Global pattern</span></div>
-<section class="grid grid-2">
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Contextual input</strong><small>The placeholder explains the current searchable scope.</small></div></div><div class="panel-body"><label class="cabinet-search"><span data-icon="model"></span><input class="input" type="search" placeholder="Search stacks, files &amp; results…" aria-label="Search example"><kbd>/</kbd></label></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Suggested destination</strong><small>Fuzzy local match · never a remote request</small></div></div><div class="panel-body"><div class="cabinet-mini-list"><a href="workspace.html"><span class="resource-dot process"></span><span><strong>Stacks S01 and S02</strong><small>Inspect layers, conditions and samples</small></span></a><a href="report.html#nomad"><span class="resource-dot equipment"></span><span><strong>Prepare NOMAD</strong><small>Validate, package or simulate submission</small></span></a></div></div></article>
-</section>
-<div class="section-title"><div><h2>Domain visuals</h2><p>Primary editors must be visual before they become tables.</p></div></div>
-<section class="grid grid-3"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Traceability chain</strong><small>Use for provenance.</small></div></div><div class="panel-body"><div class="trace-chain"><div class="trace-item"><strong>Input</strong><small>Material lot</small></div><div class="trace-arrow">→</div><div class="trace-item"><strong>Run</strong><small>Actual process</small></div><div class="trace-arrow">→</div><div class="trace-item"><strong>Result</strong><small>Measurement</small></div></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Layer stack</strong><small>Use for devices and films.</small></div></div><div class="panel-body"><div class="layer-stack"><div class="layer-band substrate">Substrate</div><div class="layer-band transport">Transport layer</div><div class="layer-band absorber">Absorber</div><div class="layer-band contact">Contact</div></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Process node</strong><small>Use inside template graphs.</small></div></div><div class="panel-body"><button class="process-node active" type="button"><strong>Spin-coat absorber</strong><small>rpm · duration · antisolvent</small></button></div></article></section>
-<section class="grid grid-3 mt-12"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Step path</strong><small>Ordered step states</small></div></div><div class="panel-body"><div class="step-path"><span class="done">Measurement</span><i>→</i><span class="active">Comparison</span><i>→</i><span>Finding</span><i>→</i><span>Researcher conclusion</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Step flag</strong><small>Inline step notice</small></div></div><div class="panel-body"><div class="step-flag"><span class="badge warning">Session only</span><p>Files are read locally; nothing is uploaded by this POC.</p></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Step strip</strong><small>Count + label cells</small></div></div><div class="panel-body"><div class="step-strip"><span><strong>5</strong><small>Solutions</small></span><span><strong>2</strong><small>Stacks</small></span><span><strong>12</strong><small>Measurements</small></span><span><strong>1.4k</strong><small>Data points</small></span><span><strong>3</strong><small>Conclusions</small></span></div></div></article></section>
-<div class="section-title"><div><h2>Pipeline workbench</h2><p>Visual records used by CHOSE and Quick.</p></div><span class="badge success">Canonical</span></div>
-<section class="record-grid">
-  <article class="panel record-card kit-solution-record"><span class="badge">Project</span><h4>FA–Cs precursor</h4><strong>1.2 M · 5 mL</strong><div class="solution-bands"><span><b>DMF</b><small>80%</small></span><span><b>DMSO</b><small>20%</small></span></div><div class="kit-atom-row"><span>FAI</span><span>PbI₂</span><span>CsI</span></div><footer><button class="button small">Edit</button><button class="button small">Duplicate</button></footer></article>
-  <article class="panel record-card kit-stack-record"><span class="badge">1500 rpm</span><h4>Reference stack</h4><div class="mini-stack-vertical"><span>Au · 80 nm</span><span>HTL · 180 nm</span><span>Perovskite · 520 nm</span><span>SnO₂ · 30 nm</span><span>ITO / glass</span></div><footer><button class="button small">Edit</button><button class="button small">Duplicate</button></footer></article>
-  <article class="panel record-card kit-data-record"><span class="badge success">Mapped</span><h4>reference-jv.csv</h4><strong>PCE · J–V</strong><div class="kit-mini-bars"><i style="height:42%"></i><i style="height:78%"></i><i style="height:61%"></i><i style="height:91%"></i><i style="height:70%"></i></div><div class="record-facts"><span><b>124</b> rows</span><span><b>6</b> cols</span></div><footer><button class="button small">Review</button><button class="button small">Compare</button></footer></article>
-</section>
-<section class="grid grid-2 mt-12"><article class="panel"><div class="panel-header"><strong>Comparison surface</strong><span class="badge">PCE %</span></div><div class="panel-body"><div class="kit-comparison-bars"><span style="--v:72%"><b>A</b><i></i><small>18.3</small></span><span style="--v:92%"><b>B</b><i></i><small>21.1</small></span><span style="--v:81%"><b>C</b><i></i><small>19.7</small></span></div></div></article><article class="panel"><div class="panel-header"><strong>Readiness surface</strong><span class="badge success">4 / 5</span></div><div class="panel-body readiness-list"><div class="ready"><span>✓</span><strong>Materials</strong><small>Ready</small></div><div class="ready"><span>✓</span><strong>Stack</strong><small>Ready</small></div><div class="missing"><span>!</span><strong>Operator</strong><small>Missing</small></div></div></article></section>
-<div class="section-title"><div><h2>Scientific composers</h2><p>Canonical visual language for ordered workflow, solution composition and device construction.</p></div><span class="badge success">Live in CHOSE</span></div>
-<section class="grid grid-3"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Transformation step</strong><small>Sequence plus scientific intent</small></div></div><div class="panel-body"><button class="pipeline-step active" type="button"><span class="pipeline-step-index">1</span><span class="pipeline-step-copy"><i>01 · COMPOSE</i><strong>Materials &amp; Solutions</strong><small>Prepare reusable solution recipes.</small></span><span class="pipeline-step-state">Active</span></button></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Solution composer</strong><small>Ratio, dissolved species and volume</small></div></div><div class="panel-body"><div class="solution-equation"><span><b>2</b> solvents</span><em>+</em><span><b>3</b> dissolved species</span><em>→</em><span class="result"><b>5 mL</b> project recipe</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Cabinet lifecycle</strong><small>One definition, independent Project snapshot</small></div></div><div class="panel-body trace-chain"><div class="trace-item"><strong>Create</strong><small>Project or Cabinet</small></div><div class="trace-arrow">→</div><div class="trace-item"><strong>Choose</strong><small>Reusable definition</small></div><div class="trace-arrow">→</div><div class="trace-item"><strong>Snapshot</strong><small>Project evidence</small></div></div></article></section>
-<div class="section-title"><div><h2>Feedback and states</h2><p>Every asynchronous or validation state must be explicit.</p></div></div>
-<section class="grid grid-2"><div class="stack-sm"><div class="alert info"><span data-icon="info"></span><div><strong>Information</strong><div class="small subtle">Explain a distinction or next step.</div></div></div><div class="alert success"><span data-icon="check"></span><div><strong>Validated</strong><div class="small subtle">The record is complete.</div></div></div></div><div class="stack-sm"><div class="alert warning"><span data-icon="warning"></span><div><strong>Review required</strong><div class="small subtle">A non-blocking issue is present.</div></div></div><div class="alert danger"><span data-icon="warning"></span><div><strong>Blocked</strong><div class="small subtle">Authoritative validation failed.</div></div></div></div></section>
-<div class="section-title"><div><h2>Responsive compositions</h2><p>Pages should be built from these patterns only.</p></div></div>
-<section class="grid grid-3"><div class="demo-box"><strong>Dashboard</strong><p class="small subtle">Metrics → visual summaries → dense records.</p></div><div class="demo-box"><strong>Editor</strong><p class="small subtle">Visual canvas → inspector → validation footer.</p></div><div class="demo-box"><strong>Project data &amp; results</strong><p class="small subtle">Project scope → tabs → filters → evidence comparison.</p></div><div class="demo-box"><strong>Pipeline step</strong><p class="small subtle">Inputs → focused work → outputs → explicit status.</p></div><div class="demo-box"><strong>Project report</strong><p class="small subtle">Evidence → editable sections → review → local export.</p></div><div class="demo-box"><strong>Mobile</strong><p class="small subtle">Single column, local table scroll, no fixed content width.</p></div></section>
-<div class="section-title"><div><h2>Personal scope and guided flow</h2><p>New components required by the personal-workspace model.</p></div><span class="badge success">Current standard</span></div>
-<section class="grid grid-2"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Workspace scope</strong><small>Shared Lab pages never imply a current Project.</small></div></div><div class="panel-body"><div class="scope-bar scope-bar-static"><div class="scope-main"><span data-icon="grid"></span><div><span>Workspace · shared resources</span><strong>Researcher / Workspace</strong></div></div><div class="scope-meta"><span class="badge info">Generic</span><span class="mono">WS-USER-01</span></div></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Project scope</strong><small>Attach it only to Project-owned work or an explicit hand-off.</small></div></div><div class="panel-body"><div class="scope-bar scope-bar-static project-scope"><div class="scope-main"><span data-icon="folder"></span><div><span>Current Project context</span><strong>Workspace › Perovskite Optimisation</strong></div></div><div class="scope-meta"><span class="badge success">Project attached</span><span class="mono">PRJ-MCP-01</span></div></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Contextual tool hand-off</strong><small>Generic by default; Project context only through an explicit link.</small></div></div><div class="panel-body"><div class="tool-context-strip"><span data-icon="folder"></span><span><small>Project</small><strong>Perovskite Optimisation</strong></span><span><small>Mode</small><strong>Project context</strong></span><a href="#">Back to Project</a></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Reuse-first choice</strong><small>Offer existing records before creating duplicates.</small></div></div><div class="panel-body source-choice"><button class="active" type="button"><strong>Reuse existing</strong><small>Select from the shared Lab Cabinet</small></button><button type="button"><strong>Create new</strong><small>Open the minimal wizard</small></button></div></article></section>
-<section class="panel mt-12"><div class="panel-header"><div class="panel-title"><strong>Pipeline identity &amp; navigation</strong><small>Pipeline metadata supplies the accent and step labels; geometry remains shared.</small></div><div class="row"><span class="pipeline-badge pipeline-demo-chose"><i></i>CHOSE</span><span class="pipeline-badge pipeline-demo-quick"><i></i>Quick</span></div></div><div class="panel-body stack"><article class="experiment-next-action"><span><small>Current step</small><strong>Materials &amp; Solutions</strong></span><button class="button primary" type="button">Save &amp; continue</button></article><div class="pipeline-stepper pipeline-demo-chose pipeline-demo-progress"><button class="pipeline-step complete" type="button"><span class="pipeline-step-index">✓</span><span class="pipeline-step-copy"><i>01</i><strong>Materials</strong></span><span class="pipeline-step-state">Done</span></button><button class="pipeline-step active current" type="button"><span class="pipeline-step-index">2</span><span class="pipeline-step-copy"><i>02</i><strong>Stack</strong></span><span class="pipeline-step-state">Current</span></button><button class="pipeline-step" type="button"><span class="pipeline-step-index">3</span><span class="pipeline-step-copy"><i>03</i><strong>Data ingest</strong></span><span class="pipeline-step-state">Available</span></button><button class="pipeline-step" type="button"><span class="pipeline-step-index">4</span><span class="pipeline-step-copy"><i>04</i><strong>Analysis</strong></span><span class="pipeline-step-state">Available</span></button><button class="pipeline-step" type="button"><span class="pipeline-step-index">5</span><span class="pipeline-step-copy"><i>05</i><strong>Report &amp; export</strong></span><span class="pipeline-step-state">Available</span></button></div><div class="wizard-checklist"><div><span data-icon="check"></span><span><strong>Accent identifies the Pipeline</strong><small>It never replaces the selected application palette.</small></span></div><div><span data-icon="check"></span><span><strong>Progress and viewing are separate</strong><small>Researchers can revisit prior steps without losing saved progress.</small></span></div></div></div></section>
-<div class="section-title"><div><h2>Guided scientific objects</h2><p>Visual patterns used by the new Lab Cabinet and experiment workflows.</p></div><span class="badge success">Wizard-first</span></div>
-<section class="grid grid-3"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Solution preview</strong><small>Flat composition → ingredients → batch</small></div></div><div class="panel-body stack-sm"><div class="solution-map-section"><div class="solution-map-label"><strong>Solvent phase</strong><small>Relative composition</small></div><div class="solution-composition-bar"><span style="--share:80;--liquid:var(--accent)"><b>DMF</b><small>80% v/v</small></span><span style="--share:20;--liquid:var(--teal)"><b>DMSO</b><small>20% v/v</small></span></div></div><div class="solution-solute-list"><span><b>FAI</b><small>1.0 mmol</small></span><span><b>PbI₂</b><small>1.2 mmol</small></span><span><b>CsI</b><small>0.15 mmol</small></span></div><div class="solution-map-summary"><span><b>1.2 M</b><small>concentration</small></span><span><b>5.0 mL</b><small>batch</small></span><span><b>SOL-081</b><small>project recipe</small></span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Stack preview</strong><small>Ordered material layers</small></div></div><div class="panel-body"><div class="stack-visual-large"><span class="contact">Au <b>80 nm</b></span><span class="transport">HTL <b>180 nm</b></span><span class="absorber">Perovskite <b>400 nm</b></span><span class="transport">ETL <b>30 nm</b></span><span class="substrate">Glass / ITO</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Experiment group</strong><small>Condition plus physical replicates</small></div></div><div class="panel-body"><article class="experiment-lane recommended"><header><span class="condition-code">B</span><div><strong>1500 rpm</strong><small>6 replicates</small></div><span class="badge success">Focus</span></header><div class="sample-dots"><span></span><span></span><span></span><span></span><span></span><span></span></div><footer><span>Only override</span><strong>Spin speed</strong></footer></article></div></article></section>
-<div class="section-title"><div><h2>Preset and wizard patterns</h2><p>Offer a trusted starting point before an empty form.</p></div></div>
-<section class="grid grid-2"><article class="preset-card"><div class="preset-head"><span class="choice-icon" data-icon="flow"></span><span class="badge success">Recommended</span></div><div><h3>Ready protocol</h3><p>Use, duplicate, or customise through the process wizard.</p></div><div class="process-mini wide"><span>Clean</span><b>→</b><span>Coat</span><b>→</b><span>Anneal</span><b>→</b><span>Measure</span></div><footer><button class="button small" type="button">Use</button><button class="button small primary" type="button">Customise</button></footer></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Three-step object wizard</strong><small>Start → details → review</small></div></div><div class="panel-body stack"><div class="create-progress create-progress-3"><span class="complete">1 · Start</span><span class="active">2 · Details</span><span>3 · Review</span></div><div class="wizard-checklist"><div><span data-icon="check"></span><span><strong>Reuse first</strong><small>Prevent duplicates</small></span></div><div><span data-icon="check"></span><span><strong>Visual preview</strong><small>Understand the object</small></span></div><div><span data-icon="check"></span><span><strong>Owner scoped</strong><small>Experiment-only record</small></span></div></div></div></article></section>
-<div class="section-title"><div><h2>Dynamic charts and rendered graphs</h2><p>Local SVG patterns for data exploration, workflow explanation and documentation.</p></div></div>
-<section class="grid grid-2">
-<article class="panel interactive-chart" data-dynamic-chart="performance"><div class="panel-header"><div class="panel-title"><strong>Dynamic scientific chart</strong><small>Metric, type and condition filters update locally.</small></div><span class="badge violet">Interactive</span></div><div class="chart-controls"><div class="field"><label>Metric</label><select class="input" data-chart-control="metric"><option value="pce">PCE (%)</option><option value="thickness">Thickness (nm)</option><option value="roughness">RMS roughness (nm)</option></select></div><div class="field"><label>View</label><select class="input" data-chart-control="type"><option value="bar">Bar</option><option value="line">Line</option></select></div><fieldset class="chart-filter-set"><legend>Conditions</legend><label><input checked="" data-chart-condition="" type="checkbox" value="A"/>A</label><label><input checked="" data-chart-condition="" type="checkbox" value="B"/>B</label><label><input checked="" data-chart-condition="" type="checkbox" value="C"/>C</label></fieldset></div><div class="chart-frame" data-dynamic-preview=""></div><div class="chart-summary" data-dynamic-summary=""></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>Rendered workflow graph</strong><small>Use in documentation instead of arrow text.</small></div><span class="badge info">SVG</span></div><div class="panel-body"><div class="graph-stage" data-graph-ref="kitGraph"></div><script id="kitGraph" type="text/graph">direction LR
-Recipe[Solution recipe] --> Batch[Prepared batch] : creates
-Batch --> Run[Process run] : consumed by
-Run --> Sample[Sample] : produces
-Sample --> Result[Result] : characterised by</script></div></article>
-</section>
-<div class="section-title"><div><h2>Stack management</h2><p>Full stack detail with layers, solutions, materials, conditions, protocol and recorded actions.</p></div><span class="badge success">New</span></div>
-<section class="panel">
-  <div class="panel-header"><div class="panel-title"><strong>Stack detail tabs</strong><small>Each tab manages one aspect of the material stack</small></div></div>
-  <div class="panel-body">
-    <div class="layer-stack mb-12">
-      <div class="layer-band substrate">FTO/Glass · 2.2 mm</div>
-      <div class="layer-band transport">TiO2 Compact · 30 nm</div>
-      <div class="layer-band transport">TiO2 Mesoporous · 150 nm</div>
-      <div class="layer-band absorber">FA0.85Cs0.15PbI3 · 500 nm</div>
-      <div class="layer-band transport">Spiro-OMeTAD · 200 nm</div>
-      <div class="layer-band contact">Au · 80 nm</div>
-    </div>
-    <div class="tabs" data-tabs="kit-stack">
-      <button class="tab-button active" type="button" data-tab="kit-solutions">Solutions</button>
-      <button class="tab-button" type="button" data-tab="kit-materials">Materials</button>
-      <button class="tab-button" type="button" data-tab="kit-conditions">Conditions</button>
-      <button class="tab-button" type="button" data-tab="kit-pipeline">Protocol</button>
-      <button class="tab-button" type="button" data-tab="kit-actions">Actions</button>
-    </div>
-    <div class="tab-panel active" data-tab-panel="kit-solutions">
-      <table class="data-table">
-        <thead><tr><th>Solution</th><th>Role</th><th>Volume</th></tr></thead>
-        <tbody><tr><td class="mono">SOL-001</td><td>Absorber precursor</td><td>1.5 mL</td></tr><tr><td class="mono">SOL-002</td><td>Hole transport</td><td>1.0 mL</td></tr></tbody>
-      </table>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-materials" hidden>
-      <table class="data-table">
-        <thead><tr><th>Name</th><th>Formula</th><th>Supplier</th><th>Purity</th></tr></thead>
-        <tbody><tr><td>FAI</td><td class="mono">CH(NH2)2I</td><td>GreatCell Solar</td><td>99.99%</td></tr><tr><td>CsI</td><td class="mono">CsI</td><td>Sigma Aldrich</td><td>99.999%</td></tr><tr><td>PbI2</td><td class="mono">PbI2</td><td>TCI</td><td>99.99%</td></tr><tr><td>Spiro-OMeTAD</td><td class="mono">C81H68N4O8</td><td>Merck</td><td>99.8%</td></tr></tbody>
-      </table>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-conditions" hidden>
-      <dl class="key-values grid-2">
-        <div><dt>Spin speed</dt><dd>2000 rpm</dd></div>
-        <div><dt>Spin time</dt><dd>30 s</dd></div>
-        <div><dt>Annealing temp.</dt><dd>150 °C</dd></div>
-        <div><dt>Annealing time</dt><dd>20 min</dd></div>
-        <div><dt>Atmosphere</dt><dd>N2 glovebox</dd></div>
-        <div><dt>Humidity</dt><dd>&lt; 0.1 ppm</dd></div>
-      </dl>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-pipeline" hidden>
-      <div class="pipeline-steps">
-        <div class="process-mini wide"><span>Clean substrate</span><b>→</b><span>TiO2 Compact</span><b>→</b><span>TiO2 Meso.</span><b>→</b><span>Spin PVK</span><b>→</b><span>Anneal</span><b>→</b><span>HTL coat</span><b>→</b><span>Evaporate Au</span></div>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell" id="app">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand-row"><a class="brand" href="index.html">
+        <img class="brand-mark" src="assets/brand/logo-mark.svg" width="32" height="32" alt="">
+        <span class="brand-copy"><strong>Lab<span>Flow</span></strong><span>Research workspace</span></span>
+      </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation"><svg class="icon icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
+      <div class="sidebar-scroll">
+        <div class="nav-label">Research</div>
+        <nav class="nav" aria-label="Research workspace"><a class="nav-link" href="index.html"><svg class="icon icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>Workspace</span></a><a class="nav-link" href="cabinet.html"><svg class="icon icon-cabinet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16v6H4zM5 9h14v12H5zM9 13h6"/></svg><span>Lab Cabinet</span></a><a class="nav-link" href="knowledge.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Knowledge</span></a><a class="nav-link" href="tools.html"><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4-1 11-11-3-3L5 16zM14 7l3 3"/></svg><span>Tools</span></a><a class="nav-link" href="settings.html"><svg class="icon icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 15l2 2-4 4-2-2a8 8 0 0 1-6 0l-2 2-4-4 2-2a8 8 0 0 1 0-6L3 7l4-4 2 2a8 8 0 0 1 6 0l2-2 4 4-2 2a8 8 0 0 1 0 6Z"/></svg><span>Settings</span></a></nav>
+        <div class="nav-label">Reference</div>
+        <nav class="nav" aria-label="Product reference"><a class="nav-link" href="documentation.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/></svg><span>Documentation</span></a><a class="nav-link active" aria-current="page" href="ui-kit.html"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg><span>UI Kit</span></a></nav>
       </div>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-actions" hidden>
-      <div class="stack-sm">
-        <label class="check-row"><input type="checkbox" checked><span>Clean substrate with acetone and IPA</span></label>
-        <label class="check-row"><input type="checkbox" checked><span>Prepare TiO2 Compact solution</span></label>
-        <label class="check-row"><input type="checkbox"><span>Filter perovskite solution with 0.45 µm filter</span></label>
-        <label class="check-row"><input type="checkbox"><span>Turn on hotplate at 150°C</span></label>
-        <label class="check-row"><input type="checkbox"><span>Prepare Spiro-OMeTAD solution</span></label>
-        <label class="check-row"><input type="checkbox"><span>Load substrate into evaporator</span></label>
+      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button></div>
+    </aside>
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation"><svg class="icon icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <a class="mobile-brand" href="index.html" aria-label="LabFlow Workspace"><img src="assets/brand/logo-mark.svg" width="22" height="22" alt=""><span>UI Kit</span></a>
+        <span class="topbar-page-title" id="topbar-page-title">UI Kit</span>
       </div>
-    </div>
-  </div>
-</section>
-
-<div class="section-title"><div><h2>Solution management</h2><p>Full solution detail with precursors, solvents and properties.</p></div><span class="badge success">New</span></div>
-<section class="panel">
-  <div class="panel-header"><div class="panel-title"><strong>Solution preview</strong><small>Precursors → vessel → output batch</small></div></div>
-  <div class="panel-body">
-    <div class="solution-diagram">
-      <div class="solution-inputs"><span>FAI</span><span>CsI</span><span>PbI₂</span></div>
-      <div class="solution-beaker"><i class="fill-70"></i><strong>1.5 M</strong><small>DMF:DMSO</small></div>
-      <div class="solution-output"><strong>FA0.85Cs0.15PbI3</strong><small>5 mL</small></div>
-    </div>
-    <div class="grid-2 mt-12">
-      <div>
-        <h4 class="eyebrow">Precursors</h4>
-        <table class="data-table">
-          <thead><tr><th>Name</th><th>Ratio</th><th>Concentration</th></tr></thead>
-          <tbody><tr><td>FAI</td><td>0.85</td><td>1.275 M</td></tr><tr><td>CsI</td><td>0.15</td><td>0.225 M</td></tr><tr><td>PbI<sub>2</sub></td><td>1.0</td><td>1.5 M</td></tr></tbody>
-        </table>
+      <div class="global-search" id="global-search">
+        <svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg>
+        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, steps, knowledge and tools…">
+        <kbd>⌘ K</kbd><div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
       </div>
-      <div>
-        <h4 class="eyebrow">Solvents</h4>
-        <table class="data-table">
-          <thead><tr><th>Solvent</th><th>Ratio</th><th>Volume</th></tr></thead>
-          <tbody><tr><td>DMF</td><td>4</td><td>4 mL</td></tr><tr><td>DMSO</td><td>1</td><td>1 mL</td></tr></tbody>
-        </table>
+      <div class="topbar-right">
+        <span class="badge badge-accent top-status">Local POC · No cloud sync</span>
+        <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search"><svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/></svg></button>
+        <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/></svg></button>
+        <button class="top-user" data-action="profile" type="button"><span class="avatar">MG</span><span class="top-user-copy"><strong>Matteo Ginesi</strong><span>Advanced Photovoltaics</span></span></button>
       </div>
-    </div>
+    </header>
+    <main class="main" id="main-content"><div class="content" id="page-content"><div class="page-bootstrap" aria-hidden="true"><span></span><strong>UI Kit</strong><i></i><i></i></div></div></main>
   </div>
-</section>
-
-<div class="section-title"><div><h2>Material card</h2><p>Compact material identity card with supplier, purity and usage.</p></div><span class="badge success">New</span></div>
-<section class="panel">
-  <div class="panel-header"><div class="panel-title"><strong>Material detail</strong><small>Key properties at a glance</small></div></div>
-  <div class="panel-body">
-    <div class="grid-3">
-      <div class="metric"><span class="metric-label">Supplier</span><span class="metric-value mono">GreatCell Solar</span></div>
-      <div class="metric"><span class="metric-label">Purity</span><span class="metric-value mono">99.99%</span></div>
-      <div class="metric"><span class="metric-label">Lot</span><span class="metric-value mono">FAI-2204</span></div>
-    </div>
-  </div>
-</section>
-
-<div class="section-title"><div><h2>NOMAD Integration</h2><p>NOMAD connection settings and import/export interface.</p></div><span class="badge success">New</span></div>
-<section class="grid grid-2">
-  <article class="panel">
-    <div class="panel-header"><div class="panel-title"><strong>NOMAD API configuration</strong><small>Repository URL and API key management</small></div></div>
-    <div class="panel-body form-grid">
-      <div class="field span-2"><label>NOMAD Repository URL</label><input class="input" value="https://nomad-lab.eu/prod/rae/api/"></div>
-      <div class="field span-2"><label>API Key</label>
-        <div class="input-group"><input class="input" type="password" value="••••••••••••••••"><button class="button small" type="button">Show</button></div>
-      </div>
-    </div>
-    <div class="panel-footer">
-      <button class="button primary" type="button">Test connection</button>
-      <button class="button" type="button">Save credentials</button>
-    </div>
-  </article>
-  <article class="panel">
-    <div class="panel-header"><div class="panel-title"><strong>Recent NOMAD uploads</strong><small>Last exports tracked per experiment</small></div></div>
-    <div class="panel-body stack-sm">
-      <div class="between"><span class="mono">PSC-2026-041</span><span class="badge success">Uploaded</span></div>
-      <div class="between"><span class="mono">EXP-2026-048</span><span class="badge success">Uploaded</span></div>
-      <div class="between"><span class="mono">EXP-2026-041</span><span class="badge warning">Pending review</span></div>
-    </div>
-  </article>
-</section>
-
-<div class="section-title"><div><h2>Account management</h2><p>User profile, preferences and data ownership tabs.</p></div><span class="badge success">New</span></div>
-<section class="panel">
-  <div class="panel-header"><div class="panel-title"><strong>Account tabs</strong><small>Profile, NOMAD Integration, Preferences, My Data</small></div></div>
-  <div class="panel-body">
-    <div class="tabs" data-tabs="kit-account">
-      <button class="tab-button active" type="button" data-tab="kit-profile">Profile</button>
-      <button class="tab-button" type="button" data-tab="kit-nomad">NOMAD Integration</button>
-      <button class="tab-button" type="button" data-tab="kit-prefs">Preferences</button>
-    </div>
-    <div class="tab-panel active" data-tab-panel="kit-profile">
-      <div class="form-grid mt-8">
-        <div class="field"><label>Full name</label><input class="input" value="Eleanor Wright"></div>
-        <div class="field"><label>Research role</label><input class="input" value="Principal investigator"></div>
-        <div class="field"><label>Email</label><input class="input" value="eleanor@lab.example"></div>
-        <div class="field"><label>ORCID</label><input class="input mono" value="0000-0002-1825-0097"></div>
-      </div>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-nomad" hidden>
-      <p class="small subtle mt-8">NOMAD repository URL and API key fields with test/save actions.</p>
-    </div>
-    <div class="tab-panel" data-tab-panel="kit-prefs" hidden>
-      <p class="small subtle mt-8">Theme, language, units and notification preference controls.</p>
-    </div>
-  </div>
-</section>
-
-<div class="section-title"><div><h2>Lab Cabinet patterns</h2><p>Shared definitions stay distinct from traceable experiment usage.</p></div><span class="badge success">Product standard</span></div>
-<section class="stack">
-  <label class="cabinet-search"><span data-icon="model"></span><input type="search" placeholder="Search shared resources…"><kbd>/</kbd></label>
-  <nav class="cabinet-categories" aria-label="Example resource categories"><button class="active" type="button"><span data-icon="grid"></span><strong>All</strong><small>12</small></button><button type="button"><span data-icon="catalog"></span><strong>Materials</strong><small>3</small></button><button type="button"><span data-icon="flask"></span><strong>Solutions</strong><small>2</small></button><button type="button"><span data-icon="settings"></span><strong>Instruments</strong><small>2</small></button></nav>
-  <div class="cabinet-resource-grid">
-    <article class="cabinet-resource-card"><header><span class="cabinet-resource-mark materials">DMF</span><div><span class="eyebrow">Substance · solvent</span><h3>DMF anhydrous</h3></div><button class="cabinet-favorite active" type="button" aria-label="Favorite">★</button></header><p>Shared definition with identity and lot provenance.</p><div class="cabinet-resource-meta"><span class="badge success">Available</span><span>Cabinet A2</span><span>14 uses</span></div><footer><button class="button small primary" type="button">Use</button><button class="button small" type="button">Open</button></footer></article>
-    <article class="cabinet-resource-card"><header><span class="cabinet-resource-mark equipment">SC</span><div><span class="eyebrow">Instrument</span><h3>Spin Coater 01</h3></div><button class="cabinet-favorite" type="button" aria-label="Favorite">★</button></header><p>Capabilities and lightweight availability, not booking.</p><div class="cabinet-resource-meta"><span class="badge success">Available</span><span>Lab 2</span><span>26 uses</span></div><footer><button class="button small primary" type="button">Use</button><button class="button small" type="button">Open</button></footer></article>
-  </div>
-  <div class="grid grid-2"><fieldset class="cabinet-visibility-choice"><legend>Creation visibility</legend><label><input checked name="kitVisibility" type="radio"><span><strong>Share in Lab Cabinet</strong><small>Reusable in the workspace.</small></span></label><label><input name="kitVisibility" type="radio"><span><strong>Only this experiment</strong><small>Local snapshot.</small></span></label></fieldset><div class="cabinet-usage-record"><span class="badge info">Snapshot retained</span><strong>PSC-2026-041 · S01, S02 · 100 µL</strong><small>Parameters and actual values belong to the experiment use, not the shared definition.</small></div></div>
-</section>
-
-<div class="section-title"><div><h2>AI assistance patterns</h2><p>Optional suggestions must be evidence-linked, confidence-labelled and explicitly accepted.</p></div><span class="badge violet">New</span></div><section class="grid grid-2" id="kitAiPattern">
-<article class="ai-inline-assist"><div class="ai-inline-icon"><span data-icon="spark"></span></div><div class="ai-inline-copy"><span class="eyebrow">Optional AI suggestion</span><strong>Use 2 conditions and 3 replicates</strong><p>Show a short reason, confidence and the records used as evidence.</p><div class="ai-evidence-row"><span class="badge success">Confidence 88%</span><span>PSC-2026-041 · Protocol v4.1</span></div></div><div class="ai-inline-actions"><button class="button small" type="button">Why?</button><button class="button small primary" type="button">Use suggestion</button></div></article>
-<article class="panel"><div class="panel-header"><div class="panel-title"><strong>AI output states</strong><small>Never hide uncertainty or researcher action</small></div></div><div class="panel-body stack-sm"><div class="ai-context-item"><span>1</span><div><strong>Proposed</strong><small>Not written to scientific data</small></div></div><div class="ai-context-item"><span>2</span><div><strong>Accepted or edited</strong><small>Explicit researcher action</small></div></div><div class="ai-context-item"><span>3</span><div><strong>Evidence retained</strong><small>Traceable input and source records</small></div></div></div></article>
-</section>
-
-<div class="section-title"><div><h2>AI evidence, agents and knowledge retrieval</h2><p>Analysis, multi-step agents and shared knowledge remain distinct tools.</p></div><span class="badge violet">Simulated</span></div>
-<section class="stack">
-  <div class="ai-evidence-manifest"><strong>Evidence manifest</strong><dl><div><dt>Stacks</dt><dd>S01 and S02</dd></div><div><dt>Files</dt><dd>6 J–V CSV</dd></div><div><dt>Columns</dt><dd>pce_pct · thickness_nm</dd></div><div><dt>Limitation</dt><dd>One missing measurement</dd></div><div><dt>Model</dt><dd>demo-v1</dd></div><div><dt>Status</dt><dd>Draft AI</dd></div></dl></div>
-  <div class="agent-cards"><button class="active" type="button"><span data-icon="flask"></span><strong>Experiment Preparation Agent</strong><small>Bounded proposals with approval.</small><b>3 approvals</b></button><button type="button"><span data-icon="upload"></span><strong>Data Intake Agent</strong><small>Mapping and unit proposals.</small><b>4 approvals</b></button><button type="button"><span data-icon="chart"></span><strong>Analysis Agent</strong><small>Evidence-linked comparisons.</small><b>2 approvals</b></button><button disabled type="button"><span data-icon="download"></span><strong>NOMAD Agent</strong><small>Disabled state example.</small><b>Not available</b></button></div>
-  <div class="grid grid-2">
-    <article class="knowledge-source-card"><div class="knowledge-source-kind"><span data-icon="flow"></span><span>Protocol</span><b>KB-002</b></div><strong>PSC n-i-p standard · v4.1</strong><small>Perovskite Research Lab · Protocol group</small><div class="knowledge-source-tags"><span>n-i-p</span><span>baseline</span></div><footer><span class="badge success">Approved</span><time>18 Jul 2026</time><button type="button">Open</button></footer><div class="knowledge-linked"><span data-icon="file"></span><span>PRO-PSC-NIP-041</span></div></article>
-    <article class="knowledge-citation"><span>01</span><div><strong>PSC n-i-p standard · v4.1</strong><small>Protocol · laboratory provenance</small><p>Primary match for the requested process settings.</p><button type="button">PRO-PSC-NIP-041</button></div><b>96%</b></article>
-  </div>
-  <div class="knowledge-warning"><span data-icon="warning"></span><div><strong>Review required</strong><p>Conflicting or insufficient sources are shown before any contextual action.</p></div></div>
-</section>
-
-<div class="section-title"><div><h2>Tools and Export Center</h2><p>Context, tool state, archive preview and file/API separation.</p></div><span class="badge success">Canonical</span></div>
-<section class="grid grid-2"><article class="panel"><div class="tool-workbench-index"><button class="active" type="button"><span data-icon="table"></span><span><strong>Data</strong><small>Map and clean</small></span><b>6</b></button><button type="button"><span data-icon="shield"></span><span><strong>Validation</strong><small>Quality checks</small></span><b>7</b></button></div><div class="tool-catalog-grid"><article class="scientific-tool-card"><header><span class="tool-index">01</span><span class="badge success">Ready</span></header><div><h3>Column mapper</h3><p>Map fields, units and stack associations.</p></div><dl><div><dt>Input</dt><dd>CSV, Excel</dd></div><div><dt>Output</dt><dd>Mapped dataset</dd></div></dl><footer><span>EXP-052 · S02</span><button class="button small primary" type="button">Open</button></footer></article></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Export paths</strong><small>Separate outputs with explicit boundaries</small></div></div><div class="panel-body stack-sm"><div class="export-center-categories"><span>Data</span><span>Report</span><span class="active">Archive</span><span>NOMAD file</span><span>NOMAD API</span></div><pre class="package-tree">experiment-EXP-052/
-├── experiment.json
-├── data/
-├── reports/
-├── provenance/
-└── manifest.json</pre></div></article></section>
-
-<div class="section-title"><div><h2>Measurement-first &amp; progressive data capture</h2><p>Scientific meaning comes before file extension. Required information stays small; useful metadata is requested progressively.</p></div><span class="badge success">Canonical</span></div>
-<section class="stack">
-  <fieldset class="measurement-step-selector"><legend>Measurement selector</legend><label class="active"><input type="radio" checked><span class="measurement-glyph">?</span><strong>Auto-detect</strong><small>Headers + filename</small></label><label><input type="radio"><span class="measurement-glyph">J↗</span><strong>JV</strong><small>Illuminated</small></label><label><input type="radio"><span class="measurement-glyph">J◐</span><strong>Dark JV</strong><small>No illumination</small></label><label><input type="radio"><span class="measurement-glyph">λ%</span><strong>IPCE</strong><small>EQE response</small></label><label><input type="radio"><span class="measurement-glyph">λA</span><strong>UV/VIS</strong><small>Optical spectrum</small></label><label><input type="radio"><span class="measurement-glyph">t→</span><strong>Stability</strong><small>Evolution in time</small></label><label><input type="radio"><span class="measurement-glyph">…</span><strong>Other</strong><small>Generic evidence</small></label></fieldset>
-  <div class="grid grid-2"><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Progressive field levels</strong><small>Do not show every metadata field at creation time.</small></div></div><div class="panel-body form-grid"><div class="field required-field"><label>Measurement type <span class="field-level">Required</span></label><select class="input"><option>JV</option></select><small>Needed to understand the scientific record.</small></div><div class="field recommended-field"><label>Active device area <span class="field-level">Recommended</span></label><input class="input" placeholder="0.16 cm²"><small>Useful for reliable comparison; never blocks saving.</small></div><div class="context-inheritance span-2"><span data-icon="link"></span><div><strong>Inherited automatically</strong><small>Project → Stack → Fabrication → Sample</small></div><span class="badge">Inherited</span></div></div></article><article class="panel"><div class="panel-header"><div class="panel-title"><strong>Data quality</strong><small>Scientific criteria, not percentage of filled form fields.</small></div></div><div class="quality-grid"><article class="ready"><span>Core experiment</span><strong>Ready</strong><small>Solution + stack</small></article><article class="ready"><span>Analysis readiness</span><strong>Ready</strong><small>Typed Measurements</small></article><article class="recommend"><span>Reproducibility</span><strong>2 recommendations</strong><small>Never blocking</small></article><article class="recommend"><span>NOMAD readiness</span><strong>4/5 core checks</strong><small>Next: provenance</small></article></div></article></div>
-  <div class="measurement-provenance"><span><b>Measurement type</b>JV <i>inferred + confirmed</i></span><span><b>Source file</b>JV_S03-A.csv <i>imported</i></span><span><b>Target</b>S03-A <i>inherited</i></span><span><b>Derived metrics</b>Voc · Jsc · FF <i>calculated</i></span></div>
-  <aside class="contextual-request"><span class="request-mark">+</span><div><strong>Active device area is missing</strong><p>Useful for reliable JV comparison. The researcher can continue without adding it now.</p></div><button class="button small" type="button">Add</button><button class="button small" type="button">Continue anyway</button></aside>
-</section>
-
-<div class="section-title"><div><h2>Import and multi-stack patterns</h2><p>The UI Kit reuses the same operational components as Imports and Experiment.</p></div><span class="badge success">Current standard</span></div>
-<section class="grid grid-2">
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Import method</strong><small>Separate file, manual and NOMAD entry points.</small></div></div><div class="panel-body"><div class="import-method-grid"><button class="import-method active" type="button"><span data-icon="upload"></span><strong>File</strong><small>Preview and map</small></button><button class="import-method" type="button"><span data-icon="table"></span><strong>Manual</strong><small>Table or value</small></button><button class="import-method" type="button"><span data-icon="download"></span><strong>NOMAD</strong><small>Preview entry</small></button></div><div class="import-flow-steps"><span class="active">1 · Add</span><span>2 · Detect</span><span>3 · Preview</span><span>4 · Map</span><span>5 · Validate</span><span>6 · Attach</span></div><div class="useful-empty"><span data-icon="file"></span><div><strong>No file selected</strong><small>Parsed, structure-inspected, metadata-only and unparsed are distinct outcomes.</small></div></div></div></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Variant matrix</strong><small>Generated stacks remain local copies by default.</small></div></div><div class="panel-body"><div class="variant-matrix"><span>S01<br><b>DMF/DMSO · 90 °C</b></span><span>S02<br><b>DMF/DMSO · 100 °C</b></span><span>S03<br><b>DMF/NMP · 90 °C</b></span><span>S04<br><b>DMF/NMP · 100 °C</b></span></div><div class="alert info mt-10"><span data-icon="info"></span><div><strong>Definition versus use</strong><small>Editing a generated stack does not alter its Lab Cabinet template.</small></div></div></div></article>
-</section>
-
-<div class="section-title"><div><h2>Scientific object views</h2><p>Use flat 2D composition, ordered layers, charts and connectors. Perspective and faux depth are not part of the LabFlow visual language.</p></div><span class="badge success">2D · canonical</span></div>
-<section class="stack">
-  <article class="solution-recipe-card"><header><div><span class="eyebrow">Solution recipe</span><h3>FA-Cs 1.2 M</h3></div><span class="badge success">Ready</span></header><div class="recipe-composition"><section class="recipe-solvent"><span class="recipe-label">Solvent mixture</span><div class="solvent-mixture"><span class="dmf" style="--ratio:80%"><b>DMF</b><small>80%</small></span><span class="dmso" style="--ratio:20%"><b>DMSO</b><small>20%</small></span></div></section><span class="recipe-plus">+</span><section class="recipe-ingredients"><span class="recipe-label">Solutes</span><div><button type="button"><b>FAI</b><small>Precursor</small></button><button type="button"><b>PbI₂</b><small>Lead source</small></button></div></section></div><footer><div><small>Concentration</small><strong>1.2 M</strong></div><div><small>Volume</small><strong>5.0 mL</strong></div></footer></article>
-  <article class="panel"><div class="panel-header"><div class="panel-title"><strong>Layer specimen</strong><small>Ordered, selectable and comparable</small></div></div><div class="panel-body"><button class="stack-specimen" type="button"><span class="contact"><b>Au</b><small>80 nm</small></span><span class="transport"><b>HTL</b><small>180 nm</small></span><span class="absorber"><b>Perovskite</b><small>400 nm · SOL-081</small></span><span class="transport"><b>SnO₂</b><small>30 nm</small></span><span class="substrate"><b>ITO / glass</b><small>25 × 25 mm</small></span></button></div></article>
-</section>
-</main></div>
-<div aria-live="polite" class="toast-region" id="toastRegion"></div>
+  <div id="global-overlays"></div>
+  <div class="modal-backdrop" id="modal" hidden></div>
+  <script defer src="assets/js/settings-bundle.js"></script>
+  <script defer src="assets/js/data.js"></script>
+  <script defer src="assets/js/pipeline-bundle.js"></script>
+  <script defer src="assets/js/exporters.js"></script>
+  <script defer src="assets/js/workbook.js"></script>
+  <script defer src="assets/js/state.js"></script>
+  <script defer src="assets/js/docs-bundle.js"></script>
+  <script defer src="assets/js/diagrams.js"></script>
+  <script defer src="assets/js/app.js"></script>
 </body>
 </html>

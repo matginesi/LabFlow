@@ -1,0 +1,7 @@
+definitions:
+  name: LabFlow project export
+data:
+  project_id: "PRJ-2026-014"
+  project_name: "Mixed-cation perovskite optimisation"
+  source: LabFlow static research workspace
+  upload_state: preview

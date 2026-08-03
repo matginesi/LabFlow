@@ -1,0 +1,14 @@
+:root{
+  --font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Arial,sans-serif;
+  --reading:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --mono:"SFMono-Regular",Consolas,monospace;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13.5px;--fs-md:15px;--fs-lg:18px;--fs-xl:22px;--fs-2xl:32px;
+  --lh-tight:1.2;--lh-base:1.48;--lh-reading:1.64;
+  --r1:2px;--r2:4px;--r3:6px;
+  --sidebar:224px;--topbar:52px;--content:1540px;--control:35px;--scrollbar:8px;
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;
+  --z-shell:30;--z-overlay:100;
+}
+
+html[data-density="compact"]{--sidebar:214px;--topbar:50px}
+html[data-density="comfortable"]{--sidebar:214px;--topbar:52px;--control:38px}
