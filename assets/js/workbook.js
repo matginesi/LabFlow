@@ -23,90 +23,6 @@
     const last = column(Math.max(...rows.map((values) => values.length), 1));
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="${config.showGridLines === false ? 0 : 1}"><pane ySplit="1" topLeftCell="A2" state="frozen"/></sheetView></sheetViews>${widthXml}<sheetFormatPr defaultRowHeight="18"/><sheetData>${rows.map((values, index) => row(values, index + 1, index === 0, config)).join("")}</sheetData>${filter && rows.length > 1 ? `<autoFilter ref="A1:${last}${rows.length}"/>` : ""}<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
   };
-  const pdfSafe = (value) => String(value ?? "").normalize("NFKD").replace(/[^\x20-\x7e]/g, "").replace(/([\\()])/g, "\\$1");
-  const pdfRgb = (hex) => [0, 2, 4].map((index) => (parseInt(hex.slice(index, index + 2), 16) / 255).toFixed(3)).join(" ");
-  const pdfText = (value, x, y, size = 10, bold = false, colour = "0.12 0.16 0.22") => `${colour} rg BT /F${bold ? 2 : 1} ${size} Tf ${x} ${y} Td (${pdfSafe(value)}) Tj ET`;
-  const pdfLines = (value, width = 82) => {
-    const words = pdfSafe(value).split(/\s+/);
-    const lines = [];
-    let line = "";
-    words.forEach((word) => { const next = line ? `${line} ${word}` : word; if (next.length > width && line) { lines.push(line); line = word; } else line = next; });
-    if (line) lines.push(line);
-    return lines;
-  };
-  function editablePdfRaw(project, data, options = {}) {
-    const encoder = new TextEncoder();
-    const palette = E.palettes[options.palette] || E.palettes.blue;
-    const accent = pdfRgb(palette.hex);
-    const dark = pdfRgb(palette.dark);
-    const report = options.report || {};
-    const findings = options.findings || [];
-    const best = data.reduce((current, item) => current.pce > item.pce ? current : item);
-    const pages = [];
-    const fields = [];
-    const addField = (page, name, value, rect, config = {}) => {
-      fields.push({ page, name, value: pdfSafe(value), rect, multiline: Boolean(config.multiline), size: config.size || 8, align: config.align || 0 });
-    };
-    const paragraph = (commands, value, y, width = 82) => { pdfLines(value, width).forEach((line, index) => commands.push(pdfText(line, 48, y - index * 14, 10))); return y - pdfLines(value, width).length * 14; };
-    const frame = (number, title) => [`1 1 1 rg 0 0 595 842 re f`, `${dark} rg 0 804 595 38 re f`, `${accent} rg 0 804 9 38 re f`, pdfText(`${String(number).padStart(2, "0")}  |  ${title}`, 38, 818, 10, true, "1 1 1"), pdfText(project.id, 455, 818, 8, false, "0.78 0.83 0.90"), pdfText(`Page ${number} of 6`, 475, 24, 7, false, "0.38 0.43 0.51"), `${accent} rg 0 0 595 12 re f`];
-    let commands = [`1 1 1 rg 0 0 595 842 re f`, `${dark} rg 0 470 595 372 re f`, `${accent} rg 0 470 13 372 re f`, pdfText("LABFLOW SCIENTIFIC REPORT", 48, 790, 10, true, accent), pdfText(report.title || project.name, 48, 730, 25, true, "1 1 1"), pdfText(report.subtitle || "Scientific project report", 48, 695, 12, false, "0.80 0.85 0.92")];
-    let y = 650; pdfLines(report.executiveSummary || project.objective, 68).slice(0, 7).forEach((line, index) => commands.push(pdfText(line, 48, y - index * 16, 10, false, "0.88 0.91 0.96")));
-    commands.push(pdfText(`${options.user?.laboratory || "Laboratory"}  |  ${options.user?.name || project.owner}`, 48, 500, 9, false, "0.72 0.78 0.86"), pdfText("DECISION SNAPSHOT", 48, 420, 11, true, accent));
-    [["BEST PCE", `${best.pce}%`], ["STABILITY", `${best.stability}%`], ["SAMPLES", data.length], ["AI FINDINGS", findings.length]].forEach(([label, value], index) => { const x = 48 + index * 126; commands.push("0.96 0.97 0.99 rg " + `${x} 320 112 72 re f`, `${accent} rg ${x} 389 112 3 re f`, pdfText(label, x + 10, 370, 7, true), pdfText(value, x + 10, 340, 18, true)); });
-    commands.push(pdfText("EDITABLE REPORT IDENTITY", 48, 270, 9, true, accent), pdfText("Report title", 48, 246, 7, true), pdfText("Author / laboratory", 48, 204, 7, true), pdfText("Approval state", 304, 204, 7, true), pdfText("Page 1 of 6", 475, 24, 7, false, "0.38 0.43 0.51"));
-    addField(0, "report.title", report.title || project.name, [48, 216, 547, 240], {size:10});
-    addField(0, "report.author", `${options.user?.name || project.owner} | ${options.user?.laboratory || "Laboratory"}`, [48, 174, 292, 198], {size:7});
-    addField(0, "report.approval", report.approval || "Pending researcher approval", [304, 174, 547, 198], {size:7});
-    pages.push(commands.join("\n"));
-    commands = frame(2, "CONTENTS AND EVIDENCE MAP"); commands.push(pdfText("Contents", 38, 760, 20, true)); [["03","Objectives, materials and methodology"],["04","Solutions and device stack"],["05","Results, chart and measurement table"],["06","AI findings, conclusions and approval"]].forEach(([page,title],index)=>{const rowY=710-index*52;commands.push(pdfText(title,38,rowY,11,true),pdfText(page,520,rowY,11,true,accent),`${index%2?"0.98 0.985 0.99":"0.95 0.97 0.99"} rg 38 ${rowY-18} 509 1 re f`);}); commands.push(pdfText("Evidence classes",38,470,14,true,accent)); [["HUMAN","Objectives, notes, conclusions and approval"],["RAW","Source-aligned measurement values"],["CALCULATED","Normalized values, comparison and KPI"],["AI","Simulated advisory findings with evidence and status"]].forEach(([label,detail],index)=>{const rowY=430-index*44;commands.push(`${accent} rg 38 ${rowY-8} 72 26 re f`,pdfText(label,48,rowY,7,true,"1 1 1"),pdfText(detail,126,rowY,9));}); pages.push(commands.join("\n"));
-    commands = frame(3, "OBJECTIVES, MATERIALS AND METHODOLOGY");
-    commands.push(pdfText("Editable research narrative", 38, 760, 18, true), pdfText("Research objectives", 38, 727, 8, true, accent), pdfText("Methodology", 38, 580, 8, true, accent), pdfText("Evidence boundary", 38, 432, 8, true, accent));
-    addField(2, "report.objectives", report.objectives || project.objective, [38, 610, 547, 716], {multiline:true, size:9});
-    addField(2, "report.methodology", report.methodology || "Structured preparation, mapped JV measurements and deterministic comparative analysis.", [38, 462, 547, 569], {multiline:true, size:9});
-    addField(2, "report.evidence_boundary", "Original files remain separate from mapped raw data, processed results, researcher statements and simulated AI findings. No source measurement is overwritten.", [38, 310, 547, 421], {multiline:true, size:9});
-    commands.push(pdfText("These fields remain editable in a compatible PDF reader. Changes do not alter the source project package.", 38, 282, 8, false, "0.38 0.43 0.51"));
-    pages.push(commands.join("\n"));
-    commands = frame(4, "SOLUTIONS AND DEVICE STACK"); commands.push(pdfText("Solution composition",38,760,18,true),pdfText("FA/MA 1.25 M reference · SOL-B04",38,730,10,true,accent),`${dark} rg 38 670 407 44 re f`,`${accent} rg 38 670 326 44 re f`,`0.39 0.66 0.76 rg 364 670 81 44 re f`,pdfText("DMF 80%",52,688,10,true,"1 1 1"),pdfText("DMSO 20%",372,688,8,true,"1 1 1")); [["FAI","365.3 mg","90 mol%"],["MAI","39.7 mg","10 mol%"],["PbI2","1152.5 mg","1.00 eq"]].forEach((item,index)=>{const x=38+index*170;commands.push("0.95 0.97 0.99 rg "+`${x} 605 158 46 re f`,pdfText(item[0],x+9,633,8,true,accent),pdfText(`${item[1]} · ${item[2]}`,x+9,615,8));}); commands.push(pdfText("Device stack · STK-003/v2",38,550,18,true)); [["Au","Back contact","80 nm"],["Spiro-OMeTAD","Hole transport","180 nm"],["FA/MA perovskite","Absorber","540 nm"],["SnO2","Electron transport","32 nm"],["Glass / FTO","Substrate/contact","2.2 mm"]].forEach((item,index)=>{const rowY=492-index*48;commands.push(`${index===2?accent:index%2?"0.89 0.92 0.96":"0.95 0.97 0.99"} rg 38 ${rowY} 509 40 re f`,pdfText(String(5-index).padStart(2,"0"),48,rowY+15,8,true,index===2?"1 1 1":accent),pdfText(item[0],82,rowY+15,10,true,index===2?"1 1 1":"0.12 0.16 0.22"),pdfText(item[1],270,rowY+15,8,false,index===2?"1 1 1":"0.25 0.31 0.39"),pdfText(item[2],475,rowY+15,8,true,index===2?"1 1 1":"0.12 0.16 0.22"));}); commands.push(pdfText("Validation",38,205,13,true,accent)); paragraph(commands,"Layer order is valid. Recipe quantities and units are explicit. Glovebox humidity and filtration time remain under researcher review.",178); pages.push(commands.join("\n"));
-    commands = frame(5, "RESULTS, CHART AND EDITABLE DATA"); commands.push(pdfText("Editable Measurement Table", 38, 760, 18, true), pdfText("Values are prefilled from the local project and remain editable in this PDF copy.", 38, 739, 8, false, "0.38 0.43 0.51"), `${dark} rg 38 700 509 26 re f`); const positions = [38, 86, 198, 264, 328, 392, 455]; const widths = [46, 110, 64, 62, 62, 61, 92]; ["SAMPLE", "FORMULATION", "VOC", "JSC", "FF", "PCE", "STABILITY"].forEach((label, index) => commands.push(pdfText(label, positions[index] + 4, 710, 7, true, "1 1 1"))); data.forEach((item, index) => { const rowY = 671 - index * 29; [item.sample, item.formulation, item.voc, item.jsc, item.ff, item.pce, item.stability].forEach((value, colIndex) => addField(4, `measurements.${index + 1}.${["sample","formulation","voc","jsc","ff","pce","stability"][colIndex]}`, value, [positions[colIndex], rowY, positions[colIndex] + widths[colIndex], rowY + 25], {size:colIndex === 1 ? 6.5 : 7.5, align:colIndex > 1 ? 1 : 0})); }); commands.push(pdfText("PCE comparison (snapshot at export time)",38,410,13,true,accent)); data.forEach((item,index)=>{const barY=365-index*24;const barWidth=Math.max(12,(item.pce-16)*62);commands.push("0.92 0.94 0.97 rg "+`70 ${barY} 420 14 re f`,`${accent} rg 70 ${barY} ${barWidth} 14 re f`,pdfText(item.sample,38,barY+3,7,true),pdfText(item.pce,498,barY+3,7,true));}); commands.push(pdfText("Important", 38, 145, 10, true, accent)); paragraph(commands, "Editing PDF fields changes this report copy only. Charts and deterministic summaries remain export-time snapshots; recalculate them in the XLSX workbook after changing measurements.", 122); pages.push(commands.join("\n"));
-    commands = frame(6, "FINDINGS, CONCLUSIONS AND APPROVAL"); commands.push(pdfText("AI-Assisted Findings (Simulated)", 38, 760, 18, true)); y = 722; findings.slice(0, 3).forEach((finding) => { commands.push(`${accent} rg 38 ${y - 42} 5 50 re f`, pdfText(`${finding.score}`, 52, y - 10, 9, true, accent), pdfText(finding.title, 88, y, 8.5, true), pdfText(`Evidence: ${finding.evidence} | Status: ${finding.status}`, 88, y - 29, 7, false, accent)); y -= 58; }); commands.push(pdfText("EDITABLE RESEARCHER FIELDS", 38, 535, 9, true, accent), pdfText("Conclusions", 38, 511, 8, true), pdfText("Limitations", 38, 354, 8, true), pdfText("Approval / signature state", 38, 197, 8, true));
-    addField(5, "report.conclusions", report.conclusions || "Pending researcher conclusion.", [38, 380, 547, 500], {multiline:true, size:9});
-    addField(5, "report.limitations", report.limitations || "No limitations entered.", [38, 223, 547, 343], {multiline:true, size:9});
-    addField(5, "report.approval_final", report.approval || "Pending researcher approval", [38, 160, 547, 187], {size:9});
-    commands.push(pdfText("Provenance: raw, calculated, researcher-authored and simulated AI evidence remain distinct.", 38, 128, 8, false, "0.38 0.43 0.51")); pages.push(commands.join("\n"));
-
-    const objects = [];
-    objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-    objects[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>";
-    let objectId = 5;
-    const pageIds = pages.map(() => objectId++);
-    const contentIds = pages.map(() => objectId++);
-    const fieldIds = fields.map(() => objectId++);
-    const appearanceIds = fields.map(() => objectId++);
-    fields.forEach((field, index) => {
-      const [x0, y0, x1, y1] = field.rect;
-      const width = x1 - x0; const height = y1 - y0;
-      const inset = 5; const approxChars = Math.max(6, Math.floor((width - inset * 2) / (field.size * 0.52)));
-      const lines = field.multiline ? pdfLines(field.value, approxChars).slice(0, Math.max(1, Math.floor((height - 8) / (field.size + 3)))) : [field.value];
-      const appearance = [`0.975 0.982 0.992 rg 0 0 ${width} ${height} re f`, `${accent} RG 0.7 w 0.5 0.5 ${width - 1} ${height - 1} re S`];
-      lines.forEach((line, lineIndex) => {
-        const lineWidth = line.length * field.size * 0.52;
-        const tx = field.align === 1 ? Math.max(inset, (width - lineWidth) / 2) : inset;
-        appearance.push(pdfText(line, tx, height - field.size - 6 - lineIndex * (field.size + 3), field.size));
-      });
-      const stream = appearance.join("\n");
-      objects[appearanceIds[index]] = `<< /Type /XObject /Subtype /Form /BBox [0 0 ${width} ${height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`;
-      objects[fieldIds[index]] = `<< /Type /Annot /Subtype /Widget /FT /Tx /T (${pdfSafe(field.name)}) /TU (${pdfSafe(field.name)}) /V (${field.value}) /DV (${field.value}) /Rect [${field.rect.join(" ")}] /P ${pageIds[field.page]} 0 R /F 4 /Ff ${field.multiline ? 4096 : 0} /Q ${field.align} /DA (/F1 ${field.size} Tf 0.12 0.16 0.22 rg) /MK << /BC [${accent}] /BG [0.975 0.982 0.992] >> /BS << /W 0.7 /S /S >> /AP << /N ${appearanceIds[index]} 0 R >> >>`;
-    });
-    pages.forEach((content, index) => {
-      const annotations = fields.map((field, fieldIndex) => field.page === index ? `${fieldIds[fieldIndex]} 0 R` : "").filter(Boolean);
-      objects[pageIds[index]] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentIds[index]} 0 R${annotations.length ? ` /Annots [${annotations.join(" ")}]` : ""} >>`;
-      objects[contentIds[index]] = `<< /Length ${encoder.encode(content).length} >>\nstream\n${content}\nendstream`;
-    });
-    objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
-    objects[1] = `<< /Type /Catalog /Pages 2 0 R /AcroForm << /Fields [${fieldIds.map((id) => `${id} 0 R`).join(" ")}] /DR << /Font << /F1 3 0 R /F2 4 0 R >> >> /DA (/F1 9 Tf 0.12 0.16 0.22 rg) /NeedAppearances false >> >>`;
-    let pdf = "%PDF-1.7\n%LabFlow-fillable\n"; const offsets = [0]; for (let id = 1; id < objects.length; id += 1) { offsets[id] = encoder.encode(pdf).length; pdf += `${id} 0 obj\n${objects[id]}\nendobj\n`; } const xref = encoder.encode(pdf).length; pdf += `xref\n0 ${objects.length}\n0000000000 65535 f \n`; for (let id = 1; id < objects.length; id += 1) pdf += `${String(offsets[id]).padStart(10, "0")} 00000 n \n`; pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`; return encoder.encode(pdf);
-  }
-
   function workbookRaw(project, data, options = {}) {
     const palette = E.palettes[options.palette] || E.palettes.blue;
     const findings = options.findings || [];
@@ -214,8 +130,6 @@
   E.genericWorkbook = (sheets, palette) => new Blob([genericWorkbookRaw(sheets, palette)], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   E.genericDocxRaw = genericDocxRaw;
   E.genericDocx = (input, palette) => new Blob([genericDocxRaw(input, palette)], {type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
-  E.editablePdfRaw = editablePdfRaw;
-  E.reportPdf = (project, data, options) => new Blob([editablePdfRaw(project, data, options)], { type: "application/pdf" });
   E.editableDocxRaw = editableDocxRaw;
   E.reportDocx = (project, data, options) => new Blob([editableDocxRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
   E.reportXlsx = (project, data, options) => new Blob([workbookRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -224,11 +138,10 @@
       { name: "project.yaml", data: E.projectYaml(project, pipeline) },
       { name: "data/measurements.jsonl", data: E.jsonl(project, data) },
       { name: "data/measurements.csv", data: E.csv(data) },
-      { name: "report/scientific-report.pdf", data: editablePdfRaw(project, data, options) },
       { name: "report/editable-report.docx", data: editableDocxRaw(project, data, options) },
       { name: "report/analysis-workbook.xlsx", data: workbookRaw(project, data, options) },
       { name: "knowledge/linked-context.yaml", data: (options.knowledge || []).map((item) => `- id: ${item.id}\n  type: "${item.type}"\n  title: "${item.title.replace(/"/g, '\\"')}"\n  status: "${item.status}"`).join("\n") + "\n" },
-      { name: "MANIFEST.txt", data: "LabFlow portable project package\nGenerated locally in the browser.\nIncludes structured data, palette-aware reports and 10-sheet workbook.\n" }
+      { name: "MANIFEST.txt", data: "LabFlow portable project package\nGenerated locally in the browser.\nIncludes structured data, editable DOCX, analysis workbook and linked knowledge. PDF is printed from the Report Composer preview.\n" }
     ];
     if (nomad) files.push({ name: "nomad.yaml", data: E.nomadYaml(project) }, { name: "NOMAD_VALIDATION.txt", data: "Preview only. Confirm inferred units and complete missing metadata before upload.\n" });
     return new Blob([E.zipBytes(files)], { type: "application/zip" });

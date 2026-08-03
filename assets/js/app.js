@@ -202,7 +202,7 @@
     const width = ({project:"wide",knowledge:"wide",tools:"wide","ui-kit":"wide",documentation:"reading"})[page] || "standard";
     content.className = `content page-width-${width}`;
     $("#topbar-page-title")?.replaceChildren(document.createTextNode(title));
-    const mobileTitle = $(".mobile-brand span");
+    const mobileTitle = $(".mobile-brand-title");
     if (mobileTitle) mobileTitle.textContent = title;
     $$(".user-chip .avatar, .top-user .avatar").forEach((avatar) => { avatar.textContent = D.user.initials; });
     const userChip = $(".user-chip");
@@ -221,7 +221,7 @@
       }
     }
     const overlays = $("#global-overlays");
-    if (overlays) overlays.innerHTML = assistantDrawer(page);
+    if (overlays) overlays.replaceChildren();
   }
 
   function globalSearchItems() {
@@ -254,7 +254,8 @@
     const root = $("#global-search");
     const input = $("#global-search-input");
     const results = $("#global-search-results");
-    const items = globalSearchItems();
+    let items = null;
+    const getItems = () => items || (items = globalSearchItems());
     let active = -1;
     const close = (clear = false) => {
       results.hidden = true; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant");
@@ -269,7 +270,7 @@
       const query = input.value.trim(); active = -1;
       if (!query) { results.innerHTML = '<div class="global-search-empty"><strong>Search the local workspace</strong><span>Projects, pipelines, knowledge, tools, reports and documentation.</span></div>'; }
       else {
-        const matches = items.filter((item) => `${item.title} ${item.detail} ${item.category}`.toLowerCase().includes(query.toLowerCase())).slice(0, 12);
+        const matches = getItems().filter((item) => `${item.title} ${item.detail} ${item.category}`.toLowerCase().includes(query.toLowerCase())).slice(0, 12);
         if (!matches.length) results.innerHTML = `<div class="global-search-empty"><strong>No local result</strong><span>Try a project ID, material, pipeline step or document title.</span></div>`;
         else {
           const groups = matches.reduce((map, item) => { (map[item.category] ||= []).push(item); return map; }, {});
@@ -314,6 +315,11 @@
     </aside>`;
   }
 
+  function ensureAssistant() {
+    const overlays = $("#global-overlays");
+    if (overlays && !$(".ai-assistant", overlays)) overlays.innerHTML = assistantDrawer(document.body.dataset.page);
+  }
+
   function bindShell() {
     const search = bindGlobalSearch();
     document.addEventListener("click", (event) => {
@@ -322,7 +328,7 @@
       const action = event.target.closest("[data-action]");
       if (action) {
         if (action.dataset.action === "menu") document.body.classList.toggle("sidebar-open");
-        if (action.dataset.action === "assistant") document.body.classList.toggle("ai-open");
+        if (action.dataset.action === "assistant") { ensureAssistant(); document.body.classList.toggle("ai-open"); }
         if (action.dataset.action === "search") search.open();
         if (action.dataset.action === "quick-theme") {
           const settings = getSettings();
@@ -355,11 +361,12 @@
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
       }
     });
-    $("#assistant-form")?.addEventListener("submit", (event) => {
+    document.addEventListener("submit", (event) => {
+      if (!event.target.matches("#assistant-form")) return;
       event.preventDefault();
       const input = $("#assistant-input");
-      if (input.value.trim()) askAssistant(input.value.trim());
-      input.value = "";
+      if (input?.value.trim()) askAssistant(input.value.trim());
+      if (input) input.value = "";
     });
   }
 
@@ -719,44 +726,101 @@
     });
   }
 
+  function syncReportDraft(project, notify = false) {
+    const state = reportState(project);
+    if (!$("#report-title")) return state;
+    const updated = {
+      ...state,
+      title: $("#report-title")?.value || state.title,
+      subtitle: $("#report-subtitle")?.value || state.subtitle,
+      executiveSummary: $("#report-summary")?.value || state.executiveSummary,
+      methodology: $("#report-methodology")?.value || state.methodology,
+      conclusions: $("#report-conclusions")?.value || state.conclusions,
+      limitations: $("#report-limitations")?.value || state.limitations,
+      approval: $("#report-approval")?.value || state.approval,
+      sections: $$('[data-report-section]:checked').map((input) => input.dataset.reportSection)
+    };
+    S.saveReport(project.id, updated);
+    const preview = $("#report-live-preview");
+    if (preview) preview.innerHTML = reportPreview(project);
+    if (notify) toast("Report draft applied in memory. PDF printing now uses this exact preview.");
+    return updated;
+  }
+
+  function printReportPreview(project) {
+    syncReportDraft(project, false);
+    const source = $("#report-live-preview");
+    if (!source) throw new Error("Report preview is not available.");
+    let printRoot = $("#report-print-root");
+    if (!printRoot) {
+      printRoot = document.createElement("main");
+      printRoot.id = "report-print-root";
+      printRoot.className = "report-preview";
+      printRoot.setAttribute("aria-label", "Printable scientific report");
+      document.body.append(printRoot);
+    }
+    printRoot.innerHTML = source.innerHTML;
+    document.body.classList.add("printing-report");
+    const cleanup = () => {
+      document.body.classList.remove("printing-report");
+      printRoot.replaceChildren();
+    };
+    window.addEventListener("afterprint", cleanup, { once: true });
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+    window.setTimeout(() => {
+      if (document.body.classList.contains("printing-report")) cleanup();
+    }, 30000);
+  }
+
   function analysisReport(project) {
     const report = reportState(project);
     return `<div class="grid grid-2"><div class="stack">
-      <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report composition</h3><small>Shared evidence, three native output formats</small></div>${icon("file")}</div><div class="panel-body stack">
+      <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report composition</h3><small>Single authoring point · complete project evidence</small></div>${icon("file")}</div><div class="panel-body stack">
         <div class="form-grid"><div class="field wide"><label for="report-title">Title</label><input class="input" id="report-title" name="report-title" value="${esc(report.title)}"></div><div class="field wide"><label for="report-subtitle">Subtitle</label><input class="input" id="report-subtitle" name="report-subtitle" value="${esc(report.subtitle)}"></div><div class="field wide"><label for="report-summary">Executive Summary</label><textarea class="textarea" id="report-summary" name="report-summary">${esc(report.executiveSummary)}</textarea></div><div class="field wide"><label for="report-methodology">Methodology</label><textarea class="textarea" id="report-methodology" name="report-methodology">${esc(report.methodology)}</textarea></div><div class="field wide"><label for="report-conclusions">Researcher Conclusions</label><textarea class="textarea" id="report-conclusions" name="report-conclusions">${esc(report.conclusions)}</textarea></div><div class="field wide"><label for="report-limitations">Limitations</label><textarea class="textarea" id="report-limitations" name="report-limitations">${esc(report.limitations)}</textarea></div><div class="field wide"><label for="report-approval">Approval</label><input class="input" id="report-approval" name="report-approval" value="${esc(report.approval)}"></div></div>
         <div class="report-section-list" aria-label="Included report sections">${[["summary", "Executive Summary", "Objective, decision and primary result"], ["methods", "Materials, Solutions, Stack & Methods", "Structured preparation and process"], ["results", "Results Dashboard", "KPI, charts and measurement tables"], ["ai", "AI-Assisted Findings", "Clearly identified simulation with evidence"], ["conclusions", "Conclusions & Limitations", "Editable researcher interpretation"], ["provenance", "Provenance & Approval", "Sources, mappings and decision status"]].map(([id, title, detail], index) => `<label class="check-row report-section"><span class="drag-handle" aria-hidden="true">${index + 1}</span><input type="checkbox" data-report-section="${id}" ${report.sections.includes(id) ? "checked" : ""}><span><strong>${title}</strong><small class="block">${detail}</small></span></label>`).join("")}</div><button class="btn btn-primary" id="save-report-draft">Apply Report Draft</button>
       </div></div>
       <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Output suite</h3><small>Uses the currently selected palette</small></div><span class="badge badge-accent">${esc(E.palettes[getSettings().palette].name)}</span></div><div class="panel-body stack">${reportExportCards(project)}</div></div>
       <div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Report Assistant · evidence draft</h3><small>Every significant statement remains linked to a measured value</small></div>${icon("spark")}</div><div class="panel-body stack"><div class="report-statement"><span class="badge badge-accent">Statement</span><p><strong>Sample S08 showed the highest measured PCE.</strong></p><div class="evidence-detail"><small>Evidence</small><p>batch_B03_forward.csv · Sample S08 · PCE · 21.28%</p></div></div><div class="report-statement"><span class="badge badge-warning">Limitation</span><p>EXP-067 has incomplete process provenance; the statement does not imply causality.</p></div><div class="cluster"><button class="btn" data-action="assistant">Generate methods preview</button><button class="btn" data-action="assistant">Prepare evidence appendix</button></div></div></div>
-      <div class="notice"><div>${icon("info")}</div><div><strong>Editable native outputs</strong><p>The PDF includes fillable form fields for report text, approval and measurement values. DOCX includes structured researcher fields; Excel highlights editable inputs and recalculates formulas when opened.</p></div></div>
+      <div class="notice"><div>${icon("info")}</div><div><strong>One visual report source</strong><p>Print / Save PDF uses the exact report preview shown here, including the current text, selected sections, data, charts and findings. DOCX and Excel remain separate editable analytical formats.</p></div></div>
     </div><div class="report-preview" id="report-live-preview">${reportPreview(project)}</div></div>`;
   }
 
   function reportPreview(project) {
     const settings = getSettings();
     const report = reportState(project);
-    return `<div class="report-cover"><span class="badge report-cover-badge">SCIENTIFIC REPORT · ${esc(project.id)}</span><h1>${esc(report.title)}</h1><p>${esc(report.subtitle)}</p><small>${esc(settings.reportLab)} · ${esc(settings.reportAuthor)}</small></div><div class="report-rule"></div><h2>Executive Research Summary</h2><p>${esc(report.executiveSummary)}</p><div class="report-kpis"><div class="report-kpi"><small>BEST PCE</small><strong>21.28%</strong><span>S08</span></div><div class="report-kpi"><small>STABILITY</small><strong>95%</strong><span>normalized</span></div><div class="report-kpi"><small>SAMPLES</small><strong>12</strong><span>6 stacks</span></div><div class="report-kpi"><small>AI REVIEW</small><strong>5</strong><span>simulated findings</span></div></div>
-      <div class="report-technical-grid"><section><h2>Solution Review</h2><div class="report-composition"><span class="report-composition-dmf">DMF 80%</span><span class="report-composition-dmso">DMSO 20%</span></div><dl><div><dt>Target</dt><dd>FA₀.₉₀MA₀.₁₀PbI₃</dd></div><div><dt>Volume</dt><dd>2.00 mL</dd></div><div><dt>Molarity</dt><dd>1.25 M</dd></div></dl></section><section><h2>Stack Review</h2><div class="report-stack-mini" role="img" aria-label="Device stack, substrate to back contact">${stackLayers.map((layer) => `<span style="--layer-color:var(${layer.color})">${esc(layer.material)}</span>`).join("")}</div><small>Glass/FTO → SnO₂ → absorber → Spiro-OMeTAD → Au</small></section></div>
-      <h2>Researcher Conclusions</h2><div class="report-finding"><strong>Editable Before Export</strong><p class="mb-0">${esc(report.conclusions)}</p></div><h2 class="mt-2">Limitations & Approval</h2><p>${esc(report.limitations)}</p><p><strong>${esc(report.approval)}</strong></p>`;
+    const sections = new Set(report.sections || []);
+    const rows = D.demoDataset;
+    const best = [...rows].sort((a, b) => b.pce - a.pce)[0];
+    const mean = (key) => (rows.reduce((sum, row) => sum + row[key], 0) / rows.length).toFixed(2);
+    const experiments = D.experiments.filter((item) => item.project === project.id);
+    const chartMin = Math.min(...rows.map((row) => row.pce)) - 0.5;
+    const chartMax = Math.max(...rows.map((row) => row.pce)) + 0.5;
+    const chartRange = chartMax - chartMin || 1;
+    const methods = sections.has("methods") ? `<section class="report-section-block"><div class="report-section-heading"><div><small>02 · MATERIALS & PROCESS</small><h2>Traceable preparation and device architecture</h2></div><span>${experiments.length} experiments</span></div><p>${esc(report.methodology)}</p><div class="report-technical-grid"><section><h3>Solution Review</h3><div class="report-composition"><span class="report-composition-dmf">DMF 80%</span><span class="report-composition-dmso">DMSO 20%</span></div><dl><div><dt>Target</dt><dd>FA0.90MA0.10PbI3</dd></div><div><dt>Batch</dt><dd>SOL-B04</dd></div><div><dt>Volume</dt><dd>2.00 mL</dd></div><div><dt>Molarity</dt><dd>1.25 M</dd></div></dl></section><section><h3>Stack Review</h3><div class="report-stack-mini" role="img" aria-label="Device stack, substrate to back contact">${stackLayers.map((layer) => `<span class="stack-tone-${esc(layer.tone)}">${esc(layer.material)} · ${esc(layer.thickness)}</span>`).join("")}</div><small>STK-003/v2 · n-i-p reference architecture</small></section></div><div class="report-experiment-grid">${experiments.map((experiment) => `<article><span>${esc(experiment.id)}</span><strong>${esc(experiment.samples.join(" · "))}</strong><small>${esc(experiment.process)} · ${experiment.annealing.value}${esc(experiment.annealing.unit || " unit missing")} · ${experiment.measurements} measurements</small></article>`).join("")}</div></section>` : "";
+    const results = sections.has("results") ? `<section class="report-section-block"><div class="report-section-heading"><div><small>03 · COMPLETE RESULTS</small><h2>Device performance and measurement record</h2></div><span>${rows.length} samples · 9 fields</span></div><div class="report-chart-card"><div><strong>PCE by sample</strong><small>All included measurements · no hidden exclusions</small></div><div class="report-chart-bars">${rows.map((row) => `<div><span>${esc(row.sample)}</span><i style="--bar:${(((row.pce - chartMin) / chartRange) * 100).toFixed(1)}%"></i><b>${row.pce.toFixed(2)}%</b></div>`).join("")}</div></div><div class="table-wrap report-results-table">${datasetTable(rows)}</div><p class="report-footnote">Best sample: <strong>${esc(best.sample)}</strong> at <strong>${best.pce.toFixed(2)}% PCE</strong>. Cohort mean: ${mean("pce")}% PCE; mean Voc: ${mean("voc")} V; mean stability: ${mean("stability")}%.</p></section>` : "";
+    const findings = sections.has("ai") ? `<section class="report-section-block"><div class="report-section-heading"><div><small>04 · EVIDENCE-LINKED FINDINGS</small><h2>Advisory review with explicit boundaries</h2></div><span>${D.aiFindings.length} findings</span></div><div class="report-findings-grid">${D.aiFindings.map((finding) => `<article><div><strong>${finding.score}</strong><span>${esc(finding.status)}</span></div><h3>${esc(finding.title)}</h3><p>${esc(finding.detail)}</p><small>${esc(finding.evidence)} · Simulated AI</small></article>`).join("")}</div></section>` : "";
+    const conclusions = sections.has("conclusions") ? `<section class="report-section-block report-decision"><div class="report-section-heading"><div><small>05 · RESEARCHER DECISION</small><h2>Conclusions, limitations and approval</h2></div><span>${esc(report.approval)}</span></div><div class="report-decision-grid"><div><h3>Conclusions</h3><p>${esc(report.conclusions)}</p></div><div><h3>Limitations</h3><p>${esc(report.limitations)}</p></div></div></section>` : "";
+    const provenance = sections.has("provenance") ? `<section class="report-section-block"><div class="report-provenance"><span><b>RAW</b> Local source-aligned measurements</span><span><b>CALCULATED</b> Deterministic KPI and comparisons</span><span><b>RESEARCHER</b> Objectives, conclusions and approval</span><span><b>AI</b> Simulated advisory findings requiring review</span></div></section>` : "";
+    return `<div class="report-cover report-cover-compact"><img class="report-brand" src="assets/brand/logo-horizontal-shell.svg" alt="LabFlow"><div class="report-cover-copy"><span class="badge report-cover-badge">SCIENTIFIC REPORT · ${esc(project.id)}</span><h1>${esc(report.title)}</h1><p>${esc(report.subtitle)}</p><small>${esc(settings.reportLab)} · ${esc(settings.reportAuthor)}</small></div><div class="report-cover-status"><span>${esc(project.status)}</span><strong>${esc(report.approval)}</strong></div></div>${sections.has("summary") ? `<section class="report-section-block report-summary"><div class="report-section-heading"><div><small>01 · EXECUTIVE SNAPSHOT</small><h2>Decision-ready project summary</h2></div><span>${esc(project.id)}</span></div><p class="report-lead">${esc(report.executiveSummary)}</p><div class="report-kpis"><div class="report-kpi"><small>BEST PCE</small><strong>${best.pce.toFixed(2)}%</strong><span>${esc(best.sample)}</span></div><div class="report-kpi"><small>MEAN PCE</small><strong>${mean("pce")}%</strong><span>${rows.length} samples</span></div><div class="report-kpi"><small>STABILITY</small><strong>${best.stability}%</strong><span>best retained</span></div><div class="report-kpi"><small>EXPERIMENTS</small><strong>${experiments.length}</strong><span>${rows.length} measured devices</span></div><div class="report-kpi"><small>QUALITY</small><strong>${D.validationIssues.filter((item) => item.severity === "error" || item.severity === "warning").length}</strong><span>open issues</span></div></div><div class="report-project-facts"><span><b>Objective</b>${esc(project.objective)}</span><span><b>Pipeline</b>${esc(P[project.pipeline]?.name || project.pipeline)}</span><span><b>Evidence</b>${project.files} files · ${project.measurements} measurements · ${project.findings} findings</span></div></section>` : ""}${methods}${results}${findings}${conclusions}${provenance}`;
   }
 
   function reportExportCards(project) {
     return [
-      ["pdf", "Fillable Scientific PDF", "Six-page vector report with 65 native form fields, KPI, charts, editable measurements and researcher approval."],
-      ["docx", "Editable DOCX", "Structured document with content controls, full measurement data, findings, provenance and researcher review."],
-      ["xlsx", "Analysis Excel", "Ten-sheet workbook with highlighted inputs, calculated outputs, formulas, raw data, analyses and provenance."],
-      ["bundle", "Complete project ZIP", "Structured YAML/JSONL/CSV plus all three reports and knowledge references."]
-    ].map(([type, title, detail]) => `<div class="export-card"><span class="object-icon">${icon(type === "xlsx" ? "table" : type === "bundle" ? "database" : "file")}</span><div><strong>${title}</strong><p class="mb-0">${detail}</p></div><button class="btn btn-sm ${type === "bundle" ? "btn-primary" : ""}" data-export="${type}">${icon("download")} Generate</button></div>`).join("");
+      ["pdf", "PDF from current preview", "Opens the browser print dialog using this exact report composition. Choose Save as PDF to preserve the visible text, sections, data, charts and results."],
+      ["docx", "Editable DOCX", "Structured working document with full measurement data, findings, provenance and researcher review."],
+      ["xlsx", "Analysis Excel", "Ten-sheet workbook with highlighted inputs, formulas, raw data, analyses and provenance."]
+    ].map(([type, title, detail]) => `<div class="export-card"><span class="object-icon">${icon(type === "xlsx" ? "table" : "file")}</span><div><strong>${title}</strong><p class="mb-0">${detail}</p></div><button class="btn btn-sm ${type === "pdf" ? "btn-primary" : ""}" data-export="${type}">${icon(type === "pdf" ? "file" : "download")} ${type === "pdf" ? "Print / Save PDF" : "Generate"}</button></div>`).join("");
   }
 
   function exportStep(project, pipeline) {
-    return `<div class="stack"><div class="grid grid-4">${[["Project state", "Complete", "All pipeline steps"], ["Evidence", "94%", "2 metadata warnings"], ["Report suite", "Ready", "PDF · DOCX · Excel"], ["NOMAD mapping", "Preview", "Human validation required"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value kpi-value-medium">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="grid grid-2"><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Portable project package</h3><small>Human-readable, machine-readable and independently inspectable</small></div>${icon("download")}</div><div class="panel-body stack">${reportExportCards(project)}<div class="export-card"><span class="object-icon">${icon("external")}</span><div><strong>NOMAD-ready preview</strong><p class="mb-0">Project package plus mapping preview and validation notes. Upload remains disabled.</p></div><button class="btn btn-sm" data-export="nomad">${icon("download")} Generate</button></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Individual structured files</h3><small>Useful for inspection and future integrations</small></div></div><div class="panel-body cluster"><button class="btn" data-export="yaml">Project YAML</button><button class="btn" data-export="jsonl">Measurements JSONL</button><button class="btn" data-export="csv">Measurements CSV</button></div></div></div><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Export manifest</h3><small>Generated package structure</small></div><span class="badge badge-success">Ready</span></div><div class="panel-body"><pre>${esc(`${project.id}/
+    const reportStep = pipeline.steps.find((item) => item.view === "analysis")?.id || "analysis-report";
+    const reportHref = `project.html?project=${encodeURIComponent(project.id)}&step=${encodeURIComponent(reportStep)}&view=report`;
+    return `<div class="stack"><div class="grid grid-4">${[["Project state", "Complete", "All pipeline steps"], ["Evidence", "94%", "2 metadata warnings"], ["Report", "Prepared", "Managed only in Report Composer"], ["NOMAD mapping", "Preview", "Human validation required"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value kpi-value-medium">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="notice notice-accent"><div>${icon("file")}</div><div><strong>One report workflow</strong><p>Compose, review and download PDF, DOCX and Excel only from the Report Composer. This final step packages the reviewed outputs without introducing a second report editor.</p></div><a class="btn btn-primary" href="${reportHref}">Open Report Composer</a></div><div class="grid grid-2"><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Portable project package</h3><small>Project data, reviewed reports and evidence in one local ZIP</small></div>${icon("download")}</div><div class="panel-body stack"><div class="export-card"><span class="object-icon">${icon("database")}</span><div><strong>Complete project ZIP</strong><p class="mb-0">Structured YAML, JSONL and CSV plus DOCX, Excel workbook and linked knowledge context. PDF is printed directly from the Report Composer preview.</p></div><button class="btn btn-sm btn-primary" data-export="bundle">${icon("download")} Generate package</button></div><div class="export-card"><span class="object-icon">${icon("external")}</span><div><strong>NOMAD-ready preview</strong><p class="mb-0">Project package plus mapping preview and validation notes. Upload remains disabled.</p></div><button class="btn btn-sm" data-export="nomad">${icon("download")} Generate preview</button></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Individual structured files</h3><small>Useful for inspection and future integrations</small></div></div><div class="panel-body cluster"><button class="btn" data-export="yaml">Project YAML</button><button class="btn" data-export="jsonl">Measurements JSONL</button><button class="btn" data-export="csv">Measurements CSV</button></div></div></div><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Export manifest</h3><small>Generated package structure</small></div><span class="badge badge-success">Ready</span></div><div class="panel-body"><pre>${esc(`${project.id}/
 ├── project.yaml
 ├── data/
 │   ├── measurements.jsonl
 │   └── measurements.csv
 ├── report/
-│   ├── scientific-report.pdf
 │   ├── editable-report.docx
 │   └── analysis-workbook.xlsx
 ├── knowledge/
@@ -865,25 +929,8 @@
   }
 
   function bindReportBuilder(project) {
-    const save = (notify = false) => {
-      const state = reportState(project);
-      const updated = {
-        ...state,
-        title: $("#report-title")?.value || state.title,
-        subtitle: $("#report-subtitle")?.value || state.subtitle,
-        executiveSummary: $("#report-summary")?.value || state.executiveSummary,
-        methodology: $("#report-methodology")?.value || state.methodology,
-        conclusions: $("#report-conclusions")?.value || state.conclusions,
-        limitations: $("#report-limitations")?.value || state.limitations,
-        approval: $("#report-approval")?.value || state.approval,
-        sections: $$('[data-report-section]:checked').map((input) => input.dataset.reportSection)
-      };
-      S.saveReport(project.id, updated);
-      if ($("#report-live-preview")) $("#report-live-preview").innerHTML = reportPreview(project);
-      if (notify) toast("Report draft applied in memory. Exports on this page use this content.");
-    };
-    $$("#report-title, #report-subtitle, #report-summary, #report-methodology, #report-conclusions, #report-limitations, #report-approval, [data-report-section]").forEach((control) => control.addEventListener("change", () => save(false)));
-    $("#save-report-draft")?.addEventListener("click", () => save(true));
+    $$("#report-title, #report-subtitle, #report-summary, #report-methodology, #report-conclusions, #report-limitations, #report-approval, [data-report-section]").forEach((control) => control.addEventListener("change", () => syncReportDraft(project, false)));
+    $("#save-report-draft")?.addEventListener("click", () => syncReportDraft(project, true));
   }
 
   function bindIngest() {
@@ -981,7 +1028,11 @@
     const options = { palette: settings.palette, user: reportUser, findings: D.aiFindings, knowledge: D.knowledge, report };
     const base = project.id.toLowerCase();
     try {
-      if (type === "pdf") E.download(E.reportPdf(exportProject, D.demoDataset, options), `${base}-scientific-report.pdf`);
+      if (type === "pdf") {
+        printReportPreview(project);
+        toast("Browser print preview opened from the current Report Composer view. Choose Save as PDF.");
+        return;
+      }
       if (type === "docx") E.download(E.reportDocx(exportProject, D.demoDataset, options), `${base}-editable-report.docx`);
       if (type === "xlsx") E.download(E.reportXlsx(exportProject, D.demoDataset, options), `${base}-analysis-workbook.xlsx`);
       if (type === "yaml") E.download(new Blob([E.projectYaml(exportProject, pipeline)], {type: "text/yaml"}), `${base}-project.yaml`);
@@ -1038,7 +1089,7 @@
       <div id="admin-settings" class="settings-pane stack" role="tabpanel" hidden>
         <h2 class="sr-only">Admin settings</h2>
         <div class="notice notice-warning"><div>${icon("info")}</div><div><strong>Demonstration administration</strong><p>These controls model global policy only. There is no authentication, permission enforcement or shared server configuration.</p></div></div>
-        <div class="grid grid-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Branding & Interface Policy</h3>${icon("palette")}</div><div class="panel-body form-grid"><div class="field wide"><label for="admin-lab">Laboratory Name</label><input class="input" id="admin-lab" name="admin-lab" value="${esc(settings.laboratoryName)}"></div><div class="field"><label for="admin-theme">Forced Theme</label><select class="select" id="admin-theme"><option value="user">Allow User Choice</option><option value="dark">Force Dark</option><option value="light">Force Light Content</option></select></div><div class="field"><label for="admin-palette">Default Palette</label><select class="select" id="admin-palette">${Object.entries(E.palettes).map(([id, palette]) => `<option value="${id}">${esc(palette.name)}</option>`).join("")}</select></div><div class="field wide"><label for="admin-branding">Report Branding</label><input class="input" id="admin-branding" value="LabFlow · CHOSE Research Workspace"></div></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Feature & Content Policy</h3>${icon("settings")}</div><div class="panel-body stack"><label class="check-row"><input type="checkbox" checked><span>Enable CHOSE Pipeline</span></label><label class="check-row"><input type="checkbox" checked><span>Enable Quick Measurement Review</span></label><label class="check-row"><input type="checkbox" checked><span>Enable AI-Assisted Findings (Simulated)</span></label><label class="check-row"><input type="checkbox" checked><span>Require Evidence for AI Findings</span></label><label class="check-row"><input type="checkbox" checked><span>Show Knowledge Base Working Notes</span></label></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Report & Export Policy</h3>${icon("download")}</div><div class="panel-body stack"><label class="check-row"><input type="checkbox" checked><span>PDF (Fillable Scientific Form)</span></label><label class="check-row"><input type="checkbox" checked><span>DOCX (Editable Working Document)</span></label><label class="check-row"><input type="checkbox" checked><span>Excel (10-Sheet Workbook)</span></label><label class="check-row"><input type="checkbox" checked><span>Complete Project ZIP</span></label><label class="check-row"><input type="checkbox" checked><span>NOMAD-Ready Preview (No Upload)</span></label></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Shared Configuration Boundary</h3>${icon("lock")}</div><div class="panel-body"><div class="check-list"><div class="check-row">${icon("check")}<span>Global settings remain illustrative.</span></div><div class="check-row">${icon("check")}<span>Personal settings remain separate from policy.</span></div><div class="check-row">${icon("check")}<span>No control implies real authorization.</span></div></div></div></div></div>
+        <div class="grid grid-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Branding & Interface Policy</h3>${icon("palette")}</div><div class="panel-body form-grid"><div class="field wide"><label for="admin-lab">Laboratory Name</label><input class="input" id="admin-lab" name="admin-lab" value="${esc(settings.laboratoryName)}"></div><div class="field"><label for="admin-theme">Forced Theme</label><select class="select" id="admin-theme"><option value="user">Allow User Choice</option><option value="dark">Force Dark</option><option value="light">Force Light Content</option></select></div><div class="field"><label for="admin-palette">Default Palette</label><select class="select" id="admin-palette">${Object.entries(E.palettes).map(([id, palette]) => `<option value="${id}">${esc(palette.name)}</option>`).join("")}</select></div><div class="field wide"><label for="admin-branding">Report Branding</label><input class="input" id="admin-branding" value="LabFlow · CHOSE Research Workspace"></div></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Feature & Content Policy</h3>${icon("settings")}</div><div class="panel-body stack"><label class="check-row"><input type="checkbox" checked><span>Enable CHOSE Pipeline</span></label><label class="check-row"><input type="checkbox" checked><span>Enable Quick Measurement Review</span></label><label class="check-row"><input type="checkbox" checked><span>Enable AI-Assisted Findings (Simulated)</span></label><label class="check-row"><input type="checkbox" checked><span>Require Evidence for AI Findings</span></label><label class="check-row"><input type="checkbox" checked><span>Show Knowledge Base Working Notes</span></label></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Report & Export Policy</h3>${icon("download")}</div><div class="panel-body stack"><label class="check-row"><input type="checkbox" checked><span>PDF (Printed from the current Report preview)</span></label><label class="check-row"><input type="checkbox" checked><span>DOCX (Editable Working Document)</span></label><label class="check-row"><input type="checkbox" checked><span>Excel (10-Sheet Workbook)</span></label><label class="check-row"><input type="checkbox" checked><span>Complete Project ZIP</span></label><label class="check-row"><input type="checkbox" checked><span>NOMAD-Ready Preview (No Upload)</span></label></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Shared Configuration Boundary</h3>${icon("lock")}</div><div class="panel-body"><div class="check-list"><div class="check-row">${icon("check")}<span>Global settings remain illustrative.</span></div><div class="check-row">${icon("check")}<span>Personal settings remain separate from policy.</span></div><div class="check-row">${icon("check")}<span>No control implies real authorization.</span></div></div></div></div></div>
       </div>`;
     $("#theme").value = settings.theme;
     $("#density").value = settings.density;
@@ -1315,6 +1366,7 @@
   function renderUiKit() {
     const colors = ["--bg", "--surface", "--surface2", "--surface3", "--text", "--muted", "--line", "--accent", "--success", "--warning", "--danger", "--info"];
     $("#page-content").innerHTML = header("UI Kit", "The single source of truth for the compact application shell, components, scientific visuals, AI patterns and report identity.", `<a class="btn btn-primary" href="settings.html">Test themes</a>`) + `
+      <section class="section"><div class="section-heading"><div><h2>Brand identity</h2><p>The flask, flowing path and process nodes combine laboratory science, experimental continuity and traceable data.</p></div><span class="badge badge-success">Local SVG</span></div><div class="panel"><div class="panel-body"><div class="brand-identity-preview"><div class="brand-lockup-preview"><img src="assets/brand/logo-horizontal.svg" alt="LabFlow — Manage experiments. Accelerate discovery."></div><div class="brand-asset-grid"><div class="card"><img src="assets/brand/logo-mark.svg" alt="LabFlow app mark"><strong>Application mark</strong><small>Sidebar, compact navigation and app surfaces</small></div><div class="card brand-asset-light"><img src="assets/brand/logo-symbol.svg" alt="LabFlow standalone symbol"><strong>Standalone symbol</strong><small>Light surfaces and identity documentation</small></div><div class="card brand-asset-light"><img src="assets/brand/logo-monochrome.svg" alt="LabFlow monochrome wordmark"><strong>Monochrome</strong><small>Print-safe and single-colour use</small></div></div></div></div></div></section>
       <section class="section page-composition-showcase"><div class="section-heading"><div><h2>Page Shell and Composition</h2><p>The checked-in application shell stays stable while every renderer follows one ordered page grammar.</p></div><span class="badge badge-success">Production standard</span></div><div class="panel composition-demo"><div class="panel-body"><nav class="page-context" aria-label="Example breadcrumb"><a href="#">Workspace</a><span>/</span><span>Project</span></nav><div class="composition-header"><div><span class="page-eyebrow">Object type</span><h3>Page title <span class="badge badge-accent">Status</span></h3><p>Description and current context.</p></div><div class="cluster"><button class="btn">Secondary</button><button class="btn btn-primary">Primary action</button></div></div><div class="summary-strip"><div class="summary-item"><small>Summary</small><strong>Essential state</strong></div><div class="summary-item"><small>Progress</small><strong>78%</strong></div><div class="summary-item"><small>Owner</small><strong>Matteo Ginesi</strong></div><div class="summary-item"><small>Evidence</small><strong>Reviewed</strong></div></div><div class="tabs"><button class="tab active">Overview</button><button class="tab">Evidence</button><button class="tab">History</button></div><div class="toolbar"><div class="search"><span>${icon("search")}</span><input class="input" aria-label="Example search" placeholder="Search this view…"></div><button class="btn">Filter</button><span class="toolbar-spacer"></span><span class="badge">12 items</span></div><div class="composition-content"><div class="panel"><div class="panel-body">Primary content</div></div><aside class="panel"><div class="panel-body">Secondary rail</div></aside></div></div></div><div class="grid grid-5 mt-2">${[["Index page","Header · summary · toolbar · collection"],["Detail page","Entity header · status · summary · sections"],["Workflow page","Project header · stepper · current step · controls"],["Analysis / Workbench","Header · scope · work area · evidence rail"],["Reference page","Header · navigation · reading or configuration surface"]].map(([name,flow]) => `<article class="card archetype-card"><span class="badge">Archetype</span><h3>${name}</h3><p>${flow}</p></article>`).join("")}</div><div class="grid grid-3 mt-2"><div class="card width-sample width-standard"><strong>Standard</strong><small>Workspace, Cabinet, Settings</small></div><div class="card width-sample width-wide"><strong>Wide workbench</strong><small>Project, Knowledge, Tools, UI Kit</small></div><div class="card width-sample width-reading"><strong>Narrow reading</strong><small>Documentation</small></div></div><div class="grid grid-4 mt-2"><article class="card"><strong>Standard card</strong><p>Neutral border; ordinary content.</p></article><article class="card kpi"><span class="kpi-label">Metric card</span><strong class="kpi-value">21.28%</strong><span class="kpi-detail">Top accent only</span></article><article class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Status card</strong><p>Left accent communicates severity.</p></div></article><article class="card selected-card"><strong>Selected card</strong><p>Selection uses outline and surface, not severity color.</p></article></div></section>
       <section class="section"><div class="section-heading"><div><h2>Foundations</h2><p>Theme, palette, typography, spacing and semantic status tokens.</p></div></div><div class="grid grid-4">${colors.map((token) => `<div class="card"><div class="color-swatch token-swatch mb-1" style="background:var(${token})"></div><code>${token}</code></div>`).join("")}</div><div class="panel mt-2"><div class="panel-body grid grid-3"><div><h1>Page title</h1><p>34px maximum, restrained hierarchy.</p></div><div><h2>Section title</h2><p>Compact grouping for technical content.</p></div><div><h3>Panel title</h3><p>Dense information without oversized cards.</p></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Shared Block Registry</h2><p>Only blocks used by the current product belong here; extend these before creating page-specific variants.</p></div></div><div class="panel"><div class="table-wrap"><table class="table-dense"><thead><tr><th>Block</th><th>Allowed Variants</th><th>Current Product Use</th></tr></thead><tbody><tr><td><code>page-header</code></td><td>Title, supporting copy, contextual actions</td><td>Every main workspace</td></tr><tr><td><code>panel / card</code></td><td>Default, KPI, AI context, interactive link</td><td>Workspace, project steps, Cabinet, Knowledge, Tools</td></tr><tr><td><code>toolbar</code></td><td>Search, filters, view controls, count</td><td>Workspace portfolio and Lab Cabinet</td></tr><tr><td><code>notice</code></td><td>Information, success, warning, error</td><td>Import, validation, assistant and export</td></tr><tr><td><code>stepper</code></td><td>Available, active, completed</td><td>Project pipelines and Workspace focus</td></tr><tr><td><code>scientific-builder-layout</code></td><td>Solution or stack builder paired with Review</td><td>CHOSE Solutions and Stack steps</td></tr><tr><td><code>validation-issue</code></td><td>Error, warning, information, suggestion</td><td>Experiment Inspector and Ask LabFlow</td></tr><tr><td><code>report-preview</code></td><td>Active palette and approved content</td><td>Analysis Report, Export and UI Kit</td></tr></tbody></table></div></div></section>
@@ -1323,7 +1375,7 @@
       <section class="section"><div class="section-heading"><div><h2>Data display</h2><p>Panels, KPI cards, tables, timelines, progress and notices.</p></div></div><div class="grid grid-5">${[["Best PCE", "21.28%", "S08"], ["Samples", "12", "6 stacks"], ["Quality", "94%", "2 warnings"], ["Findings", "5", "2 in review"], ["Knowledge", "6", "linked records"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="grid grid-2 mt-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Scientific table</h3><small>Dense, scrollable and unit-aware</small></div><button class="btn btn-sm">Export</button></div><div class="panel-body"><div class="table-wrap">${datasetTable(D.demoDataset.slice(0, 4))}</div></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Feedback patterns</h3></div><div class="panel-body stack"><div class="notice"><div>${icon("info")}</div><div><strong>Information</strong><p>Explain system behaviour and provenance.</p></div></div><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Validated</strong><p>Data mapping and units are complete.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Review required</strong><p>Make gaps visible without hiding useful work.</p></div></div></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Scientific components</h2><p>Shared, compact representations used by pipeline builders and reviews.</p></div></div><div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack schematic</h3><small>Layer order, role, thickness and selectable detail</small></div></div><div class="panel-body">${stackReview(stackLayers)}</div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution composition</h3><small>Solvent, solutes, quantities and validation</small></div></div><div class="panel-body">${solutionReview()}</div></div></div><div class="grid grid-3 mt-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Pipeline stepper</h3></div><div class="panel-body"><div class="stepper"><div class="step-link done"><span class="step-index">${icon("check")}</span><span class="step-copy"><strong>Solutions</strong><span>Structured batches</span></span></div><div class="step-link active"><span class="step-index">2</span><span class="step-copy"><strong>Stack</strong><span>Device layers</span></span></div><div class="step-link"><span class="step-index">3</span><span class="step-copy"><strong>Data</strong><span>Measurements</span></span></div></div></div></div><div class="stack">${D.tools.slice(0, 2).map(toolCard).join("")}</div><article class="card object-card"><span class="object-icon">${icon("flask")}</span><div><span class="badge">solution</span><h3 class="mt-1">FA/MA reference</h3><p>Reusable Cabinet object with versioned metadata.</p></div></article></div></section>
       <section class="section"><div class="section-heading"><div><h2>Lab Assistant and Knowledge</h2><p>Production-used Ask, Inspect and Prepare patterns keep evidence, confidence and human control visible.</p></div></div><div class="grid grid-2"><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Contextual assistant panel</h3><small>Compact support inside a workflow</small></div>${icon("spark")}</div><div class="panel-body stack"><button class="btn btn-secondary">${icon("spark")} AI action button</button>${D.aiFindings.slice(0, 2).map(aiFinding).join("")}<div class="proposed-action-preview"><div><span class="badge badge-accent">Proposed action</span><h3>Create comparison</h3><p>3 experiments · PCE, Voc, Jsc and FF</p></div><div class="cluster"><button class="btn">Cancel</button><button class="btn btn-primary">Review</button></div></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Knowledge response and evidence</h3><small>Source card · confidence · limitation</small></div></div><div class="panel-body stack"><div class="ai-message"><strong>Lab Assistant response</strong><p>S08 has the highest measured PCE in the current cohort.</p><small>Structured query + deterministic aggregation</small></div><button class="evidence-item"><span class="evidence-type">Results</span><span><strong>batch_B03_forward.csv</strong><small>S08 · PCE · 21.28%</small></span><span class="confidence-badge confidence-high">High</span></button><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Limitation</strong><p>The result does not establish causality.</p></div></div></div></div></div><div class="grid grid-2 mt-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Validation and mapping patterns</h3><small>Error · warning · suggestion · confidence</small></div></div><div class="panel-body stack">${D.validationIssues.slice(0,3).map((item) => `<article class="validation-issue issue-${item.severity}"><div>${icon(item.severity === "suggestion" ? "spark" : "warning")}</div><div><strong>${esc(item.title)}</strong><p>${esc(item.detail)}</p></div></article>`).join("")}<div class="table-wrap"><table class="table-dense"><thead><tr><th>Column</th><th>Destination</th><th>Confidence</th><th>Preview</th></tr></thead><tbody><tr><td>PCE</td><td>measurements.jv.efficiency</td><td><span class="confidence-badge confidence-high">99%</span></td><td>21.28%</td></tr></tbody></table></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Saved view and comparison summary</h3><small>Reusable, session-only patterns</small></div></div><div class="panel-body stack"><div class="saved-view-item"><button><strong>High-performing devices</strong><small>PCE &gt; 20%</small></button><span class="badge">4</span><button class="btn btn-ghost icon-btn">✎</button><button class="btn btn-ghost icon-btn">×</button></div><div class="comparison-summary"><div><span>Included</span><strong>3 experiments</strong></div><div><span>Metrics</span><strong>4</strong></div><div><span>Missing</span><strong>2 links</strong></div><div><span>Status</span><strong>Review</strong></div></div></div></div></div><div class="grid grid-3 mt-2"><div class="empty"><strong>Ask LabFlow</strong><p>Choose a scope or start with a suggested question.</p></div><div class="panel"><div class="panel-body"><div class="skeleton" aria-label="Assistant response loading"></div><small>AI loading state</small></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Assistant unavailable</strong><p>Deterministic tools remain available; no data is lost.</p></div></div></div></section>
-      <section class="section"><div class="section-heading"><div><h2>Report system</h2><p>The selected palette becomes a consistent identity across PDF, DOCX, Excel and in-app preview.</p></div></div><div class="grid grid-2"><div class="stack">${reportExportCards(D.projects[0])}</div><div class="report-preview">${reportPreview(D.projects[0])}</div></div></section>
+      <section class="section"><div class="section-heading"><div><h2>Report system</h2><p>The UI Kit documents the report identity; authoring and downloads remain available only in the Report Composer.</p></div><a class="btn btn-primary" href="project.html?project=${encodeURIComponent(D.projects[0].id)}&step=analysis-report&view=report">Open Report Composer</a></div><div class="report-preview">${reportPreview(D.projects[0])}</div></section>
       <section class="section"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Composition rule</h3><small>Pipeline pages combine approved components; local CSS is avoided</small></div></div><div class="panel-body"><pre>${esc(`Step page = workflow banner
           + shared cards / panels / forms / tables
           + optional scientific visual
@@ -1372,9 +1424,9 @@
     applySettings();
     const page = document.body.dataset.page;
     hydrateShell(page);
-    bindShell();
     const renderers = {workspace: renderWorkspace, project: renderProject, cabinet: renderCabinet, knowledge: () => window.LabFlowKnowledgePages.renderBase({root: $("#page-content"), header, icon, esc, badgeStatus}), tools: () => window.LabFlowToolsPage.render({root: $("#page-content"), header, icon, esc, toast, getSettings}), settings: renderSettings, documentation: renderDocumentation, "ui-kit": renderUiKit};
     (renderers[page] || renderWorkspace)();
+    bindShell();
     enhanceAccessibility();
   }
 

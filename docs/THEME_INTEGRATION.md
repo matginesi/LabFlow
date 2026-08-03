@@ -6,7 +6,9 @@ LabFlow uses semantic tokens so components describe purpose instead of choosing 
 
 Typography is local-only: the UI uses the operating system’s system font stack and a local monospace stack. No font file, stylesheet or icon is requested from a CDN. Icons are shared inline SVG paths with consistent stroke, cap and join treatment.
 
-![LabFlow local brand mark](../assets/brand/logo-mark.svg)
+![LabFlow horizontal brand identity](../assets/brand/logo-horizontal.svg)
+
+The checked-in identity uses the LF workflow monogram: the navy path establishes structure, the muted green pipette/flow element signals laboratory work, and the final node represents a traceable result. `logo-mark.svg` is used in the application shell, `favicon.svg` is the compact browser mark, and `logo-horizontal.svg` is the primary wordmark. All variants are local SVG assets and remain independent from the selectable interface palettes.
 
 ## First-paint order
 

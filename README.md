@@ -16,7 +16,7 @@ LabFlow joins work that is usually scattered across notes, spreadsheets and isol
 - deterministic analysis, validation and comparison views;
 - Ask LabFlow for evidence-led questions, inspection and action previews;
 - local TXT, Markdown, LaTeX, YAML, JSON, spreadsheet, DOCX and diagram tools;
-- native six-page PDF with 65 fillable form fields, structured editable DOCX and ten-sheet formula-driven XLSX output plus transparent ZIP packages;
+- PDF output printed directly from the current Report Composer preview, plus structured editable DOCX, a ten-sheet formula-driven XLSX workbook and transparent ZIP packages;
 - a non-transmitting NOMAD readiness preview.
 
 ```mermaid
@@ -60,6 +60,8 @@ Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through res
 ## Configuration and checked-in sources
 
 `settings.yaml` is the canonical configuration source. `pipelines/` contains canonical workflow definitions. Documentation and both kinds of YAML have checked-in browser snapshots so the application remains request-free when opened from disk. When a canonical source changes, refresh its corresponding snapshot and complete the validation checklist.
+
+For static hosting, the root pages load one checked-in CSS bundle and one small shared runtime bundle instead of requesting every source file separately. The readable files under `ui/` and `assets/js/` remain canonical; run `python tools/build_frontend_bundles.py` after changing shared CSS, settings, data, pipelines, exporters or volatile state. No build step is required to open or deploy the already checked-in POC.
 
 `examples/` is intentionally retained. It contains a standalone theme integration page and inspectable sample export packages used to verify that generated artifacts remain understandable outside the application.
 

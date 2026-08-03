@@ -29,7 +29,6 @@ const options = {
 const output = "/tmp/labflow-export-test";
 mkdirSync(output, { recursive: true });
 const files = {
-  "report.pdf": LabFlowExport.reportPdf(project, LabFlowData.demoDataset, options),
   "report.docx": LabFlowExport.reportDocx(project, LabFlowData.demoDataset, options),
   "report.xlsx": LabFlowExport.reportXlsx(project, LabFlowData.demoDataset, options),
   "project.zip": LabFlowExport.bundle(project, LabFlowPipelines.chose, LabFlowData.demoDataset, false, options),
@@ -53,15 +52,6 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /word\/document\.xml/);
     assert.match(packageText, /Working note/);
   }
-  if (name === "report.pdf") {
-    assert.match(packageText, /\/Count 6/);
-    assert.match(packageText, /\/AcroForm/);
-    assert.equal((packageText.match(/\/Subtype \/Widget/g) || []).length, 65);
-    assert.match(packageText, /measurements\.8\.pce/);
-    assert.match(packageText, /report\.conclusions/);
-    assert.match(packageText, /Solution composition/);
-    assert.match(packageText, /Device stack/);
-  }
   if (name === "report.docx") {
     assert.match(packageText, /TOC \\o/);
     assert.match(packageText, /Solution Review/);
@@ -81,7 +71,7 @@ for (const [name, blob] of Object.entries(files)) {
     assert.match(packageText, /FFE8F7EE/);
   }
   if (name === "project.zip") {
-    for (const entry of ["scientific-report.pdf", "editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
+    for (const entry of ["editable-report.docx", "analysis-workbook.xlsx", "linked-context.yaml"]) assert.match(packageText, new RegExp(entry.replace(".", "\\.")));
   }
 }
 console.log(output);

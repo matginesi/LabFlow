@@ -4,7 +4,7 @@ Use this checklist after changes to behavior, data contracts, pipelines, documen
 
 ## Automated checks
 
-Run the repository’s static validator and the local export package test. The static validator checks entry pages, required local assets, canonical-source parity, light defaults, privacy constraints and internal links. The export test inspects generated PDF, DOCX, XLSX and ZIP structures.
+Run the repository’s static validator and the local export package test. The static validator checks entry pages, required local assets, canonical-source parity, light defaults, privacy constraints and internal links. The export test inspects generated DOCX, XLSX and ZIP structures; PDF parity is verified in the browser because it is printed from the visible Report Composer DOM.
 
 ```bash
 node tools/test_exports.mjs
@@ -22,7 +22,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 - Trace every candidate file through HTML, JavaScript, CSS, documentation, dynamic references and static deployment needs before removal.
 - Confirm root entry pages remain thin and load only checked-in shared modules.
-- Confirm every root entry page contains the same non-empty static application shell, uses direct CSS links in the canonical order and defers page scripts. Run the checked-in shell maintenance helper and inspect the diff when shell markup changes.
+- Confirm every root entry page contains the same non-empty static application shell, loads the checked-in CSS/runtime bundles and defers only the modules needed by that page. Run the frontend-bundle and shell maintenance helpers and inspect the diff when shared sources or shell markup change.
 - Check that project, Cabinet, Knowledge, experiment and measurement identifiers are unique and that every project step exists in its declared pipeline.
 - Verify new record lookups use the small demo-data boundary where physical mock location would otherwise leak into interaction code.
 - Search for obsolete parallel names, unreferenced selectors, duplicate helpers, dead listeners, empty primary actions and internal links with no target.
@@ -92,8 +92,8 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 ## Export inspection
 
-- Generate PDF, DOCX, XLSX and ZIP from the project.
-- Render and visually inspect all six PDF pages. Confirm at least 65 AcroForm fields, edit one narrative field and one measurement field, save, reopen and verify both values.
+- Modify the Report Composer title, narrative fields and included sections, then choose Print / Save PDF. Confirm the browser print preview reproduces the visible report composition, data table, charts, findings and current approval state.
+- Generate DOCX, XLSX and ZIP from the project.
 - Open the DOCX, update its table of contents, edit each researcher content-control type and inspect headings and tables.
 - Open and recalculate all ten XLSX sheets in an Office-compatible application. Confirm pale amber input cells, pale green formula cells, frozen headers, filters and updated Dashboard values after a Raw Data edit.
 - Inspect package manifests, identifiers, provenance, statement classes and NOMAD readiness.

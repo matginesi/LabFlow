@@ -59,6 +59,10 @@ The renderer creates inline SVG, follows the active semantic theme and can downl
 
 A generated action includes a label, affected records, evidence summary, known limitations and explicit review controls. Confirmation changes only page memory. Assistant actions cannot modify raw files, authorize laboratory execution, exclude samples silently, approve conclusions or transmit a NOMAD package.
 
+## Single report workflow
+
+The **Report Composer** inside the Analysis & Report step is the only place where PDF, DOCX and XLSX reports are authored, reviewed and downloaded. The final Export step packages the reviewed outputs with structured project data and NOMAD previews; it does not expose a second report editor or a duplicate set of individual report actions.
+
 ## Report contract
 
 The report preview and exporters share the same structured project representation. A report package includes:
@@ -72,16 +76,16 @@ The report preview and exporters share the same structured project representatio
 7. validation issues, limitations and approvals;
 8. export manifest and identifiers.
 
-PDF is a fixed-layout reading artifact with native AcroForm fields. Its six pages include editable identity, objectives, methodology, evidence boundary, approval, conclusions, limitations and every displayed measurement value. Initial values have appearance streams, so the report remains readable in viewers that do not activate forms. Changing a PDF field changes only that exported copy: charts and deterministic summaries remain export-time snapshots and must be recalculated in XLSX after measurement edits.
+PDF is produced through **Print / Save PDF** from the current Report Composer preview. LabFlow clones the visible report DOM after applying the latest in-memory edits, then prints that same title, selected sections, text, data tables, charts, findings, conclusions, limitations, provenance and approval. There is no second hard-coded PDF layout and no separate PDF form model.
 
 DOCX is an editable native package. Researcher-owned narrative sections use labelled content controls, while the report includes cover metadata, KPI, solution and stack reviews, experiment coverage, full measurement columns, findings and provenance. Its table of contents and document fields are marked for refresh when opened.
 
-XLSX contains ten named sheets: Dashboard, Project, Solutions, Stack, Raw Data, Processed Data, Analysis, AI Findings, Provenance and Export Manifest. Pale amber cells identify editable inputs, pale green cells identify formulas, headers remain palette-aware and workbook calculation is forced on open. ZIP bundles keep machine-readable tables beside human-readable reports.
+XLSX contains ten named sheets: Dashboard, Project, Solutions, Stack, Raw Data, Processed Data, Analysis, AI Findings, Provenance and Export Manifest. Pale amber cells identify editable inputs, pale green cells identify formulas, headers remain palette-aware and workbook calculation is forced on open. ZIP bundles keep machine-readable tables beside editable DOCX, XLSX and linked knowledge; PDF is printed separately from the Report Composer preview.
 
 ### Editing contract
 
-- PDF form field names are stable and hierarchical, for example `report.conclusions` and `measurements.1.pce`.
-- PDF form edits are intentionally not written back to LabFlow and do not update embedded charts.
+- Edit the report inside the Report Composer; Print / Save PDF captures the exact current preview.
+- PDF is a final reading artifact and is not a second editing surface.
 - DOCX content controls identify researcher-authored sections without locking the rest of the document.
 - XLSX formulas derive dashboard and processed values from the `Raw Data` sheet; edit the highlighted cells, then recalculate before review.
 - Every format retains the distinction between raw, calculated, researcher-authored and simulated AI content.

@@ -28,4 +28,11 @@ These rules apply to the whole repository.
 - Update the relevant canonical document whenever behavior, contracts or validation change. Remove obsolete documentation rather than leaving competing guidance.
 - A change is not complete until the superseded implementation has been removed and the affected documentation has been updated.
 - Rebuild checked-in bundles after editing pipeline YAML or Markdown docs, then run the commands in `docs/VALIDATION_CHECKLIST.md`.
-- Verify native PDF, DOCX and ten-sheet XLSX packages structurally and visually after exporter changes.
+- Verify that Print / Save PDF reproduces the current Report Composer preview, and verify DOCX and the ten-sheet XLSX package structurally and visually after exporter changes.
+## Static delivery performance
+
+- Root pages load `ui/labflow.bundle.css` and `assets/js/runtime.js` to avoid a large request waterfall on GitHub Pages.
+- The readable source files remain canonical. After changing shared CSS, settings, data, pipelines, exporters or volatile state, run `python tools/build_frontend_bundles.py`.
+- Keep full documentation, workbook, diagram, Knowledge and Tools modules page-specific; do not add them back to every entry page.
+- Do not add a framework, service worker, remote CDN or runtime build dependency as a performance shortcut.
+

@@ -10,7 +10,6 @@ The generated ZIP contains:
 
 - project metadata with Matteo Ginesi as illustrative owner;
 - measurement data in JSONL and CSV;
-- a six-page palette-aware PDF report with native fillable identity, narrative, approval and measurement fields;
 - a native editable DOCX report with structured content controls, headings, complete result tables and provenance;
 - an XLSX analysis workbook with ten named sheets, highlighted inputs and recalculating formulas;
 - linked knowledge and evidence references;
@@ -28,4 +27,4 @@ The example should verify root theme, palette and density controls, local typogr
 
 ## Review expectations
 
-Open the PDF visually and edit at least one narrative and one measurement field. Confirm that the chart is explicitly an export-time snapshot. Update the DOCX table of contents and edit a highlighted content control. Recalculate all workbook sheets, check the input/formula legend and inspect the ZIP manifest. Confirm stable identifiers, provenance, statement classes, author name and the absence of credentials or external resources.
+In the application, modify the Report Composer and verify that Print / Save PDF matches the visible preview. Update the DOCX table of contents and edit a highlighted content control. Recalculate all workbook sheets, check the input/formula legend and inspect the ZIP manifest. Confirm stable identifiers, provenance, statement classes, author name and the absence of credentials or external resources.

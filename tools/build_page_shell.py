@@ -60,41 +60,21 @@ def nav_links(page: str, items: list[tuple[str, str, str, str]]) -> str:
 
 
 def scripts(page: str) -> str:
-    files = [
-        "assets/js/settings-bundle.js",
-        "assets/js/data.js",
-        "assets/js/pipeline-bundle.js",
-        "assets/js/exporters.js",
-    ]
-    if page in {"project", "tools", "ui-kit"}:
+    files = ["assets/js/runtime.js"]
+    if page == "documentation":
+        files += ["assets/js/docs-bundle.js", "assets/js/diagrams.js"]
+    elif page == "knowledge":
+        files += ["assets/js/diagrams.js", "assets/js/knowledge-pages.js"]
+    elif page == "tools":
+        files += ["assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js"]
+    elif page == "project":
         files.append("assets/js/workbook.js")
-    files += ["assets/js/state.js", "assets/js/docs-bundle.js"]
-    if page in {"knowledge", "tools", "documentation", "ui-kit"}:
-        files.append("assets/js/diagrams.js")
-    if page == "knowledge":
-        files.append("assets/js/knowledge-pages.js")
-    if page == "tools":
-        files.append("assets/js/tools-page.js")
     files.append("assets/js/app.js")
     return "\n  ".join(f'<script defer src="{path}"></script>' for path in files)
 
 
 def render(page: str, title: str, description: str) -> str:
-    styles = [
-        "ui/foundations/tokens.css",
-        "ui/themes/theme-base.css",
-        "ui/themes/theme-dark.css",
-        "ui/themes/theme-light.css",
-        "ui/themes/palettes.css",
-        "ui/foundations/base.css",
-        "ui/layout/shell.css",
-        "ui/components/core.css",
-        "ui/components/scientific.css",
-        "ui/components/knowledge-tools.css",
-        "ui/foundations/utilities.css",
-        "ui/layout/responsive.css",
-    ]
-    style_links = "\n  ".join(f'<link rel="stylesheet" href="{path}">' for path in styles)
+    style_links = '<link rel="stylesheet" href="ui/labflow.bundle.css">'
     return f'''<!doctype html>
 <html lang="en" data-theme="light" data-palette="blue" data-density="compact">
 <head>
@@ -104,6 +84,7 @@ def render(page: str, title: str, description: str) -> str:
   <meta name="theme-color" content="#0c1119">
   <title>{title} · LabFlow</title>
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="assets/brand/logo-horizontal-shell.svg" as="image" type="image/svg+xml">
   <script src="ui/theme-controller.js"></script>
   {style_links}
 </head>
@@ -111,9 +92,8 @@ def render(page: str, title: str, description: str) -> str:
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="app-shell" id="app">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="sidebar-brand-row"><a class="brand" href="index.html">
-        <img class="brand-mark" src="assets/brand/logo-mark.svg" width="32" height="32" alt="">
-        <span class="brand-copy"><strong>Lab<span>Flow</span></strong><span>Research workspace</span></span>
+      <div class="sidebar-brand-row"><a class="brand" href="index.html" aria-label="LabFlow — Manage experiments. Accelerate discovery.">
+        <img class="brand-lockup" src="assets/brand/logo-horizontal-shell.svg" width="188" height="41" alt="LabFlow">
       </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation">{icon("close")}</button></div>
       <div class="sidebar-scroll">
         <div class="nav-label">Research</div>
@@ -126,8 +106,8 @@ def render(page: str, title: str, description: str) -> str:
     <header class="topbar">
       <div class="topbar-left">
         <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation">{icon("menu")}</button>
-        <a class="mobile-brand" href="index.html" aria-label="LabFlow Workspace"><img src="assets/brand/logo-mark.svg" width="22" height="22" alt=""><span>{title}</span></a>
-        <span class="topbar-page-title" id="topbar-page-title">{title}</span>
+        <a class="mobile-brand" href="index.html" aria-label="LabFlow"><img src="assets/brand/logo-mark.svg" width="25" height="25" alt=""><span class="mobile-brand-copy"><strong>LabFlow</strong><small class="mobile-brand-title">{title}</small></span></a>
+        <div class="topbar-context"><span class="topbar-context-brand">LABFLOW</span><span class="topbar-page-title" id="topbar-page-title">{title}</span></div>
       </div>
       <div class="global-search" id="global-search">
         {icon("search")}
@@ -135,7 +115,7 @@ def render(page: str, title: str, description: str) -> str:
         <kbd>⌘ K</kbd><div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
       </div>
       <div class="topbar-right">
-        <span class="badge badge-accent top-status">Local POC · No cloud sync</span>
+        <span class="badge top-status" title="Static local proof of concept">LOCAL POC</span>
         <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search">{icon("search")}</button>
         <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant">{icon("spark")}</button>
         <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme">{icon("palette")}</button>

@@ -10,22 +10,17 @@ errors = []
 html_pages = sorted(ROOT.glob("*.html"))
 required_pages = {"index.html", "project.html", "cabinet.html", "knowledge.html", "tools.html", "settings.html", "documentation.html", "ui-kit.html"}
 required_assets = {
-    "ui/ui.css", "ui/theme.css", "ui/theme-controller.js",
+    "ui/ui.css", "ui/theme.css", "ui/theme-controller.js", "ui/labflow.bundle.css",
     "ui/foundations/tokens.css", "ui/themes/theme-base.css",
     "ui/themes/theme-dark.css", "ui/themes/theme-light.css", "ui/themes/palettes.css",
-    "assets/js/data.js", "assets/js/pipeline-bundle.js", "assets/js/exporters.js",
+    "assets/js/data.js", "assets/js/pipeline-bundle.js", "assets/js/exporters.js", "assets/js/runtime.js",
     "assets/js/workbook.js", "assets/js/state.js", "assets/js/docs-bundle.js", "assets/js/app.js",
     "assets/js/settings-bundle.js", "settings.yaml", "tools/build_settings_bundle.py",
     "assets/js/knowledge-pages.js", "assets/js/tools-page.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css",
-    "examples/theme-integration.html", "tools/build_page_shell.py",
+    "examples/theme-integration.html", "tools/build_page_shell.py", "tools/build_frontend_bundles.py",
 }
 
-entry_styles = [
-    "ui/foundations/tokens.css", "ui/themes/theme-base.css", "ui/themes/theme-dark.css",
-    "ui/themes/theme-light.css", "ui/themes/palettes.css", "ui/foundations/base.css",
-    "ui/layout/shell.css", "ui/components/core.css", "ui/components/scientific.css",
-    "ui/components/knowledge-tools.css", "ui/foundations/utilities.css", "ui/layout/responsive.css",
-]
+entry_styles = ["ui/labflow.bundle.css"]
 canonical_docs = {
     "PROJECT.md", "UI_UX_GUIDELINES.md", "PIPELINES_AND_DATA.md",
     "AI_REPORTS_AND_EXPORT.md", "THEME_INTEGRATION.md", "VALIDATION_CHECKLIST.md",
@@ -74,7 +69,7 @@ for page in html_pages:
         target = ROOT / ref.split("?")[0].split("#")[0]
         if not target.exists():
             errors.append(f"{page.name}: broken local reference {ref}")
-    for asset in ("ui/theme-controller.js", "assets/js/state.js", "assets/js/app.js"):
+    for asset in ("ui/theme-controller.js", "assets/js/runtime.js", "assets/js/app.js"):
         if asset not in text:
             errors.append(f"{page.name}: required shared asset missing: {asset}")
 
@@ -93,7 +88,7 @@ for forbidden in ("manifest.json", "manifest.webmanifest", "service-worker.js", 
     if any(path.name == forbidden for path in ROOT.rglob("*")):
         errors.append(f"Forbidden PWA artifact found: {forbidden}")
 
-runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
+runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
 privacy_patterns = {
     "persistent browser storage": r"\b(?:localStorage|sessionStorage|indexedDB|cookieStore)\b|document\.cookie",
     "service worker registration": r"serviceWorker\s*\.",

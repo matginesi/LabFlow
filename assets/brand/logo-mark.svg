@@ -1,7 +1,21 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="LabFlow">
-  <defs><linearGradient id="lf-bg" x1="7" y1="5" x2="57" y2="59" gradientUnits="userSpaceOnUse"><stop stop-color="#4C7DFF"/><stop offset="1" stop-color="#1746C4"/></linearGradient><linearGradient id="lf-flow" x1="15" y1="15" x2="50" y2="48" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF"/><stop offset="1" stop-color="#D9E5FF"/></linearGradient></defs>
-  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#lf-bg)"/>
-  <path d="M18 15v31.5h27" fill="none" stroke="url(#lf-flow)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M31 17h16M31 17v17h13" fill="none" stroke="#FFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="18" cy="15" r="3" fill="#75E4FF"/><circle cx="45" cy="46.5" r="3" fill="#75E4FF"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-label="LabFlow">
+  <defs>
+    <linearGradient id="lf-mark-bg" x1="8" y1="5" x2="72" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#15345E"/>
+      <stop offset="1" stop-color="#07182E"/>
+    </linearGradient>
+    <linearGradient id="lf-mark-flow" x1="19" y1="63" x2="54" y2="28" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1394A2"/>
+      <stop offset="1" stop-color="#09B9A6"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="76" height="76" rx="18" fill="url(#lf-mark-bg)"/>
+  <rect x="2.5" y="2.5" width="75" height="75" rx="17.5" fill="none" stroke="#FFFFFF" stroke-opacity=".12"/>
+  <path d="M27 10h26M31 10v17L14 56c-4 7 1 13 9 13h12M49 10v17l17 29c4 7-1 13-9 13H45" fill="none" stroke="#FFFFFF" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 63c5-9 26-8 31-19 3-9-5-16-13-11-5 3-7 8-12 11" fill="none" stroke="url(#lf-mark-flow)" stroke-width="8.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M40 20v11" stroke="#DCEBFF" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="40" cy="20" r="4.6" fill="#DCEBFF"/>
+  <circle cx="40" cy="32" r="4.6" fill="#00C4B2"/>
+  <path d="M40 58v7" stroke="#9BE28A" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="40" cy="67" r="4.7" fill="#9BE28A"/>
 </svg>
