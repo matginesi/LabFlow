@@ -5,7 +5,7 @@
 ;
 
 /* --- assets/js/settings-bundle.js --- */
-window.LabFlowConfig={"application":{"id":"labflow-static-poc","name":"LabFlow","description":"Static research workspace for structured laboratory projects","deployment":"github-pages","runtime":"vanilla-html-css-javascript"},"appearance":{"default_theme":"light","default_palette":"blue","default_density":"compact","shell_theme":"dark"},"demo_user":{"name":"Matteo Ginesi","role":"Perovskite Researcher","email":"matteo.ginesi@lab.example","organisation":"University of Rome Tor Vergata","laboratory":"CHOSE — Centre for Hybrid and Organic Solar Energy","workspace":"Advanced Photovoltaics"},"demo_administration":{"allow_user_theme":true,"require_evidence_for_ai":true,"show_working_knowledge":true},"pipelines":{"enabled":["chose","quick"],"default":"chose"},"features":{"global_search":true,"knowledge_base":true,"generic_tools":true,"ai_assistance":true,"ai_models_foundation":true,"nomad_preview":true},"reports":{"author":"Matteo Ginesi","laboratory":"CHOSE — Centre for Hybrid and Organic Solar Energy","organisation":"University of Rome Tor Vergata","default_export":"bundle","approval_required":true},"exports":{"enabled":["pdf","docx","xlsx","latex","bundle"],"workbook_sheets":["Dashboard","Project","Solutions","Stack","Raw Data","Processed Data","Analysis","AI Findings","Provenance","Export Manifest"]},"nomad":{"mode":"demonstration","upload_enabled":false,"credentials_allowed":false},"ai":{"mode":"deterministic-local-demonstration","enabled":true,"human_approval_required":true,"external_provider":false,"capabilities":{"knowledge_and_rag":"simulated","dataset_snapshots":"demonstrated","model_registry":"demonstrated","training":"disabled","prediction":"demonstrated","deep_learning":"future"}},"knowledge":{"default_scope":"approved","include_provenance":true,"automatic_writes":false},"feature_flags":{"authentication":false,"browser_persistence":false,"external_requests":false,"tracking":false,"pwa":false}};
+window.LabFlowConfig={"application":{"id":"labflow-static-poc","name":"LabFlow","description":"Static research workspace for structured laboratory projects","deployment":"github-pages","runtime":"vanilla-html-css-javascript","author":"Matteo Ginesi","copyright":"© 2026 Matteo Ginesi"},"appearance":{"default_theme":"light","default_palette":"blue","default_density":"compact","shell_theme":"dark"},"demo_user":{"name":"Matteo Ginesi","role":"Perovskite Researcher","email":"matteo.ginesi@lab.example","organisation":"University of Rome Tor Vergata","laboratory":"CHOSE — Centre for Hybrid and Organic Solar Energy","workspace":"Advanced Photovoltaics"},"demo_administration":{"allow_user_theme":true,"require_evidence_for_ai":true,"show_working_knowledge":true},"pipelines":{"enabled":["chose","quick"],"default":"chose"},"features":{"global_search":true,"knowledge_base":true,"generic_tools":true,"ai_assistance":true,"ai_models_foundation":true,"user_management":"demonstrated","nomad_preview":true},"reports":{"author":"Matteo Ginesi","laboratory":"CHOSE — Centre for Hybrid and Organic Solar Energy","organisation":"University of Rome Tor Vergata","default_export":"bundle","approval_required":true},"exports":{"enabled":["pdf","docx","xlsx","latex","bundle"],"workbook_sheets":["Dashboard","Project","Solutions","Stack","Raw Data","Processed Data","Analysis","AI Findings","Provenance","Export Manifest"]},"nomad":{"mode":"demonstration","upload_enabled":false,"credentials_allowed":false},"ai":{"mode":"deterministic-local-demonstration","enabled":true,"human_approval_required":true,"external_provider":false,"capabilities":{"knowledge_and_rag":"simulated","dataset_snapshots":"demonstrated","model_registry":"demonstrated","training":"disabled","prediction":"demonstrated","deep_learning":"future"}},"knowledge":{"default_scope":"approved","include_provenance":true,"automatic_writes":false},"feature_flags":{"authentication":false,"browser_persistence":false,"external_requests":false,"tracking":false,"pwa":false}};
 ;
 
 /* --- assets/js/data.js --- */
@@ -287,12 +287,24 @@ window.LabFlowPipelines = {
   const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   let settings = {};
   let projects;
+  let currentUser;
+  let workspaceUsers;
   const reports = new Map();
   let assistantMessages = [];
 
   window.LabFlowState = {
     getSettings: (fallback = {}) => ({ ...clone(fallback), ...clone(settings) }),
     saveSettings(value) { settings = clone(value); Log.debug("settings.saved", { keys: Object.keys(value || {}) }); return true; },
+    getUser(fallback = {}) {
+      if (currentUser === undefined) currentUser = clone(fallback);
+      return clone(currentUser);
+    },
+    saveUser(value) { currentUser = clone(value); Log.debug("user.saved", { id: value?.id, role: value?.role }); return true; },
+    getUsers(fallback = []) {
+      if (workspaceUsers === undefined) workspaceUsers = clone(fallback);
+      return clone(workspaceUsers);
+    },
+    saveUsers(value) { workspaceUsers = clone(value); Log.debug("users.saved", { count: value?.length || 0 }); return true; },
     getProjects(fallback) {
       if (projects === undefined) projects = clone(fallback);
       return clone(projects);
@@ -307,6 +319,8 @@ window.LabFlowPipelines = {
     reset() {
       settings = {};
       projects = undefined;
+      currentUser = undefined;
+      workspaceUsers = undefined;
       reports.clear();
       assistantMessages = [];
       Log.info("state.reset");

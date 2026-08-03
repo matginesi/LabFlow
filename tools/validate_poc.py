@@ -79,6 +79,21 @@ for asset in required_assets:
     if not (ROOT / asset).exists():
         errors.append(f"Missing shared asset: {asset}")
 
+page_script_contracts = {
+    "project.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/app.js"],
+    "knowledge.html": ["assets/js/runtime.js", "assets/js/diagrams.js", "assets/js/knowledge-pages.js", "assets/js/app.js"],
+    "tools.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js", "assets/js/app.js"],
+    "documentation.html": ["assets/js/runtime.js", "assets/js/docs-bundle.js", "assets/js/diagrams.js", "assets/js/app.js"],
+    "ui-kit.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/app.js"],
+}
+for page_name, scripts in page_script_contracts.items():
+    source = (ROOT / page_name).read_text(encoding="utf-8")
+    positions = [source.find(f'src="{script}"') for script in scripts]
+    if any(position < 0 for position in positions):
+        errors.append(f"{page_name}: page-specific script contract is incomplete: {scripts}")
+    elif positions != sorted(positions):
+        errors.append(f"{page_name}: page-specific scripts are not in dependency order")
+
 ui_kit_source = (ROOT / "ui-kit.html").read_text(encoding="utf-8")
 if ui_kit_source.find('assets/js/workbook.js') < 0 or ui_kit_source.find('assets/js/workbook.js') > ui_kit_source.find('assets/js/app.js'):
     errors.append("ui-kit.html: workbook.js must load before app.js for the report preview")

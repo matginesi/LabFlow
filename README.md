@@ -115,6 +115,8 @@ The UI Kit is the visual source of truth. A block belongs there only when the ap
 
 LabFlow is a non-production proof of concept. Its records, identities, scientific values and integrations are illustrative. Product concept, direction and authorship: **Matteo Ginesi**.
 
+Copyright © 2026 Matteo Ginesi.
+
 ### Model evaluation and scientific authoring
 
 The AI & Models area includes checked-in demonstrations of training runs, learning curves, baseline comparisons, residual diagnostics, classification metrics and model artifacts. They define the future ML/DL contract without claiming that the static POC performs real training.

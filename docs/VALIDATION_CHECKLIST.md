@@ -135,3 +135,27 @@ Record an accepted exception next to the relevant check. Do not silently weaken 
 - Compile the source locally with `latexmk -pdf scientific-report.tex` when TeX Live is available and verify title page, tables, chart, running header, footer, page numbers and provenance.
 - Reorder solution components and stack layers by keyboard-accessible arrow controls and by drag. Confirm the review updates immediately and no row is lost or duplicated.
 - Confirm product controls use only the checked-in icon set and that branding SVG files remain separate.
+
+
+## Appearance continuity and user management
+
+- Select every palette, navigate among Workspace, Project, AI & Models, Tools, Documentation, UI Kit and Settings, and confirm theme, palette and density remain unchanged. Repeat from a direct `file://` opening and from static HTTP hosting.
+- Confirm internal file links remain relative and do not trigger unique-origin security errors.
+- Inspect shared tabs and segmented controls: one contained bar, one active surface, aligned heights and local horizontal scrolling on narrow screens.
+- Edit the current profile and confirm sidebar, topbar and report defaults update for the session.
+- Add, edit and remove a demonstration workspace user; verify no real invitation, account or permission claim is made and reload clears the directory.
+- Confirm page metadata, sidebar attribution, README and license consistently identify **© 2026 Matteo Ginesi**.
+
+## Runtime page smoke checks
+
+- Open Workspace, Project, Lab Cabinet, AI & Models, Tools, Settings, Documentation and UI Kit and confirm each page produces content rather than the generic render-failure notice.
+- Verify page-specific module order: workbook before Project/UI Kit, diagrams before Documentation/AI & Models, and page modules before `app.js`.
+- Temporarily replace one optional AI demonstration array with an empty array and confirm the affected view shows an empty state without blanking the page.
+
+## Lab Cabinet browser
+
+- Filter every resource family, search by name/tag/metadata and test all three sort options.
+- Select resources of every type and confirm the inspector updates stable ID, status, metadata, tags, usage and snapshot behavior.
+- Verify selected state and family filters are keyboard operable and do not rely on color alone.
+- Check desktop sticky inspector, tablet stacked inspector and single-column mobile cards with no page-level horizontal overflow.
+- Compare the production Cabinet pattern with the corresponding UI Kit section.

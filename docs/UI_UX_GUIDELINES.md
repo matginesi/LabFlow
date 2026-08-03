@@ -192,3 +192,30 @@ Stack layers and solution components support both pointer-based dragging and exp
 ## Local icon system
 
 Product icons come from one checked-in, Lucide-inspired local icon set with a consistent 24×24 view box, two-pixel stroke, round caps and round joins. Branding marks remain separate. Do not introduce one-off decorative SVG paths when an icon already exists in the local set, and never load icons from a CDN.
+
+
+## Tabs, appearance continuity and user management
+
+Tabs use one aligned contained bar with a single active surface and accent marker. Do not reintroduce unrelated underline-only variants. Theme, palette and density must travel through every internal navigation link, including direct-file use, so page changes preserve appearance without cookies or persistent browser storage.
+
+User management is a session-only POC contract: the current profile, workspace directory, role vocabulary, status and project-access scope may be edited in memory, but the interface must never imply that credentials were created or permissions were enforced. Global product attribution uses **© 2026 Matteo Ginesi** where authorship or copyright is expected.
+
+## Lab Cabinet browser contract
+
+Lab Cabinet uses one reusable-object browser rather than a generic grid of unrelated cards. The shared pattern is:
+
+```text
+Family filters
+→ Search and deterministic sort
+→ Visual resource cards
+→ Selected resource inspector
+→ Explicit snapshot / provenance notice
+```
+
+Resource cards may use a small type-specific visual for materials, solvents, solutions, stacks, mappings and analysis recipes, but these visuals are summaries rather than scientific diagrams. The item name, stable identifier, status, metadata and usage remain readable without relying on color. Selection uses the shared selected-card treatment and the inspector remains visible on desktop, then moves below the catalogue on tablet and mobile.
+
+Using a Cabinet definition in a project means copying a traceable snapshot. Editing a reusable definition must never imply that historical experiments are silently updated.
+
+## Runtime page resilience
+
+Each page declares its page-specific JavaScript dependencies and validates them before rendering. Knowledge, Tools, Documentation, Project and UI Kit must render a clear local failure state if a required checked-in module is missing or loaded in the wrong order. Data-backed visualizations normalize optional arrays and records before calling `map`, `filter`, numeric formatting or chart helpers, so a missing demonstration collection cannot blank the complete page.

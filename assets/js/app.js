@@ -1,8 +1,24 @@
 (function () {
   "use strict";
 
-  const D = window.LabFlowData;
-  const F = D.aiFoundation;
+  const D = window.LabFlowData || {};
+  const asArray = (value) => Array.isArray(value) ? value : [];
+  const rawFoundation = D.aiFoundation && typeof D.aiFoundation === "object" ? D.aiFoundation : {};
+  const F = {
+    ...rawFoundation,
+    readiness: {
+      overall: Number(rawFoundation.readiness?.overall) || 0,
+      status: rawFoundation.readiness?.status || "Not assessed",
+      updated: rawFoundation.readiness?.updated || "—",
+      metrics: asArray(rawFoundation.readiness?.metrics),
+      blocking: asArray(rawFoundation.readiness?.blocking)
+    },
+    datasetSnapshots: asArray(rawFoundation.datasetSnapshots),
+    models: asArray(rawFoundation.models),
+    predictions: asArray(rawFoundation.predictions),
+    trainingRuns: asArray(rawFoundation.trainingRuns),
+    outputTypes: asArray(rawFoundation.outputTypes)
+  };
   const A = window.LabFlowDataSource;
   const C = window.LabFlowConfig || {};
   const P = window.LabFlowPipelines;
@@ -88,19 +104,61 @@
     T.apply(settings);
   }
 
+  function normalizeUser(value = {}) {
+    const name = String(value.name || "Researcher").trim() || "Researcher";
+    return {
+      ...D.user,
+      ...value,
+      name,
+      initials: name.split(/\s+/).filter(Boolean).map((part) => part[0]).join("").slice(0, 2).toUpperCase() || "LF"
+    };
+  }
+
+  function currentUser() {
+    const user = normalizeUser(S.getUser ? S.getUser(D.user) : D.user);
+    Object.assign(D.user, user);
+    return user;
+  }
+
+  function defaultWorkspaceUsers() {
+    const user = currentUser();
+    return [
+      {...user, isCurrent: true, permission: "Owner", status: "active", access: "All projects", lastActivity: "Current session"},
+      {id:"USR-CHOSE-018", name:"Data Steward", initials:"DS", email:"data.steward@lab.example", role:"Data Steward", organisation:user.organisation, laboratory:user.laboratory, workspace:user.workspace, permission:"Data steward", status:"invited", access:"Assigned projects", lastActivity:"Invitation pending"}
+    ];
+  }
+
+  function workspaceUserDirectory() {
+    const current = currentUser();
+    const users = S.getUsers ? S.getUsers(defaultWorkspaceUsers()) : defaultWorkspaceUsers();
+    const currentIndex = users.findIndex((item) => item.isCurrent || item.id === current.id);
+    const currentEntry = {...current, isCurrent:true, permission:"Owner", status:"active", access:"All projects", lastActivity:"Current session"};
+    if (currentIndex >= 0) users[currentIndex] = {...users[currentIndex], ...currentEntry};
+    else users.unshift(currentEntry);
+    return users;
+  }
+
+  function saveWorkspaceUserDirectory(users) {
+    if (S.saveUsers) S.saveUsers(users);
+  }
+
+  function saveCurrentUser(value) {
+    const user = normalizeUser(value);
+    if (S.saveUser) S.saveUser(user);
+    Object.assign(D.user, user);
+    const users = workspaceUserDirectory();
+    const index = users.findIndex((item) => item.isCurrent || item.id === user.id);
+    if (index >= 0) users[index] = {...users[index], ...user, isCurrent:true, permission:"Owner", status:"active", access:"All projects", lastActivity:"Current session"};
+    saveWorkspaceUserDirectory(users);
+    return user;
+  }
+
   const carriedSettingParams = {theme: "lf_theme", palette: "lf_palette", density: "lf_density"};
 
-  function restoreCarriedSettings(isReload) {
+  function restoreCarriedSettings() {
     const url = new URL(location.href);
     const hasCarriedSettings = Object.values(carriedSettingParams).some((param) => url.searchParams.has(param));
-    if (isReload) {
-      if (hasCarriedSettings && document.body.dataset.page !== "project") {
-        Object.values(carriedSettingParams).forEach((param) => url.searchParams.delete(param));
-        if (location.protocol !== "file:") history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-        else Log.debug("appearance.file-url-preserved", { reason: "file origins cannot safely rewrite history" });
-      }
-      return;
-    }
+    if (!hasCarriedSettings) return;
     const next = getSettings();
     const theme = url.searchParams.get(carriedSettingParams.theme);
     const palette = url.searchParams.get(carriedSettingParams.palette);
@@ -108,16 +166,18 @@
     if (["light", "dark"].includes(theme)) next.theme = theme;
     if (E.palettes[palette]) next.palette = palette;
     if (["compact", "comfortable"].includes(density)) next.density = density;
-    if (hasCarriedSettings) saveSettings(next);
+    saveSettings(next);
+    Log.debug("appearance.restored-from-navigation", { theme: next.theme, palette: next.palette, density: next.density });
   }
 
   function withCarriedSettings(href) {
     if (!href || href.startsWith("#") || /^(?:mailto:|tel:|javascript:)/i.test(href)) return href;
     const url = new URL(href, location.href);
-    if (url.origin !== location.origin) return href;
-    if (url.protocol === "file:") return url.href;
+    const sameLocalFileContext = location.protocol === "file:" && url.protocol === "file:";
+    if (!sameLocalFileContext && url.origin !== location.origin) return href;
     const settings = getSettings();
     Object.entries(carriedSettingParams).forEach(([key, param]) => url.searchParams.set(param, settings[key]));
+    if (sameLocalFileContext) return `${url.pathname.split("/").pop()}${url.search}${url.hash}`;
     return url.href;
   }
 
@@ -151,7 +211,7 @@
       cabinet: ["Lab Cabinet", "Reusable laboratory knowledge and resources"],
       knowledge: ["Knowledge", "Ask, inspect and prepare with traceable laboratory evidence"],
       tools: ["Tools", "Local document and data utilities"],
-      settings: ["Settings", "Workspace, appearance and integrations"],
+      settings: ["Settings", "Workspace users, appearance and integrations"],
       documentation: ["Documentation", "Product and technical guide"],
       "ui-kit": ["UI Kit", "Reusable interface system"]
     })[page] || ["LabFlow", "Research workspace"];
@@ -159,17 +219,18 @@
 
   function hydrateShell(page) {
     const [title] = pageMeta(page);
+    const user = currentUser();
     const content = $("#page-content");
     const width = ({project:"wide",knowledge:"wide",tools:"wide","ui-kit":"wide",documentation:"reading"})[page] || "standard";
     content.className = `content page-width-${width}`;
     $("#topbar-page-title")?.replaceChildren(document.createTextNode(title));
     const mobileTitle = $(".mobile-brand-title");
     if (mobileTitle) mobileTitle.textContent = title;
-    $$(".user-chip .avatar, .top-user .avatar").forEach((avatar) => { avatar.textContent = D.user.initials; });
+    $$(".user-chip .avatar, .top-user .avatar").forEach((avatar) => { avatar.textContent = user.initials; });
     const userChip = $(".user-chip");
-    if (userChip) userChip.querySelector("span:last-child").innerHTML = `<strong>${esc(D.user.name)}</strong><span>${esc(D.user.role)}</span>`;
+    if (userChip) userChip.querySelector("span:last-child").innerHTML = `<strong>${esc(user.name)}</strong><span>${esc(user.role)}</span>`;
     const topUser = $(".top-user-copy");
-    if (topUser) topUser.innerHTML = `<strong>${esc(D.user.name)}</strong><span>${esc(D.user.workspace)}</span>`;
+    if (topUser) topUser.innerHTML = `<strong>${esc(user.name)}</strong><span>${esc(user.workspace)}</span>`;
     if (page === "project") {
       const project = currentProject();
       const step = new URLSearchParams(location.search).get("step");
@@ -295,7 +356,7 @@
     const search = bindGlobalSearch();
     document.addEventListener("click", (event) => {
       const internalLink = event.target.closest("a[href]");
-      if (internalLink && !internalLink.hasAttribute("download")) internalLink.href = withCarriedSettings(internalLink.getAttribute("href"));
+      if (internalLink && !internalLink.hasAttribute("download")) internalLink.setAttribute("href", withCarriedSettings(internalLink.getAttribute("href")));
       const action = event.target.closest("[data-action]");
       if (action) {
         if (action.dataset.action === "menu") document.body.classList.toggle("sidebar-open");
@@ -383,15 +444,17 @@
   }
 
   function openProfile() {
-    const u = D.user;
+    const u = currentUser();
+    const members = workspaceUserDirectory();
     modal(`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
-      <div class="modal-header"><div><h2 id="profile-title" class="mb-0">Researcher profile</h2><small>Visible workspace identity and local preferences</small></div><button class="btn btn-ghost icon-btn" data-action="close-modal">${icon("x")}</button></div>
+      <div class="modal-header"><div><h2 id="profile-title" class="mb-0">Researcher profile</h2><small>Current workspace identity and session-only user directory</small></div><button class="btn btn-ghost icon-btn" data-action="close-modal" aria-label="Close">${icon("x")}</button></div>
       <div class="modal-body stack">
-        <div class="row align-start"><span class="avatar avatar-lg">${esc(u.initials)}</span><div><h3>${esc(u.name)}</h3><p class="mb-0">${esc(u.role)} · ${esc(u.organisation)}</p><small>${esc(u.email)}</small></div></div>
-        <div class="grid grid-3"><div class="card kpi"><span class="kpi-label">Projects</span><strong class="kpi-value">${u.projects}</strong><span class="kpi-detail">in workspace</span></div><div class="card kpi"><span class="kpi-label">Storage</span><strong class="kpi-value kpi-value-small">${esc(u.storage.split(" / ")[0])}</strong><span class="kpi-detail">of ${esc(u.storage.split(" / ")[1])}</span></div><div class="card kpi"><span class="kpi-label">Last access</span><strong class="kpi-value kpi-value-compact">${esc(u.lastAccess.split(" · ")[0])}</strong><span class="kpi-detail">${esc(u.lastAccess.split(" · ")[1] || "")}</span></div></div>
-        <div class="notice"><div>${icon("lock")}</div><div><strong>Static workspace</strong><p>Profile data is illustrative and stored only in this package. Authentication and permissions are outside the current demonstration.</p></div></div>
+        <div class="profile-identity"><span class="avatar avatar-lg">${esc(u.initials)}</span><div><h3>${esc(u.name)}</h3><p class="mb-0">${esc(u.role)} · ${esc(u.organisation)}</p><small>${esc(u.email)}</small></div><span class="badge badge-success">Current user</span></div>
+        <div class="grid grid-3"><div class="card kpi"><span class="kpi-label">Projects</span><strong class="kpi-value">${u.projects}</strong><span class="kpi-detail">in workspace</span></div><div class="card kpi"><span class="kpi-label">Workspace users</span><strong class="kpi-value">${members.length}</strong><span class="kpi-detail">${members.filter((item) => item.status === "active").length} active</span></div><div class="card kpi"><span class="kpi-label">Permission</span><strong class="kpi-value kpi-value-small">Owner</strong><span class="kpi-detail">demonstration policy</span></div></div>
+        <div class="metadata-list"><div><span>Workspace</span><strong>${esc(u.workspace)}</strong></div><div><span>Laboratory</span><strong>${esc(u.laboratory)}</strong></div><div><span>Last access</span><strong>${esc(u.lastAccess)}</strong></div></div>
+        <div class="notice"><div>${icon("lock")}</div><div><strong>Static user management</strong><p>Profiles, roles and access are session-only demonstrations. Authentication and server-side permission enforcement remain future backend responsibilities.</p></div></div>
       </div>
-      <div class="modal-footer"><a class="btn" href="settings.html">Open settings</a><button class="btn btn-primary" data-action="close-modal">Done</button></div>
+      <div class="modal-footer"><a class="btn" href="settings.html?tab=user">Edit profile</a><a class="btn btn-primary" href="settings.html?tab=users">Manage users</a></div>
     </div>`);
   }
 
@@ -440,6 +503,7 @@
   }
 
   function renderWorkspace() {
+    const readinessOverall = Number(F.readiness?.overall ?? 0);
     const projects = projectStore();
     const active = projects.filter((project) => project.status === "active").length;
     const complete = projects.filter((project) => project.status === "complete").length;
@@ -462,7 +526,7 @@
         <div class="workspace-project-grid" id="project-grid">${projects.map(projectCard).join("")}</div>
         ${projectTable(projects)}
       </section>
-      <section class="panel section workspace-ai-foundation"><div class="panel-header"><div><span class="page-eyebrow">Future-ready research foundation</span><h2 class="mb-0">Simple today. Ready for AI, ML and DL tomorrow.</h2><small>LabFlow prepares structured, traceable data without changing the researcher’s normal project workflow.</small></div><a class="btn btn-primary" href="knowledge.html?view=datasets">Inspect AI readiness</a></div><div class="panel-body"><div class="workspace-ai-readiness"><div class="readiness-ring readiness-ring-small" style="--readiness:${F.readiness.overall}"><strong>${F.readiness.overall}</strong><span>%</span></div><div class="workspace-ai-metrics">${F.readiness.metrics.slice(0,4).map((item) => `<span><small>${esc(item.label)}</small><strong>${item.value}%</strong><div class="progress"><span style="width:${item.value}%"></span></div></span>`).join("")}</div><div class="workspace-ai-path"><span><b>Knowledge</b> RAG, Graph RAG and evidence-led answers</span><span><b>Datasets</b> Snapshots, features, targets and quality</span><span><b>Models</b> Versions, runs, metrics and provenance</span><span><b>Predictions</b> Uncertainty, applicability and human review</span></div></div></div></section>
+      <section class="panel section workspace-ai-foundation"><div class="panel-header"><div><span class="page-eyebrow">Future-ready research foundation</span><h2 class="mb-0">Simple today. Ready for AI, ML and DL tomorrow.</h2><small>LabFlow prepares structured, traceable data without changing the researcher’s normal project workflow.</small></div><a class="btn btn-primary" href="knowledge.html?view=datasets">Inspect AI readiness</a></div><div class="panel-body"><div class="workspace-ai-readiness"><div class="readiness-ring readiness-ring-small" style="--readiness:${readinessOverall}"><strong>${readinessOverall}</strong><span>%</span></div><div class="workspace-ai-metrics">${F.readiness.metrics.slice(0,4).map((item) => `<span><small>${esc(item.label)}</small><strong>${item.value}%</strong><div class="progress"><span style="width:${item.value}%"></span></div></span>`).join("")}</div><div class="workspace-ai-path"><span><b>Knowledge</b> RAG, Graph RAG and evidence-led answers</span><span><b>Datasets</b> Snapshots, features, targets and quality</span><span><b>Models</b> Versions, runs, metrics and provenance</span><span><b>Predictions</b> Uncertainty, applicability and human review</span></div></div></div></section>
       <section class="section workspace-operations">
         <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Next research actions</h3><small>Prioritised from project state</small></div>${icon("check")}</div><div class="panel-body stack">${projects.slice(0, 4).map((p) => `<a class="notice" href="project.html?project=${encodeURIComponent(p.id)}"><div>${icon(p.status === "review" ? "warning" : "arrow")}</div><div><strong>${esc(p.name)}</strong><p>${esc(p.nextAction)}</p></div></a>`).join("")}</div></div>
         <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Project activity</h3><small>Included demonstration events</small></div>${icon("clock")}</div><div class="panel-body">${D.activity.map((a) => `<div class="timeline-item"><span class="timeline-time">${esc(a.time)}</span><span class="timeline-dot"></span><div><strong>${esc(a.text)}</strong><p>${esc(a.detail)}</p></div></div>`).join("")}</div></div>
@@ -666,10 +730,13 @@
 
   function aiReadinessView(project) {
     const readiness = F.readiness;
-    const snapshot = F.datasetSnapshots[0];
-    const modelCard = F.models[0];
-    const prediction = F.predictions[0];
-    return `<div class="stack"><div class="ai-readiness-hero"><div><span class="page-eyebrow">${esc(project.id)} · AI-ready foundation</span><h2>${readiness.overall}% ready</h2><p>Structured records, normalized units, provenance and dataset snapshots prepare this project for future RAG, machine learning and predictive models.</p><div class="cluster"><span class="badge badge-warning">${esc(readiness.status)}</span><a class="btn btn-sm" href="knowledge.html?view=datasets">Open AI & Models</a></div></div><div class="readiness-ring" style="--readiness:${readiness.overall}"><strong>${readiness.overall}</strong><span>%</span></div></div><div class="readiness-metrics">${readiness.metrics.map((item) => `<article><div><strong>${esc(item.label)}</strong><span>${item.value}%</span></div><div class="progress"><span style="width:${item.value}%"></span></div><small>${esc(item.detail)}</small></article>`).join("")}</div><div class="grid grid-3"><article class="panel"><div class="panel-header"><div><h3 class="mb-0">Dataset snapshot</h3><small>${esc(snapshot.id)} · v${esc(snapshot.version)}</small></div>${icon("database")}</div><div class="panel-body"><div class="dataset-stats"><span><small>Rows</small><strong>${snapshot.rows}</strong></span><span><small>Features</small><strong>${snapshot.features}</strong></span><span><small>Target</small><strong>${esc(snapshot.target)}</strong></span></div><p>${esc(snapshot.split)} · immutable demonstration snapshot.</p></div></article><article class="panel"><div class="panel-header"><div><h3 class="mb-0">Baseline model</h3><small>${esc(modelCard.id)} · ${esc(modelCard.status)}</small></div>${icon("chart")}</div><div class="panel-body"><div class="model-metrics">${Object.entries(modelCard.metrics).slice(0,3).map(([key,value]) => `<span><small>${esc(key)}</small><strong>${esc(value)}</strong></span>`).join("")}</div><p>${esc(modelCard.scope)}</p></div></article><article class="panel"><div class="panel-header"><div><h3 class="mb-0">Reviewed prediction</h3><small>${esc(prediction.sample)} · ${esc(prediction.model)}</small></div>${icon("spark")}</div><div class="panel-body prediction-compact"><strong>${prediction.predicted.toFixed(2)} ± ${prediction.uncertainty.toFixed(2)}%</strong><span>Observed ${prediction.observed.toFixed(2)}% · ${prediction.coverage}% input coverage</span><small>${esc(prediction.note)}</small></div></article></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Three gaps still limit reuse</strong><p>${readiness.blocking.map(esc).join(" · ")}</p></div></div></div>`;
+    const snapshot = F.datasetSnapshots[0] || null;
+    const modelCard = F.models[0] || null;
+    const prediction = F.predictions[0] || null;
+    const snapshotCard = snapshot ? `<article class="panel"><div class="panel-header"><div><h3 class="mb-0">Dataset snapshot</h3><small>${esc(snapshot.id)} · v${esc(snapshot.version)}</small></div>${icon("database")}</div><div class="panel-body"><div class="dataset-stats"><span><small>Rows</small><strong>${snapshot.rows}</strong></span><span><small>Features</small><strong>${snapshot.features}</strong></span><span><small>Target</small><strong>${esc(snapshot.target)}</strong></span></div><p>${esc(snapshot.split)} · immutable demonstration snapshot.</p></div></article>` : `<div class="empty"><strong>No dataset snapshot</strong><p>The project remains usable; no AI dataset preview is currently available.</p></div>`;
+    const modelCardMarkup = modelCard ? `<article class="panel"><div class="panel-header"><div><h3 class="mb-0">Baseline model</h3><small>${esc(modelCard.id)} · ${esc(modelCard.status)}</small></div>${icon("chart")}</div><div class="panel-body"><div class="model-metrics">${Object.entries(modelCard.metrics || {}).slice(0,3).map(([key,value]) => `<span><small>${esc(key)}</small><strong>${esc(value)}</strong></span>`).join("")}</div><p>${esc(modelCard.scope)}</p></div></article>` : `<div class="empty"><strong>No model card</strong><p>Model history is optional and cannot prevent project review.</p></div>`;
+    const predictionCard = prediction ? `<article class="panel"><div class="panel-header"><div><h3 class="mb-0">Reviewed prediction</h3><small>${esc(prediction.sample)} · ${esc(prediction.model)}</small></div>${icon("spark")}</div><div class="panel-body prediction-compact"><strong>${Number(prediction.predicted || 0).toFixed(2)} ± ${Number(prediction.uncertainty || 0).toFixed(2)}%</strong><span>Observed ${Number(prediction.observed || 0).toFixed(2)}% · ${Number(prediction.coverage || 0)}% input coverage</span><small>${esc(prediction.note)}</small></div></article>` : `<div class="empty"><strong>No prediction record</strong><p>Measured results remain available independently of model outputs.</p></div>`;
+    return `<div class="stack"><div class="ai-readiness-hero"><div><span class="page-eyebrow">${esc(project.id)} · AI-ready foundation</span><h2>${readiness.overall}% ready</h2><p>Structured records, normalized units, provenance and dataset snapshots prepare this project for future RAG, machine learning and predictive models.</p><div class="cluster"><span class="badge badge-warning">${esc(readiness.status)}</span><a class="btn btn-sm" href="knowledge.html?view=datasets">Open AI & Models</a></div></div><div class="readiness-ring" style="--readiness:${readiness.overall}"><strong>${readiness.overall}</strong><span>%</span></div></div><div class="readiness-metrics">${readiness.metrics.map((item) => `<article><div><strong>${esc(item.label)}</strong><span>${Number(item.value || 0)}%</span></div><div class="progress"><span style="width:${Number(item.value || 0)}%"></span></div><small>${esc(item.detail)}</small></article>`).join("")}</div><div class="grid grid-3">${snapshotCard}${modelCardMarkup}${predictionCard}</div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>${readiness.blocking.length || "No"} readiness gaps</strong><p>${readiness.blocking.length ? readiness.blocking.map(esc).join(" · ") : "No blocking issues are included in the current demonstration data."}</p></div></div></div>`;
   }
 
   function analysisOverview(project) {
@@ -1158,38 +1225,194 @@
     }
   }
 
+  const cabinetTypeCatalog = {
+    material: {label:"Materials", singular:"Material", icon:"database", description:"Raw and functional laboratory materials"},
+    solvent: {label:"Solvents", singular:"Solvent", icon:"flask", description:"Traceable liquids and handling metadata"},
+    solution: {label:"Solutions", singular:"Solution", icon:"flask", description:"Reusable recipes with explicit composition"},
+    stack: {label:"Stacks", singular:"Stack", icon:"layers", description:"Ordered device and material architectures"},
+    mapping: {label:"Mappings", singular:"Mapping", icon:"swap", description:"Import schemas and normalized fields"},
+    analysis: {label:"Analyses", singular:"Analysis", icon:"chart", description:"Deterministic analysis recipes"}
+  };
+
+  function cabinetTypeInfo(type) {
+    return cabinetTypeCatalog[type] || {label:String(type || "Resource"), singular:String(type || "Resource"), icon:"database", description:"Reusable laboratory definition"};
+  }
+
+  function cabinetVisual(item) {
+    const parts = String(item.meta || "").split(/\s*[·,/]\s*/).filter(Boolean).slice(0,6);
+    if (item.type === "stack") return `<div class="cabinet-visual cabinet-visual-stack" aria-hidden="true">${parts.map((part,index) => `<i style="height:${12 + index * 6}px;opacity:${(0.68 + index * 0.05).toFixed(2)}" title="${esc(part)}"></i>`).join("")}</div>`;
+    if (item.type === "solution") return `<div class="cabinet-visual cabinet-visual-solution" aria-hidden="true"><i></i><i></i><i></i><span>${icon("flask")}</span></div>`;
+    if (item.type === "mapping") return `<div class="cabinet-visual cabinet-visual-mapping" aria-hidden="true"><span>${parts.slice(0,3).map(() => "<i></i>").join("")}</span>${icon("arrow")}<span>${parts.slice(0,3).map(() => "<b></b>").join("")}</span></div>`;
+    if (item.type === "analysis") return `<div class="cabinet-visual cabinet-visual-analysis" aria-hidden="true">${[42,68,54,86,72].map((height,index) => `<i style="--bar-height:${Math.max(20,Math.min(92,height + ((item.usage + index * 7) % 13) - 6))}%"></i>`).join("")}</div>`;
+    return `<div class="cabinet-visual cabinet-visual-material" aria-hidden="true"><i></i><i></i><i></i><i></i><span>${icon(item.type === "solvent" ? "flask" : "database")}</span></div>`;
+  }
+
+  function cabinetCardMarkup(item, {demo = false} = {}) {
+    const info = cabinetTypeInfo(item.type);
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    const tag = "article";
+    const attributes = demo ? "" : `tabindex="0" role="button" aria-pressed="false" data-object-card data-object-id="${esc(item.id)}" data-type="${esc(item.type)}" data-usage="${Number(item.usage) || 0}" data-name="${esc(String(item.name || "").toLowerCase())}" data-search="${esc(`${item.name || ""} ${item.subtitle || ""} ${item.meta || ""} ${tags.join(" ")}`.toLowerCase())}"`;
+    return `<${tag} class="cabinet-resource-card" ${attributes} data-cabinet-type="${esc(item.type)}"><div class="cabinet-card-top"><span class="cabinet-type-icon">${icon(info.icon)}</span><span class="cabinet-id">${esc(item.id)}</span>${badgeStatus(item.status)}</div>${cabinetVisual(item)}<div class="cabinet-card-copy"><span class="cabinet-kind">${esc(info.singular || info.label)}</span><h3>${esc(item.name)}</h3><p>${esc(item.subtitle)}</p><small>${esc(item.meta)}</small></div><div class="cabinet-card-footer"><div class="cluster">${tags.slice(0,2).map((value) => `<span class="badge">${esc(value)}</span>`).join("")}</div><span>${Number(item.usage) || 0} uses</span></div></${tag}>`;
+  }
+
+  function cabinetInspectorMarkup(item, {compact = false} = {}) {
+    if (!item) return `<div class="empty"><strong>No resource selected</strong><p>Choose a laboratory object to inspect its reusable definition.</p></div>`;
+    const info = cabinetTypeInfo(item.type);
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    const details = String(item.meta || "").split(/\s*·\s*/).filter(Boolean);
+    return `<div class="cabinet-inspector-head" data-cabinet-type="${esc(item.type)}"><span class="cabinet-type-icon cabinet-type-icon-lg">${icon(info.icon)}</span><div><span class="page-eyebrow">${esc(info.singular || info.label)} · ${esc(item.id)}</span><h2>${esc(item.name)}</h2><p>${esc(item.subtitle)}</p></div>${badgeStatus(item.status)}</div>${cabinetVisual(item)}<div class="cabinet-inspector-facts"><div><span>Definition</span><strong>${esc(details[0] || item.meta || "Structured local object")}</strong></div><div><span>Usage</span><strong>${Number(item.usage) || 0} project snapshots</strong></div><div><span>Behaviour</span><strong>Copied as a traceable snapshot</strong></div>${details.slice(1,4).map((value) => `<div><span>Metadata</span><strong>${esc(value)}</strong></div>`).join("")}</div><div class="cluster cabinet-inspector-tags">${tags.map((value) => `<span class="badge badge-accent">${esc(value)}</span>`).join("")}</div>${compact ? "" : `<div class="cabinet-inspector-actions"><button class="btn btn-primary" type="button" data-cabinet-action="use">${icon("plus")} Use in project</button><button class="btn" type="button" data-cabinet-action="history">${icon("clock")} Inspect history</button></div><div class="notice"><div>${icon("link")}</div><div><strong>Traceability contract</strong><p>Projects receive a stable snapshot. Updating this reusable definition never silently rewrites existing experiments.</p></div></div>`}`;
+  }
+
   function renderCabinet() {
-    $("#page-content").innerHTML = header("Lab Cabinet", "Reusable materials, solutions, stacks, mappings and analysis recipes. Knowledge and generic tools have dedicated workspaces.", `<a class="btn" href="knowledge.html">${icon("book")} Knowledge</a><span class="badge">${A.listCabinet().length} local demo resources</span>`) + `
-      <section class="summary-strip summary-strip-metrics" aria-label="Lab Cabinet summary">${[["Reusable objects",D.cabinet.length,"materials, solutions, stacks and mappings"],["Reviewed",D.cabinet.filter((item) => item.status === "reviewed").length,"ready for project snapshots"],["Object types",new Set(D.cabinet.map((item) => item.type)).size,"shared resource families"],["Total uses",D.cabinet.reduce((sum, item) => sum + item.usage, 0),"across demonstration projects"]].map(([label,value,detail]) => `<div class="summary-item metric-summary"><span>${label}</span><strong>${value}</strong><small>${detail}</small></div>`).join("")}</section>
-      <section class="section"><div class="section-heading"><div><h2>Reusable laboratory objects</h2><p>Definitions copied into projects as traceable snapshots.</p></div><a class="btn btn-sm" href="tools.html">Open generic tools</a></div><div id="cabinet-content">${cabinetObjects()}</div></section>`;
+    const cabinet = Array.isArray(D.cabinet) ? D.cabinet : [];
+    $("#page-content").innerHTML = header("Lab Cabinet", "A visual, reusable library for materials, solutions, stacks, mappings and analysis recipes. Every use creates a traceable project snapshot.", `<a class="btn" href="knowledge.html">${icon("book")} Knowledge</a><button class="btn btn-primary" type="button" id="cabinet-create">${icon("plus")} New resource</button>`, {eyebrow:"Reusable laboratory definitions"}) + `
+      <section class="summary-strip summary-strip-metrics" aria-label="Lab Cabinet summary">${[["Reusable objects",cabinet.length,"curated local definitions"],["Reviewed",cabinet.filter((item) => item.status === "reviewed").length,"ready for project snapshots"],["Resource families",new Set(cabinet.map((item) => item.type)).size,"materials through analyses"],["Total uses",cabinet.reduce((sum, item) => sum + (Number(item.usage) || 0), 0),"across demonstration projects"]].map(([label,value,detail]) => `<div class="summary-item metric-summary"><span>${label}</span><strong>${value}</strong><small>${detail}</small></div>`).join("")}</section>
+      <section class="section"><div class="section-heading"><div><h2>Browse reusable objects</h2><p>Filter by scientific role, inspect metadata and reuse a controlled definition without editing historical records.</p></div><a class="btn btn-sm" href="tools.html">${icon("grid")} Open generic tools</a></div><div id="cabinet-content">${cabinetObjects()}</div></section>`;
     bindCabinetContent();
+    $("#cabinet-create")?.addEventListener("click", () => toast("Resource creation is a future backend action. This POC keeps the catalogue read-only."));
   }
 
   function cabinetObjects() {
-    const types = [...new Set(D.cabinet.map((item) => item.type))];
-    return `<div class="stack"><div class="toolbar"><div class="search"><span>${icon("search")}</span><input class="input" id="cabinet-search" aria-label="Search Lab Cabinet" placeholder="Search materials, solutions, stacks and mappings…"></div><select class="select" id="cabinet-type" aria-label="Filter by resource type"><option value="all">All types</option>${types.map((type) => `<option value="${type}">${type}</option>`).join("")}</select><div class="toolbar-spacer"></div><span class="badge">${D.cabinet.length} resources</span></div><div class="grid grid-3" id="object-grid">${D.cabinet.map((item) => `<article class="card object-card" data-object-card data-type="${item.type}" data-search="${esc(`${item.name} ${item.subtitle} ${item.meta} ${item.tags.join(" ")}`.toLowerCase())}"><div class="row justify-between align-start"><span class="object-icon">${icon(item.type === "solution" ? "flask" : item.type === "stack" ? "layers" : item.type === "mapping" ? "swap" : item.type === "analysis" ? "chart" : "database")}</span>${badgeStatus(item.status)}</div><div><span class="badge">${esc(item.type)}</span><h3 class="mt-1">${esc(item.name)}</h3><p>${esc(item.subtitle)}</p><small>${esc(item.meta)}</small></div><div class="row justify-between"><div class="cluster">${item.tags.map((tag) => `<span class="badge">${esc(tag)}</span>`).join("")}</div><small>${item.usage} uses</small></div></article>`).join("")}</div></div>`;
+    const cabinet = Array.isArray(D.cabinet) ? D.cabinet : [];
+    const types = [...new Set(cabinet.map((item) => item.type))];
+    const first = cabinet[0];
+    const familyButtons = ["all", ...types].map((type) => {
+      const items = type === "all" ? cabinet : cabinet.filter((item) => item.type === type);
+      const info = type === "all" ? {label:"All resources",icon:"grid",description:"Complete reusable catalogue"} : cabinetTypeInfo(type);
+      return `<button class="cabinet-family-card ${type === "all" ? "active" : ""}" type="button" data-cabinet-filter="${esc(type)}" aria-pressed="${type === "all" ? "true" : "false"}"><span>${icon(info.icon)}</span><strong>${esc(info.label)}</strong><small>${items.length} items · ${items.reduce((sum,item) => sum + (Number(item.usage) || 0),0)} uses</small></button>`;
+    }).join("");
+    return `<div class="cabinet-family-bar" role="group" aria-label="Filter Lab Cabinet by resource family">${familyButtons}</div><div class="cabinet-browser"><div class="cabinet-browser-main"><div class="toolbar cabinet-toolbar"><div class="search cabinet-search"><span>${icon("search")}</span><input class="input" id="cabinet-search" aria-label="Search Lab Cabinet" placeholder="Search name, metadata or tag…"></div><label class="cabinet-sort"><span class="sr-only">Sort resources</span><select class="select" id="cabinet-sort" aria-label="Sort resources"><option value="usage">Most used</option><option value="name">Name A–Z</option><option value="status">Reviewed first</option></select></label><div class="toolbar-spacer"></div><span class="badge" id="cabinet-result-count">${cabinet.length} resources</span></div><div class="cabinet-results-heading"><div><strong>Resource catalogue</strong><small>Click a card to inspect the reusable definition.</small></div><span class="cabinet-view-label">Grid + inspector</span></div><div class="cabinet-resource-grid" id="object-grid">${cabinet.map((item) => cabinetCardMarkup(item)).join("")}</div><div class="empty cabinet-empty" id="cabinet-empty" hidden><strong>No matching resources</strong><p>Change the family filter or search terms.</p></div></div><aside class="panel cabinet-inspector sticky" id="cabinet-inspector" data-cabinet-type="${esc(first?.type || "material")}" aria-live="polite">${cabinetInspectorMarkup(first)}</aside></div>`;
   }
 
   function bindCabinetContent() {
-    const filter = () => {
-      const q = $("#cabinet-search").value.toLowerCase();
-      const type = $("#cabinet-type").value;
-      $$('[data-object-card]').forEach((card) => card.hidden = !card.dataset.search.includes(q) || (type !== "all" && card.dataset.type !== type));
+    const cabinet = Array.isArray(D.cabinet) ? D.cabinet : [];
+    const byId = new Map(cabinet.map((item) => [item.id, item]));
+    const grid = $("#object-grid");
+    const inspector = $("#cabinet-inspector");
+    const resultCount = $("#cabinet-result-count");
+    const empty = $("#cabinet-empty");
+    let activeType = "all";
+    let selectedId = cabinet[0]?.id || null;
+
+    const selectResource = (id) => {
+      const item = byId.get(id);
+      if (!item) return;
+      selectedId = id;
+      $$('[data-object-card]', grid).forEach((card) => {
+        const active = card.dataset.objectId === id;
+        card.classList.toggle("selected", active);
+        card.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      inspector.dataset.cabinetType = item.type;
+      inspector.innerHTML = cabinetInspectorMarkup(item);
+      $$('[data-cabinet-action]', inspector).forEach((button) => button.addEventListener("click", () => toast(button.dataset.cabinetAction === "use" ? `${item.name} is ready to be copied into a project snapshot.` : `${item.name} has ${item.usage} demonstration uses; history remains read-only in this POC.`)));
     };
-    $("#cabinet-search").addEventListener("input", filter);
-    $("#cabinet-type").addEventListener("change", filter);
+
+    const apply = () => {
+      const query = $("#cabinet-search").value.trim().toLowerCase();
+      const sort = $("#cabinet-sort").value;
+      const cards = $$('[data-object-card]', grid);
+      cards.sort((a,b) => sort === "name" ? a.dataset.name.localeCompare(b.dataset.name) : sort === "status" ? Number(b.querySelector(".badge-success") !== null) - Number(a.querySelector(".badge-success") !== null) : Number(b.dataset.usage) - Number(a.dataset.usage)).forEach((card) => grid.appendChild(card));
+      const visible = cards.filter((card) => {
+        const show = card.dataset.search.includes(query) && (activeType === "all" || card.dataset.type === activeType);
+        card.hidden = !show;
+        return show;
+      });
+      resultCount.textContent = `${visible.length} ${visible.length === 1 ? "resource" : "resources"}`;
+      empty.hidden = visible.length > 0;
+      if (!visible.length) {
+        selectedId = null;
+        inspector.removeAttribute("data-cabinet-type");
+        inspector.innerHTML = cabinetInspectorMarkup(null);
+      } else if (!visible.some((card) => card.dataset.objectId === selectedId)) {
+        selectResource(visible[0].dataset.objectId);
+      }
+    };
+
+    $$('[data-cabinet-filter]').forEach((button) => button.addEventListener("click", () => {
+      activeType = button.dataset.cabinetFilter;
+      $$('[data-cabinet-filter]').forEach((item) => {
+        const active = item === button;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      apply();
+    }));
+    $$('[data-object-card]', grid).forEach((card) => {
+      card.addEventListener("click", () => selectResource(card.dataset.objectId));
+      card.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectResource(card.dataset.objectId);
+        }
+      });
+    });
+    $("#cabinet-search").addEventListener("input", apply);
+    $("#cabinet-sort").addEventListener("change", apply);
+    if (selectedId) selectResource(selectedId);
+    apply();
+  }
+
+  function userDirectoryMarkup() {
+    const users = workspaceUserDirectory();
+    const active = users.filter((item) => item.status === "active").length;
+    const invited = users.filter((item) => item.status === "invited").length;
+    const roles = new Set(users.map((item) => item.permission || item.role)).size;
+    return `<section class="summary-strip" aria-label="User management summary"><div class="summary-item metric-summary"><span>Workspace users</span><strong>${users.length}</strong><small>session directory</small></div><div class="summary-item metric-summary"><span>Active</span><strong>${active}</strong><small>available users</small></div><div class="summary-item metric-summary"><span>Invited</span><strong>${invited}</strong><small>pending access</small></div><div class="summary-item metric-summary"><span>Roles</span><strong>${roles}</strong><small>demonstrated policies</small></div></section>
+      <div class="grid grid-2 user-management-grid"><section class="panel wide"><div class="panel-header"><div><h3 class="mb-0">Workspace directory</h3><small>Manage illustrative users, roles and project access for this session</small></div><button class="btn btn-primary btn-sm" id="add-workspace-user">${icon("plus")} Add user</button></div><div class="table-wrap user-directory-table"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Project access</th><th>Last activity</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>${users.map((item) => `<tr><td><div class="directory-user"><span class="avatar">${esc(item.initials || normalizeUser(item).initials)}</span><span><strong>${esc(item.name)}</strong><small>${esc(item.email || "No email")}${item.isCurrent ? " · You" : ""}</small></span></div></td><td><span class="badge">${esc(item.permission || item.role)}</span></td><td><span class="badge ${item.status === "active" ? "badge-success" : "badge-warning"}">${esc(item.status === "active" ? "Active" : "Invited")}</span></td><td>${esc(item.access || "Assigned projects")}</td><td><small>${esc(item.lastActivity || "No activity")}</small></td><td><div class="cluster user-row-actions"><button class="btn btn-ghost icon-btn" data-user-edit="${esc(item.id)}" aria-label="Edit ${esc(item.name)}">${icon("edit")}</button>${item.isCurrent ? "" : `<button class="btn btn-ghost icon-btn" data-user-remove="${esc(item.id)}" aria-label="Remove ${esc(item.name)}">${icon("trash")}</button>`}</div></td></tr>`).join("")}</tbody></table></div></section>
+      <div class="stack"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Role model</h3><small>Future backend permission vocabulary</small></div>${icon("user")}</div><div class="panel-body role-policy-list"><div><strong>Owner</strong><span>Workspace policy and all projects</span></div><div><strong>Research lead</strong><span>Projects, review and approval</span></div><div><strong>Researcher</strong><span>Create and edit assigned work</span></div><div><strong>Data steward</strong><span>Data quality, mappings and exports</span></div><div><strong>Viewer</strong><span>Read-only approved records</span></div></div></section><div class="notice notice-warning"><div>${icon("info")}</div><div><strong>POC boundary</strong><p>No account is created and no invitation is sent. Records reset on reload and demonstrate the intended user-management contract only.</p></div></div></div></div>`;
+  }
+
+  function renderUserDirectoryPane() {
+    const root = $("#users-settings-content");
+    if (!root) return;
+    root.innerHTML = userDirectoryMarkup();
+    bindUserDirectory();
+  }
+
+  function openUserEditor(userId = null) {
+    const users = workspaceUserDirectory();
+    const existing = userId ? users.find((item) => item.id === userId) : null;
+    const user = existing || {id:`USR-DEMO-${Date.now().toString(36).toUpperCase()}`, name:"", email:"", permission:"Researcher", role:"Researcher", status:"invited", access:"Assigned projects", lastActivity:"Invitation pending"};
+    modal(`<form class="modal" role="dialog" aria-modal="true" aria-labelledby="user-editor-title" id="user-editor-form"><div class="modal-header"><div><h2 id="user-editor-title" class="mb-0">${existing ? "Edit user" : "Add workspace user"}</h2><small>Session-only directory record</small></div><button class="btn btn-ghost icon-btn" type="button" data-action="close-modal" aria-label="Close">${icon("x")}</button></div><div class="modal-body form-grid"><div class="field wide"><label for="managed-user-name">Display name</label><input class="input" id="managed-user-name" required value="${esc(user.name)}"></div><div class="field wide"><label for="managed-user-email">Email</label><input class="input" id="managed-user-email" type="email" required value="${esc(user.email)}"></div><div class="field"><label for="managed-user-role">Role</label><select class="select" id="managed-user-role">${["Owner","Research lead","Researcher","Data steward","Viewer"].map((role) => `<option ${String(user.permission).toLowerCase() === role.toLowerCase() ? "selected" : ""}>${role}</option>`).join("")}</select></div><div class="field"><label for="managed-user-status">Status</label><select class="select" id="managed-user-status"><option value="active" ${user.status === "active" ? "selected" : ""}>Active</option><option value="invited" ${user.status === "invited" ? "selected" : ""}>Invited</option></select></div><div class="field wide"><label for="managed-user-access">Project access</label><select class="select" id="managed-user-access"><option ${user.access === "All projects" ? "selected" : ""}>All projects</option><option ${user.access !== "All projects" ? "selected" : ""}>Assigned projects</option></select></div><div class="wide notice"><div>${icon("lock")}</div><div><strong>Demonstration only</strong><p>This does not create credentials or enforce permissions.</p></div></div></div><div class="modal-footer"><button class="btn" type="button" data-action="close-modal">Cancel</button><button class="btn btn-primary" type="submit">${existing ? "Save user" : "Add user"}</button></div></form>`);
+    $("#user-editor-form").onsubmit = (event) => {
+      event.preventDefault();
+      const next = normalizeUser({...user, name:$("#managed-user-name").value.trim(), email:$("#managed-user-email").value.trim(), permission:$("#managed-user-role").value, role:$("#managed-user-role").value, status:$("#managed-user-status").value, access:$("#managed-user-access").value, lastActivity:$("#managed-user-status").value === "active" ? "Updated this session" : "Invitation pending"});
+      const directory = workspaceUserDirectory();
+      const index = directory.findIndex((item) => item.id === next.id);
+      if (index >= 0) directory[index] = {...directory[index], ...next}; else directory.push(next);
+      saveWorkspaceUserDirectory(directory);
+      closeModal();
+      renderUserDirectoryPane();
+      toast(existing ? "User record updated for this session." : "User added to the session directory.");
+    };
+  }
+
+  function bindUserDirectory() {
+    $("#add-workspace-user")?.addEventListener("click", () => openUserEditor());
+    $$('[data-user-edit]').forEach((button) => button.addEventListener("click", () => openUserEditor(button.dataset.userEdit)));
+    $$('[data-user-remove]').forEach((button) => button.addEventListener("click", () => {
+      const user = workspaceUserDirectory().find((item) => item.id === button.dataset.userRemove);
+      if (!user) return;
+      modal(`<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="remove-user-title"><div class="modal-header"><h2 id="remove-user-title" class="mb-0">Remove ${esc(user.name)}?</h2><button class="btn btn-ghost icon-btn" data-action="close-modal" aria-label="Close">${icon("x")}</button></div><div class="modal-body"><p>This removes only the temporary directory record. No account or project data is affected.</p></div><div class="modal-footer"><button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-danger" id="confirm-remove-user">Remove user</button></div></div>`);
+      $("#confirm-remove-user").onclick = () => { saveWorkspaceUserDirectory(workspaceUserDirectory().filter((item) => item.id !== user.id)); closeModal(); renderUserDirectoryPane(); toast("User removed from the session directory."); };
+    }));
   }
 
   function renderSettings() {
     const settings = getSettings();
+    const user = currentUser();
+    const nameParts = user.name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ");
     const paletteOptions = Object.entries(E.palettes).map(([id, palette]) => `<label class="palette-option"><input type="radio" name="palette" value="${id}" ${settings.palette === id ? "checked" : ""}><span class="color-swatch" style="background:#${palette.hex}"></span><span><strong>${esc(palette.name)}</strong><small class="block">#${palette.hex}</small></span></label>`).join("");
-    $("#page-content").innerHTML = header("Settings", "Inspect the checked-in POC configuration and apply temporary changes that reset on reload.", `<button class="btn" id="download-settings">${icon("download")} Download settings.yaml</button><button class="btn btn-primary" id="save-settings">${icon("check")} Apply for this page</button>`) + `
+    $("#page-content").innerHTML = header("Settings", "Manage the session profile and user directory, then inspect temporary appearance and integration settings.", `<button class="btn" id="download-settings">${icon("download")} Download settings.yaml</button><button class="btn btn-primary" id="save-settings">${icon("check")} Apply for this page</button>`) + `
       <div class="configuration-boundary"><div>${icon("file")}<span><strong>Declarative source: settings.yaml</strong><small>The checked-in generated bundle is loaded locally. Downloaded changes must be reviewed and manually replace the repository file.</small></span></div><div><span class="badge badge-success">Loaded</span><span class="badge">${esc(C.application?.deployment || "static")}</span><span class="badge">No browser memory</span></div></div>
-      <div class="tabs settings-tabs" role="tablist" aria-label="Settings sections"><button class="tab active" role="tab" aria-selected="true" data-settings-tab="user">User Settings</button><button class="tab" role="tab" aria-selected="false" data-settings-tab="admin">Admin Settings</button></div>
+      <div class="tabs settings-tabs" role="tablist" aria-label="Settings sections"><button class="tab active" role="tab" aria-selected="true" data-settings-tab="user">Profile & Preferences</button><button class="tab" role="tab" aria-selected="false" data-settings-tab="users">User Management</button><button class="tab" role="tab" aria-selected="false" data-settings-tab="admin">Administration</button></div>
       <div id="user-settings" class="settings-pane stack" role="tabpanel">
         <h2 class="sr-only">User settings</h2>
         <div class="grid grid-2"><div class="stack">
-          <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Researcher Profile</h3><small>Personal identity used in the shell and reports</small></div>${icon("user")}</div><div class="panel-body form-grid"><div class="field"><label for="first-name">First Name</label><input class="input" id="first-name" name="first-name" autocomplete="given-name" value="Matteo"></div><div class="field"><label for="last-name">Last Name</label><input class="input" id="last-name" name="last-name" autocomplete="family-name" value="Ginesi"></div><div class="field"><label for="display-name">Display Name</label><input class="input" id="display-name" name="display-name" autocomplete="nickname" value="${esc(D.user.name)}"></div><div class="field"><label for="user-email">Email</label><input class="input" id="user-email" name="email" type="email" autocomplete="email" spellcheck="false" value="${esc(D.user.email)}"></div><div class="field"><label for="user-role">Role</label><input class="input" id="user-role" name="role" autocomplete="organization-title" value="${esc(D.user.role)}"></div><div class="field"><label for="user-org">Organisation</label><input class="input" id="user-org" name="organisation" autocomplete="organization" value="${esc(settings.reportOrganisation)}"></div><div class="field wide"><label for="report-lab">Laboratory</label><input class="input" id="report-lab" name="laboratory" value="${esc(settings.reportLab)}"></div></div></div>
+          <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Researcher Profile</h3><small>Personal identity used in the shell and reports</small></div>${icon("user")}</div><div class="panel-body form-grid"><div class="field"><label for="first-name">First Name</label><input class="input" id="first-name" name="first-name" autocomplete="given-name" value="${esc(firstName)}"></div><div class="field"><label for="last-name">Last Name</label><input class="input" id="last-name" name="last-name" autocomplete="family-name" value="${esc(lastName)}"></div><div class="field"><label for="display-name">Display Name</label><input class="input" id="display-name" name="display-name" autocomplete="nickname" value="${esc(user.name)}"></div><div class="field"><label for="user-email">Email</label><input class="input" id="user-email" name="email" type="email" autocomplete="email" spellcheck="false" value="${esc(user.email)}"></div><div class="field"><label for="user-role">Role</label><input class="input" id="user-role" name="role" autocomplete="organization-title" value="${esc(user.role)}"></div><div class="field"><label for="user-workspace">Workspace</label><input class="input" id="user-workspace" name="workspace" value="${esc(user.workspace)}"></div><div class="field"><label for="user-org">Organisation</label><input class="input" id="user-org" name="organisation" autocomplete="organization" value="${esc(settings.reportOrganisation)}"></div><div class="field wide"><label for="report-lab">Laboratory</label><input class="input" id="report-lab" name="laboratory" value="${esc(settings.reportLab)}"></div></div></div>
           <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Interface & Locale</h3><small>Topbar and sidebar stay dark while following theme and palette</small></div>${icon("grid")}</div><div class="panel-body stack"><div class="form-grid"><div class="field"><label for="theme">Content Theme</label><select class="select" id="theme" name="theme"><option value="light">Light Content</option><option value="dark">Dark Content</option></select></div><div class="field"><label for="density">Density</label><select class="select" id="density" name="density"><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></div><div class="field"><label for="language">Language</label><select class="select" id="language" name="language"><option value="en">English</option><option value="it">Italiano</option></select></div><div class="field"><label for="units">Preferred Units</label><select class="select" id="units" name="units"><option value="si">SI scientific</option><option value="lab">Laboratory practical</option></select></div></div><h4>Colour Palette</h4><div class="grid grid-4">${paletteOptions}</div></div></div>
           <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report Preferences</h3><small>Shared identity for PDF, DOCX, Excel and LaTeX</small></div>${icon("file")}</div><div class="panel-body form-grid"><div class="field"><label for="report-author">Report Author</label><input class="input" id="report-author" name="report-author" value="${esc(settings.reportAuthor)}"></div><div class="field"><label for="default-export">Default Export</label><select class="select" id="default-export" name="default-export"><option value="bundle">Complete Project ZIP</option><option value="pdf">Scientific PDF</option><option value="docx">Editable DOCX</option><option value="xlsx">Analysis Workbook</option><option value="latex">LaTeX Report Package</option></select></div><div class="wide notice notice-success"><div>${icon("check")}</div><div><strong>One report source</strong><p>All formats use the same approved findings, provenance, names and active palette.</p></div></div></div></div>
         </div><div class="stack">
@@ -1198,6 +1421,7 @@
           <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Temporary state</h3><small>Current changes exist only in JavaScript memory</small></div>${icon("trash")}</div><div class="panel-body row justify-between"><div><strong>Reset temporary state</strong><p class="mb-0">Restore included projects, reports and interface defaults now.</p></div><button class="btn btn-danger" id="reset-demo">Reset…</button></div></div>
         </div></div>
       </div>
+      <div id="users-settings" class="settings-pane stack" role="tabpanel" hidden><h2 class="sr-only">User management</h2><div id="users-settings-content"></div></div>
       <div id="admin-settings" class="settings-pane stack" role="tabpanel" hidden>
         <h2 class="sr-only">Admin settings</h2>
         <div class="notice notice-warning"><div>${icon("info")}</div><div><strong>Demonstration administration</strong><p>These controls model global policy only. There is no authentication, permission enforcement or shared server configuration.</p></div></div>
@@ -1213,7 +1437,10 @@
     $("#admin-palette").value = settings.adminPalette;
     $("#save-settings").onclick = () => {
       const updated = {...settings, theme: $("#theme").value, density: $("#density").value, palette: $('input[name="palette"]:checked').value, language: $("#language").value, units: $("#units").value, defaultExport: $("#default-export").value, aiEnabled: $("#ai-enabled").checked, knowledgeScope: $("#knowledge-scope").value, reportAuthor: $("#report-author").value, reportLab: $("#report-lab").value, reportOrganisation: $("#user-org").value, nomadUrl: $("#nomad-url").value, nomadUsername: $("#nomad-user").value, nomadApiKey: $("#nomad-key").value, adminTheme: $("#admin-theme").value, adminPalette: $("#admin-palette").value, laboratoryName: $("#admin-lab").value};
-      saveSettings(updated); applySettings(); toast("Settings applied for this page. Reload restores settings.yaml defaults.");
+      const profileName = $("#display-name").value.trim() || [$("#first-name").value.trim(), $("#last-name").value.trim()].filter(Boolean).join(" ") || user.name;
+      const profile = saveCurrentUser({...user, name:profileName, email:$("#user-email").value.trim(), role:$("#user-role").value.trim(), workspace:$("#user-workspace").value.trim(), organisation:$("#user-org").value.trim(), laboratory:$("#report-lab").value.trim()});
+      updated.reportAuthor = $("#report-author").value.trim() || profile.name;
+      saveSettings(updated); applySettings(); hydrateShell("settings"); renderUserDirectoryPane(); toast("Profile and preferences applied for this session and carried to other pages.");
     };
     $("#download-settings").onclick = () => {
       const copy = JSON.parse(JSON.stringify(C));
@@ -1228,7 +1455,16 @@
     $$('input[name="palette"]').forEach((input) => input.addEventListener("change", () => previewSetting("palette", input.value)));
     $("#theme").addEventListener("change", (event) => previewSetting("theme", event.target.value));
     $("#density").addEventListener("change", (event) => previewSetting("density", event.target.value));
-    $$('[data-settings-tab]').forEach((tab) => tab.onclick = () => { const user = tab.dataset.settingsTab === "user"; $("#user-settings").hidden = !user; $("#admin-settings").hidden = user; $$('[data-settings-tab]').forEach((item) => { item.classList.toggle("active", item === tab); item.setAttribute("aria-selected", item === tab); }); });
+    const activateSettingsTab = (name) => {
+      const selected = ["user", "users", "admin"].includes(name) ? name : "user";
+      $("#user-settings").hidden = selected !== "user";
+      $("#users-settings").hidden = selected !== "users";
+      $("#admin-settings").hidden = selected !== "admin";
+      $$('[data-settings-tab]').forEach((item) => { const active = item.dataset.settingsTab === selected; item.classList.toggle("active", active); item.setAttribute("aria-selected", active); });
+      if (selected === "users") renderUserDirectoryPane();
+    };
+    $$('[data-settings-tab]').forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
+    activateSettingsTab(new URLSearchParams(location.search).get("tab") || "user");
     $("#show-nomad-key").onclick = () => { const input = $("#nomad-key"); const showing = input.type === "text"; input.type = showing ? "password" : "text"; $("#show-nomad-key").textContent = showing ? "Show" : "Hide"; $("#show-nomad-key").setAttribute("aria-label", showing ? "Show API key" : "Hide API key"); };
     $("#test-nomad").onclick = () => { const complete = $("#nomad-url").value && $("#nomad-user").value && $("#nomad-key").value; $("#nomad-state").className = `badge ${complete ? "badge-success" : "badge-warning"}`; $("#nomad-state").textContent = complete ? "Simulated configuration valid" : "Complete URL, account and demo key"; toast("Simulation only: no NOMAD request was sent.", complete ? "success" : "error"); };
     $("#reset-demo").onclick = () => {
@@ -1478,18 +1714,31 @@
   function renderUiKit() {
     Log.info("page.render", { page: "ui-kit" });
     const colors = ["--bg", "--surface", "--surface2", "--surface3", "--text", "--muted", "--line", "--accent", "--success", "--warning", "--danger", "--info"];
+    const comparisonSource = F?.modelComparison || {};
+    const modelComparisonItems = Array.isArray(comparisonSource)
+      ? comparisonSource
+      : (comparisonSource.labels || []).map((name, index) => ({
+          name,
+          r2: comparisonSource.r2?.[index] ?? 0,
+          mae: comparisonSource.mae?.[index] ?? null,
+          rmse: comparisonSource.rmse?.[index] ?? null
+        }));
+    const trainingRuns = Array.isArray(F?.trainingRuns) ? F.trainingRuns : [];
+    const outputTypes = Array.isArray(F?.outputTypes) ? F.outputTypes : [];
+    const readinessOverall = Number(F?.readiness?.overall ?? 0);
     $("#page-content").innerHTML = header("UI Kit", "The single source of truth for the compact application shell, components, scientific visuals, AI patterns and report identity.", `<a class="btn btn-primary" href="settings.html">Test themes</a>`) + `
       <section class="section"><div class="section-heading"><div><h2>Brand identity</h2><p>The flask, flowing path and process nodes combine laboratory science, experimental continuity and traceable data.</p></div><span class="badge badge-success">Local SVG</span></div><div class="panel"><div class="panel-body"><div class="brand-identity-preview"><div class="brand-lockup-preview"><img src="assets/brand/logo-horizontal.svg" alt="LabFlow — Manage experiments. Accelerate discovery."></div><div class="brand-asset-grid"><div class="card"><img src="assets/brand/logo-mark.svg" alt="LabFlow app mark"><strong>Application mark</strong><small>Sidebar, compact navigation and app surfaces</small></div><div class="card brand-asset-light"><img src="assets/brand/logo-symbol.svg" alt="LabFlow standalone symbol"><strong>Standalone symbol</strong><small>Light surfaces and identity documentation</small></div><div class="card brand-asset-light"><img src="assets/brand/logo-monochrome.svg" alt="LabFlow monochrome wordmark"><strong>Monochrome</strong><small>Print-safe and single-colour use</small></div></div></div></div></div></section>
       <section class="section page-composition-showcase"><div class="section-heading"><div><h2>Page Shell and Composition</h2><p>The checked-in application shell stays stable while every renderer follows one ordered page grammar.</p></div><span class="badge badge-success">Production standard</span></div><div class="panel composition-demo"><div class="panel-body"><nav class="page-context" aria-label="Example breadcrumb"><a href="#">Workspace</a><span>/</span><span>Project</span></nav><div class="composition-header"><div><span class="page-eyebrow">Object type</span><h3>Page title <span class="badge badge-accent">Status</span></h3><p>Description and current context.</p></div><div class="cluster"><button class="btn">Secondary</button><button class="btn btn-primary">Primary action</button></div></div><div class="summary-strip"><div class="summary-item"><small>Summary</small><strong>Essential state</strong></div><div class="summary-item"><small>Progress</small><strong>78%</strong></div><div class="summary-item"><small>Owner</small><strong>Matteo Ginesi</strong></div><div class="summary-item"><small>Evidence</small><strong>Reviewed</strong></div></div><div class="tabs"><button class="tab active">Overview</button><button class="tab">Evidence</button><button class="tab">History</button></div><div class="toolbar"><div class="search"><span>${icon("search")}</span><input class="input" aria-label="Example search" placeholder="Search this view…"></div><button class="btn">Filter</button><span class="toolbar-spacer"></span><span class="badge">12 items</span></div><div class="composition-content"><div class="panel"><div class="panel-body">Primary content</div></div><aside class="panel"><div class="panel-body">Secondary rail</div></aside></div></div></div><div class="grid grid-5 mt-2">${[["Index page","Header · summary · toolbar · collection"],["Detail page","Entity header · status · summary · sections"],["Workflow page","Project header · stepper · current step · controls"],["Analysis / Workbench","Header · scope · work area · evidence rail"],["Reference page","Header · navigation · reading or configuration surface"]].map(([name,flow]) => `<article class="card archetype-card"><span class="badge">Archetype</span><h3>${name}</h3><p>${flow}</p></article>`).join("")}</div><div class="grid grid-3 mt-2"><div class="card width-sample width-standard"><strong>Standard</strong><small>Workspace, Cabinet, Settings</small></div><div class="card width-sample width-wide"><strong>Wide workbench</strong><small>Project, Knowledge, Tools, UI Kit</small></div><div class="card width-sample width-reading"><strong>Narrow reading</strong><small>Documentation</small></div></div><div class="grid grid-4 mt-2"><article class="card"><strong>Standard card</strong><p>Neutral border; ordinary content.</p></article><article class="card kpi"><span class="kpi-label">Metric card</span><strong class="kpi-value">21.28%</strong><span class="kpi-detail">Top accent only</span></article><article class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Status card</strong><p>Left accent communicates severity.</p></div></article><article class="card selected-card"><strong>Selected card</strong><p>Selection uses outline and surface, not severity color.</p></article></div></section>
       <section class="section"><div class="section-heading"><div><h2>Foundations</h2><p>Theme, palette, local-first Noto Sans typography, spacing and semantic status tokens.</p></div></div><div class="grid grid-4">${colors.map((token) => `<div class="card"><div class="color-swatch token-swatch mb-1" style="background:var(${token})"></div><code>${token}</code></div>`).join("")}</div><div class="panel mt-2"><div class="panel-body grid grid-3"><div><h1>Page title</h1><p>34px maximum, restrained hierarchy.</p></div><div><h2>Section title</h2><p>Compact grouping for technical content.</p></div><div><h3>Panel title</h3><p>Dense information without oversized cards.</p></div></div></div></section>
-      <section class="section"><div class="section-heading"><div><h2>Shared Block Registry</h2><p>Only blocks used by the current product belong here; extend these before creating page-specific variants.</p></div></div><div class="panel"><div class="table-wrap"><table class="table-dense"><thead><tr><th>Block</th><th>Allowed Variants</th><th>Current Product Use</th></tr></thead><tbody><tr><td><code>page-header</code></td><td>Title, supporting copy, contextual actions</td><td>Every main workspace</td></tr><tr><td><code>panel / card</code></td><td>Default, KPI, AI context, interactive link</td><td>Workspace, project steps, Cabinet, Knowledge, Tools</td></tr><tr><td><code>toolbar</code></td><td>Search, filters, view controls, count</td><td>Workspace portfolio and Lab Cabinet</td></tr><tr><td><code>notice</code></td><td>Information, success, warning, error</td><td>Import, validation, assistant and export</td></tr><tr><td><code>stepper</code></td><td>Available, active, completed</td><td>Project pipelines and Workspace focus</td></tr><tr><td><code>scientific-builder-layout</code></td><td>Solution or stack builder paired with Review</td><td>CHOSE Solutions and Stack steps</td></tr><tr><td><code>validation-issue</code></td><td>Error, warning, information, suggestion</td><td>Experiment Inspector and Ask LabFlow</td></tr><tr><td><code>report-preview</code></td><td>Active palette and approved content</td><td>Analysis Report, Export and UI Kit</td></tr></tbody></table></div></div></section>
+      <section class="section"><div class="section-heading"><div><h2>Shared Block Registry</h2><p>Only blocks used by the current product belong here; extend these before creating page-specific variants.</p></div></div><div class="panel"><div class="table-wrap"><table class="table-dense"><thead><tr><th>Block</th><th>Allowed Variants</th><th>Current Product Use</th></tr></thead><tbody><tr><td><code>page-header</code></td><td>Title, supporting copy, contextual actions</td><td>Every main workspace</td></tr><tr><td><code>panel / card</code></td><td>Default, KPI, AI context, interactive link</td><td>Workspace, project steps, Cabinet, Knowledge, Tools</td></tr><tr><td><code>toolbar</code></td><td>Search, filters, view controls, count</td><td>Workspace portfolio and Lab Cabinet</td></tr><tr><td><code>notice</code></td><td>Information, success, warning, error</td><td>Import, validation, assistant and export</td></tr><tr><td><code>stepper</code></td><td>Available, active, completed</td><td>Project pipelines and Workspace focus</td></tr><tr><td><code>cabinet-browser</code></td><td>Family filters, resource cards and sticky inspector</td><td>Lab Cabinet and reusable-object previews</td></tr><tr><td><code>scientific-builder-layout</code></td><td>Solution or stack builder paired with Review</td><td>CHOSE Solutions and Stack steps</td></tr><tr><td><code>validation-issue</code></td><td>Error, warning, information, suggestion</td><td>Experiment Inspector and Ask LabFlow</td></tr><tr><td><code>report-preview</code></td><td>Active palette and approved content</td><td>Analysis Report, Export and UI Kit</td></tr></tbody></table></div></div></section>
+      <section class="section"><div class="section-heading"><div><h2>Lab Cabinet resource browser</h2><p>Reusable scientific objects use one visual card language, compact family navigation and a detail inspector with explicit snapshot behaviour.</p></div><a class="btn" href="cabinet.html">${icon("cabinet")} Open Lab Cabinet</a></div><div class="cabinet-ui-kit-demo"><div><div class="cabinet-family-bar cabinet-family-bar-demo"><button class="cabinet-family-card active" type="button"><span>${icon("grid")}</span><strong>All resources</strong><small>${D.cabinet.length} items</small></button>${["material","solution","stack","mapping","analysis"].map((type) => { const info=cabinetTypeInfo(type); const count=D.cabinet.filter((item)=>item.type===type).length; return `<button class="cabinet-family-card" type="button"><span>${icon(info.icon)}</span><strong>${esc(info.label)}</strong><small>${count} items</small></button>`; }).join("")}</div><div class="cabinet-demo-cards">${[D.cabinet.find((item)=>item.type==="solution"),D.cabinet.find((item)=>item.type==="stack"),D.cabinet.find((item)=>item.type==="analysis")].filter(Boolean).map((item)=>cabinetCardMarkup(item,{demo:true})).join("")}</div></div><aside class="panel cabinet-inspector cabinet-inspector-demo" data-cabinet-type="solution">${cabinetInspectorMarkup(D.cabinet.find((item)=>item.type==="solution") || D.cabinet[0],{compact:true})}</aside></div></section>
       <section class="section"><div class="section-heading"><div><h2>Actions and navigation</h2><p>Buttons, statuses, tabs, segmented controls, breadcrumbs and commands.</p></div></div><div class="grid grid-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Buttons and badges</h3></div><div class="panel-body cluster"><button class="btn btn-primary">Primary</button><button class="btn btn-secondary">AI / contextual</button><button class="btn">Secondary</button><button class="btn btn-ghost">Ghost</button><button class="btn btn-danger">Danger</button><button class="btn btn-sm">Small</button><span class="badge badge-accent">Active</span><span class="badge badge-success">Reviewed</span><span class="badge badge-warning">Review</span><span class="badge badge-danger">Issue</span></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Tabs and commands</h3></div><div class="panel-body stack"><div class="tabs"><button class="tab active">Overview</button><button class="tab">Tools</button><button class="tab">Findings</button><button class="tab">Report</button></div><div class="command-bar">${icon("search")} Search or run a command </div><div class="segmented"><button class="active">Compact</button><button>Comfortable</button></div></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Forms and input</h2><p>Compact controls for structured scientific data.</p></div></div><div class="grid grid-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Form fields</h3></div><div class="panel-body form-grid"><div class="field"><label>Text field</label><input class="input" value="FA0.90MA0.10"></div><div class="field"><label>Select field</label><select class="select"><option>Reviewed recipe</option></select></div><div class="field"><label>Numeric + unit</label><div class="input-group"><input class="input" value="1.25"><span class="btn">mol/L</span></div></div><div class="field"><label>State</label><label class="toggle"><input type="checkbox" checked><span class="toggle-track"></span><span>Enabled</span></label></div><div class="field wide"><label>Researcher notes</label><textarea class="textarea">Evidence-linked interpretation remains editable.</textarea></div></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Upload and search</h3></div><div class="panel-body stack"><div class="search"><span>${icon("search")}</span><input class="input" placeholder="Search project evidence"></div><div class="dropzone">${icon("upload")}<h3 class="mt-1">Drop local scientific files</h3><p>Source provenance is retained.</p><button class="btn btn-primary">Choose files</button></div></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Data display</h2><p>Panels, KPI cards, tables, timelines, progress and notices.</p></div></div><div class="grid grid-5">${[["Best PCE", "21.28%", "S08"], ["Samples", "12", "6 stacks"], ["Quality", "94%", "2 warnings"], ["Findings", "5", "2 in review"], ["Knowledge", "6", "linked records"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="grid grid-2 mt-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Scientific table</h3><small>Dense, scrollable and unit-aware</small></div><button class="btn btn-sm">Export</button></div><div class="panel-body"><div class="table-wrap">${datasetTable(D.demoDataset.slice(0, 4))}</div></div></div><div class="panel"><div class="panel-header"><h3 class="mb-0">Feedback patterns</h3></div><div class="panel-body stack"><div class="notice"><div>${icon("info")}</div><div><strong>Information</strong><p>Explain system behaviour and provenance.</p></div></div><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Validated</strong><p>Data mapping and units are complete.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Review required</strong><p>Make gaps visible without hiding useful work.</p></div></div></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Scientific components</h2><p>Shared, compact representations used by pipeline builders and reviews.</p></div></div><div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack schematic</h3><small>Layer order, role, thickness and selectable detail</small></div></div><div class="panel-body">${stackReview(stackLayers)}</div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution composition</h3><small>Solvent, solutes, quantities and validation</small></div></div><div class="panel-body">${solutionReview()}</div></div></div><div class="grid grid-3 mt-2"><div class="panel"><div class="panel-header"><h3 class="mb-0">Pipeline stepper</h3></div><div class="panel-body"><div class="stepper"><div class="step-link done"><span class="step-index">${icon("check")}</span><span class="step-copy"><strong>Solutions</strong><span>Structured batches</span></span></div><div class="step-link active"><span class="step-index">2</span><span class="step-copy"><strong>Stack</strong><span>Device layers</span></span></div><div class="step-link"><span class="step-index">3</span><span class="step-copy"><strong>Data</strong><span>Measurements</span></span></div></div></div></div><div class="stack">${D.tools.slice(0, 2).map(toolCard).join("")}</div><article class="card object-card"><span class="object-icon">${icon("flask")}</span><div><span class="badge">solution</span><h3 class="mt-1">FA/MA reference</h3><p>Reusable Cabinet object with versioned metadata.</p></div></article></div></section>
       <section class="section"><div class="section-heading"><div><h2>Lab Assistant and Knowledge</h2><p>Production-used Ask, Inspect and Prepare patterns keep evidence, confidence and human control visible.</p></div></div><div class="grid grid-2"><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Contextual assistant panel</h3><small>Compact support inside a workflow</small></div>${icon("spark")}</div><div class="panel-body stack"><button class="btn btn-secondary">${icon("spark")} AI action button</button>${D.aiFindings.slice(0, 2).map(aiFinding).join("")}<div class="proposed-action-preview"><div><span class="badge badge-accent">Proposed action</span><h3>Create comparison</h3><p>3 experiments · PCE, Voc, Jsc and FF</p></div><div class="cluster"><button class="btn">Cancel</button><button class="btn btn-primary">Review</button></div></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Knowledge response and evidence</h3><small>Source card · confidence · limitation</small></div></div><div class="panel-body stack"><div class="ai-message"><strong>Lab Assistant response</strong><p>S08 has the highest measured PCE in the current cohort.</p><small>Structured query + deterministic aggregation</small></div><button class="evidence-item"><span class="evidence-type">Results</span><span><strong>batch_B03_forward.csv</strong><small>S08 · PCE · 21.28%</small></span><span class="confidence-badge confidence-high">High</span></button><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Limitation</strong><p>The result does not establish causality.</p></div></div></div></div></div><div class="grid grid-2 mt-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Validation and mapping patterns</h3><small>Error · warning · suggestion · confidence</small></div></div><div class="panel-body stack">${D.validationIssues.slice(0,3).map((item) => `<article class="validation-issue issue-${item.severity}"><div>${icon(item.severity === "suggestion" ? "spark" : "warning")}</div><div><strong>${esc(item.title)}</strong><p>${esc(item.detail)}</p></div></article>`).join("")}<div class="table-wrap"><table class="table-dense"><thead><tr><th>Column</th><th>Destination</th><th>Confidence</th><th>Preview</th></tr></thead><tbody><tr><td>PCE</td><td>measurements.jv.efficiency</td><td><span class="confidence-badge confidence-high">99%</span></td><td>21.28%</td></tr></tbody></table></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Saved view and comparison summary</h3><small>Reusable, session-only patterns</small></div></div><div class="panel-body stack"><div class="saved-view-item"><button><strong>High-performing devices</strong><small>PCE &gt; 20%</small></button><span class="badge">4</span><button class="btn btn-ghost icon-btn" aria-label="Rename saved view">${icon("edit")}</button><button class="btn btn-ghost icon-btn" aria-label="Delete saved view">${icon("x")}</button></div><div class="comparison-summary"><div><span>Included</span><strong>3 experiments</strong></div><div><span>Metrics</span><strong>4</strong></div><div><span>Missing</span><strong>2 links</strong></div><div><span>Status</span><strong>Review</strong></div></div></div></div></div><div class="grid grid-3 mt-2"><div class="empty"><strong>Ask LabFlow</strong><p>Choose a scope or start with a suggested question.</p></div><div class="panel"><div class="panel-body"><div class="skeleton" aria-label="Assistant response loading"></div><small>AI loading state</small></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Assistant unavailable</strong><p>Deterministic tools remain available; no data is lost.</p></div></div></div></section>
       <section class="section"><div class="section-heading"><div><h2>Local icon system</h2><p>A single checked-in stroke set is used for product controls; branding remains separate.</p></div><span class="badge badge-accent">Local · no CDN</span></div><div class="icon-library-grid">${["home","cabinet","book","brain","database","activity","chart","file","download","code","layers","flask","grip","chevron-up","chevron-down","settings"].map((name) => `<article><span>${icon(name, "icon icon-lg")}</span><code>${name}</code></article>`).join("")}</div></section>
-      <section class="section"><div class="section-heading"><div><h2>AI & Models foundation</h2><p>One workspace presents Knowledge, Datasets, Models and Predictions while preserving distinct scientific record types.</p></div><a class="btn btn-primary" href="knowledge.html?view=datasets">Open AI & Models</a></div><div class="grid grid-4"><article class="card"><span class="knowledge-kind">Knowledge</span><h3>Evidence-led answers</h3><p>Scope, sources, relationships, tools and limitations stay visible.</p></article><article class="card"><span class="knowledge-kind">Datasets</span><h3>Immutable snapshots</h3><p>Features, targets, units, selection, exclusions and split policy.</p></article><article class="card"><span class="knowledge-kind">Models</span><h3>Training and evaluation</h3><p>Learning curves, residuals, confusion matrix, model cards, baselines and versioned runs.</p></article><article class="card"><span class="knowledge-kind">Predictions</span><h3>Reviewed outputs</h3><p>Prediction, uncertainty, applicability, observed value and review state.</p></article></div><div class="model-dashboard mt-2"><section class="panel model-dashboard-main"><div class="panel-header"><div><h3 class="mb-0">Model comparison pattern</h3><small>Comparable evaluation metrics and explicit baseline</small></div><span class="badge">Demonstration data</span></div><div class="panel-body model-bars">${F.modelComparison.map((item) => `<div><span>${esc(item.name)}</span><div><i style="width:${Math.max(8, Number(item.r2 || 0) * 100)}%"></i></div><strong>R² ${Number(item.r2 || 0).toFixed(2)}</strong></div>`).join("")}</div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Training-run pattern</h3><small>Status, artifact and best metric</small></div>${icon("activity")}</div><div class="training-status-list">${F.trainingRuns.slice(0,4).map((run) => `<article><span class="run-status ${run.status === "completed" ? "is-complete" : "is-review"}">${icon(run.status === "completed" ? "check" : "warning")}</span><div><strong>${esc(run.id)}</strong><small>${esc(run.model)} · ${esc(run.dataset)}</small></div><span><b>${esc(run.bestMetric || "Review")}</b><small>${esc(run.artifact || run.status)}</small></span></article>`).join("")}</div></section></div><div class="ai-readiness-hero mt-2"><div><span class="page-eyebrow">AI readiness pattern</span><h2>${F.readiness.overall}% ready</h2><p>The score is always accompanied by its component checks and blocking issues.</p></div><div class="readiness-ring readiness-ring-small" style="--readiness:${F.readiness.overall}"><strong>${F.readiness.overall}</strong><span>%</span></div></div><div class="output-class-list mt-2">${F.outputTypes.map((item) => `<article><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span><span><small>Initial state</small><strong>${esc(item.review)}</strong></span><span><small>Required evidence</small><strong>${esc(item.evidence)}</strong></span></article>`).join("")}</div></section>
+      <section class="section"><div class="section-heading"><div><h2>AI & Models foundation</h2><p>One workspace presents Knowledge, Datasets, Models and Predictions while preserving distinct scientific record types.</p></div><a class="btn btn-primary" href="knowledge.html?view=datasets">Open AI & Models</a></div><div class="grid grid-4"><article class="card"><span class="knowledge-kind">Knowledge</span><h3>Evidence-led answers</h3><p>Scope, sources, relationships, tools and limitations stay visible.</p></article><article class="card"><span class="knowledge-kind">Datasets</span><h3>Immutable snapshots</h3><p>Features, targets, units, selection, exclusions and split policy.</p></article><article class="card"><span class="knowledge-kind">Models</span><h3>Training and evaluation</h3><p>Learning curves, residuals, confusion matrix, model cards, baselines and versioned runs.</p></article><article class="card"><span class="knowledge-kind">Predictions</span><h3>Reviewed outputs</h3><p>Prediction, uncertainty, applicability, observed value and review state.</p></article></div><div class="model-dashboard mt-2"><section class="panel model-dashboard-main"><div class="panel-header"><div><h3 class="mb-0">Model comparison pattern</h3><small>Comparable evaluation metrics and explicit baseline</small></div><span class="badge">Demonstration data</span></div><div class="panel-body model-bars">${modelComparisonItems.map((item) => `<div><span>${esc(item.name)}</span><div><i style="width:${Math.max(8, Number(item.r2 || 0) * 100)}%"></i></div><strong>R² ${Number(item.r2 || 0).toFixed(2)}</strong></div>`).join("")}</div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Training-run pattern</h3><small>Status, artifact and best metric</small></div>${icon("activity")}</div><div class="training-status-list">${trainingRuns.slice(0,4).map((run) => `<article><span class="run-status ${run.status === "completed" ? "is-complete" : "is-review"}">${icon(run.status === "completed" ? "check" : "warning")}</span><div><strong>${esc(run.id)}</strong><small>${esc(run.model)} · ${esc(run.dataset)}</small></div><span><b>${esc(run.bestMetric || "Review")}</b><small>${esc(run.artifact || run.status)}</small></span></article>`).join("")}</div></section></div><div class="ai-readiness-hero mt-2"><div><span class="page-eyebrow">AI readiness pattern</span><h2>${readinessOverall}% ready</h2><p>The score is always accompanied by its component checks and blocking issues.</p></div><div class="readiness-ring readiness-ring-small" style="--readiness:${F.readiness.overall}"><strong>${F.readiness.overall}</strong><span>%</span></div></div><div class="output-class-list mt-2">${outputTypes.map((item) => `<article><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span><span><small>Initial state</small><strong>${esc(item.review)}</strong></span><span><small>Required evidence</small><strong>${esc(item.evidence)}</strong></span></article>`).join("")}</div></section>
       <section class="section"><div class="section-heading"><div><h2>Report system</h2><p>The canonical Report Composer drives native PDF, editable DOCX, analysis workbook and a compile-ready LaTeX package.</p></div><a class="btn btn-primary" href="project.html?project=${encodeURIComponent(D.projects[0].id)}&step=analysis-report&view=report">Open Report Composer</a></div><div class="report-preview">${reportPreview(D.projects[0])}</div></section>
       <section class="section"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Composition rule</h3><small>Pipeline pages combine approved components; local CSS is avoided</small></div></div><div class="panel-body"><pre>${esc(`Step page = workflow banner
           + shared cards / panels / forms / tables
@@ -1533,14 +1782,27 @@
     $$("canvas").forEach((canvas) => { canvas.setAttribute("role", "img"); if (!canvas.hasAttribute("aria-label")) canvas.setAttribute("aria-label", "Scientific data chart"); });
   }
 
+  function assertPageDependencies(page) {
+    const requirements = {
+      knowledge: [[window.LabFlowKnowledgePages, "renderBase", "assets/js/knowledge-pages.js"]],
+      tools: [[window.LabFlowToolsPage, "render", "assets/js/tools-page.js"]],
+      project: [[E, "buildReportDocument", "assets/js/workbook.js"]],
+      "ui-kit": [[E, "buildReportDocument", "assets/js/workbook.js"]],
+      documentation: [[window.LabFlowDiagrams, "render", "assets/js/diagrams.js"]]
+    };
+    (requirements[page] || []).forEach(([module, method, source]) => {
+      if (!module || typeof module[method] !== "function") throw new TypeError(`${source} did not expose ${method}(). Check the page script order.`);
+    });
+  }
+
   function init() {
     const page = document.body.dataset.page;
     const finish = Log.time("page.init", { page });
     Log.info("page.init-start", { page, protocol: location.protocol });
     try {
-      const navigation = performance.getEntriesByType?.("navigation")?.[0];
-      restoreCarriedSettings(navigation?.type === "reload");
+      restoreCarriedSettings();
       applySettings();
+      assertPageDependencies(page);
       hydrateShell(page);
       const renderers = {workspace: renderWorkspace, project: renderProject, cabinet: renderCabinet, knowledge: () => window.LabFlowKnowledgePages.renderBase({root: $("#page-content"), header, icon, esc, badgeStatus}), tools: () => window.LabFlowToolsPage.render({root: $("#page-content"), header, icon, esc, toast, getSettings}), settings: renderSettings, documentation: renderDocumentation, "ui-kit": renderUiKit};
       const renderer = renderers[page] || renderWorkspace;
@@ -1551,7 +1813,7 @@
     } catch (error) {
       Log.error("page.init-failed", { page, error });
       const root = $("#page-content");
-      if (root) root.innerHTML = `<div class="notice notice-error"><div>${icon("warning")}</div><div><strong>LabFlow could not render this page</strong><p>Check the JavaScript console for the structured LabFlow error entry.</p></div></div>`;
+      if (root) root.innerHTML = `<div class="notice notice-error"><div>${icon("warning")}</div><div><strong>LabFlow could not render this page</strong><p>${esc(error?.message || "Check the JavaScript console for the structured LabFlow error entry.")}</p><small>Page: ${esc(page)} · the application shell remains available.</small></div></div>`;
       finish({ status: "failed" });
     }
   }

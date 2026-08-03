@@ -65,3 +65,19 @@ These rules apply to the whole repository.
 - Use `assets/icons/labflow-icons.json` / `assets/js/icons.js` for product icons; branding assets are excluded.
 - Every drag-reorder interaction must retain visible keyboard-accessible move buttons.
 - Reordering solution components or stack layers must refresh the corresponding review immediately.
+
+
+## Appearance, tabs and user-directory rules
+
+- Preserve `lf_theme`, `lf_palette` and `lf_density` across every internal page navigation, including `file://`; do not use cookies or browser persistence.
+- Use the shared contained `.tabs` and `.segmented` patterns. Do not add page-specific tab bars.
+- User/profile changes remain session-only demonstrations until a backend exists. Never imply account creation, invitations sent or permission enforcement.
+- Keep product attribution consistent with **Matteo Ginesi · 2026** and the MIT copyright notice.
+
+## Lab Cabinet and runtime resilience
+
+- Use the shared Cabinet browser pattern: family filters, search/sort toolbar, visual resource card and one detail inspector. Do not add a second Cabinet card language.
+- Cabinet visuals summarize type and structure only; stable ID, status, metadata, usage and snapshot semantics must remain textual and accessible.
+- Treat Cabinet reuse as snapshot creation. Never suggest that changing a reusable definition mutates existing project or experiment records.
+- Keep page-specific scripts in their validated dependency order. When a renderer depends on a module, add it to the page contract in `tools/validate_poc.py`.
+- Normalize optional arrays and records at module boundaries before mapping, filtering, plotting or formatting. A missing demonstration collection must produce an empty state, not a blank page.

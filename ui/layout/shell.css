@@ -26,6 +26,7 @@
 .project-nav-copy strong{font-size:var(--fs-xs);font-weight:750}
 .project-nav-copy small{color:var(--shell-muted);font:9px var(--mono);letter-spacing:.02em}
 .sidebar-footer{position:sticky;bottom:0;z-index:2;flex:none;margin-top:auto;padding-top:10px;border-top:1px solid var(--shell-line);background:linear-gradient(180deg,var(--shell),color-mix(in srgb,var(--shell) 88%,#127a8b 12%))}
+.sidebar-credit{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:5px 6px 0;padding-top:6px;border-top:1px solid rgba(255,255,255,.055);color:var(--shell-muted);font-size:9px;letter-spacing:.02em}.sidebar-credit small{font-size:9px;color:var(--shell-muted)}
 .user-chip,.top-user{display:flex;align-items:center;gap:8px;border:0;background:transparent;color:var(--shell-text);cursor:pointer}
 .user-chip{width:100%;padding:6px;text-align:left}
 .user-chip:hover{background:var(--shell3)}

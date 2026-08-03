@@ -5,12 +5,24 @@
   const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   let settings = {};
   let projects;
+  let currentUser;
+  let workspaceUsers;
   const reports = new Map();
   let assistantMessages = [];
 
   window.LabFlowState = {
     getSettings: (fallback = {}) => ({ ...clone(fallback), ...clone(settings) }),
     saveSettings(value) { settings = clone(value); Log.debug("settings.saved", { keys: Object.keys(value || {}) }); return true; },
+    getUser(fallback = {}) {
+      if (currentUser === undefined) currentUser = clone(fallback);
+      return clone(currentUser);
+    },
+    saveUser(value) { currentUser = clone(value); Log.debug("user.saved", { id: value?.id, role: value?.role }); return true; },
+    getUsers(fallback = []) {
+      if (workspaceUsers === undefined) workspaceUsers = clone(fallback);
+      return clone(workspaceUsers);
+    },
+    saveUsers(value) { workspaceUsers = clone(value); Log.debug("users.saved", { count: value?.length || 0 }); return true; },
     getProjects(fallback) {
       if (projects === undefined) projects = clone(fallback);
       return clone(projects);
@@ -25,6 +37,8 @@
     reset() {
       settings = {};
       projects = undefined;
+      currentUser = undefined;
+      workspaceUsers = undefined;
       reports.clear();
       assistantMessages = [];
       Log.info("state.reset");

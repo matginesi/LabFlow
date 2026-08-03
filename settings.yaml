@@ -9,6 +9,8 @@ application:
   description: Static research workspace for structured laboratory projects
   deployment: github-pages
   runtime: vanilla-html-css-javascript
+  author: Matteo Ginesi
+  copyright: "© 2026 Matteo Ginesi"
 
 appearance:
   # Content may be light or dark; the application shell always stays dark.
@@ -43,6 +45,7 @@ features:
   generic_tools: true
   ai_assistance: true
   ai_models_foundation: true
+  user_management: demonstrated
   nomad_preview: true
 
 reports:

@@ -70,6 +70,8 @@ def render(page: str, title: str, description: str) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{description}">
+  <meta name="author" content="Matteo Ginesi">
+  <meta name="copyright" content="© 2026 Matteo Ginesi">
   <meta name="theme-color" content="#0c1119">
   <title>{title} · LabFlow</title>
   <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
@@ -90,7 +92,7 @@ def render(page: str, title: str, description: str) -> str:
         <div class="nav-label">Reference</div>
         <nav class="nav" aria-label="Product reference">{nav_links(page, REFERENCE)}</nav>
       </div>
-      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button></div>
+      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button><div class="sidebar-credit"><span>© 2026 Matteo Ginesi</span><small>LabFlow POC</small></div></div>
     </aside>
     <header class="topbar">
       <div class="topbar-left">

@@ -1,11 +1,47 @@
 (function () {
   "use strict";
 
-  const D = window.LabFlowData;
+  const D = window.LabFlowData || {};
   const Log = window.LabFlowLogger?.child("ai-models") || {debug(){},info(){},warn(){},error(){}};
-  const F = D.aiFoundation;
+  const list = (value) => Array.isArray(value) ? value : [];
+  const rawFoundation = D.aiFoundation && typeof D.aiFoundation === "object" ? D.aiFoundation : {};
+  const rawComparison = rawFoundation.modelComparison;
+  const normalizedComparison = Array.isArray(rawComparison)
+    ? {
+        labels: rawComparison.map((item) => item.name || item.label || "Model"),
+        r2: rawComparison.map((item) => Number(item.r2) || 0),
+        mae: rawComparison.map((item) => Number(item.mae) || 0),
+        rmse: rawComparison.map((item) => Number(item.rmse) || 0)
+      }
+    : {
+        labels: list(rawComparison?.labels),
+        r2: list(rawComparison?.r2),
+        mae: list(rawComparison?.mae),
+        rmse: list(rawComparison?.rmse)
+      };
+  const F = {
+    ...rawFoundation,
+    readiness: {
+      overall: Number(rawFoundation.readiness?.overall) || 0,
+      status: rawFoundation.readiness?.status || "Not assessed",
+      updated: rawFoundation.readiness?.updated || "—",
+      metrics: list(rawFoundation.readiness?.metrics),
+      blocking: list(rawFoundation.readiness?.blocking)
+    },
+    ragEvaluation: list(rawFoundation.ragEvaluation),
+    datasetSnapshots: list(rawFoundation.datasetSnapshots),
+    featureSchema: list(rawFoundation.featureSchema),
+    trainingRuns: list(rawFoundation.trainingRuns),
+    models: list(rawFoundation.models),
+    predictions: list(rawFoundation.predictions),
+    outputTypes: list(rawFoundation.outputTypes),
+    residuals: list(rawFoundation.residuals),
+    confusionMatrix: rawFoundation.confusionMatrix && typeof rawFoundation.confusionMatrix === "object" ? rawFoundation.confusionMatrix : {labels:[],matrix:[]},
+    modelComparison: normalizedComparison,
+    trainingHistory: rawFoundation.trainingHistory && typeof rawFoundation.trainingHistory === "object" ? rawFoundation.trainingHistory : {model:"No training run",epochs:[],trainLoss:[],validationLoss:[],validationR2:[],learningRate:[]}
+  };
   const sources = ["Experiments", "Processes", "Materials", "Results", "Documents and SOPs"];
-  const savedViews = D.savedViews.map((item) => ({...item}));
+  const savedViews = list(D.savedViews).map((item) => ({...item}));
 
   const evidence = {
     sop: {id:"KB-SOP-014", type:"SOP", title:"Perovskite precursor preparation", detail:"Section 4.2 · approved v4.2", confidence:"High"},
@@ -148,56 +184,107 @@
     bindDemoActions(root, icon);
   }
 
-  function chartPoints(values, width = 620, height = 210, padding = 28) {
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const span = Math.max(max - min, 0.0001);
-    return values.map((value, index) => {
-      const x = padding + (index / Math.max(values.length - 1, 1)) * (width - padding * 2);
-      const y = height - padding - ((value - min) / span) * (height - padding * 2);
-      return [x, y];
-    });
+  function chartScale(values, {includeZero = false, padding = 0.08} = {}) {
+    const finite = values.map(Number).filter(Number.isFinite);
+    let min = finite.length ? Math.min(...finite) : 0;
+    let max = finite.length ? Math.max(...finite) : 1;
+    if (includeZero) { min = Math.min(0, min); max = Math.max(0, max); }
+    if (min === max) { min -= 1; max += 1; }
+    const span = max - min;
+    return { min: min - span * padding, max: max + span * padding };
   }
 
-  function lineChart(series, labels, {title, yLabel = "", footer = ""} = {}) {
-    const width = 620; const height = 220; const padding = 30;
-    const all = series.flatMap((item) => item.values);
-    const min = Math.min(...all); const max = Math.max(...all); const span = Math.max(max - min, 0.0001);
-    const pointSet = (values) => values.map((value, index) => {
-      const x = padding + (index / Math.max(values.length - 1, 1)) * (width - padding * 2);
-      const y = height - padding - ((value - min) / span) * (height - padding * 2);
-      return [x, y];
-    });
-    const grid = [0,.25,.5,.75,1].map((ratio) => { const y=padding+ratio*(height-padding*2); const value=(max-ratio*span).toFixed(max < 2 ? 2 : 1); return `<g><line x1="${padding}" y1="${y}" x2="${width-padding}" y2="${y}"/><text x="4" y="${y+3}">${value}</text></g>`; }).join("");
-    const paths = series.map((item,index) => { const pts=pointSet(item.values); return `<polyline class="model-chart-series series-${index+1}" points="${pts.map((point)=>point.join(",")).join(" ")}"/>${pts.map(([x,y])=>`<circle class="model-chart-point series-${index+1}" cx="${x}" cy="${y}" r="2.6"/>`).join("")}`; }).join("");
-    const ticks = labels.map((label,index)=>{ if(index % Math.max(1,Math.ceil(labels.length/6))!==0 && index!==labels.length-1) return ""; const x=padding+(index/Math.max(labels.length-1,1))*(width-padding*2); return `<text x="${x}" y="${height-7}" text-anchor="middle">${label}</text>`; }).join("");
-    return `<figure class="model-chart"><figcaption><div><strong>${title}</strong><small>${yLabel}</small></div><div class="model-chart-legend">${series.map((item,index)=>`<span class="series-${index+1}"><i></i>${item.label}</span>`).join("")}</div></figcaption><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title}"><g class="model-chart-grid">${grid}</g>${paths}<g class="model-chart-axis">${ticks}</g></svg>${footer ? `<small class="model-chart-footer">${footer}</small>` : ""}</figure>`;
+  function niceTicks(min, max, count = 5) {
+    const span = Math.max(max - min, 1e-9);
+    const raw = span / Math.max(count - 1, 1);
+    const power = 10 ** Math.floor(Math.log10(raw));
+    const scaled = raw / power;
+    const step = (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power;
+    const first = Math.ceil(min / step) * step;
+    const ticks = [];
+    for (let value = first; value <= max + step * 0.25; value += step) ticks.push(Number(value.toFixed(10)));
+    return ticks.length ? ticks : [min, max];
   }
 
-  function barChart(labels, values, {title, suffix = "", higherBetter = true} = {}) {
-    const max=Math.max(...values,1);
-    return `<figure class="model-chart model-bar-chart"><figcaption><div><strong>${title}</strong><small>${higherBetter ? "Higher is better" : "Lower is better"}</small></div></figcaption><div class="model-bars">${labels.map((label,index)=>`<div><span>${label}</span><div><i style="width:${Math.max(4,values[index]/max*100)}%"></i></div><strong>${values[index].toFixed(2)}${suffix}</strong></div>`).join("")}</div></figure>`;
+  function formatMetric(value, digits = 2) {
+    if (!Number.isFinite(Number(value))) return "—";
+    const numeric = Number(value);
+    if (Math.abs(numeric) >= 1000 || (Math.abs(numeric) > 0 && Math.abs(numeric) < 0.001)) return numeric.toExponential(1);
+    return numeric.toFixed(digits).replace(/\.00$/, "");
+  }
+
+  function chartFrame({title, subtitle = "", meta = "", body, footer = "", legend = "", className = ""}) {
+    return `<figure class="metric-chart ${className}"><figcaption><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ""}</div>${meta ? `<span class="metric-chart-meta">${meta}</span>` : ""}</figcaption>${legend ? `<div class="metric-chart-legend">${legend}</div>` : ""}<div class="metric-chart-stage">${body}</div>${footer ? `<small class="metric-chart-footer">${footer}</small>` : ""}</figure>`;
+  }
+
+  function comparisonChart(labels, values, {title, subtitle, suffix = "", higherBetter = true, digits = 2} = {}) {
+    const rows = labels.map((label, index) => ({label, value:Number(values[index]) || 0}));
+    const sorted = [...rows].sort((a,b) => higherBetter ? b.value-a.value : a.value-b.value);
+    const scale = chartScale(rows.map(row => row.value), {includeZero:true, padding:.03});
+    const range = Math.max(scale.max - scale.min, 1e-9);
+    const best = sorted[0]?.label;
+    const bars = rows.map((row) => {
+      const width = Math.max(2, ((row.value - Math.min(0, scale.min)) / (scale.max - Math.min(0, scale.min))) * 100);
+      return `<div class="comparison-row ${row.label === best ? "is-best" : ""}"><div class="comparison-label"><strong>${row.label}</strong>${row.label === best ? `<span>Best</span>` : ""}</div><div class="comparison-track"><i style="width:${width}%"></i></div><b>${formatMetric(row.value,digits)}${suffix}</b></div>`;
+    }).join("");
+    return chartFrame({title,subtitle,meta:higherBetter?"Higher is better":"Lower is better",body:`<div class="comparison-chart">${bars}</div>`,footer:`All models use the same grouped validation split. Range ${formatMetric(scale.min,digits)}–${formatMetric(scale.max,digits)}${suffix}.`,className:"comparison-card"});
+  }
+
+  function lineChart(series, labels, {title, yLabel = "", footer = "", digits = 2} = {}) {
+    const width=760,height=300,plot={left:54,right:22,top:22,bottom:42};
+    const all=series.flatMap(item=>item.values.map(Number));
+    const scale=chartScale(all,{padding:.1});
+    const ticks=niceTicks(scale.min,scale.max,5);
+    const x=(index)=>plot.left+(index/Math.max(labels.length-1,1))*(width-plot.left-plot.right);
+    const y=(value)=>plot.top+(scale.max-value)/(scale.max-scale.min)*(height-plot.top-plot.bottom);
+    const grid=ticks.map(value=>`<g class="chart-grid-line"><line x1="${plot.left}" y1="${y(value)}" x2="${width-plot.right}" y2="${y(value)}"/><text x="${plot.left-10}" y="${y(value)+4}" text-anchor="end">${formatMetric(value,digits)}</text></g>`).join("");
+    const tickEvery=Math.max(1,Math.ceil(labels.length/7));
+    const xTicks=labels.map((label,index)=>(index%tickEvery===0||index===labels.length-1)?`<g><line class="chart-tick" x1="${x(index)}" y1="${height-plot.bottom}" x2="${x(index)}" y2="${height-plot.bottom+5}"/><text class="chart-x-label" x="${x(index)}" y="${height-14}" text-anchor="middle">${label}</text></g>`:"").join("");
+    const defs=`<defs>${series.map((item,index)=>`<linearGradient id="series-fill-${index}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient>`).join("")}</defs>`;
+    const plotted=series.map((item,index)=>{
+      const points=item.values.map((value,i)=>[x(i),y(Number(value))]);
+      const path=points.map((point,i)=>`${i?"L":"M"}${point[0].toFixed(2)},${point[1].toFixed(2)}`).join(" ");
+      const area=`${path} L${points.at(-1)[0]},${height-plot.bottom} L${points[0][0]},${height-plot.bottom} Z`;
+      return `<g class="chart-series series-${index+1}"><path class="chart-area" d="${area}" fill="url(#series-fill-${index})"/><path class="chart-line" d="${path}"/>${points.map(([cx,cy],i)=>`<circle class="chart-dot" cx="${cx}" cy="${cy}" r="4"><title>${item.label}: ${formatMetric(item.values[i],digits)} · ${labels[i]}</title></circle>`).join("")}</g>`;
+    }).join("");
+    const legend=series.map((item,index)=>`<span class="series-${index+1}"><i></i>${item.label}</span>`).join("");
+    const body=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title}">${defs}<g>${grid}</g><line class="chart-axis" x1="${plot.left}" y1="${height-plot.bottom}" x2="${width-plot.right}" y2="${height-plot.bottom}"/>${xTicks}${plotted}${yLabel?`<text class="chart-y-title" transform="translate(15 ${height/2}) rotate(-90)" text-anchor="middle">${yLabel}</text>`:""}</svg>`;
+    return chartFrame({title,subtitle:`${labels.length} checkpoints`,legend,body,footer,className:"line-chart-card"});
   }
 
   function residualChart(rows) {
-    const width=620,height=220,padding=30;
-    const xs=rows.map((item)=>item.observed), residuals=rows.map((item)=>item.observed-item.predicted);
-    const xmin=Math.min(...xs)-.3,xmax=Math.max(...xs)+.3,ymax=Math.max(1.5,...residuals.map(Math.abs));
-    const x=(value)=>padding+(value-xmin)/(xmax-xmin)*(width-padding*2);
-    const y=(value)=>height/2-value/ymax*(height/2-padding);
-    return `<figure class="model-chart"><figcaption><div><strong>Residual review</strong><small>Observed PCE vs prediction residual</small></div><span class="badge badge-warning">S06 requires review</span></figcaption><svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Residual plot"><line class="model-zero-line" x1="${padding}" y1="${height/2}" x2="${width-padding}" y2="${height/2}"/>${rows.map((item,index)=>`<g><circle class="model-residual-point ${Math.abs(residuals[index])>1 ? "is-warning" : ""}" cx="${x(item.observed)}" cy="${y(residuals[index])}" r="5"/><text x="${x(item.observed)}" y="${y(residuals[index])-9}" text-anchor="middle">${item.sample}</text></g>`).join("")}</svg><small class="model-chart-footer">Residuals remain linked to sample IDs; outliers are reviewed rather than silently removed.</small></figure>`;
+    const width=760,height=300,plot={left:54,right:22,top:22,bottom:44};
+    const points=rows.map(item=>({sample:item.sample,x:Number(item.observed),y:Number(item.observed)-Number(item.predicted)}));
+    const xs=chartScale(points.map(p=>p.x),{padding:.12});
+    const ys=chartScale(points.map(p=>p.y),{includeZero:true,padding:.18});
+    const x=(value)=>plot.left+(value-xs.min)/(xs.max-xs.min)*(width-plot.left-plot.right);
+    const y=(value)=>plot.top+(ys.max-value)/(ys.max-ys.min)*(height-plot.top-plot.bottom);
+    const yTicks=niceTicks(ys.min,ys.max,5);
+    const xTicks=niceTicks(xs.min,xs.max,5);
+    const grid=yTicks.map(v=>`<g class="chart-grid-line"><line x1="${plot.left}" y1="${y(v)}" x2="${width-plot.right}" y2="${y(v)}"/><text x="${plot.left-10}" y="${y(v)+4}" text-anchor="end">${formatMetric(v,1)}</text></g>`).join("");
+    const xt=xTicks.map(v=>`<g><line class="chart-tick" x1="${x(v)}" y1="${height-plot.bottom}" x2="${x(v)}" y2="${height-plot.bottom+5}"/><text class="chart-x-label" x="${x(v)}" y="${height-14}" text-anchor="middle">${formatMetric(v,1)}</text></g>`).join("");
+    const dots=points.map(p=>`<g class="residual-sample ${Math.abs(p.y)>1?"is-warning":""}"><circle cx="${x(p.x)}" cy="${y(p.y)}" r="6"><title>${p.sample}: residual ${formatMetric(p.y,2)} pp</title></circle><text x="${x(p.x)}" y="${y(p.y)-11}" text-anchor="middle">${p.sample}</text></g>`).join("");
+    const body=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Residual diagnostic">${grid}<line class="chart-zero" x1="${plot.left}" y1="${y(0)}" x2="${width-plot.right}" y2="${y(0)}"/>${xt}${dots}<text class="chart-y-title" transform="translate(15 ${height/2}) rotate(-90)" text-anchor="middle">Residual (pp)</text><text class="chart-x-title" x="${(plot.left+width-plot.right)/2}" y="${height-1}" text-anchor="middle">Observed PCE (%)</text></svg>`;
+    return chartFrame({title:"Residual diagnostic",subtitle:"Observed value versus prediction error",meta:`${points.filter(p=>Math.abs(p.y)>1).length} flagged`,body,footer:"Points outside ±1 pp are highlighted for researcher review.",className:"scatter-chart-card"});
   }
 
   function confusionMatrix(matrix) {
-    const max=Math.max(...matrix.values.flat());
-    return `<figure class="model-chart confusion-card"><figcaption><div><strong>Readiness classifier</strong><small>Confusion matrix · accuracy ${(matrix.accuracy*100).toFixed(0)}%</small></div></figcaption><div class="confusion-grid"><span></span>${matrix.labels.map((label)=>`<b>Predicted ${label}</b>`).join("")}${matrix.values.map((row,rowIndex)=>`<b>Actual ${matrix.labels[rowIndex]}</b>${row.map((value)=>`<span style="--heat:${value/max}"><strong>${value}</strong></span>`).join("")}`).join("")}</div></figure>`;
+    const max=Math.max(...matrix.values.flat(),1);
+    const total=matrix.values.flat().reduce((sum,value)=>sum+value,0);
+    const cells=matrix.values.map((row,rowIndex)=>row.map((value,colIndex)=>{
+      const ratio=value/max;
+      const correct=rowIndex===colIndex;
+      return `<div class="matrix-cell ${correct?"is-correct":"is-error"}" style="--intensity:${ratio}"><small>${matrix.labels[rowIndex]} → ${matrix.labels[colIndex]}</small><strong>${value}</strong><span>${total?Math.round(value/total*100):0}%</span></div>`;
+    }).join("")).join("");
+    const body=`<div class="matrix-wrap"><div class="matrix-axis matrix-axis-top"><span></span>${matrix.labels.map(label=>`<b>Predicted ${label}</b>`).join("")}</div><div class="matrix-main"><div class="matrix-y-label">Actual class</div><div class="matrix-rows">${matrix.values.map((row,rowIndex)=>`<div class="matrix-row"><b>${matrix.labels[rowIndex]}</b>${row.map((value,colIndex)=>{const ratio=value/max;const correct=rowIndex===colIndex;return `<div class="matrix-cell ${correct?"is-correct":"is-error"}" style="--intensity:${ratio}"><strong>${value}</strong><span>${total?Math.round(value/total*100):0}%</span></div>`}).join("")}</div>`).join("")}</div></div></div>`;
+    return chartFrame({title:"Readiness classifier",subtitle:"Confusion matrix",meta:`Accuracy ${(matrix.accuracy*100).toFixed(0)}%`,body,footer:"Diagonal cells are correct classifications; off-diagonal cells require review.",className:"matrix-chart-card"});
   }
 
   function renderModels(root, {icon, esc}) {
     const history=F.trainingHistory;
     const comparison=F.modelComparison;
     root.innerHTML = `<div class="notice notice-accent"><div>${icon("brain")}</div><div><strong>From baseline to reproducible ML/DL</strong><p>Every result is tied to a dataset snapshot, grouped validation, a training run, metrics and reviewable artifacts. Values below are demonstration data, not deployed scientific claims.</p></div></div>
-      <section class="model-dashboard section"><article class="panel model-dashboard-main"><div class="panel-header"><div><h2 class="mb-0">Model performance overview</h2><small>Regression baselines compared on the same grouped dataset split</small></div><span class="badge badge-accent">${comparison.labels.length} models</span></div><div class="panel-body model-chart-grid">${barChart(comparison.labels,comparison.r2,{title:"Cross-validated R²"})}${barChart(comparison.labels,comparison.mae,{title:"Mean absolute error",suffix:" pp",higherBetter:false})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Training status</h2><small>Latest reproducible runs</small></div>${icon("activity")}</div><div class="panel-body training-status-list">${F.trainingRuns.map((run)=>`<article><span class="run-status ${run.status === "completed" ? "is-complete" : "is-review"}">${icon(run.status === "completed" ? "check" : "warning")}</span><div><strong>${esc(run.id)}</strong><small>${esc(run.model)} · ${esc(run.duration)}</small></div><span><b>${esc(run.bestMetric)}</b><small>${esc(run.artifact)}</small></span></article>`).join("")}</div></article></section>
+      <section class="model-dashboard section"><article class="panel model-dashboard-main"><div class="panel-header"><div><h2 class="mb-0">Model performance overview</h2><small>Regression baselines compared on the same grouped dataset split</small></div><span class="badge badge-accent">${comparison.labels.length} models</span></div><div class="panel-body model-chart-grid">${comparisonChart(comparison.labels,comparison.r2,{title:"Cross-validated R²",subtitle:"Grouped cross-validation"})}${comparisonChart(comparison.labels,comparison.mae,{title:"Mean absolute error",subtitle:"Prediction error by model",suffix:" pp",higherBetter:false})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Training status</h2><small>Latest reproducible runs</small></div>${icon("activity")}</div><div class="panel-body training-status-list">${F.trainingRuns.map((run)=>`<article><span class="run-status ${run.status === "completed" ? "is-complete" : "is-review"}">${icon(run.status === "completed" ? "check" : "warning")}</span><div><strong>${esc(run.id)}</strong><small>${esc(run.model)} · ${esc(run.duration)}</small></div><span><b>${esc(run.bestMetric)}</b><small>${esc(run.artifact)}</small></span></article>`).join("")}</div></article></section>
       <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Neural training curves</h2><small>${esc(history.model)} · ${history.epochs.at(-1)} epochs</small></div><span class="badge badge-warning">Prototype</span></div><div class="panel-body">${lineChart([{label:"Training loss",values:history.trainLoss},{label:"Validation loss",values:history.validationLoss}],history.epochs,{title:"Loss convergence",yLabel:"RMSE-like training objective",footer:"Validation loss stabilises after epoch 35; early stopping would retain the best checkpoint."})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Validation progression</h2><small>Metric and learning-rate schedule</small></div>${icon("chart")}</div><div class="panel-body stack">${lineChart([{label:"Validation R²",values:history.validationR2}],history.epochs,{title:"Validation R² by epoch",yLabel:"Grouped validation"})}<div class="learning-rate-strip">${history.epochs.map((epoch,index)=>`<span><small>${epoch}</small><strong>${history.learningRate[index]}</strong></span>`).join("")}</div></div></article></section>
       <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction diagnostics</h2><small>Sample-level errors stay visible</small></div>${icon("compare")}</div><div class="panel-body">${residualChart(F.residuals)}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Classification diagnostics</h2><small>Review labels and errors</small></div>${icon("grid")}</div><div class="panel-body">${confusionMatrix(F.confusionMatrix)}</div></article></section>
       <section class="model-registry section">${F.models.map((item) => `<article class="panel model-card"><div class="panel-header"><div><span class="knowledge-kind">${esc(item.id)} · v${esc(item.version)}</span><h2 class="mb-0">${esc(item.name)}</h2></div><span class="badge ${item.status === "evaluated" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></div><div class="panel-body stack"><div class="model-facts"><span><small>Task</small><strong>${esc(item.task)}</strong></span><span><small>Algorithm</small><strong>${esc(item.algorithm)}</strong></span><span><small>Dataset</small><strong>${esc(item.dataset)}</strong></span><span><small>Artifact</small><strong>${esc(item.size || "—")}</strong></span></div><p class="model-parameters"><strong>Configuration</strong><span>${esc(item.parameters || item.scope)}</span></p><div class="model-metrics">${Object.entries(item.metrics).map(([key,value]) => `<span><small>${esc(key)}</small><strong>${esc(value)}</strong></span>`).join("")}</div><div class="cluster"><button class="btn btn-sm" data-demo-action="model-card">${icon("file")} Model card</button><button class="btn btn-sm btn-ghost" data-demo-action="compare-model">${icon("compare")} Compare runs</button></div></div></article>`).join("")}</section>
@@ -207,7 +294,12 @@
   }
 
   function renderPredictions(root, {icon, esc}) {
-    root.innerHTML = `<section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction review</h2><small>Predictions never replace observations and always carry model and dataset provenance</small></div><span class="badge badge-accent">Demonstration only</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Sample</th><th>Prediction</th><th>Observed</th><th>Residual</th><th>Input coverage</th><th>Review</th></tr></thead><tbody>${F.predictions.map((item) => `<tr><td><button class="table-link" data-prediction="${esc(item.id)}">${esc(item.sample)}</button><small class="block"><code>${esc(item.id)}</code></small></td><td><strong>${item.predicted.toFixed(2)} ± ${item.uncertainty.toFixed(2)}%</strong></td><td>${item.observed.toFixed(2)}%</td><td>${(item.observed-item.predicted).toFixed(2)} pp</td><td>${item.coverage}%</td><td><span class="badge ${item.status === "reviewed" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></td></tr>`).join("")}</tbody></table></div></section><div class="grid grid-2 section"><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction provenance</h2><small id="prediction-subtitle">Select a sample to inspect the complete record</small></div>${icon("database")}</div><div class="panel-body" id="prediction-inspector">${predictionInspector(F.predictions[0], {icon,esc})}</div></section><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Scientific output classes</h2><small>Measurement, calculation, prediction and interpretation stay distinct</small></div>${icon("layers")}</div><div class="panel-body output-class-list">${F.outputTypes.map((item) => `<article><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span><span><small>Initial state</small><strong>${esc(item.review)}</strong></span><span><small>Required evidence</small><strong>${esc(item.evidence)}</strong></span></article>`).join("")}</div></section></div><div class="notice notice-warning section"><div>${icon("warning")}</div><div><strong>Never present a prediction as an experimental result</strong><p>Observed value, model output, uncertainty, applicability and human review state remain visible together.</p></div></div>`;
+    if (!F.predictions.length) {
+      root.innerHTML = `<div class="empty"><strong>No prediction records</strong><p>The AI foundation loaded correctly, but no demonstration predictions are available.</p></div>`;
+      Log.warn("predictions.empty");
+      return;
+    }
+    root.innerHTML = `<section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction review</h2><small>Predictions never replace observations and always carry model and dataset provenance</small></div><span class="badge badge-accent">Demonstration only</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Sample</th><th>Prediction</th><th>Observed</th><th>Residual</th><th>Input coverage</th><th>Review</th></tr></thead><tbody>${F.predictions.map((item) => `<tr><td><button class="table-link" data-prediction="${esc(item.id)}">${esc(item.sample)}</button><small class="block"><code>${esc(item.id)}</code></small></td><td><strong>${Number(item.predicted || 0).toFixed(2)} ± ${Number(item.uncertainty || 0).toFixed(2)}%</strong></td><td>${Number(item.observed || 0).toFixed(2)}%</td><td>${(Number(item.observed || 0)-Number(item.predicted || 0)).toFixed(2)} pp</td><td>${Number(item.coverage || 0)}%</td><td><span class="badge ${item.status === "reviewed" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></td></tr>`).join("")}</tbody></table></div></section><div class="grid grid-2 section"><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction provenance</h2><small id="prediction-subtitle">Select a sample to inspect the complete record</small></div>${icon("database")}</div><div class="panel-body" id="prediction-inspector">${predictionInspector(F.predictions[0], {icon,esc})}</div></section><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Scientific output classes</h2><small>Measurement, calculation, prediction and interpretation stay distinct</small></div>${icon("layers")}</div><div class="panel-body output-class-list">${F.outputTypes.map((item) => `<article><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span><span><small>Initial state</small><strong>${esc(item.review)}</strong></span><span><small>Required evidence</small><strong>${esc(item.evidence)}</strong></span></article>`).join("")}</div></section></div><div class="notice notice-warning section"><div>${icon("warning")}</div><div><strong>Never present a prediction as an experimental result</strong><p>Observed value, model output, uncertainty, applicability and human review state remain visible together.</p></div></div>`;
     root.querySelectorAll("[data-prediction]").forEach((button) => button.addEventListener("click", () => {
       const item = F.predictions.find((candidate) => candidate.id === button.dataset.prediction);
       root.querySelector("#prediction-inspector").innerHTML = predictionInspector(item,{icon,esc});
@@ -216,7 +308,7 @@
   }
 
   function predictionInspector(item, {icon, esc}) {
-    return `<div class="prediction-card"><div class="prediction-value"><small>Predicted PCE</small><strong>${item.predicted.toFixed(2)} ± ${item.uncertainty.toFixed(2)}%</strong><span>Observed: ${item.observed.toFixed(2)}%</span></div><dl><div><dt>Model version</dt><dd>${esc(item.model)}</dd></div><div><dt>Dataset snapshot</dt><dd>${esc(item.dataset)}</dd></div><div><dt>Input coverage</dt><dd>${item.coverage}%</dd></div><div><dt>Human review</dt><dd>${esc(item.status)}</dd></div></dl><div class="notice ${item.status === "reviewed" ? "notice-success" : "notice-warning"}"><div>${icon(item.status === "reviewed" ? "check" : "warning")}</div><div><strong>${item.status === "reviewed" ? "Reviewed prediction" : "Review required"}</strong><p>${esc(item.note)}</p></div></div></div>`;
+    return `<div class="prediction-card"><div class="prediction-value"><small>Predicted PCE</small><strong>${Number(item.predicted || 0).toFixed(2)} ± ${Number(item.uncertainty || 0).toFixed(2)}%</strong><span>Observed: ${Number(item.observed || 0).toFixed(2)}%</span></div><dl><div><dt>Model version</dt><dd>${esc(item.model)}</dd></div><div><dt>Dataset snapshot</dt><dd>${esc(item.dataset)}</dd></div><div><dt>Input coverage</dt><dd>${item.coverage}%</dd></div><div><dt>Human review</dt><dd>${esc(item.status)}</dd></div></dl><div class="notice ${item.status === "reviewed" ? "notice-success" : "notice-warning"}"><div>${icon(item.status === "reviewed" ? "check" : "warning")}</div><div><strong>${item.status === "reviewed" ? "Reviewed prediction" : "Review required"}</strong><p>${esc(item.note)}</p></div></div></div>`;
   }
 
   function bindDemoActions(root, icon) {

@@ -131,3 +131,8 @@ This seam keeps future replacement possible without making the current showcase 
 ## Local diagnostics boundary
 
 The static runtime exposes one structured logger through `window.LabFlowLogger` and `window.LabFlowLog`. It captures page lifecycle, renderer failures, state transitions and local export operations without creating telemetry. Entries remain in the console and in a bounded page-memory buffer, redact sensitive keys and are cleared with the page. Full contracts and examples are documented in [JavaScript logging and diagnostics](JAVASCRIPT_LOGGING.md).
+
+
+## User and access foundation
+
+The static POC now demonstrates a current researcher profile and a small workspace user directory with role, status and project-access vocabulary. These records live only in JavaScript memory and reset on reload. They define a future backend contract without claiming authentication, invitations or enforced permissions. The visible product attribution and authored artifacts use **Matteo Ginesi · 2026** consistently.
