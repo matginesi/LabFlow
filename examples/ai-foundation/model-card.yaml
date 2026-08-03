@@ -1,0 +1,21 @@
+schema: labflow.model_card.v1
+id: MDL-PCE-RF-001
+version: "1.0"
+name: PCE baseline regressor
+task: regression
+algorithm: random_forest
+training_dataset: DS-PCE-001
+status: evaluated
+scope: illustrative_baseline_only
+validation:
+  strategy: grouped_cross_validation
+  grouping: experiment_id
+  seed: 42
+metrics:
+  mae_percentage_points: 1.40
+  rmse_percentage_points: 1.72
+  r2: 0.71
+limitations:
+  - Demonstration cohort is too small for scientific deployment
+  - Environmental metadata are incomplete
+  - No causal claim is supported

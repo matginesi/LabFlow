@@ -1,5 +1,9 @@
 # Lab Assistant, diagrams, reports and export
 
+## Relationship to the AI and ML foundation
+
+Ask LabFlow is the knowledge-facing part of the wider AI-ready foundation. The **AI & Models** workspace also demonstrates dataset snapshots, model versions, training runs and prediction review. These capabilities share evidence, provenance and human-control rules but remain different scientific record types. See `AI_ML_FOUNDATION.md`.
+
 ## One assistant, three useful modes
 
 Ask LabFlow is the single assistance system across the product. Researchers select a task, not an implementation technique:
@@ -99,3 +103,14 @@ LabFlow previews mappings and creates a transparent local package. It does not s
 Before accepting a finding or export, verify the selected project and experiments, source versions, units, mapping and conversions, exclusions, comparison criteria, statement classes, unresolved issues, report author and manifest. For diagrams, also verify that every edge represents a documented relationship and that the caption states any causal limitation.
 
 The current behavior is a deterministic demonstration, not a scientific validation service. Researchers must consult controlled procedures and exercise domain judgement before laboratory action.
+
+## LaTeX report package
+
+The Report Composer can generate a local LaTeX package in addition to the native PDF, DOCX and analysis workbook. The package contains:
+
+- `scientific-report.tex`, generated from the same canonical report model as the live preview;
+- `measurements.csv`;
+- a local `compile.sh` script;
+- compilation instructions.
+
+The browser does not contact a remote TeX service and does not embed a LaTeX engine. Compilation is intentionally performed on the researcher’s machine with TeX Live or an equivalent installation, for example with `latexmk -pdf scientific-report.tex`. The generated source includes professional typography, running headers, page numbering, tables, a PGFPlots chart, report metadata, findings and provenance.

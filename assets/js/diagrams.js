@@ -1,6 +1,7 @@
 (function () {
   "use strict";
 
+  const Log = window.LabFlowLogger?.child("diagrams") || {debug(){},info(){},warn(){},error(){}};
   let sequence = 0;
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -93,5 +94,6 @@
     }
   }
 
+  Log.info("module.ready");
   window.LabFlowDiagrams = {parse, render};
 })();

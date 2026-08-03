@@ -28,3 +28,7 @@ The example should verify root theme, palette and density controls, local typogr
 ## Review expectations
 
 In the application, modify the Report Composer and verify that the native PDF and editable DOCX contain the same title, selected sections, author text, data, findings and approval shown in the preview. Edit a highlighted DOCX content control. Recalculate all workbook sheets, check the input/formula legend and inspect the ZIP manifest. Confirm stable identifiers, provenance, statement classes, author name and the absence of credentials or external resources.
+
+## AI foundation examples
+
+`ai-foundation/` contains small, human-readable examples of the future Dataset Snapshot, Model Card, Prediction and RAG Evaluation contracts. They are documentation fixtures only: no model is trained, no embeddings are created and no remote AI service is contacted by the POC.

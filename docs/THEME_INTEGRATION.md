@@ -20,7 +20,9 @@ The theme controller must run before the stylesheet:
 <link rel="stylesheet" href="ui/theme.css">
 ```
 
-The controller validates carried `lf_theme`, `lf_palette` and `lf_density` parameters and applies them synchronously to the root element. CSS is then evaluated against the correct attributes on the first paint, preventing a light/dark flash during internal navigation. It performs no persistence, file operation or network request.
+The controller bootstraps the local structured logger, validates carried `lf_theme`, `lf_palette` and `lf_density` parameters, and applies appearance synchronously to the root element. CSS is then evaluated against the correct attributes on the first paint, preventing a light/dark flash during internal navigation. It performs no persistence, file operation or network request.
+
+Appearance parameters are carried between pages on GitHub Pages and other static HTTP hosts. Direct `file://` navigation deliberately does not append them and does not rewrite browser history, because local files are treated as unique security origins by browsers. Project and view query parameters continue to work normally.
 
 ## Semantic tokens
 

@@ -1,17 +1,17 @@
 :root{
-  --font-ui:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI Variable Text","Segoe UI",ui-sans-serif,system-ui,sans-serif;
-  --font-display:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI Variable Display","Segoe UI",ui-sans-serif,system-ui,sans-serif;
-  --font-report:"Adwaita Sans","Inter","IBM Plex Sans","Segoe UI","Helvetica Neue",Arial,sans-serif;
-  --reading:"Charis SIL","Source Serif 4","Noto Serif","Iowan Old Style",Georgia,serif;
-  --mono:"Adwaita Mono","Cascadia Code","JetBrains Mono","Noto Sans Mono","SFMono-Regular",Consolas,monospace;
+  --font-ui:"Noto Sans","IBM Plex Sans","Aptos","Segoe UI Variable Text","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --font-display:"Noto Sans Display","Noto Sans","IBM Plex Sans","Aptos Display","Segoe UI Variable Display","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --font-report:"Noto Sans","IBM Plex Sans","Aptos","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --reading:"Noto Serif","Source Serif 4","Charis SIL","Iowan Old Style",Georgia,serif;
+  --mono:"JetBrains Mono","Noto Sans Mono","Cascadia Code","SFMono-Regular",Consolas,monospace;
   --font:var(--font-ui);
-  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13.5px;--fs-md:15px;--fs-lg:18px;--fs-xl:22px;--fs-2xl:32px;
+  --fs-2xs:9.5px;--fs-xs:10.5px;--fs-sm:11.5px;--fs-base:13px;--fs-md:14px;--fs-lg:17px;--fs-xl:21px;--fs-2xl:30px;
   --lh-tight:1.2;--lh-base:1.48;--lh-reading:1.64;
   --r1:2px;--r2:4px;--r3:6px;
-  --sidebar:224px;--topbar:52px;--content:1540px;--control:35px;--scrollbar:8px;
+  --sidebar:224px;--topbar:52px;--content:1540px;--control:31px;--scrollbar:8px;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;
   --z-shell:30;--z-overlay:100;
 }
 
 html[data-density="compact"]{--sidebar:214px;--topbar:50px}
-html[data-density="comfortable"]{--sidebar:214px;--topbar:52px;--control:38px}
+html[data-density="comfortable"]{--sidebar:214px;--topbar:52px;--control:35px}

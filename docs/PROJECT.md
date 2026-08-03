@@ -17,8 +17,13 @@ flowchart TD
   E --> F[Sample]
   F --> G[Measurement]
   B --> H[Report package]
+  B --> J[Dataset snapshot]
+  J --> K[Model run or retrieval run]
+  K --> L[Prediction or AI output]
+  L --> M[Human review]
   I[Lab Cabinet] --> D
   G --> H
+  G --> J
 ```
 
 - **Workspace** is the all-project context.
@@ -28,6 +33,8 @@ flowchart TD
 - **Lab Cabinet** provides reusable materials, solutions, stacks, import mappings and analysis recipes.
 - **Evidence** connects a claim to a source, record, field, metric or relationship.
 - **Report package** preserves reviewed content, source references and export metadata.
+- **Dataset snapshot** freezes selected rows, features, target, exclusions and provenance for reproducible analysis or training.
+- **Model/AI output** records the model, prompt or run, its data and evidence, limitations and human review state.
 
 Stable identifiers are visible wherever a record may be compared, cited or exported. A page title alone is never treated as provenance.
 
@@ -55,6 +62,25 @@ flowchart LR
 New interaction code should call this boundary when it needs to locate domain records. It may still pass already-resolved objects directly to small render functions. Do not add repository classes, dependency injection, promise-based fake APIs or one file per entity.
 
 Stable identifiers connect the flow **User → Workspace → Project → Process → Experiment → Sample → Measurement**. Pipeline steps organise the work around those records but do not replace them.
+
+## AI-ready architecture
+
+AI readiness belongs to the core domain model. Stable identifiers, explicit units, data classes, provenance and immutable dataset snapshots connect ordinary project work to future knowledge and predictive systems. The current POC demonstrates these records inside the existing data source and the single **AI & Models** workspace.
+
+```mermaid
+flowchart LR
+  A[Laboratory records] --> B[Validation and provenance]
+  B --> C[Knowledge retrieval]
+  B --> D[Dataset snapshot]
+  C --> E[Grounded LLM or RAG output]
+  D --> F[Training and evaluation run]
+  F --> G[Prediction]
+  E --> H[Human review]
+  G --> H
+  H --> I[Approved scientific use]
+```
+
+The browser remains independent of any specific LLM provider, vector database or ML framework. Future connected services should implement small product contracts such as `ask`, `retrieve`, `build_dataset`, `train`, `evaluate`, `predict` and `review`. See `AI_ML_FOUNDATION.md` for the full record and evaluation contract.
 
 ## Reusable UI blocks
 
@@ -100,3 +126,8 @@ flowchart LR
 ```
 
 This seam keeps future replacement possible without making the current showcase pretend that connected capabilities already exist.
+
+
+## Local diagnostics boundary
+
+The static runtime exposes one structured logger through `window.LabFlowLogger` and `window.LabFlowLog`. It captures page lifecycle, renderer failures, state transitions and local export operations without creating telemetry. Entries remain in the console and in a bounded page-memory buffer, redact sensitive keys and are cleared with the page. Full contracts and examples are documented in [JavaScript logging and diagnostics](JAVASCRIPT_LOGGING.md).

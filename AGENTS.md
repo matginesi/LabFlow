@@ -21,9 +21,20 @@ These rules apply to the whole repository.
 - Theme components consume semantic tokens. Keep foundations, theme variants, palettes, components and layout separated under `ui/`.
 - Product-facing Documentation and UI Kit views must not expose raw source/configuration file links or behave like file browsers.
 - Preserve the distinction among raw data, derived results, researcher statements and AI suggestions. AI output requires visible provenance and human control.
+- Treat simplicity and AI readiness as linked product requirements: ordinary project work must produce structured, traceable records without forcing a separate technical workflow on the researcher.
+- Keep one AI & Models workspace with Knowledge, Datasets, Models and Predictions sections. Do not create separate RAG, Graph RAG, ML, DL or prediction products unless a distinct user workflow is proven.
+- Preserve AI-ready records and provenance: dataset snapshots, transformations, features, labels, model versions, training runs, predictions, AI outputs and human reviews must have stable identifiers and explicit source links.
+- A dataset used for training or evaluation must be an immutable versioned snapshot with selection, exclusions, feature/target schema, units and split policy. Do not train from an unidentified live query.
+- Never present a prediction as a measurement or an LLM suggestion as a researcher conclusion. Show uncertainty, applicability/input coverage, model and dataset versions, evidence and review state.
+- Prefer inspectable baselines and grouped scientific validation before advanced ML or DL. Guard against sample, batch, experiment and temporal leakage.
+- Future AI integrations must use small provider-neutral contracts rather than coupling UI code directly to a model vendor, vector database or ML framework.
 - Preserve the domain flow User → Workspace → Project → Process → Experiment; a pipeline step organizes work but does not replace record identity or provenance.
 - Never create parallel files or names such as `old`, `new`, `v2` or `final` for an implementation. Replace the active implementation and remove the superseded one after verifying references.
 - Do not leave broken pages, empty primary actions, dead listeners, console errors or undocumented visual variants.
+- Use the shared `LabFlowLogger` for JavaScript lifecycle, operation and error diagnostics. Do not add ad-hoc `console.log`, remote logging, telemetry or persistent log storage.
+- Log identifiers, counts, status and timings rather than scientific payloads. Never log credentials, API keys, assistant questions, report body text or uploaded file contents.
+- JavaScript pages must fail visibly and safely: log the structured error, preserve the static shell and render a useful local fallback instead of leaving an empty page.
+- Preserve direct `file://` compatibility. Do not call History API URL rewrites for file origins or append appearance parameters to local file navigation.
 - Prefer simple functions, explicit initialization and readable duplication over an internal framework or premature abstraction.
 - Update the relevant canonical document whenever behavior, contracts or validation change. Remove obsolete documentation rather than leaving competing guidance.
 - A change is not complete until the superseded implementation has been removed and the affected documentation has been updated.
@@ -36,3 +47,21 @@ These rules apply to the whole repository.
 - Keep full documentation, workbook, diagram, Knowledge and Tools modules page-specific; do not add them back to every entry page.
 - Do not add a framework, service worker, remote CDN or runtime build dependency as a performance shortcut.
 
+
+## Model visualisation contract
+
+- Training curves, metrics, residuals, confusion matrices and comparisons must identify their model, run and dataset snapshot.
+- Demonstration metrics must remain explicitly labelled as demonstration data.
+- Never show a single headline metric without baseline and validation context when the surrounding view is intended for model evaluation.
+
+## LaTeX export contract
+
+- LaTeX source must consume `buildReportDocument`; it must not rebuild an independent report state.
+- Browser export produces a local compile-ready package, not a claim that TeX was compiled remotely.
+- New report sections must be implemented consistently in preview, native PDF, DOCX and LaTeX where the format supports them.
+
+## Icon and reorder contract
+
+- Use `assets/icons/labflow-icons.json` / `assets/js/icons.js` for product icons; branding assets are excluded.
+- Every drag-reorder interaction must retain visible keyboard-accessible move buttons.
+- Reordering solution components or stack layers must refresh the corresponding review immediately.

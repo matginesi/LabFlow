@@ -14,7 +14,7 @@ LabFlow joins work that is usually scattered across notes, spreadsheets and isol
 - structured Solution and Stack Builder/Review interfaces;
 - Smart Import with explicit field mapping, units and provenance;
 - deterministic analysis, validation and comparison views;
-- Ask LabFlow for evidence-led questions, inspection and action previews;
+- an **AI & Models** workspace for evidence-led RAG questions, dataset snapshots, model history and reviewed predictions;
 - local TXT, Markdown, LaTeX, YAML, JSON, spreadsheet, DOCX and diagram tools;
 - a native downloadable PDF generated from the current Report Composer state, a professionally formatted editable DOCX, a ten-sheet formula-driven XLSX workbook and transparent ZIP packages;
 - a non-transmitting NOMAD readiness preview.
@@ -32,13 +32,22 @@ flowchart LR
 
 The included CHOSE scenario follows a mixed-cation perovskite campaign through solution preparation, device stack definition, experiment records, JV ingestion, analysis and reporting. A shorter measurement-review pipeline demonstrates that the shared shell and scientific components are reusable.
 
+## Two product pillars
+
+LabFlow is intentionally built around two connected promises:
+
+1. **Simple laboratory work** — the researcher uses projects, processes, experiments, reusable definitions, import, analysis and reports without learning a separate data-engineering product.
+2. **AI-ready by construction** — the same work produces stable identifiers, explicit units, provenance, evidence and dataset snapshots that future LLM, RAG, ML and DL services can consume safely.
+
+The current AI & Models screens are transparent demonstrations. They do not train models or call remote services; they make the future contracts visible now so connected capabilities can be added without redesigning the scientific workflow.
+
 ## Product principles
 
 Evidence remains visible. LabFlow distinguishes raw measurements, calculated results, researcher statements, validation findings and AI suggestions. Suggested actions are previews until a person confirms them; confidence describes source matching and never replaces scientific judgement.
 
-Privacy is structural. Mutable state exists only in JavaScript memory. Reload restores checked-in defaults. The application uses no cookies, browser persistence, service workers, trackers, telemetry or network-backed search. Demonstration credentials are never retained or included in exports.
+Privacy is structural. Mutable state exists only in JavaScript memory. Reload restores checked-in defaults. The application uses no cookies, browser persistence, service workers, trackers, telemetry or network-backed search. Demonstration credentials are never retained or included in exports. A structured local logger records lifecycle, rendering and export diagnostics only in the browser console and a bounded in-memory buffer; sensitive keys are redacted and nothing is transmitted.
 
-The interface uses a dark laboratory shell around light content by default. Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses the operating system’s local UI font stack; icons and diagrams are inline SVG assets rendered locally.
+The interface uses a dark laboratory shell around light content by default. Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses a local-first Noto Sans / IBM Plex Sans stack with platform fallbacks; icons and diagrams are inline SVG assets rendered locally.
 
 ## Explore the POC
 
@@ -51,7 +60,7 @@ A useful walkthrough is:
 1. Open Workspace and enter `PRJ-2026-014`.
 2. Review the pipeline context, Solution Builder and Stack Builder.
 3. Inspect Smart Import and the deterministic data-quality issues.
-4. Ask a relationship question in Ask LabFlow and inspect its evidence graph.
+4. Open AI & Models: ask a relationship question, inspect AI readiness, review the dataset snapshot and compare the demonstration model records.
 5. Open Tools, render a workflow in Diagram Studio and download the SVG.
 6. Review the report, XLSX structure and local export package.
 
@@ -95,11 +104,19 @@ The UI Kit is the visual source of truth. A block belongs there only when the ap
 - [Project model and architecture](docs/PROJECT.md)
 - [UI and interaction guidelines](docs/UI_UX_GUIDELINES.md)
 - [Pipelines, records and provenance](docs/PIPELINES_AND_DATA.md)
+- [AI and machine-learning foundation](docs/AI_ML_FOUNDATION.md)
 - [Lab Assistant, diagrams, reports and export](docs/AI_REPORTS_AND_EXPORT.md)
 - [Theme integration](docs/THEME_INTEGRATION.md)
+- [JavaScript logging and diagnostics](docs/JAVASCRIPT_LOGGING.md)
 - [Validation checklist](docs/VALIDATION_CHECKLIST.md)
 - Example artifacts are described inside the retained `examples/` package.
 
 ## Status and authorship
 
 LabFlow is a non-production proof of concept. Its records, identities, scientific values and integrations are illustrative. Product concept, direction and authorship: **Matteo Ginesi**.
+
+### Model evaluation and scientific authoring
+
+The AI & Models area includes checked-in demonstrations of training runs, learning curves, baseline comparisons, residual diagnostics, classification metrics and model artifacts. They define the future ML/DL contract without claiming that the static POC performs real training.
+
+The Report Composer now also exports a compile-ready LaTeX package generated from the same canonical report state as the preview, PDF and DOCX. All icons used by the product interface are bundled locally, and stack layers and solution components can be reordered with either drag controls or explicit buttons.

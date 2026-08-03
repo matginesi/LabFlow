@@ -47,6 +47,18 @@ Import presets exist only during the page session. The source file remains conce
 
 A solution record includes composition, concentration, solvent ratio, quantities, units, preparation notes, batch identity and review state. A stack record includes ordered layers, material, thickness, function, process and version. Builder, Review, scientific visual and report preview must consume the same data rather than maintaining parallel copies.
 
+## AI-ready dataset records
+
+Pipeline outputs may later become dataset inputs, but a pipeline step is never itself a training dataset. LabFlow creates an explicit **Dataset Snapshot** containing source projects and experiments, included and excluded samples, feature and target schemas, units, transformations, quality filters, split policy, creator, timestamp and version.
+
+The canonical progression is:
+
+```text
+raw file → mapped measurement → validated record → derived feature → dataset snapshot → model run → prediction → human review
+```
+
+Raw, validated, processed, derived, predicted and researcher-approved values remain distinct. Labels and targets record whether they were observed, calculated, researcher-assigned, suggested or confirmed. No model output may overwrite a measurement or silently become a scientific conclusion.
+
 ## Data-quality severity
 
 - **Error** blocks the affected export or scientific action.

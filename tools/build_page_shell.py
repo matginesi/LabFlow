@@ -2,6 +2,7 @@
 """Regenerate the checked-in LabFlow entry pages with one static application shell."""
 
 from pathlib import Path
+import json
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -9,7 +10,7 @@ PAGES = {
     "index.html": ("workspace", "Workspace", "LabFlow static research workspace for structured laboratory projects, AI-assisted analysis and NOMAD-ready export."),
     "project.html": ("project", "Project", "LabFlow project workflow, evidence review and local scientific export."),
     "cabinet.html": ("cabinet", "Lab Cabinet", "Reusable local laboratory materials, solutions, stacks, mappings and analysis recipes."),
-    "knowledge.html": ("knowledge", "Knowledge", "Ask LabFlow across laboratory knowledge, data, relationships and evidence."),
+    "knowledge.html": ("knowledge", "AI & Models", "Evidence-led knowledge, dataset snapshots, model history and reviewed predictions in LabFlow."),
     "tools.html": ("tools", "Tools", "Local document, data and diagram tools for the LabFlow research workspace."),
     "settings.html": ("settings", "Settings", "Temporary local LabFlow appearance, report and demonstration settings."),
     "documentation.html": ("documentation", "Documentation", "Curated LabFlow product, workflow, interface and validation guidance."),
@@ -19,7 +20,7 @@ PAGES = {
 NAV = [
     ("workspace", "index.html", "home", "Workspace"),
     ("cabinet", "cabinet.html", "cabinet", "Lab Cabinet"),
-    ("knowledge", "knowledge.html", "book", "Knowledge"),
+    ("knowledge", "knowledge.html", "spark", "AI & Models"),
     ("tools", "tools.html", "edit", "Tools"),
     ("settings", "settings.html", "settings", "Settings"),
 ]
@@ -29,23 +30,11 @@ REFERENCE = [
     ("ui-kit", "ui-kit.html", "palette", "UI Kit"),
 ]
 
-PATHS = {
-    "home": '<path d="m3 11 9-8 9 8v9a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',
-    "cabinet": '<path d="M4 3h16v6H4zM5 9h14v12H5zM9 13h6"/>',
-    "book": '<path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4zM20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4z"/>',
-    "edit": '<path d="m4 20 4-1 11-11-3-3L5 16zM14 7l3 3"/>',
-    "settings": '<circle cx="12" cy="12" r="3"/><path d="M19 15l2 2-4 4-2-2a8 8 0 0 1-6 0l-2 2-4-4 2-2a8 8 0 0 1 0-6L3 7l4-4 2 2a8 8 0 0 1 6 0l2-2 4 4-2 2a8 8 0 0 1 0 6Z"/>',
-    "palette": '<circle cx="12" cy="12" r="9"/><path d="M8 10h.01M12 7h.01M16 10h.01M8 15h.01M15 16c1 0 2-1 2-2s-1-2-2-2h-1c-1 0-2 1-2 2s1 2 2 2z"/>',
-    "menu": '<path d="M4 7h16M4 12h16M4 17h16"/>',
-    "close": '<path d="m6 6 12 12M18 6 6 18"/>',
-    "search": '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.4 15.4 5.1 5.1"/>',
-    "spark": '<path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/>',
-    "layers": '<path d="m12 2 9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/>',
-}
+PATHS = json.loads((ROOT / "assets/icons/labflow-icons.json").read_text(encoding="utf-8"))
 
 
 def icon(name: str, css_class: str = "icon") -> str:
-    return f'<svg class="{css_class} icon-{name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{PATHS[name]}</svg>'
+    return f'<svg class="{css_class} icon-{name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{PATHS[name]}</svg>'
 
 
 def nav_links(page: str, items: list[tuple[str, str, str, str]]) -> str:
@@ -67,7 +56,7 @@ def scripts(page: str) -> str:
         files += ["assets/js/diagrams.js", "assets/js/knowledge-pages.js"]
     elif page == "tools":
         files += ["assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js"]
-    elif page == "project":
+    elif page in ("project", "ui-kit"):
         files.append("assets/js/workbook.js")
     files.append("assets/js/app.js")
     return "\n  ".join(f'<script defer src="{path}"></script>' for path in files)
@@ -111,7 +100,7 @@ def render(page: str, title: str, description: str) -> str:
       </div>
       <div class="global-search" id="global-search">
         {icon("search")}
-        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, steps, knowledge and tools…">
+        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, knowledge, datasets, models and tools…">
 <div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
       </div>
       <div class="topbar-right">

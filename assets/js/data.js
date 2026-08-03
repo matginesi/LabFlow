@@ -42,6 +42,60 @@ window.LabFlowData={
   {id:"export",name:"Experiments ready for export",criteria:"No blocking validation errors",count:2},
   {id:"dmso",name:"Experiments using DMSO",criteria:"Solution solvent contains DMSO",count:3}
  ],
+ aiFoundation:{
+  readiness:{overall:86,status:"Ready with warnings",updated:"03 Aug 2026",metrics:[
+   {id:"structured",label:"Structured metadata",value:92,detail:"Stable project, experiment, sample and measurement identifiers"},
+   {id:"units",label:"Units normalized",value:100,detail:"Measurement units are explicit and conversion remains traceable"},
+   {id:"provenance",label:"Provenance available",value:87,detail:"Three process links still require review"},
+   {id:"targets",label:"Target completeness",value:75,detail:"PCE is complete; environmental context is partial"},
+   {id:"knowledge",label:"Knowledge coverage",value:78,detail:"Six governed sources are linked to the current project"}
+  ],blocking:["Resolve EXP-067 device count mismatch","Add the annealing unit","Link solution batch B06 to its preparation record"]},
+  datasetSnapshots:[
+   {id:"DS-PCE-001",name:"Mixed-cation PCE baseline",version:"1.0",project:"PRJ-2026-014",created:"03 Aug 2026",rows:8,features:6,target:"PCE (%)",excluded:0,status:"ready-with-warnings",split:"Grouped by experiment",sourceExperiments:["EXP-041","EXP-052","EXP-067"]},
+   {id:"DS-STABILITY-001",name:"Stability screening preview",version:"0.2",project:"PRJ-2026-014",created:"03 Aug 2026",rows:8,features:5,target:"Retained performance (%)",excluded:1,status:"draft",split:"Not assigned",sourceExperiments:["EXP-041","EXP-052","EXP-067"]}
+  ],
+  featureSchema:[
+   {name:"fa_fraction",label:"FA fraction",type:"numeric",unit:"fraction",role:"feature",source:"Solution formulation",coverage:100},
+   {name:"ma_fraction",label:"MA fraction",type:"numeric",unit:"fraction",role:"feature",source:"Solution formulation",coverage:100},
+   {name:"annealing_temperature",label:"Annealing temperature",type:"numeric",unit:"°C",role:"feature",source:"Process snapshot",coverage:87},
+   {name:"annealing_duration",label:"Annealing duration",type:"numeric",unit:"min",role:"feature",source:"Process snapshot",coverage:100},
+   {name:"batch",label:"Batch",type:"categorical",unit:"—",role:"group",source:"Experiment",coverage:100},
+   {name:"pce",label:"Power conversion efficiency",type:"numeric",unit:"%",role:"target",source:"JV measurement",coverage:100}
+  ],
+  models:[
+   {id:"MDL-PCE-RF-001",name:"PCE baseline regressor",version:"1.0",task:"Regression",algorithm:"Random Forest",dataset:"DS-PCE-001",status:"evaluated",scope:"Illustrative baseline only",metrics:{mae:"1.40 pp",rmse:"1.72 pp",r2:"0.71",validation:"Grouped cross-validation"},score:0.71,mae:1.40,rmse:1.72,parameters:"240 trees · max depth 6",size:"1.8 MB"},
+   {id:"MDL-PCE-GB-002",name:"PCE gradient boosting",version:"0.8",task:"Regression",algorithm:"Gradient Boosting",dataset:"DS-PCE-001",status:"evaluated",scope:"Candidate baseline · demonstration only",metrics:{mae:"1.18 pp",rmse:"1.51 pp",r2:"0.78",validation:"Grouped cross-validation"},score:0.78,mae:1.18,rmse:1.51,parameters:"120 estimators · depth 3",size:"940 KB"},
+   {id:"MDL-PCE-MLP-003",name:"PCE neural regressor",version:"0.4",task:"Regression",algorithm:"Multilayer Perceptron",dataset:"DS-PCE-001",status:"prototype",scope:"DL-ready workflow demonstration",metrics:{mae:"1.31 pp",rmse:"1.63 pp",r2:"0.74",validation:"Grouped cross-validation"},score:0.74,mae:1.31,rmse:1.63,parameters:"6 → 24 → 12 → 1 · dropout 0.10",size:"86 KB"},
+   {id:"MDL-QUALITY-RULES-001",name:"Experiment readiness classifier",version:"0.3",task:"Classification",algorithm:"Deterministic baseline + review labels",dataset:"DS-PCE-001",status:"prototype",scope:"Demonstration only",metrics:{precision:"0.83",recall:"0.80",f1:"0.81",validation:"Leave-one-experiment-out"},score:0.81,parameters:"Rules + calibrated review labels",size:"12 KB"}
+  ],
+  modelComparison:{labels:["Random Forest","Gradient Boosting","Neural regressor"],r2:[0.71,0.78,0.74],mae:[1.40,1.18,1.31],rmse:[1.72,1.51,1.63]},
+  trainingHistory:{model:"MDL-PCE-MLP-003",epochs:[1,5,10,15,20,25,30,35,40],trainLoss:[5.8,3.6,2.5,2.0,1.72,1.55,1.43,1.37,1.34],validationLoss:[6.2,4.1,3.0,2.42,2.06,1.88,1.75,1.70,1.68],validationR2:[0.08,0.31,0.49,0.61,0.68,0.71,0.73,0.74,0.74],learningRate:[0.01,0.01,0.01,0.005,0.005,0.002,0.002,0.001,0.001]},
+  residuals:[{sample:"S01",observed:18.94,predicted:19.22},{sample:"S02",observed:20.16,predicted:19.71},{sample:"S03",observed:19.42,predicted:19.60},{sample:"S04",observed:21.10,predicted:20.63},{sample:"S05",observed:19.90,predicted:20.08},{sample:"S06",observed:17.36,predicted:18.62},{sample:"S07",observed:20.54,predicted:20.31},{sample:"S08",observed:21.28,predicted:20.80}],
+  confusionMatrix:{labels:["Ready","Review"],values:[[5,1],[1,3]],accuracy:0.80},
+  trainingRuns:[
+   {id:"RUN-PCE-20260803-01",model:"MDL-PCE-RF-001",dataset:"DS-PCE-001",seed:42,status:"completed",duration:"2.4 s",hardware:"Local CPU demonstration",created:"03 Aug 2026 · 18:42",bestMetric:"R² 0.71",artifact:"rf-pce-v1.bin"},
+   {id:"RUN-PCE-20260803-02",model:"MDL-PCE-GB-002",dataset:"DS-PCE-001",seed:42,status:"completed",duration:"1.8 s",hardware:"Local CPU demonstration",created:"03 Aug 2026 · 18:44",bestMetric:"R² 0.78",artifact:"gb-pce-v08.bin"},
+   {id:"RUN-PCE-20260803-03",model:"MDL-PCE-MLP-003",dataset:"DS-PCE-001",seed:42,status:"completed",duration:"18.6 s",hardware:"Local CPU demonstration",created:"03 Aug 2026 · 18:47",bestMetric:"Val R² 0.74",artifact:"mlp-pce-v04.onnx"},
+   {id:"RUN-QUALITY-20260803-01",model:"MDL-QUALITY-RULES-001",dataset:"DS-PCE-001",seed:42,status:"review",duration:"0.6 s",hardware:"Local CPU demonstration",created:"03 Aug 2026 · 18:45",bestMetric:"F1 0.81",artifact:"quality-rules-v03.json"}
+  ],
+  predictions:[
+   {id:"PRD-S08-PCE-001",sample:"S08",model:"MDL-PCE-RF-001",dataset:"DS-PCE-001",predicted:20.8,uncertainty:1.5,observed:21.28,coverage:93,status:"reviewed",note:"Prediction is consistent with the observed result."},
+   {id:"PRD-S06-PCE-001",sample:"S06",model:"MDL-PCE-RF-001",dataset:"DS-PCE-001",predicted:19.1,uncertainty:1.8,observed:17.36,coverage:81,status:"needs-review",note:"Large residual; inspect fabrication and provenance before interpretation."}
+  ],
+  ragEvaluation:[
+   {id:"RAG-EVAL-001",question:"Which solvent system was used in batch B03?",expectedSource:"SOL-011",expected:"DMF:DMSO 4:1",status:"pass"},
+   {id:"RAG-EVAL-002",question:"Which samples exceed 20% PCE?",expectedSource:"JV-B03",expected:"S02, S04, S07 and S08",status:"pass"},
+   {id:"RAG-EVAL-003",question:"What blocks EXP-067 from final NOMAD submission?",expectedSource:"DQ-001–DQ-003",expected:"Device count, annealing unit and solution provenance",status:"pass"},
+   {id:"RAG-EVAL-004",question:"Did SnO₂ cause the best PCE?",expectedSource:"STK-003/v2 + measurements",expected:"Unsupported causal claim must be rejected",status:"review"}
+  ],
+  outputTypes:[
+   {type:"raw",label:"Raw measurement",review:"Recorded",evidence:"Source file"},
+   {type:"derived",label:"Calculated result",review:"Calculated",evidence:"Formula or analysis run"},
+   {type:"prediction",label:"Model prediction",review:"Needs review",evidence:"Model + dataset snapshot"},
+   {type:"suggestion",label:"LLM suggestion",review:"Suggested",evidence:"Prompt + sources + tools"},
+   {type:"conclusion",label:"Researcher conclusion",review:"Approved by researcher",evidence:"Reviewed evidence"}
+  ]
+ },
  activity:[{time:"00:48",text:"Report package regenerated",detail:"PDF, DOCX and Excel outputs updated with the active palette"},{time:"00:33",text:"AI review completed",detail:"5 evidence-linked findings generated"},{time:"Yesterday",text:"Knowledge item linked",detail:"JV protocol added to project context"},{time:"Yesterday",text:"Measurement mapping reviewed",detail:"12 files mapped with Keithley JV CSV"},{time:"01 Aug",text:"Stack variant created",detail:"S04 copied from reference stack"}],
  assistantPrompts:["Inspect current experiment","Compare experiments using DMSO","Find missing annealing parameters","Prepare evidence-linked report","Check NOMAD readiness"]
 };
@@ -62,6 +116,13 @@ window.LabFlowData={
     listTools: () => list(data.tools),
     listExperiments: (projectId) => data.experiments.filter((item) => !projectId || item.project === projectId),
     listMeasurements: () => list(data.demoDataset),
-    listValidationIssues: () => list(data.validationIssues)
+    listValidationIssues: () => list(data.validationIssues),
+    getAiReadiness: () => ({...data.aiFoundation.readiness, metrics: list(data.aiFoundation.readiness.metrics), blocking: list(data.aiFoundation.readiness.blocking)}),
+    listDatasetSnapshots: () => list(data.aiFoundation.datasetSnapshots),
+    listFeatureSchema: () => list(data.aiFoundation.featureSchema),
+    listModels: () => list(data.aiFoundation.models),
+    listTrainingRuns: () => list(data.aiFoundation.trainingRuns),
+    listPredictions: () => list(data.aiFoundation.predictions),
+    listRagEvaluations: () => list(data.aiFoundation.ragEvaluation)
   });
 })();

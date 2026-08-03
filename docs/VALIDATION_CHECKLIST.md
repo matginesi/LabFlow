@@ -28,6 +28,17 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Search for obsolete parallel names, unreferenced selectors, duplicate helpers, dead listeners, empty primary actions and internal links with no target.
 - Confirm replaced code, CSS and documentation were removed rather than retained as a second implementation.
 
+## JavaScript diagnostics
+
+- Confirm every page emits `logger.ready`, `page.init-start` and `page.init.complete` entries without an error.
+- Open UI Kit directly from `file://` and from a static HTTP server; verify the page renders and no unique-origin History API error is produced.
+- Verify UI Kit loads its page-specific report module before `app.js`; `E.buildReportDocument` must be available.
+- Trigger a report draft update and a local export; verify structured report/export/download entries appear.
+- Temporarily request a missing local image or script in development and confirm a redacted `resource.load.failed` entry contains only the asset filename.
+- Run `LabFlowLog.setLevel("debug")`, inspect `LabFlowLog.snapshot()` and confirm the bounded records contain no credentials, report body text, assistant questions or uploaded data.
+- Search runtime sources for direct `console.log`, `console.info`, `console.warn` and `console.error`; only the logger implementation may call the native console.
+- Confirm logging performs no network request, browser persistence or background transmission.
+
 ## Browser matrix
 
 - Open Workspace, Project, Lab Cabinet, Knowledge, Tools, Settings, Documentation and UI Kit.
@@ -50,6 +61,16 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Open the relationship graph and verify its labels, edges, caption and theme contrast.
 - Preview each proposed action; confirm that no action writes automatically.
 - Open, rename and delete session-only saved views, then reload to clear them.
+
+## AI-ready foundation
+
+- Open AI & Models and verify Knowledge, Datasets, Models and Predictions without console errors.
+- Confirm the readiness score exposes its component checks and blocking issues.
+- Verify dataset snapshots show stable IDs, versions, features, target, exclusions and split policy.
+- Verify model cards identify task, algorithm, dataset, version, metrics and demonstration scope.
+- Verify predictions display predicted and observed values, uncertainty, input coverage, model/dataset provenance and human review state.
+- Confirm no control actually trains a model, calls a remote LLM, creates embeddings or persists a dataset in this static POC.
+- Confirm raw data, calculated results, predictions, suggestions and approved conclusions remain visibly distinct.
 
 ## Tools and diagrams
 
@@ -104,3 +125,13 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 Open the theme integration example and test appearance controls. Open the application from a local folder and from a static subpath. Change settings, tabs, drafts and demonstration NOMAD fields, reload, and confirm that checked-in defaults—including Matteo Ginesi as example author—are restored.
 
 Record an accepted exception next to the relevant check. Do not silently weaken a contract or leave obsolete guidance in place.
+
+
+## AI model workbench and LaTeX export
+
+- Open AI & Models → Models and verify model comparison bars, learning curves, learning-rate history, residual plot, confusion matrix, registry cards and training-run table render from the checked-in demonstration records.
+- Confirm every metric is labelled as demonstration data and model outputs remain distinct from measured results and researcher conclusions.
+- Generate the LaTeX report package from the Report Composer; inspect `scientific-report.tex`, `measurements.csv`, `README.md` and `compile.sh`.
+- Compile the source locally with `latexmk -pdf scientific-report.tex` when TeX Live is available and verify title page, tables, chart, running header, footer, page numbers and provenance.
+- Reorder solution components and stack layers by keyboard-accessible arrow controls and by drag. Confirm the review updates immediately and no row is lost or duplicated.
+- Confirm product controls use only the checked-in icon set and that branding SVG files remain separate.

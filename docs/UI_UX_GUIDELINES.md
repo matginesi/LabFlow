@@ -92,6 +92,17 @@ Cards and panels are structural surfaces, not synonyms for arbitrary boxes. Tool
 
 Theme values flow from global semantic tokens to shared blocks and then to minimal layout adjustments. Page-specific colors, parallel component names, inline static dimensions and selector overrides are not accepted when a shared token or block already covers the need.
 
+## AI & Models workspace
+
+The existing `knowledge.html` entry point is presented as one **AI & Models** workspace with four compact sections: Knowledge Assistant, Datasets, Models and Predictions. This avoids separate technical products for RAG, ML and inference.
+
+- Knowledge keeps conversation, scope and evidence visible together.
+- Datasets explains readiness, snapshots, features, targets and warnings.
+- Models shows model cards and training runs without implying production deployment.
+- Predictions pairs every prediction with observed value, uncertainty, input coverage, model/dataset provenance and human review.
+
+Project Analysis includes a contextual AI readiness view, but the researcher remains inside the normal project flow. Do not add isolated AI dashboards, unexplained readiness scores or predictions styled as measured results.
+
 ## Ask LabFlow layout
 
 On wide screens, Ask LabFlow uses three full-height columns: scope and saved views, conversation, and evidence. The outer panels stretch to the height of the conversation rather than ending after their initial content. Below the wide breakpoint, evidence moves beneath the first two columns; on tablet and mobile all panels become a single reading flow.
@@ -169,3 +180,15 @@ When a project is open, the primary sidebar adds a contextual project entry dire
 ## Content voice
 
 Use direct, operational language. Distinguish “generated”, “reviewed”, “approved” and “submitted”. Avoid claims that imply connected services or scientific certainty. Demonstration values and identities should be clearly illustrative; use **Matteo Ginesi** consistently as the example researcher and report author.
+
+## Dense scientific controls
+
+LabFlow uses a slightly denser control scale for laboratory workbenches. Buttons, inputs, selects and text areas remain keyboard accessible and readable, but avoid unnecessary vertical expansion. Comfortable density remains available for users who prefer larger controls.
+
+## Reorderable scientific definitions
+
+Stack layers and solution components support both pointer-based dragging and explicit Move Up / Move Down controls. The accessible controls are mandatory; drag and drop is only a convenience. Reordering immediately updates the technical review so the author can see the canonical order that will be retained by future persistence and export adapters.
+
+## Local icon system
+
+Product icons come from one checked-in, Lucide-inspired local icon set with a consistent 24×24 view box, two-pixel stroke, round caps and round joins. Branding marks remain separate. Do not introduce one-off decorative SVG paths when an icon already exists in the local set, and never load icons from a CDN.

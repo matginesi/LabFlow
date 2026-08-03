@@ -42,6 +42,7 @@ features:
   knowledge_base: true
   generic_tools: true
   ai_assistance: true
+  ai_models_foundation: true
   nomad_preview: true
 
 reports:
@@ -56,6 +57,7 @@ exports:
     - pdf
     - docx
     - xlsx
+    - latex
     - bundle
   workbook_sheets:
     - Dashboard
@@ -79,6 +81,14 @@ ai:
   enabled: true
   human_approval_required: true
   external_provider: false
+  # The POC demonstrates contracts and records; it performs no training or inference.
+  capabilities:
+    knowledge_and_rag: simulated
+    dataset_snapshots: demonstrated
+    model_registry: demonstrated
+    training: disabled
+    prediction: demonstrated
+    deep_learning: future
 
 knowledge:
   default_scope: approved

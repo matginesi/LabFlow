@@ -17,13 +17,15 @@ required_assets = {
     "assets/js/workbook.js", "assets/js/state.js", "assets/js/docs-bundle.js", "assets/js/app.js",
     "assets/js/settings-bundle.js", "settings.yaml", "tools/build_settings_bundle.py",
     "assets/js/knowledge-pages.js", "assets/js/tools-page.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css",
-    "examples/theme-integration.html", "tools/build_page_shell.py", "tools/build_frontend_bundles.py",
+    "examples/theme-integration.html", "examples/ai-foundation/dataset-snapshot.yaml", "examples/ai-foundation/model-card.yaml",
+    "examples/ai-foundation/prediction-record.json", "examples/ai-foundation/rag-evaluation.yaml",
+    "tools/build_page_shell.py", "tools/build_frontend_bundles.py",
 }
 
 entry_styles = ["ui/labflow.bundle.css"]
 canonical_docs = {
     "PROJECT.md", "UI_UX_GUIDELINES.md", "PIPELINES_AND_DATA.md",
-    "AI_REPORTS_AND_EXPORT.md", "THEME_INTEGRATION.md", "VALIDATION_CHECKLIST.md",
+    "AI_ML_FOUNDATION.md", "AI_REPORTS_AND_EXPORT.md", "THEME_INTEGRATION.md", "JAVASCRIPT_LOGGING.md", "VALIDATION_CHECKLIST.md",
 }
 
 settings_path = ROOT / "settings.yaml"
@@ -76,6 +78,15 @@ for page in html_pages:
 for asset in required_assets:
     if not (ROOT / asset).exists():
         errors.append(f"Missing shared asset: {asset}")
+
+ui_kit_source = (ROOT / "ui-kit.html").read_text(encoding="utf-8")
+if ui_kit_source.find('assets/js/workbook.js') < 0 or ui_kit_source.find('assets/js/workbook.js') > ui_kit_source.find('assets/js/app.js'):
+    errors.append("ui-kit.html: workbook.js must load before app.js for the report preview")
+
+for source in [ROOT / "assets/js/app.js", ROOT / "assets/js/state.js", ROOT / "assets/js/exporters.js", ROOT / "assets/js/workbook.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js"]:
+    text = source.read_text(encoding="utf-8")
+    if re.search(r"\bconsole\.(?:log|info|warn|error|debug)\s*\(", text):
+        errors.append(f"{source.relative_to(ROOT)}: use LabFlowLogger instead of direct console calls")
 
 if not (ROOT / ".nojekyll").exists():
     errors.append("Missing .nojekyll for direct GitHub Pages delivery")

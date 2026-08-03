@@ -1,6 +1,7 @@
 (function () {
   "use strict";
   const E = window.LabFlowExport;
+  const Log = window.LabFlowLogger?.child("workbook") || {debug(){},info(){},warn(){},error(){},time(){return () => {};}};
   const xml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
   const column = (number) => {
     let result = "";
@@ -52,6 +53,7 @@
     return lines.length ? lines : [""];
   };
   function buildReportDocument(project, data, options = {}) {
+    Log.debug("report-model.build", { projectId: project?.id, rows: data?.length || 0 });
     const report = { ...(options.report || {}) };
     const rows = (data || []).map((row) => ({ ...row }));
     const sections = Array.isArray(report.sections) ? [...report.sections] : ["summary", "methods", "results", "ai", "conclusions", "provenance"];
@@ -425,6 +427,7 @@
     return page.commands.join("\n");
   }
   function reportPdfRaw(project, data, options = {}) {
+    const finish = Log.time("pdf.build", { projectId: project?.id, rows: data?.length || 0 });
     const model = buildReportDocument(project, data, options);
     const palette = E.palettes[options.palette] || E.palettes.blue;
     const streams = [pageOne(model, palette), pageTwo(model, palette), pageThree(model, palette), pageFour(model, palette)];
@@ -459,6 +462,7 @@
     const total = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
     const output = new Uint8Array(total); let cursor = 0;
     chunks.forEach((chunk) => { output.set(chunk, cursor); cursor += chunk.length; });
+    finish({ bytes: output.length, pages: streams.length });
     return output;
   }
   const pdfSafeInfo = (value) => String(value || "").replace(/([\\()])/g, "\\$1");
@@ -615,6 +619,128 @@
     ]);
   }
 
+
+  function latexEscape(value) {
+    const replacements = {
+      "\\": "\\textbackslash{}",
+      "&": "\\&",
+      "%": "\\%",
+      "$": "\\$",
+      "#": "\\#",
+      "_": "\\_",
+      "{": "\\{",
+      "}": "\\}",
+      "~": "\\textasciitilde{}",
+      "^": "\\textasciicircum{}"
+    };
+    return String(value ?? "")
+      .replace(/[\\&%$#_{}~^]/g, (character) => replacements[character])
+      .replace(/\n+/g, "\\par ");
+  }
+
+  function latexReportSource(project, data, options = {}) {
+    const model = buildReportDocument(project, data, options);
+    const { report, rows, sectionSet, best, mean, findings, experiments, stackLayers } = model;
+    const palette = E.palettes[options.palette] || E.palettes.blue;
+    const accent = palette.strong || palette.hex;
+    const dark = palette.dark;
+    const tex = [];
+    const pushSection = (title, body) => { tex.push(`\\section{${latexEscape(title)}}`, body); };
+    tex.push(String.raw`\documentclass[10pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=16mm,headheight=15pt,footskip=18pt]{geometry}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{booktabs,tabularx,array,longtable}
+\usepackage{siunitx}
+\usepackage{fancyhdr,lastpage}
+\usepackage{hyperref}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\definecolor{LabAccent}{HTML}{${accent}}
+\definecolor{LabDark}{HTML}{${dark}}
+\definecolor{LabSoft}{HTML}{F3F6F8}
+\hypersetup{colorlinks=true,linkcolor=LabAccent,urlcolor=LabAccent,pdftitle={${latexEscape(report.title || project.name)}},pdfauthor={${latexEscape(report.author || project.owner)}}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{LabAccent}{\textbf{LABFLOW}}}
+\fancyhead[R]{\small ${latexEscape(report.reportCode || project.id)}}
+\fancyfoot[L]{\scriptsize ${latexEscape(report.organisation || "LabFlow")} · ${latexEscape(report.approval || "Pending approval")}}
+\fancyfoot[R]{\scriptsize Page \thepage\ of \pageref{LastPage}}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\newcommand{\metric}[3]{\begin{minipage}[t]{0.18\linewidth}\textcolor{LabAccent}{\scriptsize\bfseries #1}\\[-1pt]{\Large\bfseries #2}\\[-1pt]{\scriptsize #3}\end{minipage}}
+\begin{document}
+\begin{titlepage}
+\color{LabDark}
+{\small\bfseries\textcolor{LabAccent}{LABFLOW · SCIENTIFIC REPORT}}\par
+\vspace{22mm}
+{\Huge\bfseries ${latexEscape(report.title || project.name)}\par}
+\vspace{3mm}
+{\Large\color{LabAccent}${latexEscape(report.subtitle || report.reportType || "Scientific project report")}\par}
+\vspace{14mm}
+\begin{tabularx}{\linewidth}{@{}>{\bfseries}lX@{}}
+Project & ${latexEscape(project.id)}\\
+Report code & ${latexEscape(report.reportCode || project.id)}\\
+Author & ${latexEscape(report.author || project.owner)}\\
+Laboratory & ${latexEscape(report.laboratory || "Laboratory")}\\
+Organisation & ${latexEscape(report.organisation || "Organisation")}\\
+Date & ${latexEscape(report.reportDate || new Date().toISOString().slice(0,10))}\\
+Approval & ${latexEscape(report.approval || "Pending researcher approval")}\\
+Keywords & ${latexEscape(report.keywords || "")}\\
+\end{tabularx}
+\vfill
+\colorbox{LabSoft}{\parbox{0.95\linewidth}{\small This document is generated from the current LabFlow Report Composer state. Sections, author text, data selections and evidence follow the same canonical report model used by the live preview and native PDF.}}
+\end{titlepage}`);
+    if (sectionSet.has("summary")) {
+      pushSection("Executive Summary", `${latexEscape(report.executiveSummary)}\n\n\\textbf{Research objectives.} ${latexEscape(report.objectives)}\n\n\\begin{center}\n\\metric{BEST PCE}{${Number(best.pce || 0).toFixed(2)}\\%}{${latexEscape(best.sample || "—")}}\n\\hfill\\metric{MEAN PCE}{${mean.pce.toFixed(2)}\\%}{${rows.length} samples}\n\\hfill\\metric{BEST STABILITY}{${Number(best.stability || 0).toFixed(0)}\\%}{retained}\n\\hfill\\metric{MEAN VOC}{${mean.voc.toFixed(2)} V}{cohort}\n\\end{center}`);
+    }
+    if (sectionSet.has("methods")) {
+      const solutionRows=model.solution.map((row)=>row.map(latexEscape).join(" & ")+" \\\\").join("\n");
+      const stackRows=stackLayers.map((layer,index)=>`${index+1} & ${latexEscape(layer.material)} & ${latexEscape(layer.function || layer.role || "")} & ${latexEscape(layer.thickness)} & ${latexEscape(layer.process || "—")} \\\\`).join("\n");
+      const expRows=experiments.map((item)=>`${latexEscape(item.id)} & ${latexEscape((item.samples || []).join(", "))} & ${latexEscape(item.process || "—")} & ${latexEscape(item.annealing ? `${item.annealing.value}${item.annealing.unit || ""}` : "—")} & ${latexEscape(item.measurements || "—")} \\\\`).join("\n");
+      pushSection("Materials, Process and Experiments", `${latexEscape(report.methodology)}\n\n\\subsection{Solution composition}\n\\begin{tabularx}{\\linewidth}{@{}lXXX@{}}\\toprule Component & Function & Quantity & Composition \\\\ \\midrule\n${solutionRows}\n\\bottomrule\\end{tabularx}\n\n\\subsection{Device stack}\n\\begin{tabularx}{\\linewidth}{@{}rXXXX@{}}\\toprule Layer & Material & Function & Thickness & Process \\\\ \\midrule\n${stackRows}\n\\bottomrule\\end{tabularx}\n${report.includeExperiments ? `\\subsection{Experiment coverage}\n\\begin{tabularx}{\\linewidth}{@{}lXXXX@{}}\\toprule Experiment & Samples & Process & Annealing & Measurements \\\\ \\midrule\n${expRows}\n\\bottomrule\\end{tabularx}` : ""}`);
+    }
+    if (sectionSet.has("results")) {
+      const metric = model.metric;
+      const coords=rows.map((row,index)=>`(${index+1},${Number(row[metric] || 0)})`).join(" ");
+      const labels=rows.map((row,index)=>`${index+1}/${latexEscape(row.sample)}`).join(",");
+      const tableRows=rows.map((row)=>`${latexEscape(row.sample)} & ${latexEscape(row.formulation)} & ${latexEscape(row.batch)} & ${Number(row.voc).toFixed(2)} & ${Number(row.jsc).toFixed(1)} & ${Number(row.ff).toFixed(1)} & ${Number(row.pce).toFixed(2)} & ${Number(row.stability).toFixed(0)} & ${Number(row.hysteresis).toFixed(1)} \\\\`).join("\n");
+      pushSection("Results and Data", `${latexEscape(report.resultsNarrative)}\n${report.includeChart !== false ? `\\begin{center}\\begin{tikzpicture}\\begin{axis}[width=0.95\\linewidth,height=58mm,ymajorgrids=true,grid style={gray!18},xlabel={Sample},ylabel={${latexEscape(model.metricLabel)} (${latexEscape(model.metricSuffix)})},xtick={1,...,${rows.length}},xticklabels={${rows.map((row)=>latexEscape(row.sample)).join(",")}},tick label style={font=\\scriptsize},label style={font=\\small},bar width=8pt,ybar,fill=LabAccent,draw=LabAccent]\\addplot coordinates {${coords}};\\end{axis}\\end{tikzpicture}\\end{center}` : ""}\n${report.includeFullTable ? `\\scriptsize\\begin{longtable}{@{}lllrrrrrr@{}}\\toprule Sample & Formulation & Batch & Voc & Jsc & FF & PCE & Stability & Hyst. \\\\ \\midrule\\endhead\n${tableRows}\n\\bottomrule\\end{longtable}\\normalsize` : ""}`);
+    }
+    if (sectionSet.has("ai")) {
+      const items=findings.map((item)=>`\\item \\textbf{${latexEscape(item.title)}} — ${latexEscape(item.detail)} \\textit{Evidence: ${latexEscape(item.evidence)}; status: ${latexEscape(item.status)}}`).join("\n");
+      pushSection("Evidence-Linked Findings", `\\begin{itemize}\n${items}\n\\end{itemize}\n\\textit{AI-assisted findings are advisory and remain separate from researcher-authored conclusions.}`);
+    }
+    if (sectionSet.has("conclusions")) {
+      pushSection("Discussion, Conclusions and Limitations", `\\subsection{Discussion}\n${latexEscape(report.discussion)}\n\\subsection{Conclusions}\n${latexEscape(report.conclusions)}\n\\subsection{Limitations}\n${latexEscape(report.limitations)}`);
+    }
+    if (sectionSet.has("custom")) pushSection(report.customTitle || "Additional Researcher Notes", latexEscape(report.customBody));
+    if (sectionSet.has("provenance")) {
+      pushSection("Provenance and Approval", `\\begin{tabularx}{\\linewidth}{@{}>{\\bfseries}lX@{}}\\toprule Data class & Source and control \\\\ \\midrule Raw measurements & Source files remain immutable and linked to sample identifiers.\\\\ Processed results & Deterministic transformations and grouped statistics.\\\\ Model/AI output & Model, dataset, prompt, tools and review state remain explicit.\\\\ Report state & Generated from the current Composer draft.\\\\ Approval & ${latexEscape(report.approval || "Pending researcher approval")}\\\\ \\bottomrule\\end{tabularx}\n\\vspace{6mm}\n\\textbf{Sources:} ${model.sources.map(latexEscape).join("; ")}.`);
+    }
+    tex.push("\\end{document}");
+    return tex.join("\n\n") + "\n";
+  }
+
+  function latexReportBundleRaw(project, data, options = {}) {
+    const source = latexReportSource(project, data, options);
+    const readme = `# LabFlow LaTeX report package\n\nThis package is generated from the same Report Composer state used by the live preview and native PDF.\n\nCompile with:\n\n    latexmk -pdf scientific-report.tex\n\nOr run ./compile.sh on a system with TeX Live, latexmk and pgfplots installed.\nNo remote service is contacted.\n`;
+    const compile = `#!/usr/bin/env sh\nset -eu\nlatexmk -pdf -interaction=nonstopmode -halt-on-error scientific-report.tex\n`;
+    return E.zipBytes([
+      {name:"scientific-report.tex",data:source},
+      {name:"measurements.csv",data:E.csv(data || [])},
+      {name:"README.md",data:readme},
+      {name:"compile.sh",data:compile}
+    ]);
+  }
+
+  Log.info("module.ready", { reportModel: true, pdf: true, docx: true, xlsx: true, latex: true });
   E.workbookRaw = workbookRaw;
   E.genericWorkbookRaw = genericWorkbookRaw;
   E.genericWorkbook = (sheets, palette) => new Blob([genericWorkbookRaw(sheets, palette)], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
@@ -626,6 +752,8 @@
   E.editableDocxRaw = editableDocxRaw;
   E.reportDocx = (project, data, options) => new Blob([editableDocxRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
   E.reportXlsx = (project, data, options) => new Blob([workbookRaw(project, data, options)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  E.reportLatexSource = latexReportSource;
+  E.reportLatexBundle = (project, data, options = {}) => new Blob([latexReportBundleRaw(project, data, options)], { type: "application/zip" });
   E.bundle = (project, pipeline, data, nomad = false, options = {}) => {
     const files = [
       { name: "project.yaml", data: E.projectYaml(project, pipeline) },
@@ -634,8 +762,9 @@
       { name: "report/scientific-report.pdf", data: reportPdfRaw(project, data, options) },
       { name: "report/editable-report.docx", data: editableDocxRaw(project, data, options) },
       { name: "report/analysis-workbook.xlsx", data: workbookRaw(project, data, options) },
+      { name: "report/scientific-report.tex", data: latexReportSource(project, data, options) },
       { name: "knowledge/linked-context.yaml", data: (options.knowledge || []).map((item) => `- id: ${item.id}\n  type: "${item.type}"\n  title: "${item.title.replace(/"/g, '\\"')}"\n  status: "${item.status}"`).join("\n") + "\n" },
-      { name: "MANIFEST.txt", data: "LabFlow portable project package\nGenerated locally in the browser.\nIncludes structured data, native PDF, editable DOCX, analysis workbook and linked knowledge.\n" }
+      { name: "MANIFEST.txt", data: "LabFlow portable project package\nGenerated locally in the browser.\nIncludes structured data, native PDF, editable DOCX, analysis workbook, LaTeX report source and linked knowledge.\n" }
     ];
     if (nomad) files.push({ name: "nomad.yaml", data: E.nomadYaml(project) }, { name: "NOMAD_VALIDATION.txt", data: "Preview only. Confirm inferred units and complete missing metadata before upload.\n" });
     return new Blob([E.zipBytes(files)], { type: "application/zip" });

@@ -28,6 +28,7 @@ CSS_SOURCES = [
 ]
 
 RUNTIME_SOURCES = [
+    "assets/js/icons.js",
     "assets/js/settings-bundle.js",
     "assets/js/data.js",
     "assets/js/pipeline-bundle.js",

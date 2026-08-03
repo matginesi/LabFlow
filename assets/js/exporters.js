@@ -1,6 +1,7 @@
 (function () {
   "use strict";
 
+  const Log = window.LabFlowLogger?.child("export") || {debug(){},info(){},warn(){},error(){}};
   const encoder = new TextEncoder();
   const palettes = {
     blue:{name:"Scientific Blue",hex:"5B82FF",strong:"3268F5",dark:"101827",light:"EAF0FF"}, green:{name:"Laboratory Green",hex:"35B985",strong:"159568",dark:"0E2720",light:"E6F7F0"},
@@ -15,12 +16,22 @@
   function crc(data) { if(!crcTable){crcTable=new Uint32Array(256);for(let n=0;n<256;n++){let value=n;for(let k=0;k<8;k++)value=value&1?0xedb88320^(value>>>1):value>>>1;crcTable[n]=value>>>0;}}let value=0xffffffff;for(const byte of data)value=crcTable[(value^byte)&255]^(value>>>8);return(value^0xffffffff)>>>0; }
   function dosTime() { const now=new Date(); const year=Math.max(1980,now.getFullYear()); return {time:now.getHours()<<11|now.getMinutes()<<5|now.getSeconds()>>1,date:(year-1980)<<9|(now.getMonth()+1)<<5|now.getDate()}; }
   function zipBytes(files) { const local=[];const central=[];let offset=0;for(const file of files){const name=encoder.encode(file.name);const data=file.data instanceof Uint8Array?file.data:encoder.encode(String(file.data));const checksum=crc(data);const stamp=dosTime();const record=concat([u32(0x04034b50),u16(20),u16(0),u16(0),u16(stamp.time),u16(stamp.date),u32(checksum),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data]);local.push(record);central.push(concat([u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(stamp.time),u16(stamp.date),u32(checksum),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]));offset+=record.length;}const directory=concat(central);return concat([...local,directory,u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(directory.length),u32(offset),u16(0)]); }
-  function download(value, name) { const blob=value instanceof Blob?value:new Blob([value]);const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),1500); }
+  function download(value, name) {
+    const blob=value instanceof Blob?value:new Blob([value]);
+    const link=document.createElement("a");
+    const objectUrl=URL.createObjectURL(blob);
+    link.href=objectUrl;link.download=name;document.body.append(link);
+    Log.info("download.started", { name, bytes: blob.size, mime: blob.type || "application/octet-stream" });
+    try { link.click(); Log.info("download.dispatched", { name }); }
+    catch (error) { Log.error("download.failed", { name, error }); throw error; }
+    finally { link.remove(); setTimeout(()=>URL.revokeObjectURL(objectUrl),1500); }
+  }
   const yamlString = (value) => typeof value === "number" || typeof value === "boolean" ? String(value) : `"${String(value ?? "").replace(/\\/g,"\\\\").replace(/"/g,'\\"')}"`;
   function projectYaml(project, pipeline) { const completed=Math.ceil(project.progress/100*pipeline.steps.length);return ["schema: labflow.project.v1",`id: ${yamlString(project.id)}`,`name: ${yamlString(project.name)}`,`pipeline: ${yamlString(pipeline.id)}`,`pipeline_version: ${yamlString(pipeline.version)}`,`status: ${yamlString(project.status)}`,`progress: ${project.progress}`,`owner: ${yamlString(project.owner)}`,`objective: ${yamlString(project.objective)}`,"counts:",`  samples: ${project.samples}`,`  measurements: ${project.measurements}`,`  findings: ${project.findings}`,"steps:",...pipeline.steps.flatMap((step,index)=>[`  - id: ${yamlString(step.id)}`,`    status: ${index<completed?"completed":"available"}`,`    output: ${yamlString(step.output)}`])].join("\n")+"\n"; }
   function jsonl(project, data) { return data.map((row)=>JSON.stringify({project_id:project.id,measurement_type:"JV summary",...row})).join("\n")+"\n"; }
   function csv(data) { const keys=Object.keys(data[0]||{});const quote=(value)=>/[",\n]/.test(String(value))?`"${String(value).replace(/"/g,'""')}"`:value;return keys.join(",")+"\n"+data.map((row)=>keys.map((key)=>quote(row[key])).join(",")).join("\n")+"\n"; }
   function nomadYaml(project) { return `definitions:\n  name: LabFlow project export\ndata:\n  project_id: ${yamlString(project.id)}\n  project_name: ${yamlString(project.name)}\n  source: LabFlow static research workspace\n  upload_state: preview\n`; }
 
+  Log.info("module.ready", { palettes: Object.keys(palettes).length });
   window.LabFlowExport = {palettes, download, projectYaml, jsonl, csv, nomadYaml, zipBytes, zipStore:(files,type="application/zip")=>new Blob([zipBytes(files)],{type})};
 })();

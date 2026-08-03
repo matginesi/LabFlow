@@ -1,6 +1,7 @@
 (function () {
   "use strict";
   const E = window.LabFlowExport;
+  const Log = window.LabFlowLogger?.child("tools") || {debug(){},info(){},warn(){},error(){}};
   const textState = {
     txt:{name:"notes.txt",content:"Experiment notes\n\nRecord observations here. Nothing is retained after reload."},
     markdown:{name:"research-note.md",content:"# Research note\n\n## Observation\n\nThe leading sample remains **S08**.\n\n- Review process metadata\n- Link the JV protocol"},
@@ -173,6 +174,7 @@
 
   function render(ctx) {
     const {root,header,icon} = ctx;
+    Log.info("page.render", { page: "tools" });
     const tools=[
       ["txt","TXT editor","Plain notes","text","Write"],["markdown","Markdown","Live preview","markdown","Write"],["latex","LaTeX","Scientific source","formula","Write"],
       ["yaml","YAML","Metadata check","hierarchy","Structure"],["json","JSON","Format & validate","braces","Structure"],["spreadsheet","Spreadsheet","Workbook sheets","table","Structure"],
@@ -183,7 +185,7 @@
     const requested=new URLSearchParams(location.search).get("tool");
     const reloaded=performance.getEntriesByType?.("navigation")?.[0]?.type==="reload";
     let active=!reloaded&&tools.some(([id])=>id===requested)?requested:"txt";
-    const rerender=(type)=>{active=type;root.querySelectorAll("[data-tool-switch]").forEach(button=>button.classList.toggle("active",button.dataset.toolSwitch===type));const workspace=root.querySelector("#tool-workspace");workspace.innerHTML=type==="spreadsheet"?spreadsheetStage(ctx):type==="docx"?docxStage(ctx):type==="diagram"?diagramStage(ctx):editorStage(type,ctx);const stage=workspace.firstElementChild;if(type==="spreadsheet")bindSpreadsheet(stage,rerender,ctx);else if(type==="docx")bindDocx(stage,ctx);else if(type==="diagram")bindDiagram(stage,ctx);else bindText(type,stage,ctx);};
+    const rerender=(type)=>{active=type;Log.info("tool.changed", { tool: type });root.querySelectorAll("[data-tool-switch]").forEach(button=>button.classList.toggle("active",button.dataset.toolSwitch===type));const workspace=root.querySelector("#tool-workspace");workspace.innerHTML=type==="spreadsheet"?spreadsheetStage(ctx):type==="docx"?docxStage(ctx):type==="diagram"?diagramStage(ctx):editorStage(type,ctx);const stage=workspace.firstElementChild;if(type==="spreadsheet")bindSpreadsheet(stage,rerender,ctx);else if(type==="docx")bindDocx(stage,ctx);else if(type==="diagram")bindDiagram(stage,ctx);else bindText(type,stage,ctx);};
     root.querySelectorAll("[data-tool-switch]").forEach(button=>button.addEventListener("click",()=>rerender(button.dataset.toolSwitch)));rerender(active);
   }
 
