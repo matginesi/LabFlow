@@ -1,211 +1,245 @@
-# AI and machine-learning foundation
+# AI, machine learning, deep learning and Vision foundation
 
-LabFlow is designed around two product promises: laboratory work must remain simple for the researcher, and the same everyday work must produce data that can support trustworthy AI, machine learning and deep learning later. AI readiness is therefore a property of the core data model, not a collection of disconnected assistant buttons.
+LabFlow treats AI readiness as a consequence of ordinary laboratory work. Researchers continue to use **Workspace → Project → Process → Experiment**; LabFlow captures stable identifiers, units, provenance, files, transformations, labels and outcomes behind that workflow.
 
-The current POC remains local and simulated. It does not train a model, call an LLM, create embeddings or connect to a vector database. It demonstrates the contracts, record types and review patterns that a future implementation can use without redesigning the researcher workflow.
+The current implementation is a static proof of concept. It performs no real training, inference, upload or remote request. Its purpose is to make the future contracts and user experience concrete before a backend or ML platform exists.
 
-## Product principle
+## Product boundary
+
+The AI & Models workspace contains six connected but distinct areas:
+
+1. **Knowledge** — the existing assistant and evidence-led RAG demonstration.
+2. **Data & datasets** — laboratory data collection, validation, labeling, dataset browsing and immutable snapshots.
+3. **ML / training** — model registry, reproducible runs, metrics, diagnostics and artifacts.
+4. **Vision** — optical, PL, EL and microscopy ingestion, annotation, classification and segmentation review.
+5. **Scientific AI** — quality detection, stability forecasting, reproducibility monitoring and experiment optimization.
+6. **Predictions** — model outputs, uncertainty, applicability and human review.
+
+These sections do not replace the project workflow. They expose what the normal project workflow is already producing and how those records may later support connected services.
+
+## End-to-end data lifecycle
 
 ```mermaid
 flowchart LR
-  A[Simple researcher workflow] --> B[Structured laboratory records]
-  B --> C[Validated data]
-  C --> D[Dataset snapshot]
-  D --> E[Model or retrieval run]
-  E --> F[Prediction or AI output]
-  F --> G[Human review]
-  G --> H[Approved scientific conclusion]
+  A[Collect laboratory assets] --> B[Map identity and provenance]
+  B --> C[Validate units, ranges and links]
+  C --> D[Create or review labels and targets]
+  D --> E[Build immutable dataset snapshot]
+  E --> F[Train or evaluate model]
+  F --> G[Register metrics and artifacts]
+  G --> H[Review prediction or recommendation]
 ```
 
-The researcher continues to work through **Workspace → Project → Process → Experiment**. LabFlow captures identifiers, units, provenance, files and relationships behind that familiar flow. Future AI services consume those stable records rather than forcing the user to prepare a second, separate AI system.
+The POC shows this lifecycle as a lightweight laboratory MLOps surface. It deliberately avoids infrastructure concepts that would not help a researcher understand the data.
 
-## Shared AI-ready records
+## Data sources and modalities
 
-The future data layer should recognize the following records even when the first implementation stores them inside a larger project document:
+A future connected LabFlow should collect four broad modalities through the same project and experiment records:
+
+| Modality | Examples | Required linkage |
+|---|---|---|
+| Structured process data | solution composition, stack, deposition, annealing, environment | project, experiment, sample, process snapshot, material lot |
+| Electrical measurements | JV, stabilized output, Voc, Jsc, FF, PCE | sample, device, instrument, calibration, acquisition time |
+| Spectra and time series | UV–Vis, PL, EQE, impedance, aging trajectory | sample, instrument, processing version, time or wavelength axis |
+| Scientific images | optical, PL map, EL, microscopy, thermal image | sample or module, acquisition session, calibration, modality |
+
+Raw files remain immutable. Parsed values, normalized fields, derived features, labels and model-ready tensors are separate objects linked back to the original source.
+
+## Core AI-ready records
 
 | Record | Purpose | Minimum provenance |
 |---|---|---|
-| Data source | Original file, instrument stream, form or controlled document | source identifier, author/instrument, timestamp, checksum or version |
-| Dataset snapshot | Immutable selection of rows, features, targets and exclusions | source projects, selection rules, schema, created time, version |
-| Transformation | Deterministic change from one representation to another | input, output, operation, parameters, implementation version |
-| Feature | Machine-readable model input | name, type, unit, source field, transformation |
-| Label or target | Observed or reviewed outcome used for learning | value, unit, origin, reviewer and label state |
-| Model | Stable conceptual model definition | task, algorithm, input schema, target and owner |
-| Model version | Reproducible model artifact | model, dataset snapshot, parameters, code version and file hash |
-| Training run | One execution of training or evaluation | dataset, split, seed, metrics, hardware, logs and artifacts |
-| Prediction | Versioned model output for one record | model version, dataset/version context, inputs, uncertainty and applicability |
-| AI output | LLM/RAG answer, suggestion or generated section | model, prompt, sources, tools, timestamp and limitations |
-| Human review | Explicit acceptance, rejection or revision | reviewer, time, decision and note |
+| Data source | Original form, instrument file, image or stream | source ID, timestamp, instrument or author, checksum |
+| Parsed record | Machine-readable representation of a source | parser and version, mapping, warnings |
+| Transformation | Deterministic processing step | input, output, parameters, code version |
+| Feature | Model input | name, type, unit, source, transformation |
+| Label or target | Reviewed outcome for learning | value, unit, origin, reviewer, state |
+| Annotation | Image class, region or pixel mask | image, label schema, reviewer, version |
+| Dataset snapshot | Immutable rows, schema, filters and split | sources, exclusions, groups, creator, time, version |
+| Model | Stable task and input/output contract | family, algorithm, schema, owner |
+| Training run | One execution | model, snapshot, split, seed, environment, logs |
+| Artifact | Serialized model, metrics or report | run, file hash, format, creation time |
+| Prediction | Versioned model output | model version, dataset context, inputs, uncertainty |
+| Human review | Acceptance, rejection or revision | reviewer, decision, timestamp, note |
 
-These records do not all require separate screens or database tables. They require stable semantics and exportable structures.
+## Dataset Studio contract
 
-## Scientific data classes
+The Data & Datasets view demonstrates one active multimodal working cohort. It includes:
 
-LabFlow must keep the following classes separate in storage, interface and export:
+- record, experiment, measurement, image, feature, target and storage counts;
+- collection-to-training lifecycle stages;
+- modality coverage;
+- deterministic quality gates;
+- annotation and target queue;
+- dataset row browser with train, validation, test, holdout and review states;
+- feature, target and grouping schema;
+- immutable snapshot history.
+
+A future Dataset Builder should let a researcher select projects, experiments, samples and modalities, then define inclusion rules, features, targets, groups and exclusions. The output is always an immutable snapshot with a stable ID and version.
+
+A snapshot must record:
+
+- source projects, experiments, samples and assets;
+- schema and explicit units;
+- feature and target definitions;
+- selection and exclusion rules;
+- missing-value policy;
+- transformations and versions;
+- grouping and split policy;
+- leakage checks;
+- label schema and annotation state;
+- creator, timestamp and manifest hash.
+
+## Quality and leakage prevention
+
+Quality checks should be deterministic whenever possible. The POC demonstrates:
+
+- unit and dimensional validation;
+- entity and provenance links;
+- duplicate and near-duplicate detection;
+- scientific range checks;
+- target completeness;
+- reviewed labels;
+- experiment- and batch-grouped splits.
+
+Future checks should also cover instrument drift, acquisition-session bias, repeated images, category sparsity, target leakage, temporal leakage, laboratory bias and out-of-domain inputs.
+
+## Model families shown in the POC
+
+The registry is organized around useful laboratory tasks rather than fashionable architectures:
+
+- **PCE regression** using an interpretable gradient-boosting baseline;
+- **T80 forecasting** using a probabilistic model with uncertainty and censored outcomes;
+- **process anomaly detection** using deterministic rules plus an unsupervised baseline;
+- **film-defect segmentation** using a compact U-Net demonstration;
+- **defect triage classification** using a compact CNN;
+- **next-experiment ranking** using Gaussian-process Bayesian optimization.
+
+Simple statistical and ML baselines should be established before deep learning. DL is justified primarily for images, large spectra, long time series or genuinely multimodal inputs.
+
+## Training-run contract
+
+A model definition and a training run are separate records. Every run retains:
+
+- model ID and version;
+- dataset snapshot ID and version;
+- preprocessing manifest;
+- grouping and split strategy;
+- random seed;
+- parameters;
+- code and environment version;
+- hardware description;
+- training and validation history;
+- metrics and diagnostics;
+- artifact references;
+- review state.
+
+Regression evaluation should include MAE, RMSE, R², grouped cross-validation and residual inspection. Classification should include class balance, precision, recall, F1, confusion matrix and grouped validation. Segmentation should include Dice, mean IoU, precision, recall and representative overlays.
+
+## Scientific Vision contract
+
+The Vision section demonstrates the future flow:
+
+```mermaid
+flowchart LR
+  A[Optical / PL / EL / microscopy] --> B[Calibration and preprocessing]
+  B --> C[Class, region or pixel annotation]
+  C --> D[Classifier or segmenter]
+  D --> E[Confidence and overlay]
+  E --> F[Human review]
+```
+
+Potential CHOSE-oriented uses include:
+
+- film uniformity, streaks, pinholes and aggregation;
+- PL non-uniformity;
+- EL inactive regions and shunts;
+- P1/P2/P3 scribing defects;
+- microcracks and flexible-module damage;
+- edge delamination and incomplete coverage.
+
+Images and masks remain distinct. Model masks are never silently promoted to reviewed annotations.
+
+## Stability forecasting
+
+A stability model may consume:
+
+- stack, materials, lots and encapsulation;
+- initial electrical and optical descriptors;
+- stress protocol and environmental conditions;
+- timestamped performance trajectory;
+- T80/T90 or censored endpoint;
+- reviewed failure mechanism.
+
+The interface must show observed data, forecast, uncertainty interval, target definition and applicability together. A forecast is not an experimental measurement.
+
+## Experiment optimization
+
+The Scientific AI section demonstrates offline Bayesian ranking of candidate experiments. A candidate includes:
+
+- proposed variable values;
+- fixed parameters and constraints;
+- objective or acquisition rationale;
+- expected information gain or improvement;
+- uncertainty;
+- feasibility and risk;
+- source dataset and model version.
+
+The model ranks candidates; the researcher decides whether a candidate is scientifically sensible, safe and feasible.
+
+## Scientific output classes
+
+LabFlow keeps these states separate in storage, interface and export:
 
 ```text
 Raw measurement
 Validated measurement
 Processed measurement
 Calculated result
+Reviewed annotation
 Model prediction
+Model-generated mask
+Experiment recommendation
 LLM or RAG suggestion
 Researcher statement
 Approved conclusion
 ```
 
-A prediction is never silently written into a measured-result field. A generated suggestion is never upgraded to a researcher conclusion without review. Every derived object points back to the exact data, transformation, model or source that produced it.
-
-## Knowledge, LLM and RAG path
-
-The Knowledge Assistant is the future entry point for document RAG, structured queries, Graph RAG and deterministic tools. The user chooses scope and asks a laboratory question; LabFlow chooses the retrieval method internally.
-
-```mermaid
-flowchart LR
-  Q[Researcher question] --> R[Intent and scope]
-  R --> D[Documents and SOPs]
-  R --> S[Structured records]
-  R --> G[Explicit relationships]
-  R --> T[Deterministic tools]
-  D --> E[Evidence set]
-  S --> E
-  G --> E
-  T --> E
-  E --> A[Grounded answer]
-  A --> H[Researcher review or proposed action]
-```
-
-A useful answer record contains:
-
-- answer text;
-- search scope;
-- model and prompt version;
-- documents and structured records used;
-- relationships traversed;
-- deterministic calculations or tools executed;
-- evidence locations;
-- coverage or confidence information;
-- limitations;
-- proposed actions;
-- human review state.
-
-The POC includes a small RAG evaluation set with expected sources and unsupported-claim checks. A future connected implementation should measure retrieval coverage, citation correctness, unsupported claims and answer usefulness rather than relying on subjective demonstrations.
-
-## Dataset Builder contract
-
-The future Dataset Builder should let a researcher select projects, processes, experiments and samples, then choose input features and a target. It produces an immutable **Dataset Snapshot**, not a live query with no identity.
-
-A snapshot records:
-
-- stable dataset identifier and version;
-- source projects and experiments;
-- included and excluded rows;
-- selection and quality filters;
-- feature schema;
-- target schema;
-- explicit units;
-- missing-value policy;
-- group or split strategy;
-- source and transformation versions;
-- creator and timestamp.
-
-The included `DS-PCE-001` demonstration shows eight samples, six candidate features, PCE as target and an experiment-grouped validation policy. It remains illustrative and is not evidence of a trained production model.
-
-## Data readiness
-
-AI readiness is explained through visible checks rather than one unexplained score. The POC currently shows:
-
-- structured metadata;
-- normalized units;
-- provenance coverage;
-- target completeness;
-- governed knowledge coverage;
-- blocking data-quality issues.
-
-Future checks should also cover duplicated records, incompatible units, category sparsity, target leakage, repeated samples across train and test, instrument or laboratory bias, temporal drift and domain coverage.
-
-## Model and training-run contract
-
-Start with inspectable baselines before deep learning. Linear models, decision trees, random forests or gradient boosting can validate the data and evaluation flow before advanced architectures are justified.
-
-A **Model** describes the task and intended input/output contract. A **Training Run** records one execution with a particular snapshot, split, seed, parameters and environment. Evaluation must include a simple baseline and a split that respects scientific grouping such as experiment, batch or time.
-
-For regression, useful evidence includes MAE, RMSE, R², cross-validation, residual plots and performance by experiment or batch. For classification, include precision, recall, F1, confusion matrix, class balance and grouped validation. Metrics alone are insufficient without leakage checks and domain-of-applicability information.
-
-## Prediction contract
-
-A prediction record contains at least:
-
-```yaml
-id: PRD-S08-PCE-001
-sample_id: S08
-model_version: MDL-PCE-RF-001
-training_dataset: DS-PCE-001
-predicted_value: 20.8
-unit: percent
-uncertainty: 1.5
-input_coverage: 0.93
-observed_value: 21.28
-review_state: reviewed
-```
-
-The interface presents predicted and observed values together, with uncertainty, input coverage, model version, dataset snapshot and review state. Missing inputs and applicability warnings remain visible.
+No model output is silently written into a measured-result or approved-conclusion field.
 
 ## Future service boundary
 
-The browser should not depend directly on Ollama, a specific vector database, PyTorch, TensorFlow or scikit-learn. Future infrastructure should implement a small set of product contracts:
+The browser should not depend directly on a particular ML framework. A future backend may implement a small set of product-oriented operations:
 
 ```text
-ask
-retrieve
-inspect
+collect
+parse
+validate
+annotate
 build_dataset
+snapshot
 train
 evaluate
 predict
+rank_experiments
 review
 ```
 
-The current `LabFlowDataSource` remains a small replacement seam for records. A connected implementation may add explicit service boundaries later, but the static POC must not simulate remote APIs or introduce speculative infrastructure.
+The static POC demonstrates the input, output and review contracts for those operations without pretending that the infrastructure already exists.
 
-## POC surfaces
+## Recommended implementation sequence
 
-The **AI & Models** workspace contains four sections:
+1. Complete identifiers, units, provenance, file relationships and raw/processed/derived separation.
+2. Implement deterministic validation and dataset manifests.
+3. Add reviewed labels and image annotations.
+4. Build immutable snapshots with leakage-safe groups and splits.
+5. Train a simple tabular baseline and register runs and artifacts.
+6. Add stability forecasting and anomaly detection.
+7. Add Vision only after acquisition and annotation practices are stable.
+8. Add offline experiment ranking before considering closed-loop automation.
 
-1. **Knowledge Assistant** — evidence-led questions, scope, citations and a RAG evaluation set.
-2. **Datasets** — AI readiness, immutable snapshots, features, targets and quality.
-3. **Models** — model registry, baseline metrics and training-run history.
-4. **Predictions** — prediction review, uncertainty, applicability and scientific output classes.
+This sequence keeps LabFlow useful as a laboratory application first, while making later AI work technically credible.
 
-The Project Analysis area also includes an **AI readiness** tab so the future capability remains contextual to the current project rather than becoming a separate technical product.
+## Interface integration
 
-All controls remain non-persistent demonstrations. They show future contracts and do not create datasets, train models or perform inference.
-
-## Development sequence
-
-1. Complete identifiers, units, provenance, raw/processed/derived distinctions and evidence records.
-2. Connect document and structured retrieval with citations and an evaluation set.
-3. Implement Dataset Builder and immutable snapshots.
-4. Train and evaluate a simple baseline model.
-5. Add model registry, training runs, predictions and human review.
-6. Introduce image, spectral, sequence or multimodal deep learning only when the available data justify it.
-
-This sequence protects simplicity: advanced AI is added behind stable contracts instead of becoming a new workflow the researcher must learn.
-
-## Model training and evaluation workbench
-
-The Models view now demonstrates the complete path from a versioned dataset snapshot to a reviewable model result. It includes baseline comparisons, training runs, artifacts, training and validation curves, learning-rate history, residual review and a classification confusion matrix.
-
-The displayed values are checked-in demonstration data. They are never presented as a real deployed model or a scientific conclusion. The interface contract requires every future training result to retain:
-
-- model and model version;
-- dataset snapshot and feature schema;
-- split policy and seed;
-- parameters and runtime environment;
-- training and validation history;
-- baseline comparison;
-- final metrics and diagnostic plots;
-- generated artifacts;
-- applicability, uncertainty and human review.
-
-A training chart is evidence about a run, not decoration. Curves, residuals and matrices must remain connected to the exact run and dataset that produced them.
+The AI & Models workspace does not define a parallel visual system. Dataset, model, Vision and prediction views reuse the canonical LabFlow breadcrumb, page header, summary strip, tabs, panels, toolbars, dense tables, validation issues, notices, badges and responsive grids. Domain-specific visuals are limited to scientific plots and image previews inside ordinary panels.

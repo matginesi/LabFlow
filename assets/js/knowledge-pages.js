@@ -29,16 +29,28 @@
       blocking: list(rawFoundation.readiness?.blocking)
     },
     ragEvaluation: list(rawFoundation.ragEvaluation),
+    activeDataset: rawFoundation.activeDataset && typeof rawFoundation.activeDataset === "object" ? rawFoundation.activeDataset : {},
+    datasetLifecycle: list(rawFoundation.datasetLifecycle),
+    modalities: list(rawFoundation.modalities),
+    qualityChecks: list(rawFoundation.qualityChecks),
+    datasetRows: list(rawFoundation.datasetRows),
+    labelQueue: list(rawFoundation.labelQueue),
     datasetSnapshots: list(rawFoundation.datasetSnapshots),
     featureSchema: list(rawFoundation.featureSchema),
     trainingRuns: list(rawFoundation.trainingRuns),
     models: list(rawFoundation.models),
     predictions: list(rawFoundation.predictions),
+    visionSamples: list(rawFoundation.visionSamples),
+    visionMetrics: rawFoundation.visionMetrics && typeof rawFoundation.visionMetrics === "object" ? rawFoundation.visionMetrics : {metrics:[],classes:[]},
+    stabilityForecast: rawFoundation.stabilityForecast && typeof rawFoundation.stabilityForecast === "object" ? rawFoundation.stabilityForecast : {times:[],observed:[],forecast:[],lower:[],upper:[]},
+    experimentCandidates: list(rawFoundation.experimentCandidates),
+    processSignals: list(rawFoundation.processSignals),
+    useCases: list(rawFoundation.useCases),
     outputTypes: list(rawFoundation.outputTypes),
     residuals: list(rawFoundation.residuals),
-    confusionMatrix: rawFoundation.confusionMatrix && typeof rawFoundation.confusionMatrix === "object" ? rawFoundation.confusionMatrix : {labels:[],matrix:[]},
+    confusionMatrix: rawFoundation.confusionMatrix && typeof rawFoundation.confusionMatrix === "object" ? rawFoundation.confusionMatrix : {labels:[],values:[]},
     modelComparison: normalizedComparison,
-    trainingHistory: rawFoundation.trainingHistory && typeof rawFoundation.trainingHistory === "object" ? rawFoundation.trainingHistory : {model:"No training run",epochs:[],trainLoss:[],validationLoss:[],validationR2:[],learningRate:[]}
+    trainingHistory: rawFoundation.trainingHistory && typeof rawFoundation.trainingHistory === "object" ? rawFoundation.trainingHistory : {model:"No training run",metricLabel:"Validation metric",epochs:[],trainLoss:[],validationLoss:[],validationMetric:[],learningRate:[]}
   };
   const sources = ["Experiments", "Processes", "Materials", "Results", "Documents and SOPs"];
   const savedViews = list(D.savedViews).map((item) => ({...item}));
@@ -172,173 +184,298 @@
     bindDynamic();
   }
 
-  function readinessMarkup({icon, esc}) {
-    const readiness = F.readiness;
-    return `<div class="ai-readiness-hero"><div><span class="page-eyebrow">AI-ready data foundation</span><h2>${readiness.overall}% ready</h2><p>Readiness comes from structured records, normalized units, provenance and reviewed targets—not from an opaque score.</p><div class="cluster"><span class="badge badge-warning">${esc(readiness.status)}</span><span class="badge">Updated ${esc(readiness.updated)}</span></div></div><div class="readiness-ring" style="--readiness:${readiness.overall}" aria-label="AI readiness ${readiness.overall} percent"><strong>${readiness.overall}</strong><span>%</span></div></div><div class="readiness-metrics">${readiness.metrics.map((item) => `<article><div><strong>${esc(item.label)}</strong><span>${item.value}%</span></div><div class="progress"><span style="width:${item.value}%"></span></div><small>${esc(item.detail)}</small></article>`).join("")}</div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Readiness warnings remain explicit</strong><p>${readiness.blocking.map(esc).join(" · ")}</p></div></div>`;
+  function badgeClass(status) {
+    const value = String(status || "").toLowerCase();
+    if (["pass", "ready", "reviewed", "complete", "completed", "evaluated", "candidate"].some((item) => value.includes(item))) return "badge-success";
+    if (["warning", "review", "draft", "building", "annotation", "active", "waiting", "prototype", "needs-review", "medium", "high"].some((item) => value.includes(item))) return "badge-warning";
+    if (["queued", "simulation", "holdout"].some((item) => value.includes(item))) return "badge-accent";
+    if (["low"].some((item) => value.includes(item))) return "badge-success";
+    return "";
+  }
+
+  function statusBadge(status, esc) {
+    return `<span class="badge ${badgeClass(status)}">${esc(status || "—")}</span>`;
+  }
+
+  function metricStrip(items, esc) {
+    return `<section class="summary-strip ai-summary-strip" aria-label="Section summary">${items.map(([label, value, detail]) => `<div class="summary-item metric-summary"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></div>`).join("")}</section>`;
+  }
+
+  function progressItem(label, value, detail, esc) {
+    const numeric = Math.max(0, Math.min(100, Number(value) || 0));
+    return `<article class="ai-progress-row"><div><strong>${esc(label)}</strong><span>${numeric}%</span></div><div class="progress"><span style="width:${numeric}%"></span></div><small>${esc(detail)}</small></article>`;
+  }
+
+  function tableEmpty(columns, message, esc) {
+    return `<tr><td colspan="${columns}"><div class="empty"><strong>No demonstration records</strong><p>${esc(message)}</p></div></td></tr>`;
+  }
+
+  function chartSvg(series, labels = []) {
+    const width = 720;
+    const height = 250;
+    const pad = {left:42,right:18,top:18,bottom:32};
+    const all = series.flatMap((item) => item.values.filter((value) => Number.isFinite(value)));
+    const minimum = all.length ? Math.min(...all) : 0;
+    const maximum = all.length ? Math.max(...all) : 1;
+    const range = maximum - minimum || 1;
+    const count = Math.max(2, ...series.map((item) => item.values.length));
+    const x = (index) => pad.left + (index / (count - 1)) * (width - pad.left - pad.right);
+    const y = (value) => pad.top + ((maximum - value) / range) * (height - pad.top - pad.bottom);
+    const grid = [0,1,2,3,4].map((step) => {
+      const yy = pad.top + (step / 4) * (height - pad.top - pad.bottom);
+      const value = maximum - (step / 4) * range;
+      return `<line x1="${pad.left}" y1="${yy}" x2="${width-pad.right}" y2="${yy}" class="ai-chart-grid"/><text x="${pad.left-8}" y="${yy+3}" text-anchor="end">${Number(value).toFixed(range < 2 ? 2 : 1)}</text>`;
+    }).join("");
+    const xLabels = labels.length ? labels : Array.from({length:count}, (_, index) => String(index + 1));
+    const ticks = xLabels.map((label, index) => `<text x="${x(index)}" y="${height-10}" text-anchor="middle">${String(label)}</text>`).join("");
+    const lines = series.map((item, seriesIndex) => {
+      const points = item.values.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : null).filter(Boolean).join(" ");
+      return `<polyline points="${points}" class="ai-chart-line series-${seriesIndex+1}"/>${item.values.map((value,index) => Number.isFinite(value) ? `<circle cx="${x(index)}" cy="${y(value)}" r="3" class="ai-chart-point series-${seriesIndex+1}"/>` : "").join("")}`;
+    }).join("");
+    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Demonstration metric chart">${grid}${ticks}${lines}</svg>`;
+  }
+
+  function chartPanel(title, subtitle, series, labels, esc) {
+    return `<section class="panel"><div class="panel-header"><div><h3 class="mb-0">${esc(title)}</h3><small>${esc(subtitle)}</small></div><span class="badge">Demonstration data</span></div><div class="panel-body"><div class="ai-chart">${chartSvg(series, labels)}</div><div class="ai-chart-legend">${series.map((item,index) => `<span><i class="series-${index+1}"></i>${esc(item.label)}</span>`).join("")}</div></div></section>`;
+  }
+
+  function visionPreview(kind) {
+    const common = `<rect width="240" height="132" class="ai-vision-base"/><path d="M0 33H240M0 66H240M0 99H240M60 0V132M120 0V132M180 0V132" class="ai-vision-grid"/>`;
+    const drawings = {
+      streak:`<path d="M18 26 C72 35 121 28 220 42" class="ai-vision-signal"/><path d="M20 82 C86 67 140 88 222 74" class="ai-vision-signal muted"/>`,
+      pl:`<ellipse cx="118" cy="66" rx="82" ry="43" class="ai-vision-fill"/><ellipse cx="168" cy="76" rx="28" ry="18" class="ai-vision-mask"/>`,
+      module:`<rect x="18" y="18" width="204" height="96" class="ai-vision-frame"/><path d="M67 18V114M116 18V114M165 18V114" class="ai-vision-grid strong"/><rect x="112" y="18" width="9" height="96" class="ai-vision-mask"/>`,
+      edge:`<path d="M20 26H220V105H20Z" class="ai-vision-frame"/><path d="M20 28 C38 42 28 61 43 77 C55 90 42 105 62 109" class="ai-vision-signal"/>`,
+      pinhole:`${[42,74,108,145,176,202].map((cx,index)=>`<circle cx="${cx}" cy="${40+(index%3)*24}" r="${5+(index%2)*2}" class="ai-vision-mask"/>`).join("")}`,
+      crack:`<path d="M28 28 67 54 89 47 121 81 149 73 211 110" class="ai-vision-signal"/>`
+    };
+    return `<svg viewBox="0 0 240 132" aria-hidden="true">${common}${drawings[kind] || drawings.streak}</svg>`;
   }
 
   function renderDatasets(root, {icon, esc}) {
-    root.innerHTML = `<div class="ai-foundation-grid"><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Dataset readiness</h2><small>Current project · deterministic checks</small></div><span class="badge badge-warning">Review required</span></div><div class="panel-body stack">${readinessMarkup({icon,esc})}</div></section><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Dataset snapshots</h2><small>Immutable, versioned inputs for reproducible model runs</small></div><button class="btn btn-sm" data-demo-action="snapshot">${icon("plus")} Build snapshot</button></div><div class="panel-body dataset-snapshot-list">${F.datasetSnapshots.map((item) => `<article class="dataset-snapshot"><div class="card-title"><div><span class="knowledge-kind">${esc(item.id)} · v${esc(item.version)}</span><h3>${esc(item.name)}</h3></div><span class="badge ${item.status === "ready-with-warnings" ? "badge-warning" : ""}">${esc(item.status)}</span></div><div class="dataset-stats"><span><small>Rows</small><strong>${item.rows}</strong></span><span><small>Features</small><strong>${item.features}</strong></span><span><small>Target</small><strong>${esc(item.target)}</strong></span><span><small>Excluded</small><strong>${item.excluded}</strong></span></div><p>${esc(item.split)} · ${item.sourceExperiments.map(esc).join(" · ")}</p><div class="cluster"><button class="btn btn-sm" data-demo-action="inspect-snapshot">Inspect schema</button><button class="btn btn-sm btn-ghost" data-demo-action="export-snapshot">Export manifest</button></div></article>`).join("")}</div></section></div>
-      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Feature and target schema</h2><small>Machine-readable fields remain understandable to researchers</small></div><span class="badge badge-accent">${F.featureSchema.length} fields</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Field</th><th>Role</th><th>Type</th><th>Unit</th><th>Source</th><th>Coverage</th></tr></thead><tbody>${F.featureSchema.map((item) => `<tr><td><strong>${esc(item.label)}</strong><small class="block"><code>${esc(item.name)}</code></small></td><td><span class="badge ${item.role === "target" ? "badge-accent" : ""}">${esc(item.role)}</span></td><td>${esc(item.type)}</td><td>${esc(item.unit)}</td><td>${esc(item.source)}</td><td><div class="metric-inline"><div class="progress"><span style="width:${item.coverage}%"></span></div><strong>${item.coverage}%</strong></div></td></tr>`).join("")}</tbody></table></div></section>
-      <section class="grid grid-3 section">${[["Raw data","Original files and imported values remain immutable","file"],["Validated data","Units, identifiers and mappings are checked deterministically","check"],["Dataset snapshot","Selected rows, features, target and exclusions receive a stable version","database"]].map(([title,text,ico],index) => `<article class="panel ai-data-stage"><div class="panel-body"><span>${icon(ico)}</span><small>0${index+1}</small><h3>${title}</h3><p>${text}</p></div></article>`).join("")}</section>`;
+    const active = F.activeDataset;
+    root.innerHTML = `${metricStrip([
+      ["Dataset records", active.records || 0, `${active.experiments || 0} experiments`],
+      ["Measurements", active.measurements || 0, "electrical and spectral"],
+      ["Scientific images", active.images || 0, `${F.visionMetrics.reviewed || 0} reviewed`],
+      ["Readiness", `${active.readiness || F.readiness.overall}%`, F.readiness.status]
+    ], esc)}
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><span class="page-eyebrow">${esc(active.id || "DATASET")}</span><h2 class="mb-0">${esc(active.name || "Active laboratory dataset")}</h2><small>${esc(active.purpose || "Structured records collected from ordinary laboratory work")}</small></div>${statusBadge(active.status,esc)}</div><div class="panel-body stack"><div class="metadata-list"><div><span>Version</span><strong>${esc(active.version || "—")}</strong></div><div><span>Owner</span><strong>${esc(active.owner || "—")}</strong></div><div><span>Features</span><strong>${esc(active.features || 0)}</strong></div><div><span>Targets</span><strong>${esc(active.targets || 0)}</strong></div><div><span>Size</span><strong>${esc(active.size || "—")}</strong></div><div><span>Split policy</span><strong>${esc(active.split || "—")}</strong></div></div><div class="cluster"><button class="btn" data-demo-action="manifest">${icon("file")} Inspect manifest</button><button class="btn btn-primary" data-demo-action="snapshot">${icon("database")} Prepare snapshot</button></div></div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Dataset readiness</h2><small>Visible checks, not a model-generated score</small></div><span class="badge badge-warning">${F.readiness.overall}%</span></div><div class="panel-body stack">${F.readiness.metrics.map((item)=>progressItem(item.label,item.value,item.detail,esc)).join("")}<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Blocking work</strong><p>${F.readiness.blocking.map(esc).join(" · ")}</p></div></div></div></article>
+      </section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Collection and snapshot pipeline</h2><small>The same page language used by project steps and validation views</small></div><button class="btn btn-sm" data-demo-action="pipeline">${icon("play")} Continue build</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Stage</th><th>Assets / state</th><th>Purpose</th><th>Status</th></tr></thead><tbody>${F.datasetLifecycle.map((item,index)=>`<tr><td><strong>${String(index+1).padStart(2,"0")} · ${esc(item.label)}</strong></td><td>${esc(item.count)}</td><td>${esc(item.detail)}</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("") || tableEmpty(4,"No lifecycle stages are defined.",esc)}</tbody></table></div></section>
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Data coverage</h2><small>Modalities collected for current and future models</small></div><span class="badge">${F.modalities.length} modalities</span></div><div class="panel-body stack">${F.modalities.map((item)=>`<article class="validation-issue issue-information"><div class="issue-icon">${icon(item.icon)}</div><div><div class="cluster"><strong>${esc(item.label)}</strong><span class="badge">${item.count} items</span></div><p>${esc(item.detail)}</p><div class="metric-inline"><div class="progress"><span style="width:${item.coverage}%"></span></div><strong>${item.coverage}%</strong></div></div></article>`).join("")}</div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Quality gates</h2><small>Records remain reviewable before entering a snapshot</small></div><span class="badge">${F.qualityChecks.length} checks</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Check</th><th>Passed</th><th>Issue</th><th>Status</th></tr></thead><tbody>${F.qualityChecks.map((item)=>`<tr><td><strong>${esc(item.label)}</strong></td><td>${item.passed} / ${item.total}</td><td>${esc(item.detail)}</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></article>
+      </section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Dataset browser</h2><small>Preview the cohort being assembled across projects and modalities</small></div><span class="badge badge-accent" id="dataset-visible-count">${F.datasetRows.length} visible rows</span></div><div class="toolbar"><div class="segmented" role="group" aria-label="Filter dataset rows"><button class="active" type="button" data-row-filter="all">All</button><button type="button" data-row-filter="train">Train</button><button type="button" data-row-filter="validation">Validation</button><button type="button" data-row-filter="test">Test</button><button type="button" data-row-filter="review">Review</button></div><span class="toolbar-spacer"></span><button class="btn btn-sm" data-demo-action="export-dataset">${icon("download")} Export snapshot</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Sample</th><th>Experiment / batch</th><th>Modalities</th><th>Target / label</th><th>Split</th><th>Quality</th></tr></thead><tbody>${F.datasetRows.map((item)=>`<tr data-dataset-row data-split="${esc(item.split)}" data-quality="${esc(item.quality)}"><td><strong>${esc(item.sample)}</strong></td><td><code>${esc(item.experiment)}</code><small class="block">${esc(item.batch)}</small></td><td>${item.modalities.map((value)=>`<span class="badge">${esc(value)}</span>`).join(" ")}</td><td>${esc(item.target)}</td><td><span class="badge badge-accent">${esc(item.split)}</span></td><td>${statusBadge(item.quality,esc)}</td></tr>`).join("") || tableEmpty(6,"No rows are available in the demonstration cohort.",esc)}</tbody></table></div></section>
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Annotation and target queue</h2><small>Labels remain human-reviewed scientific records</small></div><button class="btn btn-sm" data-demo-action="annotation">${icon("edit")} Open labeling</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Record</th><th>Type</th><th>Label / target</th><th>Reviewer</th><th>Status</th></tr></thead><tbody>${F.labelQueue.map((item)=>`<tr><td><strong>${esc(item.sample)}</strong><small class="block"><code>${esc(item.id)}</code></small></td><td>${esc(item.type)}</td><td>${esc(item.label)}</td><td>${esc(item.reviewer)}</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Snapshot registry</h2><small>Immutable versions, targets and leakage-safe split policies</small></div><span class="badge">${F.datasetSnapshots.length} snapshots</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Snapshot</th><th>Rows</th><th>Target</th><th>Split</th><th>Status</th></tr></thead><tbody>${F.datasetSnapshots.map((item)=>`<tr><td><strong>${esc(item.name)}</strong><small class="block"><code>${esc(item.id)} · v${esc(item.version)}</code></small></td><td>${item.rows}</td><td>${esc(item.target)}</td><td>${esc(item.split)}</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></article>
+      </section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Feature, target and grouping schema</h2><small>Every field retains role, unit, source and coverage</small></div><span class="badge badge-accent">${F.featureSchema.length} fields shown</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Field</th><th>Role</th><th>Type</th><th>Unit</th><th>Source</th><th>Coverage</th></tr></thead><tbody>${F.featureSchema.map((item)=>`<tr><td><strong>${esc(item.label)}</strong><small class="block"><code>${esc(item.name)}</code></small></td><td>${esc(item.role)}</td><td>${esc(item.type)}</td><td>${esc(item.unit)}</td><td>${esc(item.source)}</td><td><div class="metric-inline"><div class="progress"><span style="width:${item.coverage}%"></span></div><strong>${item.coverage}%</strong></div></td></tr>`).join("")}</tbody></table></div></section>`;
+
+    const applyFilter = (filter) => {
+      let visible = 0;
+      root.querySelectorAll("[data-dataset-row]").forEach((row) => {
+        const show = filter === "all" || row.dataset.split === filter || (filter === "review" && ["review","warning"].includes(row.dataset.quality));
+        row.hidden = !show;
+        if (show) visible += 1;
+      });
+      root.querySelector("#dataset-visible-count").textContent = `${visible} visible rows`;
+      root.querySelectorAll("[data-row-filter]").forEach((button)=>button.classList.toggle("active",button.dataset.rowFilter===filter));
+    };
+    root.querySelectorAll("[data-row-filter]").forEach((button)=>button.addEventListener("click",()=>applyFilter(button.dataset.rowFilter)));
     bindDemoActions(root, icon);
-  }
-
-  function chartScale(values, {includeZero = false, padding = 0.08} = {}) {
-    const finite = values.map(Number).filter(Number.isFinite);
-    let min = finite.length ? Math.min(...finite) : 0;
-    let max = finite.length ? Math.max(...finite) : 1;
-    if (includeZero) { min = Math.min(0, min); max = Math.max(0, max); }
-    if (min === max) { min -= 1; max += 1; }
-    const span = max - min;
-    return { min: min - span * padding, max: max + span * padding };
-  }
-
-  function niceTicks(min, max, count = 5) {
-    const span = Math.max(max - min, 1e-9);
-    const raw = span / Math.max(count - 1, 1);
-    const power = 10 ** Math.floor(Math.log10(raw));
-    const scaled = raw / power;
-    const step = (scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10) * power;
-    const first = Math.ceil(min / step) * step;
-    const ticks = [];
-    for (let value = first; value <= max + step * 0.25; value += step) ticks.push(Number(value.toFixed(10)));
-    return ticks.length ? ticks : [min, max];
-  }
-
-  function formatMetric(value, digits = 2) {
-    if (!Number.isFinite(Number(value))) return "—";
-    const numeric = Number(value);
-    if (Math.abs(numeric) >= 1000 || (Math.abs(numeric) > 0 && Math.abs(numeric) < 0.001)) return numeric.toExponential(1);
-    return numeric.toFixed(digits).replace(/\.00$/, "");
-  }
-
-  function chartFrame({title, subtitle = "", meta = "", body, footer = "", legend = "", className = ""}) {
-    return `<figure class="metric-chart ${className}"><figcaption><div><strong>${title}</strong>${subtitle ? `<small>${subtitle}</small>` : ""}</div>${meta ? `<span class="metric-chart-meta">${meta}</span>` : ""}</figcaption>${legend ? `<div class="metric-chart-legend">${legend}</div>` : ""}<div class="metric-chart-stage">${body}</div>${footer ? `<small class="metric-chart-footer">${footer}</small>` : ""}</figure>`;
-  }
-
-  function comparisonChart(labels, values, {title, subtitle, suffix = "", higherBetter = true, digits = 2} = {}) {
-    const rows = labels.map((label, index) => ({label, value:Number(values[index]) || 0}));
-    const sorted = [...rows].sort((a,b) => higherBetter ? b.value-a.value : a.value-b.value);
-    const scale = chartScale(rows.map(row => row.value), {includeZero:true, padding:.03});
-    const range = Math.max(scale.max - scale.min, 1e-9);
-    const best = sorted[0]?.label;
-    const bars = rows.map((row) => {
-      const width = Math.max(2, ((row.value - Math.min(0, scale.min)) / (scale.max - Math.min(0, scale.min))) * 100);
-      return `<div class="comparison-row ${row.label === best ? "is-best" : ""}"><div class="comparison-label"><strong>${row.label}</strong>${row.label === best ? `<span>Best</span>` : ""}</div><div class="comparison-track"><i style="width:${width}%"></i></div><b>${formatMetric(row.value,digits)}${suffix}</b></div>`;
-    }).join("");
-    return chartFrame({title,subtitle,meta:higherBetter?"Higher is better":"Lower is better",body:`<div class="comparison-chart">${bars}</div>`,footer:`All models use the same grouped validation split. Range ${formatMetric(scale.min,digits)}–${formatMetric(scale.max,digits)}${suffix}.`,className:"comparison-card"});
-  }
-
-  function lineChart(series, labels, {title, yLabel = "", footer = "", digits = 2} = {}) {
-    const width=760,height=300,plot={left:54,right:22,top:22,bottom:42};
-    const all=series.flatMap(item=>item.values.map(Number));
-    const scale=chartScale(all,{padding:.1});
-    const ticks=niceTicks(scale.min,scale.max,5);
-    const x=(index)=>plot.left+(index/Math.max(labels.length-1,1))*(width-plot.left-plot.right);
-    const y=(value)=>plot.top+(scale.max-value)/(scale.max-scale.min)*(height-plot.top-plot.bottom);
-    const grid=ticks.map(value=>`<g class="chart-grid-line"><line x1="${plot.left}" y1="${y(value)}" x2="${width-plot.right}" y2="${y(value)}"/><text x="${plot.left-10}" y="${y(value)+4}" text-anchor="end">${formatMetric(value,digits)}</text></g>`).join("");
-    const tickEvery=Math.max(1,Math.ceil(labels.length/7));
-    const xTicks=labels.map((label,index)=>(index%tickEvery===0||index===labels.length-1)?`<g><line class="chart-tick" x1="${x(index)}" y1="${height-plot.bottom}" x2="${x(index)}" y2="${height-plot.bottom+5}"/><text class="chart-x-label" x="${x(index)}" y="${height-14}" text-anchor="middle">${label}</text></g>`:"").join("");
-    const defs=`<defs>${series.map((item,index)=>`<linearGradient id="series-fill-${index}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient>`).join("")}</defs>`;
-    const plotted=series.map((item,index)=>{
-      const points=item.values.map((value,i)=>[x(i),y(Number(value))]);
-      const path=points.map((point,i)=>`${i?"L":"M"}${point[0].toFixed(2)},${point[1].toFixed(2)}`).join(" ");
-      const area=`${path} L${points.at(-1)[0]},${height-plot.bottom} L${points[0][0]},${height-plot.bottom} Z`;
-      return `<g class="chart-series series-${index+1}"><path class="chart-area" d="${area}" fill="url(#series-fill-${index})"/><path class="chart-line" d="${path}"/>${points.map(([cx,cy],i)=>`<circle class="chart-dot" cx="${cx}" cy="${cy}" r="4"><title>${item.label}: ${formatMetric(item.values[i],digits)} · ${labels[i]}</title></circle>`).join("")}</g>`;
-    }).join("");
-    const legend=series.map((item,index)=>`<span class="series-${index+1}"><i></i>${item.label}</span>`).join("");
-    const body=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${title}">${defs}<g>${grid}</g><line class="chart-axis" x1="${plot.left}" y1="${height-plot.bottom}" x2="${width-plot.right}" y2="${height-plot.bottom}"/>${xTicks}${plotted}${yLabel?`<text class="chart-y-title" transform="translate(15 ${height/2}) rotate(-90)" text-anchor="middle">${yLabel}</text>`:""}</svg>`;
-    return chartFrame({title,subtitle:`${labels.length} checkpoints`,legend,body,footer,className:"line-chart-card"});
-  }
-
-  function residualChart(rows) {
-    const width=760,height=300,plot={left:54,right:22,top:22,bottom:44};
-    const points=rows.map(item=>({sample:item.sample,x:Number(item.observed),y:Number(item.observed)-Number(item.predicted)}));
-    const xs=chartScale(points.map(p=>p.x),{padding:.12});
-    const ys=chartScale(points.map(p=>p.y),{includeZero:true,padding:.18});
-    const x=(value)=>plot.left+(value-xs.min)/(xs.max-xs.min)*(width-plot.left-plot.right);
-    const y=(value)=>plot.top+(ys.max-value)/(ys.max-ys.min)*(height-plot.top-plot.bottom);
-    const yTicks=niceTicks(ys.min,ys.max,5);
-    const xTicks=niceTicks(xs.min,xs.max,5);
-    const grid=yTicks.map(v=>`<g class="chart-grid-line"><line x1="${plot.left}" y1="${y(v)}" x2="${width-plot.right}" y2="${y(v)}"/><text x="${plot.left-10}" y="${y(v)+4}" text-anchor="end">${formatMetric(v,1)}</text></g>`).join("");
-    const xt=xTicks.map(v=>`<g><line class="chart-tick" x1="${x(v)}" y1="${height-plot.bottom}" x2="${x(v)}" y2="${height-plot.bottom+5}"/><text class="chart-x-label" x="${x(v)}" y="${height-14}" text-anchor="middle">${formatMetric(v,1)}</text></g>`).join("");
-    const dots=points.map(p=>`<g class="residual-sample ${Math.abs(p.y)>1?"is-warning":""}"><circle cx="${x(p.x)}" cy="${y(p.y)}" r="6"><title>${p.sample}: residual ${formatMetric(p.y,2)} pp</title></circle><text x="${x(p.x)}" y="${y(p.y)-11}" text-anchor="middle">${p.sample}</text></g>`).join("");
-    const body=`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Residual diagnostic">${grid}<line class="chart-zero" x1="${plot.left}" y1="${y(0)}" x2="${width-plot.right}" y2="${y(0)}"/>${xt}${dots}<text class="chart-y-title" transform="translate(15 ${height/2}) rotate(-90)" text-anchor="middle">Residual (pp)</text><text class="chart-x-title" x="${(plot.left+width-plot.right)/2}" y="${height-1}" text-anchor="middle">Observed PCE (%)</text></svg>`;
-    return chartFrame({title:"Residual diagnostic",subtitle:"Observed value versus prediction error",meta:`${points.filter(p=>Math.abs(p.y)>1).length} flagged`,body,footer:"Points outside ±1 pp are highlighted for researcher review.",className:"scatter-chart-card"});
-  }
-
-  function confusionMatrix(matrix) {
-    const max=Math.max(...matrix.values.flat(),1);
-    const total=matrix.values.flat().reduce((sum,value)=>sum+value,0);
-    const cells=matrix.values.map((row,rowIndex)=>row.map((value,colIndex)=>{
-      const ratio=value/max;
-      const correct=rowIndex===colIndex;
-      return `<div class="matrix-cell ${correct?"is-correct":"is-error"}" style="--intensity:${ratio}"><small>${matrix.labels[rowIndex]} → ${matrix.labels[colIndex]}</small><strong>${value}</strong><span>${total?Math.round(value/total*100):0}%</span></div>`;
-    }).join("")).join("");
-    const body=`<div class="matrix-wrap"><div class="matrix-axis matrix-axis-top"><span></span>${matrix.labels.map(label=>`<b>Predicted ${label}</b>`).join("")}</div><div class="matrix-main"><div class="matrix-y-label">Actual class</div><div class="matrix-rows">${matrix.values.map((row,rowIndex)=>`<div class="matrix-row"><b>${matrix.labels[rowIndex]}</b>${row.map((value,colIndex)=>{const ratio=value/max;const correct=rowIndex===colIndex;return `<div class="matrix-cell ${correct?"is-correct":"is-error"}" style="--intensity:${ratio}"><strong>${value}</strong><span>${total?Math.round(value/total*100):0}%</span></div>`}).join("")}</div>`).join("")}</div></div></div>`;
-    return chartFrame({title:"Readiness classifier",subtitle:"Confusion matrix",meta:`Accuracy ${(matrix.accuracy*100).toFixed(0)}%`,body,footer:"Diagonal cells are correct classifications; off-diagonal cells require review.",className:"matrix-chart-card"});
   }
 
   function renderModels(root, {icon, esc}) {
-    const history=F.trainingHistory;
-    const comparison=F.modelComparison;
-    root.innerHTML = `<div class="notice notice-accent"><div>${icon("brain")}</div><div><strong>From baseline to reproducible ML/DL</strong><p>Every result is tied to a dataset snapshot, grouped validation, a training run, metrics and reviewable artifacts. Values below are demonstration data, not deployed scientific claims.</p></div></div>
-      <section class="model-dashboard section"><article class="panel model-dashboard-main"><div class="panel-header"><div><h2 class="mb-0">Model performance overview</h2><small>Regression baselines compared on the same grouped dataset split</small></div><span class="badge badge-accent">${comparison.labels.length} models</span></div><div class="panel-body model-chart-grid">${comparisonChart(comparison.labels,comparison.r2,{title:"Cross-validated R²",subtitle:"Grouped cross-validation"})}${comparisonChart(comparison.labels,comparison.mae,{title:"Mean absolute error",subtitle:"Prediction error by model",suffix:" pp",higherBetter:false})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Training status</h2><small>Latest reproducible runs</small></div>${icon("activity")}</div><div class="panel-body training-status-list">${F.trainingRuns.map((run)=>`<article><span class="run-status ${run.status === "completed" ? "is-complete" : "is-review"}">${icon(run.status === "completed" ? "check" : "warning")}</span><div><strong>${esc(run.id)}</strong><small>${esc(run.model)} · ${esc(run.duration)}</small></div><span><b>${esc(run.bestMetric)}</b><small>${esc(run.artifact)}</small></span></article>`).join("")}</div></article></section>
-      <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Neural training curves</h2><small>${esc(history.model)} · ${history.epochs.at(-1)} epochs</small></div><span class="badge badge-warning">Prototype</span></div><div class="panel-body">${lineChart([{label:"Training loss",values:history.trainLoss},{label:"Validation loss",values:history.validationLoss}],history.epochs,{title:"Loss convergence",yLabel:"RMSE-like training objective",footer:"Validation loss stabilises after epoch 35; early stopping would retain the best checkpoint."})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Validation progression</h2><small>Metric and learning-rate schedule</small></div>${icon("chart")}</div><div class="panel-body stack">${lineChart([{label:"Validation R²",values:history.validationR2}],history.epochs,{title:"Validation R² by epoch",yLabel:"Grouped validation"})}<div class="learning-rate-strip">${history.epochs.map((epoch,index)=>`<span><small>${epoch}</small><strong>${history.learningRate[index]}</strong></span>`).join("")}</div></div></article></section>
-      <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction diagnostics</h2><small>Sample-level errors stay visible</small></div>${icon("compare")}</div><div class="panel-body">${residualChart(F.residuals)}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Classification diagnostics</h2><small>Review labels and errors</small></div>${icon("grid")}</div><div class="panel-body">${confusionMatrix(F.confusionMatrix)}</div></article></section>
-      <section class="model-registry section">${F.models.map((item) => `<article class="panel model-card"><div class="panel-header"><div><span class="knowledge-kind">${esc(item.id)} · v${esc(item.version)}</span><h2 class="mb-0">${esc(item.name)}</h2></div><span class="badge ${item.status === "evaluated" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></div><div class="panel-body stack"><div class="model-facts"><span><small>Task</small><strong>${esc(item.task)}</strong></span><span><small>Algorithm</small><strong>${esc(item.algorithm)}</strong></span><span><small>Dataset</small><strong>${esc(item.dataset)}</strong></span><span><small>Artifact</small><strong>${esc(item.size || "—")}</strong></span></div><p class="model-parameters"><strong>Configuration</strong><span>${esc(item.parameters || item.scope)}</span></p><div class="model-metrics">${Object.entries(item.metrics).map(([key,value]) => `<span><small>${esc(key)}</small><strong>${esc(value)}</strong></span>`).join("")}</div><div class="cluster"><button class="btn btn-sm" data-demo-action="model-card">${icon("file")} Model card</button><button class="btn btn-sm btn-ghost" data-demo-action="compare-model">${icon("compare")} Compare runs</button></div></div></article>`).join("")}</section>
-      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Training runs</h2><small>Model definition, execution, artifact and evaluation remain separate</small></div><span class="badge">${F.trainingRuns.length} demonstration runs</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Run</th><th>Model</th><th>Dataset</th><th>Seed</th><th>Duration</th><th>Best metric</th><th>Artifact</th><th>Status</th></tr></thead><tbody>${F.trainingRuns.map((item) => `<tr><td><code>${esc(item.id)}</code><small class="block">${esc(item.created)}</small></td><td>${esc(item.model)}</td><td>${esc(item.dataset)}</td><td>${item.seed}</td><td>${esc(item.duration)}</td><td><strong>${esc(item.bestMetric)}</strong></td><td><code>${esc(item.artifact)}</code></td><td><span class="badge ${item.status === "completed" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></td></tr>`).join("")}</tbody></table></div></section>
-      <section class="grid grid-3 section">${[["Grouped validation","Keep samples from the same experiment out of both train and test"],["Baseline comparison","Compare every model with a deterministic or statistical baseline"],["Applicability","Show missing inputs, domain coverage and uncertainty with every prediction"]].map(([title,text]) => `<div class="panel"><div class="panel-body"><div class="check-row">${icon("check")}<span><strong>${title}</strong><small>${text}</small></span></div></div></div>`).join("")}</section>`;
-    bindDemoActions(root, icon);
+    const history = F.trainingHistory;
+    const best = F.models.reduce((current,item)=>!current || Number(item.score)>Number(current.score) ? item : current,null);
+    const comparisonRows = normalizedComparison.labels.map((label,index)=>({label,r2:Number(normalizedComparison.r2[index] || 0),mae:Number(normalizedComparison.mae[index] || 0),rmse:Number(normalizedComparison.rmse[index] || 0)}));
+    root.innerHTML = `${metricStrip([
+      ["Registered models", F.models.length, `${F.models.filter((item)=>item.family==="Deep learning").length} deep-learning`],
+      ["Training runs", F.trainingRuns.length, `${F.trainingRuns.filter((item)=>item.status==="completed").length} completed`],
+      ["Best evaluated score", best ? String(best.score) : "—", best ? best.name : "No evaluated model"],
+      ["Current snapshot", "DS-PCE-001", "grouped validation"]
+    ],esc)}
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Model comparison</h2><small>Baselines remain visible beside the preferred candidate</small></div><span class="badge">Regression</span></div><div class="panel-body stack">${comparisonRows.map((item,index)=>`<article class="ai-comparison-row"><div><strong>${esc(item.label)}</strong><small>MAE ${item.mae.toFixed(2)} pp · RMSE ${item.rmse.toFixed(2)} pp</small></div><div class="progress"><span style="width:${Math.max(4,item.r2*100)}%"></span></div><strong>R² ${item.r2.toFixed(2)}</strong>${index===comparisonRows.length-1?'<span class="badge badge-success">Best</span>':""}</article>`).join("")}</div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Run status</h2><small>Versioned execution, artifact and evaluation state</small></div><button class="btn btn-sm" data-demo-action="training">${icon("play")} Queue run</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Run</th><th>Model / dataset</th><th>Metric</th><th>Stage</th><th>Status</th></tr></thead><tbody>${F.trainingRuns.map((run)=>`<tr><td><code>${esc(run.id)}</code><small class="block">${esc(run.created)}</small></td><td>${esc(run.model)}<small class="block">${esc(run.dataset)}</small></td><td><strong>${esc(run.bestMetric)}</strong></td><td>${esc(run.stage)}</td><td>${statusBadge(run.status,esc)}</td></tr>`).join("")}</tbody></table></div></article>
+      </section>
+      <section class="grid grid-2 section">${chartPanel("Training and validation loss",`${history.model} · grouped demonstration run`,[{label:"Training loss",values:history.trainLoss},{label:"Validation loss",values:history.validationLoss}],history.epochs,esc)}${chartPanel(history.metricLabel || "Validation metric","The metric is shown separately from loss",[{label:history.metricLabel || "Validation",values:history.validationMetric}],history.epochs,esc)}</section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Model registry</h2><small>Task, algorithm, snapshot, metrics and scope stay inspectable</small></div><span class="badge badge-accent">POC registry</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Model</th><th>Family / task</th><th>Algorithm</th><th>Dataset</th><th>Primary metrics</th><th>Status</th></tr></thead><tbody>${F.models.map((item)=>`<tr><td><strong>${esc(item.name)}</strong><small class="block"><code>${esc(item.id)} · v${esc(item.version)}</code></small></td><td>${esc(item.family)}<small class="block">${esc(item.task)}</small></td><td>${esc(item.algorithm)}<small class="block">${esc(item.scope)}</small></td><td><code>${esc(item.dataset)}</code></td><td>${Object.entries(item.metrics || {}).slice(0,3).map(([key,value])=>`<span class="badge">${esc(key)} ${esc(value)}</span>`).join(" ")}</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></section>
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Validation policy</h2><small>Scientific controls shared by all model families</small></div>${icon("check")}</div><div class="panel-body validation-list">${[
+          ["Grouped split","Experiment, batch and acquisition session never cross train/test boundaries","information"],
+          ["Baseline required","Every candidate is compared with a simple deterministic or statistical baseline","information"],
+          ["Uncertainty visible","Predictions retain intervals, applicability and missing-input warnings","warning"],
+          ["Human approval","Models never write conclusions or exclude records automatically","suggestion"]
+        ].map(([title,detail,severity])=>`<article class="validation-issue issue-${severity}"><div class="issue-icon">${icon(severity==="warning"?"warning":severity==="suggestion"?"user":"check")}</div><div><strong>${title}</strong><p>${detail}</p></div></article>`).join("")}</div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Learning-rate history</h2><small>Hyperparameters remain part of the run record</small></div><span class="badge">${history.epochs.length} checkpoints</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Epoch</th><th>Learning rate</th><th>Train loss</th><th>Validation loss</th><th>${esc(history.metricLabel || "Metric")}</th></tr></thead><tbody>${history.epochs.map((epoch,index)=>`<tr><td>${epoch}</td><td><code>${Number(history.learningRate[index] || 0).toExponential(1)}</code></td><td>${Number(history.trainLoss[index] || 0).toFixed(3)}</td><td>${Number(history.validationLoss[index] || 0).toFixed(3)}</td><td>${Number(history.validationMetric[index] || 0).toFixed(3)}</td></tr>`).join("")}</tbody></table></div></article>
+      </section>`;
+    bindDemoActions(root,icon);
   }
 
-  function renderPredictions(root, {icon, esc}) {
-    if (!F.predictions.length) {
-      root.innerHTML = `<div class="empty"><strong>No prediction records</strong><p>The AI foundation loaded correctly, but no demonstration predictions are available.</p></div>`;
-      Log.warn("predictions.empty");
-      return;
-    }
-    root.innerHTML = `<section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction review</h2><small>Predictions never replace observations and always carry model and dataset provenance</small></div><span class="badge badge-accent">Demonstration only</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Sample</th><th>Prediction</th><th>Observed</th><th>Residual</th><th>Input coverage</th><th>Review</th></tr></thead><tbody>${F.predictions.map((item) => `<tr><td><button class="table-link" data-prediction="${esc(item.id)}">${esc(item.sample)}</button><small class="block"><code>${esc(item.id)}</code></small></td><td><strong>${Number(item.predicted || 0).toFixed(2)} ± ${Number(item.uncertainty || 0).toFixed(2)}%</strong></td><td>${Number(item.observed || 0).toFixed(2)}%</td><td>${(Number(item.observed || 0)-Number(item.predicted || 0)).toFixed(2)} pp</td><td>${Number(item.coverage || 0)}%</td><td><span class="badge ${item.status === "reviewed" ? "badge-success" : "badge-warning"}">${esc(item.status)}</span></td></tr>`).join("")}</tbody></table></div></section><div class="grid grid-2 section"><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Prediction provenance</h2><small id="prediction-subtitle">Select a sample to inspect the complete record</small></div>${icon("database")}</div><div class="panel-body" id="prediction-inspector">${predictionInspector(F.predictions[0], {icon,esc})}</div></section><section class="panel"><div class="panel-header"><div><h2 class="mb-0">Scientific output classes</h2><small>Measurement, calculation, prediction and interpretation stay distinct</small></div>${icon("layers")}</div><div class="panel-body output-class-list">${F.outputTypes.map((item) => `<article><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span><span><small>Initial state</small><strong>${esc(item.review)}</strong></span><span><small>Required evidence</small><strong>${esc(item.evidence)}</strong></span></article>`).join("")}</div></section></div><div class="notice notice-warning section"><div>${icon("warning")}</div><div><strong>Never present a prediction as an experimental result</strong><p>Observed value, model output, uncertainty, applicability and human review state remain visible together.</p></div></div>`;
-    root.querySelectorAll("[data-prediction]").forEach((button) => button.addEventListener("click", () => {
-      const item = F.predictions.find((candidate) => candidate.id === button.dataset.prediction);
-      root.querySelector("#prediction-inspector").innerHTML = predictionInspector(item,{icon,esc});
-      root.querySelector("#prediction-subtitle").textContent = `${item.sample} · ${item.model}`;
+  function visionInspector(item, {icon, esc}) {
+    if (!item) return `<div class="empty"><strong>No image selected</strong><p>Select a record from the review table.</p></div>`;
+    return `<div class="grid grid-2 ai-vision-inspector"><div class="ai-vision-large">${visionPreview(item.kind)}</div><div class="stack"><div><span class="page-eyebrow">${esc(item.id)}</span><h3>${esc(item.sample)} · ${esc(item.label)}</h3><p>${esc(item.detail)}</p></div><div class="metadata-list"><div><span>Modality</span><strong>${esc(item.modality)}</strong></div><div><span>Model score</span><strong>${Math.round(Number(item.score || 0)*100)}%</strong></div><div><span>Review state</span><strong>${esc(item.status)}</strong></div><div><span>Output class</span><strong>Prediction / annotation proposal</strong></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Human review retained</strong><p>The preview is not a measured defect map and cannot replace the source image or approved annotation.</p></div></div></div></div>`;
+  }
+
+  function renderVision(root, {icon, esc}) {
+    const reviewed = Number(F.visionMetrics.reviewed || 0);
+    const total = Number(F.visionMetrics.total || 0);
+    const coverage = total ? Math.round(reviewed/total*100) : 0;
+    const first = F.visionSamples[0];
+    root.innerHTML = `${metricStrip([
+      ["Images", total || F.visionSamples.length, "optical, PL, EL and microscopy"],
+      ["Reviewed labels", reviewed, `${coverage}% coverage`],
+      ["Open review", Math.max(0,total-reviewed), "queued or incomplete"],
+      ["Best Dice", F.visionMetrics.metrics?.find((item)=>item.label==="Dice")?.value || "—", "segmentation baseline"]
+    ],esc)}
+      <section class="grid grid-2 section">
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Vision dataset status</h2><small>Annotation, class balance and review readiness</small></div><span class="badge badge-warning">${coverage}% reviewed</span></div><div class="panel-body stack">${(F.visionMetrics.metrics || []).map((item)=>`<article class="ai-metric-row"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></article>`).join("")}<div>${progressItem("Reviewed annotations",coverage,`${reviewed} of ${total} images`,esc)}</div></div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Class balance</h2><small>Distribution used to plan sampling and augmentation</small></div><span class="badge">${F.visionMetrics.classes?.length || 0} classes</span></div><div class="panel-body stack">${(F.visionMetrics.classes || []).map((item)=>progressItem(item.label,total?Math.round(item.count/total*100):0,`${item.count} images`,esc)).join("")}</div></article>
+      </section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Image review queue</h2><small>One shared table pattern for classification, segmentation and annotation review</small></div><button class="btn btn-sm" data-demo-action="annotation">${icon("edit")} Open annotation</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Preview</th><th>Record</th><th>Modality</th><th>Proposed label</th><th>Score</th><th>Status</th></tr></thead><tbody>${F.visionSamples.map((item,index)=>`<tr class="ai-selectable-row ${index===0?"active":""}" data-vision="${esc(item.id)}"><td><button class="ai-vision-thumb" type="button" aria-label="Inspect ${esc(item.id)}">${visionPreview(item.kind)}</button></td><td><strong>${esc(item.sample)}</strong><small class="block"><code>${esc(item.id)}</code></small></td><td>${esc(item.modality)}</td><td>${esc(item.label)}<small class="block">${esc(item.detail)}</small></td><td>${Math.round(Number(item.score || 0)*100)}%</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Selected image</h2><small id="vision-selection-title">${first ? `${esc(first.sample)} · ${esc(first.modality)}` : "No selection"}</small></div><span class="badge badge-accent">Scientific Vision POC</span></div><div class="panel-body" id="vision-inspector">${visionInspector(first,{icon,esc})}</div></section>
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Vision data contract</h2><small>What LabFlow must collect before training or inference</small></div>${icon("eye")}</div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Record</th><th>Required data</th><th>Quality control</th><th>Output</th></tr></thead><tbody>${[
+        ["Source image","Original file, modality, calibration, acquisition session","Checksum, dimensions, exposure and instrument linkage","Immutable raw asset"],
+        ["Annotation","Class, polygon/mask, reviewer and timestamp","Inter-review agreement and unresolved regions","Versioned human label"],
+        ["Training sample","Group, split, transformations and exclusions","No session or sample leakage","Snapshot membership"],
+        ["Model output","Class/mask, score, model and dataset versions","Applicability and review state","Prediction kept separate from observation"]
+      ].map((row)=>`<tr>${row.map((cell)=>`<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>`;
+    root.querySelectorAll("[data-vision]").forEach((row)=>row.addEventListener("click",()=>{
+      const item = F.visionSamples.find((candidate)=>candidate.id===row.dataset.vision);
+      root.querySelectorAll("[data-vision]").forEach((candidate)=>candidate.classList.toggle("active",candidate===row));
+      root.querySelector("#vision-inspector").innerHTML = visionInspector(item,{icon,esc});
+      root.querySelector("#vision-selection-title").textContent = `${item.sample} · ${item.modality}`;
     }));
+    bindDemoActions(root,icon);
+  }
+
+  function forecastChart(data, esc) {
+    return chartPanel("Stability trajectory",`${data.sample || "Sample"} · observed and forecast normalized performance`,[
+      {label:"Observed",values:(data.observed || []).map((value)=>value===null?NaN:Number(value))},
+      {label:"Forecast",values:(data.forecast || []).map(Number)}
+    ],(data.times || []).map((time)=>`${time} h`),esc);
+  }
+
+  function candidateDetail(item, {icon, esc}) {
+    if (!item) return `<div class="empty"><strong>No candidate selected</strong><p>Select an experiment candidate from the ranking table.</p></div>`;
+    return `<div class="stack"><div class="cluster"><span class="badge badge-accent">Rank #${item.rank}</span><span class="badge ${item.risk==="Low"?"badge-success":item.risk==="High"?"badge-warning":""}">${esc(item.risk)} risk</span></div><div><h3>${esc(item.id)} · ${esc(item.objective)}</h3><p>${esc(item.reason)}</p></div><div class="metadata-list"><div><span>Blade speed</span><strong>${esc(item.speed)}</strong></div><div><span>Annealing</span><strong>${esc(item.temperature)}</strong></div><div><span>Concentration</span><strong>${esc(item.concentration)}</strong></div><div><span>Acquisition score</span><strong>${Math.round(item.score*100)}%</strong></div></div><div class="notice"><div>${icon("info")}</div><div><strong>Recommendation, not instruction</strong><p>Feasibility constraints and researcher approval remain required before creating an experiment.</p></div></div></div>`;
+  }
+
+  function renderApplications(root, {icon, esc}) {
+    const first = F.experimentCandidates[0];
+    root.innerHTML = `${metricStrip(F.processSignals.map((item)=>[item.label,item.value,`${item.trend} · ${item.detail}`]),esc)}
+      <section class="section"><div class="section-heading"><div><h2>Scientific AI use cases</h2><p>Each use case is presented with the same panel, badge, notice and table vocabulary used elsewhere in LabFlow.</p></div></div><div class="grid grid-3">${F.useCases.map((item)=>`<article class="panel"><div class="panel-header"><div class="cluster"><span class="object-icon">${icon(item.icon)}</span><div><h3 class="mb-0">${esc(item.title)}</h3><small>${esc(item.stage)}</small></div></div>${statusBadge(item.stage,esc)}</div><div class="panel-body"><p>${esc(item.description)}</p><button class="btn btn-sm" data-demo-action="use-case">Inspect requirements</button></div></article>`).join("")}</div></section>
+      <section class="grid grid-2 section"><div>${forecastChart(F.stabilityForecast,esc)}</div><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Stability input contract</h2><small>Minimum records for a credible T80/T90 POC</small></div>${icon("activity")}</div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Input group</th><th>Required content</th></tr></thead><tbody>${[
+        ["Device and stack","Architecture, materials, lots and encapsulation"],
+        ["Initial state","PCE, Voc, Jsc, FF, PL and EQE descriptors"],
+        ["Stress protocol","ISOS mode, light, temperature, humidity and atmosphere"],
+        ["Time series","Timestamped performance and environmental measurements"],
+        ["Outcome","T80/T90, censoring state and reviewed failure mechanism"]
+      ].map(([a,b])=>`<tr><td><strong>${a}</strong></td><td>${b}</td></tr>`).join("")}</tbody></table></div></article></section>
+      <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Next-experiment ranking</h2><small>Bayesian optimization shown as an offline, reviewable simulation</small></div><span class="badge badge-accent">POC only</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Rank</th><th>Candidate</th><th>Speed</th><th>Annealing</th><th>Score</th><th>Risk</th></tr></thead><tbody>${F.experimentCandidates.map((item,index)=>`<tr data-candidate="${esc(item.id)}" class="ai-selectable-row ${index===0?"active":""}"><td>#${item.rank}</td><td><button class="table-link" type="button">${esc(item.id)}</button><small class="block">${esc(item.objective)}</small></td><td>${esc(item.speed)}</td><td>${esc(item.temperature)}</td><td>${Math.round(item.score*100)}%</td><td>${statusBadge(item.risk,esc)}</td></tr>`).join("")}</tbody></table></div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Selected candidate</h2><small>Parameters, rationale and limitations</small></div>${icon("flask")}</div><div class="panel-body" id="candidate-inspector">${candidateDetail(first,{icon,esc})}</div></article></section>
+      <section class="grid grid-3 section">${[
+        ["Quality before prediction","Invalid measurements and missing provenance are resolved before modeling","warning"],
+        ["Grouped validation","Samples, batches and sessions remain together across splits","lock"],
+        ["Researcher decision","Models rank, estimate and explain; researchers approve","user"]
+      ].map(([title,detail,ico])=>`<article class="panel"><div class="panel-body"><div class="check-row">${icon(ico)}<span><strong>${title}</strong><small>${detail}</small></span></div></div></article>`).join("")}</section>`;
+    root.querySelectorAll("[data-candidate]").forEach((row)=>row.addEventListener("click",()=>{
+      const item = F.experimentCandidates.find((candidate)=>candidate.id===row.dataset.candidate);
+      root.querySelectorAll("[data-candidate]").forEach((candidate)=>candidate.classList.toggle("active",candidate===row));
+      root.querySelector("#candidate-inspector").innerHTML = candidateDetail(item,{icon,esc});
+    }));
+    bindDemoActions(root,icon);
   }
 
   function predictionInspector(item, {icon, esc}) {
-    return `<div class="prediction-card"><div class="prediction-value"><small>Predicted PCE</small><strong>${Number(item.predicted || 0).toFixed(2)} ± ${Number(item.uncertainty || 0).toFixed(2)}%</strong><span>Observed: ${Number(item.observed || 0).toFixed(2)}%</span></div><dl><div><dt>Model version</dt><dd>${esc(item.model)}</dd></div><div><dt>Dataset snapshot</dt><dd>${esc(item.dataset)}</dd></div><div><dt>Input coverage</dt><dd>${item.coverage}%</dd></div><div><dt>Human review</dt><dd>${esc(item.status)}</dd></div></dl><div class="notice ${item.status === "reviewed" ? "notice-success" : "notice-warning"}"><div>${icon(item.status === "reviewed" ? "check" : "warning")}</div><div><strong>${item.status === "reviewed" ? "Reviewed prediction" : "Review required"}</strong><p>${esc(item.note)}</p></div></div></div>`;
+    if (!item) return `<div class="empty"><strong>No prediction selected</strong><p>Select a row from the review queue.</p></div>`;
+    const unit = item.unit || "%";
+    const predicted = Number(item.predicted || 0);
+    const observed = Number(item.observed || 0);
+    const digits = unit === "h" ? 0 : 2;
+    return `<div class="stack"><div class="summary-strip summary-strip-three"><div class="summary-item"><span>Predicted</span><strong>${predicted.toFixed(digits)} ${esc(unit)}</strong><small>± ${Number(item.uncertainty || 0).toFixed(digits)} ${esc(unit)}</small></div><div class="summary-item"><span>Observed</span><strong>${observed.toFixed(digits)} ${esc(unit)}</strong><small>reviewed value</small></div><div class="summary-item"><span>Residual</span><strong>${(observed-predicted).toFixed(digits)} ${esc(unit)}</strong><small>${item.coverage}% input coverage</small></div></div><div class="metadata-list"><div><span>Prediction ID</span><strong>${esc(item.id)}</strong></div><div><span>Model</span><strong>${esc(item.model)}</strong></div><div><span>Dataset</span><strong>${esc(item.dataset)}</strong></div><div><span>Output type</span><strong>${esc(item.kind)}</strong></div><div><span>Human review</span><strong>${esc(item.status)}</strong></div></div><div class="notice ${item.status==="reviewed"?"notice-success":"notice-warning"}"><div>${icon(item.status==="reviewed"?"check":"warning")}</div><div><strong>${item.status==="reviewed"?"Reviewed prediction":"Review required"}</strong><p>${esc(item.note)}</p></div></div></div>`;
+  }
+
+  function renderPredictions(root, {icon, esc}) {
+    const first = F.predictions[0];
+    root.innerHTML = `${metricStrip([
+      ["Predictions",F.predictions.length,"reviewable outputs"],
+      ["Reviewed",F.predictions.filter((item)=>item.status==="reviewed").length,"accepted for comparison"],
+      ["Needs review",F.predictions.filter((item)=>item.status!=="reviewed").length,"not scientific conclusions"],
+      ["Output types",new Set(F.predictions.map((item)=>item.kind)).size,"performance, stability and vision"]
+    ],esc)}
+      <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Prediction review queue</h2><small>Measured values, model outputs and uncertainty remain visible together</small></div><span class="badge badge-accent">Demonstration only</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Sample</th><th>Use case</th><th>Prediction</th><th>Observed</th><th>Residual</th><th>Coverage</th><th>Review</th></tr></thead><tbody>${F.predictions.map((item,index)=>{const digits=item.unit==="h"?0:2;return `<tr data-prediction="${esc(item.id)}" class="ai-selectable-row ${index===0?"active":""}"><td><button class="table-link" type="button">${esc(item.sample)}</button><small class="block"><code>${esc(item.id)}</code></small></td><td>${esc(item.kind)}</td><td><strong>${Number(item.predicted).toFixed(digits)} ± ${Number(item.uncertainty).toFixed(digits)} ${esc(item.unit)}</strong></td><td>${Number(item.observed).toFixed(digits)} ${esc(item.unit)}</td><td>${(Number(item.observed)-Number(item.predicted)).toFixed(digits)} ${esc(item.unit)}</td><td>${item.coverage}%</td><td>${statusBadge(item.status,esc)}</td></tr>`}).join("")}</tbody></table></div></section>
+      <section class="grid grid-2 section"><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Selected prediction</h2><small id="prediction-subtitle">${first ? `${esc(first.sample)} · ${esc(first.model)}` : "No selection"}</small></div>${icon("database")}</div><div class="panel-body" id="prediction-inspector">${predictionInspector(first,{icon,esc})}</div></article><article class="panel"><div class="panel-header"><div><h2 class="mb-0">Scientific output classes</h2><small>Storage and review states remain distinct</small></div>${icon("layers")}</div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Output</th><th>Initial state</th><th>Required evidence</th></tr></thead><tbody>${F.outputTypes.map((item)=>`<tr><td><span class="output-type output-${esc(item.type)}">${esc(item.label)}</span></td><td>${esc(item.review)}</td><td>${esc(item.evidence)}</td></tr>`).join("")}</tbody></table></div></article></section>
+      <div class="notice notice-warning section"><div>${icon("warning")}</div><div><strong>Predictions never become experimental results</strong><p>Model, dataset snapshot, uncertainty, applicability and human review remain attached to every output.</p></div></div>`;
+    root.querySelectorAll("[data-prediction]").forEach((row)=>row.addEventListener("click",()=>{
+      const item=F.predictions.find((candidate)=>candidate.id===row.dataset.prediction);
+      root.querySelectorAll("[data-prediction]").forEach((candidate)=>candidate.classList.toggle("active",candidate===row));
+      root.querySelector("#prediction-inspector").innerHTML=predictionInspector(item,{icon,esc});
+      root.querySelector("#prediction-subtitle").textContent=`${item.sample} · ${item.model}`;
+    }));
   }
 
   function bindDemoActions(root, icon) {
     root.querySelectorAll("[data-demo-action]").forEach((button) => button.addEventListener("click", () => {
       const target = button.closest(".panel, article") || button.parentElement;
       if (target.querySelector(".demo-action-result")) return;
-      target.insertAdjacentHTML("beforeend", `<div class="notice notice-success demo-action-result"><div>${icon("check")}</div><div><strong>Preview only</strong><p>This demonstrates the future contract. No dataset, model or file is created and reload restores the default state.</p></div></div>`);
+      target.insertAdjacentHTML("beforeend", `<div class="notice notice-success demo-action-result"><div>${icon("check")}</div><div><strong>POC interaction</strong><p>This control demonstrates the future workflow. Nothing is persisted and reloading restores the checked-in state.</p></div></div>`);
     }));
   }
 
   function renderBase({root, header, icon, esc}) {
-    Log.info("page.render", { page: "knowledge" });
+    Log.info("page.render", {page:"knowledge"});
     const query = new URLSearchParams(location.search);
     const requested = query.get("q");
-    const initial = requested ? "knowledge" : ["knowledge","datasets","models","predictions"].includes(query.get("view")) ? query.get("view") : "knowledge";
-    root.innerHTML = header("AI & Models", "One simple workspace for evidence-led knowledge, reproducible datasets, model history and reviewed predictions.", `<a class="btn" href="project.html?project=PRJ-2026-014&step=analysis-report">${icon("chart")} Open current project</a><button class="btn btn-primary" data-ai-open="datasets">${icon("database")} Inspect AI readiness</button>`, {eyebrow:"Knowledge and predictive foundation"}) + `<section class="ai-principles"><article><span>01</span><div><strong>Simple for the researcher</strong><p>AI capabilities stay contextual and use the same project, experiment and report flow.</p></div></article><article><span>02</span><div><strong>Ready by construction</strong><p>Stable identifiers, units, provenance and snapshots prepare data for RAG, ML and DL.</p></div></article><article><span>03</span><div><strong>Human controlled</strong><p>Predictions and suggestions remain separate from measurements and approved conclusions.</p></div></article></section><nav class="tabs ai-foundation-tabs" aria-label="AI and models sections">${[["knowledge","Knowledge Assistant","book"],["datasets","Datasets","database"],["models","Models","chart"],["predictions","Predictions","spark"]].map(([id,label,ico]) => `<button class="tab" type="button" data-ai-view="${id}">${icon(ico)} ${label}</button>`).join("")}</nav><div id="ai-foundation-content"></div>`;
+    const available = ["knowledge","datasets","models","vision","applications","predictions"];
+    const initial = requested ? "knowledge" : available.includes(query.get("view")) ? query.get("view") : "datasets";
+    root.innerHTML = header(
+      "AI & Models",
+      "Knowledge assistance, dataset construction, ML/DL evaluation, scientific vision and reviewed predictions in one coherent LabFlow workspace.",
+      `<a class="btn" href="project.html?project=PRJ-2026-014&step=analysis-report">${icon("chart")} Open current project</a><button class="btn btn-primary" data-ai-open="datasets">${icon("database")} Dataset Studio</button>`,
+      {eyebrow:"Laboratory AI and data operations"}
+    ) + `${metricStrip([
+      ["Collect","Normal laboratory work","projects, experiments, files and images"],
+      ["Validate","Scientific quality first","units, provenance, leakage and labels"],
+      ["Review","Human-controlled outputs","models advise; researchers decide"]
+    ],esc)}<nav class="tabs ai-foundation-tabs" aria-label="AI and models sections">${[
+      ["knowledge","Knowledge","book"],
+      ["datasets","Data & datasets","database"],
+      ["models","ML / training","chart"],
+      ["vision","Vision","eye"],
+      ["applications","Scientific AI","flask"],
+      ["predictions","Predictions","spark"]
+    ].map(([id,label,ico])=>`<button class="tab" type="button" data-ai-view="${id}">${icon(ico)} ${label}</button>`).join("")}</nav><div id="ai-foundation-content"></div>`;
     const content = root.querySelector("#ai-foundation-content");
-    const renderers = {knowledge:() => renderKnowledge(content,requested,{icon,esc}),datasets:() => renderDatasets(content,{icon,esc}),models:() => renderModels(content,{icon,esc}),predictions:() => renderPredictions(content,{icon,esc})};
+    const renderers = {
+      knowledge:()=>renderKnowledge(content,requested,{icon,esc}),
+      datasets:()=>renderDatasets(content,{icon,esc}),
+      models:()=>renderModels(content,{icon,esc}),
+      vision:()=>renderVision(content,{icon,esc}),
+      applications:()=>renderApplications(content,{icon,esc}),
+      predictions:()=>renderPredictions(content,{icon,esc})
+    };
     function show(view) {
-      Log.info("view.changed", { view });
-      root.querySelectorAll("[data-ai-view]").forEach((button) => { const active=button.dataset.aiView===view; button.classList.toggle("active",active); button.setAttribute("aria-current",active?"page":"false"); });
-      renderers[view]();
+      const resolved = renderers[view] ? view : "datasets";
+      root.querySelectorAll("[data-ai-view]").forEach((button)=>{
+        const active=button.dataset.aiView===resolved;
+        button.classList.toggle("active",active);
+        button.setAttribute("aria-current",active?"page":"false");
+      });
+      renderers[resolved]();
       const url = new URL(location.href);
-      if (view !== "knowledge") url.searchParams.set("view",view); else url.searchParams.delete("view");
-      if (view !== "knowledge") url.searchParams.delete("q");
-      if (location.protocol !== "file:") history.replaceState(null,"",`${url.pathname}${url.search}${url.hash}`);
-      else Log.debug("history.file-url-preserved", { view });
+      if (resolved !== "datasets") url.searchParams.set("view",resolved); else url.searchParams.delete("view");
+      if (resolved !== "knowledge") url.searchParams.delete("q");
+      if (["http:","https:"].includes(location.protocol)) history.replaceState(null,"",`${url.pathname}${url.search}${url.hash}`);
+      Log.info("view.changed",{view:resolved});
     }
-    root.querySelectorAll("[data-ai-view]").forEach((button) => button.addEventListener("click", () => show(button.dataset.aiView)));
-    root.querySelector("[data-ai-open]")?.addEventListener("click", (event) => show(event.currentTarget.dataset.aiOpen));
+    root.querySelectorAll("[data-ai-view]").forEach((button)=>button.addEventListener("click",()=>show(button.dataset.aiView)));
+    root.querySelector("[data-ai-open]")?.addEventListener("click",(event)=>show(event.currentTarget.dataset.aiOpen));
     show(initial);
   }
 

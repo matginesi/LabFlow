@@ -88,10 +88,15 @@ ai:
   capabilities:
     knowledge_and_rag: simulated
     dataset_snapshots: demonstrated
+    data_quality_and_labeling: demonstrated
+    mlops_workbench: demonstrated
     model_registry: demonstrated
-    training: disabled
+    training: simulated
     prediction: demonstrated
-    deep_learning: future
+    deep_learning: demonstrated
+    scientific_vision: demonstrated
+    stability_forecasting: demonstrated
+    experiment_optimization: demonstrated
 
 knowledge:
   default_scope: approved

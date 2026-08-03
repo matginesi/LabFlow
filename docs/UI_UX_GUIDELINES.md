@@ -39,7 +39,7 @@ Application Shell
         └── Optional secondary content
 ```
 
-Blocks may be omitted, but present blocks keep this order, shared spacing and shared responsive behavior. The breadcrumb sits inside page content above the header and aligned to the same left edge. Workspace may omit it. The global topbar contains only global navigation, search, assistant, appearance and profile controls.
+Blocks may be omitted, but present blocks keep this order, shared spacing and shared responsive behavior. The breadcrumb sits inside page content above the header and aligned to the same left edge. Workspace uses a single current-page breadcrumb so every main page begins with the same composition. The global topbar contains only global navigation, search, assistant, appearance and profile controls. It remains fixed at the top of the viewport on desktop, tablet and mobile; page content reserves the same topbar height so no heading or control is hidden underneath it.
 
 The shared page header accepts context, eyebrow, title, description, status and actions. Each page has at most one primary action, a small number of secondary actions and no principal action hidden in an unrelated card. Rare or destructive actions belong in a local More menu when required.
 
@@ -111,7 +111,7 @@ The conversation labels answer route, sources, confidence and limitations. Relat
 
 ## Tools layout
 
-Tools groups workspaces by job: Write, Structure, Visualise and Publish. Each tool has a distinct icon, concise purpose, persistent privacy reminder and consistent stage header. Editors keep source and preview visually separate. Diagram Studio presents source beside a gridded SVG stage and provides a local download.
+Tools groups workspaces by job: Write, Structure, Visualise and Publish. Each tool has a distinct icon, concise purpose, persistent privacy reminder and consistent stage header. Editors keep source and preview visually separate. Diagram Studio presents a line-numbered source editor beside a gridded SVG stage, with templates, syntax help, TD/LR controls, validation, node/relation counts, fit/zoom controls and a local editable-SVG download. These controls extend the shared Tool Stage rather than creating a separate visual language.
 
 Tool state is volatile. Opening a local file never implies upload. Reload returns every editor to its checked-in example.
 

@@ -1,0 +1,14 @@
+{
+  "id": "ANN-IMG-EL-044-V2",
+  "image_id": "IMG-EL-044",
+  "sample_id": "VIS-044",
+  "modality": "electroluminescence",
+  "schema_version": "defects-0.3",
+  "class": "p2_interruption",
+  "regions": [{"type": "polygon", "points": [[155, 12], [170, 12], [170, 178], [155, 178]]}],
+  "source": "model_proposal",
+  "model_version": "MDL-VIS-UNET-001:0.4",
+  "confidence": 0.87,
+  "review_state": "needs_review",
+  "reviewer": null
+}

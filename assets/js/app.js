@@ -209,7 +209,7 @@
       workspace: ["Workspace", "Research projects and priorities"],
       project: ["Project", "Pipeline workspace"],
       cabinet: ["Lab Cabinet", "Reusable laboratory knowledge and resources"],
-      knowledge: ["Knowledge", "Ask, inspect and prepare with traceable laboratory evidence"],
+      knowledge: ["AI & Models", "Knowledge, datasets, models and reviewed scientific outputs"],
       tools: ["Tools", "Local document and data utilities"],
       settings: ["Settings", "Workspace users, appearance and integrations"],
       documentation: ["Documentation", "Product and technical guide"],
@@ -460,9 +460,10 @@
 
   function header(title, description, actions = "", options = {}) {
     const page = document.body.dataset.page;
-    const crumbs = options.breadcrumbs || (page === "workspace" ? [] : [{label:"Workspace",href:"index.html"},{label:title}]);
-    const context = crumbs.length ? `<nav class="page-context" aria-label="Breadcrumb">${crumbs.map((crumb, index) => `${crumb.href ? `<a href="${crumb.href}">${crumb.label}</a>` : `<span aria-current="page">${crumb.label}</span>`}${index < crumbs.length - 1 ? '<span aria-hidden="true">/</span>' : ""}`).join("")}</nav>` : "";
-    return `${context}<header class="page-header"><div class="page-header-main"><div class="page-header-copy">${options.eyebrow ? `<span class="page-eyebrow">${options.eyebrow}</span>` : ""}<div class="page-title-line"><h1>${title}</h1>${options.status || ""}</div><p class="page-description">${description}</p></div>${actions ? `<div class="page-actions">${actions}</div>` : ""}</div></header>`;
+    const crumbs = options.breadcrumbs || (page === "workspace" ? [{label:"Workspace"}] : [{label:"Workspace",href:"index.html"},{label:title}]);
+    const context = `<nav class="page-context" aria-label="Breadcrumb">${crumbs.map((crumb, index) => `${crumb.href ? `<a href="${crumb.href}">${crumb.label}</a>` : `<span aria-current="page">${crumb.label}</span>`}${index < crumbs.length - 1 ? '<span aria-hidden="true">/</span>' : ""}`).join("")}</nav>`;
+    const pageActions = actions;
+    return `${context}<header class="page-header"><div class="page-header-main"><div class="page-header-copy">${options.eyebrow ? `<span class="page-eyebrow">${options.eyebrow}</span>` : ""}<div class="page-title-line"><h1>${title}</h1>${options.status || ""}</div><p class="page-description">${description}</p></div>${pageActions ? `<div class="page-actions">${pageActions}</div>` : ""}</div></header>`;
   }
 
   function badgeStatus(status) {

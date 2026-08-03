@@ -48,16 +48,18 @@ Reports and exports must retain these categories. A polished sentence must never
 
 ## Graphs and diagrams
 
-Diagram Studio is a local tool for small research workflows and evidence graphs. It supports top-to-bottom (`TD`) and left-to-right (`LR`) flowcharts, ordinary boxes, rounded nodes, decision nodes and directed edges.
+Diagram Studio is a local tool for small research workflows and evidence graphs. It supports top-to-bottom (`TD`) and left-to-right (`LR`) flowcharts, ordinary boxes, rounded and stadium nodes, decisions, process nodes, milestones, chained relationships, optional edge labels, dashed review paths, strong primary paths and undirected connector lines.
 
 ```text
 flowchart LR
   A[Raw measurement] --> B[Deterministic check]
   B --> C{Evidence complete}
-  C --> D[Researcher review]
+  C -->|yes| D[[Researcher review]]
+  C -.->|missing evidence| E([Return to records])
+  D ==> F((Approved output))
 ```
 
-The renderer creates inline SVG, follows the active semantic theme and can download an editable SVG file. Documentation uses the same renderer for fenced `mermaid` blocks. Ask LabFlow uses it only when relationships materially clarify an answer. Graph definitions and rendered SVG remain local and contain no script or external reference.
+The editor validates locally, reports node and relation counts, provides template, direction, fit and zoom controls, and renders inline SVG using the active semantic theme. It can download an editable SVG file. Documentation uses the same renderer for fenced `mermaid` blocks. Ask LabFlow uses it only when relationships materially clarify an answer. Graph definitions and rendered SVG remain local and contain no script or external reference.
 
 ## Proposed-action contract
 

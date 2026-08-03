@@ -61,7 +61,7 @@ A useful walkthrough is:
 2. Review the pipeline context, Solution Builder and Stack Builder.
 3. Inspect Smart Import and the deterministic data-quality issues.
 4. Open AI & Models: ask a relationship question, inspect AI readiness, review the dataset snapshot and compare the demonstration model records.
-5. Open Tools, render a workflow in Diagram Studio and download the SVG.
+5. Open Tools, choose or edit a Diagram Studio workflow, validate relationships, adjust direction/zoom and download the editable SVG.
 6. Review the report, XLSX structure and local export package.
 
 Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through results with the arrow keys, confirm with Enter and close with Escape.

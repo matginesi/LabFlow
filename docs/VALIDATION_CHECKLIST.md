@@ -42,12 +42,14 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 ## Browser matrix
 
 - Open Workspace, Project, Lab Cabinet, Knowledge, Tools, Settings, Documentation and UI Kit.
+- Confirm every main page begins with the canonical breadcrumb and page header; Workspace shows a single current-page breadcrumb.
+- Confirm every main page exposes Ask LabFlow once in the global topbar, that no duplicate page-header action is rendered, and that the topbar control opens the shared assistant drawer.
 - Check the console and verify every internal navigation target.
 - Open multiple projects and confirm the current project appears directly below Workspace in the sidebar, with its name, stable identifier, active state and current-step link; verify the same entry in the mobile drawer.
 - Exercise desktop, tablet and mobile widths and confirm no page-level overflow.
 - Test both themes, all eight palettes and both densities.
 - Navigate repeatedly between pages in both themes and confirm there is no light/dark flash.
-- Inspect first paint with JavaScript disabled or paused: sidebar, topbar and the page bootstrap must already exist, with no empty `#app`, opacity gate or global fade. Confirm sidebar/topbar geometry and the stable scrollbar gutter do not shift between short and long pages.
+- Inspect first paint with JavaScript disabled or paused: sidebar, fixed topbar and the page bootstrap must already exist, with no empty `#app`, opacity gate or global fade. Scroll short and long pages at desktop, tablet and mobile widths; the topbar must remain visible and content must begin below it without jumping or being obscured.
 - Check standard, wide workbench and reading width assignments at 1600, 1024, 768 and 390 pixels.
 - Verify search icon alignment, icon-only accessible names and missing-icon fallbacks.
 - Test global search by mouse and keyboard, including empty results and mobile overlay.
@@ -77,7 +79,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Exercise TXT, Markdown, LaTeX, YAML and JSON editing and validation.
 - Add and rename workbook sheets; generate a local XLSX.
 - Edit DOCX title, subtitle and body; generate an editable document.
-- In Diagram Studio, test `TD` and `LR`, ordinary, rounded and decision nodes, invalid syntax and both examples.
+- In Diagram Studio, test all templates, `TD` and `LR`, boxes, rounded/stadium nodes, decisions, process nodes, milestones, chained edges, labels, dashed and strong paths, invalid syntax, line numbers, validation counts, fit and zoom controls.
 - Download the SVG and inspect it at multiple sizes; confirm it contains no external resource.
 - Reload Tools and confirm all examples return to defaults.
 
