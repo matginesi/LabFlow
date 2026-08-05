@@ -11,6 +11,7 @@ PAGES = {
     "project.html": ("project", "Project", "LabFlow project workflow, evidence review and local scientific export."),
     "cabinet.html": ("cabinet", "Lab Cabinet", "Reusable local laboratory materials, solutions, stacks, mappings and analysis recipes."),
     "knowledge.html": ("knowledge", "AI & Models", "Evidence-led knowledge, dataset snapshots, model history and reviewed predictions in LabFlow."),
+    "robotics.html": ("robotics", "Robotics", "Local robot-arm simulation, joint control, motion programs and experiment-linked execution evidence."),
     "tools.html": ("tools", "Tools", "Local document, data and diagram tools for the LabFlow research workspace."),
     "settings.html": ("settings", "Settings", "Temporary local LabFlow appearance, report and demonstration settings."),
     "documentation.html": ("documentation", "Documentation", "Curated LabFlow product, workflow, interface and validation guidance."),
@@ -21,6 +22,7 @@ NAV = [
     ("workspace", "index.html", "home", "Workspace"),
     ("cabinet", "cabinet.html", "cabinet", "Lab Cabinet"),
     ("knowledge", "knowledge.html", "spark", "AI & Models"),
+    ("robotics", "robotics.html", "robot", "Robotics"),
     ("tools", "tools.html", "edit", "Tools"),
     ("settings", "settings.html", "settings", "Settings"),
 ]
@@ -54,6 +56,8 @@ def scripts(page: str) -> str:
         files += ["assets/js/docs-bundle.js", "assets/js/diagrams.js"]
     elif page == "knowledge":
         files += ["assets/js/diagrams.js", "assets/js/knowledge-pages.js"]
+    elif page == "robotics":
+        files += ["assets/js/robotics-bundle.js", "assets/js/robotics.js"]
     elif page == "tools":
         files += ["assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js"]
     elif page in ("project", "ui-kit"):

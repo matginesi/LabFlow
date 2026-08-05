@@ -8,7 +8,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
 html_pages = sorted(ROOT.glob("*.html"))
-required_pages = {"index.html", "project.html", "cabinet.html", "knowledge.html", "tools.html", "settings.html", "documentation.html", "ui-kit.html"}
+required_pages = {"index.html", "project.html", "cabinet.html", "knowledge.html", "robotics.html", "tools.html", "settings.html", "documentation.html", "ui-kit.html"}
 required_assets = {
     "ui/ui.css", "ui/theme.css", "ui/theme-controller.js", "ui/labflow.bundle.css",
     "ui/foundations/tokens.css", "ui/themes/theme-base.css",
@@ -16,16 +16,16 @@ required_assets = {
     "assets/js/data.js", "assets/js/pipeline-bundle.js", "assets/js/exporters.js", "assets/js/runtime.js",
     "assets/js/workbook.js", "assets/js/state.js", "assets/js/docs-bundle.js", "assets/js/app.js",
     "assets/js/settings-bundle.js", "settings.yaml", "tools/build_settings_bundle.py",
-    "assets/js/knowledge-pages.js", "assets/js/tools-page.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css",
+    "assets/js/knowledge-pages.js", "assets/js/robotics.js", "assets/js/robotics-bundle.js", "assets/js/tools-page.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css", "ui/components/robotics.css",
     "examples/theme-integration.html", "examples/ai-foundation/dataset-snapshot.yaml", "examples/ai-foundation/model-card.yaml",
     "examples/ai-foundation/prediction-record.json", "examples/ai-foundation/rag-evaluation.yaml",
-    "tools/build_page_shell.py", "tools/build_frontend_bundles.py",
+    "tools/build_page_shell.py", "tools/build_frontend_bundles.py", "tools/build_robotics_bundle.py", "robotics/robot-arm-01.yaml",
 }
 
 entry_styles = ["ui/labflow.bundle.css"]
 canonical_docs = {
     "PROJECT.md", "UI_UX_GUIDELINES.md", "PIPELINES_AND_DATA.md",
-    "AI_ML_FOUNDATION.md", "AI_REPORTS_AND_EXPORT.md", "THEME_INTEGRATION.md", "JAVASCRIPT_LOGGING.md", "VALIDATION_CHECKLIST.md",
+    "AI_ML_FOUNDATION.md", "AI_REPORTS_AND_EXPORT.md", "ROBOTICS.md", "THEME_INTEGRATION.md", "JAVASCRIPT_LOGGING.md", "VALIDATION_CHECKLIST.md",
 }
 
 settings_path = ROOT / "settings.yaml"
@@ -82,6 +82,7 @@ for asset in required_assets:
 page_script_contracts = {
     "project.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/app.js"],
     "knowledge.html": ["assets/js/runtime.js", "assets/js/diagrams.js", "assets/js/knowledge-pages.js", "assets/js/app.js"],
+    "robotics.html": ["assets/js/runtime.js", "assets/js/robotics-bundle.js", "assets/js/robotics.js", "assets/js/app.js"],
     "tools.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js", "assets/js/app.js"],
     "documentation.html": ["assets/js/runtime.js", "assets/js/docs-bundle.js", "assets/js/diagrams.js", "assets/js/app.js"],
     "ui-kit.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/app.js"],
@@ -98,7 +99,7 @@ ui_kit_source = (ROOT / "ui-kit.html").read_text(encoding="utf-8")
 if ui_kit_source.find('assets/js/workbook.js') < 0 or ui_kit_source.find('assets/js/workbook.js') > ui_kit_source.find('assets/js/app.js'):
     errors.append("ui-kit.html: workbook.js must load before app.js for the report preview")
 
-for source in [ROOT / "assets/js/app.js", ROOT / "assets/js/state.js", ROOT / "assets/js/exporters.js", ROOT / "assets/js/workbook.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js"]:
+for source in [ROOT / "assets/js/app.js", ROOT / "assets/js/state.js", ROOT / "assets/js/exporters.js", ROOT / "assets/js/workbook.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js"]:
     text = source.read_text(encoding="utf-8")
     if re.search(r"\bconsole\.(?:log|info|warn|error|debug)\s*\(", text):
         errors.append(f"{source.relative_to(ROOT)}: use LabFlowLogger instead of direct console calls")
@@ -114,7 +115,7 @@ for forbidden in ("manifest.json", "manifest.webmanifest", "service-worker.js", 
     if any(path.name == forbidden for path in ROOT.rglob("*")):
         errors.append(f"Forbidden PWA artifact found: {forbidden}")
 
-runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
+runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
 privacy_patterns = {
     "persistent browser storage": r"\b(?:localStorage|sessionStorage|indexedDB|cookieStore)\b|document\.cookie",
     "service worker registration": r"serviceWorker\s*\.",
@@ -154,6 +155,17 @@ for page in html_pages:
     text = page.read_text(encoding="utf-8")
     if 'data-theme="light"' not in text:
         errors.append(f"{page.name}: checked-in content theme must default to light")
+
+robotics_source = ROOT / "robotics/robot-arm-01.yaml"
+try:
+    robotics = yaml.safe_load(robotics_source.read_text(encoding="utf-8"))
+    if len(robotics.get("joints", [])) != 3:
+        errors.append("robot-arm-01.yaml: the POC must define exactly three joints")
+    expected_robotics_bundle = "/* Generated from robotics/robot-arm-01.yaml. Do not edit by hand. */\nwindow.LabFlowRoboticsConfig=" + json.dumps(robotics, ensure_ascii=False, separators=(",", ":")) + ";\n"
+    if (ROOT / "assets/js/robotics-bundle.js").read_text(encoding="utf-8") != expected_robotics_bundle:
+        errors.append("Robotics bundle is not synchronized with robotics/robot-arm-01.yaml")
+except Exception as exc:
+    errors.append(f"robot-arm-01.yaml could not be parsed: {exc}")
 
 pipeline_ids = set()
 for source in sorted((ROOT / "pipelines").glob("*/pipeline.yaml")):

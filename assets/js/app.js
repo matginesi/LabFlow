@@ -210,6 +210,7 @@
       project: ["Project", "Pipeline workspace"],
       cabinet: ["Lab Cabinet", "Reusable laboratory knowledge and resources"],
       knowledge: ["AI & Models", "Knowledge, datasets, models and reviewed scientific outputs"],
+      robotics: ["Robotics", "Robot simulation, motion programs and experiment-linked execution"],
       tools: ["Tools", "Local document and data utilities"],
       settings: ["Settings", "Workspace users, appearance and integrations"],
       documentation: ["Documentation", "Product and technical guide"],
@@ -221,7 +222,7 @@
     const [title] = pageMeta(page);
     const user = currentUser();
     const content = $("#page-content");
-    const width = ({project:"wide",knowledge:"wide",tools:"wide","ui-kit":"wide",documentation:"reading"})[page] || "standard";
+    const width = ({project:"wide",knowledge:"wide",robotics:"wide",tools:"wide","ui-kit":"wide",documentation:"reading"})[page] || "standard";
     content.className = `content page-width-${width}`;
     $("#topbar-page-title")?.replaceChildren(document.createTextNode(title));
     const mobileTitle = $(".mobile-brand-title");
@@ -262,6 +263,7 @@
     A.listDatasetSnapshots().forEach((item) => add("Datasets", item.name, `${item.id} · ${item.rows} rows · ${item.target}`, "knowledge.html?view=datasets", "database"));
     A.listModels().forEach((item) => add("Models", item.name, `${item.id} · ${item.task} · ${item.status}`, "knowledge.html?view=models", "chart"));
     A.listPredictions().forEach((item) => add("Predictions", `${item.sample} PCE prediction`, `${item.model} · ${item.status}`, "knowledge.html?view=predictions", "spark"));
+    add("Platform capabilities", "Robotics", "Robot Arm 01 · simulation, poses and motion programs", "robotics.html", "robot");
     A.listTools().forEach((item) => add("Scientific tools", item.name, item.description, `project.html?project=${encodeURIComponent(A.listProjects()[0].id)}&step=analysis-report&view=tools`, item.icon));
     [["txt","TXT editor"],["markdown","Markdown editor"],["latex","LaTeX editor"],["yaml","YAML editor"],["json","JSON editor"],["spreadsheet","Excel workbook"],["docx","DOCX composer"]].forEach(([id, title]) => add("Generic tools", title, "Local temporary workspace", `tools.html?tool=${id}`, id === "spreadsheet" ? "table" : "edit"));
     A.listProjects().forEach((project) => add("Reports", `${project.name} report`, `${project.id} · PDF, DOCX and Excel`, `project.html?project=${encodeURIComponent(project.id)}&step=analysis-report&view=report`, "file"));
@@ -1786,6 +1788,7 @@
   function assertPageDependencies(page) {
     const requirements = {
       knowledge: [[window.LabFlowKnowledgePages, "renderBase", "assets/js/knowledge-pages.js"]],
+      robotics: [[window.LabFlowRobotics, "renderBase", "assets/js/robotics.js"]],
       tools: [[window.LabFlowToolsPage, "render", "assets/js/tools-page.js"]],
       project: [[E, "buildReportDocument", "assets/js/workbook.js"]],
       "ui-kit": [[E, "buildReportDocument", "assets/js/workbook.js"]],
@@ -1805,7 +1808,7 @@
       applySettings();
       assertPageDependencies(page);
       hydrateShell(page);
-      const renderers = {workspace: renderWorkspace, project: renderProject, cabinet: renderCabinet, knowledge: () => window.LabFlowKnowledgePages.renderBase({root: $("#page-content"), header, icon, esc, badgeStatus}), tools: () => window.LabFlowToolsPage.render({root: $("#page-content"), header, icon, esc, toast, getSettings}), settings: renderSettings, documentation: renderDocumentation, "ui-kit": renderUiKit};
+      const renderers = {workspace: renderWorkspace, project: renderProject, cabinet: renderCabinet, knowledge: () => window.LabFlowKnowledgePages.renderBase({root: $("#page-content"), header, icon, esc, badgeStatus}), robotics: () => window.LabFlowRobotics.renderBase({root: $("#page-content"), header, icon, esc, toast}), tools: () => window.LabFlowToolsPage.render({root: $("#page-content"), header, icon, esc, toast, getSettings}), settings: renderSettings, documentation: renderDocumentation, "ui-kit": renderUiKit};
       const renderer = renderers[page] || renderWorkspace;
       renderer();
       bindShell();

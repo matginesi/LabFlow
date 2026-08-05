@@ -45,6 +45,7 @@ features:
   generic_tools: true
   ai_assistance: true
   ai_models_foundation: true
+  robotics: true
   user_management: demonstrated
   nomad_preview: true
 
@@ -97,6 +98,13 @@ ai:
     scientific_vision: demonstrated
     stability_forecasting: demonstrated
     experiment_optimization: demonstrated
+
+robotics:
+  mode: deterministic-local-simulation
+  enabled: true
+  hardware_adapter: false
+  configuration_source: robotics/robot-arm-01.yaml
+  experiment_attachment: demonstrated
 
 knowledge:
   default_scope: approved

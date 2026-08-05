@@ -23,6 +23,7 @@ CSS_SOURCES = [
     "ui/components/core.css",
     "ui/components/scientific.css",
     "ui/components/knowledge-tools.css",
+    "ui/components/robotics.css",
     "ui/foundations/utilities.css",
     "ui/layout/responsive.css",
 ]

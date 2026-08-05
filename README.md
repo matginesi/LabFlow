@@ -16,6 +16,7 @@ LabFlow joins work that is usually scattered across notes, spreadsheets and isol
 - deterministic analysis, validation and comparison views;
 - an **AI & Models** workspace for evidence-led RAG questions, dataset snapshots, model history and reviewed predictions;
 - local TXT, Markdown, LaTeX, YAML, JSON, spreadsheet, DOCX and diagram tools;
+- a top-level Robotics page with a local three-joint arm simulation, motion programs, telemetry and experiment-linked execution evidence;
 - a native downloadable PDF generated from the current Report Composer state, a professionally formatted editable DOCX, a ten-sheet formula-driven XLSX workbook and transparent ZIP packages;
 - a non-transmitting NOMAD readiness preview.
 
