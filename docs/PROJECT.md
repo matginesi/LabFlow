@@ -93,7 +93,7 @@ The domain hierarchy and visual hierarchy are intentionally different. A Project
 
 The application shell assigns one semantic page width before rendering page content:
 
-- Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit: 1600 px maximum;
+- Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Pipeline Studio, Documentation and UI Kit: 1600 px maximum;
 - the 1320 px compact variant is reserved for future intentionally narrow surfaces;
 - documentation prose: approximately 72 characters inside the wide shell rather than a narrower page wrapper.
 
@@ -105,7 +105,7 @@ CHOSE composes the Project page in this stable order: page context, project head
 
 Pages are compositions of a limited vocabulary: page and section headers, cards, panels, KPI blocks, toolbars, notices, forms, table containers, steppers, validation issues, assistant/evidence blocks, scientific Builder/Review pairs, report previews, modals and drawers. Their source styles live in `ui/`; page renderers combine them and add only layout adjustments that are genuinely specific.
 
-The UI Kit is the visual ground truth and includes a registry of allowed variants and current product uses. A new block is justified only when no existing block can express a distinct interaction contract. Replacing a block requires removing its old markup and CSS, updating the UI Kit and updating the relevant canonical guide in the same change.
+The UI Kit is the visual ground truth and includes a registry of allowed variants and current product uses. The compact `entity-heading` hierarchy and the Pipeline Studio source/editor/preview composition are documented there and reused rather than styled as one-off pages. A new block is justified only when no existing block can express a distinct interaction contract. Replacing a block requires removing its old markup and CSS, updating the UI Kit and updating the relevant canonical guide in the same change.
 
 ## State and privacy boundary
 

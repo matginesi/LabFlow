@@ -62,8 +62,58 @@ def build_pipeline(source: Path) -> dict[str, Any]:
     return data
 
 
+def referenced_paths(value: Any) -> list[str]:
+    """Return referenced resource paths in stable declaration order."""
+    paths: list[str] = []
+    if isinstance(value, str):
+        paths.append(value)
+    elif isinstance(value, dict):
+        for item in value.values():
+            paths.extend(referenced_paths(item))
+    elif isinstance(value, list):
+        for item in value:
+            paths.extend(referenced_paths(item))
+    return paths
+
+
+def source_registry(source: Path) -> dict[str, Any]:
+    """Embed editable source text for the local Pipeline Studio POC.
+
+    The browser never fetches source files. Draft edits remain in memory and
+    can only be downloaded as a review copy.
+    """
+    pipeline_dir = source.parent
+    entry = load_document(source)
+    refs = entry.get("resource_refs", {}) if isinstance(entry, dict) else {}
+    relative_paths = ["pipeline.yaml", *referenced_paths(refs)]
+    seen: set[str] = set()
+    documents: list[dict[str, Any]] = []
+    for relative in relative_paths:
+        if relative in seen:
+            continue
+        seen.add(relative)
+        path = source if relative == "pipeline.yaml" else resolve_resource_path(pipeline_dir, relative)
+        suffix = path.suffix.lower()
+        group = "Contract" if relative == "pipeline.yaml" else relative.split("/", 1)[0].replace("_", " ").title()
+        documents.append({
+            "id": relative.replace("/", "-").replace(".", "-"),
+            "label": "Pipeline contract" if relative == "pipeline.yaml" else path.stem.replace("-", " ").replace("_", " ").title(),
+            "group": group,
+            "path": relative,
+            "format": "json" if suffix == ".json" else "yaml",
+            "content": path.read_text(encoding="utf-8"),
+        })
+    return {
+        "entry": "pipeline.yaml",
+        "editable": True,
+        "persistence": "download-only",
+        "documents": documents,
+    }
+
+
 def main() -> None:
     pipelines: dict[str, dict[str, Any]] = {}
+    sources: dict[str, dict[str, Any]] = {}
     for source in sorted(PIPELINES_ROOT.glob("*/pipeline.yaml")):
         data = build_pipeline(source)
         pipeline_id = data.get("id")
@@ -72,17 +122,22 @@ def main() -> None:
         if pipeline_id in pipelines:
             raise ValueError(f"Duplicate pipeline id: {pipeline_id}")
         pipelines[pipeline_id] = data
+        sources[pipeline_id] = source_registry(source)
 
     out = ROOT / "assets/js/pipeline-bundle.js"
     out.write_text(
         "/* Generated from pipeline YAML sources and referenced resources. Do not edit by hand. */\n"
         + "window.LabFlowPipelines = "
         + json.dumps(pipelines, ensure_ascii=False, indent=2)
+        + ";\n"
+        + "window.LabFlowPipelineSources = "
+        + json.dumps(sources, ensure_ascii=False, indent=2)
         + ";\n",
         encoding="utf-8",
     )
     resource_count = sum(len(item.get("resources", {})) for item in pipelines.values())
-    print(f"Wrote {out.relative_to(ROOT)} with {len(pipelines)} pipelines and {resource_count} resource groups")
+    document_count = sum(len(item.get("documents", [])) for item in sources.values())
+    print(f"Wrote {out.relative_to(ROOT)} with {len(pipelines)} pipelines, {resource_count} resource groups and {document_count} studio documents")
 
 
 if __name__ == "__main__":

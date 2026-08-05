@@ -1,6 +1,7 @@
 .hidden,[hidden]{display:none!important}
 .w-full{width:100%}
 .block{display:block}
+.select-sm{width:auto;min-height:27px;padding:3px 7px;font-size:var(--fs-xs)}
 .mb-0{margin-bottom:0!important}
 .mb-1{margin-bottom:6px!important}
 .mt-1{margin-top:6px!important}

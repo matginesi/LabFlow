@@ -14,6 +14,7 @@ PAGES = {
     "robotics.html": ("robotics", "Robotics", "Local robot-arm simulation, joint control, motion programs and experiment-linked execution evidence."),
     "tools.html": ("tools", "Tools", "Local document, data and diagram tools for the LabFlow research workspace."),
     "settings.html": ("settings", "Settings", "Temporary local LabFlow appearance, report and demonstration settings."),
+    "pipeline-studio.html": ("pipeline-studio", "Pipeline Studio", "Inspect and edit local pipeline YAML drafts without persistence or remote requests."),
     "documentation.html": ("documentation", "Documentation", "Curated LabFlow product, workflow, interface and validation guidance."),
     "ui-kit.html": ("ui-kit", "UI Kit", "LabFlow interface components, page composition patterns and responsive states."),
 }
@@ -43,10 +44,12 @@ def nav_links(page: str, items: list[tuple[str, str, str, str]]) -> str:
     links = []
     for item_id, href, icon_name, label in items:
         active = page == item_id
-        context_parent = page == "project" and item_id == "workspace"
+        context_parent = (page == "project" and item_id == "workspace") or (page == "pipeline-studio" and item_id == "settings")
         links.append(f'<a class="nav-link{" active" if active else ""}{" context-parent" if context_parent else ""}"{" aria-current=\"page\"" if active else ""} href="{href}">{icon(icon_name)}<span>{label}</span></a>')
         if page == "project" and item_id == "workspace":
             links.append(f'<a class="nav-link project-nav-entry active" aria-current="page" href="project.html" title="Current project"><span class="project-nav-rail" aria-hidden="true"></span>{icon("layers")}<span class="project-nav-copy"><strong>Current project</strong><small>Loading context…</small></span></a>')
+        if page == "pipeline-studio" and item_id == "settings":
+            links.append(f'<a class="nav-link project-nav-entry active" aria-current="page" href="pipeline-studio.html" title="Pipeline Studio"><span class="project-nav-rail" aria-hidden="true"></span>{icon("code")}<span class="project-nav-copy"><strong>Pipeline Studio</strong><small>Local draft editor</small></span></a>')
     return "".join(links)
 
 
@@ -60,6 +63,8 @@ def scripts(page: str) -> str:
         files += ["assets/js/robotics-bundle.js", "assets/js/robotics.js"]
     elif page == "tools":
         files += ["assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js"]
+    elif page == "pipeline-studio":
+        files += ["assets/js/pipeline-studio.js"]
     elif page in ("project", "ui-kit"):
         files.append("assets/js/workbook.js")
     files.append("assets/js/app.js")

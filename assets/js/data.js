@@ -181,30 +181,14 @@ window.LabFlowPipelineRuntime?.hydrateData(window.LabFlowData, "chose");
   const list = (items) => items.slice();
 
   window.LabFlowDataSource = Object.freeze({
-    getUser: () => data.user,
-    listProjects: () => list(data.projects),
     getProjectById: (id) => data.projects.find((item) => item.id === id) || null,
+    listProjects: () => list(data.projects),
     listCabinet: () => list(data.cabinet),
-    getCabinetItemById: (id) => data.cabinet.find((item) => item.id === id) || null,
     listKnowledge: () => list(data.knowledge),
     listTools: () => list(data.tools),
     listExperiments: (projectId) => data.experiments.filter((item) => !projectId || item.project === projectId),
-    listMeasurements: () => list(data.demoDataset),
-    listValidationIssues: () => list(data.validationIssues),
-    getAiReadiness: () => ({...data.aiFoundation.readiness, metrics: list(data.aiFoundation.readiness.metrics), blocking: list(data.aiFoundation.readiness.blocking)}),
-    getActiveDataset: () => ({...data.aiFoundation.activeDataset}),
-    listDatasetLifecycle: () => list(data.aiFoundation.datasetLifecycle),
-    listDatasetRows: () => list(data.aiFoundation.datasetRows),
-    listModalities: () => list(data.aiFoundation.modalities),
-    listQualityChecks: () => list(data.aiFoundation.qualityChecks),
-    listLabelQueue: () => list(data.aiFoundation.labelQueue),
     listDatasetSnapshots: () => list(data.aiFoundation.datasetSnapshots),
-    listFeatureSchema: () => list(data.aiFoundation.featureSchema),
     listModels: () => list(data.aiFoundation.models),
-    listTrainingRuns: () => list(data.aiFoundation.trainingRuns),
-    listPredictions: () => list(data.aiFoundation.predictions),
-    listVisionSamples: () => list(data.aiFoundation.visionSamples),
-    listExperimentCandidates: () => list(data.aiFoundation.experimentCandidates),
-    listRagEvaluations: () => list(data.aiFoundation.ragEvaluation)
+    listPredictions: () => list(data.aiFoundation.predictions)
   });
 })();

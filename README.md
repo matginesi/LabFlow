@@ -49,7 +49,7 @@ Evidence remains visible. LabFlow distinguishes raw measurements, calculated res
 
 Privacy is structural. Mutable state exists only in JavaScript memory. Reload restores checked-in defaults. The application uses no cookies, browser persistence, service workers, trackers, telemetry or network-backed search. Demonstration credentials are never retained or included in exports. A structured local logger records lifecycle, rendering and export diagnostics only in the browser console and a bounded in-memory buffer; sensitive keys are redacted and nothing is transmitted.
 
-The interface uses a dark laboratory shell around light content by default. All operational, reference and configuration workspaces—including Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit—use the centered 1600 px wide wrapper. The 1320 px compact wrapper remains available only for future intentionally narrow surfaces. Documentation keeps prose near 72 characters inside its wide shell, so navigation and diagrams have room without making paragraphs difficult to read. Spacing follows the 4/8/12/16/24/32 px scale, and surfaces remain flat, compact and sober: no decorative gradients, glow, glass effects or heavy shadows.
+The interface uses a dark laboratory shell around light content by default. All operational, reference and configuration workspaces—including Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Pipeline Studio, Documentation and UI Kit—use the centered 1600 px wide wrapper. The 1320 px compact wrapper remains available only for future intentionally narrow surfaces. Documentation keeps prose near 72 characters inside its wide shell, so navigation and diagrams have room without making paragraphs difficult to read. Spacing follows the 4/8/12/16/24/32 px scale, and surfaces remain flat, compact and sober: no decorative gradients, glow, glass effects or heavy shadows.
 
 Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses a local-first Noto Sans / IBM Plex Sans stack with platform fallbacks; icons and diagrams are inline SVG assets rendered locally.
 
@@ -67,7 +67,7 @@ A useful walkthrough is:
 4. In **Results**, review file provenance, Smart Import mappings, unit conversion and deterministic quality issues.
 5. In **Review**, compare experiments, classify findings, edit the Report Composer and generate the local report/export package or NOMAD readiness preview.
 6. Open AI & Models for evidence-led questions, dataset snapshots, model demonstrations and reviewed predictions; open Tools for local documents, workbooks and diagrams.
-7. Open Settings → Pipelines to inspect the checked-in registry, choose which workflows are available in the current session and select the default used by Create Project.
+7. Open Settings → Pipelines to choose workflow availability and the Create Project default, then open Pipeline Studio to inspect or edit a temporary local YAML/JSON draft.
 
 Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through results with the arrow keys, confirm with Enter and close with Escape.
 
@@ -106,7 +106,7 @@ The essential directories are:
 
 The UI Kit is the visual source of truth. A block belongs there only when the application uses it; shared blocks should be extended before page-specific CSS is introduced. The AI & Models workspace therefore composes canonical summary strips, panels, dense tables, progress rows, badges, notices and metadata lists. Its only specialized visuals are documented local SVG training charts and scientific-image review previews.
 
-Settings contains a dedicated **Pipelines** workspace. It reads the bundled registry, exposes enabled/default session preferences, shows strict-contract state and resource metadata, and links to each workflow and guide. Disabling a pipeline removes it from the Create Project selector without hiding existing projects. At least one pipeline must remain enabled, and the selected default must always be enabled.
+Settings contains a dedicated **Pipelines** workspace. It reads the bundled registry, exposes enabled/default session preferences, shows a compact contract preview and opens **Pipeline Studio** for the selected workflow. Pipeline Studio embeds the checked-in entry contract and referenced YAML/JSON resources, provides syntax highlighting and lightweight draft checks, and keeps edits in JavaScript memory only. A draft can be downloaded for external review, but the POC never writes repository files or claims deployment. Disabling a pipeline removes it from the Create Project selector without hiding existing projects. At least one pipeline must remain enabled, and the selected default must always be enabled.
 
 For CHOSE changes, rebuild in this order:
 

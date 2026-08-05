@@ -291,3 +291,12 @@ AI & Models does not define an alternative dashboard style. It composes the same
 
 Only two specialized visual families are allowed and both are represented in the UI Kit: `ai-training-chart`, a local SVG plot inside a canonical panel with a separate legend; and `ai-vision-review`, a local image/annotation preview paired with canonical metadata, table selection and a human-review notice. Avoid readiness rings, gradient hero panels, decorative model dashboards, glow, oversized metrics and unlabeled model graphics.
 
+
+
+## Compact entity titles
+
+Long object names such as **CHOSE Perovskite Workflow** are not page titles unless the object itself owns the entire page. Inspectors, registry previews and configuration rails use the shared `entity-heading` pattern: status badges or an eyebrow, a compact 16 px `entity-title`, and restrained supporting copy. Do not reuse `h1`, large section headings or documentation hero typography for record names inside panels.
+
+## Pipeline Studio
+
+Pipeline Studio uses the wide 1600 px page shell and the canonical order header → summary → toolbar → work surface. Its work surface has three functional regions: source outline, highlighted draft editor and validation preview. On narrower desktops the preview moves below the editor; on tablet and mobile all regions stack and the source outline becomes horizontally scrollable. The checked-in source state and a modified local draft must remain visually distinct. Saving to the repository is explicitly unavailable in the POC; Download draft is the only export action.

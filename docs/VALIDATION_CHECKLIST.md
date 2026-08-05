@@ -45,7 +45,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 ## Browser matrix
 
-- Open Workspace, Project, Lab Cabinet, Knowledge, Tools, Settings, Documentation and UI Kit.
+- Open Workspace, Project, Lab Cabinet, Knowledge, Tools, Settings, Pipeline Studio, Documentation and UI Kit.
 - Confirm every main page begins with the canonical breadcrumb and page header; Workspace shows a single current-page breadcrumb.
 - Confirm every main page exposes Ask LabFlow once in the global topbar, that no duplicate page-header action is rendered, and that the topbar control opens the shared assistant drawer.
 - Check the console and verify every internal navigation target.
@@ -54,7 +54,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Test both themes, all eight palettes and both densities.
 - Navigate repeatedly between pages in both themes and confirm there is no light/dark flash.
 - Inspect first paint with JavaScript disabled or paused: sidebar, fixed topbar and the page bootstrap must already exist, with no empty `#app`, opacity gate or global fade. Scroll short and long pages at desktop, tablet and mobile widths; the topbar must remain visible and content must begin below it without jumping or being obscured.
-- Check page-width assignments at 1920, 1600, 1024, 768 and 390 pixels. Confirm that Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit share the centered 1600 px wrapper; the 1320 px variant is not assigned to a current top-level page; documentation prose remains near 72 characters without narrowing the whole page. Verify that no inner block imposes a competing page cap.
+- Check page-width assignments at 1920, 1600, 1024, 768 and 390 pixels. Confirm that Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Pipeline Studio, Documentation and UI Kit share the centered 1600 px wrapper; the 1320 px variant is not assigned to a current top-level page; documentation prose remains near 72 characters without narrowing the whole page. Verify that no inner block imposes a competing page cap.
 - Inspect page and component spacing against the 4/8/12/16/24/32 px scale. Confirm current-step headings, panels and summary cells use solid surfaces rather than decorative gradients, glow, glass or heavy shadows.
 - Verify search icon alignment, icon-only accessible names and missing-icon fallbacks.
 - Test global search by mouse and keyboard, including empty results and mobile overlay.
@@ -161,7 +161,7 @@ Record an accepted exception next to the relevant check. Do not silently weaken 
 
 ## Appearance continuity and user management
 
-- Select every palette, navigate among Workspace, Project, AI & Models, Tools, Documentation, UI Kit and Settings, and confirm theme, palette and density remain unchanged. Repeat from a direct `file://` opening and from static HTTP hosting.
+- Select every palette, navigate among Workspace, Project, AI & Models, Tools, Pipeline Studio, Documentation, UI Kit and Settings, and confirm theme, palette and density remain unchanged. Repeat from a direct `file://` opening and from static HTTP hosting.
 - Confirm internal file links remain relative and do not trigger unique-origin security errors.
 - Inspect shared tabs and segmented controls: one contained bar, one active surface, aligned heights and local horizontal scrolling on narrow screens.
 - Edit the current profile and confirm sidebar, topbar and report defaults update for the session.
@@ -170,8 +170,8 @@ Record an accepted exception next to the relevant check. Do not silently weaken 
 
 ## Runtime page smoke checks
 
-- Open Workspace, Project, Lab Cabinet, AI & Models, Tools, Settings, Documentation and UI Kit and confirm each page produces content rather than the generic render-failure notice.
-- Verify page-specific module order: workbook before Project/UI Kit, diagrams before Documentation/AI & Models, and page modules before `app.js`.
+- Open Workspace, Project, Lab Cabinet, AI & Models, Tools, Settings, Pipeline Studio, Documentation and UI Kit and confirm each page produces content rather than the generic render-failure notice.
+- Verify page-specific module order: workbook before Project/UI Kit, diagrams before Documentation/AI & Models, Pipeline Studio before `app.js`, and every page module before `app.js`.
 - Temporarily replace one optional AI demonstration array with an empty array and confirm the affected view shows an empty state without blanking the page.
 
 ## Lab Cabinet browser
@@ -185,10 +185,16 @@ Record an accepted exception next to the relevant check. Do not silently weaken 
 
 - Open Settings at 1920, 1600, 1024, 768 and 390 pixels and confirm it uses the same centered wide shell as the other top-level pages, with no competing inner page cap.
 - Open the Pipelines tab; inspect every registered workflow and confirm identity, version, schema/resource metadata, step outputs and contract state match the bundled pipeline registry.
+- Confirm long pipeline names use the compact `entity-heading` pattern in Settings and Pipeline Studio rather than page-sized `h1`/`h2` typography.
+- Open Pipeline Studio from each registry row. Switch among the entry contract and referenced schemas/defaults/mappings/demo documents; verify syntax highlighting, line numbers, active-source state and the compact draft preview.
+- Edit YAML and JSON drafts, insert a tab or remove a required top-level key, and confirm local warnings/errors update without a network request. Reset the document and confirm the checked-in source returns.
+- Download a modified draft and confirm the file contains the current textarea value. Reload Pipeline Studio and confirm every edit is discarded. The Save control must remain disabled and must not imply repository persistence.
 - Disable and re-enable a pipeline; confirm the last enabled pipeline cannot be disabled.
 - Confirm a disabled pipeline cannot be selected as default and that disabling the current default selects another enabled workflow.
-- Apply the session settings, open Create Project and confirm only enabled pipelines are listed and the configured default is selected. Existing projects must remain visible.
 - Download `settings.yaml` and confirm `pipelines.enabled` and `pipelines.default` reflect the current draft without mutating checked-in sources. Reload and confirm defaults are restored.
+- Open the Pipelines tab step editor: reorder steps with the move buttons, edit a step title and output, add and remove a step, and confirm the contract preview table and step count update immediately.
+- Confirm the editor keeps standard step ids stable so completion-gate evaluation still matches, keeps at least one step, has accessible keyboard move buttons, and that Reset to source restores the checked-in step list without a reload.
+- Confirm step editor drafts are page-memory only: reload Settings and confirm the original checked-in workflow returns unchanged.
 
 ## AI UI Kit consistency
 

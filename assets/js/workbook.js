@@ -653,11 +653,7 @@
   }
 
   const wordRun = (value, properties = "") => `<w:r><w:rPr>${properties}</w:rPr><w:t xml:space="preserve">${xml(value)}</w:t></w:r>`;
-  const wordParagraph = (value, style = "BodyText") => `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr>${wordRun(value)}</w:p>`;
-  const wordEditable = (label, value, tag) => `${wordParagraph(label, "Heading2")}<w:sdt><w:sdtPr><w:alias w:val="${xml(label)}"/><w:tag w:val="${xml(tag)}"/><w:text w:multiLine="1"/></w:sdtPr><w:sdtContent><w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="FFF3D6"/><w:spacing w:before="100" w:after="180"/><w:ind w:left="120" w:right="120"/></w:pPr>${wordRun(value)}</w:p></w:sdtContent></w:sdt>`;
-  const wordTable = (rows, accent) => `<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid>${Array.from({length:Math.max(...rows.map((values) => values.length), 1)}, () => '<w:gridCol w:w="1200"/>').join("")}</w:tblGrid>${rows.map((values, rowIndex) => `<w:tr>${values.map((value) => `<w:tc><w:tcPr>${rowIndex === 0 ? `<w:shd w:val="clear" w:color="auto" w:fill="${accent}"/>` : ""}</w:tcPr><w:p>${wordRun(value, rowIndex === 0 ? '<w:b/><w:color w:val="FFFFFF"/>' : "")}</w:p></w:tc>`).join("")}</w:tr>`).join("")}</w:tbl>`;
-  const wordPageBreak = () => `<w:p><w:r><w:br w:type="page"/></w:r></w:p>`;
-  const wordToc = () => `<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-2" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Update this field in Word to refresh the table of contents.</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>`;
+  const wordParagraph = (label, style = "BodyText") => `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr>${wordRun(label)}</w:p>`;
   function genericDocxRaw(input, paletteId = "blue") {
     const palette = E.palettes[paletteId] || E.palettes.blue;
     const body = String(input.body || "").split(/\r?\n/).map((line) => {

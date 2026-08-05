@@ -8,15 +8,15 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 errors = []
 html_pages = sorted(ROOT.glob("*.html"))
-required_pages = {"index.html", "project.html", "cabinet.html", "knowledge.html", "robotics.html", "tools.html", "settings.html", "documentation.html", "ui-kit.html"}
+required_pages = {"index.html", "project.html", "cabinet.html", "knowledge.html", "robotics.html", "tools.html", "settings.html", "pipeline-studio.html", "documentation.html", "ui-kit.html"}
 required_assets = {
-    "ui/ui.css", "ui/theme.css", "ui/theme-controller.js", "ui/labflow.bundle.css",
+    "ui/theme.css", "ui/theme-controller.js", "ui/labflow.bundle.css",
     "ui/foundations/tokens.css", "ui/themes/theme-base.css",
     "ui/themes/theme-dark.css", "ui/themes/theme-light.css", "ui/themes/palettes.css",
     "assets/js/data.js", "assets/js/pipeline-bundle.js", "assets/js/pipeline-runtime.js", "assets/js/exporters.js", "assets/js/runtime.js",
     "assets/js/workbook.js", "assets/js/state.js", "assets/js/docs-bundle.js", "assets/js/app.js",
     "assets/js/settings-bundle.js", "settings.yaml", "tools/build_settings_bundle.py",
-    "assets/js/knowledge-pages.js", "assets/js/robotics.js", "assets/js/robotics-bundle.js", "assets/js/tools-page.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css", "ui/components/robotics.css",
+    "assets/js/knowledge-pages.js", "assets/js/robotics.js", "assets/js/robotics-bundle.js", "assets/js/tools-page.js", "assets/js/pipeline-studio.js", "assets/js/diagrams.js", "ui/components/knowledge-tools.css", "ui/components/robotics.css",
     "examples/theme-integration.html", "examples/ai-foundation/dataset-snapshot.yaml", "examples/ai-foundation/model-card.yaml",
     "examples/ai-foundation/prediction-record.json", "examples/ai-foundation/rag-evaluation.yaml",
     "tools/build_page_shell.py", "tools/build_frontend_bundles.py", "tools/build_robotics_bundle.py", "robotics/robot-arm-01.yaml",
@@ -85,6 +85,7 @@ page_script_contracts = {
     "robotics.html": ["assets/js/runtime.js", "assets/js/robotics-bundle.js", "assets/js/robotics.js", "assets/js/app.js"],
     "tools.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/diagrams.js", "assets/js/tools-page.js", "assets/js/app.js"],
     "documentation.html": ["assets/js/runtime.js", "assets/js/docs-bundle.js", "assets/js/diagrams.js", "assets/js/app.js"],
+    "pipeline-studio.html": ["assets/js/runtime.js", "assets/js/pipeline-studio.js", "assets/js/app.js"],
     "ui-kit.html": ["assets/js/runtime.js", "assets/js/workbook.js", "assets/js/app.js"],
 }
 for page_name, scripts in page_script_contracts.items():
@@ -99,7 +100,7 @@ ui_kit_source = (ROOT / "ui-kit.html").read_text(encoding="utf-8")
 if ui_kit_source.find('assets/js/workbook.js') < 0 or ui_kit_source.find('assets/js/workbook.js') > ui_kit_source.find('assets/js/app.js'):
     errors.append("ui-kit.html: workbook.js must load before app.js for the report preview")
 
-for source in [ROOT / "assets/js/app.js", ROOT / "assets/js/pipeline-runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/exporters.js", ROOT / "assets/js/workbook.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js"]:
+for source in [ROOT / "assets/js/app.js", ROOT / "assets/js/pipeline-runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/exporters.js", ROOT / "assets/js/workbook.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/pipeline-studio.js", ROOT / "assets/js/diagrams.js"]:
     text = source.read_text(encoding="utf-8")
     if re.search(r"\bconsole\.(?:log|info|warn|error|debug)\s*\(", text):
         errors.append(f"{source.relative_to(ROOT)}: use LabFlowLogger instead of direct console calls")
@@ -115,7 +116,7 @@ for forbidden in ("manifest.json", "manifest.webmanifest", "service-worker.js", 
     if any(path.name == forbidden for path in ROOT.rglob("*")):
         errors.append(f"Forbidden PWA artifact found: {forbidden}")
 
-runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/pipeline-runtime.js", ROOT / "assets/js/runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
+runtime_sources = [*html_pages, ROOT / "assets/js/app.js", ROOT / "assets/js/pipeline-runtime.js", ROOT / "assets/js/runtime.js", ROOT / "assets/js/state.js", ROOT / "assets/js/knowledge-pages.js", ROOT / "assets/js/robotics.js", ROOT / "assets/js/tools-page.js", ROOT / "assets/js/pipeline-studio.js", ROOT / "assets/js/diagrams.js", ROOT / "ui/theme-controller.js"]
 privacy_patterns = {
     "persistent browser storage": r"\b(?:localStorage|sessionStorage|indexedDB|cookieStore)\b|document\.cookie",
     "service worker registration": r"serviceWorker\s*\.",
@@ -174,6 +175,7 @@ except Exception as exc:
 
 pipeline_ids = set()
 built_pipelines = {}
+built_pipeline_sources = {}
 known_chose_components = {
     "chose.process.chemistry", "chose.process.fabrication", "chose.process.stack_review",
     "chose.experiment.setup", "chose.experiment.execution", "chose.experiment.summary",
@@ -182,7 +184,7 @@ known_chose_components = {
 }
 try:
     sys.path.insert(0, str(ROOT / "tools"))
-    from build_pipeline_bundle import build_pipeline
+    from build_pipeline_bundle import build_pipeline, source_registry
 except Exception as exc:
     build_pipeline = None
     errors.append(f"Pipeline builder could not be imported: {exc}")
@@ -202,6 +204,8 @@ for source in sorted((ROOT / "pipelines").glob("*/pipeline.yaml")):
         errors.append(f"Duplicate pipeline id {pipeline_id}")
     pipeline_ids.add(pipeline_id)
     built_pipelines[pipeline_id] = built
+    if build_pipeline:
+        built_pipeline_sources[pipeline_id] = source_registry(source)
     step_ids = set()
     for index, step in enumerate(data.get("steps", []), 1):
         for key in ["id", "title", "short_title", "view", "description", "output"]:
@@ -403,6 +407,9 @@ try:
         "/* Generated from pipeline YAML sources and referenced resources. Do not edit by hand. */\n"
         + "window.LabFlowPipelines = "
         + json.dumps(built_pipelines, ensure_ascii=False, indent=2)
+        + ";\n"
+        + "window.LabFlowPipelineSources = "
+        + json.dumps(built_pipeline_sources, ensure_ascii=False, indent=2)
         + ";\n"
     )
     if (ROOT / "assets/js/pipeline-bundle.js").read_text(encoding="utf-8") != expected_pipeline_bundle:

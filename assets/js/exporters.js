@@ -115,5 +115,5 @@
   }
 
   Log.info("module.ready", { palettes: Object.keys(palettes).length });
-  window.LabFlowExport = {palettes, download, projectYaml, pipelineContractJson, jsonl, csv, nomadYaml, zipBytes, zipStore:(files,type="application/zip")=>new Blob([zipBytes(files)],{type})};
+  window.LabFlowExport = {palettes, download, projectYaml, pipelineContractJson, jsonl, csv, nomadYaml, zipBytes};
 })();

@@ -133,19 +133,20 @@ The responsibilities remain separate:
 
 A section references a stable component identifier. CHOSE uses a strict registry, so an unknown component fails visibly instead of silently falling back to unrelated markup.
 
-## Pipeline registry in Settings
+## Pipeline registry and Pipeline Studio
 
-Settings → Pipelines is the browser-facing registry for checked-in workflows. It is a management and inspection surface, not a pipeline editor.
+Settings → Pipelines is the browser-facing registry for checked-in workflows. It manages session availability and the Create Project default, and provides a compact preview of identity, resources, steps and contract state. For the selected workflow it also exposes a **session step editor**: reorder, relabel and add steps, then watch the contract preview update immediately. Edited steps exist only in page memory and are never written back to the checked-in pipeline. The dedicated **Pipeline Studio** page is the POC editing surface: it displays the bundled `pipeline.yaml` entry contract and referenced YAML/JSON resources, allows temporary in-memory edits, applies syntax highlighting and lightweight structural checks, and can download the active draft for external review.
 
 It provides:
 
 - enable/disable controls for the current volatile session;
 - one enabled default pipeline for the Create Project dialog;
 - pipeline identity, version, domain, schema and resource-group inspection;
+- a session step editor that reorders, relabels and extends steps with an immediate contract preview;
 - strict completion-gate state for executable contracts such as CHOSE;
 - links to the workflow and its documentation.
 
-The registry obeys fail-safe UI rules: at least one workflow remains enabled; a disabled workflow cannot be selected as default; if the default is disabled, the first enabled workflow becomes default. Existing projects remain readable even when their pipeline is not available for new project creation. Downloading `settings.yaml` creates a reviewable configuration copy only. It never mutates `pipelines/<id>/pipeline.yaml` or another checked-in source.
+The registry obeys fail-safe UI rules: at least one workflow remains enabled; a disabled workflow cannot be selected as default; if the default is disabled, the first enabled workflow becomes default. The session step editor keeps the same boundary: its draft is volatile, standard step rows keep their stable ids so completion-gate evaluation still matches the source, and reordering, relabel or reset never touches the checked-in bundle. Existing projects remain readable even when their pipeline is not available for new project creation. Downloading `settings.yaml` creates a reviewable configuration copy only. Pipeline Studio follows the same boundary: source edits remain in memory, reload restores the checked-in bundle, and Download draft produces a review copy. Neither surface mutates `pipelines/<id>/pipeline.yaml` or another checked-in source.
 
 ## Canonical data layers
 
@@ -173,7 +174,7 @@ The current POC exposes these values in the step heading and footer. `LabFlowPip
 
 ## Contract build and validation
 
-`tools/build_pipeline_bundle.py` resolves referenced YAML/JSON, prevents path escape and embeds each resource under `pipeline.resources`. `tools/validate_poc.py` independently reconstructs the resolved registry and compares it with the checked-in bundle. For CHOSE it also verifies strict/fail-closed policy, component registration, dependency order, data boundaries, schema-required paths, collection identities, operation/layer references, source identities, mapping policy, review/provenance content and disabled remote NOMAD submission. `node tools/test_exports.mjs` executes the browser-side gates and verifies that all report formats consume the resolved resource model.
+`tools/build_pipeline_bundle.py` resolves referenced YAML/JSON, prevents path escape, embeds each resource under `pipeline.resources`, and creates a separate local source snapshot for Pipeline Studio without runtime file requests. `tools/validate_poc.py` independently reconstructs the resolved registry and compares it with the checked-in bundle. For CHOSE it also verifies strict/fail-closed policy, component registration, dependency order, data boundaries, schema-required paths, collection identities, operation/layer references, source identities, mapping policy, review/provenance content and disabled remote NOMAD submission. `node tools/test_exports.mjs` executes the browser-side gates and verifies that all report formats consume the resolved resource model.
 
 
 ## Runtime source-of-truth flow

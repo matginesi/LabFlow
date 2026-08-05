@@ -131,7 +131,7 @@
   function renderKnowledge(root, requested, {icon, esc}) {
     let activeResponse = requested ? {...classify(requested), question:requested} : responses.analytical;
     const activeSources = new Set(sources);
-    root.innerHTML = `<section class="summary-strip summary-strip-three capability-strip" aria-label="Lab Assistant capabilities">${[["Ask","Find answers across laboratory knowledge and data","search"],["Inspect","Check quality, consistency and provenance","check"],["Prepare","Preview imports, comparisons, reports and exports","file"]].map(([title,text,ico]) => `<div class="summary-item">${icon(ico)}<span><strong>${title}</strong><small>${text}</small></span></div>`).join("")}</section>
+    root.innerHTML = `<section class="summary-strip summary-strip-three" aria-label="Lab Assistant capabilities">${[["Ask","Find answers across laboratory knowledge and data","search"],["Inspect","Check quality, consistency and provenance","check"],["Prepare","Preview imports, comparisons, reports and exports","file"]].map(([title,text,ico]) => `<div class="summary-item">${icon(ico)}<span><strong>${title}</strong><small>${text}</small></span></div>`).join("")}</section>
       <div class="knowledge-workspace">
         <aside class="panel knowledge-controls"><div class="panel-header"><div><h3 class="mb-0">Search scope</h3><small>Choose context, not retrieval technology</small></div></div><div class="panel-body stack"><div class="field"><label for="knowledge-scope">Search in</label><select class="select" id="knowledge-scope"><option>Current experiment</option><option>Current project</option><option selected>Current workspace</option><option>All accessible data</option></select></div><fieldset class="source-toggles"><legend>Sources</legend>${sources.map((source) => `<label class="check-row"><input type="checkbox" value="${esc(source)}" checked><span>${esc(source)}</span></label>`).join("")}</fieldset><div class="notice"><div>${icon("info")}</div><div><strong>Automatic routing</strong><p>LabFlow selects documents, structured data, relationships or deterministic analyses internally.</p></div></div></div><div class="panel-header saved-header"><div><h3 class="mb-0">Saved views</h3><small>Session only · reset on reload</small></div></div><div class="saved-view-list" id="saved-view-list">${savedViews.map((item) => savedViewMarkup(item, esc, icon)).join("")}</div></aside>
         <main class="panel knowledge-conversation"><div class="panel-header"><div><h3 class="mb-0">Conversation</h3><small id="knowledge-route">${esc(activeResponse.route)}</small></div><span class="badge badge-success">No automatic writes</span></div><div class="panel-body" id="knowledge-answer">${answerMarkup(activeResponse,{icon,esc})}</div><form class="knowledge-composer" id="knowledge-form"><div class="prompt-chips">${["How is the standard solution prepared?","Which stacks contain SnO₂?","Compare experiments using DMSO","Inspect EXP-067 for NOMAD"].map((prompt) => `<button type="button" class="prompt-chip" data-knowledge-prompt="${esc(prompt)}">${esc(prompt)}</button>`).join("")}</div><div class="input-group"><textarea class="textarea" id="knowledge-question" rows="2" placeholder="Ask about SOPs, processes, experiments, results or relationships…">${requested ? esc(requested) : ""}</textarea><button class="btn btn-primary" type="submit">${icon("spark")} Ask LabFlow</button></div><small id="source-summary">Current workspace · ${sources.length} source types enabled</small></form></main>
@@ -228,28 +228,45 @@
     }).join("");
     const xLabels = labels.length ? labels : Array.from({length:count}, (_, index) => String(index + 1));
     const ticks = xLabels.map((label, index) => `<text x="${x(index)}" y="${height-10}" text-anchor="middle">${String(label)}</text>`).join("");
+    const baseline = height - pad.bottom;
+    const area = series.map((item, seriesIndex) => {
+      const pts = item.values.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : null).filter(Boolean);
+      if (!pts.length) return "";
+      return `<polygon points="${pts.join(" ")} ${x(count-1)},${baseline} ${x(0)},${baseline}" class="ai-chart-area series-${seriesIndex+1}"/>`;
+    }).join("");
     const lines = series.map((item, seriesIndex) => {
       const points = item.values.map((value, index) => Number.isFinite(value) ? `${x(index)},${y(value)}` : null).filter(Boolean).join(" ");
-      return `<polyline points="${points}" class="ai-chart-line series-${seriesIndex+1}"/>${item.values.map((value,index) => Number.isFinite(value) ? `<circle cx="${x(index)}" cy="${y(value)}" r="3" class="ai-chart-point series-${seriesIndex+1}"/>` : "").join("")}`;
+      return `<polyline points="${points}" class="ai-chart-line series-${seriesIndex+1}"/>${item.values.map((value,index) => Number.isFinite(value) ? `<circle cx="${x(index)}" cy="${y(value)}" r="2.6" class="ai-chart-point series-${seriesIndex+1}"/>` : "").join("")}`;
     }).join("");
-    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Demonstration metric chart">${grid}${ticks}${lines}</svg>`;
+    return `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Demonstration metric chart">${grid}${area}${ticks}${lines}</svg>`;
   }
 
   function chartPanel(title, subtitle, series, labels, esc) {
     return `<section class="panel"><div class="panel-header"><div><h3 class="mb-0">${esc(title)}</h3><small>${esc(subtitle)}</small></div><span class="badge">Demonstration data</span></div><div class="panel-body"><div class="ai-chart">${chartSvg(series, labels)}</div><div class="ai-chart-legend">${series.map((item,index) => `<span><i class="series-${index+1}"></i>${esc(item.label)}</span>`).join("")}</div></div></section>`;
   }
 
+  let visionFigureId = 0;
   function visionPreview(kind) {
-    const common = `<rect width="240" height="132" class="ai-vision-base"/><path d="M0 33H240M0 66H240M0 99H240M60 0V132M120 0V132M180 0V132" class="ai-vision-grid"/>`;
+    const id = `ai-vg${++visionFigureId}`;
+    const defs = `<defs>
+      <linearGradient id="${id}-bg" x1="0" y1="0" x2="0.72" y2="1"><stop offset="0" class="ai-vision-g1"/><stop offset="1" class="ai-vision-g2"/></linearGradient>
+      <radialGradient id="${id}-vig" cx="0.5" cy="0.42" r="0.78"><stop offset="0" class="ai-vision-g0"/><stop offset="1" class="ai-vision-g5"/></radialGradient>
+      <radialGradient id="${id}-spot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" class="ai-vision-g3"/><stop offset="1" class="ai-vision-g4"/></radialGradient>
+      <radialGradient id="${id}-hot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" class="ai-vision-g6"/><stop offset="1" class="ai-vision-g7"/></radialGradient>
+    </defs>`;
+    const grainX = [13, 37, 61, 89, 113, 141, 165, 193, 217, 29, 77, 105, 153, 181, 229];
+    const grain = `<g class="ai-vision-grain">${grainX.map((cx, index) => `<circle cx="${cx}" cy="${(index * 37) % 128 + 2}" r="1" class="ai-vision-grain-dot"/>`).join("")}</g>`;
+    const common = `<rect width="240" height="132" class="ai-vision-base"/><rect width="240" height="132" fill="url(#${id}-bg)"/><rect width="240" height="132" fill="url(#${id}-vig)"/>${grain}<path d="M0 33H240M0 66H240M0 99H240M60 0V132M120 0V132M180 0V132" class="ai-vision-grid"/>`;
+    const film = (d, cls = "ai-vision-film") => `<path d="${d}" class="${cls}"/>`;
     const drawings = {
-      streak:`<path d="M18 26 C72 35 121 28 220 42" class="ai-vision-signal"/><path d="M20 82 C86 67 140 88 222 74" class="ai-vision-signal muted"/>`,
-      pl:`<ellipse cx="118" cy="66" rx="82" ry="43" class="ai-vision-fill"/><ellipse cx="168" cy="76" rx="28" ry="18" class="ai-vision-mask"/>`,
-      module:`<rect x="18" y="18" width="204" height="96" class="ai-vision-frame"/><path d="M67 18V114M116 18V114M165 18V114" class="ai-vision-grid strong"/><rect x="112" y="18" width="9" height="96" class="ai-vision-mask"/>`,
-      edge:`<path d="M20 26H220V105H20Z" class="ai-vision-frame"/><path d="M20 28 C38 42 28 61 43 77 C55 90 42 105 62 109" class="ai-vision-signal"/>`,
-      pinhole:`${[42,74,108,145,176,202].map((cx,index)=>`<circle cx="${cx}" cy="${40+(index%3)*24}" r="${5+(index%2)*2}" class="ai-vision-mask"/>`).join("")}`,
-      crack:`<path d="M28 28 67 54 89 47 121 81 149 73 211 110" class="ai-vision-signal"/>`
+      streak:`${film("M0 30 C50 22 110 36 160 26 S220 18 240 24")}${film("M0 44 C70 38 130 52 180 42 S225 34 240 40")}${film("M0 60 C80 52 150 70 200 58 S235 48 240 56")}${film("M0 78 C60 72 130 84 175 74 S225 66 240 72")}<path d="M0 50 C90 44 150 62 240 50" class="ai-vision-signal"/><path d="M0 92 C90 86 150 102 240 88" class="ai-vision-signal muted"/>`,
+      pl:`<ellipse cx="118" cy="66" rx="88" ry="48" fill="url(#${id}-hot)" class="ai-vision-pl"/><ellipse cx="136" cy="58" rx="26" ry="18" fill="url(#${id}-hot)" class="ai-vision-pl-core"/><path d="M42 84 C82 72 120 98 178 84 C144 110 92 106 42 84 Z" class="ai-vision-mask"/>`,
+      module:`<rect x="18" y="18" width="204" height="96" class="ai-vision-frame"/><path d="M68 18V114M118 18V114M168 18V114" class="ai-vision-grid strong"/><path d="M18 66H222" class="ai-vision-grid strong"/><rect x="112" y="20" width="9" height="92" class="ai-vision-mask"/><rect x="66" y="18" width="7" height="96" fill="url(#${id}-spot)"/>`,
+      edge:`<rect x="20" y="26" width="200" height="80" class="ai-vision-frame"/><path d="M22 34 C58 40 92 32 148 38 C180 42 214 34 220 42 L220 104 C150 98 92 106 22 100 Z" fill="url(#${id}-hot)" class="ai-vision-pl"/><path d="M22 62 C70 52 122 72 152 56 C182 42 206 54 220 48" class="ai-vision-signal muted"/><path d="M22 86 C70 80 130 96 170 86 S212 76 220 82" class="ai-vision-signal"/>`,
+      pinhole:`<rect x="18" y="18" width="204" height="96" class="ai-vision-frame"/>${[24,60,96,132,168,204].map((cx,index)=>`<circle cx="${cx}" cy="${38+(index%3)*28}" r="${4+(index%2)*2}" fill="url(#${id}-spot)" class="ai-vision-mask"/>`).join("")}${[36,80,120,156,192].map((cx,index)=>`<circle cx="${cx}" cy="${92-(index%2)*14}" r="3" class="ai-vision-pit"/>`).join("")}`,
+      crack:`<rect x="18" y="18" width="204" height="96" class="ai-vision-frame"/><rect x="18" y="18" width="204" height="96" fill="url(#${id}-hot)" opacity=".5"/><path d="M28 28 67 54 89 47 121 81 149 73 211 110" class="ai-vision-signal"/><path d="M67 54 56 74" class="ai-vision-signal muted"/><path d="M121 81 132 66" class="ai-vision-signal muted"/><path d="M149 73 160 94" class="ai-vision-signal muted"/>`
     };
-    return `<svg viewBox="0 0 240 132" aria-hidden="true">${common}${drawings[kind] || drawings.streak}</svg>`;
+    return `<svg viewBox="0 0 240 132" aria-hidden="true" class="ai-vision-svg">${defs}${common}${drawings[kind] || drawings.streak}</svg>`;
   }
 
   function renderDatasets(root, {icon, esc}) {
@@ -439,11 +456,7 @@
       "Knowledge assistance, dataset construction, ML/DL evaluation, scientific vision and reviewed predictions in one coherent LabFlow workspace.",
       `<a class="btn" href="project.html?project=PRJ-2026-014&step=review">${icon("chart")} Open current project</a><button class="btn btn-primary" data-ai-open="datasets">${icon("database")} Dataset Studio</button>`,
       {eyebrow:"Laboratory AI and data operations"}
-    ) + `${metricStrip([
-      ["Collect","Normal laboratory work","projects, experiments, files and images"],
-      ["Validate","Scientific quality first","units, provenance, leakage and labels"],
-      ["Review","Human-controlled outputs","models advise; researchers decide"]
-    ],esc)}<nav class="tabs ai-foundation-tabs" aria-label="AI and models sections">${[
+    ) + `<nav class="tabs ai-foundation-tabs" aria-label="AI and models sections">${[
       ["knowledge","Knowledge","book"],
       ["datasets","Data & datasets","database"],
       ["models","ML / training","chart"],

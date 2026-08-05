@@ -44,7 +44,7 @@ Icons are decorative when paired with text and therefore use `aria-hidden`. Icon
 
 ## Integration rules
 
-Load `ui/theme.css` for the portable theme package or `ui/ui.css` for the complete application system. Set all root attributes even when using defaults. Keep the controller before CSS when appearance may be carried in the URL. Do not import application components into a minimal theme consumer.
+Load `ui/theme.css` for the portable theme package or `ui/labflow.bundle.css` for the complete application system. Set all root attributes even when using defaults. Keep the controller before CSS when appearance may be carried in the URL. Do not import application components into a minimal theme consumer.
 
 The standalone example in `examples/theme-integration.html` demonstrates local theme switching without exposing repository internals as product navigation.
 
