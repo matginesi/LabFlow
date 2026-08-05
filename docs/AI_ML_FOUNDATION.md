@@ -243,3 +243,14 @@ This sequence keeps LabFlow useful as a laboratory application first, while maki
 ## Interface integration
 
 The AI & Models workspace does not define a parallel visual system. Dataset, model, Vision and prediction views reuse the canonical LabFlow breadcrumb, page header, summary strip, tabs, panels, toolbars, dense tables, validation issues, notices, badges and responsive grids. Domain-specific visuals are limited to scientific plots and image previews inside ordinary panels.
+## UI Kit alignment
+
+The AI & Models workspace uses the shared product grammar rather than a separate AI visual identity. Summary strips, panels, dense tables, progress rows, metadata lists, notices, validation issues, badges and tabs must match their UI Kit examples exactly.
+
+The only specialized renderers are:
+
+- **training/evaluation charts** — local SVG, explicit axes, a textual legend, a visible demonstration-data label and no decorative dashboard frame;
+- **scientific vision previews** — a local preview kept subordinate to source identity, proposed output, score, review state and the original evidence.
+
+Readiness must be decomposed into inspectable checks. Do not use circular readiness gauges, gradient AI hero surfaces, glass effects, model “scoreboards” or generic illustrations that are absent from the UI Kit. Prediction, annotation proposal, deterministic result and researcher conclusion remain visually and semantically distinct.
+

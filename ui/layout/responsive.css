@@ -128,3 +128,6 @@ pre{max-width:100%}
   .definition-card{flex-basis:84vw}
   .pipeline-section-tabs .tab{min-width:108px}
 }
+
+@media(max-width:1180px){.pipeline-settings-layout{grid-template-columns:1fr}.pipeline-settings-inspector{position:static}}
+@media(max-width:620px){.pipeline-toggle{min-width:0}.pipeline-settings-inspector .panel-body{padding:9px}}

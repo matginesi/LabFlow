@@ -54,7 +54,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Test both themes, all eight palettes and both densities.
 - Navigate repeatedly between pages in both themes and confirm there is no light/dark flash.
 - Inspect first paint with JavaScript disabled or paused: sidebar, fixed topbar and the page bootstrap must already exist, with no empty `#app`, opacity gate or global fade. Scroll short and long pages at desktop, tablet and mobile widths; the topbar must remain visible and content must begin below it without jumping or being obscured.
-- Check page-width assignments at 1920, 1600, 1024, 768 and 390 pixels. Confirm that Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit share the centered 1600 px wrapper; Settings uses 1320 px; documentation prose remains near 72 characters without narrowing the whole page. Verify that no inner block imposes a competing page cap.
+- Check page-width assignments at 1920, 1600, 1024, 768 and 390 pixels. Confirm that Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit share the centered 1600 px wrapper; the 1320 px variant is not assigned to a current top-level page; documentation prose remains near 72 characters without narrowing the whole page. Verify that no inner block imposes a competing page cap.
 - Inspect page and component spacing against the 4/8/12/16/24/32 px scale. Confirm current-step headings, panels and summary cells use solid surfaces rather than decorative gradients, glow, glass or heavy shadows.
 - Verify search icon alignment, icon-only accessible names and missing-icon fallbacks.
 - Test global search by mouse and keyboard, including empty results and mobile overlay.
@@ -181,3 +181,19 @@ Record an accepted exception next to the relevant check. Do not silently weaken 
 - Verify selected state and family filters are keyboard operable and do not rely on color alone.
 - Check desktop sticky inspector, tablet stacked inspector and single-column mobile cards with no page-level horizontal overflow.
 - Compare the production Cabinet pattern with the corresponding UI Kit section.
+## Settings and pipeline registry
+
+- Open Settings at 1920, 1600, 1024, 768 and 390 pixels and confirm it uses the same centered wide shell as the other top-level pages, with no competing inner page cap.
+- Open the Pipelines tab; inspect every registered workflow and confirm identity, version, schema/resource metadata, step outputs and contract state match the bundled pipeline registry.
+- Disable and re-enable a pipeline; confirm the last enabled pipeline cannot be disabled.
+- Confirm a disabled pipeline cannot be selected as default and that disabling the current default selects another enabled workflow.
+- Apply the session settings, open Create Project and confirm only enabled pipelines are listed and the configured default is selected. Existing projects must remain visible.
+- Download `settings.yaml` and confirm `pipelines.enabled` and `pipelines.default` reflect the current draft without mutating checked-in sources. Reload and confirm defaults are restored.
+
+## AI UI Kit consistency
+
+- Compare AI & Models with the UI Kit AI foundation and specialized visual examples. Confirm summary strips, panels, tables, progress rows, metadata lists, notices, validation issues and badges use the shared classes and spacing.
+- Confirm training charts are local SVG plots inside canonical panels with textual legends and demonstration-data labels.
+- Confirm scientific vision previews remain paired with source metadata, output class, score, review state and a human-review limitation.
+- Confirm no readiness ring, gradient hero, glow, glass panel, decorative model dashboard or undocumented recurring AI component remains.
+

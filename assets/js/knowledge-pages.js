@@ -198,7 +198,7 @@
   }
 
   function metricStrip(items, esc) {
-    return `<section class="summary-strip ai-summary-strip" aria-label="Section summary">${items.map(([label, value, detail]) => `<div class="summary-item metric-summary"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></div>`).join("")}</section>`;
+    return `<section class="summary-strip" aria-label="Section summary">${items.map(([label, value, detail]) => `<div class="summary-item metric-summary"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(detail)}</small></div>`).join("")}</section>`;
   }
 
   function progressItem(label, value, detail, esc) {
@@ -335,7 +335,7 @@
       ["Best Dice", F.visionMetrics.metrics?.find((item)=>item.label==="Dice")?.value || "—", "segmentation baseline"]
     ],esc)}
       <section class="grid grid-2 section">
-        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Vision dataset status</h2><small>Annotation, class balance and review readiness</small></div><span class="badge badge-warning">${coverage}% reviewed</span></div><div class="panel-body stack">${(F.visionMetrics.metrics || []).map((item)=>`<article class="ai-metric-row"><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></article>`).join("")}<div>${progressItem("Reviewed annotations",coverage,`${reviewed} of ${total} images`,esc)}</div></div></article>
+        <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Vision dataset status</h2><small>Annotation, class balance and review readiness</small></div><span class="badge badge-warning">${coverage}% reviewed</span></div><div class="panel-body stack"><div class="metadata-list">${(F.visionMetrics.metrics || []).map((item)=>`<div><span>${esc(item.label)}</span><strong>${esc(item.value)}</strong></div>`).join("")}</div><div>${progressItem("Reviewed annotations",coverage,`${reviewed} of ${total} images`,esc)}</div></div></article>
         <article class="panel"><div class="panel-header"><div><h2 class="mb-0">Class balance</h2><small>Distribution used to plan sampling and augmentation</small></div><span class="badge">${F.visionMetrics.classes?.length || 0} classes</span></div><div class="panel-body stack">${(F.visionMetrics.classes || []).map((item)=>progressItem(item.label,total?Math.round(item.count/total*100):0,`${item.count} images`,esc)).join("")}</div></article>
       </section>
       <section class="panel section"><div class="panel-header"><div><h2 class="mb-0">Image review queue</h2><small>One shared table pattern for classification, segmentation and annotation review</small></div><button class="btn btn-sm" data-demo-action="annotation">${icon("edit")} Open annotation</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Preview</th><th>Record</th><th>Modality</th><th>Proposed label</th><th>Score</th><th>Status</th></tr></thead><tbody>${F.visionSamples.map((item,index)=>`<tr class="ai-selectable-row ${index===0?"active":""}" data-vision="${esc(item.id)}"><td><button class="ai-vision-thumb" type="button" aria-label="Inspect ${esc(item.id)}">${visionPreview(item.kind)}</button></td><td><strong>${esc(item.sample)}</strong><small class="block"><code>${esc(item.id)}</code></small></td><td>${esc(item.modality)}</td><td>${esc(item.label)}<small class="block">${esc(item.detail)}</small></td><td>${Math.round(Number(item.score || 0)*100)}%</td><td>${statusBadge(item.status,esc)}</td></tr>`).join("")}</tbody></table></div></section>

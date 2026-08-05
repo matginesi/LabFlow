@@ -93,8 +93,8 @@ The domain hierarchy and visual hierarchy are intentionally different. A Project
 
 The application shell assigns one semantic page width before rendering page content:
 
-- Settings and compact configuration surfaces: 1320 px maximum;
-- Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit: 1600 px maximum;
+- Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit: 1600 px maximum;
+- the 1320 px compact variant is reserved for future intentionally narrow surfaces;
 - documentation prose: approximately 72 characters inside the wide shell rather than a narrower page wrapper.
 
 Every wrapper remains centered and `width: 100%`. Components use the 4/8/12/16/24/32 px spacing scale and local overflow. A table, chart, builder or report preview may be wide, but it cannot create a competing page cap or page-level horizontal scroll.

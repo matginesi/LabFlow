@@ -59,8 +59,8 @@ Two page-shell widths are used. Every wrapper is centered, uses `width: 100%` an
 
 | Semantic width | Maximum | Product use |
 | --- | ---: | --- |
-| `page-width-standard` | 1320 px | Settings and compact configuration surfaces |
-| `page-width-wide` | 1600 px | Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit |
+| `page-width-standard` | 1320 px | Reserved for future intentionally narrow surfaces |
+| `page-width-wide` | 1600 px | Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Documentation and UI Kit |
 
 Documentation is a wide reference page because its document navigator, article and table of contents need the same horizontal rhythm as the rest of LabFlow. Readability is controlled inside the article: ordinary prose remains near 72 characters, while tables, code and diagrams may use the wider article surface with local overflow.
 
@@ -264,3 +264,30 @@ Using a Cabinet definition in a project means copying a traceable snapshot. Edit
 ## Runtime page resilience
 
 Each page declares its page-specific JavaScript dependencies and validates them before rendering. Knowledge, Tools, Documentation, Project and UI Kit must render a clear local failure state if a required checked-in module is missing or loaded in the wrong order. Data-backed visualizations normalize optional arrays and records before calling `map`, `filter`, numeric formatting or chart helpers, so a missing demonstration collection cannot blank the complete page.
+## Settings pipeline registry pattern
+
+The Settings page uses the wide 1600 px page shell because pipeline inspection, user management and administration contain dense tables and side-by-side evidence. The Pipelines tab uses one canonical summary strip followed by a two-column registry/inspector work surface.
+
+- The registry table owns availability, contract state, step count, default selection and inspection.
+- The inspector owns descriptive metadata, step outputs, gate state and links.
+- The inspector may be sticky only at wide sizes and stacks below the table before content compresses.
+- Availability controls are session-only and must say so explicitly.
+- The last enabled pipeline cannot be disabled, and default selection is unavailable for disabled rows.
+- New-project creation lists only enabled pipelines and preselects the current default.
+
+Do not create pipeline cards with a separate visual language or duplicate pipeline administration inside the Administration tab.
+
+## AI and model visual contract
+
+AI & Models does not define an alternative dashboard style. It composes the same UI Kit blocks used elsewhere:
+
+- summary strips for scope and counts;
+- standard panels and panel headers;
+- dense tables for datasets, runs, models, predictions and image queues;
+- progress rows for readiness and coverage;
+- metadata lists for inspectable facts;
+- validation issues and notices for blocking work, limitations and human review;
+- ordinary badges for status and explicit “Demonstration data” labels.
+
+Only two specialized visual families are allowed and both are represented in the UI Kit: `ai-training-chart`, a local SVG plot inside a canonical panel with a separate legend; and `ai-vision-review`, a local image/annotation preview paired with canonical metadata, table selection and a human-review notice. Avoid readiness rings, gradient hero panels, decorative model dashboards, glow, oversized metrics and unlabeled model graphics.
+

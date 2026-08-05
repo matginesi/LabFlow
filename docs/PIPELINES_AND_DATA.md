@@ -133,6 +133,20 @@ The responsibilities remain separate:
 
 A section references a stable component identifier. CHOSE uses a strict registry, so an unknown component fails visibly instead of silently falling back to unrelated markup.
 
+## Pipeline registry in Settings
+
+Settings → Pipelines is the browser-facing registry for checked-in workflows. It is a management and inspection surface, not a pipeline editor.
+
+It provides:
+
+- enable/disable controls for the current volatile session;
+- one enabled default pipeline for the Create Project dialog;
+- pipeline identity, version, domain, schema and resource-group inspection;
+- strict completion-gate state for executable contracts such as CHOSE;
+- links to the workflow and its documentation.
+
+The registry obeys fail-safe UI rules: at least one workflow remains enabled; a disabled workflow cannot be selected as default; if the default is disabled, the first enabled workflow becomes default. Existing projects remain readable even when their pipeline is not available for new project creation. Downloading `settings.yaml` creates a reviewable configuration copy only. It never mutates `pipelines/<id>/pipeline.yaml` or another checked-in source.
+
 ## Canonical data layers
 
 - `settings.yaml` defines checked-in product defaults and feature boundaries.

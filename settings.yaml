@@ -34,6 +34,8 @@ demo_administration:
   show_working_knowledge: true
 
 pipelines:
+  # Seeds Settings → Pipelines. Browser changes are session-only; rebuild this
+  # bundle after editing the canonical defaults here.
   enabled:
     - chose
     - quick
