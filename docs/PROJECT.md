@@ -13,7 +13,8 @@ flowchart TD
   A[Workspace] --> B[Project]
   B --> C[Pipeline]
   C --> D[Revisitable step]
-  B --> E[Experiment]
+  B --> P[Process version]
+  P --> E[Experiment snapshot]
   E --> F[Sample]
   F --> G[Measurement]
   B --> H[Report package]
@@ -29,7 +30,9 @@ flowchart TD
 - **Workspace** is the all-project context.
 - **Project** owns an objective, pipeline, people, progress and linked research records.
 - **Pipeline** defines the ordered workflow and the completion contract for each step.
-- **Experiment** connects fabrication context, samples, files and results.
+- **Process** is a reusable, versioned definition of chemistry, substrate preparation, fabrication operations and expected stack.
+- **Experiment** is a concrete execution of one immutable Process snapshot and records actual batches, samples, parameters, timings and deviations.
+- **Result Set** groups source files, mappings and validated measurements under an Experiment.
 - **Lab Cabinet** provides reusable materials, solutions, stacks, import mappings and analysis recipes.
 - **Evidence** connects a claim to a source, record, field, metric or relationship.
 - **Report package** preserves reviewed content, source references and export metadata.
@@ -61,7 +64,7 @@ flowchart LR
 
 New interaction code should call this boundary when it needs to locate domain records. It may still pass already-resolved objects directly to small render functions. Do not add repository classes, dependency injection, promise-based fake APIs or one file per entity.
 
-Stable identifiers connect the flow **User → Workspace → Project → Process → Experiment → Sample → Measurement**. Pipeline steps organise the work around those records but do not replace them.
+Stable identifiers connect the flow **User → Workspace → Project → Process Version → Experiment → Sample / Device → Result Set → Measurement**. Pipeline steps organise the work around those records but do not replace them.
 
 ## AI-ready architecture
 
@@ -82,6 +85,20 @@ flowchart LR
 
 The browser remains independent of any specific LLM provider, vector database or ML framework. Future connected services should implement small product contracts such as `ask`, `retrieve`, `build_dataset`, `train`, `evaluate`, `predict` and `review`. See `AI_ML_FOUNDATION.md` for the full record and evaluation contract.
 
+## Workflow and presentation architecture
+
+The domain hierarchy and visual hierarchy are intentionally different. A Project owns records; a pipeline only orders the work used to create or review them. The CHOSE Project page therefore presents one four-step navigator while preserving distinct Process Version, Experiment, Result Set and Report identities underneath it.
+
+The application shell assigns one semantic page width before rendering page content:
+
+- Settings and compact configuration surfaces: 1320 px maximum;
+- Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit: 1600 px maximum;
+- documentation prose: approximately 72 characters inside the wide shell rather than a narrower page wrapper.
+
+Every wrapper remains centered and `width: 100%`. Components use the 4/8/12/16/24/32 px spacing scale and local overflow. A table, chart, builder or report preview may be wide, but it cannot create a competing page cap or page-level horizontal scroll.
+
+CHOSE composes the Project page in this stable order: page context, project header, summary strip, four-step navigator, current-step heading, contained section tabs, work surface and workflow footer. This geometry is shared across Process, Experiment, Results and Review rather than rebuilt per step.
+
 ## Reusable UI blocks
 
 Pages are compositions of a limited vocabulary: page and section headers, cards, panels, KPI blocks, toolbars, notices, forms, table containers, steppers, validation issues, assistant/evidence blocks, scientific Builder/Review pairs, report previews, modals and drawers. Their source styles live in `ui/`; page renderers combine them and add only layout adjustments that are genuinely specific.
@@ -96,7 +113,7 @@ The current demonstration includes no authentication, durable database, cloud sy
 
 ## Shared interaction contracts
 
-Solution Builder and Review share one structured representation. Stack Builder, the 2D stack visual and report preview use the same ordered layers. Smart Import never hides mappings or conversions. Data-quality checks stay distinct from interpretation. Ask LabFlow routes questions internally to documents, structured records, deterministic calculations or explicit relationships while presenting one coherent assistant.
+Solution Definition Builder and Review share one structured representation. Prepared Solution Batches remain experiment records. Process fabrication operations, Stack Builder, the 2D stack visual and report preview use linked representations with one clear source of truth. Smart Import never hides mappings or conversions. Data-quality checks stay distinct from interpretation. Ask LabFlow routes questions internally to documents, structured records, deterministic calculations or explicit relationships while presenting one coherent assistant.
 
 Every generated action shows its scope and consequence before an in-memory confirmation. Reload remains the universal reset mechanism.
 

@@ -67,7 +67,7 @@ A generated action includes a label, affected records, evidence summary, known l
 
 ## Single report workflow
 
-The **Report Composer** inside the Analysis & Report step is the only place where PDF, DOCX and XLSX reports are authored, reviewed and downloaded. The final Export step packages the reviewed outputs with structured project data and NOMAD previews; it does not expose a second report editor or a duplicate set of individual report actions.
+The **Report Composer** inside **Review & Export → Report & Export** is the only place where PDF, DOCX, XLSX and LaTeX reports are authored, reviewed and downloaded. The same contained view packages reviewed outputs with structured Process, Experiment and Result Set data plus the local NOMAD preview; there is no separate pipeline Export step and no duplicate report editor.
 
 ## Report contract
 

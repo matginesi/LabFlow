@@ -24,7 +24,7 @@ required_assets = {
 
 entry_styles = ["ui/labflow.bundle.css"]
 canonical_docs = {
-    "PROJECT.md", "UI_UX_GUIDELINES.md", "PIPELINES_AND_DATA.md",
+    "PROJECT.md", "UI_UX_GUIDELINES.md", "PIPELINE_CATALOG.md", "PIPELINE_CHOSE.md", "PIPELINE_QUICK.md", "PIPELINES_AND_DATA.md",
     "AI_ML_FOUNDATION.md", "AI_REPORTS_AND_EXPORT.md", "ROBOTICS.md", "THEME_INTEGRATION.md", "JAVASCRIPT_LOGGING.md", "VALIDATION_CHECKLIST.md",
 }
 

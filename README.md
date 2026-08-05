@@ -10,7 +10,8 @@ LabFlow joins work that is usually scattered across notes, spreadsheets and isol
 
 - a workspace containing multiple research projects;
 - reusable pipelines with revisitable, state-aware steps;
-- a Lab Cabinet for materials, solutions, stacks, mappings and analyses;
+- a Lab Cabinet for reusable materials, solution definitions, stacks, mappings and analyses;
+- a simplified CHOSE pipeline: Process → Experiment → Results → Review & Export;
 - structured Solution and Stack Builder/Review interfaces;
 - Smart Import with explicit field mapping, units and provenance;
 - deterministic analysis, validation and comparison views;
@@ -48,7 +49,9 @@ Evidence remains visible. LabFlow distinguishes raw measurements, calculated res
 
 Privacy is structural. Mutable state exists only in JavaScript memory. Reload restores checked-in defaults. The application uses no cookies, browser persistence, service workers, trackers, telemetry or network-backed search. Demonstration credentials are never retained or included in exports. A structured local logger records lifecycle, rendering and export diagnostics only in the browser console and a bounded in-memory buffer; sensitive keys are redacted and nothing is transmitted.
 
-The interface uses a dark laboratory shell around light content by default. Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses a local-first Noto Sans / IBM Plex Sans stack with platform fallbacks; icons and diagrams are inline SVG assets rendered locally.
+The interface uses a dark laboratory shell around light content by default. Operational and reference workspaces—including Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit—use the centered 1600 px wide wrapper. Settings retains the compact 1320 px configuration wrapper. Documentation keeps prose near 72 characters inside its wide shell, so navigation and diagrams have room without making paragraphs difficult to read. Spacing follows the 4/8/12/16/24/32 px scale, and surfaces remain flat, compact and sober: no decorative gradients, glow, glass effects or heavy shadows.
+
+Theme, palette and density travel only in internal navigation parameters, and are applied before the stylesheet to avoid cross-page flicker. Typography uses a local-first Noto Sans / IBM Plex Sans stack with platform fallbacks; icons and diagrams are inline SVG assets rendered locally.
 
 ## Explore the POC
 
@@ -59,11 +62,11 @@ Each root entry page already contains the shared sidebar, topbar and content she
 A useful walkthrough is:
 
 1. Open Workspace and enter `PRJ-2026-014`.
-2. Review the pipeline context, Solution Builder and Stack Builder.
-3. Inspect Smart Import and the deterministic data-quality issues.
-4. Open AI & Models: ask a relationship question, inspect AI readiness, review the dataset snapshot and compare the demonstration model records.
-5. Open Tools, choose or edit a Diagram Studio workflow, validate relationships, adjust direction/zoom and download the editable SVG.
-6. Review the report, XLSX structure and local export package.
+2. In **Process**, review Chemistry, Fabrication and Stack Review; note that recipes and process values are reusable definitions rather than actual batches or execution records.
+3. In **Experiment**, inspect the immutable Process snapshot, selected batches, sample/device instances, planned-versus-actual parameters, timings and deviations.
+4. In **Results**, review file provenance, Smart Import mappings, unit conversion and deterministic quality issues.
+5. In **Review**, compare experiments, classify findings, edit the Report Composer and generate the local report/export package or NOMAD readiness preview.
+6. Open AI & Models for evidence-led questions, dataset snapshots, model demonstrations and reviewed predictions; open Tools for local documents, workbooks and diagrams.
 
 Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through results with the arrow keys, confirm with Enter and close with Escape.
 
@@ -104,7 +107,11 @@ The UI Kit is the visual source of truth. A block belongs there only when the ap
 
 - [Project model and architecture](docs/PROJECT.md)
 - [UI and interaction guidelines](docs/UI_UX_GUIDELINES.md)
+- [Pipeline catalog](docs/PIPELINE_CATALOG.md)
+- [CHOSE Perovskite Workflow](docs/PIPELINE_CHOSE.md)
+- [Quick Measurement Review](docs/PIPELINE_QUICK.md)
 - [Pipelines, records and provenance](docs/PIPELINES_AND_DATA.md)
+- [Robotics capability](docs/ROBOTICS.md)
 - [AI and machine-learning foundation](docs/AI_ML_FOUNDATION.md)
 - [Lab Assistant, diagrams, reports and export](docs/AI_REPORTS_AND_EXPORT.md)
 - [Theme integration](docs/THEME_INTEGRATION.md)

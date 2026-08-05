@@ -7,6 +7,10 @@ Use this checklist after changes to behavior, data contracts, pipelines, documen
 Run the repository’s static validator and the local export package test. The static validator checks entry pages, required local assets, canonical-source parity, light defaults, privacy constraints and internal links. The export test inspects generated PDF, DOCX, XLSX and ZIP structures; PDF and DOCX are also rendered to page images for visual inspection.
 
 ```bash
+python tools/build_docs_bundle.py
+python tools/build_pipeline_bundle.py
+python tools/build_frontend_bundles.py
+python tools/validate_poc.py
 node tools/test_exports.mjs
 ```
 
@@ -50,7 +54,8 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Test both themes, all eight palettes and both densities.
 - Navigate repeatedly between pages in both themes and confirm there is no light/dark flash.
 - Inspect first paint with JavaScript disabled or paused: sidebar, fixed topbar and the page bootstrap must already exist, with no empty `#app`, opacity gate or global fade. Scroll short and long pages at desktop, tablet and mobile widths; the topbar must remain visible and content must begin below it without jumping or being obscured.
-- Check standard, wide workbench and reading width assignments at 1600, 1024, 768 and 390 pixels.
+- Check page-width assignments at 1920, 1600, 1024, 768 and 390 pixels. Confirm that Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit share the centered 1600 px wrapper; Settings uses 1320 px; documentation prose remains near 72 characters without narrowing the whole page. Verify that no inner block imposes a competing page cap.
+- Inspect page and component spacing against the 4/8/12/16/24/32 px scale. Confirm current-step headings, panels and summary cells use solid surfaces rather than decorative gradients, glow, glass or heavy shadows.
 - Verify search icon alignment, icon-only accessible names and missing-icon fallbacks.
 - Test global search by mouse and keyboard, including empty results and mobile overlay.
 - Click every primary action on each main page; it must navigate, update explicit in-memory state, download a local artifact or clearly identify itself as a non-interactive status.
@@ -85,7 +90,9 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 ## Project workflow
 
-- Open every CHOSE step at 1600, 1024, 768 and 390 pixels; verify zero page-level horizontal overflow.
+- Open every CHOSE step at 1600, 1024, 768 and 390 pixels; verify zero page-level horizontal overflow and confirm Project remains on the wide semantic wrapper.
+- Confirm the page order is header → summary → four-step navigator → current-step heading → contained tabs → work surface → workflow footer, without duplicated project identity/status cards.
+- At 1600 px verify the Process Builder/Review pair remains side by side; confirm it stacks before its fields become compressed at narrower widths.
 - Confirm the current pipeline step is visible without manual horizontal scrolling on tablet and mobile.
 - Exercise Solution Builder/Review and Stack Builder/Review; add, copy, delete and reorder layers.
 - Confirm Solution Review contains no vessel illustration or reserved empty column; volume, concentration, state, solvent ratios, solutes, quantities and validation must remain visible and update after recalculation.
@@ -106,7 +113,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 
 ## Documentation rendering
 
-- Open every managed document initially and through the document navigation; confirm active state, previous/next links and heading anchors.
+- Open every managed document initially and through the grouped document navigation; confirm Overview, Pipelines, Capabilities and Engineering groups are visible, including the pipeline catalog, CHOSE, Quick Measurement Review and Robotics guides. Confirm active state, previous/next links and heading anchors.
 - Inspect headings, paragraphs, nested lists, blockquotes, inline code, fenced code, tables, local images and Mermaid diagrams in light and dark themes.
 - Confirm prose remains near 72 characters while tables, code and diagrams use local overflow without creating page-level overflow.
 - Follow relative links between managed Markdown documents and verify fragments scroll to the requested heading after rendering.

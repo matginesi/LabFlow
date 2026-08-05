@@ -21,7 +21,7 @@ steps:
   - id: "ingest"
     status: completed
     output: "Validated measurement datasets"
-  - id: "analysis-report"
+  - id: "review"
     status: completed
     output: "Validated findings, comparisons, charts and report packages"
   - id: "export"

@@ -50,7 +50,7 @@ def documentation_index() -> list[dict[str, str]]:
         raise RuntimeError("Unexpected docs-bundle.js format")
     payload = source[position + len(marker):].strip().removesuffix(";")
     documents = json.loads(payload)
-    keys = ("id", "title", "path", "updated", "status", "description")
+    keys = ("id", "title", "path", "group", "updated", "status", "description")
     return [{key: document.get(key, "") for key in keys} for document in documents]
 
 

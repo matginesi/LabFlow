@@ -4,6 +4,8 @@
 
 LabFlow should feel like calibrated laboratory instrumentation: compact, sober and precise. Small radii, low controls, clear separators, dense tables and restrained accents support scanning. Decoration is secondary to identifiers, state, evidence and next actions.
 
+Surfaces are flat and deliberate. Ordinary panels use neutral borders and solid semantic backgrounds. Decorative gradients, glassmorphism, neon or glow effects, oversized radii and heavy shadows are not part of the product language. Accent color communicates selection, progress, metrics, validation or status; it is not used as decoration.
+
 The dark shell establishes stable navigation around light content by default. Typography uses one local system stack with a deliberate weight hierarchy. Icons use a coherent outline language. Page entry animations are avoided; continuity comes from stable geometry and applying appearance before first paint.
 
 ## Information hierarchy
@@ -53,7 +55,22 @@ LabFlow uses five composition archetypes:
 - **Analysis / workbench:** Knowledge and Tools; header, scope or tool controls, main work area and evidence/inspector rail.
 - **Reference:** Settings, Documentation and UI Kit; standard context/header with a reading, configuration or reference surface.
 
-Only three semantic content widths are allowed. `page-width-standard` is used by Workspace, Lab Cabinet and Settings; `page-width-wide` by Project, Knowledge, Tools and UI Kit; `page-width-reading` by Documentation. Width, side padding and topbar distance belong to the page shell, not individual renderers.
+Two page-shell widths are used. Every wrapper is centered, uses `width: 100%` and stays within 1600 px. Width, side padding and topbar distance belong to the page shell, not individual renderers.
+
+| Semantic width | Maximum | Product use |
+| --- | ---: | --- |
+| `page-width-standard` | 1320 px | Settings and compact configuration surfaces |
+| `page-width-wide` | 1600 px | Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Documentation and UI Kit |
+
+Documentation is a wide reference page because its document navigator, article and table of contents need the same horizontal rhythm as the rest of LabFlow. Readability is controlled inside the article: ordinary prose remains near 72 characters, while tables, code and diagrams may use the wider article surface with local overflow.
+
+Project and other operational workbenches use the wide wrapper. Builder/Review pairs, tables and report workbenches use the available width and then reflow locally; they must not introduce a second page-level maximum width. At very large viewport sizes the centered wrapper leaves visible margins instead of stretching indefinitely.
+
+### Spacing and density
+
+Page and component layout use the shared 4/8/12/16/24/32 px scale. The default wide page uses 24 px horizontal padding on desktop, 12 px on tablet/mobile and compact vertical rhythm. Values outside the scale are reserved for intrinsic control dimensions, charts or scientific geometry rather than arbitrary whitespace.
+
+A dense interface is not a cramped interface. Labels, identifiers and units remain readable; large blank areas, decorative hero spacing and repeated nested containers are avoided. Tables and workbenches receive local horizontal scrolling instead of shrinking scientific controls until they become ambiguous.
 
 ### Summary, cards, tabs and toolbars
 
@@ -101,7 +118,7 @@ The existing `knowledge.html` entry point is presented as one **AI & Models** wo
 - Models shows model cards and training runs without implying production deployment.
 - Predictions pairs every prediction with observed value, uncertainty, input coverage, model/dataset provenance and human review.
 
-Project Analysis includes a contextual AI readiness view, but the researcher remains inside the normal project flow. Do not add isolated AI dashboards, unexplained readiness scores or predictions styled as measured results.
+Project Review may show evidence-linked advisory findings, but dataset and model management remain in AI & Models. Do not add isolated AI dashboards inside the pipeline, unexplained readiness scores or predictions styled as measured results.
 
 ## Ask LabFlow layout
 
@@ -114,6 +131,33 @@ The conversation labels answer route, sources, confidence and limitations. Relat
 Tools groups workspaces by job: Write, Structure, Visualise and Publish. Each tool has a distinct icon, concise purpose, persistent privacy reminder and consistent stage header. Editors keep source and preview visually separate. Diagram Studio presents a line-numbered source editor beside a gridded SVG stage, with templates, syntax help, TD/LR controls, validation, node/relation counts, fit/zoom controls and a local editable-SVG download. These controls extend the shared Tool Stage rather than creating a separate visual language.
 
 Tool state is volatile. Opening a local file never implies upload. Reload returns every editor to its checked-in example.
+
+## Project workflow composition
+
+CHOSE uses one page-level sequence and one contained navigation level:
+
+```text
+Project header
+→ project summary strip
+→ Process / Experiment / Results / Review navigator
+→ current-step heading
+→ contained section tabs
+→ current work surface
+→ Back / Save draft / Save and continue
+```
+
+The current-step heading is a plain section boundary, not another card or hero banner. It shows step number, expected output, title and concise description without repeating project ID, owner and status already visible in the page header or summary.
+
+Contained tabs are allowed only for the sections inside the active step:
+
+| Step | Contained sections |
+| --- | --- |
+| Process | Chemistry · Fabrication · Stack Review |
+| Experiment | Setup · Execution · Summary |
+| Results | Files · Mapping · Quality Review |
+| Review | Overview · Compare · Findings · Report & Export |
+
+The project navigator is compact on desktop and scrolls locally on narrow screens. Wide tables scroll inside `table-wrap`; the complete page never develops horizontal overflow.
 
 ## Scientific interaction rules
 
@@ -154,8 +198,9 @@ Smart Import exposes mappings and unit conversions before confirmation. Validati
 - Mobile uses a single content column with scoped horizontal scrolling for tables and steppers.
 - No page may introduce page-level horizontal overflow.
 - Touch targets and control labels remain operable at compact density.
+- CHOSE uses one horizontal four-step project navigator: Process, Experiment, Results and Review. Contained tabs organise subsections without adding another navigation hierarchy.
 - Project steps are tested at 1600, 1024, 768 and 390 pixels. Builder/Review pairs stack before their scientific controls become compressed.
-- The project stepper scrolls horizontally below the desktop layout and centers the active step on entry.
+- The project navigator scrolls horizontally below the desktop layout and centers the active step on entry.
 - Wide scientific tables keep their own scroll region; forms, findings and report panels reflow inside the viewport.
 - Stack fields retain visible Material, Thickness, Function and Process labels on mobile. Layer thicknesses never wrap into vertical fragments.
 
@@ -165,7 +210,7 @@ Global search is local, ephemeral and grouped by domain. It supports pointer inp
 
 Theme, palette and density remain coherent across normal internal navigation, but reload restores checked-in defaults. The pre-style theme controller prevents cross-page flicker.
 
-When a project is open, the primary sidebar adds a contextual project entry directly below Workspace. It shows the project name and stable identifier, retains the current pipeline step in its link and is the active navigation item. Workspace remains the parent destination rather than being marked as the current page. The same hierarchy remains visible in the tablet and mobile navigation drawer.
+When a project is open, the primary sidebar adds a contextual project entry directly below Workspace. It shows the project name and stable identifier, retains the current pipeline step in its link and is the active navigation item. The project does not add a second internal sidebar; its pipeline navigator appears once above the current step. Workspace remains the parent destination rather than being marked as the current page. The same hierarchy remains visible in the tablet and mobile navigation drawer.
 
 ## Accessibility contract
 

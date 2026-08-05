@@ -113,7 +113,7 @@
   }
 
   function evidencePanel(response, {icon, esc}) {
-    return `<div class="panel-header"><div><h3 class="mb-0">Evidence</h3><small>${response.evidence.length} sources · ${response.experiments.length} linked experiments</small></div><span class="badge badge-success">Traceable</span></div><div class="panel-body stack"><div class="evidence-list">${response.evidence.map((item) => evidenceMarkup(item, esc)).join("")}</div><div><h4 class="mb-1">Linked experiments</h4><div class="cluster">${response.experiments.map((id) => `<a class="badge badge-accent" href="project.html?project=PRJ-2026-014&step=analysis-report&experiment=${id}">${esc(id)}</a>`).join("")}</div></div><div class="notice"><div>${icon("lock")}</div><div><strong>Evidence remains read only</strong><p>Generated actions require review before changing any working data.</p></div></div></div>`;
+    return `<div class="panel-header"><div><h3 class="mb-0">Evidence</h3><small>${response.evidence.length} sources · ${response.experiments.length} linked experiments</small></div><span class="badge badge-success">Traceable</span></div><div class="panel-body stack"><div class="evidence-list">${response.evidence.map((item) => evidenceMarkup(item, esc)).join("")}</div><div><h4 class="mb-1">Linked experiments</h4><div class="cluster">${response.experiments.map((id) => `<a class="badge badge-accent" href="project.html?project=PRJ-2026-014&step=review&view=findings&experiment=${id}">${esc(id)}</a>`).join("")}</div></div><div class="notice"><div>${icon("lock")}</div><div><strong>Evidence remains read only</strong><p>Generated actions require review before changing any working data.</p></div></div></div>`;
   }
 
   function savedViewMarkup(item, esc, icon) {
@@ -437,7 +437,7 @@
     root.innerHTML = header(
       "AI & Models",
       "Knowledge assistance, dataset construction, ML/DL evaluation, scientific vision and reviewed predictions in one coherent LabFlow workspace.",
-      `<a class="btn" href="project.html?project=PRJ-2026-014&step=analysis-report">${icon("chart")} Open current project</a><button class="btn btn-primary" data-ai-open="datasets">${icon("database")} Dataset Studio</button>`,
+      `<a class="btn" href="project.html?project=PRJ-2026-014&step=review">${icon("chart")} Open current project</a><button class="btn btn-primary" data-ai-open="datasets">${icon("database")} Dataset Studio</button>`,
       {eyebrow:"Laboratory AI and data operations"}
     ) + `${metricStrip([
       ["Collect","Normal laboratory work","projects, experiments, files and images"],

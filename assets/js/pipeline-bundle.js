@@ -3,51 +3,43 @@ window.LabFlowPipelines = {
   "chose": {
     "id": "chose",
     "name": "CHOSE Perovskite Workflow",
-    "version": 1.0,
+    "version": 2.0,
     "status": "primary",
-    "description": "Structured preparation, device stack definition, scientific data analysis, reporting and export for perovskite research.",
+    "description": "Define reusable fabrication processes, execute traceable experiments, review measurement results and produce evidence-linked reports.",
     "project_type": "perovskite-research",
     "accent": "blue",
     "steps": [
       {
-        "id": "solutions",
-        "title": "Solutions, Solvents & Solutes",
-        "short_title": "Solutions",
-        "view": "solutions",
-        "description": "Reuse or define chemicals and prepare traceable solution batches.",
-        "output": "Structured solution batches and recipes"
+        "id": "process",
+        "title": "Process Definition",
+        "short_title": "Process",
+        "view": "chose-process",
+        "description": "Define reusable chemistry, substrate preparation, fabrication operations and the expected device stack.",
+        "output": "Versioned process definition"
       },
       {
-        "id": "stack",
-        "title": "Stack Preparation",
-        "short_title": "Stack",
-        "view": "stack",
-        "description": "Define ordered perovskite device layers, samples and fabrication context.",
-        "output": "Device stacks and sample identifiers"
+        "id": "experiment",
+        "title": "Experiment Execution",
+        "short_title": "Experiment",
+        "view": "chose-experiment",
+        "description": "Create an experiment from a process snapshot and record actual batches, samples, devices, timings and deviations.",
+        "output": "Traceable experiment execution"
       },
       {
-        "id": "ingest",
-        "title": "Data Ingest",
-        "short_title": "Data",
-        "view": "ingest",
-        "description": "Import or manually map measurements while preserving provenance.",
-        "output": "Validated measurement datasets"
+        "id": "results",
+        "title": "Results",
+        "short_title": "Results",
+        "view": "chose-results",
+        "description": "Attach result files, map scientific fields, normalize units and review result-set quality.",
+        "output": "Validated result sets"
       },
       {
-        "id": "analysis-report",
-        "title": "Analysis & Report",
-        "short_title": "Analysis",
-        "view": "analysis",
-        "description": "Visualise data, inspect quality, compare experiments and assemble evidence-linked reports.",
-        "output": "Validated findings, comparisons, charts and report packages"
-      },
-      {
-        "id": "export",
-        "title": "Export",
-        "short_title": "Export",
-        "view": "export",
-        "description": "Produce the project ZIP and a transparent NOMAD-ready package.",
-        "output": "Project and NOMAD export bundles"
+        "id": "review",
+        "title": "Review & Export",
+        "short_title": "Review",
+        "view": "chose-review",
+        "description": "Analyse and compare results, review findings, approve conclusions and generate transparent export packages.",
+        "output": "Reviewed findings, reports and export packages"
       }
     ]
   },
