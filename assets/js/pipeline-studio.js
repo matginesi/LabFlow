@@ -268,9 +268,9 @@
       const context = currentContext();
       highlight.innerHTML = highlightSource(textarea.value, context.document.format) + (textarea.value.endsWith("\n") ? "\n " : "");
       gutter.textContent = textarea.value.split("\n").map((_, index) => index + 1).join("\n");
-      highlight.scrollTop = textarea.scrollTop;
-      highlight.scrollLeft = textarea.scrollLeft;
-      gutter.scrollTop = textarea.scrollTop;
+      highlight.style.transform = `translateY(${-textarea.scrollTop}px)`;
+      highlight.style.transformOrigin = "0 0";
+      gutter.style.transform = `translateY(${-textarea.scrollTop}px)`;
       const analysis = analyseDraft(textarea.value, context.document, context.pipeline);
       const preview = document.getElementById("studio-preview");
       if (preview) preview.innerHTML = previewMarkup({analysis, document:context.document, pipeline:context.pipeline, icon, esc});
@@ -282,7 +282,7 @@
       const reset = document.getElementById("studio-reset");
       if (reset) reset.disabled = !dirty;
       const outline = document.getElementById("studio-outline");
-      if (outline) outline.innerHTML = outlineMarkup(studioRecord());
+      if (outline) { outline.innerHTML = outlineMarkup(studioRecord()); bindOutlineClicks(); }
       updateCursor();
     }
 
@@ -307,16 +307,13 @@
         renderShell();
       });
       documentSelect?.addEventListener("change", () => { documentPath = documentSelect.value; renderShell(); });
-      document.querySelectorAll("[data-studio-document]").forEach((button) => button.addEventListener("click", () => { documentPath = button.dataset.studioDocument; renderShell(); }));
+      bindOutlineClicks();
       textarea?.addEventListener("input", () => {
         const context = currentContext();
         draftStore.set(draftKey(context.document.path), textarea.value);
         updateEditorVisuals();
       });
-      textarea?.addEventListener("scroll", () => {
-        if (highlight) { highlight.scrollTop = textarea.scrollTop; highlight.scrollLeft = textarea.scrollLeft; }
-        if (gutter) gutter.scrollTop = textarea.scrollTop;
-      });
+      textarea?.addEventListener("scroll", syncEditorScroll);
       textarea?.addEventListener("keyup", updateCursor);
       textarea?.addEventListener("click", updateCursor);
       textarea?.addEventListener("keydown", (event) => {
@@ -339,6 +336,19 @@
         download?.(new Blob([context.text], {type:context.document.format === "json" ? "application/json" : "application/yaml"}), filename);
         toast?.("Local draft downloaded for external review.");
       });
+    }
+
+    function bindOutlineClicks() {
+      document.querySelectorAll("[data-studio-document]").forEach((button) => button.addEventListener("click", () => { documentPath = button.dataset.studioDocument; renderShell(); }));
+    }
+
+    function syncEditorScroll() {
+      const textarea = document.getElementById("studio-source");
+      const highlight = document.getElementById("studio-highlight");
+      const gutter = document.getElementById("studio-gutter");
+      if (!textarea) return;
+      if (highlight) { highlight.style.transform = `translateY(${-textarea.scrollTop}px)`; highlight.style.transformOrigin = "0 0"; }
+      if (gutter) gutter.style.transform = `translateY(${-textarea.scrollTop}px)`;
     }
 
     documentPath = studioRecord().entry || studioRecord().documents[0]?.path || "";
