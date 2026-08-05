@@ -1,0 +1,24 @@
+schema_version: labflow.defaults.v1
+id: chose-operation-types
+items:
+  - id: rinsing
+    label: Rinsing / washing
+    category: substrate_preparation
+  - id: sonication
+    label: Sonication
+    category: substrate_preparation
+  - id: uv_ozone
+    label: UV/Ozone
+    category: surface_treatment
+  - id: spin_coating
+    label: Spin coating
+    category: deposition
+  - id: annealing
+    label: Annealing
+    category: thermal
+  - id: evaporation
+    label: Evaporation
+    category: deposition
+  - id: custom
+    label: Custom operation
+    category: custom

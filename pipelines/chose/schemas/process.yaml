@@ -1,0 +1,76 @@
+schema_version: labflow.record-schema.v1
+record_type: process_version
+label: CHOSE process version document
+record_path: process
+stable_id_field: process_id
+version_field: version
+immutable_when: approved
+
+document:
+  required:
+    - process
+    - solution_definitions
+    - substrate
+    - fabrication_operations
+    - stack
+
+fields:
+  process_id:
+    type: string
+    required: true
+    pattern: '^PROC-CHOSE-[0-9]{3}$'
+  version:
+    type: integer
+    required: true
+    minimum: 1
+  name:
+    type: string
+    required: true
+  status:
+    type: enum
+    required: true
+    values: [draft, review, approved, superseded]
+
+collections:
+  solution_definitions:
+    type: object_list
+    required: true
+    minimum_items: 1
+    stable_id_field: id
+    version_field: version
+  fabrication_operations:
+    type: ordered_list
+    required: true
+    minimum_items: 1
+    stable_id_field: id
+  stack.layers:
+    type: ordered_list
+    required: true
+    minimum_items: 1
+    stable_id_field: id
+
+relationships:
+  solution_definition:
+    cardinality: many
+    versioned: true
+  substrate_definition:
+    path: substrate
+    cardinality: one
+    versioned: true
+  stack_definition:
+    path: stack
+    cardinality: one
+    versioned: true
+
+validation:
+  - id: no-execution-fields
+    validator: forbidden_fields_absent
+    fields: [operator, actual_parameters, actual_timestamps, solution_batch_id]
+    severity: error
+  - id: operation-order
+    validator: ordered_unique_positions
+    path: fabrication_operations
+    severity: error
+  - id: stack-traceability
+    validator: every_stack_layer_has_producer
+    severity: error

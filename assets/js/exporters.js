@@ -27,11 +27,93 @@
     finally { link.remove(); setTimeout(()=>URL.revokeObjectURL(objectUrl),1500); }
   }
   const yamlString = (value) => typeof value === "number" || typeof value === "boolean" ? String(value) : `"${String(value ?? "").replace(/\\/g,"\\\\").replace(/"/g,'\\"')}"`;
-  function projectYaml(project, pipeline) { const completed=Math.ceil(project.progress/100*pipeline.steps.length);return ["schema: labflow.project.v1",`id: ${yamlString(project.id)}`,`name: ${yamlString(project.name)}`,`pipeline: ${yamlString(pipeline.id)}`,`pipeline_version: ${yamlString(pipeline.version)}`,`status: ${yamlString(project.status)}`,`progress: ${project.progress}`,`owner: ${yamlString(project.owner)}`,`objective: ${yamlString(project.objective)}`,"counts:",`  samples: ${project.samples}`,`  measurements: ${project.measurements}`,`  findings: ${project.findings}`,"steps:",...pipeline.steps.flatMap((step,index)=>[`  - id: ${yamlString(step.id)}`,`    status: ${index<completed?"completed":"available"}`,`    output: ${yamlString(step.output)}`])].join("\n")+"\n"; }
+  const asArray = (value) => Array.isArray(value) ? value : [];
+  const jsonClone = (value) => JSON.parse(JSON.stringify(value ?? {}));
+  const yamlList = (values, indent = 0) => asArray(values).map((value) => `${" ".repeat(indent)}- ${yamlString(value)}`);
+  function pipelineContractJson(pipeline) { return JSON.stringify(jsonClone(pipeline), null, 2) + "\n"; }
+  function projectYaml(project, pipeline) {
+    const steps = asArray(pipeline?.steps);
+    const completed = steps.length ? Math.ceil(Number(project.progress || 0) / 100 * steps.length) : 0;
+    const lines = [
+      "schema_version: labflow.project.v1",
+      `id: ${yamlString(project.id)}`,
+      `name: ${yamlString(project.name)}`,
+      `status: ${yamlString(project.status)}`,
+      `progress: ${Number(project.progress || 0)}`,
+      `owner: ${yamlString(project.owner)}`,
+      `objective: ${yamlString(project.objective)}`,
+      "pipeline:",
+      `  id: ${yamlString(pipeline?.id)}`,
+      `  name: ${yamlString(pipeline?.name)}`,
+      `  schema_version: ${yamlString(pipeline?.schema_version || "legacy-navigation-only")}`,
+      `  version: ${yamlString(pipeline?.version)}`,
+      `  domain: ${yamlString(pipeline?.domain || pipeline?.project_type)}`,
+      `  contract_included: true`,
+      "counts:",
+      `  samples: ${Number(project.samples || 0)}`,
+      `  measurements: ${Number(project.measurements || 0)}`,
+      `  findings: ${Number(project.findings || 0)}`,
+      "steps:"
+    ];
+    steps.forEach((step, index) => {
+      const completion = step.completion || {};
+      lines.push(
+        `  - id: ${yamlString(step.id)}`,
+        `    title: ${yamlString(step.title)}`,
+        `    status: ${yamlString(index < completed ? "completed" : "available")}`,
+        `    output: ${yamlString(step.output)}`,
+        `    sections: [${asArray(step.sections).map((section) => yamlString(section.id)).join(", ")}]`,
+        "    completion:",
+        `      label: ${yamlString(completion.label || "Complete step")}`,
+        `      mode: ${yamlString(completion.mode || "unspecified")}`,
+        "      requires:"
+      );
+      lines.push(...(asArray(completion.requires).length ? yamlList(completion.requires, 8) : ["        []"]));
+      lines.push("      rules:");
+      if (asArray(completion.rules).length) {
+        asArray(completion.rules).forEach((rule) => lines.push(
+          `        - id: ${yamlString(rule.id)}`,
+          `          validator: ${yamlString(rule.validator)}`,
+          `          severity: ${yamlString(rule.severity)}`
+        ));
+      } else lines.push("        []");
+      lines.push("      expected_evidence:");
+      lines.push(...(asArray(completion.expected_evidence).length ? yamlList(completion.expected_evidence, 8) : ["        []"]));
+    });
+    return lines.join("\n") + "\n";
+  }
   function jsonl(project, data) { return data.map((row)=>JSON.stringify({project_id:project.id,measurement_type:"JV summary",...row})).join("\n")+"\n"; }
   function csv(data) { const keys=Object.keys(data[0]||{});const quote=(value)=>/[",\n]/.test(String(value))?`"${String(value).replace(/"/g,'""')}"`:value;return keys.join(",")+"\n"+data.map((row)=>keys.map((key)=>quote(row[key])).join(",")).join("\n")+"\n"; }
-  function nomadYaml(project) { return `definitions:\n  name: LabFlow project export\ndata:\n  project_id: ${yamlString(project.id)}\n  project_name: ${yamlString(project.name)}\n  source: LabFlow static research workspace\n  upload_state: preview\n`; }
+  function nomadYaml(project, pipeline = {}) {
+    const exportContract = pipeline.exports?.nomad || {};
+    const mapping = pipeline.resources?.mappings?.nomad || {};
+    const requiredEntities = asArray(mapping.required_entities);
+    const lines = [
+      "schema_version: labflow.nomad-preview.v1",
+      "definitions:",
+      "  name: LabFlow project export",
+      `  pipeline_id: ${yamlString(pipeline.id || "unknown")}`,
+      `  pipeline_version: ${yamlString(pipeline.version || "unknown")}`,
+      `  mapping_profile: ${yamlString(exportContract.mapping_profile || mapping.id || "unmapped")}`,
+      "data:",
+      `  project_id: ${yamlString(project.id)}`,
+      `  project_name: ${yamlString(project.name)}`,
+      "  source: LabFlow static research workspace",
+      `  upload_state: ${yamlString(exportContract.mode || mapping.mode || "readiness_preview")}`,
+      `  remote_submission: ${Boolean(exportContract.remote_submission ?? mapping.remote_submission ?? false)}`,
+      "  required_entities:"
+    ];
+    lines.push(...(requiredEntities.length ? yamlList(requiredEntities, 4) : ["    []"]));
+    lines.push(
+      "  provenance:",
+      `    require_source_manifest: ${Boolean(mapping.provenance?.require_source_manifest ?? true)}`,
+      `    require_process_snapshot: ${Boolean(mapping.provenance?.require_process_snapshot ?? true)}`,
+      `    preserve_open_issues: ${Boolean(mapping.provenance?.preserve_open_issues ?? true)}`,
+      "  validation_state: preview_only"
+    );
+    return lines.join("\n") + "\n";
+  }
 
   Log.info("module.ready", { palettes: Object.keys(palettes).length });
-  window.LabFlowExport = {palettes, download, projectYaml, jsonl, csv, nomadYaml, zipBytes, zipStore:(files,type="application/zip")=>new Blob([zipBytes(files)],{type})};
+  window.LabFlowExport = {palettes, download, projectYaml, pipelineContractJson, jsonl, csv, nomadYaml, zipBytes, zipStore:(files,type="application/zip")=>new Blob([zipBytes(files)],{type})};
 })();

@@ -1,0 +1,79 @@
+schema_version: labflow.record-schema.v1
+record_type: result_set
+label: CHOSE result-set document
+record_path: result_set
+stable_id_field: result_set_id
+
+document:
+  required:
+    - result_set
+    - source_files
+    - mapping_decisions
+    - normalized_records
+    - quality_issues
+    - quality_context
+
+fields:
+  result_set_id:
+    type: string
+    required: true
+    pattern: '^RST-[A-Z0-9-]+$'
+  name:
+    type: string
+    required: true
+  experiment_id:
+    type: relation
+    relation: experiment
+    required: true
+  measurement_type:
+    type: string
+    required: true
+  parser_profile:
+    type: relation
+    relation: mapping_profile
+    required: true
+
+collections:
+  source_files:
+    type: object_list
+    required: true
+    minimum_items: 1
+    stable_id_field: demo_identity
+  mapping_decisions:
+    type: object_list
+    required: true
+    minimum_items: 1
+  normalized_records:
+    type: object_list
+    required: true
+    minimum_items: 1
+  quality_issues:
+    type: object_list
+    required: true
+    stable_id_field: id
+
+source_file_contract:
+  required_fields:
+    - file_name
+    - experiment_id
+    - demo_identity
+    - parser_profile
+    - parsing_status
+  optional_fields:
+    - sample_scope
+    - acquisition_time
+    - instrument_id
+
+validation:
+  - id: source-immutable
+    validator: source_file_identity_preserved
+    severity: error
+  - id: mapping-decisions
+    validator: required_columns_have_decisions
+    severity: error
+  - id: quantity-units
+    validator: normalized_quantities_have_units
+    severity: error
+  - id: identity-links
+    validator: records_link_to_experiment_and_sample
+    severity: error

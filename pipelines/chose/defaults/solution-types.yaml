@@ -1,0 +1,30 @@
+schema_version: labflow.defaults.v1
+id: chose-solution-types
+items:
+  - id: perovskite_precursor
+    label: perovskite precursor
+    role: absorber
+  - id: etl
+    label: n-type (ETL)
+    role: electron_transport
+  - id: htl
+    label: p-type (HTL)
+    role: hole_transport
+  - id: solvent
+    label: solvent
+  - id: additive
+    label: additive
+  - id: passivation
+    label: passivation agent/layer
+  - id: conductor
+    label: conductor (contact)
+  - id: encapsulant
+    label: encapsulant
+  - id: semiconductor
+    label: semiconductor (intrinsic)
+  - id: molecule
+    label: molecule
+  - id: polymer
+    label: polymer
+  - id: other
+    label: other

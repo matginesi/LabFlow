@@ -1,0 +1,205 @@
+schema_version: labflow.demo.v1
+experiment:
+  experiment_id: EXP-067
+  name: Mixed-cation validation batch
+  status: review
+  start_date: '2026-08-03'
+  operator: Matteo Ginesi
+  operator_options:
+  - Matteo Ginesi
+  - Laura Conti
+  environment:
+    atmosphere: N2 glovebox
+    temperature:
+      value: 24
+      unit: degC
+    humidity: null
+  environment_options:
+  - N2 glovebox
+  - Ambient laboratory
+  process_snapshot:
+    process_id: PROC-CHOSE-014
+    version: 2
+    label: CHOSE Standard v2 · PROC-CHOSE-014/v2
+    immutable: true
+    demo_hash: sha256:poc-process-snapshot-014-v2
+  execution_window: 03 Aug 2026 · 09:10–15:32
+batches:
+- id: SOL-B01
+  definition: SOL-011/v3
+  prepared: 2.00 mL
+  operator: 01 Aug · MG
+  status: reviewed
+- id: SOL-B03
+  definition: SOL-011/v3
+  prepared: 1.50 mL
+  operator: 02 Aug · MG
+  status: reviewed
+- id: HTL-B02
+  definition: SOL-017/v2
+  prepared: 1.00 mL
+  operator: 02 Aug · LC
+  status: review
+samples:
+- id: S06
+  substrate: SUB-ITO-01/v2
+  variant: Reference
+  precursor_batch: B04
+  devices: 6
+  status: review
+- id: S07
+  substrate: SUB-ITO-01/v2
+  variant: Anneal +5 degC
+  precursor_batch: B05
+  devices: 6
+  status: active
+- id: S08
+  substrate: SUB-ITO-01/v2
+  variant: Anneal +5 degC
+  precursor_batch: B06
+  devices: 8
+  status: active
+execution_records:
+- operation_id: OP-01
+  order: 1
+  operation: Rinsing / washing
+  planned: 3 cycles
+  actual: 3 cycles
+  execution_time: 09:10–09:20
+  equipment: Wet bench
+  status: completed
+- operation_id: OP-02
+  order: 2
+  operation: Sonication
+  planned: 40 kHz · 10 min
+  actual: 40 kHz · 10 min
+  execution_time: 09:22–09:32
+  equipment: Wet bench
+  status: completed
+- operation_id: OP-03
+  order: 3
+  operation: UV/Ozone
+  planned: 15 min
+  actual: 15 min
+  execution_time: 09:40–09:55
+  equipment: Wet bench
+  status: completed
+- operation_id: OP-04
+  order: 4
+  operation: SnO2 spin coating
+  planned: 4000 rpm · 30 s
+  actual: 3980 rpm · 30 s
+  execution_time: '10:04'
+  equipment: Spin coater 02
+  status: completed
+- operation_id: OP-05
+  order: 5
+  operation: ETL annealing
+  planned: 100 degC · 30 min
+  actual: 100 degC · 28 min
+  execution_time: 10:06–10:34
+  equipment: Spin coater 02
+  status: deviation
+- operation_id: OP-06
+  order: 6
+  operation: Perovskite coating
+  planned: 4000 rpm · 30 s
+  actual: 4000 rpm · 30 s
+  execution_time: '11:02'
+  equipment: Spin coater 02
+  status: completed
+- operation_id: OP-07
+  order: 7
+  operation: Au evaporation
+  planned: 80 nm
+  actual: 82 nm
+  execution_time: '15:20'
+  equipment: Thermal evaporator
+  status: completed
+deviations:
+- id: DEV-EXP-067-01
+  operation_id: OP-05
+  statement: ETL annealing ended two minutes earlier than planned.
+  impact: Minor · retain sample
+  decision: Keep visible in comparison
+completion:
+  recorded_operations: 7
+  required_operations: 7
+  warnings:
+  - Humidity is missing
+  ready_for_results: true
+devices:
+- id: S06-D01
+  sample_id: S06
+  status: declared
+- id: S06-D02
+  sample_id: S06
+  status: declared
+- id: S06-D03
+  sample_id: S06
+  status: declared
+- id: S06-D04
+  sample_id: S06
+  status: declared
+- id: S06-D05
+  sample_id: S06
+  status: declared
+- id: S06-D06
+  sample_id: S06
+  status: declared
+- id: S07-D01
+  sample_id: S07
+  status: declared
+- id: S07-D02
+  sample_id: S07
+  status: declared
+- id: S07-D03
+  sample_id: S07
+  status: declared
+- id: S07-D04
+  sample_id: S07
+  status: declared
+- id: S07-D05
+  sample_id: S07
+  status: declared
+- id: S07-D06
+  sample_id: S07
+  status: declared
+- id: S08-D01
+  sample_id: S08
+  status: declared
+- id: S08-D02
+  sample_id: S08
+  status: declared
+- id: S08-D03
+  sample_id: S08
+  status: declared
+- id: S08-D04
+  sample_id: S08
+  status: declared
+- id: S08-D05
+  sample_id: S08
+  status: declared
+- id: S08-D06
+  sample_id: S08
+  status: declared
+- id: S08-D07
+  sample_id: S08
+  status: declared
+- id: S08-D08
+  sample_id: S08
+  status: declared
+validation:
+  rule_results:
+    immutable-snapshot:
+      status: pass
+      detail: The process snapshot is immutable and carries a demonstration hash.
+    actual-values:
+      status: pass
+      detail: All seven required operations have actual values and execution times.
+    explicit-deviations:
+      status: pass
+      detail: The shortened annealing operation has a linked deviation record.
+    environmental-context:
+      status: warning
+      detail: Humidity is missing from the environment record.

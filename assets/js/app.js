@@ -22,11 +22,84 @@
   const A = window.LabFlowDataSource;
   const C = window.LabFlowConfig || {};
   const P = window.LabFlowPipelines;
+  const R = window.LabFlowPipelineRuntime;
   const E = window.LabFlowExport;
   const S = window.LabFlowState;
   const T = window.LabFlowTheme;
   const DOCS = window.LabFlowDocs || [];
   const Log = window.LabFlowLogger?.child("app") || {debug(){},info(){},warn(){},error(){},time(){return () => {};}};
+
+  function nestedValue(value, path, fallback = undefined) {
+    const keys = Array.isArray(path) ? path : String(path || "").split(".").filter(Boolean);
+    let current = value;
+    for (const key of keys) {
+      if (current == null || typeof current !== "object" || !(key in current)) return fallback;
+      current = current[key];
+    }
+    return current == null ? fallback : current;
+  }
+
+  function pipelineResource(pipeline, group, key, fallback = {}) {
+    return nestedValue(pipeline, ["resources", group, key], fallback);
+  }
+
+  function pipelineStep(pipeline, stepId) {
+    return asArray(pipeline?.steps).find((item) => item.id === stepId) || null;
+  }
+
+  function pipelineSections(pipeline, stepId) {
+    return asArray(pipelineStep(pipeline, stepId)?.sections);
+  }
+
+  function chosePipeline(pipeline = null) {
+    return pipeline?.id === "chose" ? pipeline : (P?.chose || {});
+  }
+
+  function choseDemo(pipeline, key, fallback = {}) {
+    return pipelineResource(chosePipeline(pipeline), "demo", key, fallback);
+  }
+
+  function choseMapping(pipeline, key, fallback = {}) {
+    return pipelineResource(chosePipeline(pipeline), "mappings", key, fallback);
+  }
+
+  function normalizePipelineFinding(item) {
+    const statusMap = {accepted:"accepted", needs_revision:"review", proposed:"action", rejected:"review"};
+    return {
+      score: Number(item?.score) || 0,
+      title: item?.title || item?.statement || "Untitled finding",
+      detail: item?.statement || item?.detail || "",
+      evidence: item?.evidence_label || asArray(item?.evidence_refs).join(" · ") || "No evidence linked",
+      status: statusMap[item?.review_status] || item?.status || "review",
+      type: item?.type || "observation",
+      id: item?.finding_id || item?.id || ""
+    };
+  }
+
+  function hydrateChoseDemoFromContract() {
+    R?.hydrateData(D, "chose");
+    const pipeline = chosePipeline();
+    Log.info("pipeline.contract-hydrated", {
+      pipeline: pipeline.id,
+      version: pipeline.version,
+      measurements: asArray(D.demoDataset).length,
+      findings: asArray(D.aiFindings).length,
+      issues: asArray(D.validationIssues).length
+    });
+  }
+
+  hydrateChoseDemoFromContract();
+
+  const CHOSE_CONTRACT = chosePipeline();
+  const CHOSE_DEMO_PROCESS = choseDemo(CHOSE_CONTRACT, "process", {});
+  const CHOSE_DEMO_EXPERIMENT = choseDemo(CHOSE_CONTRACT, "experiment", {});
+  const CHOSE_DEMO_RESULTS = choseDemo(CHOSE_CONTRACT, "results", {});
+  const CHOSE_DEMO_REVIEW = choseDemo(CHOSE_CONTRACT, "review", {});
+  const CHOSE_JV_MAPPING = choseMapping(CHOSE_CONTRACT, "jv", {});
+  const CHOSE_NOMAD_MAPPING = choseMapping(CHOSE_CONTRACT, "nomad", {});
+  const CHOSE_SOLUTION_TYPES = asArray(pipelineResource(CHOSE_CONTRACT, "defaults", "solution_types", {}).items);
+  const CHOSE_OPERATION_TYPES = asArray(pipelineResource(CHOSE_CONTRACT, "defaults", "operation_types", {}).items);
+
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -615,18 +688,42 @@
     return `<nav class="project-pipeline-nav" aria-label="Project pipeline">${pipeline.steps.map((item, index) => `<a class="step-link ${stepState(index, currentIndex, project)}" ${item.id === step.id ? 'aria-current="step"' : ""} href="project.html?project=${encodeURIComponent(project.id)}&step=${encodeURIComponent(item.id)}"><span class="step-index">${index < currentIndex || project.progress === 100 ? icon("check") : index + 1}</span><span class="step-copy"><strong>${esc(item.short_title)}</strong><span>${esc(item.output)}</span></span></a>`).join("")}</nav>`;
   }
 
+  function stepGate(pipeline, step) {
+    if (R?.evaluateStep) return R.evaluateStep(pipeline, step.id);
+    const completion = step.completion || {};
+    const errors = asArray(completion.rules).filter((item) => item.severity === "error").length;
+    const warnings = asArray(completion.rules).filter((item) => item.severity === "warning").length;
+    return {ready:errors === 0, status:errors ? "blocked" : warnings ? "warning" : "ready", errors, warnings, missing:[], rules:[]};
+  }
+
   function stepTop(project, pipeline, step) {
     const currentIndex = pipeline.steps.findIndex((item) => item.id === step.id);
-    return `<header class="workflow-heading"><div><span class="page-eyebrow">Step ${currentIndex + 1} of ${pipeline.steps.length} · ${esc(step.output)}</span><h2>${esc(step.title)}</h2><p>${esc(step.description)}</p></div></header>`;
+    const completion = step.completion || {};
+    const gate = stepGate(pipeline, step);
+    const gateLabel = gate.ready ? (gate.warnings ? `${gate.warnings} visible warning${gate.warnings === 1 ? "" : "s"}` : "Completion gate ready") : `${gate.errors} blocking issue${gate.errors === 1 ? "" : "s"}`;
+    return `<header class="workflow-heading"><div><span class="page-eyebrow">Step ${currentIndex + 1} of ${pipeline.steps.length} · ${esc(step.output)}</span><h2>${esc(step.title)}</h2><p>${esc(step.description)}</p></div><div class="workflow-contract-summary" aria-label="Step contract"><span class="badge">${asArray(step.sections).length} sections</span><span class="badge">${asArray(completion.requires).length} required records</span><span class="badge ${gate.ready ? gate.warnings ? "badge-warning" : "badge-success" : "badge-error"}">${esc(gateLabel)}</span></div></header>`;
   }
 
   function projectStepFooter(project, pipeline, step) {
     const index = pipeline.steps.findIndex((item) => item.id === step.id);
     const previous = pipeline.steps[index - 1];
     const next = pipeline.steps[index + 1];
+    const completion = step.completion || {};
+    const completionLabel = completion.label || "Save step";
+    const gate = stepGate(pipeline, step);
     const previousLink = previous ? `<a class="btn" href="project.html?project=${encodeURIComponent(project.id)}&step=${encodeURIComponent(previous.id)}">${icon("arrow")} Back to ${esc(previous.short_title)}</a>` : `<a class="btn" href="index.html#project-portfolio">${icon("home")} Workspace</a>`;
-    const nextLink = next ? `<a class="btn btn-primary" href="project.html?project=${encodeURIComponent(project.id)}&step=${encodeURIComponent(next.id)}">Save and continue to ${esc(next.short_title)}</a>` : `<button class="btn btn-primary" data-export="bundle">${icon("download")} Generate reviewed package</button>`;
-    return `<footer class="workflow-actions-footer"><div>${previousLink}</div><div class="cluster"><button class="btn" id="save-step">Save draft</button>${nextLink}</div></footer>`;
+    const blockedLabel = `${gate.errors} blocker${gate.errors === 1 ? "" : "s"} to resolve`;
+    const nextLink = next
+      ? gate.ready
+        ? `<a class="btn btn-primary" href="project.html?project=${encodeURIComponent(project.id)}&step=${encodeURIComponent(next.id)}">${esc(completionLabel)} · continue to ${esc(next.short_title)}</a>`
+        : `<button class="btn btn-primary" disabled title="${esc(blockedLabel)}">${icon("warning")} ${esc(blockedLabel)}</button>`
+      : gate.ready
+        ? `<button class="btn btn-primary" data-export="bundle">${icon("download")} ${esc(completionLabel)}</button>`
+        : `<button class="btn btn-primary" disabled title="${esc(blockedLabel)}">${icon("warning")} ${esc(blockedLabel)}</button>`;
+    const gateCopy = gate.ready
+      ? `${completion.mode || "draft"} gate · ${asArray(completion.expected_evidence).length} expected evidence items${gate.warnings ? ` · ${gate.warnings} warning${gate.warnings === 1 ? "" : "s"} remain visible` : ""}`
+      : `${completion.mode || "draft"} gate · ${gate.errors} blocking issue${gate.errors === 1 ? "" : "s"} · navigation remains available for review`;
+    return `<footer class="workflow-actions-footer"><div>${previousLink}</div><div class="workflow-gate-copy"><small>${esc(gateCopy)}</small><div class="cluster"><button class="btn" id="save-step">Save draft</button>${nextLink}</div></div></footer>`;
   }
 
   function renderProject() {
@@ -634,17 +731,46 @@
     const pipeline = P[project.pipeline];
     const step = currentStep(project, pipeline);
     const actions = `<label class="sr-only" for="project-switcher">Switch project</label><select class="select project-switcher" id="project-switcher" aria-label="Switch current project">${projectStore().map((item) => `<option value="${esc(item.id)}" ${item.id === project.id ? "selected" : ""}>${esc(item.name)}</option>`).join("")}</select>${pipeline.id === "chose" ? `<a class="btn btn-primary" href="project.html?project=${encodeURIComponent(project.id)}&step=experiment">${icon("plus")} New experiment</a>` : ""}`;
-    const processVersion = pipeline.id === "chose" ? "CHOSE Standard v2" : pipeline.name;
+    const processVersion = pipeline.id === "chose" ? (choseDemo(pipeline, "process", {}).process?.name || pipeline.name) : pipeline.name;
     const projectExperiments = A.listExperiments(project.id);
     const activeExperiment = pipeline.id === "chose" ? (projectExperiments.at(-1)?.id || "No experiment") : "Review session";
-    const blockingIssues = pipeline.id === "chose"
-      ? (project.id === "PRJ-2026-014" ? "3 requiring review" : project.status === "complete" ? "No blockers" : "Review metadata")
-      : "No blockers";
+    const pipelineGates = asArray(pipeline.steps).map((item) => stepGate(pipeline, item));
+    const gateErrors = pipelineGates.reduce((sum, gate) => sum + Number(gate.errors || 0), 0);
+    const gateWarnings = pipelineGates.reduce((sum, gate) => sum + Number(gate.warnings || 0), 0);
+    const blockingIssues = gateErrors
+      ? `${gateErrors} contract blocker${gateErrors === 1 ? "" : "s"}`
+      : gateWarnings
+        ? `${gateWarnings} visible warning${gateWarnings === 1 ? "" : "s"}`
+        : "No blockers";
     $("#page-content").innerHTML = header(project.name, `${pipeline.name} · ${project.objective}`, actions, {eyebrow:"Project workflow",status:badgeStatus(project.status),breadcrumbs:[{label:"Workspace",href:"index.html"},{label:"Projects",href:"index.html#project-portfolio"},{label:esc(project.id)}]}) + `<section class="summary-strip summary-strip-project" aria-label="Project summary"><div class="summary-item"><small>Process version</small><strong>${esc(processVersion)}</strong><span class="summary-detail">Immutable experiment snapshots</span></div><div class="summary-item"><small>Active experiment</small><strong>${esc(activeExperiment)}</strong><span class="summary-detail">${project.samples} samples · ${project.measurements} measurements</span></div><div class="summary-item"><small>Completion</small><strong>${project.progress}%</strong><div class="progress" aria-label="Project progress ${project.progress}%"><span style="width:${project.progress}%"></span></div></div><div class="summary-item"><small>Blocking issues</small><strong>${esc(blockingIssues)}</strong><span class="summary-detail">Visible in Results and export</span></div></section><section class="project-workspace">${projectPipelineNav(project, pipeline, step)}${stepTop(project, pipeline, step)}<div id="step-view">${renderStepView(project, pipeline, step)}</div>${projectStepFooter(project, pipeline, step)}</section>`;
     if (matchMedia("(max-width: 760px)").matches) requestAnimationFrame(() => $(".project-pipeline-nav [aria-current=step]")?.scrollIntoView({block:"nearest",inline:"center"}));
     $("#save-step")?.addEventListener("click", () => toast("Draft applied in page memory. Reload restores the checked-in demonstration."));
     $("#project-switcher").onchange = (event) => navigateWithSettings(`project.html?project=${encodeURIComponent(event.target.value)}`);
     bindProjectInteractions(project, pipeline, step);
+  }
+
+  function renderRegisteredSection(component, context = {}) {
+    const registry = {
+      "chose.process.chemistry": ({pipeline}) => processChemistryView(pipeline),
+      "chose.process.fabrication": ({pipeline}) => processFabricationView(pipeline),
+      "chose.process.stack_review": ({pipeline}) => processStackView(pipeline),
+      "chose.experiment.setup": ({project, pipeline}) => experimentSetupView(project, pipeline),
+      "chose.experiment.execution": ({project, pipeline}) => experimentExecutionView(project, pipeline),
+      "chose.experiment.summary": ({project, pipeline}) => experimentSummaryView(project, pipeline),
+      "chose.results.files": ({project, pipeline}) => resultFilesView(project, pipeline),
+      "chose.results.mapping": ({project, pipeline}) => resultMappingView(project, pipeline),
+      "chose.results.quality": ({project, pipeline}) => resultQualityView(project, pipeline),
+      "chose.review.overview": ({project, pipeline}) => analysisOverview(project, pipeline),
+      "chose.review.compare": ({pipeline}) => comparisonView(pipeline),
+      "chose.review.findings": ({pipeline}) => analysisFindings(pipeline),
+      "chose.review.report_export": ({project, pipeline}) => reportAndExportView(project, pipeline)
+    };
+    const renderer = registry[component];
+    if (!renderer) {
+      Log.error("pipeline.component-missing", {component, pipeline: context.pipeline?.id, step: context.step?.id, section: context.section?.id});
+      return `<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Pipeline component is not registered</strong><p>${esc(component || "No component identifier")} cannot be rendered by this POC.</p></div></div>`;
+    }
+    return renderer(context);
   }
 
   function renderStepView(project, pipeline, step) {
@@ -661,30 +787,29 @@
     return (views[step.view] || quickPlan)(project, pipeline, step);
   }
 
-  const solutionComponents = [
-    {name:"DMF", role:"Primary solvent", amount:"1.60 mL", share:"80% v/v", tone:"dmf"},
-    {name:"DMSO", role:"Co-solvent", amount:"0.40 mL", share:"20% v/v", tone:"dmso"},
-    {name:"FAI", role:"A-site solute", amount:"365.3 mg", share:"90 mol%", tone:"fai"},
-    {name:"MAI", role:"A-site solute", amount:"39.7 mg", share:"10 mol%", tone:"mai"},
-    {name:"PbI₂", role:"Lead halide", amount:"1152.5 mg", share:"1.00 eq", tone:"pbi"}
-  ];
-  const stackLayers = [
-    {material:"Glass / FTO", thickness:"2.2 mm", function:"Substrate + front contact", process:"Cleaning", tone:"substrate"},
-    {material:"SnO₂", thickness:"32 nm", function:"Electron transport", process:"Spin coat", tone:"etl"},
-    {material:"FA/MA perovskite", thickness:"540 nm", function:"Photoactive absorber", process:"Anti-solvent", tone:"absorber"},
-    {material:"Spiro-OMeTAD", thickness:"180 nm", function:"Hole transport", process:"Spin coat", tone:"htl"},
-    {material:"Au", thickness:"80 nm", function:"Back contact", process:"Evaporation", tone:"contact"}
-  ];
+  const solutionDefinitions = asArray(CHOSE_DEMO_PROCESS.solution_definitions);
+  const activeSolutionDefinition = solutionDefinitions[0] || {};
+  const solutionComponents = asArray(activeSolutionDefinition.components);
+  const stackLayers = asArray(CHOSE_DEMO_PROCESS.stack?.layers);
 
-  function solutionReview(components = solutionComponents) {
-    return `<div class="solution-review" role="group" aria-label="Solution review: DMF and DMSO solvent system with FAI, MAI and lead iodide solutes">
-      <div class="solution-composition"><div class="composition-heading"><div><small>Solvent system</small><strong>DMF : DMSO · 4 : 1</strong></div>${badgeStatus("reviewed")}</div><div class="solution-key-facts" role="group" aria-label="Prepared solution summary"><div><span>Total volume</span><strong data-solution-volume>2.00 mL</strong></div><div><span>Concentration</span><strong data-solution-concentration>1.25 M</strong></div><div><span>State</span><strong>Homogeneous precursor</strong></div></div><div class="solvent-meters" role="group" aria-label="DMF 80 percent, DMSO 20 percent"><div class="solvent-meter tone-dmf"><span><b>DMF</b><small>Primary solvent</small></span><strong>80%</strong><div aria-hidden="true"><i style="--fill:80%"></i></div></div><div class="solvent-meter tone-dmso"><span><b>DMSO</b><small>Co-solvent</small></span><strong>20%</strong><div aria-hidden="true"><i style="--fill:20%"></i></div></div></div><div class="solute-strip">${components.filter((item) => !["dmf","dmso"].includes(item.tone)).map((item) => `<span class="solute-${item.tone}"><b>${esc(item.name)}</b><small>${esc(item.share)}</small></span>`).join("")}</div></div>
-      <div class="solution-technical table-wrap"><table class="table-dense"><thead><tr><th>Component</th><th>Function</th><th>Quantity</th><th>Composition</th></tr></thead><tbody>${components.map((item) => `<tr data-solution-component="${item.tone}"><td><i class="component-key tone-${item.tone}"></i><strong>${esc(item.name)}</strong></td><td>${esc(item.role)}</td><td data-component-amount>${esc(item.amount)}</td><td>${esc(item.share)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="validation-rail"><span class="valid">Formula balanced</span><span class="valid">Units explicit</span><span class="warning">Handling metadata incomplete</span></div>
+  function solutionReview(components = solutionComponents, definition = activeSolutionDefinition) {
+    const solvents = components.filter((item) => item.phase === "solvent" || ["dmf", "dmso"].includes(item.tone));
+    const solutes = components.filter((item) => !solvents.includes(item));
+    const referenceVolume = definition.reference_volume ? `${definition.reference_volume.value} ${definition.reference_volume.unit}` : "2.00 mL";
+    const concentration = definition.target_concentration ? `${definition.target_concentration.value} ${definition.target_concentration.unit}` : "1.25 mol/L";
+    const checks = asArray(definition.checks).length ? asArray(definition.checks) : [
+      {label:"Formula balanced", state:"valid"}, {label:"Units explicit", state:"valid"}, {label:"Handling metadata incomplete", state:"warning"}
+    ];
+    const aria = `${definition.name || "Solution"}: ${definition.solvent_ratio || "explicit solvent system"}`;
+    return `<div class="solution-review" role="group" aria-label="${esc(aria)}">
+      <div class="solution-composition"><div class="composition-heading"><div><small>Solvent system</small><strong>${esc(definition.solvent_ratio || solvents.map((item) => item.name).join(" : ") || "Not defined")}</strong></div>${badgeStatus(definition.status || "reviewed")}</div><div class="solution-key-facts" role="group" aria-label="Solution definition summary"><div><span>Reference volume</span><strong data-solution-volume>${esc(referenceVolume)}</strong></div><div><span>Concentration</span><strong data-solution-concentration>${esc(concentration)}</strong></div><div><span>State</span><strong>${esc(definition.state || "Reusable definition")}</strong></div></div><div class="solvent-meters" role="group" aria-label="Solvent composition">${solvents.map((item) => { const fill = Number.parseFloat(item.share) || 50; return `<div class="solvent-meter tone-${esc(item.tone || "interface")}"><span><b>${esc(item.name)}</b><small>${esc(item.role)}</small></span><strong>${esc(item.share)}</strong><div aria-hidden="true"><i style="--fill:${Math.max(0, Math.min(100, fill))}%"></i></div></div>`; }).join("")}</div><div class="solute-strip">${solutes.map((item) => `<span class="solute-${esc(item.tone || "interface")}"><b>${esc(item.name)}</b><small>${esc(item.share)}</small></span>`).join("")}</div></div>
+      <div class="solution-technical table-wrap"><table class="table-dense"><thead><tr><th>Component</th><th>Function</th><th>Quantity</th><th>Composition</th></tr></thead><tbody>${components.map((item) => `<tr data-solution-component="${esc(item.tone)}"><td><i class="component-key tone-${esc(item.tone || "interface")}"></i><strong>${esc(item.name)}</strong></td><td>${esc(item.role)}</td><td data-component-amount>${esc(item.amount)}</td><td>${esc(item.share)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="validation-rail">${checks.map((item) => `<span class="${esc(item.state)}">${esc(item.label)}</span>`).join("")}</div>
     </div>`;
   }
 
   function stackReview(layers = stackLayers, selectable = true) {
+    if (!asArray(layers).length) return `<div class="empty-state compact-empty">${icon("layers")}<strong>No stack layers declared</strong><p>Add fabrication producers or a stack definition to the CHOSE pipeline resources.</p></div>`;
     return `<div class="stack-review"><div class="stack-orientation"><span>Incident light</span><span>Device axis ↓</span></div><div class="stack-schematic">${[...layers].reverse().map((layer, reverseIndex) => { const index = layers.length - reverseIndex - 1; return `<button type="button" class="stack-band tone-${esc(layer.tone || "interface")}" data-stack-review-layer="${index}" ${selectable ? "" : "tabindex=\"-1\""}><span class="layer-order">${String(index + 1).padStart(2,"0")}</span><strong>${esc(layer.material)}</strong><span>${esc(layer.function)}</span><code>${esc(layer.thickness)}</code></button>`; }).join("")}</div><div class="stack-legend">${[["substrate","Substrate/contact"],["etl","Electron transport"],["absorber","Absorber"],["htl","Hole transport"],["contact","Metal contact"]].map(([tone,label]) => `<span><i class="tone-${tone}"></i>${label}</span>`).join("")}</div><div class="stack-layer-detail" id="stack-layer-detail"><small>Selected layer 01</small><strong>${esc(layers[0].material)}</strong><span>${esc(layers[0].function)} · ${esc(layers[0].process)} · ${esc(layers[0].thickness)}</span></div></div>`;
   }
 
@@ -707,171 +832,281 @@
     return `<div class="solution-component-editor" id="solution-component-editor"><div class="solution-component-head"><span></span><span>Component</span><span>Function</span><span>Quantity</span><span>Composition</span><span>Order</span></div>${components.map((item,index)=>`<article class="solution-component-row tone-${esc(item.tone)}" data-solution-row data-tone="${esc(item.tone)}" draggable="true"><span class="solution-grip" title="Drag to reorder">${icon("grip")}</span><label><span>Component</span><input class="input" data-solution-field="name" value="${esc(item.name)}"></label><label><span>Function</span><input class="input" data-solution-field="role" value="${esc(item.role)}"></label><label><span>Quantity</span><input class="input" data-solution-field="amount" value="${esc(item.amount)}"></label><label><span>Composition</span><input class="input" data-solution-field="share" value="${esc(item.share)}"></label><div class="solution-order-actions"><button class="btn btn-ghost icon-btn" data-solution-move="up" aria-label="Move component up">${icon("chevron-up")}</button><button class="btn btn-ghost icon-btn" data-solution-move="down" aria-label="Move component down">${icon("chevron-down")}</button><span class="badge">${String(index+1).padStart(2,"0")}</span></div></article>`).join("")}</div>`;
   }
 
-  function processChemistryView() {
-    const definitions = [
-      ["SOL-011", "FA/MA 1.25 M reference", "Perovskite precursor", "DMF:DMSO 4:1 · reviewed"],
-      ["SOL-021", "SnO₂ diluted 1:5", "n-type (ETL)", "DI water · reviewed"],
-      ["SOL-017", "Spiro-OMeTAD standard", "p-type (HTL)", "Chlorobenzene · draft"]
+  function processChemistryView(pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS);
+    const definitions = asArray(demo.solution_definitions);
+    const definition = definitions[0] || activeSolutionDefinition;
+    const components = asArray(definition.components).length ? asArray(definition.components) : solutionComponents;
+    const solutionTypes = asArray(pipelineResource(pipeline, "defaults", "solution_types", {}).items).length
+      ? asArray(pipelineResource(pipeline, "defaults", "solution_types", {}).items)
+      : CHOSE_SOLUTION_TYPES;
+    const soluteMasses = components.filter((item) => item.phase !== "solvent").slice(0, 3);
+    const referenceVolume = definition.reference_volume || {value:2, unit:"mL"};
+    const concentration = definition.target_concentration || {value:1.25, unit:"mol/L"};
+    const warningCount = asArray(definition.checks).filter((item) => item.state === "warning").length;
+    return `<div class="stack"><div class="process-definition-strip" aria-label="Reusable solution definitions">${definitions.map((item, index) => `<button class="definition-card ${index === 0 ? "active" : ""}" type="button" data-definition-card><span class="object-icon">${icon("flask")}</span><span><small>${esc(item.id)}${item.version ? `/v${esc(item.version)}` : ""} · ${esc(item.type)}</small><strong>${esc(item.name)}</strong><em>${esc(item.summary || `${item.solvent_ratio || "Explicit composition"} · ${item.status || "draft"}`)}</em></span></button>`).join("")}<button class="definition-card definition-card-add" type="button" id="add-solution-definition">${icon("plus")}<span><strong>New definition</strong><em>Custom or commercial solution</em></span></button></div>
+      <div class="scientific-builder-layout"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution Definition</h3><small>Reusable recipe only · execution fields are forbidden by the pipeline contract</small></div><span class="badge badge-accent">${esc(definition.id || "SOL-NEW")}/v${esc(definition.version || 1)}</span></div><div class="panel-body form-grid">
+        <div class="field wide"><label for="solution-recipe">Definition name</label><input class="input" id="solution-recipe" value="${esc(definition.name || "New solution definition")}"></div><div class="field"><label for="solution-type">Solution type</label><select class="select" id="solution-type">${solutionTypes.map((item) => `<option ${item.label === definition.type ? "selected" : ""}>${esc(item.label)}</option>`).join("")}</select></div>
+        <div class="field"><label for="solution-volume">Reference volume</label><div class="input-group"><input class="input" id="solution-volume" type="number" min="0.1" value="${esc(referenceVolume.value)}"><span class="btn">${esc(referenceVolume.unit)}</span></div></div><div class="field"><label for="solution-molarity">Target concentration</label><div class="input-group"><input class="input" id="solution-molarity" type="number" min="0.05" step="0.05" value="${esc(concentration.value)}"><span class="btn">${esc(concentration.unit)}</span></div></div>
+        <div class="field"><label for="solvent-ratio">Solvent ratio</label><input class="input" id="solvent-ratio" value="${esc(definition.solvent_ratio || "Explicit component quantities")}"></div><div class="field"><label for="solution-validation">Definition state</label><input class="input" id="solution-validation" value="${warningCount ? `${warningCount} contract warning${warningCount === 1 ? "" : "s"}` : "Ready for process versioning"}" readonly></div>
+        <div class="field wide"><label for="preparation-handling">Handling during preparation</label><textarea class="textarea" id="preparation-handling">${esc(definition.preparation_handling || "")}</textarea></div><div class="field wide"><label for="before-use-handling">Handling before use</label><textarea class="textarea" id="before-use-handling">${esc(definition.before_use_handling || "")}</textarea></div>
+        ${soluteMasses.map((item, index) => `<div class="field ${index === soluteMasses.length - 1 && soluteMasses.length % 2 ? "wide" : ""}"><label for="solute-mass-${index}">${esc(item.name)} reference quantity</label><input class="input" id="${item.tone === "fai" ? "fai-mass" : item.tone === "mai" ? "mai-mass" : item.tone === "pbi" ? "pbi-mass" : `solute-mass-${index}`}" value="${esc(item.amount)}" readonly></div>`).join("")}
+      </div><div class="solution-components-block"><div class="section-heading compact-heading"><div><h4>Recipe components</h4><p>Solvents, solutes and stock-solution references come from the bundled pipeline definition.</p></div><span class="badge">Drag or use arrows</span></div>${solutionComponentEditor(components)}</div><div class="panel-footer action-footer"><small>Saving creates a reusable definition version; it never creates a prepared batch.</small><div class="cluster"><button class="btn" id="duplicate-solution">Duplicate definition</button><button class="btn" id="save-solution">Add temporary definition</button><button class="btn btn-primary" id="recalculate">Recalculate</button></div></div></section>
+      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution Review</h3><small>Composition, scale formula, handling and YAML-defined checks</small></div><span class="badge ${warningCount ? "badge-warning" : "badge-success"}">${warningCount ? `${warningCount} warning${warningCount === 1 ? "" : "s"}` : "Ready"}</span></div><div class="panel-body" id="solution-review">${solutionReview(components, definition)}</div><div class="panel-footer"><div class="validation-rail">${asArray(definition.checks).map((item) => `<span class="${esc(item.state)}">${esc(item.label)}</span>`).join("")}</div></div></section></div></div>`;
+  }
+
+  function fabricationOperationsTable(pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS);
+    const operations = asArray(demo.fabrication_operations);
+    const operationTypes = asArray(pipelineResource(pipeline, "defaults", "operation_types", {}).items).length
+      ? asArray(pipelineResource(pipeline, "defaults", "operation_types", {}).items)
+      : CHOSE_OPERATION_TYPES;
+    return `<div class="table-wrap"><table class="table-dense operation-table"><thead><tr><th>#</th><th>Operation</th><th>Material / solution</th><th>Planned parameters</th><th>Duration / target</th><th>Capability</th><th>Rule</th><th></th></tr></thead><tbody id="fabrication-operations">${operations.map((item, index) => `<tr data-operation-id="${esc(item.id)}"><td><span class="step-index">${String(index + 1).padStart(2,"0")}</span></td><td><select class="select" aria-label="Operation type">${operationTypes.map((type) => `<option ${type.id === item.type ? "selected" : ""} value="${esc(type.id)}">${esc(type.label)}</option>`).join("")}</select></td><td><input class="input" value="${esc(item.material === "none" ? "—" : item.material)}"></td><td><input class="input" value="${esc(item.planned)}"></td><td><input class="input" value="${esc(item.target)}"></td><td><input class="input" value="${esc(item.capability || "unassigned")}"></td><td><select class="select"><option ${item.required ? "selected" : ""}>Required</option><option ${!item.required ? "selected" : ""}>Optional</option></select></td><td><button class="btn btn-ghost icon-btn" data-remove-operation aria-label="Remove operation">${icon("trash")}</button></td></tr>`).join("")}</tbody></table></div>`;
+  }
+
+  function processFabricationView(pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS);
+    const substrate = demo.substrate || {};
+    const dimensions = substrate.dimensions || {};
+    const operations = asArray(demo.fabrication_operations);
+    const stack = demo.stack || {};
+    const checks = stepGate(pipeline, pipelineStep(pipeline, "process")).rules.map((item) => ({state:item.status === "pass" ? "success" : item.status, title:item.id, detail:item.detail}));
+    const processBoundary = pipeline.data_boundaries?.process || {};
+    const experimentBoundary = pipeline.data_boundaries?.experiment || {};
+    const contractRows = [
+      `Process owns ${asArray(processBoundary.owns).length} planned-data groups and forbids ${asArray(processBoundary.forbids).length} execution fields.`,
+      `Every required operation records actual values and execution time in Experiment.`,
+      `Experiment owns ${asArray(experimentBoundary.owns).length} execution-data groups, including batches, samples and deviations.`,
+      `Deviations never overwrite the immutable process snapshot.`
     ];
-    return `<div class="stack"><div class="process-definition-strip" aria-label="Reusable solution definitions">${definitions.map(([id,name,type,meta], index) => `<button class="definition-card ${index === 0 ? "active" : ""}" type="button" data-definition-card><span class="object-icon">${icon("flask")}</span><span><small>${esc(id)} · ${esc(type)}</small><strong>${esc(name)}</strong><em>${esc(meta)}</em></span></button>`).join("")}<button class="definition-card definition-card-add" type="button" id="add-solution-definition">${icon("plus")}<span><strong>New definition</strong><em>Custom or commercial solution</em></span></button></div>
-      <div class="scientific-builder-layout"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution Definition</h3><small>Reusable recipe only · no batch, operator or execution data</small></div><span class="badge badge-accent">SOL-011/v3</span></div><div class="panel-body form-grid">
-        <div class="field wide"><label for="solution-recipe">Definition name</label><input class="input" id="solution-recipe" value="FA/MA 1.25 M reference"></div><div class="field"><label for="solution-type">Solution type</label><select class="select" id="solution-type"><option>perovskite precursor</option><option>n-type (ETL)</option><option>p-type (HTL)</option><option>additive</option><option>passivation agent/layer</option><option>conductor (contact)</option><option>encapsulant</option><option>other</option></select></div>
-        <div class="field"><label for="solution-volume">Reference volume</label><div class="input-group"><input class="input" id="solution-volume" type="number" min="0.1" value="2"><span class="btn">mL</span></div></div><div class="field"><label for="solution-molarity">Target concentration</label><div class="input-group"><input class="input" id="solution-molarity" type="number" min="0.05" step="0.05" value="1.25"><span class="btn">mol/L</span></div></div>
-        <div class="field"><label for="solvent-ratio">Solvent ratio</label><input class="input" id="solvent-ratio" value="DMF:DMSO 4:1"></div><div class="field"><label for="solution-validation">Definition state</label><input class="input" id="solution-validation" value="Handling metadata requires review" readonly></div>
-        <div class="field wide"><label for="preparation-handling">Handling during preparation</label><textarea class="textarea" id="preparation-handling">Prepare in N₂ glovebox; keep away from moisture; filter with 0.22 µm PTFE.</textarea></div><div class="field wide"><label for="before-use-handling">Handling before use</label><textarea class="textarea" id="before-use-handling">Stir at 60 °C for 1 h and allow to cool before coating.</textarea></div>
-        <div class="field"><label for="fai-mass">FAI reference mass</label><input class="input" id="fai-mass" value="365.3 mg" readonly></div><div class="field"><label for="mai-mass">MAI reference mass</label><input class="input" id="mai-mass" value="39.7 mg" readonly></div><div class="field wide"><label for="pbi-mass">PbI₂ reference mass</label><input class="input" id="pbi-mass" value="1152.5 mg" readonly></div>
-      </div><div class="solution-components-block"><div class="section-heading compact-heading"><div><h4>Recipe components</h4><p>Solvents, solutes and stock-solution references remain ordered and exportable.</p></div><span class="badge">Drag or use arrows</span></div>${solutionComponentEditor()}</div><div class="panel-footer action-footer"><small>Saving creates a new reusable process definition version. It does not create a prepared batch.</small><div class="cluster"><button class="btn" id="duplicate-solution">Duplicate definition</button><button class="btn" id="save-solution">Add temporary definition</button><button class="btn btn-primary" id="recalculate">Recalculate</button></div></div></section>
-      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Solution Review</h3><small>Composition, scale formula, handling and deterministic checks</small></div><span class="badge badge-warning">1 warning</span></div><div class="panel-body" id="solution-review">${solutionReview()}</div><div class="panel-footer"><div class="validation-rail"><span class="valid">Recipe identity stable</span><span class="valid">Units explicit</span><span class="warning">Confirm humidity limit</span></div></div></section></div></div>`;
+    const quantity = (entry, fallbackValue, fallbackUnit) => entry || {value:fallbackValue, unit:fallbackUnit};
+    const roughness = quantity(substrate.roughness_rms, 1, "nm");
+    const length = quantity(dimensions.length, 2, "cm");
+    const width = quantity(dimensions.width, 2, "cm");
+    const thickness = quantity(dimensions.thickness, 1, "mm");
+    return `<div class="stack"><div class="grid grid-2 process-substrate-grid"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Substrate Definition</h3><small>Reusable geometry and surface properties from the process contract</small></div><span class="badge">${esc(substrate.id || "SUB-NEW")}/v${esc(substrate.version || 1)}</span></div><div class="panel-body form-grid"><div class="field"><label>Name</label><input class="input" value="${esc(substrate.name || "Substrate")}"></div><div class="field"><label>Material</label><select class="select">${[substrate.material, ...asArray(substrate.alternatives)].filter(Boolean).map((item, index) => `<option ${index === 0 ? "selected" : ""}>${esc(item)}</option>`).join("")}</select></div><div class="field"><label>Rigidity</label><select class="select">${asArray(substrate.rigidity_options).map((item) => `<option ${item === substrate.rigidity ? "selected" : ""}>${esc(item)}</option>`).join("")}</select></div><div class="field"><label>Surface roughness RMS</label><div class="input-group"><input class="input" type="number" value="${esc(roughness.value)}"><span class="btn">${esc(roughness.unit)}</span></div></div><div class="field"><label>Length</label><div class="input-group"><input class="input" type="number" value="${esc(length.value)}"><span class="btn">${esc(length.unit)}</span></div></div><div class="field"><label>Width</label><div class="input-group"><input class="input" type="number" value="${esc(width.value)}"><span class="btn">${esc(width.unit)}</span></div></div><div class="field wide"><label>Thickness</label><div class="input-group"><input class="input" type="number" value="${esc(thickness.value)}"><span class="btn">${esc(thickness.unit)}</span></div></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Process Contract</h3><small>Executable ownership boundaries loaded from pipeline.yaml</small></div>${icon("check")}</div><div class="panel-body check-list">${contractRows.map((row) => `<div class="check-row">${icon("check")}<span>${esc(row)}</span></div>`).join("")}</div></section></div>
+      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Ordered Fabrication Operations</h3><small>Producer-before-consumer sequence used to generate the expected device stack</small></div><button class="btn btn-sm" id="add-operation">${icon("plus")} Add operation</button></div><div class="panel-body">${fabricationOperationsTable(pipeline)}</div><div class="panel-footer action-footer"><small>Process parameters are planned values. Actual values are captured only in Experiment.</small><span class="badge badge-success">${operations.filter((item) => item.required).length} required operations</span></div></section>
+      <div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Generated Stack Preview</h3><small>Derived from operations that declare a produced layer</small></div><span class="badge badge-accent">${esc(stack.id || "STK-NEW")}/v${esc(stack.version || 1)}</span></div><div class="panel-body" id="fabrication-stack-review">${stackReview(asArray(stack.layers).length ? asArray(stack.layers) : stackLayers)}</div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Process Validation</h3><small>Deterministic completion rules declared by pipeline.yaml</small></div>${icon("check")}</div><div class="panel-body stack">${checks.map((item) => `<div class="notice notice-${item.state === "warning" ? "warning" : "success"}"><div>${icon(item.state === "warning" ? "warning" : "check")}</div><div><strong>${esc(item.title)}</strong><p>${esc(item.detail)}</p></div></div>`).join("")}</div></section></div></div>`;
   }
 
-  function fabricationOperationsTable() {
-    const operations = [
-      ["01", "Rinsing / washing", "IPA · DI water", "3 cycles", "10 min", "Required"],
-      ["02", "Sonication", "IPA", "40 kHz", "10 min", "Required"],
-      ["03", "UV/Ozone", "—", "Ambient", "15 min", "Required"],
-      ["04", "Spin coating", "SOL-021 · SnO₂", "4000 rpm", "30 s", "Required"],
-      ["05", "Annealing", "—", "100 °C", "30 min", "Required"],
-      ["06", "Spin coating", "SOL-011 · precursor", "4000 rpm", "30 s", "Required"],
-      ["07", "Evaporation", "Au", "2×10⁻⁶ mbar", "80 nm", "Required"]
+  function processStackView(pipeline = CHOSE_CONTRACT) {
+    const stack = choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS).stack || {};
+    const layers = asArray(stack.layers).length ? asArray(stack.layers) : stackLayers;
+    const completion = pipelineStep(pipeline, "process")?.completion || {};
+    const producerRule = asArray(completion.rules).find((item) => item.id === "producer-before-consumer");
+    return `<div class="scientific-builder-layout"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack Definition</h3><small>Review or correct the stack generated by fabrication operations</small></div><button class="btn btn-sm" id="add-layer">${icon("plus")} Add layer</button></div><div class="panel-body"><div class="layer-columns" aria-hidden="true"><span></span><span>#</span><span>Material</span><span>Thickness</span><span>Function</span><span>Process</span><span>Actions</span></div><div class="layers" id="layer-editor">${layers.map(stackEditorRow).join("")}</div></div><div class="panel-footer action-footer"><small>${esc(producerRule ? "Manual corrections are checked by stack_layers_have_producing_operations." : "Manual corrections must remain consistent with fabrication operations.")}</small><div class="cluster"><button class="btn" id="save-stack-template">Add temporary template</button><button class="btn btn-primary" id="apply-stack-version">Apply process version</button></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack Review</h3><small>${esc(stack.architecture || "Device")} architecture with selectable layer details</small></div><span class="badge badge-success">Order valid</span></div><div class="panel-body" id="stack-review">${stackReview(layers)}</div><div class="panel-footer"><div class="validation-rail"><span class="valid">${esc(stack.architecture || "device")} order valid</span><span class="valid">All layers traceable</span><span class="warning">Equipment category review</span></div></div></section></div>`;
+  }
+
+  function sectionTabs(step, dataAttribute, activeId = null) {
+    const sections = asArray(step?.sections);
+    const selected = activeId || sections[0]?.id;
+    return sections.map((section) => `<button class="tab ${section.id === selected ? "active" : ""}" data-${dataAttribute}="${esc(section.id)}" title="${esc(section.description || "")}">${esc(section.title)}</button>`).join("");
+  }
+
+  function processStep(project, pipeline = CHOSE_CONTRACT, step = pipelineStep(pipeline, "process")) {
+    const sections = pipelineSections(pipeline, step?.id || "process");
+    const first = sections[0] || {id:"chemistry"};
+    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Process sections">${sectionTabs(step, "process-tab", first.id)}</div><div class="panel-body" id="process-content">${renderRegisteredSection(first.component, {project, pipeline, step, section:first})}</div></div>`;
+  }
+
+  function experimentSetupView(project, pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "experiment", CHOSE_DEMO_EXPERIMENT);
+    const experiment = demo.experiment || {};
+    const snapshot = experiment.process_snapshot || {};
+    const batches = asArray(demo.batches);
+    const samples = asArray(demo.samples);
+    return `<div class="stack"><section class="experiment-identity"><div><span class="page-eyebrow">Experiment instance</span><h3>${esc(experiment.name || "New experiment")}</h3><p>Concrete execution of an immutable process snapshot defined by the pipeline contract.</p></div><div class="experiment-id"><small>Experiment ID</small><strong>${esc(experiment.experiment_id || "EXP-NEW")}</strong>${badgeStatus(experiment.status || "draft")}</div></section><div class="snapshot-banner"><span class="object-icon">${icon("layers")}</span><div><small>Process snapshot</small><strong>${esc(snapshot.label || `${snapshot.process_id || "Process"}/v${snapshot.version || 1}`)}</strong><p>Snapshot identity: ${esc(snapshot.demo_hash || "immutable record hash pending")}. Later process edits do not mutate this experiment.</p></div><button class="btn btn-sm">View snapshot</button></div>
+      <div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Experiment Metadata</h3><small>Execution identity and responsibility required by the experiment schema</small></div>${icon("edit")}</div><div class="panel-body form-grid"><div class="field wide"><label>Experiment name</label><input class="input" value="${esc(experiment.name || "")}"></div><div class="field"><label>Start date</label><input class="input" type="date" value="${esc(experiment.start_date || "")}"></div><div class="field"><label>Operator</label><select class="select">${asArray(experiment.operator_options).map((item) => `<option ${item === experiment.operator ? "selected" : ""}>${esc(item)}</option>`).join("")}</select></div><div class="field"><label>Environment</label><select class="select">${asArray(experiment.environment_options).map((item) => `<option ${item === experiment.environment?.atmosphere ? "selected" : ""}>${esc(item)}</option>`).join("")}</select></div><div class="field"><label>Experiment status</label><select class="select"><option ${experiment.status === "active" ? "selected" : ""}>In progress</option><option>Ready for results</option><option>Completed</option></select></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Selected Material Batches</h3><small>Actual preparations and lots owned by Experiment, never Process</small></div><button class="btn btn-sm">${icon("plus")} Select batch</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Batch</th><th>Definition</th><th>Prepared</th><th>Operator</th><th>QC</th></tr></thead><tbody>${batches.map((item) => `<tr><td><strong>${esc(item.id)}</strong></td><td>${esc(item.definition)}</td><td>${esc(item.prepared)}</td><td>${esc(item.operator)}</td><td>${badgeStatus(item.status || "draft")}</td></tr>`).join("")}</tbody></table></div></section></div>
+      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Samples & Devices</h3><small>Stable instances generated for this experiment, not reusable definitions</small></div><button class="btn btn-sm" id="add-experiment-sample">${icon("plus")} Add sample</button></div><div class="table-wrap"><table class="table-dense sample-instance-table"><thead><tr><th>Sample</th><th>Substrate</th><th>Process variant</th><th>Precursor batch</th><th>Devices</th><th>Status</th><th></th></tr></thead><tbody id="experiment-samples">${samples.map((item) => `<tr><td><input class="input" value="${esc(item.id)}"></td><td><select class="select"><option>${esc(item.substrate)}</option></select></td><td><select class="select"><option>${esc(item.variant)}</option></select></td><td><select class="select"><option>${esc(item.precursor_batch)}</option>${batches.map((batch) => `<option>${esc(batch.id)}</option>`).join("")}</select></td><td><input class="input" type="number" value="${esc(item.devices)}"></td><td>${badgeStatus(item.status || "draft")}</td><td><button class="btn btn-ghost icon-btn" aria-label="Duplicate sample">${icon("copy")}</button></td></tr>`).join("")}</tbody></table></div></section></div>`;
+  }
+
+  function experimentExecutionView(project, pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "experiment", CHOSE_DEMO_EXPERIMENT);
+    const experiment = demo.experiment || {};
+    const rows = asArray(demo.execution_records);
+    const deviations = asArray(demo.deviations);
+    const completion = demo.completion || {};
+    const deviation = deviations[0] || {};
+    return `<div class="stack"><div class="notice"><div>${icon("info")}</div><div><strong>Planned values remain read-only</strong><p>Record actual values, equipment, execution time and deviations without changing ${esc(experiment.process_snapshot?.label || "the process snapshot")}.</p></div></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Execution Record</h3><small>Planned process versus what was actually performed</small></div><span class="badge ${deviations.length ? "badge-warning" : "badge-success"}">${deviations.length} deviation${deviations.length === 1 ? "" : "s"}</span></div><div class="table-wrap"><table class="table-dense execution-table"><thead><tr><th>#</th><th>Operation</th><th>Planned</th><th>Actual</th><th>Execution time</th><th>Equipment</th><th>Status</th></tr></thead><tbody>${rows.map((item, index) => `<tr data-operation-id="${esc(item.operation_id)}"><td><span class="step-index">${String(item.order || index + 1).padStart(2,"0")}</span></td><td><strong>${esc(item.operation)}</strong></td><td><code>${esc(item.planned)}</code></td><td><input class="input ${item.status === "deviation" ? "input-warning" : ""}" value="${esc(item.actual)}"></td><td><input class="input" value="${esc(item.execution_time)}"></td><td><select class="select"><option>${esc(item.equipment || "Unassigned")}</option></select></td><td>${badgeStatus(item.status === "deviation" ? "review" : "reviewed")}</td></tr>`).join("")}</tbody></table></div></section><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Deviation Record</h3><small>Researcher-authored explanation and consequence</small></div>${icon("warning")}</div><div class="panel-body form-grid"><div class="field wide"><label>Deviation</label><textarea class="textarea">${esc(deviation.statement || "No deviation recorded.")}</textarea></div><div class="field"><label>Impact assessment</label><select class="select"><option>${esc(deviation.impact || "No impact")}</option><option>Requires repeat</option></select></div><div class="field"><label>Decision</label><select class="select"><option>${esc(deviation.decision || "Keep visible")}</option><option>Exclude after review</option></select></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Execution Completeness</h3><small>Required evidence for result upload</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>${esc(completion.recorded_operations || rows.length)} of ${esc(completion.required_operations || rows.length)} operations recorded</strong><p>Actual values and execution time are present.</p></div></div>${asArray(completion.warnings).map((warning) => `<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Visible completion warning</strong><p>${esc(warning)}</p></div></div>`).join("")}</div></section></div></div>`;
+  }
+
+  function experimentSummaryView(project, pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "experiment", CHOSE_DEMO_EXPERIMENT);
+    const experiment = demo.experiment || {};
+    const samples = asArray(demo.samples);
+    const batches = asArray(demo.batches);
+    const deviations = asArray(demo.deviations);
+    const devices = samples.reduce((sum, item) => sum + Number(item.devices || 0), 0);
+    const completion = demo.completion || {};
+    return `<div class="stack"><div class="grid grid-4">${[["Process snapshot",experiment.process_snapshot?.label || "—","Immutable"],["Samples",samples.length,samples.map((item) => item.id).join("–")],["Devices",`${devices} declared`,"Measurement count reconciled in Results"],["Deviations",deviations.length,deviations[0]?.impact || "None"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${esc(a)}</div><div class="kpi-value kpi-value-medium">${esc(b)}</div><div class="kpi-detail">${esc(c)}</div></div>`).join("")}</div><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Experiment Summary</h3><small>Records ready to accompany measurement files</small></div>${icon("file")}</div><div class="panel-body metadata-list"><div><span>Experiment</span><strong>${esc(experiment.experiment_id)} · ${esc(experiment.name)}</strong></div><div><span>Process</span><strong>${esc(experiment.process_snapshot?.label || "—")}</strong></div><div><span>Batches</span><strong>${esc(batches.map((item) => item.id).join(" · "))}</strong></div><div><span>Samples</span><strong>${esc(samples.map((item) => item.id).join(" · "))}</strong></div><div><span>Operator</span><strong>${esc(experiment.operator || "—")}</strong></div><div><span>Execution window</span><strong>${esc(experiment.execution_window || "—")}</strong></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Ready for Results?</h3><small>YAML-defined gate before files and measurements are attached</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice ${completion.ready_for_results ? "notice-success" : "notice-warning"}"><div>${icon(completion.ready_for_results ? "check" : "warning")}</div><div><strong>${completion.ready_for_results ? "Experiment structure is complete" : "Experiment requires completion"}</strong><p>Process, batches, samples, devices and execution records are evaluated against the pipeline contract.</p></div></div>${asArray(completion.warnings).map((warning) => `<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Proceed with visible warning</strong><p>${esc(warning)}</p></div></div>`).join("")}<a class="btn btn-primary" href="project.html?project=${encodeURIComponent(project?.id || "PRJ-2026-014")}&step=results">Continue to Results</a></div></section></div></div>`;
+  }
+
+  function experimentStep(project, pipeline = CHOSE_CONTRACT, step = pipelineStep(pipeline, "experiment")) {
+    const sections = pipelineSections(pipeline, step?.id || "experiment");
+    const first = sections[0] || {id:"setup"};
+    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Experiment sections">${sectionTabs(step, "experiment-tab", first.id)}</div><div class="panel-body" id="experiment-content">${renderRegisteredSection(first.component, {project, pipeline, step, section:first})}</div></div>`;
+  }
+
+  function resultFilesView(project, pipeline = CHOSE_CONTRACT) {
+    const demo = choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS);
+    const resultSet = demo.result_set || {};
+    const files = asArray(demo.source_files);
+    const accepted = asArray(choseMapping(pipeline, "jv", CHOSE_JV_MAPPING).accepted_sources);
+    const linkedExperiments = new Set(files.map((item) => item.experiment_id).filter(Boolean));
+    const unassigned = files.filter((item) => !item.experiment_id).length;
+    return `<div class="stack"><div class="grid grid-3"><div class="card kpi"><div class="kpi-label">Result sets</div><div class="kpi-value">1</div><div class="kpi-detail">${esc(resultSet.result_set_id || "Draft result set")}</div></div><div class="card kpi"><div class="kpi-label">Source files</div><div class="kpi-value">${files.length}</div><div class="kpi-detail">${accepted.map((item) => item.toUpperCase()).join(", ")}</div></div><div class="card kpi"><div class="kpi-label">Unassigned files</div><div class="kpi-value">${unassigned}</div><div class="kpi-detail">${linkedExperiments.size} linked experiment${linkedExperiments.size === 1 ? "" : "s"}</div></div></div><div class="grid grid-2"><label class="dropzone" for="file-input">${icon("upload")}<h3 class="mt-1">Add result files</h3><p>Attach files to an experiment, then assign sample, device and measurement type. Files remain local.</p><span class="btn btn-primary">Choose files</span><input id="file-input" type="file" multiple accept="${accepted.map((item) => `.${item}`).join(",")}"></label><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Result Set Identity</h3><small>Files belong to a named result set, not directly to the project</small></div><span class="badge badge-accent">${esc(resultSet.result_set_id || "RST-NEW")}</span></div><div class="panel-body form-grid"><div class="field wide"><label>Result set name</label><input class="input" value="${esc(resultSet.name || "New result set")}"></div><div class="field"><label>Experiment</label><select class="select"><option>${esc(resultSet.experiment_id || "Select experiment")}</option>${[...linkedExperiments].filter((item) => item !== resultSet.experiment_id).map((item) => `<option>${esc(item)}</option>`).join("")}</select></div><div class="field"><label>Measurement type</label><select class="select"><option>${esc(resultSet.measurement_type || "Custom")}</option></select></div><div class="field"><label>Instrument</label><select class="select"><option>${esc(resultSet.instrument || "Unassigned")}</option></select></div><div class="field"><label>Acquired by</label><select class="select"><option>${esc(resultSet.acquired_by || "Unassigned")}</option></select></div></div></section></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Files & Provenance</h3><small>Source identity, experiment link, sample scope and parsing state</small></div><span class="badge">${files.length} source files</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>File</th><th>Experiment</th><th>Samples / devices</th><th>Type</th><th>Rows</th><th>Parsing</th><th>Quality</th></tr></thead><tbody id="ingest-files">${files.map((item) => `<tr><td>${esc(item.file_name)}</td><td>${esc(item.experiment_id || "Unassigned")}</td><td>${esc(item.sample_scope || "—")}</td><td>${esc(item.measurement_type || "—")}</td><td>${esc(item.rows || "—")}</td><td>${esc(item.parser || resultSet.parser_profile || "—")}</td><td>${item.quality_label ? `<span class="badge badge-warning">${esc(item.quality_label)}</span>` : badgeStatus(item.quality || "draft")}</td></tr>`).join("")}</tbody></table></div></section></div>`;
+  }
+
+  function resultMappingView(project, pipeline = CHOSE_CONTRACT) {
+    const mapping = choseMapping(pipeline, "jv", CHOSE_JV_MAPPING);
+    const fields = asArray(mapping.fields);
+    const decisions = fields.filter((item) => item.decision !== "confirmed").length;
+    const currentDensity = fields.find((item) => item.source === "Jsc") || fields[0] || {};
+    return `<div class="stack"><div class="notice"><div>${icon("info")}</div><div><strong>Mapping creates derived normalized records</strong><p>Source files remain immutable. Every conversion is shown before researcher confirmation; silent conversion is ${mapping.allow_silent_conversion ? "allowed" : "forbidden"}.</p></div></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Field & Unit Mapping</h3><small>${esc(mapping.label || mapping.id || "Mapping profile")}</small></div><span class="badge ${decisions ? "badge-warning" : "badge-success"}">${decisions} decision${decisions === 1 ? "" : "s"}</span></div><div class="table-wrap"><table class="table-dense mapping-table"><thead><tr><th>Source column</th><th>Destination field</th><th>Source → target unit</th><th>Conversion</th><th>Confidence</th><th>Preview</th><th>Decision</th></tr></thead><tbody>${fields.map((row) => `<tr><td><code>${esc(row.source)}</code></td><td><select class="select"><option>${esc(row.target)}</option><option>Ignore column</option></select></td><td>${esc(row.source_unit)} → ${esc(row.target_unit)}</td><td>${esc(row.conversion === "multiply_10" ? "× 10" : row.conversion === "FWD_to_forward" ? "FWD → forward" : "None")}</td><td><span class="confidence-badge confidence-${Number(row.confidence) > 95 ? "high" : "medium"}">${esc(row.confidence)}%</span></td><td>${esc(row.preview)}</td><td><select class="select"><option>${row.decision === "confirmed" ? "Confirm" : "Review"}</option><option>Correct</option><option>Ignore</option></select></td></tr>`).join("")}</tbody></table></div><div class="panel-footer action-footer"><small>Required links: ${asArray(mapping.required_links).map(esc).join(" · ")}</small><div class="cluster"><button class="btn" id="save-mapping-preset">Save temporary preset</button><button class="btn btn-primary" id="preview-normalized">Preview normalized records</button></div></div></section><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Normalized Preview</h3><small>Original and derived values stay distinguishable</small></div>${icon("table")}</div><div class="panel-body"><div class="metadata-list"><div><span>Source</span><strong>${esc(currentDensity.source)} = ${esc(currentDensity.preview)}</strong></div><div><span>Destination</span><strong>${esc(currentDensity.target)}</strong></div><div><span>Rule</span><strong>${esc(currentDensity.conversion || "none")}</strong></div><div><span>Evidence</span><strong>${esc(mapping.id || "mapping")} · source field ${esc(currentDensity.source)}</strong></div></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Mapping Gate</h3><small>Required identity and unit checks from the mapping contract</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Stable identity links are required</strong><p>${asArray(mapping.required_links).map(esc).join(" and ")} connect every normalized record.</p></div></div><div class="notice ${mapping.require_unit_confirmation ? "notice-warning" : "notice-success"}"><div>${icon(mapping.require_unit_confirmation ? "warning" : "check")}</div><div><strong>${mapping.require_unit_confirmation ? "Researcher unit confirmation required" : "Units can be accepted automatically"}</strong><p>Current-density conversion remains visible and reversible in the POC.</p></div></div></div></section></div></div>`;
+  }
+
+  function resultQualityView(project, pipeline = CHOSE_CONTRACT) {
+    const measurements = asArray(choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS).normalized_records);
+    return `<div class="stack">${experimentInspector(pipeline)}<section class="panel"><div class="panel-header"><div><h3 class="mb-0">Validated Measurement Preview</h3><small>Result records linked to experiment, sample and source file</small></div><span class="badge badge-success">${measurements.length} samples</span></div><div class="panel-body"><div class="table-wrap">${datasetTable(measurements.length ? measurements : D.demoDataset)}</div></div></section></div>`;
+  }
+
+  function resultsStep(project, pipeline = CHOSE_CONTRACT, step = pipelineStep(pipeline, "results")) {
+    const sections = pipelineSections(pipeline, step?.id || "results");
+    const first = sections[0] || {id:"files"};
+    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Result sections">${sectionTabs(step, "results-tab", first.id)}</div><div class="panel-body" id="results-content">${renderRegisteredSection(first.component, {project, pipeline, step, section:first})}</div></div>`;
+  }
+
+  function exportPackagePanel(project, pipeline = CHOSE_CONTRACT) {
+    const formats = asArray(pipeline.exports?.formats).filter((item) => item.enabled !== false);
+    const nomad = pipeline.exports?.nomad || {};
+    const nomadMapping = choseMapping(pipeline, "nomad", CHOSE_NOMAD_MAPPING);
+    const issues = asArray(choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS).quality_issues);
+    const blocking = issues.filter((item) => item.severity === "error").length;
+    const visible = issues.filter((item) => ["error","warning"].includes(item.severity)).length;
+    const formatById = Object.fromEntries(formats.map((item) => [item.id, item]));
+    const localButtons = ["yaml","jsonl","csv"].filter((id) => formatById[id]).map((id) => `<button class="btn" data-export="${esc(id)}">${esc(formatById[id].label)}</button>`).join("");
+    return `<section class="section export-package-section"><div class="section-heading"><div><h2>Report & Export Package</h2><p>Reviewed outputs and structured records follow the YAML export contract and preserve open issues.</p></div><span class="badge ${visible ? "badge-warning" : "badge-success"}">${visible} visible issue${visible === 1 ? "" : "s"}</span></div><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Portable Project Package</h3><small>Complete local handoff without remote submission</small></div>${icon("download")}</div><div class="panel-body stack">${formatById.bundle ? `<div class="export-card"><span class="object-icon">${icon("database")}</span><div><strong>${esc(formatById.bundle.label)}</strong><p class="mb-0">Process snapshots, experiments, result sets, measurements, report files and provenance.</p></div><button class="btn btn-sm btn-primary" data-export="bundle">Generate package</button></div>` : ""}${nomad.enabled ? `<div class="export-card"><span class="object-icon">${icon("external")}</span><div><strong>NOMAD-ready preview</strong><p class="mb-0">${esc(nomadMapping.label || nomad.mapping_profile)} · ${esc(nomad.mode)} · no automatic upload.</p></div><button class="btn btn-sm" data-export="nomad">Generate preview</button></div>` : ""}<div class="cluster">${localButtons}</div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Export Readiness</h3><small>Deterministic blockers remain visible in every package</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Preview package can be generated</strong><p>${asArray(pipeline.exports?.require).length} contract requirements are included in the manifest.</p></div></div>${blocking ? `<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Final submission requires review</strong><p>${blocking} blocking error${blocking === 1 ? " remains" : "s remain"}; all are preserved in the export.</p></div></div>` : ""}<div class="notice"><div>${icon("lock")}</div><div><strong>No automatic upload</strong><p>Remote submission is ${nomad.remote_submission ? "enabled" : "disabled"} by pipeline.yaml.</p></div></div></div></section></div></section>`;
+  }
+
+  function reportAndExportView(project, pipeline = CHOSE_CONTRACT) {
+    return `<div class="stack">${analysisReport(project, pipeline)}${exportPackagePanel(project, pipeline)}</div>`;
+  }
+
+  function reviewStep(project, pipeline = CHOSE_CONTRACT, step = pipelineStep(pipeline, "review")) {
+    const sections = pipelineSections(pipeline, step?.id || "review");
+    const first = sections[0] || {id:"overview"};
+    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Review sections">${sectionTabs(step, "review-tab", first.id)}</div><div class="panel-body" id="review-content">${renderRegisteredSection(first.component, {project, pipeline, step, section:first})}</div></div>`;
+  }
+
+  function formatOverviewMetric(value, format) {
+    if (format === "percent_2") return `${Number(value).toFixed(2)}%`;
+    if (format === "percent_0") return `${Number(value).toFixed(0)}%`;
+    if (format === "voltage_2") return `${Number(value).toFixed(2)} V`;
+    return String(Math.round(Number(value) || 0));
+  }
+
+  function analysisOverview(project, pipeline = CHOSE_CONTRACT) {
+    const data = asArray(choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS).normalized_records);
+    const review = choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW);
+    const definitions = asArray(review.overview?.metrics);
+    const findings = asArray(review.findings);
+    const cards = definitions.map((definition) => {
+      if (definition.source === "findings") return [definition.label, findings.length, definition.detail || "review records"];
+      const values = data.map((row) => Number(row[definition.field])).filter(Number.isFinite);
+      let value = 0;
+      let detail = definition.detail || "cohort";
+      if (definition.aggregation === "max") {
+        const best = data.reduce((current, row) => !current || Number(row[definition.field]) > Number(current[definition.field]) ? row : current, null);
+        value = best ? Number(best[definition.field]) : 0;
+        if (best && definition.detail_field) detail = best[definition.detail_field] || detail;
+      } else if (definition.aggregation === "mean") value = values.length ? values.reduce((sum, item) => sum + item, 0) / values.length : 0;
+      else if (definition.aggregation === "count") value = values.length;
+      return [definition.label, formatOverviewMetric(value, definition.format), detail];
+    });
+    const chartMetrics = asArray(review.overview?.chart_metrics);
+    const firstMetric = chartMetrics[0] || {id:"pce",label:"PCE"};
+    return `<div class="stack"><div class="grid grid-5">${cards.map(([a, b, c]) => `<div class="card kpi"><div class="kpi-label">${esc(a)}</div><div class="kpi-value">${esc(b)}</div><div class="kpi-detail">${esc(c)}</div></div>`).join("")}</div>
+      <div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0" data-chart-title>${esc(firstMetric.label)} by sample</h3><small>Interactive canvas · YAML-declared metrics</small></div><div class="segmented" aria-label="Chart metric">${chartMetrics.map((metric,index) => `<button class="${index === 0 ? "active" : ""}" data-chart-metric="${esc(metric.id)}">${esc(metric.label)}</button>`).join("")}</div></div><div class="panel-body"><canvas class="chart" id="analysis-chart" width="900" height="360"></canvas></div></div><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Evidence-linked summary</h3><small>Review records loaded from demo/review.yaml</small></div>${icon("spark")}</div><div class="panel-body">${D.aiFindings.slice(0, 4).map(aiFinding).join("")}</div></div></div>
+      <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Measurement dataset</h3><small>Normalized values loaded from demo/results.yaml</small></div><button class="btn btn-sm" data-export="csv">${icon("download")} CSV</button></div><div class="panel-body"><div class="table-wrap">${datasetTable(data.length ? data : D.demoDataset)}</div></div></div></div>`;
+  }
+
+  function analysisFindings(pipeline = CHOSE_CONTRACT) {
+    const policy = pipeline.review_policy || {};
+    const humanReview = asArray(policy.human_review_required);
+    const allowedTypes = asArray(policy.finding_types);
+    const policyRows = [
+      `Allowed finding classes: ${allowedTypes.length ? allowedTypes.join(", ") : "explicit scientific classes"}.`,
+      `Human review is required for: ${humanReview.length ? humanReview.join(", ") : "all advisory content"}.`,
+      `Every finding records evidence, score, type and review status.`,
+      `Irreversible AI actions are ${policy.irreversible_ai_actions ? "allowed" : "forbidden"}.`
     ];
-    return `<div class="table-wrap"><table class="table-dense operation-table"><thead><tr><th>#</th><th>Operation</th><th>Material / solution</th><th>Planned parameters</th><th>Duration / target</th><th>Rule</th><th></th></tr></thead><tbody id="fabrication-operations">${operations.map(([n,op,material,parameters,duration,rule]) => `<tr><td><span class="step-index">${n}</span></td><td><input class="input" value="${esc(op)}"></td><td><input class="input" value="${esc(material)}"></td><td><input class="input" value="${esc(parameters)}"></td><td><input class="input" value="${esc(duration)}"></td><td><select class="select"><option>${esc(rule)}</option><option>Optional</option></select></td><td><button class="btn btn-ghost icon-btn" data-remove-operation aria-label="Remove operation">${icon("trash")}</button></td></tr>`).join("")}</tbody></table></div>`;
+    return `<div class="grid grid-2"><div class="stack">${D.aiFindings.map((finding) => `<div class="panel ai-panel"><div class="panel-body"><div class="cluster mb-1"><span class="badge">${esc(finding.type || "finding")}</span><span class="badge">${esc(finding.id || "YAML contract")}</span></div>${aiFinding(finding)}<div class="cluster mt-1"><button class="btn btn-sm ${finding.status === "accepted" ? "btn-primary" : ""}" data-finding-action="Accepted">Accept</button><button class="btn btn-sm ${finding.status === "review" ? "btn-primary" : ""}" data-finding-action="Needs revision">Needs revision</button><a class="btn btn-sm btn-ghost" href="knowledge.html?q=${encodeURIComponent(finding.title)}">Link evidence</a></div></div></div>`).join("")}</div><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Assistant review policy</h3><small>Explicit boundaries loaded from pipeline.yaml</small></div>${icon("lock")}</div><div class="panel-body check-list">${policyRows.map((row) => `<div class="check-row">${icon("check")}<span>${esc(row)}</span></div>`).join("")}</div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Knowledge context</h3><small>Items supporting this review</small></div><a class="btn btn-sm" href="knowledge.html">Open Knowledge</a></div><div class="panel-body stack">${D.knowledge.slice(0, 4).map(knowledgeCard).join("")}</div></div></div></div>`;
   }
 
-  function processFabricationView() {
-    return `<div class="stack"><div class="grid grid-2 process-substrate-grid"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Substrate Definition</h3><small>Reusable geometry and surface properties</small></div><span class="badge">SUB-ITO-01/v2</span></div><div class="panel-body form-grid"><div class="field"><label>Name</label><input class="input" value="ITO glass substrate"></div><div class="field"><label>Material</label><select class="select"><option>Glass / ITO</option><option>Glass / FTO</option><option>Flexible ITO / PET</option></select></div><div class="field"><label>Rigidity</label><select class="select"><option>Rigid</option><option>Flexible</option></select></div><div class="field"><label>Surface roughness RMS</label><div class="input-group"><input class="input" type="number" value="1"><span class="btn">nm</span></div></div><div class="field"><label>Length</label><div class="input-group"><input class="input" type="number" value="2"><span class="btn">cm</span></div></div><div class="field"><label>Width</label><div class="input-group"><input class="input" type="number" value="2"><span class="btn">cm</span></div></div><div class="field wide"><label>Thickness</label><div class="input-group"><input class="input" type="number" value="1"><span class="btn">mm</span></div></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Process Contract</h3><small>What an experiment must record when this process is executed</small></div>${icon("check")}</div><div class="panel-body check-list"><div class="check-row">${icon("check")}<span>Every required operation records actual values and execution time.</span></div><div class="check-row">${icon("check")}<span>Materials and solution batches are selected at experiment time.</span></div><div class="check-row">${icon("check")}<span>Deviations never overwrite the planned process version.</span></div><div class="check-row">${icon("check")}<span>Alternative substrates or steps create explicit variants.</span></div></div></section></div>
-      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Ordered Fabrication Operations</h3><small>Producer-before-consumer sequence used to generate the expected device stack</small></div><button class="btn btn-sm" id="add-operation">${icon("plus")} Add operation</button></div><div class="panel-body">${fabricationOperationsTable()}</div><div class="panel-footer action-footer"><small>Process parameters are planned values. Actual values are captured only in Experiment.</small><span class="badge badge-success">7 required operations</span></div></section>
-      <div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Generated Stack Preview</h3><small>Derived from the ordered deposition and contact operations</small></div><span class="badge badge-accent">STK-003/v2</span></div><div class="panel-body" id="fabrication-stack-review">${stackReview(stackLayers)}</div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Process Validation</h3><small>Deterministic completeness before versioning</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Operation order is coherent</strong><p>Substrate preparation precedes coating; transport and contact layers have producers.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Equipment capability is not assigned</strong><p>Link a spin coater and evaporator category before approving a production process.</p></div></div></div></section></div></div>`;
-  }
-
-  function processStackView() {
-    return `<div class="scientific-builder-layout"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack Definition</h3><small>Review or correct the stack generated by fabrication operations</small></div><button class="btn btn-sm" id="add-layer">${icon("plus")} Add layer</button></div><div class="panel-body"><div class="layer-columns" aria-hidden="true"><span></span><span>#</span><span>Material</span><span>Thickness</span><span>Function</span><span>Process</span><span>Actions</span></div><div class="layers" id="layer-editor">${stackLayers.map(stackEditorRow).join("")}</div></div><div class="panel-footer action-footer"><small>Manual corrections must remain consistent with the ordered process operations.</small><div class="cluster"><button class="btn" id="save-stack-template">Add temporary template</button><button class="btn btn-primary" id="apply-stack-version">Apply process version</button></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Stack Review</h3><small>Complete architecture with selectable layer details</small></div><span class="badge badge-success">Order valid</span></div><div class="panel-body" id="stack-review">${stackReview(stackLayers)}</div><div class="panel-footer"><div class="validation-rail"><span class="valid">n-i-p order valid</span><span class="valid">All layers traceable</span><span class="warning">Equipment category missing</span></div></div></section></div>`;
-  }
-
-  function processStep() {
-    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Process sections"><button class="tab active" data-process-tab="chemistry">Chemistry</button><button class="tab" data-process-tab="fabrication">Fabrication</button><button class="tab" data-process-tab="stack">Stack Review</button></div><div class="panel-body" id="process-content">${processChemistryView()}</div></div>`;
-  }
-
-  function experimentSetupView(project) {
-    const batches = [["SOL-B01", "SOL-011/v3", "2.00 mL", "01 Aug · MG", "Reviewed"],["SOL-B03", "SOL-011/v3", "1.50 mL", "02 Aug · MG", "Reviewed"],["HTL-B02", "SOL-017/v2", "1.00 mL", "02 Aug · LC", "Review"]];
-    return `<div class="stack"><section class="experiment-identity"><div><span class="page-eyebrow">Experiment instance</span><h3>Mixed-cation validation batch</h3><p>Concrete execution of an immutable process snapshot.</p></div><div class="experiment-id"><small>Experiment ID</small><strong>EXP-067</strong><span class="badge badge-warning">In review</span></div></section><div class="snapshot-banner"><span class="object-icon">${icon("layers")}</span><div><small>Process snapshot</small><strong>CHOSE Standard v2 · PROC-CHOSE-014/v2</strong><p>Created from the approved chemistry, substrate, fabrication and stack definitions. Later process edits do not mutate this experiment.</p></div><button class="btn btn-sm">View snapshot</button></div>
-      <div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Experiment Metadata</h3><small>Execution identity and responsibility</small></div>${icon("edit")}</div><div class="panel-body form-grid"><div class="field wide"><label>Experiment name</label><input class="input" value="Mixed-cation validation batch"></div><div class="field"><label>Start date</label><input class="input" type="date" value="2026-08-03"></div><div class="field"><label>Operator</label><select class="select"><option>Matteo Ginesi</option><option>Laura Conti</option></select></div><div class="field"><label>Environment</label><select class="select"><option>N₂ glovebox</option><option>Ambient laboratory</option></select></div><div class="field"><label>Experiment status</label><select class="select"><option>In progress</option><option>Ready for results</option><option>Completed</option></select></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Selected Material Batches</h3><small>Actual preparations and lots used by this experiment</small></div><button class="btn btn-sm">${icon("plus")} Select batch</button></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Batch</th><th>Definition</th><th>Prepared</th><th>Operator</th><th>QC</th></tr></thead><tbody>${batches.map(([id,definition,volume,prepared,status]) => `<tr><td><strong>${id}</strong></td><td>${definition}</td><td>${volume}</td><td>${prepared}</td><td>${badgeStatus(status.toLowerCase())}</td></tr>`).join("")}</tbody></table></div></section></div>
-      <section class="panel"><div class="panel-header"><div><h3 class="mb-0">Samples & Devices</h3><small>Stable instances generated for this experiment, not reusable definitions</small></div><button class="btn btn-sm" id="add-experiment-sample">${icon("plus")} Add sample</button></div><div class="table-wrap"><table class="table-dense sample-instance-table"><thead><tr><th>Sample</th><th>Substrate</th><th>Process variant</th><th>Precursor batch</th><th>Devices</th><th>Status</th><th></th></tr></thead><tbody id="experiment-samples">${D.demoDataset.slice(5,8).map((row,index) => `<tr><td><input class="input" value="${row.sample}"></td><td><select class="select"><option>SUB-ITO-01/v2</option></select></td><td><select class="select"><option>${index === 0 ? "Reference" : "Anneal +5 °C"}</option></select></td><td><select class="select"><option>${row.batch}</option><option>SOL-B03</option></select></td><td><input class="input" type="number" value="${index === 2 ? 8 : 6}"></td><td>${badgeStatus(index === 0 ? "review" : "active")}</td><td><button class="btn btn-ghost icon-btn" aria-label="Duplicate sample">${icon("copy")}</button></td></tr>`).join("")}</tbody></table></div></section></div>`;
-  }
-
-  function experimentExecutionView() {
-    const rows = [
-      ["01", "Rinsing / washing", "3 cycles", "3 cycles", "09:10–09:20", "Completed"],
-      ["02", "Sonication", "40 kHz · 10 min", "40 kHz · 10 min", "09:22–09:32", "Completed"],
-      ["03", "UV/Ozone", "15 min", "15 min", "09:40–09:55", "Completed"],
-      ["04", "SnO₂ spin coating", "4000 rpm · 30 s", "3980 rpm · 30 s", "10:04", "Completed"],
-      ["05", "ETL annealing", "100 °C · 30 min", "100 °C · 28 min", "10:06–10:34", "Deviation"],
-      ["06", "Perovskite coating", "4000 rpm · 30 s", "4000 rpm · 30 s", "11:02", "Completed"],
-      ["07", "Au evaporation", "80 nm", "82 nm", "15:20", "Completed"]
-    ];
-    return `<div class="stack"><div class="notice"><div>${icon("info")}</div><div><strong>Planned values remain read-only</strong><p>Record actual values, equipment, execution time and deviations without changing PROC-CHOSE-014/v2.</p></div></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Execution Record</h3><small>Planned process versus what was actually performed</small></div><span class="badge badge-warning">1 deviation</span></div><div class="table-wrap"><table class="table-dense execution-table"><thead><tr><th>#</th><th>Operation</th><th>Planned</th><th>Actual</th><th>Execution time</th><th>Equipment</th><th>Status</th></tr></thead><tbody>${rows.map(([n,operation,planned,actual,time,status],index) => `<tr><td><span class="step-index">${n}</span></td><td><strong>${operation}</strong></td><td><code>${planned}</code></td><td><input class="input ${status === "Deviation" ? "input-warning" : ""}" value="${actual}"></td><td><input class="input" value="${time}"></td><td><select class="select"><option>${index < 3 ? "Wet bench" : index === 6 ? "Thermal evaporator" : "Spin coater 02"}</option></select></td><td>${badgeStatus(status === "Deviation" ? "review" : "reviewed")}</td></tr>`).join("")}</tbody></table></div></section><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Deviation Record</h3><small>Researcher-authored explanation and consequence</small></div>${icon("warning")}</div><div class="panel-body form-grid"><div class="field wide"><label>Deviation</label><textarea class="textarea">ETL annealing ended two minutes earlier than planned.</textarea></div><div class="field"><label>Impact assessment</label><select class="select"><option>Minor · retain sample</option><option>Requires repeat</option></select></div><div class="field"><label>Decision</label><select class="select"><option>Keep visible in comparison</option><option>Exclude after review</option></select></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Execution Completeness</h3><small>Required evidence for result upload</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>7 of 7 operations recorded</strong><p>Actual values and execution time are present.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Humidity is missing</strong><p>Add glovebox humidity before final scientific review.</p></div></div></div></section></div></div>`;
-  }
-
-  function experimentSummaryView() {
-    return `<div class="stack"><div class="grid grid-4">${[["Process snapshot","PROC-CHOSE-014/v2","Immutable"],["Samples","3","S06–S08"],["Devices","20 declared","24 measurements expected"],["Deviations","1","Minor annealing duration"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value kpi-value-medium">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Experiment Summary</h3><small>Records ready to accompany measurement files</small></div>${icon("file")}</div><div class="panel-body metadata-list"><div><span>Experiment</span><strong>EXP-067 · Mixed-cation validation batch</strong></div><div><span>Process</span><strong>CHOSE Standard v2</strong></div><div><span>Batches</span><strong>SOL-B01 · SOL-B03 · HTL-B02</strong></div><div><span>Samples</span><strong>S06 · S07 · S08</strong></div><div><span>Operator</span><strong>Matteo Ginesi</strong></div><div><span>Execution window</span><strong>03 Aug 2026 · 09:10–15:32</strong></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Ready for Results?</h3><small>Gate before files and measurements are attached</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Experiment structure is complete</strong><p>Process, batches, samples, devices and execution records are linked.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Proceed with visible warnings</strong><p>Humidity and device-count reconciliation remain open and will follow the result set.</p></div></div><a class="btn btn-primary" href="project.html?project=PRJ-2026-014&step=results">Continue to Results</a></div></section></div></div>`;
-  }
-
-  function experimentStep(project) {
-    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Experiment sections"><button class="tab active" data-experiment-tab="setup">Setup</button><button class="tab" data-experiment-tab="execution">Execution</button><button class="tab" data-experiment-tab="summary">Summary</button></div><div class="panel-body" id="experiment-content">${experimentSetupView(project)}</div></div>`;
-  }
-
-  function resultFilesView() {
-    return `<div class="stack"><div class="grid grid-3"><div class="card kpi"><div class="kpi-label">Result sets</div><div class="kpi-value">4</div><div class="kpi-detail">Linked to EXP-041, 052 and 067</div></div><div class="card kpi"><div class="kpi-label">Source files</div><div class="kpi-value">12</div><div class="kpi-detail">CSV, XLSX and instrument TXT</div></div><div class="card kpi"><div class="kpi-label">Unassigned files</div><div class="kpi-value">0</div><div class="kpi-detail">Every file has experiment provenance</div></div></div><div class="grid grid-2"><label class="dropzone" for="file-input">${icon("upload")}<h3 class="mt-1">Add result files</h3><p>Attach files to EXP-067, then assign sample, device and measurement type. Files remain local.</p><span class="btn btn-primary">Choose files</span><input id="file-input" type="file" multiple accept=".csv,.tsv,.txt,.json,.xlsx"></label><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Result Set Identity</h3><small>Files belong to a named result set, not directly to the project</small></div><span class="badge badge-accent">RST-JV-067-01</span></div><div class="panel-body form-grid"><div class="field wide"><label>Result set name</label><input class="input" value="EXP-067 forward and reverse JV"></div><div class="field"><label>Experiment</label><select class="select"><option>EXP-067</option><option>EXP-052</option></select></div><div class="field"><label>Measurement type</label><select class="select"><option>J-V curve</option><option>Stability</option><option>UV–Vis</option></select></div><div class="field"><label>Instrument</label><select class="select"><option>Keithley 2450</option></select></div><div class="field"><label>Acquired by</label><select class="select"><option>Matteo Ginesi</option></select></div></div></section></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Files & Provenance</h3><small>Source identity, experiment link, sample scope and parsing state</small></div><span class="badge">4 source files</span></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>File</th><th>Experiment</th><th>Samples / devices</th><th>Type</th><th>Rows</th><th>Parsing</th><th>Quality</th></tr></thead><tbody id="ingest-files"><tr><td>batch_B03_forward.csv</td><td>EXP-067</td><td>S06–S08 · 12 devices</td><td>JV forward</td><td>126</td><td>Keithley JV CSV</td><td>${badgeStatus("reviewed")}</td></tr><tr><td>batch_B03_reverse.csv</td><td>EXP-067</td><td>S06–S08 · 12 devices</td><td>JV reverse</td><td>126</td><td>Keithley JV CSV</td><td>${badgeStatus("reviewed")}</td></tr><tr><td>aging_500h.xlsx</td><td>EXP-052</td><td>S04–S05</td><td>Stability</td><td>640</td><td>Stability v2</td><td><span class="badge badge-warning">2 gaps</span></td></tr><tr><td>uvvis_reference.txt</td><td>EXP-041</td><td>S01–S03</td><td>UV–Vis</td><td>356</td><td>UV–Vis Cary</td><td>${badgeStatus("reviewed")}</td></tr></tbody></table></div></section></div>`;
-  }
-
-  function resultMappingView() {
-    return `<div class="stack"><div class="notice"><div>${icon("info")}</div><div><strong>Mapping creates derived normalized records</strong><p>Source files remain immutable. Every conversion is shown before researcher confirmation.</p></div></div><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Field & Unit Mapping</h3><small>RST-JV-067-01 · Keithley JV CSV</small></div><span class="badge badge-warning">2 decisions</span></div><div class="table-wrap"><table class="table-dense mapping-table"><thead><tr><th>Source column</th><th>Destination field</th><th>Source → target unit</th><th>Conversion</th><th>Confidence</th><th>Preview</th><th>Decision</th></tr></thead><tbody>${D.importMapping.map((row) => `<tr><td><code>${esc(row.column)}</code></td><td><select class="select"><option>${esc(row.target)}</option><option>Ignore column</option></select></td><td>${esc(row.detected)} → ${esc(row.required)}</td><td>${esc(row.conversion)}</td><td><span class="confidence-badge confidence-${row.confidence > 95 ? "high" : "medium"}">${row.confidence}%</span></td><td>${esc(row.preview)}</td><td><select class="select"><option>Confirm</option><option>Correct</option><option>Ignore</option></select></td></tr>`).join("")}</tbody></table></div><div class="panel-footer action-footer"><small>Preset scope: CHOSE · Keithley 2450 · JV measurement</small><div class="cluster"><button class="btn" id="save-mapping-preset">Save temporary preset</button><button class="btn btn-primary" id="preview-normalized">Preview normalized records</button></div></div></section><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Normalized Preview</h3><small>Original and derived values stay distinguishable</small></div>${icon("table")}</div><div class="panel-body"><div class="metadata-list"><div><span>Source</span><strong>Jsc = 23.4 mA/cm²</strong></div><div><span>Derived</span><strong>short_circuit_current_density = 234 A/m²</strong></div><div><span>Rule</span><strong>Multiply by 10</strong></div><div><span>Evidence</span><strong>MAP-002 · row 18 · S08</strong></div></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Mapping Gate</h3><small>Required identity and unit checks</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Sample and measurement identity mapped</strong><p>All rows can be connected to stable sample identifiers.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Review current-density conversion</strong><p>The proposed ×10 conversion remains researcher-controlled.</p></div></div></div></section></div></div>`;
-  }
-
-  function resultQualityView() {
-    return `<div class="stack">${experimentInspector()}<section class="panel"><div class="panel-header"><div><h3 class="mb-0">Validated Measurement Preview</h3><small>Result records linked to experiment, sample and source file</small></div><span class="badge badge-success">8 samples</span></div><div class="panel-body"><div class="table-wrap">${datasetTable(D.demoDataset)}</div></div></section></div>`;
-  }
-
-  function resultsStep() {
-    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Result sections"><button class="tab active" data-results-tab="files">Files</button><button class="tab" data-results-tab="mapping">Mapping</button><button class="tab" data-results-tab="quality">Quality Review</button></div><div class="panel-body" id="results-content">${resultFilesView()}</div></div>`;
-  }
-
-  function exportPackagePanel(project) {
-    return `<section class="section export-package-section"><div class="section-heading"><div><h2>Report & Export Package</h2><p>Reviewed outputs, structured records and a transparent local NOMAD preview share the same canonical project state.</p></div><span class="badge badge-warning">3 visible issues</span></div><div class="grid grid-2"><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Portable Project Package</h3><small>Complete local handoff without remote submission</small></div>${icon("download")}</div><div class="panel-body stack"><div class="export-card"><span class="object-icon">${icon("database")}</span><div><strong>Complete project ZIP</strong><p class="mb-0">Process snapshots, experiments, result sets, measurements, report files and provenance.</p></div><button class="btn btn-sm btn-primary" data-export="bundle">Generate package</button></div><div class="export-card"><span class="object-icon">${icon("external")}</span><div><strong>NOMAD-ready preview</strong><p class="mb-0">Mapping preview and validation notes; no automatic upload.</p></div><button class="btn btn-sm" data-export="nomad">Generate preview</button></div><div class="cluster"><button class="btn" data-export="yaml">Project YAML</button><button class="btn" data-export="jsonl">Measurements JSONL</button><button class="btn" data-export="csv">Measurements CSV</button></div></div></section><section class="panel"><div class="panel-header"><div><h3 class="mb-0">Export Readiness</h3><small>Deterministic blockers remain visible in every package</small></div>${icon("check")}</div><div class="panel-body stack"><div class="notice notice-success"><div>${icon("check")}</div><div><strong>Preview package can be generated</strong><p>Project, process, experiments, samples, results and evidence are linked.</p></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Final submission requires review</strong><p>Resolve device count, annealing unit and solution-batch provenance.</p></div></div><div class="notice"><div>${icon("lock")}</div><div><strong>No automatic upload</strong><p>Credentials and remote submission remain outside this static proof of concept.</p></div></div></div></section></div></section>`;
-  }
-
-  function reportAndExportView(project) {
-    return `<div class="stack">${analysisReport(project)}${exportPackagePanel(project)}</div>`;
-  }
-
-  function reviewStep(project) {
-    return `<div class="panel contained-workspace"><div class="tabs pipeline-section-tabs" role="tablist" aria-label="Review sections"><button class="tab active" data-review-tab="overview">Overview</button><button class="tab" data-review-tab="compare">Compare</button><button class="tab" data-review-tab="findings">Findings</button><button class="tab" data-review-tab="report">Report & Export</button></div><div class="panel-body" id="review-content">${analysisOverview(project)}</div></div>`;
-  }
-
-  function analysisOverview(project) {
-    const best = [...D.demoDataset].sort((a, b) => b.pce - a.pce)[0];
-    const mean = (key) => (D.demoDataset.reduce((sum, row) => sum + row[key], 0) / D.demoDataset.length).toFixed(2);
-    return `<div class="stack"><div class="grid grid-5">${[["Best PCE", `${best.pce}%`, best.sample], ["Mean PCE", `${mean("pce")}%`, "8 samples"], ["Mean Voc", `${mean("voc")} V`, "cohort"], ["Stability", `${mean("stability")}%`, "normalized"], ["AI findings", D.aiFindings.length, "2 require review"]].map(([a, b, c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div>
-      <div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0" data-chart-title>PCE by sample</h3><small>Interactive canvas · formulation comparison</small></div><div class="segmented" aria-label="Chart metric"><button class="active" data-chart-metric="pce">PCE</button><button data-chart-metric="stability">Stability</button><button data-chart-metric="hysteresis">Hysteresis</button></div></div><div class="panel-body"><canvas class="chart" id="analysis-chart" width="900" height="360"></canvas></div></div><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Evidence-linked summary</h3><small>AI-assisted · researcher approval retained</small></div>${icon("spark")}</div><div class="panel-body">${D.aiFindings.slice(0, 4).map(aiFinding).join("")}</div></div></div>
-      <div class="panel"><div class="panel-header"><div><h3 class="mb-0">Measurement dataset</h3><small>Filterable values used by analyses and reports</small></div><button class="btn btn-sm" data-export="csv">${icon("download")} CSV</button></div><div class="panel-body"><div class="table-wrap">${datasetTable(D.demoDataset)}</div></div></div></div>`;
-  }
-
-  function analysisFindings() {
-    return `<div class="grid grid-2"><div class="stack">${D.aiFindings.map((finding) => `<div class="panel ai-panel"><div class="panel-body">${aiFinding(finding)}<div class="cluster mt-1"><button class="btn btn-sm ${finding.status === "accepted" ? "btn-primary" : ""}" data-finding-action="Accepted">Accept</button><button class="btn btn-sm ${finding.status === "review" ? "btn-primary" : ""}" data-finding-action="Needs revision">Needs revision</button><a class="btn btn-sm btn-ghost" href="knowledge.html?q=${encodeURIComponent(finding.title)}">Link evidence</a></div></div></div>`).join("")}</div><div class="stack"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Assistant review policy</h3><small>Explicit boundaries for scientific use</small></div>${icon("lock")}</div><div class="panel-body check-list"><div class="check-row">${icon("check")}<span>Only project evidence and approved Knowledge items are used.</span></div><div class="check-row">${icon("check")}<span>Every finding records evidence, score and approval status.</span></div><div class="check-row">${icon("check")}<span>Assistant output is stored separately from researcher conclusions.</span></div><div class="check-row">${icon("check")}<span>No automated exclusion or irreversible data changes.</span></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Knowledge context</h3><small>Items supporting this review</small></div><a class="btn btn-sm" href="knowledge.html">Open Knowledge</a></div><div class="panel-body stack">${D.knowledge.slice(0, 4).map(knowledgeCard).join("")}</div></div></div></div>`;
-  }
-
-  function experimentInspector() {
+  function experimentInspector(pipeline = CHOSE_CONTRACT) {
     const issueIcon = (severity) => severity === "error" || severity === "warning" ? "warning" : severity === "suggestion" ? "spark" : "info";
-    return `<div class="stack"><div class="grid grid-4">${[["Completeness","82%","3 required fields"],["Data quality","1 error","Device count mismatch"],["Report","Ready with caveat","Evidence linked"],["NOMAD","Blocked","Resolve 3 issues"]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${a}</div><div class="kpi-value kpi-value-medium">${b}</div><div class="kpi-detail">${c}</div></div>`).join("")}</div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">EXP-067 quality review</h3><small>Deterministic validation first; ambiguous text interpreted separately</small></div><a class="btn btn-sm" href="knowledge.html?q=Inspect%20EXP-067">Open in Knowledge</a></div><div class="panel-body validation-list">${D.validationIssues.map((item) => `<article class="validation-issue issue-${item.severity}"><div class="issue-icon">${icon(issueIcon(item.severity))}</div><div><div class="cluster"><strong>${esc(item.title)}</strong><span class="badge">${esc(item.severity)}</span></div><p>${esc(item.detail)}</p><small>${esc(item.source)} · ${esc(item.evidence)}</small></div></article>`).join("")}</div></div><div class="interpretation-stack"><div><span class="badge badge-success">Observed data</span><p>S06 has PCE 17.36%; the imported file contains 24 measurements.</p></div><div><span class="badge badge-accent">Correlation</span><p>The same experiment has incomplete solution and annealing provenance.</p></div><div><span class="badge badge-warning">Hypothesis</span><p>Process variation may contribute. This is not demonstrated by the available data.</p></div><div><span class="badge">Suggestion</span><p>Complete provenance and repeat the deterministic comparison.</p></div></div></div>`;
+    const demo = choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS);
+    const issues = asArray(demo.quality_issues).length ? asArray(demo.quality_issues) : asArray(D.validationIssues);
+    const experiment = choseDemo(pipeline, "experiment", CHOSE_DEMO_EXPERIMENT).experiment || {};
+    const measurements = asArray(demo.normalized_records);
+    const errors = issues.filter((item) => item.severity === "error").length;
+    const warnings = issues.filter((item) => item.severity === "warning").length;
+    const resultStep = pipelineStep(pipeline, "results");
+    const required = asArray(resultStep?.completion?.requires).length;
+    const checks = asArray(choseMapping(pipeline, "jv", CHOSE_JV_MAPPING).quality_checks).length;
+    return `<div class="stack"><div class="grid grid-4">${[["Contract fields",required,`${asArray(resultStep?.completion?.rules).length} completion rules`],["Data quality",`${errors} error${errors === 1 ? "" : "s"}`,`${warnings} warnings`],["Measurements",measurements.length,"source-linked rows"],["NOMAD",errors ? "Blocked" : "Preview ready",`${checks} quality checks`]].map(([a,b,c]) => `<div class="card kpi"><div class="kpi-label">${esc(a)}</div><div class="kpi-value kpi-value-medium">${esc(b)}</div><div class="kpi-detail">${esc(c)}</div></div>`).join("")}</div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">${esc(experiment.experiment_id || "Experiment")} quality review</h3><small>Deterministic validation first; ambiguous text interpreted separately</small></div><a class="btn btn-sm" href="knowledge.html?q=Inspect%20${encodeURIComponent(experiment.experiment_id || "experiment")}">Open in Knowledge</a></div><div class="panel-body validation-list">${issues.map((item) => `<article class="validation-issue issue-${esc(item.severity)}"><div class="issue-icon">${icon(issueIcon(item.severity))}</div><div><div class="cluster"><strong>${esc(item.title)}</strong><span class="badge">${esc(item.severity)}</span></div><p>${esc(item.detail)}</p><small>${esc(item.source)} · ${esc(item.evidence)}</small></div></article>`).join("")}</div></div><div class="interpretation-stack">${asArray(demo.interpretation).map((item) => `<div><span class="badge ${item.type === "observation" ? "badge-success" : item.type === "correlation" ? "badge-accent" : item.type === "hypothesis" ? "badge-warning" : ""}">${esc(item.label || item.type)}</span><p>${esc(item.statement)}</p></div>`).join("")}</div></div>`;
   }
 
-  function comparisonView() {
-    return `<div class="stack"><div class="comparison-summary"><div><span>Included experiments</span><strong>EXP-041 · EXP-052 · EXP-067</strong></div><div><span>Selection criteria</span><strong>Current project · uses DMSO</strong></div><div><span>Parameters</span><strong>Annealing · formulation · batch</strong></div><div><span>Measurements</span><strong>PCE · Voc · Jsc · FF</strong></div></div><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>Limited comparability</strong><p>EXP-067 is missing an annealing unit and solution-preparation link. Summary statistics remain visible, but interpretation requires review.</p></div></div><div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Comparison table</h3><small>Mean, median, range and missingness</small></div></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Experiment</th><th>n</th><th>Mean PCE</th><th>Median PCE</th><th>Range</th><th>Missing</th></tr></thead><tbody><tr><td>EXP-041</td><td>3</td><td>19.42%</td><td>19.15%</td><td>18.94–20.16%</td><td>0</td></tr><tr><td>EXP-052</td><td>2</td><td>20.50%</td><td>20.50%</td><td>19.90–21.10%</td><td>0</td></tr><tr><td>EXP-067</td><td>3</td><td>19.69%</td><td>20.44%</td><td>17.36–21.28%</td><td>2 links</td></tr></tbody></table></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Simple outlier review</h3><small>Deterministic IQR candidate · no automatic exclusion</small></div></div><div class="panel-body stack"><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>S06 is a review candidate</strong><p>It is low across PCE, FF and stability. Keep the raw row and inspect fabrication evidence before any exclusion.</p></div></div><div class="cluster"><a class="btn" href="knowledge.html?q=Compare%20experiments%20using%20DMSO">Open evidence</a></div></div></div></div></div>`;
+  function comparisonView(pipeline = CHOSE_CONTRACT) {
+    const comparison = choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW).comparison || {};
+    const rows = asArray(comparison.rows);
+    const warning = comparison.warning || {};
+    const outlier = comparison.outlier || {};
+    return `<div class="stack"><div class="comparison-summary"><div><span>Included experiments</span><strong>${asArray(comparison.included_experiments).map(esc).join(" · ") || "—"}</strong></div><div><span>Selection criteria</span><strong>${esc(comparison.selection_criteria || "—")}</strong></div><div><span>Parameters</span><strong>${asArray(comparison.parameters).map(esc).join(" · ") || "—"}</strong></div><div><span>Measurements</span><strong>${asArray(comparison.measurements).map(esc).join(" · ") || "—"}</strong></div></div>${warning.title ? `<div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>${esc(warning.title)}</strong><p>${esc(warning.detail)}</p></div></div>` : ""}<div class="grid grid-2"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Comparison table</h3><small>YAML-defined demonstration summary</small></div></div><div class="table-wrap"><table class="table-dense"><thead><tr><th>Experiment</th><th>n</th><th>Mean PCE</th><th>Median PCE</th><th>Range</th><th>Missing</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${esc(row.experiment)}</td><td>${esc(row.n)}</td><td>${esc(row.mean_pce)}</td><td>${esc(row.median_pce)}</td><td>${esc(row.range)}</td><td>${esc(row.missing)}</td></tr>`).join("")}</tbody></table></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Simple outlier review</h3><small>${esc(outlier.method || "Deterministic review") } · no automatic exclusion</small></div></div><div class="panel-body stack"><div class="notice notice-warning"><div>${icon("warning")}</div><div><strong>${esc(outlier.title || "Review candidate")}</strong><p>${esc(outlier.detail || "No outlier statement is configured.")}</p></div></div><div class="cluster"><a class="btn" href="knowledge.html?q=${encodeURIComponent(`Review ${outlier.sample || "outlier"} evidence`)}">Open evidence</a></div></div></div></div></div>`;
   }
 
-  const reportSectionCatalog = [
-    ["summary", "Executive Summary", "Decision context, objectives and key indicators"],
-    ["methods", "Materials, Process & Experiments", "Solution, stack, methodology and experiment coverage"],
-    ["results", "Results & Data", "Chart, complete measurements and author interpretation"],
-    ["ai", "Evidence-Linked Findings", "Advisory findings with evidence and review state"],
-    ["conclusions", "Discussion, Conclusions & Limitations", "Researcher-authored interpretation and boundaries"],
-    ["custom", "Custom Author Section", "Optional researcher-authored section with a custom heading"],
-    ["provenance", "Provenance & Approval", "Data classes, source controls and final status"]
-  ];
+  function reportSectionCatalog(pipeline = CHOSE_CONTRACT) {
+    return asArray(choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW).report?.section_catalog).map((item) => [item.id, item.title, item.detail, item.enabled_by_default !== false]);
+  }
 
-  function reportDefaults(project) {
+
+  function reportDefaults(project, pipeline = CHOSE_CONTRACT) {
     const settings = getSettings();
+    const review = choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW);
+    const defaults = review.report?.defaults || {};
+    const sections = reportSectionCatalog(pipeline);
     return {
       title: project.name,
-      subtitle: "Scientific project report",
-      reportType: "Scientific project report",
+      subtitle: defaults.subtitle || "Scientific project report",
+      reportType: defaults.report_type || "Scientific project report",
       reportCode: `${project.id}-R01`,
-      keywords: "perovskite, mixed-cation, JV, stability",
+      keywords: defaults.keywords || "",
       author: settings.reportAuthor,
       laboratory: settings.reportLab,
       organisation: settings.reportOrganisation,
       reportDate: new Date().toISOString().slice(0, 10),
-      executiveSummary: "The current evidence identifies FA0.90MA0.10 as the leading formulation across power conversion efficiency, stability and hysteresis. The result remains subject to outlier and metadata review.",
+      executiveSummary: defaults.executive_summary || "",
       objectives: project.objective,
-      methodology: "Structured solution preparation, versioned device stacks, mapped JV measurements and deterministic comparative analysis.",
-      resultsNarrative: "S08 records the highest PCE in the current cohort. S04 and S08 remain the strongest validation candidates; S06 requires process and provenance review before interpretation.",
-      discussion: "The performance pattern is consistent across PCE, stability and hysteresis, but the small cohort and incomplete process metadata prevent causal conclusions.",
-      conclusions: "FA0.90MA0.10 is the strongest current candidate. S04 and S08 should proceed to validation; S06 and two process metadata gaps require review.",
-      limitations: "The demonstration dataset is small and cannot support causal claims. AI-assisted text is simulated and requires researcher approval.",
-      customTitle: "Additional researcher notes",
+      methodology: defaults.methodology || "",
+      resultsNarrative: defaults.results_narrative || "",
+      discussion: defaults.discussion || "",
+      conclusions: defaults.conclusions || review.review?.researcher_conclusion?.statement || "",
+      limitations: defaults.limitations || "",
+      customTitle: defaults.custom_title || "Additional researcher notes",
       customBody: "",
-      approval: "Pending researcher approval",
-      chartMetric: "pce",
+      approval: defaults.approval || review.review?.approval_state || "Pending researcher approval",
+      chartMetric: defaults.chart_metric || "pce",
       includeFullTable: true,
       includeExperiments: true,
       includeEvidence: true,
       includeSourceAppendix: true,
       includeQualityReview: true,
-      sections: reportSectionCatalog.map(([id]) => id).filter((id) => id !== "custom")
+      sections: sections.filter(([, , , enabled]) => enabled).map(([id]) => id)
     };
   }
 
-  function reportState(project) {
-    return S.getReport(project.id, reportDefaults(project));
+  function reportState(project, pipeline = CHOSE_CONTRACT) {
+    return S.getReport(project.id, reportDefaults(project, pipeline));
   }
 
   function reportReadiness(report) {
@@ -886,8 +1121,8 @@
     return { errors, warnings, ready: errors.length === 0 };
   }
 
-  function syncReportDraft(project, notify = false) {
-    const state = reportState(project);
+  function syncReportDraft(project, pipeline = CHOSE_CONTRACT, notify = false) {
+    const state = reportState(project, pipeline);
     if (!$("#report-title")) return state;
     const value = (id, fallback) => $(id)?.value ?? fallback;
     const checked = (id, fallback) => $(id) ? $(id).checked : fallback;
@@ -923,7 +1158,7 @@
     S.saveReport(project.id, updated);
     Log.info("report.draft-applied", { projectId: project.id, sections: updated.sections.length, chartMetric: updated.chartMetric });
     const preview = $("#report-live-preview");
-    if (preview) preview.innerHTML = reportPreview(project);
+    if (preview) preview.innerHTML = reportPreview(project, pipeline);
     renderReportReadiness(updated);
     if (notify) toast("Report draft applied in memory. PDF and DOCX now use this exact report state.");
     return updated;
@@ -941,42 +1176,50 @@
     return `<details class="report-editor-group" ${open ? "open" : ""}><summary><span><strong>${title}</strong><small>${detail}</small></span>${icon("arrow")}</summary><div class="report-editor-group-body">${content}</div></details>`;
   }
 
-  function analysisReport(project) {
-    const report = reportState(project);
+  function analysisReport(project, pipeline = CHOSE_CONTRACT) {
+    const report = reportState(project, pipeline);
+    const reportContract = choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW).report || {};
+    const evidenceStatement = reportContract.evidence_statement || {};
+    const boundaryStatement = reportContract.boundary_statement || {};
     const metadata = `<div class="form-grid"><div class="field wide"><label for="report-title">Report title</label><input class="input" id="report-title" value="${esc(report.title)}"></div><div class="field wide"><label for="report-subtitle">Subtitle</label><input class="input" id="report-subtitle" value="${esc(report.subtitle)}"></div><div class="field"><label for="report-type">Document type</label><select class="select" id="report-type"><option ${report.reportType === "Scientific project report" ? "selected" : ""}>Scientific project report</option><option ${report.reportType === "Experiment report" ? "selected" : ""}>Experiment report</option><option ${report.reportType === "Internal technical note" ? "selected" : ""}>Internal technical note</option></select></div><div class="field"><label for="report-code">Report code</label><input class="input" id="report-code" value="${esc(report.reportCode)}"></div><div class="field"><label for="report-author">Author</label><input class="input" id="report-author" value="${esc(report.author)}"></div><div class="field"><label for="report-date">Report date</label><input class="input" id="report-date" type="date" value="${esc(report.reportDate)}"></div><div class="field wide"><label for="report-laboratory">Laboratory</label><input class="input" id="report-laboratory" value="${esc(report.laboratory)}"></div><div class="field wide"><label for="report-organisation">Organisation</label><input class="input" id="report-organisation" value="${esc(report.organisation)}"></div><div class="field wide"><label for="report-keywords">Keywords</label><input class="input" id="report-keywords" value="${esc(report.keywords)}"></div><div class="field wide"><label for="report-approval">Approval / status</label><input class="input" id="report-approval" value="${esc(report.approval)}"></div></div>`;
     const textArea = (id, label, value, hint) => `<div class="field wide report-text-field"><div class="report-field-label"><label for="${id}">${label}</label><small>${hint}</small></div><textarea class="textarea report-editor-textarea" id="${id}" data-report-counter>${esc(value)}</textarea><div class="report-field-meta"><span data-counter-for="${id}">${String(value || "").length} characters</span></div></div>`;
     const narrative = `<div class="form-grid">${textArea("report-summary", "Executive summary", report.executiveSummary, "Decision-ready overview and principal result")}${textArea("report-objectives", "Objectives", report.objectives, "Research question, scope and intended decision")}${textArea("report-methodology", "Methodology", report.methodology, "Preparation, process, acquisition and analysis")}${textArea("report-results-narrative", "Results interpretation", report.resultsNarrative, "Researcher interpretation of the visible data")}${textArea("report-discussion", "Discussion", report.discussion, "Context, alternatives and scientific caveats")}${textArea("report-conclusions", "Conclusions", report.conclusions, "Final researcher-authored decision")}${textArea("report-limitations", "Limitations", report.limitations, "Dataset, method and inference boundaries")}</div>`;
     const dataOptions = `<div class="form-grid"><div class="field wide"><label for="report-chart-metric">Primary chart</label><select class="select" id="report-chart-metric"><option value="pce" ${report.chartMetric === "pce" ? "selected" : ""}>PCE by sample</option><option value="stability" ${report.chartMetric === "stability" ? "selected" : ""}>Stability by sample</option><option value="hysteresis" ${report.chartMetric === "hysteresis" ? "selected" : ""}>Hysteresis by sample</option></select></div></div><div class="report-option-grid"><label class="check-row"><input id="report-full-table" type="checkbox" ${report.includeFullTable ? "checked" : ""}><span><strong>Complete measurement table</strong><small class="block">All nine result fields and every included sample</small></span></label><label class="check-row"><input id="report-experiments" type="checkbox" ${report.includeExperiments ? "checked" : ""}><span><strong>Experiment coverage</strong><small class="block">Experiment IDs, samples, process and measurement count</small></span></label><label class="check-row"><input id="report-evidence" type="checkbox" ${report.includeEvidence ? "checked" : ""}><span><strong>Evidence details</strong><small class="block">Source references and review state for findings</small></span></label><label class="check-row"><input id="report-source-appendix" type="checkbox" ${report.includeSourceAppendix ? "checked" : ""}><span><strong>Source appendix</strong><small class="block">Files, identifiers and provenance summary</small></span></label><label class="check-row"><input id="report-quality-review" type="checkbox" ${report.includeQualityReview ? "checked" : ""}><span><strong>Data-quality review</strong><small class="block">Blocking issues and interpretation boundaries</small></span></label></div>`;
     const custom = `<div class="form-grid"><div class="field wide"><label for="report-custom-title">Custom section title</label><input class="input" id="report-custom-title" value="${esc(report.customTitle)}"></div>${textArea("report-custom-body", "Custom author text", report.customBody, "Optional notes, acknowledgements or project-specific discussion")}</div><div class="notice"><div>${icon("info")}</div><div><strong>Enable the Custom Author Section below</strong><p>This content enters the live preview, PDF and DOCX only when its section checkbox is enabled.</p></div></div>`;
-    const structure = `<div class="report-section-list" aria-label="Included report sections">${reportSectionCatalog.map(([id, title, detail], index) => `<label class="check-row report-section"><span class="drag-handle" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><input type="checkbox" data-report-section="${id}" ${report.sections.includes(id) ? "checked" : ""}><span><strong>${title}</strong><small class="block">${detail}</small></span></label>`).join("")}</div>`;
-    return `<div class="report-composer-layout"><aside class="report-composer-editor"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report Composer</h3><small>Author-controlled content · live A4 preview · native local export</small></div>${icon("file")}</div><div class="panel-body report-editor-stack">${reportEditorGroup("Identity & publication", "Title, author, document type, code, keywords and approval", metadata, true)}${reportEditorGroup("Scientific narrative", "Summary, objectives, methods, interpretation and conclusions", narrative, true)}${reportEditorGroup("Data & visual content", "Choose chart, measurements, experiments, evidence and provenance", dataOptions, true)}${reportEditorGroup("Custom author section", "Add project-specific text without changing the standard structure", custom)}${reportEditorGroup("Included sections", "Control which scientific sections enter every output", structure, true)}<div class="report-editor-actions"><button class="btn btn-primary" id="save-report-draft">Apply report draft</button><span class="badge badge-success">Session draft</span></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report readiness</h3><small>Structural checks before generating files</small></div>${icon("check")}</div><div class="panel-body" id="report-readiness"></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Output suite</h3><small>Native PDF, professional DOCX, analysis workbook and LaTeX package</small></div><span class="badge badge-accent">${esc(E.palettes[getSettings().palette].name)}</span></div><div class="panel-body stack">${reportExportCards(project)}</div></div><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Evidence assistant</h3><small>Advisory wording remains separate from researcher text</small></div>${icon("spark")}</div><div class="panel-body stack"><div class="report-statement"><span class="badge badge-accent">Measured statement</span><p><strong>Sample S08 showed the highest measured PCE.</strong></p><div class="evidence-detail"><small>Evidence</small><p>batch_B03_forward.csv · S08 · PCE · 21.28%</p></div></div><div class="report-statement"><span class="badge badge-warning">Boundary</span><p>EXP-067 has incomplete process provenance; no causal claim is made.</p></div></div></div></aside><section class="report-preview-workbench"><div class="report-preview-toolbar"><span><strong>Live report preview</strong><small>Preview and PDF use the same canonical report model, selections and author text</small></span><span class="badge">A4 · ${report.sections.length} sections</span></div><div class="report-preview report-preview-pages" id="report-live-preview">${reportPreview(project)}</div></section></div>`;
+    const structure = `<div class="report-section-list" aria-label="Included report sections">${reportSectionCatalog(pipeline).map(([id, title, detail], index) => `<label class="check-row report-section"><span class="drag-handle" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><input type="checkbox" data-report-section="${id}" ${report.sections.includes(id) ? "checked" : ""}><span><strong>${title}</strong><small class="block">${detail}</small></span></label>`).join("")}</div>`;
+    return `<div class="report-composer-layout"><aside class="report-composer-editor"><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report Composer</h3><small>Author-controlled content · live A4 preview · native local export</small></div>${icon("file")}</div><div class="panel-body report-editor-stack">${reportEditorGroup("Identity & publication", "Title, author, document type, code, keywords and approval", metadata, true)}${reportEditorGroup("Scientific narrative", "Summary, objectives, methods, interpretation and conclusions", narrative, true)}${reportEditorGroup("Data & visual content", "Choose chart, measurements, experiments, evidence and provenance", dataOptions, true)}${reportEditorGroup("Custom author section", "Add project-specific text without changing the standard structure", custom)}${reportEditorGroup("Included sections", "Control which scientific sections enter every output", structure, true)}<div class="report-editor-actions"><button class="btn btn-primary" id="save-report-draft">Apply report draft</button><span class="badge badge-success">Session draft</span></div></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Report readiness</h3><small>Structural checks before generating files</small></div>${icon("check")}</div><div class="panel-body" id="report-readiness"></div></div><div class="panel"><div class="panel-header"><div><h3 class="mb-0">Output suite</h3><small>Native PDF, professional DOCX, analysis workbook and LaTeX package</small></div><span class="badge badge-accent">${esc(E.palettes[getSettings().palette].name)}</span></div><div class="panel-body stack">${reportExportCards(pipeline)}</div></div><div class="panel ai-panel"><div class="panel-header"><div><h3 class="mb-0">Evidence assistant</h3><small>Advisory wording remains separate from researcher text</small></div>${icon("spark")}</div><div class="panel-body stack"><div class="report-statement"><span class="badge badge-accent">${esc(evidenceStatement.label || "Measured statement")}</span><p><strong>${esc(evidenceStatement.statement || "No measured statement configured.")}</strong></p><div class="evidence-detail"><small>Evidence</small><p>${esc(evidenceStatement.evidence || "No evidence reference configured.")}</p></div></div><div class="report-statement"><span class="badge badge-warning">${esc(boundaryStatement.label || "Boundary")}</span><p>${esc(boundaryStatement.statement || "No interpretation boundary configured.")}</p></div></div></div></aside><section class="report-preview-workbench"><div class="report-preview-toolbar"><span><strong>Live report preview</strong><small>Preview and PDF use the same canonical report model, selections and author text</small></span><span class="badge">A4 · ${report.sections.length} sections</span></div><div class="report-preview report-preview-pages" id="report-live-preview">${reportPreview(project, pipeline)}</div></section></div>`;
   }
 
-  function reportPreview(project) {
+  function reportPreview(project, pipeline = CHOSE_CONTRACT) {
     if (typeof E.buildReportDocument !== "function") {
       Log.error("report.model-unavailable", { page: document.body.dataset.page, module: "assets/js/workbook.js" });
       return `<div class="notice notice-error"><div>${icon("warning")}</div><div><strong>Report preview unavailable</strong><p>The report module was not loaded. Reload the page or verify the local JavaScript files.</p></div></div>`;
     }
     const model = E.buildReportDocument(project, D.demoDataset, {
-      report: reportState(project),
+      pipeline,
+      report: reportState(project, pipeline),
       findings: D.aiFindings,
       knowledge: D.knowledge,
-      experiments: D.experiments,
-      stackLayers
+      experiments: D.experiments
     });
-    const {report, rows, best, experiments, metric, metricLabel, metricSuffix, minValue, metricRange} = model;
+    const {report, rows, best, experiments, metric, metricLabel, metricSuffix, minValue, metricRange, solutionDefinition, solutionMeta, solventComponents, stackLayers: modelStackLayers, stackMeta, qualityIssues, sourceEntries, provenanceManifest} = model;
     const sections = model.sectionSet;
-    const mean = (key) => model.mean[key].toFixed(2);
+    const mean = (key) => Number(model.mean[key] || 0).toFixed(2);
     const excluded = (name) => `<div class="report-excluded"><strong>${name} excluded by the author</strong><span>Enable the section in the Composer to include it in PDF and DOCX.</span></div>`;
-    const summaryBody = sections.has("summary") ? `<p class="report-lead">${esc(report.executiveSummary)}</p><div class="report-objectives"><strong>Research objectives</strong><p>${esc(report.objectives)}</p></div><div class="report-kpis"><div class="report-kpi"><small>BEST PCE</small><strong>${best.pce.toFixed(2)}%</strong><span>${esc(best.sample)}</span></div><div class="report-kpi"><small>MEAN PCE</small><strong>${mean("pce")}%</strong><span>${rows.length} samples</span></div><div class="report-kpi"><small>STABILITY</small><strong>${best.stability}%</strong><span>best retained</span></div><div class="report-kpi"><small>MEAN VOC</small><strong>${mean("voc")} V</strong><span>cohort</span></div><div class="report-kpi"><small>OPEN ISSUES</small><strong>3</strong><span>quality review</span></div></div>` : excluded("Executive Summary");
-    const qualityReview = report.includeQualityReview ? `<div class="report-quality-strip"><span><b>1 ERROR</b> Device count mismatch</span><span><b>2 WARNINGS</b> Annealing unit and solution provenance</span><span><b>BOUNDARY</b> No causal claim from incomplete metadata</span></div>` : "";
-    const methodsBody = sections.has("methods") ? `<p>${esc(report.methodology)}</p><div class="report-technical-grid"><section><h3>Solution Review · SOL-B04</h3><div class="report-composition"><span class="report-composition-dmf">DMF 80%</span><span class="report-composition-dmso">DMSO 20%</span></div><dl><div><dt>Target</dt><dd>FA0.90MA0.10PbI3</dd></div><div><dt>Volume</dt><dd>2.00 mL</dd></div><div><dt>Molarity</dt><dd>1.25 M</dd></div><div><dt>Status</dt><dd>Reviewed</dd></div></dl></section><section><h3>Stack Review · STK-003/v2</h3><div class="report-stack-mini">${stackLayers.map((layer) => `<span class="stack-tone-${esc(layer.tone)}">${esc(layer.material)} · ${esc(layer.thickness)}</span>`).join("")}</div><small>n-i-p reference architecture</small></section></div>${report.includeExperiments ? `<div class="report-experiment-grid">${experiments.map((experiment) => `<article><span>${esc(experiment.id)}</span><strong>${esc(experiment.samples.join(" · "))}</strong><small>${esc(experiment.process)} · ${experiment.annealing.value}${esc(experiment.annealing.unit || " unit missing")} · ${experiment.measurements} measurements</small></article>`).join("")}</div>` : ""}${qualityReview}` : excluded("Materials, Process & Experiments");
-    const resultsBody = sections.has("results") ? `<div class="report-chart-card"><div><strong>${metricLabel} by sample</strong><small>Complete included cohort · deterministic snapshot</small></div><div class="report-chart-bars">${rows.map((row) => `<div><span>${esc(row.sample)}</span><i style="--bar:${(((Number(row[metric]) - minValue) / metricRange) * 100).toFixed(1)}%"></i><b>${Number(row[metric]).toFixed(2)}${metricSuffix}</b></div>`).join("")}</div></div>${report.includeFullTable ? `<div class="table-wrap report-results-table">${datasetTable(rows)}</div>` : ""}<div class="report-interpretation"><strong>Researcher interpretation</strong><p>${esc(report.resultsNarrative)}</p></div>` : excluded("Results & Data");
-    const findingsBody = sections.has("ai") ? `<div class="report-findings-grid">${D.aiFindings.map((finding) => `<article><div><strong>${finding.score}</strong><span>${esc(finding.status)}</span></div><h3>${esc(finding.title)}</h3><p>${esc(finding.detail)}</p>${report.includeEvidence ? `<small>${esc(finding.evidence)} · Simulated AI</small>` : ""}</article>`).join("")}</div>` : excluded("Evidence-Linked Findings");
+    const summaryBody = sections.has("summary") ? `<p class="report-lead">${esc(report.executiveSummary)}</p><div class="report-objectives"><strong>Research objectives</strong><p>${esc(report.objectives)}</p></div><div class="report-kpis"><div class="report-kpi"><small>BEST PCE</small><strong>${Number(best.pce || 0).toFixed(2)}%</strong><span>${esc(best.sample || "—")}</span></div><div class="report-kpi"><small>MEAN PCE</small><strong>${mean("pce")}%</strong><span>${rows.length} samples</span></div><div class="report-kpi"><small>STABILITY</small><strong>${esc(best.stability || 0)}%</strong><span>best retained</span></div><div class="report-kpi"><small>MEAN VOC</small><strong>${mean("voc")} V</strong><span>cohort</span></div><div class="report-kpi"><small>OPEN ISSUES</small><strong>${model.openIssueCount}</strong><span>quality review</span></div></div>` : excluded("Executive Summary");
+    const qualityReview = report.includeQualityReview && qualityIssues.length ? `<div class="report-quality-strip">${qualityIssues.slice(0,3).map((item) => `<span><b>${esc(String(item.severity || "information").toUpperCase())}</b> ${esc(item.title || item.detail || "Quality issue")}</span>`).join("")}</div>` : "";
+    const solventTotal = solventComponents.reduce((sum, item) => sum + Number(String(item.share || "").match(/[\d.]+/)?.[0] || 0), 0) || 100;
+    const composition = solventComponents.length ? `<div class="report-composition">${solventComponents.map((item) => {
+      const share = Number(String(item.share || "").match(/[\d.]+/)?.[0] || 0);
+      return `<span class="report-composition-${esc(item.tone || "component")}" style="flex:${share || 1}">${esc(item.name)} ${esc(item.share || "")}</span>`;
+    }).join("")}</div>` : `<div class="report-composition"><span style="flex:${solventTotal}">${esc(solutionMeta.solventRatio)}</span></div>`;
+    const methodsBody = sections.has("methods") ? `<p>${esc(report.methodology)}</p><div class="report-technical-grid"><section><h3>Solution Review · ${esc(solutionMeta.label)}</h3>${composition}<dl><div><dt>Recipe</dt><dd>${esc(solutionDefinition.name || "—")}</dd></div><div><dt>Volume</dt><dd>${esc(solutionMeta.volume)}</dd></div><div><dt>Concentration</dt><dd>${esc(solutionMeta.concentration)}</dd></div><div><dt>Status</dt><dd>${esc(solutionMeta.status)}</dd></div></dl></section><section><h3>Stack Review · ${esc(stackMeta.label)}</h3><div class="report-stack-mini">${modelStackLayers.map((layer) => `<span class="stack-tone-${esc(layer.tone || "layer")}">${esc(layer.material)} · ${esc(layer.thickness)}</span>`).join("")}</div><small>${esc(stackMeta.architecture)} reference architecture</small></section></div>${report.includeExperiments ? `<div class="report-experiment-grid">${experiments.map((experiment) => `<article><span>${esc(experiment.id)}</span><strong>${asArray(experiment.samples).map(esc).join(" · ")}</strong><small>${esc(experiment.process)} · ${esc(experiment.annealing?.value ?? "—")}${esc(experiment.annealing?.unit || " unit missing")} · ${esc(experiment.measurements || 0)} measurements</small></article>`).join("")}</div>` : ""}${qualityReview}` : excluded("Materials, Process & Experiments");
+    const resultsBody = sections.has("results") ? `<div class="report-chart-card"><div><strong>${esc(metricLabel)} by sample</strong><small>Complete included cohort · deterministic snapshot</small></div><div class="report-chart-bars">${rows.map((row) => `<div><span>${esc(row.sample)}</span><i style="--bar:${(((Number(row[metric]) - minValue) / metricRange) * 100).toFixed(1)}%"></i><b>${Number(row[metric]).toFixed(model.metricDecimals)}${esc(metricSuffix)}</b></div>`).join("")}</div></div>${report.includeFullTable ? `<div class="table-wrap report-results-table">${datasetTable(rows)}</div>` : ""}<div class="report-interpretation"><strong>Researcher interpretation</strong><p>${esc(report.resultsNarrative)}</p></div>` : excluded("Results & Data");
+    const findingsBody = sections.has("ai") ? `<div class="report-findings-grid">${model.findings.map((finding) => `<article><div><strong>${finding.score}</strong><span>${esc(finding.status)}</span></div><h3>${esc(finding.title)}</h3><p>${esc(finding.detail)}</p>${report.includeEvidence ? `<small>${esc(finding.evidence)} · ${esc(finding.type)}</small>` : ""}</article>`).join("")}</div>` : excluded("Evidence-Linked Findings");
     const decisionBody = sections.has("conclusions") ? `<div class="report-decision-grid report-decision-grid-three"><div><h3>Discussion</h3><p>${esc(report.discussion)}</p></div><div><h3>Conclusions</h3><p>${esc(report.conclusions)}</p></div><div><h3>Limitations</h3><p>${esc(report.limitations)}</p></div></div>` : excluded("Discussion, Conclusions & Limitations");
     const customBody = sections.has("custom") ? `<div class="report-custom-section"><h3>${esc(report.customTitle || "Custom author section")}</h3><p>${esc(report.customBody || "No custom text entered.")}</p></div>` : "";
-    const sourceAppendix = report.includeSourceAppendix ? `<div class="report-source-appendix"><strong>Source appendix</strong><span>batch_B03_forward.csv · process_metadata.yaml · SOL-B04 · STK-003/v2</span><span>${project.files} project files · ${project.measurements} measurements · ${model.knowledgeCount} linked knowledge items</span></div>` : "";
-    const provenanceBody = sections.has("provenance") ? `<div class="report-provenance"><span><b>RAW</b> Local source-aligned measurements</span><span><b>CALCULATED</b> Deterministic KPI and comparisons</span><span><b>RESEARCHER</b> Objectives, interpretation and approval</span><span><b>AI</b> Simulated advisory findings requiring review</span></div>${sourceAppendix}<div class="report-approval-line"><span>Approval state</span><strong>${esc(report.approval)}</strong></div>` : excluded("Provenance & Approval");
+    const sourceAppendix = report.includeSourceAppendix ? `<div class="report-source-appendix"><strong>Source appendix</strong><span>${sourceEntries.map((item) => esc(item.id)).join(" · ") || "No source records declared"}</span><span>${sourceEntries.map((item) => esc(item.detail)).join(" · ")}</span></div>` : "";
+    const provenanceBody = sections.has("provenance") ? `<div class="report-provenance">${provenanceManifest.map((item) => `<span><b>${esc(String(item.class || "evidence").toUpperCase())}</b> ${esc(item.label || "—")}</span>`).join("")}</div>${sourceAppendix}<div class="report-approval"><span>Approval state</span><strong>${esc(report.approval)}</strong></div>` : excluded("Provenance & Approval");
     const cover = `<article class="report-page report-page-cover"><div class="report-cover report-cover-compact"><img class="report-brand" src="assets/brand/logo-horizontal-shell.svg" alt="LabFlow"><div class="report-cover-copy"><span class="badge report-cover-badge">${esc(report.reportType).toUpperCase()} · ${esc(report.reportCode)}</span><h1>${esc(report.title)}</h1><p>${esc(report.subtitle)}</p><small>${esc(report.laboratory)} · ${esc(report.author)}</small></div><div class="report-cover-status"><span>${esc(report.reportDate)}</span><strong>${esc(report.approval)}</strong></div></div><div class="report-keywords"><b>Keywords</b><span>${esc(report.keywords)}</span></div><section class="report-section-block report-summary"><div class="report-section-heading"><div><small>01 · EXECUTIVE SNAPSHOT</small><h2>Decision-ready project summary</h2></div><span>${esc(project.id)}</span></div>${summaryBody}</section><footer><span>${esc(report.organisation)} · ${esc(report.reportCode)}</span><b>01 / 04</b></footer></article>`;
     const methodsPage = `<article class="report-page"><header><span>LABFLOW · ${esc(report.reportCode)}</span><b>Materials, process and experiment coverage</b></header><section class="report-section-block"><div class="report-section-heading"><div><small>02 · MATERIALS & PROCESS</small><h2>Traceable preparation and device architecture</h2></div><span>${experiments.length} experiments</span></div>${methodsBody}</section><footer><span>${esc(report.author)} · ${esc(report.reportDate)} · ${esc(report.reportCode)}</span><b>02 / 04</b></footer></article>`;
     const resultsPage = `<article class="report-page"><header><span>LABFLOW · ${esc(report.reportCode)}</span><b>Complete results and measurement record</b></header><section class="report-section-block"><div class="report-section-heading"><div><small>03 · COMPLETE RESULTS</small><h2>Device performance and source-aligned data</h2></div><span>${rows.length} samples · 9 fields</span></div>${resultsBody}</section><footer><span>Researcher-reviewed data · ${esc(report.approval)}</span><b>03 / 04</b></footer></article>`;
@@ -984,13 +1227,17 @@
     return cover + methodsPage + resultsPage + reviewPage;
   }
 
-  function reportExportCards() {
-    return [
-      ["pdf", "Scientific PDF", "Professional four-page vector PDF generated from the same canonical model used by the live Composer preview, including the current edits, selected sections, data, chart, findings and approval state."],
-      ["docx", "Professional editable DOCX", "Branded Word report with the same sections, author text, tables, findings, provenance and publication metadata."],
-      ["xlsx", "Analysis workbook", "Ten-sheet workbook with raw data, calculations, findings, provenance and report metadata."],
-      ["latex", "LaTeX report package", "A compile-ready .tex report, measurements CSV and local build script generated from the same Composer state. Compilation remains local and requires TeX Live or an equivalent LaTeX installation."]
-    ].map(([type, title, detail]) => `<div class="export-card"><span class="object-icon">${icon(type === "xlsx" ? "table" : type === "latex" ? "code" : "file")}</span><div><strong>${title}</strong><p class="mb-0">${detail}</p></div><button class="btn btn-sm ${type === "pdf" ? "btn-primary" : ""}" data-export="${type}">${icon("download")} Generate</button></div>`).join("");
+  function reportExportCards(pipeline = CHOSE_CONTRACT) {
+    const detailByType = {
+      pdf: "Professional vector PDF generated from the same canonical model used by the live Composer preview.",
+      docx: "Branded editable Word report with author text, tables, findings and provenance.",
+      xlsx: "Analysis workbook with raw data, calculations, findings, provenance and report metadata.",
+      latex: "Compile-ready LaTeX report package generated from the reviewed report state."
+    };
+    const iconsByType = {xlsx:"table", latex:"code", pdf:"file", docx:"file"};
+    return asArray(pipeline.exports?.formats)
+      .filter((item) => item.enabled !== false && ["pdf","docx","xlsx","latex"].includes(item.id))
+      .map((item) => `<div class="export-card"><span class="object-icon">${icon(iconsByType[item.id] || "file")}</span><div><strong>${esc(item.label)}</strong><p class="mb-0">${esc(detailByType[item.id] || "Generated from the canonical report model.")}</p></div><button class="btn btn-sm ${item.id === "pdf" ? "btn-primary" : ""}" data-export="${esc(item.id)}">${icon("download")} Generate</button></div>`).join("");
   }
 
 
@@ -1014,17 +1261,26 @@
     if (!$("#solution-component-editor")) return;
     const readComponents = () => $$('[data-solution-row]').map((row) => ({
       tone: row.dataset.tone,
+      phase: solutionComponents.find((item) => item.tone === row.dataset.tone)?.phase || "solute",
       name: $('[data-solution-field="name"]', row).value,
       role: $('[data-solution-field="role"]', row).value,
       amount: $('[data-solution-field="amount"]', row).value,
       share: $('[data-solution-field="share"]', row).value
     }));
+    const referenceVolume = Number(activeSolutionDefinition.reference_volume?.value || 1);
+    const referenceConcentration = Number(activeSolutionDefinition.target_concentration?.value || 1);
+    const volumeUnit = activeSolutionDefinition.reference_volume?.unit || "mL";
+    const concentrationUnit = activeSolutionDefinition.target_concentration?.unit || "mol/L";
+    const componentReference = new Map(solutionComponents.map((item) => {
+      const match = String(item.amount || "").match(/^([0-9.]+)\s*(.*)$/);
+      return [item.tone, {value:Number(match?.[1] || 0), unit:match?.[2] || "", phase:item.phase || "solute"}];
+    }));
     const refreshSolution = () => {
       const review = $("#solution-review");
       if (!review) return;
-      review.innerHTML = solutionReview(readComponents());
-      $("[data-solution-concentration]", review).textContent = `${Number($("#solution-molarity")?.value || 0).toFixed(2)} M`;
-      $("[data-solution-volume]", review).textContent = `${Number($("#solution-volume")?.value || 0).toFixed(2)} mL`;
+      review.innerHTML = solutionReview(readComponents(), activeSolutionDefinition);
+      $("[data-solution-concentration]", review).textContent = `${Number($("#solution-molarity")?.value || 0).toFixed(2)} ${concentrationUnit}`;
+      $("[data-solution-volume]", review).textContent = `${Number($("#solution-volume")?.value || 0).toFixed(2)} ${volumeUnit}`;
     };
     const renumberComponents = () => {
       $$('[data-solution-row] .solution-order-actions .badge').forEach((badge,index)=>badge.textContent=String(index+1).padStart(2,"0"));
@@ -1032,12 +1288,16 @@
     };
     const recalculate = () => {
       const volume = Number($("#solution-volume")?.value || 0);
-      const molarity = Number($("#solution-molarity")?.value || 0);
-      const values = {fai:`${(146.1 * volume * molarity / 1.25).toFixed(1)} mg`,mai:`${(15.9 * volume * molarity / 1.25).toFixed(1)} mg`,pbi:`${(461.0 * volume * molarity / 1.25).toFixed(1)} mg`};
-      if ($("#fai-mass")) $("#fai-mass").value = values.fai;
-      if ($("#mai-mass")) $("#mai-mass").value = values.mai;
-      if ($("#pbi-mass")) $("#pbi-mass").value = values.pbi;
-      Object.entries(values).forEach(([tone,value])=>{ const field=$(`[data-solution-row][data-tone="${tone}"] [data-solution-field="amount"]`); if(field) field.value=value; });
+      const concentration = Number($("#solution-molarity")?.value || 0);
+      const scale = referenceVolume > 0 && referenceConcentration > 0 ? (volume / referenceVolume) * (concentration / referenceConcentration) : 1;
+      componentReference.forEach((reference, tone) => {
+        if (reference.phase === "solvent" || !reference.value) return;
+        const value = `${(reference.value * scale).toFixed(1)}${reference.unit ? ` ${reference.unit}` : ""}`;
+        const field = $(`[data-solution-row][data-tone="${tone}"] [data-solution-field="amount"]`);
+        if (field) field.value = value;
+        const summaryField = tone === "fai" ? $("#fai-mass") : tone === "mai" ? $("#mai-mass") : tone === "pbi" ? $("#pbi-mass") : null;
+        if (summaryField) summaryField.value = value;
+      });
       refreshSolution();
     };
     $("#recalculate")?.addEventListener("click", () => { recalculate(); toast("Reference quantities recalculated."); });
@@ -1093,25 +1353,37 @@
     $("#apply-stack-version")?.addEventListener("click", () => toast("Process stack version applied in page memory."));
   }
 
-  function bindProcessTabs() {
-    const render = (target) => target === "fabrication" ? processFabricationView() : target === "stack" ? processStackView() : processChemistryView();
-    $$('[data-process-tab]').forEach((tab) => tab.addEventListener("click", () => {
-      $$('[data-process-tab]').forEach((item) => item.classList.toggle("active", item === tab));
-      $("#process-content").innerHTML = render(tab.dataset.processTab);
-      if (tab.dataset.processTab === "chemistry") bindSolutionBuilder();
-      if (tab.dataset.processTab === "fabrication") bindFabricationInteractions();
-      if (tab.dataset.processTab === "stack") bindStackBuilder();
-    }));
-    bindSolutionBuilder();
+  function sectionById(step, id) {
+    return asArray(step?.sections).find((section) => section.id === id) || asArray(step?.sections)[0] || null;
   }
 
-  function bindFabricationInteractions() {
-    bindStackReview(stackLayers, $("#fabrication-stack-review") || document);
+  function bindProcessTabs(project, pipeline, step) {
+    const activate = (tab) => {
+      $$('[data-process-tab]').forEach((item) => item.classList.toggle("active", item === tab));
+      const section = sectionById(step, tab.dataset.processTab);
+      if (!section) return;
+      $("#process-content").innerHTML = renderRegisteredSection(section.component, {project, pipeline, step, section});
+      if (section.component === "chose.process.chemistry") bindSolutionBuilder();
+      if (section.component === "chose.process.fabrication") bindFabricationInteractions(pipeline);
+      if (section.component === "chose.process.stack_review") bindStackBuilder();
+    };
+    $$('[data-process-tab]').forEach((tab) => tab.addEventListener("click", () => activate(tab)));
+    const initial = $('[data-process-tab].active') || $('[data-process-tab]');
+    if (initial?.dataset.processTab === "chemistry") bindSolutionBuilder();
+  }
+
+  function bindFabricationInteractions(pipeline = CHOSE_CONTRACT) {
+    const layers = asArray(choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS).stack?.layers).length
+      ? asArray(choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS).stack.layers)
+      : stackLayers;
+    bindStackReview(layers, $("#fabrication-stack-review") || document);
     $("#add-operation")?.addEventListener("click", () => {
       const body = $("#fabrication-operations");
       const index = body?.children.length || 0;
-      body?.insertAdjacentHTML("beforeend", `<tr><td><span class="step-index">${String(index + 1).padStart(2,"0")}</span></td><td><input class="input" value="New operation"></td><td><input class="input" value="—"></td><td><input class="input" value="Parameter"></td><td><input class="input" value="Duration"></td><td><select class="select"><option>Required</option><option>Optional</option></select></td><td><button class="btn btn-ghost icon-btn" data-remove-operation aria-label="Remove operation">${icon("trash")}</button></td></tr>`);
-      toast("Temporary fabrication operation added.");
+      const operationTypes = asArray(pipelineResource(pipeline, "defaults", "operation_types", {}).items);
+      const typeOptions = (operationTypes.length ? operationTypes : [{id:"custom",label:"Custom operation"}]).map((item) => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join("");
+      body?.insertAdjacentHTML("beforeend", `<tr data-operation-id="OP-${String(index + 1).padStart(2,"0")}"><td><span class="step-index">${String(index + 1).padStart(2,"0")}</span></td><td><select class="select">${typeOptions}</select></td><td><input class="input" value="—"></td><td><input class="input" value="Parameter"></td><td><input class="input" value="Duration"></td><td><input class="input" value="unassigned"></td><td><select class="select"><option>Required</option><option>Optional</option></select></td><td><button class="btn btn-ghost icon-btn" data-remove-operation aria-label="Remove operation">${icon("trash")}</button></td></tr>`);
+      toast("Temporary fabrication operation added from the pipeline operation registry.");
     });
     $("#fabrication-operations")?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-remove-operation]");
@@ -1121,63 +1393,71 @@
     });
   }
 
-  function bindExperimentTabs(project) {
-    const render = (target) => target === "execution" ? experimentExecutionView() : target === "summary" ? experimentSummaryView() : experimentSetupView(project);
-    $$('[data-experiment-tab]').forEach((tab) => tab.addEventListener("click", () => {
+  function bindExperimentTabs(project, pipeline, step) {
+    const activate = (tab) => {
       $$('[data-experiment-tab]').forEach((item) => item.classList.toggle("active", item === tab));
-      $("#experiment-content").innerHTML = render(tab.dataset.experimentTab);
-      bindExperimentLocalInteractions();
-    }));
-    bindExperimentLocalInteractions();
+      const section = sectionById(step, tab.dataset.experimentTab);
+      if (!section) return;
+      $("#experiment-content").innerHTML = renderRegisteredSection(section.component, {project, pipeline, step, section});
+      bindExperimentLocalInteractions(pipeline);
+    };
+    $$('[data-experiment-tab]').forEach((tab) => tab.addEventListener("click", () => activate(tab)));
+    bindExperimentLocalInteractions(pipeline);
   }
 
-  function bindExperimentLocalInteractions() {
+  function bindExperimentLocalInteractions(pipeline = CHOSE_CONTRACT) {
     $("#add-experiment-sample")?.addEventListener("click", () => {
       const body = $("#experiment-samples");
       const index = body?.children.length || 0;
-      body?.insertAdjacentHTML("beforeend", `<tr><td><input class="input" value="S${String(index + 6).padStart(2,"0")}"></td><td><select class="select"><option>SUB-ITO-01/v2</option></select></td><td><select class="select"><option>Reference</option></select></td><td><select class="select"><option>SOL-B03</option></select></td><td><input class="input" type="number" value="6"></td><td>${badgeStatus("draft")}</td><td><button class="btn btn-ghost icon-btn" aria-label="Duplicate sample">${icon("copy")}</button></td></tr>`);
+      const processDemo = choseDemo(pipeline, "process", CHOSE_DEMO_PROCESS);
+      const experimentDemo = choseDemo(pipeline, "experiment", CHOSE_DEMO_EXPERIMENT);
+      const substrate = processDemo.substrate ? `${processDemo.substrate.id}/v${processDemo.substrate.version}` : "Unassigned substrate";
+      const batch = asArray(experimentDemo.batches)[0]?.id || "Unassigned batch";
+      body?.insertAdjacentHTML("beforeend", `<tr><td><input class="input" value="S${String(index + 6).padStart(2,"0")}"></td><td><select class="select"><option>${esc(substrate)}</option></select></td><td><select class="select"><option>Reference</option></select></td><td><select class="select"><option>${esc(batch)}</option></select></td><td><input class="input" type="number" value="6"></td><td>${badgeStatus("draft")}</td><td><button class="btn btn-ghost icon-btn" aria-label="Duplicate sample">${icon("copy")}</button></td></tr>`);
       toast("Temporary sample instance added.");
     });
   }
 
-  function bindResultsTabs() {
-    const render = (target) => target === "mapping" ? resultMappingView() : target === "quality" ? resultQualityView() : resultFilesView();
-    $$('[data-results-tab]').forEach((tab) => tab.addEventListener("click", () => {
+  function bindResultsTabs(project, pipeline, step) {
+    const activate = (tab) => {
       $$('[data-results-tab]').forEach((item) => item.classList.toggle("active", item === tab));
-      $("#results-content").innerHTML = render(tab.dataset.resultsTab);
+      const section = sectionById(step, tab.dataset.resultsTab);
+      if (!section) return;
+      $("#results-content").innerHTML = renderRegisteredSection(section.component, {project, pipeline, step, section});
       bindIngest();
-    }));
+    };
+    $$('[data-results-tab]').forEach((tab) => tab.addEventListener("click", () => activate(tab)));
     bindIngest();
   }
 
-  function bindReviewTabs(project, pipeline) {
-    const render = (target) => target === "compare" ? comparisonView() : target === "findings" ? analysisFindings() : target === "report" ? reportAndExportView(project) : analysisOverview(project);
+  function bindReviewTabs(project, pipeline, step) {
     const activate = (tab) => {
       $$('[data-review-tab]').forEach((item) => item.classList.toggle("active", item === tab));
-      const target = tab.dataset.reviewTab;
+      const section = sectionById(step, tab.dataset.reviewTab);
+      if (!section) return;
       const content = $("#review-content");
-      content.innerHTML = render(target);
-      if (target === "overview") bindAnalysisChartControls();
-      if (target === "report") bindReportBuilder(project);
-      if (target === "findings") $$('[data-finding-action]', content).forEach((button) => button.addEventListener("click", () => { const group = button.closest(".cluster"); group.querySelectorAll("button").forEach((item) => item.classList.remove("btn-primary")); button.classList.add("btn-primary"); toast(`${button.dataset.findingAction} recorded temporarily for this finding.`); }));
+      content.innerHTML = renderRegisteredSection(section.component, {project, pipeline, step, section});
+      if (section.component === "chose.review.overview") bindAnalysisChartControls(pipeline);
+      if (section.component === "chose.review.report_export") bindReportBuilder(project, pipeline);
+      if (section.component === "chose.review.findings") $$('[data-finding-action]', content).forEach((button) => button.addEventListener("click", () => { const group = button.closest(".cluster"); group.querySelectorAll("button").forEach((item) => item.classList.remove("btn-primary")); button.classList.add("btn-primary"); toast(`${button.dataset.findingAction} recorded temporarily for this finding.`); }));
       $$('[data-export]', content).forEach((button) => button.addEventListener("click", () => runExport(button.dataset.export, project, pipeline, button)));
     };
     $$('[data-review-tab]').forEach((tab) => tab.addEventListener("click", () => activate(tab)));
     const requested = new URLSearchParams(location.search).get("view");
-    const requestedTab = ["overview","compare","findings","report"].includes(requested) ? $(`[data-review-tab="${requested}"]`) : null;
-    if (requestedTab) activate(requestedTab); else bindAnalysisChartControls();
+    const requestedTab = requested ? $(`[data-review-tab="${CSS.escape(requested)}"]`) : null;
+    if (requestedTab) activate(requestedTab); else bindAnalysisChartControls(pipeline);
   }
 
   function bindProjectInteractions(project, pipeline, step) {
-    if (step.view === "chose-process") bindProcessTabs();
-    if (step.view === "chose-experiment") bindExperimentTabs(project);
-    if (step.view === "chose-results") bindResultsTabs();
-    if (step.view === "chose-review") bindReviewTabs(project, pipeline);
+    if (step.view === "chose-process") bindProcessTabs(project, pipeline, step);
+    if (step.view === "chose-experiment") bindExperimentTabs(project, pipeline, step);
+    if (step.view === "chose-results") bindResultsTabs(project, pipeline, step);
+    if (step.view === "chose-review") bindReviewTabs(project, pipeline, step);
     if (step.view === "quick-data") bindIngest();
     $$('.workflow-actions-footer [data-export]').forEach((button) => button.addEventListener("click", () => runExport(button.dataset.export, project, pipeline, button)));
   }
 
-  function bindReportBuilder(project) {
+  function bindReportBuilder(project, pipeline = CHOSE_CONTRACT) {
     let previewTimer;
     const updateCounters = () => {
       $$('[data-report-counter]').forEach((control) => {
@@ -1188,15 +1468,15 @@
     const update = () => {
       updateCounters();
       clearTimeout(previewTimer);
-      previewTimer = setTimeout(() => syncReportDraft(project, false), 90);
+      previewTimer = setTimeout(() => syncReportDraft(project, pipeline, false), 90);
     };
     $$("#analysis-content input, #analysis-content textarea, #analysis-content select").forEach((control) => {
       control.addEventListener("input", update);
       control.addEventListener("change", update);
     });
-    $("#save-report-draft")?.addEventListener("click", () => syncReportDraft(project, true));
+    $("#save-report-draft")?.addEventListener("click", () => syncReportDraft(project, pipeline, true));
     updateCounters();
-    renderReportReadiness(reportState(project));
+    renderReportReadiness(reportState(project, pipeline));
   }
 
   function bindIngest() {
@@ -1222,16 +1502,17 @@
     });
   }
 
-  function bindAnalysisChartControls() {
+  function bindAnalysisChartControls(pipeline = CHOSE_CONTRACT) {
     $$('[data-chart-metric]').forEach((button) => button.addEventListener("click", () => {
       $$('[data-chart-metric]').forEach((item) => item.classList.toggle("active", item === button));
       $("[data-chart-title]").textContent = `${button.textContent} by sample`;
-      drawChart(button.dataset.chartMetric);
+      drawChart(button.dataset.chartMetric, pipeline);
     }));
-    requestAnimationFrame(() => drawChart("pce"));
+    const metrics = asArray(choseDemo(pipeline, "review", CHOSE_DEMO_REVIEW).overview?.chart_metrics);
+    requestAnimationFrame(() => drawChart(metrics[0]?.id || "pce", pipeline));
   }
 
-  function drawChart(metric = "pce") {
+  function drawChart(metric = "pce", pipeline = CHOSE_CONTRACT) {
     const canvas = $("#analysis-chart");
     if (!canvas) return;
     const context = canvas.getContext("2d");
@@ -1247,9 +1528,18 @@
     const text = styles.getPropertyValue("--text").trim();
     context.clearRect(0, 0, width, height);
     const pad = {left: 46, right: 18, top: 22, bottom: 34};
-    const values = D.demoDataset.map((row) => row[metric]);
-    const min = Math.min(...values) * 0.94;
-    const max = Math.max(...values) * 1.03;
+    const rows = asArray(choseDemo(pipeline, "results", CHOSE_DEMO_RESULTS).normalized_records);
+    const metricRows = rows.map((row) => ({row, value:Number(row[metric])})).filter((item) => Number.isFinite(item.value));
+    const values = metricRows.map((item) => item.value);
+    if (!values.length) {
+      context.fillStyle = text;
+      context.fillText("No numeric records are available for this metric.", pad.left, pad.top + 20);
+      return;
+    }
+    const rawMin = Math.min(...values);
+    const rawMax = Math.max(...values);
+    const min = rawMin === rawMax ? rawMin - 1 : rawMin * 0.94;
+    const max = rawMin === rawMax ? rawMax + 1 : rawMax * 1.03;
     context.font = "10px system-ui";
     context.strokeStyle = line; context.fillStyle = muted; context.lineWidth = 1;
     for (let i = 0; i <= 4; i++) {
@@ -1266,7 +1556,7 @@
       context.fillStyle = accent;
       context.fillRect(x, y, slot * 0.64, barHeight);
       context.fillStyle = text;
-      context.fillText(D.demoDataset[index].sample, x + 2, height - 12);
+      context.fillText(metricRows[index]?.row?.sample || `#${index + 1}`, x + 2, height - 12);
     });
   }
 
@@ -1287,18 +1577,18 @@
   }
 
   async function runExport(type, project, pipeline, trigger = null) {
-    if ($("#report-title")) syncReportDraft(project, false);
+    if ($("#report-title")) syncReportDraft(project, pipeline, false);
     const settings = getSettings();
-    const report = reportState(project);
+    const report = reportState(project, pipeline);
     const exportProject = { ...project, name: report.title, objective: report.executiveSummary };
     const reportUser = {...D.user, name: report.author || settings.reportAuthor, laboratory: report.laboratory || settings.reportLab, organisation: report.organisation || settings.reportOrganisation};
     const options = {
       palette: settings.palette,
+      pipeline,
       user: reportUser,
       findings: D.aiFindings,
       knowledge: D.knowledge,
       experiments: D.experiments,
-      stackLayers,
       report
     };
     const base = project.id.toLowerCase();

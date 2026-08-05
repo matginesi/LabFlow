@@ -72,7 +72,7 @@ Keyboard users can open global search with `Ctrl+K` or `Cmd+K`, move through res
 
 ## Configuration and checked-in sources
 
-`settings.yaml` is the canonical configuration source. `pipelines/` contains canonical workflow definitions. Documentation and both kinds of YAML have checked-in browser snapshots so the application remains request-free when opened from disk. When a canonical source changes, refresh its corresponding snapshot and complete the validation checklist.
+`settings.yaml` is the canonical product-configuration source. Each pipeline has a canonical entry contract under `pipelines/<id>/pipeline.yaml`; CHOSE 2.2 additionally resolves record schemas, controlled defaults, mapping profiles and transparent Process, Experiment, Results and Review demonstration records from its own directory. Documentation and YAML sources have checked-in browser snapshots so the application remains request-free when opened from disk. When a canonical source changes, rebuild its corresponding snapshot and complete the validation checklist.
 
 For static hosting, the root pages load one checked-in CSS bundle and one small shared runtime bundle instead of requesting every source file separately. The readable files under `ui/` and `assets/js/` remain canonical; run `python tools/build_frontend_bundles.py` after changing shared CSS, settings, data, pipelines, exporters or volatile state. No build step is required to open or deploy the already checked-in POC.
 
@@ -80,28 +80,42 @@ For static hosting, the root pages load one checked-in CSS bundle and one small 
 
 ## How the POC is organised
 
-The runtime follows one deliberately small boundary:
+The runtime follows two deliberately small, explicit boundaries:
 
 ```text
-checked-in demo records
+pipeline.yaml + referenced CHOSE resources
+        ↓ build-time resolution
+pipeline-bundle.js → pipeline runtime → registered scientific views / gates / exports
+
+shared non-pipeline demonstration records
         ↓
-small data access functions
-        ↓
-shared render blocks and page interactions
+LabFlowDataSource → common pages and focused modules
 ```
 
-`assets/js/data.js` owns the illustrative records and exposes `LabFlowDataSource` for common lookups. Rendering code does not need to know how a future source obtains the same stable entities. This is only a replacement seam and does not imply connected or speculative infrastructure.
+CHOSE scientific definitions and records are owned by `pipelines/chose/`: they are resolved into `assets/js/pipeline-bundle.js`, validated by `assets/js/pipeline-runtime.js` and reused by the UI, Report Composer and export engines. `assets/js/data.js` owns shared product demonstrations such as Workspace, Cabinet, Knowledge and AI/ML examples; it hydrates CHOSE measurement and finding compatibility views from the resolved pipeline rather than duplicating those scientific fixtures. Neither boundary implies a connected backend.
 
 The essential directories are:
 
-- `assets/js/` — demo data, in-memory state, shared rendering, focused Tools/Knowledge modules, diagrams and local exporters;
+- `assets/js/` — shared product data, in-memory state, the pipeline runtime, shared rendering, focused Tools/Knowledge modules, diagrams and local exporters;
 - `ui/` — semantic theme tokens, theme variants, shared components and responsive layout;
-- `pipelines/` — canonical workflow definitions, not page templates;
+- `pipelines/` — canonical workflow contracts and their local schemas, defaults, mappings and transparent demonstration resources; never page templates;
 - `docs/` — the small set of canonical product, UI, data, assistant/export and validation documents;
 - `examples/` — standalone theme and export fixtures used for inspection;
 - root HTML files — complete static entry points with the shared shell already checked in.
 
 The UI Kit is the visual source of truth. A block belongs there only when the application uses it; shared blocks should be extended before page-specific CSS is introduced.
+
+For CHOSE changes, rebuild in this order:
+
+```bash
+python tools/build_pipeline_bundle.py
+python tools/build_docs_bundle.py      # when documentation changes
+python tools/build_frontend_bundles.py
+python tools/validate_poc.py
+node tools/test_exports.mjs
+```
+
+The export test also evaluates all four runtime gates and verifies that report/workbook content is sourced from the resolved CHOSE resources.
 
 ## Documentation
 

@@ -88,6 +88,19 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Download the SVG and inspect it at multiple sizes; confirm it contains no external resource.
 - Reload Tools and confirm all examples return to defaults.
 
+## Pipeline contract integrity
+
+- Parse every `pipelines/*/pipeline.yaml`; confirm IDs and step IDs are unique and referenced files stay within their pipeline directory.
+- For CHOSE, verify `schema_version`, compatibility, entities, data boundaries, resource groups, strict component IDs, `reads`, `creates`, completion requirements, validation rules and expected evidence.
+- Confirm each CHOSE resource has a LabFlow schema marker and that Process, Experiment, Results and Review schemas remain distinct.
+- Confirm fabrication operations reference existing stack layers, stack producers reference existing operations or explicit external producers, and Experiment execution records reference existing planned operations.
+- Verify JV import requires unit confirmation, preserves source fields and forbids silent conversion. Verify NOMAD remote submission remains disabled and the configured profile matches the bundled mapping.
+- Run `python tools/build_pipeline_bundle.py`, then confirm `python tools/validate_poc.py` reports exact synchronization rather than merely checking that the bundle exists.
+- Run `node tools/test_exports.mjs`; confirm Process is ready, Experiment has a visible warning, Results is blocked by its unresolved deterministic error and Review is blocked both by human review and the Results dependency.
+- Confirm no CHOSE solution, fabrication, stack, normalized result, quality, finding or report fixture must be copied into `app.js`, `data.js` or `workbook.js` to change the rendered/exported scenario.
+- Confirm `demo/review.yaml` is bundled and drives findings, report defaults, experiment coverage, provenance and export review state.
+- Generate a complete project ZIP and inspect `pipeline/contract.json`, `pipeline/resource-manifest.json` and the expanded pipeline metadata in `project.yaml`. Generate a NOMAD preview package and confirm mapping profile, required entities, provenance requirements and `remote_submission: false` are visible.
+
 ## Project workflow
 
 - Open every CHOSE step at 1600, 1024, 768 and 390 pixels; verify zero page-level horizontal overflow and confirm Project remains on the wide semantic wrapper.
@@ -102,7 +115,7 @@ Confirm that fonts, icons, graph rendering, documentation, search and editors us
 - Inspect Smart Import mappings, units, conversions and normalized preview.
 - Compare experiments and ensure data-quality limitations remain attached.
 - Keep deterministic issues separate from correlation, hypothesis and suggestion.
-- Switch among PCE, Stability and Hysteresis charts and confirm the chart title, active control and canvas update together.
+- Switch among every metric declared in `demo/review.yaml` and confirm the chart title, active control and canvas update together. Add or remove a declared chart metric, rebuild, and confirm the control changes without editing `app.js`.
 
 ## UI Kit alignment
 

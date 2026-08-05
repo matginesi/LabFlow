@@ -101,14 +101,83 @@ A step can be revisited even after later work exists. Completion is a visible st
 - **Results ready for Review** — files or manual records have stable provenance, mappings are confirmed and deterministic errors are resolved or explicitly blocking.
 - **Review ready for package generation** — selected report sections, researcher text, findings and export limitations are visible. NOMAD remains a local readiness preview.
 
+## Executable pipeline architecture
+
+A pipeline has one entry contract and may reference smaller domain resources. The browser never fetches those files at runtime: the build helper resolves them into the checked-in pipeline bundle.
+
+```text
+pipeline.yaml
+  ├─ identity and compatibility
+  ├─ data boundaries
+  ├─ steps, sections and registered components
+  ├─ completion gates and expected evidence
+  ├─ review/export policy
+  └─ resource_refs
+       ├─ record schemas
+       ├─ controlled defaults and units
+       ├─ import/export mappings
+       └─ transparent demonstration records
+```
+
+The responsibilities remain separate:
+
+| Layer | Owns | Must not own |
+| --- | --- | --- |
+| Pipeline contract | workflow, record expectations, completion and evidence policy | HTML, CSS or mutable project state |
+| Record schemas | required fields, relationships and invariant checks | renderer layout |
+| Defaults | controlled choices, operation families and units | actual experiment values |
+| Mapping profiles | explicit source/target fields, units and conversion decisions | silent source mutation |
+| Demo records | inspectable POC content | hidden production assumptions |
+| Component registry | shared rendering and interaction functions | duplicated scientific definitions |
+| Project state | the researcher’s current records and decisions | changes to the canonical pipeline definition |
+
+A section references a stable component identifier. CHOSE uses a strict registry, so an unknown component fails visibly instead of silently falling back to unrelated markup.
+
 ## Canonical data layers
 
 - `settings.yaml` defines checked-in product defaults and feature boundaries.
-- Pipeline YAML defines available workflows and step contracts.
-- Demonstration records represent projects, process versions, experiments, samples, batches, result sets, measurements, evidence and saved views.
-- Browser snapshots mirror canonical settings, pipelines and documentation for request-free direct-file operation.
+- `pipelines/<id>/pipeline.yaml` defines the workflow entry contract.
+- Files referenced under `resource_refs` define schemas, defaults, mappings and transparent demonstration records.
+- Project and experiment state remains a separate in-memory record layer.
+- Browser snapshots mirror settings, resolved pipelines and documentation for request-free direct-file operation.
+- Portable project packages include the resolved pipeline contract and its resource manifest so the scientific context travels with exported records.
 
 After editing a canonical source, refresh its checked-in snapshot before validation. Generated snapshots are implementation artifacts, not competing documentation.
+
+## Completion gates are data, not decoration
+
+Each executable step states:
+
+- `reads` and `creates` record classes;
+- contained `sections` and their registered component IDs;
+- `completion.requires` paths;
+- deterministic `completion.rules` with severity;
+- `completion.expected_evidence`;
+- the action label and approval mode shown by the workflow footer.
+
+The current POC exposes these values in the step heading and footer. `LabFlowPipelineRuntime.evaluateStep` also evaluates required paths, schema contracts, completion validators and upstream dependencies against the resolved records. A future backend can apply the same contract to persisted records without redesigning the page or inventing a separate workflow description.
+
+## Contract build and validation
+
+`tools/build_pipeline_bundle.py` resolves referenced YAML/JSON, prevents path escape and embeds each resource under `pipeline.resources`. `tools/validate_poc.py` independently reconstructs the resolved registry and compares it with the checked-in bundle. For CHOSE it also verifies strict/fail-closed policy, component registration, dependency order, data boundaries, schema-required paths, collection identities, operation/layer references, source identities, mapping policy, review/provenance content and disabled remote NOMAD submission. `node tools/test_exports.mjs` executes the browser-side gates and verifies that all report formats consume the resolved resource model.
+
+
+## Runtime source-of-truth flow
+
+```mermaid
+flowchart LR
+  A[pipeline.yaml] --> B[Build-time resolver]
+  C[schemas / defaults / mappings / demo] --> B
+  B --> D[pipeline-bundle.js]
+  D --> E[Pipeline runtime]
+  E --> F[Registered scientific views]
+  E --> G[Schema + completion + dependency gates]
+  D --> H[Canonical report model]
+  H --> I[Preview / PDF / DOCX / XLSX / LaTeX]
+  D --> J[Portable project and NOMAD preview packages]
+```
+
+`assets/js/data.js` may expose compatibility arrays hydrated from the active pipeline for shared legacy render helpers, but those arrays are derived views. They are not the canonical CHOSE store and must not be edited independently.
 
 ## Record identity and lineage
 

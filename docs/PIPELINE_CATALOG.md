@@ -1,6 +1,6 @@
 # Pipeline catalog
 
-LabFlow pipelines describe **how work is organised**, not how pages are styled. A pipeline supplies stable identifiers, ordered steps, completion outputs and the renderer contract used by a Project. Shared HTML, CSS, scientific components, reports and export rules remain part of the application rather than being copied into each YAML file.
+LabFlow pipelines describe **how work is organised and verified**, not how pages are styled. A simple example may provide navigation metadata only; a primary domain pipeline can additionally define record boundaries, sections, completion rules, expected evidence, mappings and export policy. Shared HTML, CSS and report engines remain application components rather than being copied into YAML.
 
 ## Available pipelines
 
@@ -24,15 +24,15 @@ flowchart TD
 
 A Project selects one pipeline by stable `pipeline.id`. The selection determines its step navigator and the renderer used for each step; it does not change the identity of the Project or the records it owns.
 
-A pipeline definition contains:
+A navigation-only example contains stable identity, ordered steps, labels, views and outputs. An executable domain contract such as CHOSE additionally contains:
 
-- stable `id`, display `name` and `version`;
-- status and intended project type;
-- concise description;
-- ordered step identifiers;
-- user-facing titles and descriptions;
-- renderer view name;
-- expected output for each step.
+- `schema_version`, domain and compatibility constraints;
+- explicit record entities and Process/Experiment/Results/Review boundaries;
+- build-time `resource_refs` for schemas, defaults, mappings and demo records;
+- contained sections linked to a strict registered component ID;
+- records read and created by every step;
+- completion requirements, deterministic rules and expected evidence;
+- finding-review and export/NOMAD policy.
 
 ## Common rules
 
@@ -47,7 +47,7 @@ Every pipeline must preserve the following product contracts:
 
 ## Canonical sources
 
-The canonical definitions are stored under `pipelines/<pipeline-id>/pipeline.yaml`. `tools/build_pipeline_bundle.py` produces the checked-in request-free browser snapshot in `assets/js/pipeline-bundle.js`.
+The canonical entry definitions are stored under `pipelines/<pipeline-id>/pipeline.yaml`. Referenced resources remain inside the same pipeline directory. `tools/build_pipeline_bundle.py` resolves and embeds them in the checked-in request-free `assets/js/pipeline-bundle.js`; `tools/validate_poc.py` verifies that the snapshot is exact.
 
 Use the dedicated guides for the domain and UI contract of each included workflow:
 

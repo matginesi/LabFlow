@@ -2,6 +2,22 @@
   "use strict";
   const E = window.LabFlowExport;
   const Log = window.LabFlowLogger?.child("workbook") || {debug(){},info(){},warn(){},error(){},time(){return () => {};}};
+  const asArray = (value) => Array.isArray(value) ? value : [];
+  const deepGet = (value, path, fallback = undefined) => {
+    const keys = Array.isArray(path) ? path : String(path || "").split(".").filter(Boolean);
+    let current = value;
+    for (const key of keys) {
+      if (current == null || typeof current !== "object" || !(key in current)) return fallback;
+      current = current[key];
+    }
+    return current == null ? fallback : current;
+  };
+  const pipelineResource = (pipeline, group, key, fallback = {}) => deepGet(pipeline, ["resources", group, key], fallback);
+  const quantityText = (value, fallback = "—") => value && typeof value === "object" && value.value != null
+    ? `${value.value}${value.unit ? ` ${value.unit}` : ""}`
+    : (value == null || value === "" ? fallback : String(value));
+  const titleCase = (value) => String(value || "").replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  const unique = (values) => [...new Set(values.filter((value) => value != null && String(value).trim()))];
   const xml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" })[char]);
   const column = (number) => {
     let result = "";
@@ -54,22 +70,109 @@
   };
   function buildReportDocument(project, data, options = {}) {
     Log.debug("report-model.build", { projectId: project?.id, rows: data?.length || 0 });
-    const report = { ...(options.report || {}) };
-    const rows = (data || []).map((row) => ({ ...row }));
-    const sections = Array.isArray(report.sections) ? [...report.sections] : ["summary", "methods", "results", "ai", "conclusions", "provenance"];
-    const best = rows.length ? [...rows].sort((a, b) => Number(b.pce) - Number(a.pce))[0] : {};
+    const pipeline = options.pipeline || window.LabFlowPipelines?.chose || {};
+    const processRecord = options.processRecord || pipelineResource(pipeline, "demo", "process", {});
+    const experimentRecord = options.experimentRecord || pipelineResource(pipeline, "demo", "experiment", {});
+    const resultsRecord = options.resultsRecord || pipelineResource(pipeline, "demo", "results", {});
+    const reviewRecord = options.reviewRecord || pipelineResource(pipeline, "demo", "review", {});
+    const reportDefaults = reviewRecord.report?.defaults || {};
+    const report = { ...reportDefaults, ...(options.report || {}) };
+    const rows = asArray(data).length
+      ? asArray(data).map((row) => ({ ...row }))
+      : asArray(resultsRecord.normalized_records).map((row) => ({ ...row }));
+    const defaultSections = asArray(reviewRecord.report?.section_catalog)
+      .filter((item) => item.enabled_by_default !== false)
+      .map((item) => item.id);
+    const sections = Array.isArray(report.sections) ? [...report.sections] : (defaultSections.length ? defaultSections : ["summary", "methods", "results", "ai", "conclusions", "provenance"]);
+    const best = rows.length ? [...rows].sort((a, b) => Number(b.pce || 0) - Number(a.pce || 0))[0] : {};
     const mean = {};
     ["voc", "jsc", "ff", "pce", "stability", "hysteresis"].forEach((key) => {
       mean[key] = rows.length ? rows.reduce((sum, row) => sum + Number(row[key] || 0), 0) / rows.length : 0;
     });
-    const metric = ["pce", "stability", "hysteresis"].includes(report.chartMetric) ? report.chartMetric : "pce";
-    const metricLabels = { pce: ["PCE", "%"], stability: ["Stability", "%"], hysteresis: ["Hysteresis", "%"] };
+    const metricDefinitions = asArray(reviewRecord.overview?.chart_metrics);
+    const allowedMetrics = metricDefinitions.map((item) => item.id);
+    const metric = allowedMetrics.includes(report.chartMetric) ? report.chartMetric : (allowedMetrics[0] || "pce");
+    const metricDefinition = metricDefinitions.find((item) => item.id === metric) || {label:titleCase(metric), suffix:"", decimals:2};
     const metricValues = rows.map((row) => Number(row[metric] || 0));
     const padding = metric === "pce" ? 0.5 : 1;
     const minValue = metricValues.length ? Math.min(...metricValues) - padding : 0;
     const maxValue = metricValues.length ? Math.max(...metricValues) + padding : 1;
+
+    const solutionDefinitions = asArray(processRecord.solution_definitions);
+    const solutionDefinition = options.solutionDefinition || solutionDefinitions[0] || {};
+    const solution = asArray(solutionDefinition.components).map((component) => [
+      component.name || "—",
+      component.role || component.phase || "—",
+      component.amount || "—",
+      component.share || "—"
+    ]);
+    const solventComponents = asArray(solutionDefinition.components).filter((component) => component.phase === "solvent");
+    const solutionMeta = {
+      id: solutionDefinition.id || "—",
+      version: solutionDefinition.version || 1,
+      label: solutionDefinition.id ? `${solutionDefinition.id}/v${solutionDefinition.version || 1}` : "Solution definition",
+      name: solutionDefinition.name || "Solution definition",
+      concentration: quantityText(solutionDefinition.target_concentration),
+      volume: quantityText(solutionDefinition.reference_volume),
+      solventRatio: solutionDefinition.solvent_ratio || "—",
+      status: titleCase(solutionDefinition.status || "draft")
+    };
+
+    const stack = processRecord.stack || {};
+    const stackLayers = asArray(options.stackLayers).length ? asArray(options.stackLayers) : asArray(stack.layers);
+    const stackMeta = {
+      id: stack.id || "—",
+      version: stack.version || 1,
+      label: stack.id ? `${stack.id}/v${stack.version || 1}` : "Stack definition",
+      architecture: stack.architecture || "—"
+    };
+
+    const rawFindings = asArray(options.findings).length ? asArray(options.findings) : asArray(reviewRecord.findings);
+    const statusMap = {accepted:"accepted", needs_revision:"review", proposed:"action", rejected:"review"};
+    const findings = rawFindings.map((item) => ({
+      score: Number(item.score) || 0,
+      title: item.title || item.statement || "Untitled finding",
+      detail: item.detail || item.statement || "",
+      evidence: item.evidence || item.evidence_label || asArray(item.evidence_refs).join(" · ") || "No evidence linked",
+      status: item.status || statusMap[item.review_status] || "review",
+      type: item.type || "observation",
+      id: item.id || item.finding_id || ""
+    }));
+
+    const experimentCoverage = asArray(reviewRecord.report?.experiment_coverage);
+    const experiments = (experimentCoverage.length ? experimentCoverage : asArray(options.experiments))
+      .filter((item) => !item.project || item.project === project.id);
+    const qualityIssues = asArray(options.qualityIssues).length ? asArray(options.qualityIssues) : asArray(resultsRecord.quality_issues);
+    const quality = qualityIssues.slice(0, 3).map((item) => [String(item.severity || "information").toUpperCase(), item.title || item.detail || "Quality issue"]);
+    const sourceFiles = asArray(resultsRecord.source_files);
+    const sources = unique([
+      ...sourceFiles.map((item) => item.file_name),
+      processRecord.process?.stable_label,
+      solutionMeta.label,
+      stackMeta.label,
+      resultsRecord.result_set?.result_set_id
+    ]);
+    const sourceEntries = [
+      ...sourceFiles.map((item) => ({id:item.file_name, detail:`${item.measurement_type || "Scientific source"} · ${item.rows || 0} rows`})),
+      ...(processRecord.process?.stable_label ? [{id:processRecord.process.stable_label, detail:"Versioned process definition"}] : []),
+      ...(solutionDefinition.id ? [{id:solutionMeta.label, detail:"Versioned solution definition"}] : []),
+      ...(stack.id ? [{id:stackMeta.label, detail:"Versioned device architecture"}] : [])
+    ];
+    const provenanceManifest = asArray(reviewRecord.provenance_manifest);
+    const openIssueCount = qualityIssues.filter((item) => ["error", "warning"].includes(item.severity)).length;
+    const preparedBatches = asArray(experimentRecord.batches);
+    const process = processRecord.process || {};
+    const review = reviewRecord.review || {};
+
     return {
       project,
+      pipeline,
+      processRecord,
+      experimentRecord,
+      resultsRecord,
+      reviewRecord,
+      process,
+      review,
       report,
       rows,
       sections,
@@ -77,36 +180,35 @@
       best,
       mean,
       metric,
-      metricLabel: metricLabels[metric][0],
-      metricSuffix: metricLabels[metric][1],
+      metricLabel: metricDefinition.label || titleCase(metric),
+      metricSuffix: metricDefinition.suffix || "",
+      metricDecimals: Number.isInteger(metricDefinition.decimals) ? metricDefinition.decimals : 2,
       minValue,
       maxValue,
       metricRange: maxValue - minValue || 1,
-      findings: [...(options.findings || [])],
-      experiments: [...(options.experiments || [])].filter((item) => !item.project || item.project === project.id),
-      knowledgeCount: (options.knowledge || []).length,
-      solution: [
-        ["DMF", "Primary solvent", "1.60 mL", "80% v/v"],
-        ["DMSO", "Co-solvent", "0.40 mL", "20% v/v"],
-        ["FAI", "A-site solute", "365.3 mg", "90 mol%"],
-        ["MAI", "A-site solute", "39.7 mg", "10 mol%"],
-        ["PbI2", "Lead halide", "1152.5 mg", "1.00 eq"]
-      ],
-      stackLayers: options.stackLayers || [
-        { material: "Glass / ITO", role: "Substrate", thickness: "1.1 mm" },
-        { material: "SnO2", role: "ETL", thickness: "30 nm" },
-        { material: "FA0.90MA0.10PbI3", role: "Absorber", thickness: "620 nm" },
-        { material: "Spiro-OMeTAD", role: "HTL", thickness: "180 nm" },
-        { material: "Au", role: "Contact", thickness: "80 nm" }
-      ],
-      quality: [
-        ["1 ERROR", "Device count mismatch"],
-        ["2 WARNINGS", "Annealing unit and solution provenance"],
-        ["BOUNDARY", "No causal claim from incomplete metadata"]
-      ],
-      sources: ["batch_B03_forward.csv", "process_metadata.yaml", "SOL-B04", "STK-003/v2"]
+      findings,
+      experiments,
+      knowledgeCount: asArray(options.knowledge).length,
+      solutionDefinitions,
+      solutionDefinition,
+      solution,
+      solventComponents,
+      solutionMeta,
+      preparedBatches,
+      stack,
+      stackLayers,
+      stackMeta,
+      qualityIssues,
+      quality,
+      sourceFiles,
+      sourceEntries,
+      sources,
+      provenanceManifest,
+      exportManifest: reviewRecord.export_manifest || {},
+      openIssueCount
     };
   }
+
   class ReportPdfPage {
     constructor(palette, number, title, report) {
       this.commands = [];
@@ -275,7 +377,7 @@
     return page.commands.join("\n");
   }
   function pageTwo(model, palette) {
-    const { report, sectionSet, stackLayers, experiments, quality } = model;
+    const { report, sectionSet, stackLayers, experiments, quality, solutionDefinition, solutionMeta, solventComponents, stackMeta } = model;
     const page = new ReportPdfPage(palette, 2, "MATERIALS, PROCESS AND EXPERIMENT COVERAGE", report);
     let top = page.section(2, "Materials & process", "Traceable preparation and device architecture", 60, `${experiments.length} experiments`);
     if (!sectionSet.has("methods")) {
@@ -285,24 +387,35 @@
     }
     top = page.wrapped(report.methodology || "", 38, top, 509, 8.8, 12, "F1", page.text, 5) + 10;
     page.rect(38, top, 247, 157, page.soft, page.rule);
-    page.textAt("SOLUTION REVIEW  |  SOL-B04", 49, top + 12, 8, "F2", page.dark);
-    page.rect(49, top + 34, 176, 15, page.accent);
-    page.rect(225, top + 34, 44, 15, "0.20 0.44 0.76");
-    page.textAt("DMF 80%", 54, top + 38, 6.4, "F2", page.white);
-    page.textAt("DMSO 20%", 266, top + 38, 6.1, "F2", page.white, "right");
-    [["Target", "FA0.90MA0.10PbI3"], ["Volume", "2.00 mL"], ["Molarity", "1.25 M"], ["Status", "Reviewed"]].forEach(([label, value], index) => {
+    page.textAt(`SOLUTION REVIEW  |  ${solutionMeta.label}`.toUpperCase(), 49, top + 12, 7.5, "F2", page.dark);
+    const solvents = solventComponents.slice(0, 2);
+    const solventShares = solvents.map((item) => Number(String(item.share || "").match(/[\d.]+/)?.[0] || 0));
+    const shareTotal = solventShares.reduce((sum, value) => sum + value, 0) || solvents.length || 1;
+    if (solvents.length) {
+      let cursor = 49;
+      solvents.forEach((item, index) => {
+        const width = 220 * ((solventShares[index] || 1) / shareTotal);
+        page.rect(cursor, top + 34, width, 15, index === 0 ? page.accent : "0.20 0.44 0.76");
+        if (width > 36) page.textAt(`${item.name} ${item.share || ""}`.trim(), cursor + 5, top + 38, 5.8, "F2", page.white);
+        cursor += width;
+      });
+    } else {
+      page.rect(49, top + 34, 220, 15, page.accent);
+      page.textAt(solutionMeta.solventRatio, 54, top + 38, 6.1, "F2", page.white);
+    }
+    [["Recipe", solutionMeta.name], ["Volume", solutionMeta.volume], ["Concentration", solutionMeta.concentration], ["Status", solutionMeta.status]].forEach(([label, value], index) => {
       page.textAt(label.toUpperCase(), 49, top + 64 + index * 20, 6.1, "F2", page.muted);
-      page.textAt(value, 115, top + 64 + index * 20, 7.5, "F2", page.dark);
+      page.textAt(String(value || "—").slice(0, 28), 115, top + 64 + index * 20, 7.1, "F2", page.dark);
     });
     page.rect(300, top, 247, 157, page.soft, page.rule);
-    page.textAt("STACK REVIEW  |  STK-003/V2", 311, top + 12, 8, "F2", page.dark);
-    stackLayers.forEach((layer, index) => {
+    page.textAt(`STACK REVIEW  |  ${stackMeta.label}`.toUpperCase(), 311, top + 12, 7.5, "F2", page.dark);
+    stackLayers.slice(0, 5).forEach((layer, index) => {
       const y = top + 35 + index * 21;
       page.rect(311, y, 225, 17, index === 2 ? page.accent : page.white, page.rule);
-      page.textAt(layer.material, 318, y + 5, 7, "F2", index === 2 ? page.white : page.dark);
-      page.textAt(layer.thickness, 529, y + 5, 6.7, "F1", index === 2 ? page.white : page.muted, "right");
+      page.textAt(layer.material || "—", 318, y + 5, 7, "F2", index === 2 ? page.white : page.dark);
+      page.textAt(layer.thickness || "—", 529, y + 5, 6.7, "F1", index === 2 ? page.white : page.muted, "right");
     });
-    page.textAt("n-i-p reference architecture", 311, top + 145, 6.3, "F1", page.muted);
+    page.textAt(`${stackMeta.architecture} reference architecture`, 311, top + 145, 6.3, "F1", page.muted);
     top += 171;
     if (report.includeExperiments && experiments.length) {
       page.textAt("EXPERIMENT COVERAGE", 38, top, 7, "F2", page.accent);
@@ -311,26 +424,27 @@
       experiments.slice(0, 3).forEach((experiment, index) => {
         const x = 38 + index * (width + gap);
         page.rect(x, top, width, 78, page.white, page.rule);
-        page.textAt(experiment.id, x + 9, top + 10, 7, "F2", page.accent);
-        page.wrapped((experiment.samples || []).join(" | "), x + 9, top + 27, width - 18, 7.1, 9, "F2", page.dark, 2);
+        page.textAt(experiment.id || "—", x + 9, top + 10, 7, "F2", page.accent);
+        page.wrapped(asArray(experiment.samples).join(" | "), x + 9, top + 27, width - 18, 7.1, 9, "F2", page.dark, 2);
         page.wrapped(`${experiment.process || "-"} | ${experiment.annealing?.value ?? "-"}${experiment.annealing?.unit || " unit missing"} | ${experiment.measurements || 0} measurements`, x + 9, top + 49, width - 18, 6.2, 8, "F1", page.muted, 3);
       });
       top += 91;
     }
-    if (report.includeQualityReview) {
+    if (report.includeQualityReview && quality.length) {
       page.textAt("DATA-QUALITY REVIEW", 38, top, 7, "F2", page.accent);
       top += 14;
       const gap = 6, width = (509 - gap * 2) / 3;
-      quality.forEach(([label, detail], index) => {
+      quality.slice(0, 3).forEach(([label, detail], index) => {
         const x = 38 + index * (width + gap);
         page.rect(x, top, width, 52, page.soft, page.rule);
-        page.textAt(label, x + 8, top + 10, 6.8, "F2", index === 0 ? "0.76 0.18 0.20" : page.accent);
+        page.textAt(label, x + 8, top + 10, 6.8, "F2", label === "ERROR" ? "0.76 0.18 0.20" : page.accent);
         page.wrapped(detail, x + 8, top + 25, width - 16, 6.5, 8.5, "F1", page.muted, 3);
       });
     }
     page.footer(`${report.author || "Author"} | ${report.reportDate || ""} | Generated from the current Report Composer state`);
     return page.commands.join("\n");
   }
+
   function pageThree(model, palette) {
     const { report, rows, sectionSet, metric, metricLabel, metricSuffix, minValue, metricRange } = model;
     const page = new ReportPdfPage(palette, 3, "COMPLETE RESULTS AND MEASUREMENT RECORD", report);
@@ -468,21 +582,34 @@
   const pdfSafeInfo = (value) => String(value || "").replace(/([\\()])/g, "\\$1");
   function workbookRaw(project, data, options = {}) {
     const palette = E.palettes[options.palette] || E.palettes.blue;
-    const findings = options.findings || [];
-    const report = options.report || {};
-    const best = data.reduce((current, item) => current.pce > item.pce ? current : item);
-    const mean = Number((data.reduce((sum, item) => sum + item.pce, 0) / data.length).toFixed(2));
+    const model = buildReportDocument(project, data, options);
+    const { report, rows, findings, best, solutionDefinitions, preparedBatches, stackLayers, qualityIssues, provenanceManifest, process, stackMeta, resultsRecord, review } = model;
+    const rawLastRow = Math.max(2, rows.length + 1);
+    const bestSample = best.sample || "—";
+    const meanPce = rows.length ? Number((rows.reduce((sum, item) => sum + Number(item.pce || 0), 0) / rows.length).toFixed(2)) : 0;
+    const definitionsById = new Map(solutionDefinitions.map((item) => [item.id, item]));
+    const solutionRows = preparedBatches.length
+      ? preparedBatches.map((batch) => {
+          const definitionId = String(batch.definition || "").split("/")[0];
+          const definition = definitionsById.get(definitionId) || {};
+          return [batch.id || "—", batch.definition || "—", definition.name || "—", definition.target_concentration ? quantityText(definition.target_concentration) : "—", batch.prepared || "—", batch.operator || "—", titleCase(batch.status || "draft")];
+        })
+      : solutionDefinitions.map((definition) => [definition.id || "—", `${definition.id || "—"}/v${definition.version || 1}`, definition.name || "—", quantityText(definition.target_concentration), quantityText(definition.reference_volume), "Definition", titleCase(definition.status || "draft")]);
+    const stackRows = stackLayers.map((layer, index) => [index + 1, layer.id || "—", layer.material || "—", layer.thickness || "—", layer.function || layer.role || "—", layer.process || "—", layer.producer || "—"]);
+    const analysisRows = findings.map((item) => [item.id || "—", titleCase(item.type), item.title, item.detail, item.evidence, item.status]);
+    const provenanceRows = provenanceManifest.map((item) => [titleCase(item.class), item.label || "—", item.evidence || "—", item.class === "researcher" ? project.owner : "LabFlow contract", item.class === "ai" ? "Human review required" : "Preserved"]);
+    const sourceCount = asArray(resultsRecord.source_files).length;
     const sheets = [
-      ["Dashboard", [["LABFLOW ANALYSIS WORKBOOK", "VALUE", "CONTEXT"], ["Project", report.title || project.name, project.id], ["Best PCE", "=MAX('Raw Data'!G2:G9)", best.sample], ["Mean PCE", "=AVERAGE('Raw Data'!G2:G9)", `${data.length} samples`], ["PCE standard deviation", "=STDEV('Raw Data'!G2:G9)", "sample dispersion"], ["Best stability", "=MAX('Raw Data'!H2:H9)", `${best.sample} · % retained`], ["Mean hysteresis", "=AVERAGE('Raw Data'!I2:I9)", "%"], ["Approved findings", findings.filter((item) => item.status === "accepted").length, "researcher-controlled"], ["Approval", report.approval || "Pending researcher approval", "human decision"], ["EDITING LEGEND", "Pale amber = editable input", "Pale green = calculated formula"], ["Recalculation", "Automatic on open", "Charts and summaries follow Raw Data"]], [30, 44, 32], {formulas:true, showGridLines:false}],
-      ["Project", [["FIELD", "VALUE"], ["Project ID", project.id], ["Project name", project.name], ["Pipeline", project.pipeline], ["Owner", project.owner], ["Status", project.status], ["Progress (%)", project.progress], ["Objective", project.objective], ["Report title", report.title || project.name], ["Report subtitle", report.subtitle || "Scientific project report"], ["Executive summary", report.executiveSummary || project.objective], ["Methodology", report.methodology || "Structured preparation, mapped measurements and deterministic analysis."], ["Conclusions", report.conclusions || "Pending researcher conclusion."], ["Limitations", report.limitations || "No limitations entered."], ["Approval", report.approval || "Pending researcher approval"]], [24, 90], {editable:true, editableColumns:[2]}],
-      ["Solutions", [["SOLUTION ID", "RECIPE", "CONCENTRATION", "SOLVENT", "VOLUME", "STATUS"], ["SOL-B01", "FA/MA reference", "1.25 mol/L", "DMF:DMSO 4:1", "2.0 mL", "Reviewed"], ["SOL-B02", "FA/MA reference", "1.25 mol/L", "DMF:DMSO 4:1", "2.5 mL", "Reviewed"], ["SOL-B03", "FA/MA variant", "1.30 mol/L", "DMF:DMSO 4:1", "1.5 mL", "Review"]], [16, 24, 18, 20, 14, 14], {editable:true}],
-      ["Stack", [["ORDER", "MATERIAL", "THICKNESS", "FUNCTION", "PROCESS"], [1, "Glass / FTO", "2.2 mm", "Substrate", "Cleaning"], [2, "SnO₂", "32 nm", "Electron transport", "Spin coat"], [3, "FA/MA perovskite", "540 nm", "Absorber", "Anti-solvent"], [4, "Spiro-OMeTAD", "180 nm", "Hole transport", "Spin coat"], [5, "Au", "80 nm", "Back contact", "Evaporation"]], [10, 24, 16, 24, 18], {editable:true}],
-      ["Raw Data", [["SAMPLE", "FORMULATION", "BATCH", "VOC (V)", "JSC (mA/cm²)", "FF (%)", "PCE (%)", "STABILITY (%)", "HYSTERESIS (%)"], ...data.map((item) => [item.sample, item.formulation, item.batch, item.voc, item.jsc, item.ff, item.pce, item.stability, item.hysteresis])], [12, 24, 12, 12, 16, 12, 12, 16, 18], {editable:true}],
-      ["Processed Data", [["SAMPLE", "NORMALIZED PCE", "PCE DELTA VS MEAN", "OUTLIER FLAG", "INCLUDED IN REPORT"], ...data.map((item, index) => [item.sample, `='Raw Data'!G${index + 2}/MAX('Raw Data'!$G$2:$G$9)`, `='Raw Data'!G${index + 2}-AVERAGE('Raw Data'!$G$2:$G$9)`, `=IF('Raw Data'!G${index + 2}<18,"Review","No")`, "Yes"])], [12, 18, 20, 16, 22], {formulas:true, editable:true, editableColumns:[5]}],
-      ["Analysis", [["METHOD", "RESULT", "TYPE", "REPORT STATUS"], ["Descriptive statistics", `Mean PCE ${mean}%`, "Deterministic", "Included"], ["Trend", `${best.formulation} leads`, "Deterministic", "Included"], ["Outlier review", "S06 requires process review", "Deterministic", "Included"], ["Correlation preview", "Stability inversely associated with hysteresis", "Deterministic", "Included"], ["Batch comparison", "Formulation effect exceeds batch effect", "Deterministic", "Included"]], [28, 62, 18, 18]],
-      ["AI Findings", [["SCORE", "FINDING", "DETAIL", "EVIDENCE", "STATUS", "ORIGIN"], ...findings.map((item) => [item.score, item.title, item.detail, item.evidence, item.status, "Simulated AI"] )], [12, 38, 70, 28, 16, 18]],
-      ["Provenance", [["ENTITY", "SOURCE", "TRANSFORMATION", "OWNER", "STATUS"], ["Measurements", "12 local instrument files", "Mapped to JV summary", project.owner, "Reviewed"], ["Processed data", "Raw Data sheet", "Normalization + grouped statistics", project.owner, "Deterministic"], ["AI findings", "Project + approved KB", "Fixed local demonstration rules", "LabFlow POC", "Simulated"], ["Conclusions", "Approved results + human notes", "Editable report builder", project.owner, report.approval || "Pending"]], [24, 38, 42, 24, 18]],
-      ["Export Manifest", [["FILE / SHEET", "PURPOSE", "FORMAT", "PALETTE"], ["Dashboard", "Decision overview", "Worksheet", palette.name], ["Project", "Project metadata", "Worksheet", palette.name], ["Solutions", "Preparation records", "Worksheet", palette.name], ["Stack", "Device architecture", "Worksheet", palette.name], ["Raw Data", "Source-aligned values", "Worksheet", palette.name], ["Processed Data", "Derived values", "Worksheet", palette.name], ["Analysis", "Deterministic results", "Worksheet", palette.name], ["AI Findings", "Simulated advisory output", "Worksheet", palette.name], ["Provenance", "Evidence lineage", "Worksheet", palette.name], ["Export Manifest", "Workbook inventory", "Worksheet", palette.name]], [28, 42, 18, 22]]
+      ["Dashboard", [["LABFLOW ANALYSIS WORKBOOK", "VALUE", "CONTEXT"], ["Project", report.title || project.name, project.id], ["Pipeline contract", `${model.pipeline.name || project.pipeline} v${model.pipeline.version || "—"}`, model.pipeline.schema_version || "—"], ["Process snapshot", process.stable_label || process.process_id || "—", "versioned source"], ["Result set", resultsRecord.result_set?.result_set_id || "—", `${sourceCount} source files`], ["Best PCE", `=MAX('Raw Data'!G2:G${rawLastRow})`, bestSample], ["Mean PCE", `=AVERAGE('Raw Data'!G2:G${rawLastRow})`, `${rows.length} samples`], ["PCE standard deviation", `=STDEV('Raw Data'!G2:G${rawLastRow})`, "sample dispersion"], ["Best stability", `=MAX('Raw Data'!H2:H${rawLastRow})`, `${bestSample} · % retained`], ["Mean hysteresis", `=AVERAGE('Raw Data'!I2:I${rawLastRow})`, "%"], ["Approved findings", findings.filter((item) => item.status === "accepted").length, "researcher-controlled"], ["Open quality issues", model.openIssueCount, "preserved in export"], ["Approval", report.approval || review.approval_state || "Pending researcher approval", "human decision"], ["EDITING LEGEND", "Pale amber = editable input", "Pale green = calculated formula"], ["Recalculation", "Automatic on open", "Charts and summaries follow Raw Data"]], [30, 48, 34], {formulas:true, showGridLines:false}],
+      ["Project", [["FIELD", "VALUE"], ["Project ID", project.id], ["Project name", project.name], ["Pipeline", project.pipeline], ["Pipeline version", model.pipeline.version || "—"], ["Process", process.stable_label || "—"], ["Stack", stackMeta.label], ["Owner", project.owner], ["Status", project.status], ["Progress (%)", project.progress], ["Objective", project.objective], ["Report title", report.title || project.name], ["Report subtitle", report.subtitle || "Scientific project report"], ["Executive summary", report.executiveSummary || project.objective], ["Methodology", report.methodology || "Structured preparation, mapped measurements and deterministic analysis."], ["Conclusions", report.conclusions || "Pending researcher conclusion."], ["Limitations", report.limitations || "No limitations entered."], ["Approval", report.approval || review.approval_state || "Pending researcher approval"]], [24, 90], {editable:true, editableColumns:[2]}],
+      ["Solutions", [["BATCH ID", "DEFINITION", "RECIPE", "CONCENTRATION", "PREPARED", "OPERATOR", "STATUS"], ...solutionRows], [16, 18, 34, 18, 16, 24, 16], {editable:true}],
+      ["Stack", [["ORDER", "LAYER ID", "MATERIAL", "THICKNESS", "FUNCTION", "PROCESS", "PRODUCER"], ...stackRows], [10, 14, 24, 16, 28, 20, 18], {editable:true}],
+      ["Raw Data", [["SAMPLE", "FORMULATION", "BATCH", "VOC (V)", "JSC (mA/cm²)", "FF (%)", "PCE (%)", "STABILITY (%)", "HYSTERESIS (%)"], ...rows.map((item) => [item.sample, item.formulation, item.batch, item.voc, item.jsc, item.ff, item.pce, item.stability, item.hysteresis])], [12, 24, 12, 12, 16, 12, 12, 16, 18], {editable:true}],
+      ["Processed Data", [["SAMPLE", "NORMALIZED PCE", "PCE DELTA VS MEAN", "OUTLIER FLAG", "INCLUDED IN REPORT", "RESULT SET", "SOURCE FILE"], ...rows.map((item, index) => [item.sample, `='Raw Data'!G${index + 2}/MAX('Raw Data'!$G$2:$G$${rawLastRow})`, `='Raw Data'!G${index + 2}-AVERAGE('Raw Data'!$G$2:$G$${rawLastRow})`, `=IF('Raw Data'!G${index + 2}<18,"Review","No")`, "Yes", item.result_set_id || resultsRecord.result_set?.result_set_id || "—", item.source_file || "—"])], [12, 18, 20, 16, 22, 22, 30], {formulas:true, editable:true, editableColumns:[5]}],
+      ["Analysis", [["FINDING ID", "TYPE", "TITLE", "RESULT", "EVIDENCE", "REPORT STATUS"], ...analysisRows, ["SUMMARY", "Deterministic", "Mean PCE", `${meanPce}%`, resultsRecord.result_set?.result_set_id || "—", "Included"]], [16, 18, 34, 60, 30, 18]],
+      ["AI Findings", [["SCORE", "FINDING", "DETAIL", "EVIDENCE", "STATUS", "ORIGIN"], ...findings.map((item) => [item.score, item.title, item.detail, item.evidence, item.status, item.type === "ai_suggestion" ? "Simulated AI" : "Review record"])], [12, 38, 70, 28, 16, 18]],
+      ["Provenance", [["EVIDENCE CLASS", "SOURCE / CONTROL", "EVIDENCE RECORD", "OWNER", "STATUS"], ...provenanceRows, ...qualityIssues.map((item) => [titleCase(item.severity), item.title || "Quality issue", item.evidence || item.id || "—", item.source || "Validation", "Open issue"])], [20, 46, 34, 24, 20]],
+      ["Export Manifest", [["FILE / SHEET", "PURPOSE", "FORMAT", "PALETTE"], ["Dashboard", "Decision overview", "Worksheet", palette.name], ["Project", "Project and pipeline contract metadata", "Worksheet", palette.name], ["Solutions", "Batch and versioned recipe records", "Worksheet", palette.name], ["Stack", "Versioned device architecture", "Worksheet", palette.name], ["Raw Data", "Source-aligned values", "Worksheet", palette.name], ["Processed Data", "Derived values with source identity", "Worksheet", palette.name], ["Analysis", "Evidence-linked review findings", "Worksheet", palette.name], ["AI Findings", "Advisory output with human state", "Worksheet", palette.name], ["Provenance", "Evidence lineage and open issues", "Worksheet", palette.name], ["Export Manifest", "Workbook inventory", "Worksheet", palette.name]], [28, 48, 18, 22]]
     ];
     const styleXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Aptos"/><color rgb="FF273448"/></font><font><b/><sz val="10"/><name val="Aptos Display"/><color rgb="FFFFFFFF"/></font></fonts><fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF5F7FA"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF${palette.strong}"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFFFF3D6"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8F7EE"/></patternFill></fill></fills><borders count="2"><border/><border><left style="thin"><color rgb="FFD7DEE8"/></left><right style="thin"><color rgb="FFD7DEE8"/></right><top style="thin"><color rgb="FFD7DEE8"/></top><bottom style="thin"><color rgb="FFD7DEE8"/></bottom></border></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="5"><xf borderId="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf fillId="2" borderId="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf fontId="1" fillId="3" borderId="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf fillId="4" borderId="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf fillId="5" borderId="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
     const types = `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((_, index) => `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`;
@@ -494,7 +621,7 @@
       { name: "xl/workbook.xml", data: workbook },
       { name: "xl/_rels/workbook.xml.rels", data: rels },
       { name: "xl/styles.xml", data: styleXml },
-      ...sheets.map(([name, rows, widths, config], index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, data: sheet(rows, widths, config?.filter !== false, config || {}) }))
+      ...sheets.map(([name, sheetRows, widths, config], index) => ({ name: `xl/worksheets/sheet${index + 1}.xml`, data: sheet(sheetRows, widths, config?.filter !== false, config || {}) }))
     ]);
   }
 
@@ -548,11 +675,9 @@
   }
   function editableDocxRaw(project, data, options = {}) {
     const palette = E.palettes[options.palette] || E.palettes.blue;
-    const report = options.report || {};
-    const sections = new Set(report.sections || ["summary", "methods", "results", "ai", "conclusions", "provenance"]);
-    const findings = options.findings || [];
-    const best = data.reduce((current, item) => current.pce > item.pce ? current : item);
-    const mean = (key) => (data.reduce((sum, item) => sum + Number(item[key] || 0), 0) / Math.max(1, data.length)).toFixed(2);
+    const model = buildReportDocument(project, data, options);
+    const { report, sectionSet: sections, findings, best, rows, solution, solutionMeta, stackLayers, stackMeta, experiments, qualityIssues, provenanceManifest, sourceEntries } = model;
+    const mean = (key) => Number(model.mean[key] || 0).toFixed(2);
     const accent = palette.strong;
     const dark = palette.dark;
     const soft = "EEF4F5";
@@ -574,19 +699,19 @@
     const cover = `<w:tbl><w:tblPr><w:tblW w:w="9400" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders></w:tblPr><w:tblGrid><w:gridCol w:w="9400"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w="9400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${dark}"/><w:tcMar><w:top w:w="700" w:type="dxa"/><w:left w:w="600" w:type="dxa"/><w:bottom w:w="700" w:type="dxa"/><w:right w:w="600" w:type="dxa"/></w:tcMar></w:tcPr>${paragraph(`LABFLOW / ${(report.reportType || "Scientific project report").toUpperCase()}`,"CoverEyebrow","",`<w:b/><w:color w:val="${accent}"/><w:sz w:val="20"/>`)}${paragraph(report.title || project.name,"CoverTitle","",'<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="48"/>')}${paragraph(report.subtitle || "Scientific project report","CoverSubtitle","",'<w:color w:val="D8E2EE"/><w:sz w:val="25"/>')}${spacer(180)}${paragraph(`${report.reportCode || project.id}  |  ${report.reportDate || ""}`,"CoverMeta","",'<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="19"/>')}${paragraph(`${author}  |  ${laboratory}`,"CoverMeta","",'<w:color w:val="D8E2EE"/><w:sz w:val="18"/>')}${paragraph(report.approval || "Pending researcher approval","CoverMeta","",`<w:b/><w:color w:val="${accent}"/><w:sz w:val="18"/>`)}</w:tc></w:tr></w:tbl>${spacer(150)}${paragraph(`Keywords: ${report.keywords || ""}`,"SmallText")}`;
     let content = cover;
     if (sections.has("summary")) {
-      content += sectionHeading("01", "Executive Snapshot", "decision-ready project summary") + editable("Executive summary", report.executiveSummary || project.objective, "report.executiveSummary") + editable("Research objectives", report.objectives || project.objective, "report.objectives") + infoTable([["BEST PCE",`${best.pce.toFixed(2)}% / ${best.sample}`],["MEAN PCE",`${mean("pce")}%`],["BEST STABILITY",`${best.stability}%`],["MEAN VOC",`${mean("voc")} V`],["OPEN ISSUES","3"]]);
+      content += sectionHeading("01", "Executive Snapshot", "decision-ready project summary") + editable("Executive summary", report.executiveSummary || project.objective, "report.executiveSummary") + editable("Research objectives", report.objectives || project.objective, "report.objectives") + infoTable([["BEST PCE",`${Number(best.pce || 0).toFixed(2)}% / ${best.sample || "—"}`],["MEAN PCE",`${mean("pce")}%`],["BEST STABILITY",`${best.stability || 0}%`],["MEAN VOC",`${mean("voc")} V`],["OPEN ISSUES",String(model.openIssueCount)]]);
     }
     content += pageBreak();
     if (sections.has("methods")) {
-      content += sectionHeading("02", "Materials, Process and Experiments", "traceable preparation") + editable("Methodology", report.methodology || "Structured preparation, mapped measurements and deterministic analysis.", "report.methodology") + paragraph("Solution Review / SOL-B04","Heading2") + tableXml([["Component","Function","Quantity","Composition"],["DMF","Primary solvent","1.60 mL","80% v/v"],["DMSO","Co-solvent","0.40 mL","20% v/v"],["FAI","A-site solute","365.3 mg","90 mol%"],["MAI","A-site solute","39.7 mg","10 mol%"],["PbI2","Lead halide","1152.5 mg","1.00 eq"]],[1500,3600,1800,2500],{fontSize:"17"}) + paragraph("Device Stack / STK-003 v2","Heading2") + tableXml([["Order","Material","Function","Thickness"],["05","Au","Back contact","80 nm"],["04","Spiro-OMeTAD","Hole transport","180 nm"],["03","FA/MA perovskite","Photoactive absorber","540 nm"],["02","SnO2","Electron transport","32 nm"],["01","Glass / FTO","Substrate + front contact","2.2 mm"]],[900,2500,4200,1800],{fontSize:"17"});
-      if (report.includeExperiments !== false) content += paragraph("Experiment Coverage","Heading2") + tableXml([["Experiment","Samples","Process","Measurements","Status"],["EXP-041","S01-S03","100 C / 30 min","6","Reviewed"],["EXP-052","S04-S05","105 C / 25 min","4","Reviewed"],["EXP-067","S06-S08","100 / unit missing","24","Review"]],[1300,1600,3000,1700,1800],{fontSize:"17"});
-      if (report.includeQualityReview !== false) content += paragraph("Data-quality review","Heading2") + tableXml([["Severity","Issue","Effect"],["Error","Device count mismatch","Resolve before final interpretation"],["Warning","Annealing unit missing","Comparison retained with caveat"],["Warning","Solution provenance incomplete","Causal inference blocked"]],[1300,3500,4600],{fontSize:"17"});
+      content += sectionHeading("02", "Materials, Process and Experiments", "traceable preparation") + editable("Methodology", report.methodology || "Structured preparation, mapped measurements and deterministic analysis.", "report.methodology") + paragraph(`Solution Review / ${solutionMeta.label}`,"Heading2") + tableXml([["Component","Function","Quantity","Composition"],...solution],[1500,3600,1800,2500],{fontSize:"17"}) + paragraph(`Device Stack / ${stackMeta.label}`,"Heading2") + tableXml([["Order","Material","Function","Thickness"],...stackLayers.map((layer,index)=>[String(index + 1).padStart(2,"0"),layer.material || "—",layer.function || layer.role || "—",layer.thickness || "—"])],[900,2500,4200,1800],{fontSize:"17"});
+      if (report.includeExperiments !== false) content += paragraph("Experiment Coverage","Heading2") + tableXml([["Experiment","Samples","Process","Measurements","Status"],...experiments.map((item)=>[item.id || "—",asArray(item.samples).join("–"),item.process || "—",item.measurements || 0,titleCase(item.status || "review")])],[1300,1600,3000,1700,1800],{fontSize:"17"});
+      if (report.includeQualityReview !== false) content += paragraph("Data-quality review","Heading2") + tableXml([["Severity","Issue","Evidence"],...qualityIssues.slice(0,6).map((item)=>[titleCase(item.severity),item.title || item.detail || "—",item.evidence || item.id || "—"])],[1300,3500,4600],{fontSize:"17"});
     }
     content += pageBreak();
     if (sections.has("results")) {
-      content += sectionHeading("03", "Complete Results", "source-aligned measurements") + paragraph(`${{pce:"PCE",stability:"Stability",hysteresis:"Hysteresis"}[report.chartMetric] || "PCE"} performance overview`,"Heading2") + tableXml([["Sample","Formulation","PCE (%)","Stability (%)","Hysteresis (%)"],...data.map((item)=>[item.sample,item.formulation,item.pce,item.stability,item.hysteresis])],[1100,3100,1700,1800,1700],{fontSize:"17",numericColumns:[2,3,4]});
+      content += sectionHeading("03", "Complete Results", "source-aligned measurements") + paragraph(`${{pce:"PCE",stability:"Stability",hysteresis:"Hysteresis"}[report.chartMetric] || "PCE"} performance overview`,"Heading2") + tableXml([["Sample","Formulation","PCE (%)","Stability (%)","Hysteresis (%)"],...rows.map((item)=>[item.sample,item.formulation,item.pce,item.stability,item.hysteresis])],[1100,3100,1700,1800,1700],{fontSize:"17",numericColumns:[2,3,4]});
       if (report.includeFullTable !== false) {
-        content += paragraph("Complete measurement table","Heading2") + tableXml([["Sample","Formulation","Batch","Voc (V)","Jsc","FF (%)","PCE (%)"],...data.map((item)=>[item.sample,item.formulation,item.batch,item.voc,item.jsc,item.ff,item.pce])],[900,2450,900,1050,1200,1200,1700],{fontSize:"15",numericColumns:[3,4,5,6]}) + spacer(60) + tableXml([["Sample","Stability (%)","Hysteresis (%)"],...data.map((item)=>[item.sample,item.stability,item.hysteresis])],[2200,3600,3600],{fontSize:"17",numericColumns:[1,2]});
+        content += paragraph("Complete measurement table","Heading2") + tableXml([["Sample","Formulation","Batch","Voc (V)","Jsc","FF (%)","PCE (%)"],...rows.map((item)=>[item.sample,item.formulation,item.batch,item.voc,item.jsc,item.ff,item.pce])],[900,2450,900,1050,1200,1200,1700],{fontSize:"15",numericColumns:[3,4,5,6]}) + spacer(60) + tableXml([["Sample","Stability (%)","Hysteresis (%)"],...rows.map((item)=>[item.sample,item.stability,item.hysteresis])],[2200,3600,3600],{fontSize:"17",numericColumns:[1,2]});
       }
       content += editable("Researcher interpretation", report.resultsNarrative || `${best.sample} is the current leader at ${best.pce}% PCE.`, "report.resultsNarrative");
     }
@@ -599,8 +724,8 @@
     }
     if (sections.has("custom")) content += sectionHeading("06", report.customTitle || "Custom Author Section") + editable(report.customTitle || "Custom author section", report.customBody || "No custom text entered.", "report.customBody");
     if (sections.has("provenance")) {
-      content += sectionHeading(sections.has("custom") ? "07" : "06", "Provenance and Approval", "evidence classes and final state") + tableXml([["Evidence class","Origin","Control"],["Raw","Local measurement files","Preserved"],["Calculated","Deterministic transformations","Reproducible"],["Researcher","Objectives, interpretation and approval","Human authored"],["AI","Local demonstration rules","Researcher review"]],[1800,4100,3500],{fontSize:"17"});
-      if (report.includeSourceAppendix !== false) content += paragraph("Source appendix","Heading2") + paragraph("batch_B03_forward.csv - source-aligned JV measurements; process_metadata.yaml - process metadata; SOL-B04 - reviewed solution snapshot; STK-003/v2 - versioned device architecture.","SmallText");
+      content += sectionHeading(sections.has("custom") ? "07" : "06", "Provenance and Approval", "evidence classes and final state") + tableXml([["Evidence class","Origin","Control"],...provenanceManifest.map((item)=>[titleCase(item.class),item.label || "—",item.evidence || "—"])],[1800,4100,3500],{fontSize:"17"});
+      if (report.includeSourceAppendix !== false) content += paragraph("Source appendix","Heading2") + paragraph(sourceEntries.map((item)=>`${item.id} - ${item.detail}`).join("; ") || "No source records declared.","SmallText");
       content += editable("Approval / signature state", report.approval || "Pending researcher approval", "report.approval");
     }
     content += `<w:sectPr><w:headerReference w:type="default" r:id="rId2"/><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="650" w:right="700" w:bottom="700" w:left="700" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr>`;
@@ -755,8 +880,27 @@ Keywords & ${latexEscape(report.keywords || "")}\\
   E.reportLatexSource = latexReportSource;
   E.reportLatexBundle = (project, data, options = {}) => new Blob([latexReportBundleRaw(project, data, options)], { type: "application/zip" });
   E.bundle = (project, pipeline, data, nomad = false, options = {}) => {
+    const resourceGroups = Object.fromEntries(Object.entries(pipeline?.resources || {}).map(([group, resources]) => [group, Object.keys(resources || {})]));
+    const resourceManifest = {
+      schema_version: "labflow.pipeline-resource-manifest.v1",
+      pipeline_id: pipeline?.id || "unknown",
+      pipeline_version: pipeline?.version || "unknown",
+      source_refs: pipeline?.resource_refs || {},
+      embedded_resource_groups: resourceGroups,
+      note: "The full build-time-resolved pipeline contract is stored in pipeline/contract.json."
+    };
+    const packageManifest = [
+      "LabFlow portable project package",
+      "Generated locally in the browser.",
+      `Pipeline: ${pipeline?.id || "unknown"} ${pipeline?.version || ""}`.trim(),
+      `Pipeline schema: ${pipeline?.schema_version || "legacy-navigation-only"}`,
+      "Includes the resolved pipeline contract, resource manifest, structured measurements, native PDF, editable DOCX, analysis workbook, LaTeX report source and linked knowledge.",
+      "Source files and open quality issues remain explicit; NOMAD output is a readiness preview only."
+    ].join("\n") + "\n";
     const files = [
       { name: "project.yaml", data: E.projectYaml(project, pipeline) },
+      { name: "pipeline/contract.json", data: E.pipelineContractJson(pipeline) },
+      { name: "pipeline/resource-manifest.json", data: JSON.stringify(resourceManifest, null, 2) + "\n" },
       { name: "data/measurements.jsonl", data: E.jsonl(project, data) },
       { name: "data/measurements.csv", data: E.csv(data) },
       { name: "report/scientific-report.pdf", data: reportPdfRaw(project, data, options) },
@@ -764,9 +908,12 @@ Keywords & ${latexEscape(report.keywords || "")}\\
       { name: "report/analysis-workbook.xlsx", data: workbookRaw(project, data, options) },
       { name: "report/scientific-report.tex", data: latexReportSource(project, data, options) },
       { name: "knowledge/linked-context.yaml", data: (options.knowledge || []).map((item) => `- id: ${item.id}\n  type: "${item.type}"\n  title: "${item.title.replace(/"/g, '\\"')}"\n  status: "${item.status}"`).join("\n") + "\n" },
-      { name: "MANIFEST.txt", data: "LabFlow portable project package\nGenerated locally in the browser.\nIncludes structured data, native PDF, editable DOCX, analysis workbook, LaTeX report source and linked knowledge.\n" }
+      { name: "MANIFEST.txt", data: packageManifest }
     ];
-    if (nomad) files.push({ name: "nomad.yaml", data: E.nomadYaml(project) }, { name: "NOMAD_VALIDATION.txt", data: "Preview only. Confirm inferred units and complete missing metadata before upload.\n" });
+    if (nomad) files.push(
+      { name: "nomad.yaml", data: E.nomadYaml(project, pipeline) },
+      { name: "NOMAD_VALIDATION.txt", data: "Preview only. Confirm inferred units, open quality issues and incomplete metadata before upload. Remote submission is disabled in this POC.\n" }
+    );
     return new Blob([E.zipBytes(files)], { type: "application/zip" });
   };
 })();

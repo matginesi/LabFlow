@@ -175,6 +175,104 @@ At wide desktop sizes paired Builder/Review surfaces remain side by side. They s
 
 The global Ask LabFlow control remains in the topbar. Step content may show evidence-linked findings or suggested actions, but it must not repeat a separate assistant launcher in every panel.
 
-## Canonical YAML
+## Executable pipeline contract
 
-The source definition is `pipelines/chose/pipeline.yaml`. Its four step views are `chose-process`, `chose-experiment`, `chose-results` and `chose-review`.
+The CHOSE workflow is no longer defined only by navigation labels. Its canonical entry point is `pipelines/chose/pipeline.yaml`, which declares the scientific contract used by the static renderer, validators and export package.
+
+```text
+pipelines/chose/
+├── pipeline.yaml
+├── schemas/
+│   ├── process.yaml
+│   ├── experiment.yaml
+│   ├── results.yaml
+│   └── review.yaml
+├── defaults/
+│   ├── solution-types.yaml
+│   ├── operation-types.yaml
+│   └── units.yaml
+├── mappings/
+│   ├── jv-import.yaml
+│   └── nomad.yaml
+└── demo/
+    ├── process.yaml
+    ├── experiment.yaml
+    ├── results.yaml
+    └── review.yaml
+```
+
+### What `pipeline.yaml` owns
+
+The entry contract defines:
+
+- pipeline identity, schema version, compatibility and domain;
+- entities used by the workflow;
+- boundaries between planned Process data and actual Experiment data;
+- ordered steps and their local sections;
+- registered UI component identifiers;
+- records read and created by each step;
+- completion labels, required paths, validation rules and expected evidence;
+- finding-review policy;
+- enabled export formats and the NOMAD readiness profile;
+- references to the smaller schema, defaults, mapping and demonstration files.
+
+It deliberately does not contain HTML fragments, CSS declarations or report templates. A section selects a registered component such as `chose.process.chemistry`; the shared application implements that component once.
+
+### Referenced resources
+
+The files under `schemas/` define record shape and invariants. `defaults/` provides controlled domain choices and accepted units. `mappings/` makes import and NOMAD decisions inspectable. `demo/` contains the illustrative records rendered by this POC; it is not mixed into application logic.
+
+`tools/build_pipeline_bundle.py` resolves `resource_refs`, rejects paths outside the pipeline directory and embeds the resolved resources in `assets/js/pipeline-bundle.js`. The browser therefore receives one request-free contract when LabFlow is opened through `file://` or static hosting.
+
+```mermaid
+flowchart LR
+  Y[pipeline.yaml] --> B[Build-time resolver]
+  R[schemas / defaults / mappings / demo] --> B
+  B --> J[pipeline-bundle.js]
+  J --> C[Strict component registry]
+  J --> V[Step gates and review metadata]
+  J --> X[Project and NOMAD export contracts]
+```
+
+
+### Runtime evaluation
+
+`assets/js/pipeline-runtime.js` resolves a step’s `demo_ref` and `schema_ref`, checks required document sections and field contracts, evaluates implemented completion validators and recursively evaluates `depends_on`. Under `contract.strict: true`, an unknown validator, missing schema, unresolved required path or cyclic dependency is an error rather than a permissive fallback.
+
+The checked-in CHOSE scenario intentionally demonstrates different gate states:
+
+| Step | Runtime state | Reason |
+| --- | --- | --- |
+| Process | Ready | schema, units, operation ordering, layer producers and capabilities pass |
+| Experiment | Warning | the record is usable but one environmental field remains explicit as missing |
+| Results | Blocked | a deterministic unresolved quality error remains |
+| Review | Blocked | human review is pending and Results is an upstream blocker |
+
+These states are calculated from the resolved YAML resources. They are not hardcoded labels in the page renderer.
+
+### Shared report and export model
+
+`LabFlowExport.buildReportDocument` reads Process, Experiment, Results and Review resources from the active resolved pipeline. The live preview, native PDF, editable DOCX, analysis workbook and LaTeX package consume this same model. Complete project and NOMAD-preview ZIPs also include the resolved contract and resource manifest. A change to a CHOSE scientific fixture therefore propagates to views and artifacts after rebuilding the pipeline bundle; it must not require copying values into exporter code.
+
+### Source-of-truth rule
+
+Domain values shown by the CHOSE Process, Experiment, Results and Review views must come from the resolved contract or from the current in-memory record being edited. `app.js` provides rendering and interaction; `workbook.js` provides format engines. Neither may become a second hidden store of solution definitions, fabrication operations, stack layers, measurement mappings, findings, report defaults or completion requirements.
+
+The complete project ZIP includes:
+
+- `pipeline/contract.json`, containing the resolved pipeline contract;
+- `pipeline/resource-manifest.json`, identifying canonical resource references and embedded groups;
+- a project YAML that records pipeline schema, version, sections, completion requirements and evidence expectations;
+- the NOMAD mapping profile when a readiness preview is requested.
+
+### Editing and validation
+
+After changing any CHOSE YAML resource:
+
+1. run `python tools/build_pipeline_bundle.py`;
+2. run `python tools/build_frontend_bundles.py`;
+3. rebuild documentation when its contract changed;
+4. run `python tools/validate_poc.py`;
+5. run `node tools/test_exports.mjs`.
+
+Validation checks resource existence and path safety, schema markers, section-component registration, completion gates, Process-to-Experiment references, operation-to-layer producer links, import policy, source identities, report/provenance resources, NOMAD policy and exact bundle synchronization. The export test additionally executes the runtime gates and asserts that report, stack, solution, quality and source-file content is read from the active CHOSE resources.

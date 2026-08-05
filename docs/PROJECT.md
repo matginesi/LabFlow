@@ -43,16 +43,18 @@ Stable identifiers are visible wherever a record may be compared, cited or expor
 
 ## Runtime architecture
 
-Thin HTML entry pages load one shared UI system and a small set of local JavaScript modules. Semantic theme tokens, components and responsive layout are separated under `ui/`. Canonical settings and pipeline definitions are authored in YAML; checked-in JavaScript snapshots make them available during direct-file use. Demonstration records live in a transparent static dataset.
+Thin HTML entry pages load one shared UI system and a small set of local JavaScript modules. Semantic theme tokens, components and responsive layout are separated under `ui/`. Canonical settings and pipeline entry contracts are authored in YAML; CHOSE references local schemas, defaults, mappings and four transparent demonstration documents—Process, Experiment, Results and Review—that are resolved at build time. Checked-in JavaScript snapshots make the complete contracts available during direct-file use. `pipeline-runtime.js` evaluates schema, completion and dependency gates; mutable project records remain separate from those definitions.
 
 The shared application module renders navigation and common pages. Focused modules own Ask LabFlow, Tools, exports and diagrams. The diagram renderer accepts a deliberately small flowchart syntax and produces accessible inline SVG without a remote renderer or packaged library. This is a pragmatic split by responsibility, not an internal application framework.
 
 ```mermaid
 flowchart LR
   A[Checked-in settings] --> E[Browser runtime]
-  B[Pipeline definitions] --> E
-  C[Demonstration records] --> D[Small access functions]
+  B[Resolved pipeline contract] --> E
+  C[Shared demonstration records] --> D[Small access functions]
   D --> E
+  B --> R[Schema and completion runtime]
+  R --> E
   E --> F[Shared UI blocks]
   E --> G[Local exporters]
   E --> H[SVG diagram renderer]
@@ -60,9 +62,9 @@ flowchart LR
 
 ## Data access boundary
 
-`assets/js/data.js` is the single demonstration dataset. `LabFlowDataSource` exposes a small set of list and identifier lookups for projects, Cabinet resources, Knowledge items, tools, experiments, measurements and validation issues. The functions return the current checked-in records; they do not fetch, cache, persist or simulate a remote service.
+LabFlow has two local demonstration-data boundaries. Shared product examples such as Workspace projects, Cabinet resources, Knowledge items and AI/ML fixtures live in `assets/js/data.js` and are exposed through `LabFlowDataSource`. Pipeline-specific CHOSE scientific records live under `pipelines/chose/demo/` and are resolved through `LabFlowPipelineRuntime.resource` / `resourceRef`. Compatibility arrays such as measurements, validation issues and normalized findings may be hydrated into `LabFlowData` from those resources, but they remain derived views rather than a second source of truth.
 
-New interaction code should call this boundary when it needs to locate domain records. It may still pass already-resolved objects directly to small render functions. Do not add repository classes, dependency injection, promise-based fake APIs or one file per entity.
+New interaction code should use the boundary that owns the record. It may pass already-resolved objects directly to small render functions. Do not add repository classes, dependency injection, promise-based fake APIs or one file per entity. Neither boundary fetches, caches, persists or simulates a remote service.
 
 Stable identifiers connect the flow **User → Workspace → Project → Process Version → Experiment → Sample / Device → Result Set → Measurement**. Pipeline steps organise the work around those records but do not replace them.
 

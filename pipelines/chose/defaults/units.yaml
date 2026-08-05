@@ -1,0 +1,18 @@
+schema_version: labflow.defaults.v1
+id: chose-units
+quantities:
+  volume: [mL, uL]
+  concentration: [mol/L, mmol/L, mg/mL]
+  mass: [mg, g]
+  length: [nm, um, mm, cm]
+  temperature: [degC, K]
+  time: [s, min, h]
+  rotation_speed: [rpm]
+  pressure: [mbar, Pa]
+  current_density: [mA/cm2, A/m2]
+  voltage: [V, mV]
+  efficiency: ['%']
+normalization:
+  current_density: A/m2
+  voltage: V
+  efficiency: '%'

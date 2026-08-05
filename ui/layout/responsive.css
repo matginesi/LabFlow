@@ -115,8 +115,8 @@ pre{max-width:100%}
 }
 @media(max-width:760px){
   .summary-strip-project{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .workflow-heading{align-items:flex-start;flex-direction:column}
-  .workflow-actions-footer{align-items:stretch;flex-direction:column}.workflow-actions-footer>div,.workflow-actions-footer .cluster{width:100%}.workflow-actions-footer .btn{flex:1}
+  .workflow-heading{align-items:flex-start;flex-direction:column}.workflow-contract-summary{flex-basis:auto;justify-content:flex-start;max-width:none}
+  .workflow-actions-footer{align-items:stretch;flex-direction:column}.workflow-actions-footer>div,.workflow-actions-footer .cluster{width:100%}.workflow-actions-footer .btn{flex:1}.workflow-gate-copy{align-items:stretch;flex-direction:column}.workflow-gate-copy>small{max-width:none;text-align:left}
   .experiment-identity{align-items:flex-start;flex-direction:column}.experiment-id{justify-items:start}
   .snapshot-banner{grid-template-columns:32px minmax(0,1fr)}.snapshot-banner>.btn{grid-column:1/-1;width:100%}
   .contained-workspace>.panel-body{padding:12px}

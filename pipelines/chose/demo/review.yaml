@@ -1,0 +1,279 @@
+schema_version: labflow.demo.v1
+review:
+  review_id: REV-EXP-067-01
+  experiment_id: EXP-067
+  result_set_id: RST-JV-067-01
+  status: needs_revision
+  approval_state: Pending researcher approval
+  researcher_conclusion:
+    conclusion_id: CON-EXP-067-01
+    statement: FA0.90MA0.10 is the strongest current candidate. S04 and S08 should proceed to validation; S06 and
+      the unresolved provenance gaps require review before a final scientific claim is approved.
+    author: Matteo Ginesi
+    review_status: proposed
+    evidence_refs:
+    - S04
+    - S06
+    - S08
+    - RST-JV-067-01
+findings:
+- finding_id: FND-001
+  type: researcher_conclusion
+  score: 96
+  title: FA0.90MA0.10 is the strongest candidate
+  statement: S04 and S08 lead both PCE and stability, with the lowest hysteresis.
+  evidence_refs:
+  - S04
+  - S08
+  - RST-JV-067-01
+  evidence_label: S04, S08 · 7 metrics
+  review_status: accepted
+- finding_id: FND-002
+  type: validation_issue
+  score: 91
+  title: S06 is a multi-metric outlier
+  statement: PCE, fill factor and stability are jointly below the robust cohort range; review fabrication notes
+    before exclusion.
+  evidence_refs:
+  - S06
+  - DQ-001
+  evidence_label: S06 · IQR + robust z
+  review_status: needs_revision
+- finding_id: FND-003
+  type: calculation
+  score: 88
+  title: Batch effect is smaller than formulation effect
+  statement: Within-batch variation is limited compared with the shift between formulations.
+  evidence_refs:
+  - RST-JV-067-01
+  evidence_label: Grouped comparison
+  review_status: accepted
+- finding_id: FND-004
+  type: correlation
+  score: 84
+  title: Stability and hysteresis are inversely associated
+  statement: Lower hysteresis appears in the most stable devices; the sample count does not support a causal claim.
+  evidence_refs:
+  - RST-JV-067-01
+  evidence_label: Spearman preview
+  review_status: needs_revision
+- finding_id: FND-005
+  type: ai_suggestion
+  score: 78
+  title: Two metadata gaps limit reproducibility
+  statement: Humidity during coating and elapsed time before annealing are missing for B04 and B05.
+  evidence_refs:
+  - DQ-002
+  - DQ-003
+  evidence_label: Process records
+  review_status: proposed
+overview:
+  metrics:
+  - id: best_pce
+    label: Best PCE
+    field: pce
+    aggregation: max
+    format: percent_2
+    detail_field: sample
+  - id: mean_pce
+    label: Mean PCE
+    field: pce
+    aggregation: mean
+    format: percent_2
+    detail: cohort
+  - id: mean_voc
+    label: Mean Voc
+    field: voc
+    aggregation: mean
+    format: voltage_2
+    detail: cohort
+  - id: mean_stability
+    label: Stability
+    field: stability
+    aggregation: mean
+    format: percent_0
+    detail: normalized
+  - id: findings
+    label: Findings
+    source: findings
+    aggregation: count
+    format: integer
+    detail: human review retained
+  chart_metrics:
+  - id: pce
+    label: PCE
+    suffix: '%'
+    decimals: 2
+  - id: stability
+    label: Stability
+    suffix: '%'
+    decimals: 0
+  - id: hysteresis
+    label: Hysteresis
+    suffix: '%'
+    decimals: 1
+comparison:
+  included_experiments:
+  - EXP-041
+  - EXP-052
+  - EXP-067
+  selection_criteria: Current project · uses DMSO
+  parameters:
+  - Annealing
+  - formulation
+  - batch
+  measurements:
+  - PCE
+  - Voc
+  - Jsc
+  - FF
+  warning:
+    title: Limited comparability
+    detail: EXP-067 is missing an annealing unit and solution-preparation link. Summary statistics remain visible,
+      but interpretation requires review.
+  rows:
+  - experiment: EXP-041
+    n: 3
+    mean_pce: 19.42%
+    median_pce: 19.15%
+    range: 18.94–20.16%
+    missing: '0'
+  - experiment: EXP-052
+    n: 2
+    mean_pce: 20.50%
+    median_pce: 20.50%
+    range: 19.90–21.10%
+    missing: '0'
+  - experiment: EXP-067
+    n: 3
+    mean_pce: 19.69%
+    median_pce: 20.44%
+    range: 17.36–21.28%
+    missing: 2 links
+  outlier:
+    sample: S06
+    method: Deterministic IQR candidate
+    title: S06 is a review candidate
+    detail: It is low across PCE, FF and stability. Keep the raw row and inspect fabrication evidence before any
+      exclusion.
+report:
+  section_catalog:
+  - id: summary
+    title: Executive Summary
+    detail: Decision context, objectives and key indicators
+    enabled_by_default: true
+  - id: methods
+    title: Materials, Process & Experiments
+    detail: Solution, stack, methodology and experiment coverage
+    enabled_by_default: true
+  - id: results
+    title: Results & Data
+    detail: Chart, complete measurements and author interpretation
+    enabled_by_default: true
+  - id: ai
+    title: Evidence-Linked Findings
+    detail: Advisory findings with evidence and review state
+    enabled_by_default: true
+  - id: conclusions
+    title: Discussion, Conclusions & Limitations
+    detail: Researcher-authored interpretation and boundaries
+    enabled_by_default: true
+  - id: custom
+    title: Custom Author Section
+    detail: Optional researcher-authored section with a custom heading
+    enabled_by_default: false
+  - id: provenance
+    title: Provenance & Approval
+    detail: Data classes, source controls and final status
+    enabled_by_default: true
+  defaults:
+    subtitle: Scientific project report
+    report_type: Scientific project report
+    keywords: perovskite, mixed-cation, JV, stability
+    executive_summary: The current evidence identifies FA0.90MA0.10 as the leading formulation across power conversion
+      efficiency, stability and hysteresis. The result remains subject to outlier and metadata review.
+    methodology: Structured solution preparation, versioned device stacks, mapped JV measurements and deterministic
+      comparative analysis.
+    results_narrative: S08 records the highest PCE in the current cohort. S04 and S08 remain the strongest validation
+      candidates; S06 requires process and provenance review before interpretation.
+    discussion: The performance pattern is consistent across PCE, stability and hysteresis, but the small cohort
+      and incomplete process metadata prevent causal conclusions.
+    conclusions: FA0.90MA0.10 is the strongest current candidate. S04 and S08 should proceed to validation; S06
+      and two process metadata gaps require review.
+    limitations: The demonstration dataset is small and cannot support causal claims. AI-assisted text is simulated
+      and requires researcher approval.
+    custom_title: Additional researcher notes
+    approval: Pending researcher approval
+    chart_metric: pce
+  evidence_statement:
+    label: Measured statement
+    statement: Sample S08 showed the highest measured PCE.
+    evidence: batch_B03_forward.csv · S08 · PCE · 21.28%
+  boundary_statement:
+    label: Boundary
+    statement: EXP-067 has incomplete process provenance; no causal claim is made.
+  experiment_coverage:
+  - id: EXP-041
+    samples:
+    - S01
+    - S02
+    - S03
+    process: 100 degC / 30 min
+    annealing:
+      value: 100
+      unit: degC
+    measurements: 6
+    status: reviewed
+  - id: EXP-052
+    samples:
+    - S04
+    - S05
+    process: 105 degC / 25 min
+    annealing:
+      value: 105
+      unit: degC
+    measurements: 4
+    status: reviewed
+  - id: EXP-067
+    samples:
+    - S06
+    - S07
+    - S08
+    process: 100 degC / unit review
+    annealing:
+      value: 100
+      unit: ''
+    measurements: 24
+    status: review
+provenance_manifest:
+- class: raw
+  label: Local source-aligned measurements
+  evidence: source_file_manifest
+- class: calculated
+  label: Deterministic KPI and comparisons
+  evidence: analysis_run
+- class: researcher
+  label: Objectives, interpretation and approval
+  evidence: review_record
+- class: ai
+  label: Simulated advisory findings requiring review
+  evidence: assistant_trace
+export_manifest:
+  include_open_issues: true
+  include_source_manifest: true
+  include_provenance_manifest: true
+  remote_submission: false
+validation:
+  rule_results:
+    finding-evidence:
+      status: pass
+      detail: Every finding has one or more evidence references.
+    human-review:
+      status: error
+      detail: FND-005 remains proposed and requires a human decision.
+    open-issues-visible:
+      status: pass
+      detail: The export manifest preserves all open issues.
+    nomad-readiness:
+      status: warning
+      detail: The NOMAD preview remains blocked by unresolved result quality issues.
