@@ -242,7 +242,7 @@
     zip.file('metadata/provenance.json',C.safeJson(provenanceSnapshot(exp),2));
     if(LF.Export&&LF.Export.canonicalSnapshot)zip.file('metadata/canonical.json',C.safeJson(LF.Export.canonicalSnapshot(exp),2));
     if(plan)zip.file('metadata/mapping_plan.json',C.safeJson(plan,2));
-    if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp));zip.file('derived/analysis.json',C.safeJson(A.analysisOf(exp),2));}
+    if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp));zip.file('derived/analysis.json',C.safeJson({analysis:A.analysisOf(exp),analysisSummary:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):null},2));}
     if(settings.includeReport){zip.file('report/laboratory-report.md',exp.report&&exp.report.labMarkdown||'');zip.file('report/paper-draft.md',exp.report&&exp.report.paperMarkdown||'');if(LF.Report&&LF.Report.activeMarkdown)zip.file('report/active-document.md',LF.Report.activeMarkdown(exp)||'');}
     if(settings.includeRaw&&rawArchive)zip.file('raw/source.zip',rawArchive);
     const packageFiles=Object.keys(zip.files).concat(['manifest.json']);

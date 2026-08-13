@@ -88,6 +88,15 @@
 
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
+  function bindReportImproveSelection(){
+    const el=document.getElementById('reportMarkdown'),btn=document.getElementById('reportImproveSelection');
+    if(!el||!btn)return;
+    function sync(){btn.disabled=!(el.selectionStart!==el.selectionEnd);}
+    sync();
+    el.addEventListener('mouseup',sync);
+    el.addEventListener('keyup',sync);
+    el.addEventListener('input',sync);
+  }
   function renderModelStatus(){
     const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
     const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey()));
@@ -126,6 +135,7 @@
     let html='';if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-changes')html=LF.ChangesPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();
     main.innerHTML=html;
     renderPageContext();
+    bindReportImproveSelection();
     C.bindFieldLabels(main);
     if(S.state.route==='ui-kit')bindUiKitFrame();
     if(renderedRoute!==S.state.route)main.scrollTop=0;
@@ -299,6 +309,7 @@
         if(e.target.closest('#applyAllDesignSuggestions')){try{const out=LF.DesignAnalysis.applyAll(S.state.experiment);if(out.changed){markModified('design');render();LF.UI.toast('Applied '+out.changed+' AI-proposed missing field'+(out.changed===1?'':'s')+' to Design.','success');}else{render();LF.UI.toast('No missing field could be filled without overwriting existing values.','info');}}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment);markModified('design');render();LF.UI.toast('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         const applyDesignProposal=e.target.closest('[data-apply-design-proposal]');if(applyDesignProposal){try{const out=LF.DesignAnalysis.applyOne(S.state.experiment,applyDesignProposal.dataset.applyDesignProposal,Number(applyDesignProposal.dataset.proposalIndex),applyDesignProposal.dataset.proposalPart||'all');markModified('design');render();LF.UI.toast('AI suggestion applied to '+out.changed+' missing field'+(out.changed===1?'':'s')+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        const applyDesignDevice=e.target.closest('[data-apply-design-device]');if(applyDesignDevice){try{const out=LF.DesignAnalysis.applySelectedDevice(S.state.experiment,applyDesignDevice.dataset.applyDesignDevice);markModified('design');render();LF.UI.toast('Applied AI-suggested missing values to '+out.changed+' Design field(s) for the selected experiment.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD validation refreshed.','success');return;}
 
         const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.curveView='single';S.state.resultsTab='curves';render();return;}
@@ -358,6 +369,7 @@
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
         if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;render();return;}
+        if(e.target.id==='operationReportDocKind'){S.state.settingsOperationDocKind=e.target.value==='paper'?'paper':'lab';if(S.persist)S.persist();render();return;}
         if(e.target.id==='curveView'){S.state.curveView=e.target.value;render();return;}
         if(e.target.id==='curveGroup'){S.state.curveGroup=e.target.value;render();return;}
         if(e.target.id==='curveDirection'){S.state.curveDirection=e.target.value;render();return;}

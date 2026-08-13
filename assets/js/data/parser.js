@@ -95,7 +95,7 @@
     const token = String(ident.reference_token || '').trim();
     if (!token) return false;
     const escaped = token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    return new RegExp('\\b'+escaped+'\\b','i').test(String(sample||''));
+    return new RegExp('(?:^|[^A-Za-z0-9])'+escaped+'(?=$|[^A-Za-z0-9])','i').test(String(sample||''));
   }
 
   function sampleFromFilename(name, path) {

@@ -219,6 +219,22 @@ validate package inputs
 
 AI never owns NOMAD readiness.
 
+### `analysis.summarize` (internal, auto-run)
+
+Goal: refresh a compact deterministic statistics bundle over the current analysis.
+
+Why it exists: Compare statistics, Report figures and NOMAD derived analysis must read the **same** per-scan statistics so they cannot diverge when the Working Copy changes. The bundle is that single source.
+
+- kind: `DETERMINISTIC`;
+- role: Automatic;
+- required input/dependency: `dataset.analyze` (fresh deterministic analysis);
+- mutation scope: Working Copy internal derived field only (`exp.analysisSummary`);
+- ordered checkpoints: `analysis.collect` → `analysis.store`;
+- output: the Analysis Dossier statistics bundle (per-scan `groupStatistics`, `metrics`, `chartData`, findings/anomalies snapshot);
+- what it must not do: never mutate analysis or scientific fields; never act as a NOMAD readiness authority.
+
+This is an internal implementation OPERATION, not part of the public researcher catalog; it is auto-run as part of deterministic analysis and never needs a researcher trigger.
+
 ## 6. Internal operations that are not OPERATIONS
 
 The following remain hidden implementation services:
@@ -236,6 +252,8 @@ The following remain hidden implementation services:
 - serializing exports.
 
 If a new proposed OPERATION merely wraps one of these implementation details, it should usually remain an internal service instead.
+
+`analysis.summarize` (§5) is the exception that already exists: it is packaged as an OPERATION so its checkpoints and outputs are inspectable in the Workshop, but it stays an internal auto-run service and is not offered to the researcher as a public action.
 
 ## 7. AI output budgets
 

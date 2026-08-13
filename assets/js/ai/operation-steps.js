@@ -50,6 +50,8 @@
     'dataset.collect-ambiguities':function(ctx){const a=ctx.exp.datasetAnalysis,current=Number(ctx.exp.sync&&ctx.exp.sync.revision||0);if(!a||Number(a.sourceRevision)!==current)refresh(ctx.exp);const list=(ctx.exp.datasetAnalysis.ambiguousFindings||[]).slice(0,12);if(!list.length)throw new Error('No semantic ambiguity requires AI resolution.');return{finding_ids:list.map(function(f){return f.id;}),scheduled:list.length,remaining:Math.max(0,(ctx.exp.datasetAnalysis.ambiguousFindings||[]).length-list.length)};},
     'dataset.store-corrections':function(ctx){const value=ctx.lastResult;if(!value||typeof value!=='object')throw new Error('Ambiguity resolution returned no structured result.');value.proposals=Array.isArray(value.proposals)?value.proposals:[];value.unresolved=Array.isArray(value.unresolved)?value.unresolved:[];value.proposals.forEach(function(p){p.decision=p.decision||'pending';p.applied=!!p.applied;});value.sourceRevision=ctx.sourceRevision;value.generatedAt=new Date().toISOString();ctx.exp.aiCorrectionPlan=value;return{stored:true,proposals:value.proposals.length,unresolved:value.unresolved.length};},
     'results.store-interpretation':function(ctx){const text=String(ctx.lastResult||'').trim();if(!text)throw new Error('The results interpretation is empty.');ctx.exp.analysis=ctx.exp.analysis||{};ctx.exp.analysis.aiInterpretation={markdown:text,generatedAt:new Date().toISOString(),sourceRevision:ctx.sourceRevision};return{stored:true,chars:text.length};},
+    'analysis.collect':function(ctx){ctx.outputs=ctx.outputs||{};ctx.outputs.analysisSummary=LF.AnalysisSummary.ensure(ctx.exp);return{revision:ctx.outputs.analysisSummary.sourceRevision,groups:ctx.outputs.analysisSummary.groupStatistics.length};},
+    'analysis.store':function(ctx){const b=LF.AnalysisSummary.ensure(ctx.exp);ctx.exp.analysisSummary=b;return{fresh:true,groups:b.groupStatistics.length,openFindings:b.findings.open};},
     'design.collect-selected':function(ctx){const exp=ctx.exp,current=Number(exp.sync&&exp.sync.revision||0);if(!exp.designAnalysis||Number(exp.designAnalysis.sourceRevision)!==current)exp.designAnalysis=designAnalysis(exp,current);const id=String(ctx.params&&ctx.params.deviceId||''),dev=(exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===id;});if(!dev)throw new Error('Select one experiment first.');return{device_id:id,sample_names:(dev.sampleNames||[]).slice(),current_design:compact(dev)};},
     'design.validate-coverage':function(ctx){const proposal=LF.ExperimentModel.normalizeDesignProposal(ctx.outputs.infer||ctx.lastResult||{}),scope=ctx.outputs.collect||{},wanted=(scope.sample_names||[]).map(String),covered=new Set();(proposal.devices||[]).forEach(function(d){(d.sample_names||[]).forEach(function(n){covered.add(String(n));});});const missing=wanted.filter(function(n){return !covered.has(n);});if(missing.length)throw new Error('Design proposal does not cover: '+missing.join(', '));ctx.outputs.infer=proposal;ctx.lastResult=proposal;return{covered:wanted.length};},
     'design.store-proposal':function(ctx){const p=LF.ExperimentModel.normalizeDesignProposal(ctx.outputs.infer||ctx.lastResult);(p.solutions||[]).concat(p.devices||[]).forEach(function(x){x.decision='pending';x.applied=false;});p.sourceRevision=ctx.sourceRevision;p.generatedAt=new Date().toISOString();ctx.exp.aiDesignProposal=p;return{stored:true,devices:p.devices.length,solutions:p.solutions.length};},
@@ -75,7 +77,17 @@
     acceptedSolutions.forEach(function(src){changed+=applyDesignSolution(exp,src);});acceptedDevices.forEach(function(src){changed+=applyDesignDevice(exp,src,'all');});
     exp.design.status='reviewing';return{solutions:acceptedSolutions.length,devices:acceptedDevices.length,changed:changed};
   }
+  function applySelectedDevice(exp, deviceId) {
+    const p = exp.aiDesignProposal; if (!p) throw new Error('No AI design proposal is available.');
+    const src = (p.devices || []).find(function (d) { return d.id === deviceId; }) || (p.devices || []).find(function (d) { return String(d.name) === String(deviceId); });
+    if (!src) throw new Error('Selected experiment proposal not found.');
+    let changed = applyDesignDevice(exp, src, 'all');
+    (p.solutions || []).forEach(function (sol) { if ((src.solution_names || []).some(function (n) { return String(sol.name).toLowerCase() === String(n).toLowerCase(); })) changed += applyDesignSolution(exp, sol); });
+    if (!changed) throw new Error('The proposed values are already present or protected by researcher-entered values.');
+    exp.design.status = 'reviewing';
+    return { changed: changed };
+  }
   LF.OperationSteps=steps;
   LF.DatasetCorrections={applyProposal:applyProposal,rebuildSamples:rebuildSamples,proposalMeasurements:proposalMeasurements,safeFixes:safeFixes,analysis:datasetAnalysis,refresh:refresh};
-  LF.DesignAnalysis={build:designAnalysis,applyAccepted:applyAcceptedDesign,applyOne:applyOneDesign,applyAll:applyAllDesign};
+  LF.DesignAnalysis={build:designAnalysis,applyAccepted:applyAcceptedDesign,applyOne:applyOneDesign,applyAll:applyAllDesign,applySelectedDevice:applySelectedDevice};
 }());

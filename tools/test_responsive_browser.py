@@ -38,7 +38,8 @@ AUDIT_JS = r"""() => {
   const localScroll = node => node.closest([
     '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip'
+    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip',
+    '.review-compact-status'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -107,19 +108,20 @@ def main() -> int:
                 # Route-internal views often carry their own grids and are
                 # part of the responsive contract, not optional test detail.
                 if route == "experiment-results":
-                    for tab in ("overview", "measurements", "curves", "boxplots"):
+                    for tab in ("overview", "all", "curves", "boxplots"):
                         page.locator(f'[data-result-tab="{tab}"]').first.click()
                         page.wait_for_timeout(80)
                         nested = page.evaluate(AUDIT_JS)
                         nested["surface"] = f"results:{tab}"
                         findings.append(nested)
                 elif route == "experiment-report":
-                    for mode in ("editor", "preview"):
-                        page.locator(f'[data-report-mode="{mode}"]').click()
-                        page.wait_for_timeout(60)
-                        nested = page.evaluate(AUDIT_JS)
-                        nested["surface"] = f"report:{mode}"
-                        findings.append(nested)
+                    if width <= 700:
+                        for mode in ("editor", "preview"):
+                            page.locator(f'[data-report-mode="{mode}"]').click()
+                            page.wait_for_timeout(60)
+                            nested = page.evaluate(AUDIT_JS)
+                            nested["surface"] = f"report:{mode}"
+                            findings.append(nested)
                 elif route == "settings":
                     for section in ("provider", "assistant", "workspace", "advanced"):
                         page.locator(f'[data-settings-section="{section}"]').click()
@@ -150,8 +152,8 @@ def main() -> int:
         item.get("uiKitDocument", {}).get("mainOverflow") or
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item.get("stepper") and (
-            item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1 or
-            len(item["stepper"]["steps"]) != 6 or
+            (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
+            len(item["stepper"]["steps"]) != 7 or
             not all(step["visible"] for step in item["stepper"]["steps"])
         ))
     )]

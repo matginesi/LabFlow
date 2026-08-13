@@ -108,6 +108,12 @@ module.exports = function (t, LF, env) {
     assert(P.canonicalSample('N1 3 -1A'), 'N1_3_1A', 'canonical sample convention');
     assert(P.canonicalSample('N 12-1A'), 'N1_2_1A', 'compact malformed N1 position');
     assert(P.canonicalSample('REF 3 -1A'), 'REF_3_1A', 'reference convention');
+    assert(P.isReference('REF_1_1A'), true, 'canonical reference with underscore token separator');
+    assert(P.isReference('REF_CONTROL'), true, 'reference with underscore suffix');
+    assert(P.isReference('REF 3 -1A'), true, 'reference with space token separator');
+    assert(P.isReference('REF CONTROL-1A'), true, 'reference with space followed by control token');
+    assert(P.isReference('N1_3_1A'), false, 'non-reference sample stays non-reference');
+    assert(P.isReference('PREFIXREF_1'), false, 'embedded REF without separator is not a reference');
     const raw='0000_2026-01-22_19.55.06_Stability (Parameters)_N1 3 -1A.txt';
     assert(P.canonicalFileName(raw), '0000_2026-01-22_19.55.06_Stability (Parameters)_N1_3_1A.txt', 'canonical filename');
     const exp = await Im.parseDataset(loadFixture('2026_01_22.zip'), '2026_01_22.zip');

@@ -241,6 +241,8 @@ These are examples of **internal services**, not public OPERATIONS:
 - validate NOMAD mappings;
 - store a OPERATION result.
 
+`analysis.summarize` (§6.1.1) is an internal deterministic OPERATION packaged for Workshop inspectability; it is auto-run, not offered as a public researcher action.
+
 Settings exposes every executable OPERATION in Operations Workshop. AI Helpers is a filtered view of those same definitions containing only AI-backed OPERATIONS; both surfaces edit the same browser-local runtime definition/prompt override.
 
 | Goal | Kind | Main outcome |
@@ -360,6 +362,20 @@ The current Analysis Dossier for the current Working Copy revision.
 - invent sample identity;
 - change data to make warnings disappear;
 - use AI to decide deterministic facts.
+
+### 6.1.1 Analysis Summary Operation — `analysis.summarize` (internal, auto-run)
+
+After analysis is fresh, an internal deterministic OPERATION stores the **Analysis Dossier statistics bundle** (`exp.analysisSummary`) on the Working Copy. It is not a public researcher OPERATION: it runs automatically, never needs a trigger, and never mutates scientific fields.
+
+The bundle is the **single deterministic source** for:
+
+- the Results **Compare** per-scan statistics table (FW/RV median±IQR and min–max);
+- **Report** statistics and the six figure series;
+- the **NOMAD** derived `analysis.json` (analysis + bundle).
+
+Consumers read the bundle only when `LF.AnalysisSummary.fresh(exp)` — bundle `sourceRevision` matching the Working Copy revision — and otherwise fall back to their own deterministic computation so nothing is ever stale.
+
+Report figures are **rasterized on demand**, never on every render: PNG previews and DOCX/PDF exports share one cached set keyed by `(experiment id, revision, figure selection, includeCharts)`. A Working Copy mutation bumps the revision and invalidates the cache automatically.
 
 ---
 

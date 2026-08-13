@@ -6,6 +6,7 @@ require('../../assets/js/experiment/data-model.js');
 require('../../assets/js/data/parser.js');
 require('../../assets/js/data/importer.js');
 require('../../assets/js/data/analysis.js');
+require('../../assets/js/data/analysis-summary.js');
 const fs=require('fs'),path=require('path');
 
 function assert(actual, expected, label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
@@ -49,6 +50,48 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('Comparison statistics')>=0,'stats table');
     truthy(html.indexOf('data-box-group=')>=0,'group selectors');
     truthy(html.indexOf('boxSelectAll')>=0&&html.indexOf('boxClearGroups')>=0,'selection controls');
+  };
+
+  function synExp(){
+    return {id:'syn',sync:{revision:0},analysisSettings:{mismatchFactor:2},measurements:[
+      {id:'m1',sample:'A1',group:'A',excluded:false,rankingEligible:true,fw:{voc:1,jsc:40,ff:.8,eff:36},rv:{voc:1,jsc:40,ff:.8,eff:40}},
+      {id:'m2',sample:'A2',group:'A',excluded:false,rankingEligible:true,fw:{voc:1,jsc:40,ff:.8,eff:38},rv:{voc:1,jsc:40,ff:.8,eff:44}},
+      {id:'m3',sample:'B1',group:'B',excluded:false,rankingEligible:true,fw:{voc:1,jsc:40,ff:.8,eff:30},rv:{voc:1,jsc:40,ff:.8,eff:32}},
+      {id:'m4',sample:'B2',group:'B',excluded:false,rankingEligible:true,fw:{voc:1,jsc:40,ff:.8,eff:28},rv:{voc:1,jsc:40,ff:.8,eff:30}}
+    ],analysis:{summary:{}},findings:[]};
+  }
+  function stateFor(e){
+    return {experiment:e,resultsTab:'boxplots',boxPlot:{metric:'eff',direction:'both',groups:['A','B'],eligibleOnly:true,experimentId:e.id},curveSelection:[],curveView:'all',curveGroup:'all',curveDirection:'both',curveEligibleOnly:false,curveSearch:''};
+  }
+  function boxState(state){LF.State={state:state||stateFor(synExp())};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');}
+
+  t['compareData yields per-scan FW/RV medians for each group'] = function(){
+    boxState();const data=LF.ResultsPage.compareData(LF.State.state.experiment);
+    assert(data.length,2,'two groups');
+    assert(data[0].name,'A','group A first');
+    assert(data[0].stats.fw.med,18.5,'A FW median (eff/2)');
+    assert(data[0].stats.rv.med,21,'A RV median');
+    assert(data[1].stats.fw.med,14.5,'B FW median');
+    assert(data[1].stats.rv.med,15.5,'B RV median');
+    assert(data[0].count,4,'both scans counted');
+  };
+
+  t['boxSvg draws a side-by-side box group per scan direction'] = function(){
+    boxState();const data=LF.ResultsPage.compareData(LF.State.state.experiment),html=LF.ResultsPage.boxSvg(data,'testBox');
+    truthy((html.match(/data-direction="both"/g)||[]).length===2,'both groups render FW+RV boxes');
+    truthy((html.match(/box-rect/g)||[]).length===4,'four boxes total (FW+RV per group)');
+    truthy(html.indexOf('Forward (FW)')>=0&&html.indexOf('Reverse (RV)')>=0,'per-scan legend');
+    truthy(html.indexOf('n=4 · FW 2 / RV 2')>=0,'per-group scan counts');
+  };
+
+  t['Compare statistics reuse the fresh bundle as single source'] = function(){
+    const e=synExp();e.analysisSummary=LF.AnalysisSummary.collect(e);boxState(stateFor(e));
+    truthy(LF.AnalysisSummary.fresh(e),'bundle fresh');
+    const html=LF.ResultsPage.render(),data=LF.ResultsPage.compareData(e);
+    truthy(html.indexOf('18.500 ± 0.500')>=0,'bundle FW A median±IQR in table');
+    truthy(html.indexOf('21.000 ± 1.000')>=0,'bundle RV A median±IQR in table');
+    truthy(html.indexOf('FW median±IQR')>=0&&html.indexOf('RV min–max')>=0,'per-scan columns');
+    assert(data[0].stats.fw.med,18.5,'compareData unchanged alongside bundle');
   };
   return t;
 };

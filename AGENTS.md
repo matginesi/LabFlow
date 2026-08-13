@@ -148,6 +148,8 @@ Examples that should stay internal:
 - validate NOMAD;
 - store output.
 
+`analysis.summarize` is an internal deterministic OPERATION (auto-run with `dataset.analyze`): it stores the Analysis Dossier statistics bundle on the Working Copy. It is inspectable in the Workshop but is not a public researcher action. Its per-scan `groupStatistics` and `metrics` are the single deterministic source shared by the Results Compare table, Report statistics/figures and NOMAD derived `analysis.json`.
+
 If adding a public OPERATION, document:
 
 - researcher goal;

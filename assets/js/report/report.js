@@ -287,7 +287,7 @@
     return { solutions: solutions, stack: stack, notes: (d.process && d.process.notes) || d.notes || '' };
   }
 
-  function reportModel(exp) {
+  function reportModelData(exp) {
     ensureReport(exp);
     const measurements = LF.Analysis.measurementsOf(exp);
     const analysis = LF.Analysis.analysisOf(exp);
@@ -305,24 +305,40 @@
     });
     const groupMap = {};
     measurements.filter(function (m) { return m.rankingEligible; }).forEach(function (m) { groupMap[m.group] = groupMap[m.group] || []; groupMap[m.group].push(m); });
-    const groupStatistics = Object.keys(groupMap).map(function (name) {
+    const legacyGroupStatistics = Object.keys(groupMap).map(function (name) {
       const g = groupMap[name], eff = g.map(function (m) { return m.rv && Number.isFinite(m.rv.eff) ? m.rv.eff / factor : (m.fw && Number.isFinite(m.fw.eff) ? m.fw.eff / factor : null); }).filter(Number.isFinite).sort(function (a, b) { return a - b; });
       const voc = g.map(function (m) { return (m.rv || m.fw || {}).voc; }).filter(Number.isFinite); const jsc = g.map(function (m) { const v = (m.rv || m.fw || {}).jsc; return Number.isFinite(v) ? v / factor : null; }).filter(Number.isFinite); const ff = g.map(function (m) { return (m.rv || m.fw || {}).ff; }).filter(Number.isFinite);
       function median(a) { if (!a.length) return null; const s = a.slice().sort(function (x, y) { return x - y; }), i = Math.floor(s.length / 2); return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2; }
       return { name: name, n: g.length, medianEff: median(eff), minEff: eff.length ? eff[0] : null, maxEff: eff.length ? eff[eff.length - 1] : null, medianVoc: median(voc), medianJsc: median(jsc), medianFF: median(ff) };
     }).sort(function (a, b) { return Number(b.medianEff || 0) - Number(a.medianEff || 0); });
     const pce = values(exp, 'rv', 'eff'); const hyst = measurements.map(function (m) { return Number.isFinite(m.hysteresis) ? Math.abs(m.hysteresis) * 100 : null; }).filter(Number.isFinite);
-    const scatterPoints=measurements.filter(function(m){return m.rankingEligible&&Number.isFinite(Number(m.bestEff))&&Number.isFinite(Number(m.hysteresis));}).map(function(m){return{cell:m.sample,x:Number(m.bestEff),y:Number(m.hysteresis)*100};});
-    const warningHysteresis=Number((((LF.PromptRegistry.effectiveRules() || {}).pair_checks || {}).hysteresis_abs_warning) || .30) * 100;
-    const figures = [], figureSelection=ensureReport(exp).figureSelection||{};
-    if (exp.report.includeCharts !== false) {
-      if(figureSelection.pceDistribution!==false){const p1 = makeHistogramDataUrl(pce, 'PCE distribution', 'Efficiency (%)'); if (p1) figures.push({ key:'pceDistribution', caption: 'PCE distribution · eligible RV measurements', dataUrl: p1, widthPx: 620, heightPx: 230 });}
-      if(figureSelection.hysteresisDistribution!==false){const p2 = makeHistogramDataUrl(hyst, 'Hysteresis distribution', '|ΔPCE| (%)'); if (p2) figures.push({ key:'hysteresisDistribution', caption: 'Absolute hysteresis distribution', dataUrl: p2, widthPx: 620, heightPx: 230 });}
-      if(figureSelection.bestJvmCurve!==false){const p3 = makeCurveDataUrl(exp); if (p3) figures.push({ key:'bestJvmCurve', caption: 'Best eligible JV curve', dataUrl: p3, widthPx: 620, heightPx: 285 });}
-      if(figureSelection.efficiencyHysteresis!==false){const ps=makeScatterDataUrl(scatterPoints,'Efficiency vs hysteresis','Best PCE (%)','Hysteresis (%)',warningHysteresis);if(ps)figures.push({key:'efficiencyHysteresis',caption:'Efficiency versus hysteresis for eligible measurements',dataUrl:ps,widthPx:620,heightPx:265});}
-      if(figureSelection.topEfficiency!==false){const p4=makeBarDataUrl(top.slice(0,10).map(function(x){return{label:x.cell,value:x.effRV,suffix:'%'};}),'Top eligible efficiency','RV PCE (%)');if(p4)figures.push({key:'topEfficiency',caption:'Top eligible samples by RV PCE',dataUrl:p4,widthPx:620,heightPx:Math.max(230,90+Math.min(10,top.length)*24)});}
-      if(figureSelection.groupComparison!==false){const p5=makeBarDataUrl(groupStatistics.slice(0,10).map(function(g){return{label:g.name||'Ungrouped',value:g.medianEff,suffix:'%'};}),'Group comparison','Median PCE (%)');if(p5)figures.push({key:'groupComparison',caption:'Group median efficiency comparison',dataUrl:p5,widthPx:620,heightPx:Math.max(230,90+Math.min(10,groupStatistics.length)*24)});}
+    const scatterPoints = measurements.filter(function (m) { return m.rankingEligible && Number.isFinite(Number(m.bestEff)) && Number.isFinite(Number(m.hysteresis)); }).map(function (m) { return { cell: m.sample, x: Number(m.bestEff), y: Number(m.hysteresis) * 100 }; });
+    const bundle = (LF.AnalysisSummary && LF.AnalysisSummary.fresh(exp)) ? LF.AnalysisSummary.ensure(exp) : null;
+    function emptyStats() { return { n: 0, min: null, q1: null, median: null, mean: null, q3: null, max: null, std: null }; }
+    function fieldStats(s) { return s ? { n: s.n, min: s.min, q1: s.q1, median: s.median, mean: s.mean, q3: s.q3, max: s.max, std: s.std } : emptyStats(); }
+    function medianOf(v) { const a = v.filter(Number.isFinite).sort(function (x, y) { return x - y; }); if (!a.length) return null; const i = Math.floor(a.length / 2); return a.length % 2 ? a[i] : (a[i - 1] + a[i]) / 2; }
+    function perGroupMedian(key) {
+      const map = {};
+      measurements.filter(function (m) { return m.rankingEligible; }).forEach(function (m) {
+        const v = Number((m.rv || m.fw || {})[key]); if (!Number.isFinite(v)) return;
+        const g = m.group || 'ungrouped'; (map[g] = map[g] || []).push(key === 'jsc' ? v / factor : v);
+      });
+      const out = {}; Object.keys(map).forEach(function (g) { out[g] = medianOf(map[g]); }); return out;
     }
+    const statistics = bundle ? {
+      effRV: fieldStats(bundle.metrics.eff.rv), effFW: fieldStats(bundle.metrics.eff.fw), hysteresisAbsPct: fieldStats(bundle.hysteresisAbsPct),
+      vocRV: fieldStats(bundle.metrics.voc.rv), vocFW: fieldStats(bundle.metrics.voc.fw), jscRV: fieldStats(bundle.metrics.jsc.rv), jscFW: fieldStats(bundle.metrics.jsc.fw),
+      ffRV: fieldStats(bundle.metrics.ff.rv), ffFW: fieldStats(bundle.metrics.ff.fw)
+    } : { effRV: stats(values(exp, 'rv', 'eff')), effFW: stats(values(exp, 'fw', 'eff')), hysteresisAbsPct: stats(hyst), vocRV: stats(values(exp, 'rv', 'voc')), vocFW: stats(values(exp, 'fw', 'voc')), jscRV: stats(values(exp, 'rv', 'jsc')), jscFW: stats(values(exp, 'fw', 'jsc')), ffRV: stats(values(exp, 'rv', 'ff')), ffFW: stats(values(exp, 'fw', 'ff')) };
+    const groupStatistics = bundle ? (function () {
+      const voc = perGroupMedian('voc'), jsc = perGroupMedian('jsc'), ff = perGroupMedian('ff');
+      return bundle.groupStatistics.map(function (g) {
+        const s = (g.scans && (g.scans.rv || g.scans.fw)) || null;
+        return { name: g.name, n: g.n, scans: g.scans || null, medianEff: s ? s.median : null, minEff: s ? s.min : null, maxEff: s ? s.max : null, medianVoc: voc[g.name] != null ? voc[g.name] : null, medianJsc: jsc[g.name] != null ? jsc[g.name] : null, medianFF: ff[g.name] != null ? ff[g.name] : null };
+      }).sort(function (a, b) { return Number(b.medianEff || 0) - Number(a.medianEff || 0); });
+    })() : legacyGroupStatistics;
+    const warningHysteresis=Number((((LF.PromptRegistry.effectiveRules() || {}).pair_checks || {}).hysteresis_abs_warning) || .30) * 100;
+    const figureSelection=ensureReport(exp).figureSelection||{};
     const bestCompact=(analysis.bestBySample||[])[0],bestMeasurement=bestCompact&&measurements.find(function(m){return m.id===bestCompact.id;});
     const bestCurve=bestMeasurement&&bestMeasurement.curve?{
       sample:bestMeasurement.sample,
@@ -339,14 +355,44 @@
       missingInformation:{openFindings:openFindings.length,unresolvedAI:unresolvedAI.length,designMissing:designMissing.slice(0,40),nomadMissing:nomadMissing.slice(0,40),total:openFindings.length+unresolvedAI.length+designMissing.length+nomadMissing.length},
       markdown: document.markdown, reportKind: document.kind, documentLabel:document.label, sourceWords:document.words, sourceChars:document.chars, contentUpdatedAt:document.updatedAt, metrics: { rawJV: fileCounts.jv || 0, analyzerEligible: ((analysis.summary || {})).eligibleCount || 0 }, validationCounts: severity,
       validationIssues: (findings || []).filter(function (f) { return f.status !== 'resolved'; }).slice(0, 60).map(function (f) { return { severity: f.severity, code: f.type, message: f.title + (f.detail ? ' — ' + f.detail : '') }; }),
-      top10: top, topRef: refs, reconstruction: designModel(exp), figures: figures,
-      statistics: { effRV: stats(values(exp, 'rv', 'eff')), effFW: stats(values(exp, 'fw', 'eff')), hysteresisAbsPct: stats(hyst), vocRV: stats(values(exp, 'rv', 'voc')), vocFW: stats(values(exp, 'fw', 'voc')), jscRV: stats(values(exp, 'rv', 'jsc')), jscFW: stats(values(exp, 'fw', 'jsc')), ffRV: stats(values(exp, 'rv', 'ff')), ffFW: stats(values(exp, 'fw', 'ff')) },
+      top10: top, topRef: refs, reconstruction: designModel(exp),
+      statistics: statistics,
       experimentalEvidence: { source_archive: exp.meta.sourceName || '—', files: (manifest || []).filter(function (x) { return !x.directory; }).length, samples: samples.length, measurements: measurements.length, patches: (exp.patches || []).length, policy: 'prompts/policies/data-format-repair.md' },
       groupStatistics: groupStatistics,
       anomalies: measurements.filter(function (m) { return m.qualityStatus !== 'valid'; }).slice(0, 40).map(function (m) { return { cell: m.sample, file: m.file, issue: (m.flags || []).map(function (f) { return f.label || f; }).join(', ') || m.qualityStatus, effRV: m.rv && Number.isFinite(m.rv.eff) ? m.rv.eff / factor : null, effFW: m.fw && Number.isFinite(m.fw.eff) ? m.fw.eff / factor : null, hysteresisPct: Number.isFinite(m.hysteresis) ? m.hysteresis * 100 : null, jscRV: m.rv && Number.isFinite(m.rv.jsc) ? m.rv.jsc / factor : null, jscFW: m.fw && Number.isFinite(m.fw.jsc) ? m.fw.jsc / factor : null }; }),
-      chartData: { efficiencies: pce, hysteresis:hyst, scatter: scatterPoints.map(function(p){return{cell:p.cell,eff:p.x,hysteresisPct:p.y};}), bestCurve:bestCurve, groupStatistics:groupStatistics, figureSelection:figureSelection, thresholds: { hysteresisPct: warningHysteresis } },
+      chartData: bundle ? Object.assign({}, bundle.chartData, { groupStatistics: groupStatistics, figureSelection: figureSelection }) : { efficiencies: pce, hysteresis: hyst, scatter: scatterPoints.map(function (p) { return { cell: p.cell, eff: p.x, hysteresisPct: p.y }; }), bestCurve: bestCurve, groupStatistics: groupStatistics, figureSelection: figureSelection, thresholds: { hysteresisPct: warningHysteresis } },
       includeCharts: exp.report.includeCharts !== false, includeValidation: exp.report.includeValidation !== false
     };
+  }
+
+  const figureCache = (window.LF_reportFigureCache = window.LF_reportFigureCache || {});
+  function figureFingerprint(exp, sel, includeCharts) { return String(exp.id) + ':' + Number(exp.sync && exp.sync.revision) + ':' + (sel ? JSON.stringify(sel) : '') + ':' + String(!!includeCharts); }
+
+  /* Memoized on-demand rasterizer. Preview and DOCX/PDF export share the exact
+     same PNG dataUrls (cache keyed by experiment + revision + selection). */
+  function reportFigurePreviews(exp) {
+    const r = ensureReport(exp), sel = r.figureSelection || {}, includeCharts = exp.report.includeCharts !== false;
+    const key = figureFingerprint(exp, sel, includeCharts);
+    if (figureCache[key]) return figureCache[key];
+    const model = reportModelData(exp);
+    const chart = model.chartData || {};
+    const figures = [];
+    if (includeCharts) {
+      if (sel.pceDistribution !== false) { const p1 = makeHistogramDataUrl(chart.efficiencies, 'PCE distribution', 'Efficiency (%)'); if (p1) figures.push({ key: 'pceDistribution', caption: 'PCE distribution · eligible RV measurements', dataUrl: p1, widthPx: 620, heightPx: 230 }); }
+      if (sel.hysteresisDistribution !== false) { const p2 = makeHistogramDataUrl(chart.hysteresis, 'Hysteresis distribution', '|ΔPCE| (%)'); if (p2) figures.push({ key: 'hysteresisDistribution', caption: 'Absolute hysteresis distribution', dataUrl: p2, widthPx: 620, heightPx: 230 }); }
+      if (sel.bestJvmCurve !== false) { const p3 = makeCurveDataUrl(exp); if (p3) figures.push({ key: 'bestJvmCurve', caption: 'Best eligible JV curve', dataUrl: p3, widthPx: 620, heightPx: 285 }); }
+      if (sel.efficiencyHysteresis !== false) { const ps = makeScatterDataUrl((chart.scatter || []).map(function (p) { return { cell: p.cell, x: p.eff != null ? p.eff : p.x, y: p.hysteresisPct != null ? p.hysteresisPct : p.y }; }), 'Efficiency vs hysteresis', 'Best PCE (%)', 'Hysteresis (%)', chart.thresholds && chart.thresholds.hysteresisPct); if (ps) figures.push({ key: 'efficiencyHysteresis', caption: 'Efficiency versus hysteresis for eligible measurements', dataUrl: ps, widthPx: 620, heightPx: 265 }); }
+      if (sel.topEfficiency !== false) { const p4 = makeBarDataUrl(model.top10.slice(0, 10).map(function (x) { return { label: x.cell, value: x.effRV, suffix: '%' }; }), 'Top eligible efficiency', 'RV PCE (%)'); if (p4) figures.push({ key: 'topEfficiency', caption: 'Top eligible samples by RV PCE', dataUrl: p4, widthPx: 620, heightPx: Math.max(230, 90 + Math.min(10, model.top10.length) * 24) }); }
+      if (sel.groupComparison !== false) { const p5 = makeBarDataUrl(model.groupStatistics.slice(0, 10).map(function (g) { return { label: g.name || 'Ungrouped', value: g.medianEff, suffix: '%' }; }), 'Group comparison', 'Median PCE (%)'); if (p5) figures.push({ key: 'groupComparison', caption: 'Group median efficiency comparison', dataUrl: p5, widthPx: 620, heightPx: Math.max(230, 90 + Math.min(10, model.groupStatistics.length) * 24) }); }
+    }
+    figureCache[key] = figures;
+    return figures;
+  }
+
+  function reportModel(exp) {
+    const model = reportModelData(exp);
+    model.figures = reportFigurePreviews(exp);
+    return model;
   }
 
   function exportMarkdown(exp) { const info=documentInfo(exp),filename=C.safeName(exp.meta.name)+info.suffix+'.md';Log.info('export.markdown',{experimentId:exp.id,document:info.label,chars:info.chars,words:info.words,updatedAt:info.updatedAt,filename:filename});C.downloadBlob(C.textBlob(info.markdown,'text/markdown;charset=utf-8'),filename);return{filename:filename,chars:info.chars,words:info.words,kind:info.kind}; }
@@ -363,5 +409,5 @@
     const info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});const model=reportModel(exp),blob=window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);end({filename:filename,bytes:blob.size,figures:model.figures.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

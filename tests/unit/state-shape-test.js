@@ -2,6 +2,7 @@
 require('../../assets/js/logger.js');
 require('../../assets/js/experiment/data-model.js');
 require('../../assets/js/state.js');
+require('../../assets/js/experiment/model.js');
 
 function assert(actual, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -129,5 +130,32 @@ module.exports = function (t, LF) {
     const n = seen.length;
     S.notify('x');
     assert(seen.length, n, 'unsubscribe stops notifications');
+  };
+
+  t['reportMode and workshop report doc kind have deterministic defaults'] = function () {
+    assert(S.state.ui.reportMode, 'editor', 'reportMode defaults to editor (no split mode)');
+    assert(S.state.ui.settingsOperationDocKind, 'lab', 'workshop report document default is lab');
+  };
+
+  t['reportMode normalization only accepts editor or preview'] = function () {
+    const exp = LF.DataModel.create({ sourceName: 'mode.zip' });
+    S.setExperiment(exp);
+    S.state.ui.reportMode = 'split';
+    LF.ExperimentModel.ensureShape(S.state.experiment, S.state);
+    assert(S.state.ui.reportMode, 'editor', 'legacy split coerced to editor');
+    S.state.ui.reportMode = 'preview';
+    LF.ExperimentModel.ensureShape(S.state.experiment, S.state);
+    assert(S.state.ui.reportMode, 'preview', 'preview preserved');
+  };
+
+  t['dataset and analysis touches invalidate the statistics bundle'] = function () {
+    const exp = LF.DataModel.create({ sourceName: 'bundle.zip' });
+    exp.analysisSummary = { version: 1, sourceRevision: 0 };
+    S.setExperiment(exp);
+    S.touch('dataset');
+    assert(S.state.experiment.analysisSummary, undefined, 'dataset touch clears bundle');
+    exp.analysisSummary = { version: 1, sourceRevision: S.state.experiment.sync.revision };
+    S.touch('analysis');
+    assert(S.state.experiment.analysisSummary, undefined, 'analysis touch clears bundle');
   };
 };

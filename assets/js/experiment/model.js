@@ -75,7 +75,8 @@
     if (!String(exp.report.author || '').trim() && profile && profile.defaultAuthor) exp.report.author = profile.defaultAuthor;
     exp.nomad = Object.assign({validation:null,upload:null,mappingPlan:null}, exp.nomad || {});
     if (LF.Report && LF.Report.ensureReport) LF.Report.ensureReport(exp);
-    if (!state.reportMode || state.reportMode === 'split') state.reportMode = 'editor';
+    const ui = state.ui || state;
+    if (!ui.reportMode || (ui.reportMode !== 'editor' && ui.reportMode !== 'preview')) ui.reportMode = 'editor';
     if (!state.boxPlot) state.boxPlot = {metric:'eff', direction:'both', groups:[], eligibleOnly:true, experimentId:null};
     return exp;
   }

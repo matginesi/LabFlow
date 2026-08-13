@@ -29,4 +29,22 @@ module.exports=function(t,LF){
     assert(exp.design.devices[0].solutionIds.includes(exp.design.solutions[0].id),'solution should be linked');
     assert(exp.design.devices[0].process.coating==='spin coating','fabrication should be applied');
   };
+  function twoDeviceFixture(){return{design:{status:'reviewing',solutions:[{id:'sol1',name:'Ink A',role:'absorber',solutes:'USER-SOLUTE',solvents:'',concentration:'',status:'user_confirmed'}],devices:[{id:'deviceA',name:'Device A',sampleNames:['S1'],solutionIds:[],process:{coating:'A-USER',annealing:'',atmosphere:''},stack:[],status:'user_confirmed'},{id:'deviceB',name:'Device B',sampleNames:['S2'],solutionIds:[],process:{coating:'B-USER',annealing:'',atmosphere:''},stack:[],status:'user_confirmed'}]},aiDesignProposal:{solutions:[{name:'Ink A',role:'absorber',solutes:'AI-SOLUTE',solvents:'DMF',concentration:'1.2 M',confidence:.8}],devices:[{id:'deviceA',name:'Device A',sample_names:['S1'],solution_names:['Ink A'],process:{coating:'A-AI',annealing:'400 C'},stack:[]},{id:'deviceB',name:'Device B',sample_names:['S2'],solution_names:['Ink A'],process:{coating:'B-AI',annealing:'450 C'},stack:[]}]}};}
+  t['applySelectedDevice changes only the selected device and linked solution']=function(){
+    const exp=twoDeviceFixture(),out=LF.DesignAnalysis.applySelectedDevice(exp,'deviceB');
+    assert(out.changed===5,'device + shared solution fields changed');
+    assert(exp.design.devices[1].process.annealing==='450 C','selected device missing field applied');
+    assert(exp.design.devices[1].process.coating==='B-USER','user_confirmed coating not overwritten');
+    assert(exp.design.devices[0].process.annealing==='','untouched device keeps empty field');
+    assert(exp.design.devices[0].process.coating==='A-USER','untouched device keeps its value');
+    assert(exp.design.solutions[0].solvents==='DMF','shared solution missing field applied');
+    assert(exp.design.solutions[0].solutes==='USER-SOLUTE','researcher solution value preserved');
+  };
+  t['applySelectedDevice is a no-op on repeat and throws without a proposal']=function(){
+    const exp=twoDeviceFixture();LF.DesignAnalysis.applySelectedDevice(exp,'deviceB');
+    let threw=false;try{LF.DesignAnalysis.applySelectedDevice(exp,'deviceB');}catch(e){threw=true;assert(/already present or protected/.test(String(e.message)),'repeat apply reports protected values');}
+    assert(threw,'repeat apply is a safe no-op');
+    const bare={design:{devices:[],solutions:[]}};let threwMissing=false;try{LF.DesignAnalysis.applySelectedDevice(bare,'deviceB');}catch(e){threwMissing=true;}
+    assert(threwMissing,'missing proposal throws');
+  };
 };

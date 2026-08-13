@@ -17,6 +17,7 @@ Canonical Store
         ↓
 Derived deterministic views
         ├─ Analysis Dossier
+        ├─ Analysis Summary statistics bundle (single statistics source)
         ├─ Results
         ├─ Design evidence status
         └─ NOMAD mapping
@@ -105,10 +106,10 @@ AI never owns parsing, deterministic Results or NOMAD readiness.
 Pages read the current Working Copy/Canonical Store. They do not own parallel scientific projections.
 
 - Review — Analysis Dossier, safe corrections, AI proposals/human decisions;
-- Results — deterministic measurements/results;
-- Design — deterministic known Design + researcher edits + optional missing-field inference;
-- Report — current Markdown editor + explicit figure selection;
-- NOMAD — one deterministic mapping plan + validation.
+- Results — deterministic measurements/results; Compare statistics read the Analysis Summary bundle when fresh;
+- Design — deterministic known Design + researcher edits + optional missing-field inference; per-device "Apply experiment" uses a deterministic gate over the AI proposal;
+- Report — current Markdown editor + explicit figure selection; statistics and the six figures read the Analysis Summary bundle when fresh and figures are rasterized on demand and cached per revision;
+- NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
 
 ## 8. Report architecture
 

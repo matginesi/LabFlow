@@ -188,7 +188,7 @@ body.activity-open { overflow: hidden; }
   padding: 10px;
   background: var(--overlay-shade);
 }
-.activity-shade[hidden] { display: none; }
+.activity-shade[hidden] { display: none !important; }
 .activity-totem {
   width: 100%;
   max-width: 640px;

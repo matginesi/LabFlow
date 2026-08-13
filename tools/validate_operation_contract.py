@@ -4,7 +4,7 @@ from __future__ import annotations
 import json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; OPERATIONS=ROOT/'operations'
-PUBLIC={'dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','results.interpret','report.generate','report.improve','nomad.prepare'}
+PUBLIC={'dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','results.interpret','report.generate','report.improve','nomad.prepare','analysis.summarize'}
 INTERNAL={'assistant.chat'}; EXPECTED=PUBLIC|INTERNAL
 errors=[]; defs={}
 for p in sorted(OPERATIONS.glob('*/operation.json')):
@@ -32,7 +32,7 @@ if set(defs)!=EXPECTED:errors.append(f'operation ids differ: missing={sorted(EXP
 if defs.get('assistant.chat',{}).get('visibility')!='internal':errors.append('assistant.chat must stay outside the researcher Operations Workshop')
 for tid in PUBLIC:
     if defs.get(tid,{}).get('visibility')=='internal':errors.append(f'{tid}: public OPERATION cannot be internal')
-for tid,kind in {'dataset.analyze':'DETERMINISTIC','dataset.correct-safe':'DETERMINISTIC','dataset.resolve-ambiguities':'AI','design.infer':'AI','results.interpret':'AI','report.generate':'AI','report.improve':'AI','nomad.prepare':'DETERMINISTIC'}.items():
+for tid,kind in {'dataset.analyze':'DETERMINISTIC','dataset.correct-safe':'DETERMINISTIC','dataset.resolve-ambiguities':'AI','design.infer':'AI','results.interpret':'AI','report.generate':'AI','report.improve':'AI','nomad.prepare':'DETERMINISTIC','analysis.summarize':'DETERMINISTIC'}.items():
     if defs.get(tid,{}).get('type')!=kind:errors.append(f'{tid}: expected {kind}')
 if 'dataset.analyze' not in (defs.get('dataset.resolve-ambiguities',{}).get('requires') or []):errors.append('dataset.resolve-ambiguities must require dataset.analyze')
 step_source=(ROOT/'assets/js/ai/operation-steps.js').read_text()

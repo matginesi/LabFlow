@@ -51,10 +51,11 @@
       resultInspectorId: null,
       uiKitQuery: '',
       uiKitFilter: 'all',
-      reportMode: 'split',
+      reportMode: 'editor',
       boxPlot: { metric: 'eff', direction: 'both', groups: [], eligibleOnly: true, experimentId: null },
       settingsSection: 'provider',
       settingsOperationId: 'dataset.analyze',
+      settingsOperationDocKind: 'lab',
       logFilters: { level: 'all', category: 'all', query: '', scope: 'all' },
       pageContext: { page: '', view: '', selected: {}, filters: {}, visible: [] }
     }
@@ -157,8 +158,14 @@
       delete exp.aiCorrectionPlan;
       delete exp.designAnalysis;
       delete exp.aiDesignProposal;
+      delete exp.analysisSummary;
       if (exp.analysis) delete exp.analysis.aiInterpretation;
       if (exp.nomad) delete exp.nomad.mappingPlan;
+    } else if (changeScope === 'analysis') {
+      /* Re-analysed metrics (e.g. a changed mismatch factor) invalidate the
+         statistics bundle and AI interpretation derived from the old analysis. */
+      delete exp.analysisSummary;
+      if (exp.analysis) delete exp.analysis.aiInterpretation;
     } else if (changeScope === 'design') {
       delete exp.designAnalysis;
       if (exp.nomad) delete exp.nomad.mappingPlan;
