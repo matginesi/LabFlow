@@ -78,30 +78,25 @@
   function defaultMarkdown(exp) {
     const s = (LF.Analysis.analysisOf(exp) || {}).summary || {};
     return '# ' + ((exp.meta && exp.meta.name) || 'Experiment report') + '\n\n' +
-      '## Executive scientific summary\n\nSummarize the experiment, data quality and principal JV results.\n\n' +
-      '## Data provenance and integrity\n\n' +
-      '- Source dataset: `' + ((exp.meta && exp.meta.sourceName) || '—') + '`\n' +
-      '- Parsed samples: **' + (s.sampleCount || 0) + '**\n' +
-      '- Parsed measurements: **' + (s.measurementCount || 0) + '**\n' +
-      '- Ranking-eligible measurements: **' + (s.eligibleCount || 0) + '**\n' +
-      '- Open findings: **' + (s.findingCount || 0) + '**\n\n' +
-      '## Experimental design and fabrication\n\nThe experimental design is maintained from the Design step and reproduced in the generated provenance section below.\n\n' +
-      '## JV results\n\nBest eligible efficiency: **' + C.fmt(s.bestEfficiency, 2) + '%** (' + (s.bestSample || '—') + ').  \nMedian best efficiency: **' + C.fmt(s.medianEfficiency, 2) + '%**.\n\n' +
-      '## Data quality and anomalies\n\nSeparate format/recovery problems from scientific measurement anomalies.\n\n' +
-      '## Discussion\n\nInterpret trends, hysteresis, reference behavior, group variability and limitations without inventing unsupported causes.\n\n' +
-      '## Reproducibility and NOMAD export\n\nDescribe provenance, working-state patches and export readiness.\n\n' +
-      '## Conclusions\n\nSummarize conclusions supported by validated measurements.\n';
+      '## Purpose and scope\n\nThis laboratory report documents the photovoltaic experiment contained in `' + ((exp.meta && exp.meta.sourceName) || 'the imported dataset') + '`. It connects the experimental design, deterministic JV analysis, data-quality review and resulting scientific interpretation while preserving the uploaded archive as immutable source evidence.\n\n' +
+      '## Experimental design\n\nDescribe the device variants, precursor formulations, solutes, solvents, additives and layer stack confirmed in the Design workspace. Distinguish values taken directly from source evidence from researcher-confirmed or AI-inferred values.\n\n' +
+      '## Fabrication and measurement methods\n\nDocument deposition, annealing, atmosphere and measurement conditions in chronological order. Record missing parameters explicitly; do not replace them with assumed standard practice. Explain the FW/RV acquisition convention and the deterministic eligibility criteria used by LabFlow.\n\n' +
+      '## Dataset and quality control\n\nThe current Working Copy contains **' + (s.sampleCount || 0) + ' samples** and **' + (s.measurementCount || 0) + ' measurements**. Of these, **' + (s.eligibleCount || 0) + '** are eligible for ranking after deterministic validation. There are **' + (s.findingCount || 0) + '** open findings. Summarize material corrections and exclusions here, including their evidence and effect on interpretation.\n\n' +
+      '## Results\n\nThe best eligible device is **' + (s.bestSample || 'not yet established') + '** with a PCE of **' + C.fmt(s.bestEfficiency, 2) + '%**; the median best efficiency is **' + C.fmt(s.medianEfficiency, 2) + '%**. Present reference and non-reference performance separately, report variability alongside central values, and describe hysteresis using the paired FW/RV measurements.\n\n' +
+      '## Discussion\n\nInterpret the observed ranking, group-level spread, reference behavior and hysteresis in relation to the confirmed design. Separate direct observations from mechanistic hypotheses. Address measurement exclusions, incomplete metadata and the limits these impose on causal conclusions.\n\n' +
+      '## Conclusions\n\nState the principal result, the strength of the supporting evidence and the most important unresolved question. Keep conclusions proportional to the validated dataset.\n\n' +
+      '## Data provenance and reuse\n\nThe original ZIP remains unchanged. This report is derived from the current LabFlow Working Copy; corrections are tracked as provenance patches and NOMAD readiness is evaluated independently in the export step.\n';
   }
 
   function defaultPaperMarkdown(exp) {
     return '# ' + ((exp.meta && exp.meta.name) || 'Experiment') + '\n\n' +
-      '## Abstract\n\nDraft a concise abstract grounded in the validated experiment.\n\n' +
-      '## Introduction\n\nState the scientific question and motivation. Do not invent literature citations.\n\n' +
-      '## Experimental methods\n\nDescribe the experimental procedure using the validated Design state. The generated provenance section below remains the source of truth for confirmed and inferred design details.\n\n' +
-      '## Results\n\nReport the validated JV results, distributions and relevant comparisons.\n\n' +
-      '## Discussion\n\nInterpret the results, uncertainties, hysteresis, variability and limitations. Keep hypotheses distinct from observations.\n\n' +
-      '## Conclusions\n\nState only conclusions supported by the current data.\n\n' +
-      '## Data availability and provenance\n\nDescribe the source ZIP, working-state corrections and NOMAD export readiness.\n';
+      '## Abstract\n\nWrite a self-contained account of the research question, experimental approach, principal quantitative result and main limitation. Avoid citations and claims that are not supported by the current experiment.\n\n' +
+      '## Introduction\n\nDefine the material or device question addressed by the experiment and explain why the selected comparison is informative. Add literature context only after verified references are available.\n\n' +
+      '## Experimental methods\n\nDescribe precursor preparation, deposition, annealing, atmosphere, device architecture and JV acquisition from the confirmed Design record. Identify missing information and distinguish evidence-backed values from inference.\n\n' +
+      '## Results\n\nPresent deterministic JV outcomes with sample counts, reference and non-reference comparisons, variability, FW/RV pairing and hysteresis. Refer only to figures selected in Report Studio.\n\n' +
+      '## Discussion\n\nRelate performance differences to confirmed experimental variables. Separate observation, interpretation and hypothesis, and discuss exclusions or incomplete metadata that limit generalization.\n\n' +
+      '## Conclusions\n\nSummarize the result supported by the current measurements and identify the next experiment needed to resolve the principal uncertainty.\n\n' +
+      '## Data availability and provenance\n\nState that the manuscript derives from the current LabFlow Working Copy, while the uploaded source archive remains byte-preserved. Record the status of correction provenance and NOMAD export readiness.\n';
   }
 
   function upsertDesignProvenance(markdown, exp) {

@@ -87,6 +87,13 @@
 
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
+  function renderModelStatus(){
+    const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
+    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey()));
+    host.classList.toggle('available',ready);host.classList.toggle('unavailable',!ready);
+    detail.textContent=ready?settings.model:'Not configured';host.title=ready?'AI model available: '+settings.model:'Configure the AI provider in Settings';
+  }
+
   function renderTopbarContext(){
     const host=document.getElementById('topbarContext');if(!host)return;
     if(S.state.route!=='ui-kit'){host.hidden=true;host.innerHTML='';return;}
@@ -113,6 +120,7 @@
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderWorkingCopyState();
+    renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.assistantOpen);if(assistant)assistant.hidden=!S.state.assistantOpen;if(toggle){const assistantLabel=S.state.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
     let html='';if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();
     main.innerHTML=html;
@@ -255,13 +263,15 @@
           const analysis=S.state.experiment.datasetAnalysis,fix=analysis&&analysis.safeFixes&&analysis.safeFixes[Number(safeFixButton.dataset.applySafeFix)];
           if(fix){try{const changed=LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'deterministic');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast('Safe correction applied ('+changed+' target'+(changed===1?'':'s')+').','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
         }
+        const ignoreSafeFix=e.target.closest('[data-ignore-safe-fix]');if(ignoreSafeFix){const fix=S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.safeFixes&&S.state.experiment.datasetAnalysis.safeFixes[Number(ignoreSafeFix.dataset.ignoreSafeFix)];if(fix){fix.decision='rejected';render();LF.UI.toast('Safe correction left unapplied.','info');}return;}
         if(e.target.closest('#applyAllAiCorrections')){
           const plan=S.state.experiment.aiCorrectionPlan,items=plan&&plan.proposals||[];let applied=0,targets=0,errors=0;
-          items.forEach(function(p){if(p.applied||p.decision==='rejected')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
+          items.forEach(function(p){if(p.applied||p.decision!=='accepted')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
           if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);}
           render();LF.UI.toast(applied+' AI proposal'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' could not be mapped':''),errors?'warning':'success');return;
         }
         const reviewProposal=e.target.closest('[data-review-proposal]');if(reviewProposal){updateProposalDecision(Number(reviewProposal.dataset.reviewProposal),reviewProposal.dataset.decision||'pending');render();return;}
+        if(e.target.closest('#runReportAiAction')){const select=document.getElementById('reportAiAction'),value=select&&select.value||'';if(!value)return;const parts=value.split(':');if(parts[0]==='generate')LF.Assistant.send('report.generate','',{params:{document_kind:parts[1]||'report'}});else LF.Assistant.send('report.improve','',{params:{mode:parts[1]||'scientific_review'}});return;}
         const localFix=e.target.closest('[data-local-fix]');if(localFix){
           const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude';m.excluded=exclude;S.state.experiment.patches=S.state.experiment.patches||[];S.state.experiment.patches.push({id:C.uid('patch'),type:exclude?'exclude_measurement':'restore_measurement',target:m.id,from:!exclude,to:exclude,source:'user',reason:'Review data local correction',createdAt:new Date().toISOString()});markModified('dataset');if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast(exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.','success');}return;
         }
