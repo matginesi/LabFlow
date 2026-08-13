@@ -1,0 +1,59 @@
+(function () {
+  'use strict';
+
+  const LF = window.LabFlow = window.LabFlow || {};
+  const C = LF.Core;
+  const S = LF.State;
+  const Log = (LF.Logger && LF.Logger.scope('report-page')) || null;
+  const PS = LF.PageShell;
+  const hasExperiment = PS.hasExperiment;
+  const routeTitle = PS.routeTitle;
+  const pageHead = PS.pageHead;
+  const workflowHead = PS.workflowHead;
+  const experimentStepper = PS.experimentStepper;
+  const needExperiment = PS.needExperiment;
+  const badge = PS.badge;
+  const ensureExperimentShape = PS.ensureExperimentShape;
+
+  /*
+   * Report Studio route.
+   * Renders the page from live deterministic state. app.js keeps only event
+   * routing and calls back into this module for helper functions.
+   */
+
+function reportFigurePreview(exp) {
+  try {
+    const model=LF.Report.reportModel(exp);
+    const figures=(model&&model.figures)||[];
+    if(!figures.length) return '<section class="report-preview-assets"><h2>Generated figures</h2><div class="notice info">No generated figures are enabled for this report.</div></section>';
+    return '<section class="report-preview-assets"><h2>Generated figures</h2><div class="report-figure-grid">'+figures.map(function(fig,i){return '<figure class="report-figure"><img src="'+C.escapeHtml(fig.dataUrl)+'" alt="'+C.escapeHtml(fig.caption||('Figure '+(i+1)))+'"><figcaption>Figure '+(i+1)+' · '+C.escapeHtml(fig.caption||'Generated from experiment data')+'</figcaption></figure>';}).join('')+'</div><div class="help">These figures are generated from the current deterministic experiment state and are embedded in DOCX/PDF exports.</div></section>';
+  } catch(err) {
+    Log.warn('report.preview-figures-failed',{error:err});
+    return '<section class="report-preview-assets"><h2>Generated figures</h2><div class="notice warning">Figure preview unavailable: '+C.escapeHtml(err.message||String(err))+'</div></section>';
+  }
+}
+
+  function render(state, deps) {
+  if(!hasExperiment())return needExperiment();
+  const e=ensureExperimentShape(S.state.experiment),r=LF.Report.ensureReport(e),mode=S.state.reportMode||'split',info=LF.Report.documentInfo(e),kind=info.kind,md=info.markdown,model=LF.Report.reportModel(e),dataState=model.dataState||{},missing=model.missingInformation||{total:0};
+  if(LF.PageContext)LF.PageContext.publish('Report',{view:info.label||'Document editor',selected:{document:kind},filters:{figures:Object.keys(r.figureSelection||{}).filter(function(k){return r.figureSelection[k]!==false;})},visible:['basis:'+String(dataState.basis||''),'missing:'+Number(missing.total||0)]});
+  const outline=C.markdownOutline(md||''),outlineHtml=outline.length?outline.map(function(h){return '<div class="outline-item level-'+h.level+'">'+C.escapeHtml(h.text)+'</div>';}).join(''):'<div class="muted">No headings yet.</div>',figurePreview=reportFigurePreview(e);
+  const designItems=[].concat((e.design.solutions||[]),(e.design.stack||[]),(e.design.devices||[])),inferred=designItems.filter(function(x){return x.status==='ai_inferred';}).length,confirmed=designItems.filter(function(x){return x.status==='user_confirmed';}).length;
+  function docChoice(docKind,label,description){const text=docKind==='paper'?r.paperMarkdown:r.labMarkdown,words=(String(text||'').trim().match(/\S+/g)||[]).length,active=kind===docKind,icon=docKind==='paper'?'notebook-text':'file-text';return '<button type="button" role="tab" aria-selected="'+active+'" class="report-document-choice '+(active?'active':'')+'" data-report-kind="'+docKind+'"><span class="report-document-icon">'+(LF.Icons?LF.Icons.icon(icon):'')+'</span><span><strong>'+label+'</strong><small>'+description+' · '+words+' words</small></span><em>'+(active?'Editing now':'Open')+'</em></button>';}
+  const documentTabs='<section class="report-document-switcher" aria-label="Choose document"><div class="report-document-switcher-head"><div><span class="eyebrow">Two independent documents</span><h2 class="h2">What are you working on?</h2></div><span class="meta">Switching never merges their text.</span></div><div class="report-document-tabs" role="tablist">'+docChoice('lab','Laboratory report','Internal record and provenance')+docChoice('paper','Scientific paper','Manuscript draft')+'</div></section>';
+  const aiTools='<div class="report-ai-tools"><span class="field-label">AI editing</span><button type="button" class="button compact" data-operation="report.generate" data-operation-kind="report">Full draft</button><button type="button" class="button compact" data-operation="report.improve" data-operation-mode="improve_selection">Improve selection</button><button type="button" class="button compact" data-operation="report.improve" data-operation-mode="methods">Methods + design</button><button type="button" class="button compact" data-operation="report.improve" data-operation-mode="results">Results</button><button type="button" class="button compact" data-operation="report.improve" data-operation-mode="discussion">Discussion</button><button type="button" class="button compact" data-operation="report.improve" data-operation-mode="scientific_review">Scientific review</button><button type="button" class="button compact" data-operation="report.generate" data-operation-kind="paper">Build paper draft</button></div>';
+  const designPanel='<details class="panel report-design-evidence"><summary class="panel-head"><strong>Experimental design provenance</strong><span class="meta">'+(e.design.devices||[]).length+' devices · '+(e.design.solutions||[]).length+' solutions · '+confirmed+' confirmed · '+inferred+' inferred</span></summary><div class="panel-body markdown-view">'+C.markdown(LF.Report.designEvidenceMarkdown(e))+'</div></details>';
+  const filename=C.safeName(e.meta.name)+info.suffix;
+  const dataStateBanner='<section class="report-data-state '+(dataState.dirty?'modified':'original')+'"><div><span class="eyebrow">DATA BASIS</span><strong>'+C.escapeHtml(dataState.basis||'Original import interpretation')+'</strong><small>Working revision '+Number(dataState.revision||0)+' · '+Number(dataState.appliedChanges||0)+' applied change(s) · RAW source immutable</small></div><div class="spacer"></div><div class="report-missing-state"><span>Missing / incomplete</span><strong>'+Number(missing.total||0)+'</strong></div></section>';
+  const activeBanner='<section class="report-active-document '+kind+'"><span class="report-active-kicker">Editing and exporting</span><div><strong>'+info.label+'</strong><small><span id="reportWordCount">'+info.words+' words · '+info.chars+' characters</span> · files start with <span class="mono">'+C.escapeHtml(filename)+'</span></small></div><span class="badge '+(kind==='paper'?'ai':'info')+'">ACTIVE</span></section>';
+  const figSel=r.figureSelection||{},figureChoices=[['pceDistribution','PCE distribution'],['hysteresisDistribution','Hysteresis'],['bestJvmCurve','Best JV curve'],['efficiencyHysteresis','PCE vs hysteresis'],['topEfficiency','Top efficiency'],['groupComparison','Group comparison']];
+  const figureSelector='<details class="panel report-figure-selector" open><summary class="panel-head"><div><strong>Figures in export</strong><span class="meta">Choose exactly which deterministic figures are appended after the editor content.</span></div><div class="spacer"></div><span class="badge info">'+figureChoices.filter(function(x){return figSel[x[0]]!==false;}).length+' selected</span></summary><div class="panel-body"><div class="report-figure-options">'+figureChoices.map(function(x){return '<label class="report-figure-option"><input type="checkbox" data-report-figure="'+x[0]+'" '+(figSel[x[0]]!==false?'checked':'')+'><span>'+x[1]+'</span></label>';}).join('')+'</div><div class="help">The Markdown editor is the document source. Selected figures are the only generated content added to PDF/DOCX.</div></div></details>';
+  const exportStrip='<div class="report-export-strip"><div class="report-export-identity"><span>Exporting</span><strong>'+info.shortLabel+'</strong><small id="reportExportStatus">Editor source · '+info.words+' words · selected figures appended</small></div><div class="spacer"></div><button type="button" class="button compact" id="reportMd">'+info.shortLabel+' MD</button><button type="button" class="button compact" id="reportTex">LaTeX</button><button type="button" class="button compact" id="reportDocx">'+info.shortLabel+' DOCX</button><button type="button" class="button primary compact" id="reportPdf">'+info.shortLabel+' PDF</button></div>';
+  return '<section class="page report-page">'+workflowHead('Report Studio','Edit one clearly identified document. Every export captures the current active editor text.','<button type="button" class="button primary" data-route="experiment-nomad">Continue to NOMAD</button>')+documentTabs+dataStateBanner+activeBanner+'<div class="panel report-meta-panel"><div class="panel-body"><div class="report-meta-grid"><div class="field"><label>Title</label><input class="input" data-report-meta="title" value="'+C.escapeHtml(r.title||'')+'"></div><div class="field"><label>Author</label><input class="input" data-report-meta="author" value="'+C.escapeHtml(r.author||'')+'"></div><div class="field"><label>Laboratory</label><input class="input" data-report-meta="lab" value="'+C.escapeHtml(r.lab||'')+'"></div><div class="field"><label>Project</label><input class="input" data-report-meta="project" value="'+C.escapeHtml(r.project||'')+'"></div></div></div></div>'+designPanel+aiTools+figureSelector+'<div class="report-toolbar"><div class="segmented"><button type="button" class="button compact '+(mode==='editor'?'primary':'')+'" data-report-mode="editor">Editor</button><button type="button" class="button compact '+(mode==='split'?'primary':'')+'" data-report-mode="split">Split</button><button type="button" class="button compact '+(mode==='preview'?'primary':'')+'" data-report-mode="preview">Preview</button></div><div class="markdown-tools"><button type="button" class="button ghost compact" data-markdown-tool="h2">H2</button><button type="button" class="button ghost compact" data-markdown-tool="bold">Bold</button><button type="button" class="button ghost compact" data-markdown-tool="italic">Italic</button><button type="button" class="button ghost compact" data-markdown-tool="list">List</button><button type="button" class="button ghost compact" data-markdown-tool="table">Table</button></div></div>'+exportStrip+'<div class="report-layout report-mode-'+mode+'"><aside class="panel report-outline"><div class="panel-head"><h2 class="h2">'+info.shortLabel+' outline</h2></div><div class="panel-body report-outline-scroll">'+outlineHtml+'</div></aside><div class="panel report-editor '+kind+'"><div class="panel-head"><div><span class="eyebrow">ACTIVE SOURCE</span><h2 class="h2">'+info.label+' Markdown</h2></div><div class="spacer"></div><span class="meta" id="reportSaveState">Saved in working state</span></div><div class="panel-body report-editor-body"><textarea class="textarea" id="reportMarkdown" aria-label="'+info.label+' Markdown source" spellcheck="false">'+C.escapeHtml(md||'')+'</textarea></div></div><article class="report-preview markdown-view" id="reportPreview"><div class="report-preview-cover '+kind+'"><span>'+info.label.toUpperCase()+'</span><strong>'+C.escapeHtml(r.title||e.meta.name)+'</strong><small>'+C.escapeHtml([r.author,r.lab,r.project].filter(Boolean).join(' · '))+'</small></div><div id="reportMarkdownRendered">'+C.markdown(md||'')+'</div>'+figurePreview+'</article></div></section>';
+}
+
+  LF.ReportPage = {
+    render: render,
+    figurePreview: reportFigurePreview
+  };
+})();

@@ -1,0 +1,191 @@
+:root {
+  color-scheme: light;
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Bright scientific workbench: dark navigation chrome, light data canvas. */
+  --bg: #edf1f5;
+  --surface: #ffffff;
+  --surface-2: #f7f9fb;
+  --surface-3: #eef3f7;
+  --text: #16202a;
+  --text-muted: #62707d;
+  --text-faint: #8a96a2;
+  --border: #d9e0e7;
+  --border-strong: #bcc8d3;
+
+  --accent: #127A8B;
+  --accent-hover: #0F6876;
+  --accent-soft: #E8F5F6;
+  --success: #22B573;
+  --success-soft: #eaf7ef;
+  --warning: #b17300;
+  --warning-soft: #fff5dc;
+  --danger: #c64141;
+  --danger-soft: #fff0f0;
+  --info: #127A8B;
+  --info-soft: #eef5fc;
+  --ai: #127A8B;
+  --ai-soft: #eef2ff;
+
+  --chart-1: #127A8B;
+  --chart-2: #df3f3f;
+  --chart-3: #22B573;
+  --chart-4: #7b61d1;
+  --chart-5: #e2a51c;
+  --chart-6: #2b8a9c;
+  --chart-7: #bf5a88;
+  --chart-8: #526d9c;
+  --chart-9: #8159a3;
+  --chart-10: #57865f;
+
+  --on-accent: #ffffff;
+  --success-border: #b9ddc7;
+  --warning-border: #ead49e;
+  --danger-border: #edc4c4;
+  --danger-border-strong: #dfaaaa;
+  --info-border: #c8daeb;
+  --ai-border: #cbd5f4;
+  --table-hover: #f6f9fc;
+  --report-border: #ccd6df;
+  --chat-user-border: #3c5267;
+
+  --sidebar-bg: #0D1F3D;
+  --sidebar-text: #eef4f9;
+  --sidebar-border: #263443;
+  --sidebar-separator: #263646;
+  --sidebar-muted: #9dafbf;
+  --sidebar-label: #7f93a7;
+  --sidebar-link: #d5e0ea;
+  --sidebar-hover: #1b2b3a;
+  --sidebar-active: #127A8B;
+  --sidebar-active-edge: #58D0D0;
+  --sidebar-foot: #8093a5;
+
+  --topbar-bg: #0A1830;
+  --topbar-text: #eef4f8;
+  --topbar-muted: #9badbd;
+  --topbar-border: #21303e;
+
+  --assistant-bg: #0D1F3D;
+  --assistant-surface: #192a3a;
+  --assistant-surface-2: #10202e;
+  --assistant-border: #314456;
+  --assistant-text: #edf4f9;
+  --assistant-muted: #9fb0c0;
+
+  --code-bg: #18232d;
+  --code-border: #344451;
+  --code-text: #e9f0f5;
+  --code-muted: #aebbc5;
+  --code-button: #e0e8ee;
+  --code-key: #8fcaf0;
+  --code-number: #e1bc77;
+
+  /* Structured JSON uses the scientific canvas palette, not the generic dark code palette. */
+  --json-bg: #f7f9fb;
+  --json-border: #d9e0e7;
+  --json-text: #16202a;
+  --json-key: #1558b0;
+  --json-string: #18713a;
+  --json-number: #9a5d00;
+  --json-literal: #5c46b5;
+  --json-punct: #6d7985;
+
+  --shadow-float: 0 12px 32px rgba(15, 28, 40, 0.18);
+  --overlay-shade: rgba(11, 20, 29, 0.58);
+
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 7px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+
+  --font-xs: 10px;
+  --font-sm: 11px;
+  --font-md: 12px;
+  --font-lg: 13px;
+  --font-xl: 19px;
+  --font-micro: 9px;
+
+  --control-h: 31px;
+  --control-h-compact: 27px;
+  --sidebar-w: 184px;
+  --sidebar-title-size: var(--font-sm);
+  --sidebar-meta-size: var(--font-xs);
+  --sidebar-label-size: var(--font-xs);
+  --assistant-w: 360px;
+  --topbar-h: 48px;
+}
+
+/* Scrollbar contract: scrollable scientific panels must visibly communicate overflow. */
+:root {
+  --scroll-track: #dfe6ec;
+  --scroll-thumb: #8fa0af;
+  --scroll-thumb-hover: #687d8f;
+  --scroll-dark-track: #101b26;
+  --scroll-dark-thumb: #42566a;
+  --scroll-dark-thumb-hover: #587086;
+}
+
+/*
+ * Optional fully light theme. The default "instrument" theme keeps the
+ * established dark structural chrome around a bright scientific canvas.
+ */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f6f9;
+  --surface: #ffffff;
+  --surface-2: #f7f9fc;
+  --surface-3: #eaf0f5;
+  --text: #17212b;
+  --text-muted: #5d6c79;
+  --text-faint: #7d8b97;
+  --border: #d6dee6;
+  --border-strong: #b7c4d0;
+
+  --sidebar-bg: #f7f9fc;
+  --sidebar-text: #17212b;
+  --sidebar-border: #ccd6df;
+  --sidebar-separator: #dbe2e9;
+  --sidebar-muted: #657686;
+  --sidebar-label: #758594;
+  --sidebar-link: #344554;
+  --sidebar-hover: #e8eef5;
+  --sidebar-active: #127A8B;
+  --sidebar-active-edge: #127A8B;
+  --sidebar-foot: #687988;
+
+  --topbar-bg: #ffffff;
+  --topbar-text: #17212b;
+  --topbar-muted: #657686;
+  --topbar-border: #d6dee6;
+
+  --assistant-bg: #f7f9fc;
+  --assistant-surface: #ffffff;
+  --assistant-surface-2: #eef3f7;
+  --assistant-border: #ccd6df;
+  --assistant-text: #17212b;
+  --assistant-muted: #617382;
+  --chat-user-border: #b8c5d1;
+
+  --json-bg: #f8fafc;
+  --json-border: #d3dde6;
+  --json-text: #17212b;
+  --json-key: #155fbe;
+  --json-string: #18733d;
+  --json-number: #955a00;
+  --json-literal: #5a46ae;
+  --json-punct: #667684;
+
+  --scroll-dark-track: #e6ecf2;
+  --scroll-dark-thumb: #98a8b6;
+  --scroll-dark-thumb-hover: #728696;
+  --shadow-float: 0 12px 32px rgba(32, 53, 70, 0.16);
+  --overlay-shade: rgba(49, 65, 80, 0.34);
+}

@@ -1,0 +1,3 @@
+report-export.js is a browser-only LabFlow utility covered by the repository
+MIT License. It builds PDF and DOCX output locally and uses the separately
+licensed vendored JSZip library for DOCX packaging.

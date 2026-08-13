@@ -1,58 +1,293 @@
 <!doctype html>
-<html lang="en" data-theme="light" data-palette="blue" data-density="compact">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="LabFlow interface components, page composition patterns and responsive states.">
-  <meta name="author" content="Matteo Ginesi">
-  <meta name="copyright" content="© 2026 Matteo Ginesi">
-  <meta name="theme-color" content="#0c1119">
-  <title>UI Kit · LabFlow</title>
-  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="assets/brand/logo-horizontal-shell.svg" as="image" type="image/svg+xml">
-  <script src="ui/theme-controller.js"></script>
-  <link rel="stylesheet" href="ui/labflow.bundle.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b141d">
+  <meta name="referrer" content="no-referrer">
+  <title>LabFlow UI Kit</title>
+  <link rel="icon" href="assets/icons/labflow-favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/ui.css">
+  <link rel="stylesheet" href="assets/css/app.css">
 </head>
-<body data-page="ui-kit">
-  <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="app-shell" id="app">
+<body class="ui-kit-page">
+  <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="sidebar-brand-row"><a class="brand" href="index.html" aria-label="LabFlow — Manage experiments. Accelerate discovery.">
-        <img class="brand-lockup" src="assets/brand/logo-horizontal-shell.svg" width="188" height="41" alt="LabFlow">
-      </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation"><svg class="icon icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-      <div class="sidebar-scroll">
-        <div class="nav-label">Research</div>
-        <nav class="nav" aria-label="Research workspace"><a class="nav-link" href="index.html"><svg class="icon icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg><span>Workspace</span></a><a class="nav-link" href="cabinet.html"><svg class="icon icon-cabinet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v12h14V8M10 12h4"/></svg><span>Lab Cabinet</span></a><a class="nav-link" href="knowledge.html"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg><span>AI & Models</span></a><a class="nav-link" href="robotics.html"><svg class="icon icon-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="10" height="8" rx="2"/><path d="M12 4v4M9 20h6M10 16v4M14 16v4M5 11H3v3h2M19 11h2v3h-2"/><circle cx="10" cy="12" r="1"/><circle cx="14" cy="12" r="1"/></svg><span>Robotics</span></a><a class="nav-link" href="tools.html"><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4-1 11-11-3-3L5 16l-1 4ZM14 7l3 3"/></svg><span>Tools</span></a><a class="nav-link" href="settings.html"><svg class="icon icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V21h-4v-.08A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.03H3v-4h.08A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06L7.03 4.2l.06.06A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.08V3h4v.08a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>Settings</span></a></nav>
-        <div class="nav-label">Reference</div>
-        <nav class="nav" aria-label="Product reference"><a class="nav-link" href="documentation.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4V4Z"/><path d="M20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4V4Z"/></svg><span>Documentation</span></a><a class="nav-link active" aria-current="page" href="ui-kit.html"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="10" r="1"/><path d="M15 16c1.2 0 2-1 2-2s-.8-2-2-2h-1a2 2 0 0 0 0 4h1Z"/></svg><span>UI Kit</span></a></nav>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">LF</span>
+        <span class="brand-copy"><strong>LabFlow</strong><small>Experiment Workbench</small></span>
       </div>
-      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button><div class="sidebar-credit"><span>© 2026 Matteo Ginesi</span><small>LabFlow POC</small></div></div>
+      <div class="nav-label">Workspace</div>
+      <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Experiment</strong><small>RAW to NOMAD</small></span></a>
+      <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Operations</small></span></a>
+      <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></a>
+      <a class="nav-link active" href="ui-kit.html" aria-current="page"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></a>
+      <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span>Local-first workspace</div>
     </aside>
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation"><svg class="icon icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-        <a class="mobile-brand" href="index.html" aria-label="LabFlow"><img src="assets/brand/logo-mark.svg" width="25" height="25" alt=""><span class="mobile-brand-copy"><strong>LabFlow</strong><small class="mobile-brand-title">UI Kit</small></span></a>
-        <div class="topbar-context"><span class="topbar-context-brand">LABFLOW</span><span class="topbar-page-title" id="topbar-page-title">UI Kit</span></div>
-      </div>
-      <div class="global-search" id="global-search">
-        <svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, knowledge, datasets, models and tools…">
-<div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
-      </div>
-      <div class="topbar-right">
-        <span class="badge top-status" title="Static local proof of concept">LOCAL POC</span>
-        <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search"><svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-        <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg></button>
-        <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="10" r="1"/><path d="M15 16c1.2 0 2-1 2-2s-.8-2-2-2h-1a2 2 0 0 0 0 4h1Z"/></svg></button>
-        <button class="top-user" data-action="profile" type="button"><span class="avatar">MG</span><span class="top-user-copy"><strong>Matteo Ginesi</strong><span>Advanced Photovoltaics</span></span></button>
-      </div>
-    </header>
-    <main class="main" id="main-content"><div class="content" id="page-content"><div class="page-bootstrap" aria-hidden="true"><span></span><strong>UI Kit</strong><i></i><i></i></div></div></main>
+
+    <section class="workspace-shell">
+      <header class="topbar">
+        <div class="topbar-title"><strong>UI Kit</strong><span>Executable visual contract for every LabFlow page</span></div>
+        <div class="topbar-context">
+          <div class="topbar-search"><label class="sr-only" for="uiKitSearch">Search UI patterns</label><input class="input" id="uiKitSearch" type="search" autocomplete="off" placeholder="Search patterns…"></div>
+          <label class="sr-only" for="uiKitFilterSelect">Pattern family</label><select class="select topbar-filter" id="uiKitFilterSelect"><option value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option><option value="data">Scientific data</option><option value="ai">AI & operations</option><option value="system">System pages</option></select>
+          <span class="topbar-result-count" id="uiKitResultCount" aria-live="polite">Loading…</span>
+        </div>
+        <div class="spacer"></div>
+        <button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button>
+        <a class="button compact" href="index.html">Back to app</a>
+      </header>
+      <main class="main-area">
+        <div class="page ui-kit-layout">
+          <header class="page-head ui-kit-section" id="principles" data-ui-kit-group="core">
+            <div><h1 class="h1">UI Kit</h1><div class="meta">Executable visual ground truth for the complete LabFlow scientific workbench.</div></div><div class="spacer"></div><div class="toolbar"><span class="badge success">Ground truth</span><span class="meta mono">current</span></div>
+          </header>
+          <dl class="ui-kit-facts ui-kit-section" data-ui-kit-group="core"><div><dt>Visual character</dt><dd>Scientific instrument</dd></div><div><dt>Themes</dt><dd>Instrument + Light</dd></div><div><dt>Shell breakpoint</dt><dd>1100 px</dd></div><div><dt>Runtime</dt><dd>file:// safe</dd></div></dl>
+
+          <section class="panel ui-kit-section" id="rules" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Non-negotiable rules</h2><div class="spacer"></div><span class="badge success">Required</span></div>
+            <div class="panel-body three-col">
+              <div class="notice info"><strong>One shared frame.</strong><br>Upload, every workflow step, Settings, Logs and UI Kit use the same fluid page anatomy. New reusable variants are documented here before use.</div>
+              <div class="notice info"><strong>Every button works.</strong><br>Visible non-disabled controls must have a real handler. Decorative examples in this page are disabled.</div>
+              <div class="notice info"><strong>Overflow is visible.</strong><br>The main workspace always has a reachable vertical scrollbar. Bounded panels expose their own styled scrollbar; critical content is never hover-only.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="ai-actions" data-ui-kit-group="ai">
+            <div class="panel-head"><h2 class="h2">Operation contract</h2><div class="spacer"></div><span class="badge ai">Explicit only</span></div>
+            <div class="panel-body stack">
+              <div class="notice info"><strong>No implicit AI.</strong> Selecting rows, opening charts, changing tabs, zooming plots, editing fields or navigating steps never calls a model.</div>
+              <div class="table-wrap"><table class="data-table"><thead><tr><th>Where</th><th>Primary AI OPERATION</th><th>Purpose</th></tr></thead><tbody>
+                <tr><td>Review</td><td><span class="badge ai">Analyze ZIP</span></td><td>One combined review of format, naming, missing data and correction proposals.</td></tr>
+                <tr><td>Results</td><td><span class="badge ai">Analyze data</span></td><td>Interpret validated deterministic results, trends and anomalies.</td></tr>
+                <tr><td>Design</td><td><span class="badge ai">Reconstruct</span></td><td>Propose solutions, process and perovskite device stack; user confirms manually.</td></tr>
+                <tr><td>Report</td><td><span class="badge ai">Draft / Improve / Review</span></td><td>One report generation OPERATION plus explicit revision modes; no duplicated workflow engine.</td></tr>
+                <tr><td>NOMAD</td><td><span class="badge ai">Prepare mapping</span></td><td>Review mapping and missing metadata before deterministic ZIP export.</td></tr>
+                <tr><td>Assistant</td><td><span class="badge ai">User initiated</span></td><td>Free chat using only the current experiment context.</td></tr>
+              </tbody></table></div>
+              <div class="help">AI OPERATIONS declare their logic, sequential checkpoints, prompt and output budget in source. Successful checkpoints advance automatically. While running the user can Stop; after an error the user can Retry checkpoint, which resumes from the failed checkpoint only. DETERMINISTIC OPERATIONS contain no AI step and no prompt.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="activity" data-ui-kit-group="ai">
+            <div class="panel-head"><h2 class="h2">Operation totem</h2><div class="spacer"></div><span class="badge info">Sequential</span></div>
+            <div class="panel-body stack">
+              <div class="notice info">Use one compact work panel for operations that need visible progress, status and details.</div>
+              <section class="activity-totem activity-demo" aria-label="Operation totem example">
+                <div class="activity-head"><div><strong>Import experiment ZIP</strong><span>Local parsing · RAW remains unchanged</span></div></div>
+                <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Phase progress</span><strong class="activity-percent">64% · Parsing</strong></div><div class="progress activity-progress"><span></span></div></div>
+                <div class="activity-current"><div class="activity-stage-row"><span class="badge">ZIP</span><strong>Parsing JV files</strong></div><div class="meta activity-message">Samples/N3_1/Stability (JV)_004.txt</div></div>
+                <dl class="activity-details"><dt>File</dt><dd>2026_01_22.zip</dd><dt>Current</dt><dd>18 / 31</dd><dt>Measurements</dt><dd>42</dd><dt>Elapsed</dt><dd>1.8 s</dd></dl>
+                <div class="activity-checklist"><div class="done"><span data-icon="check"></span><div><strong>Read source</strong><small>complete</small></div></div><div class="active"><span>2</span><div><strong>Parse measurements</strong><small>18 / 31</small></div></div><div class="pending"><span>3</span><div><strong>Recalculate Results</strong></div></div></div>
+                <div class="activity-ai-trace"><details class="activity-disclosure activity-output"><summary><span>Provider output</span><strong>Live detail</strong></summary><div class="activity-response">Streaming output appears here while the provider is producing text or reasoning.</div></details></div>
+                <div class="activity-history"><div><span>0.0 s</span><strong>Reading source file</strong></div><div><span>0.2 s</span><strong>Opening ZIP</strong></div><div><span>0.4 s</span><strong>Inspecting manifest</strong></div><div><span>0.7 s</span><strong>Parsing JV files</strong></div></div>
+              </section>
+              <div class="notice success"><strong>Terminal timer contract.</strong> Elapsed time advances only while the operation is running. Completion and final failure freeze one duration. Successful checkpoints continue automatically. Retryable AI failures retry the same checkpoint/work unit after 5 s and 10 s; only the final failure exposes Retry checkpoint. Stop remains available while work is running.</div>
+              <div class="notice info"><strong>Fresh-session contract.</strong> Opening an operation clears every title, fact, checkpoint, payload, progress class and disclosure inherited from the preceding operation. Provider and OPERATION-contract errors stay in this totem; the Logs page retains their durable diagnostic history without duplicating an error card on the workflow page. An HTTP 200 with empty, truncated, malformed, or contract-invalid model output is shown there as a correlated <strong>Rejected response</strong>, never as a completed call.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="settings-pattern" data-ui-kit-group="system">
+            <div class="panel-head"><h2 class="h2">Operations Workshop</h2><div class="spacer"></div><span class="badge success">One section at a time</span></div>
+            <div class="panel-body stack">
+              <dl class="settings-context"><div><dt>Provider</dt><dd>zai</dd></div><div><dt>Model</dt><dd>glm-4.7-flash</dd></div><div><dt>Endpoint</dt><dd>api.z.ai</dd></div><div><dt>Credential</dt><dd>Configured locally</dd></div><div><dt>Logging</dt><dd>INFO</dd></div></dl>
+              <nav class="tabs settings-tabs" aria-label="Settings example"><button type="button" class="tab" aria-selected="false" disabled>Connection</button><button type="button" class="tab active" aria-selected="true" disabled>Operations Workshop</button><button type="button" class="tab" aria-selected="false" disabled>Assistant</button><button type="button" class="tab" aria-selected="false" disabled>Workspace</button><button type="button" class="tab" aria-selected="false" disabled>Ground truth</button></nav><div class="help"><strong>Tab contract.</strong> Tabs live inside a bordered surface track. The active tab has its own filled surface, stronger border and accent edge; inactive tabs remain readable. Long sets scroll horizontally rather than shrinking labels.</div>
+              <div class="operation-workshop">
+                <aside class="panel operation-catalog"><div class="panel-head"><div><h3 class="h2">Researcher goals</h3><div class="meta">8 goals · internal services hidden</div></div></div><div class="panel-body">
+                  <section class="operation-catalog-group"><header>Dataset</header><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">D</span><span><strong>Analyze dataset</strong><small>Automatic · deterministic</small></span></button><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">D</span><span><strong>Apply safe corrections</strong><small>Researcher action</small></span></button><button class="operation-catalog-item active" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Resolve ambiguities</strong><small>AI assist · proposals only</small></span></button></section>
+                  <section class="operation-catalog-group"><header>Design</header><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Infer missing design</strong><small>Selected experiment only</small></span></button></section>
+                  <section class="operation-catalog-group"><header>Results</header><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Interpret results</strong><small>Explain computed values</small></span></button></section>
+                  <section class="operation-catalog-group"><header>Report</header><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Generate report</strong><small>Scientific prose</small></span></button><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Improve report</strong><small>Explicit revision mode</small></span></button></section>
+                  <section class="operation-catalog-group"><header>NOMAD</header><button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">D</span><span><strong>Prepare NOMAD export</strong><small>Deterministic staging</small></span></button></section>
+                </div></aside>
+                <section class="panel operation-inspector"><div class="panel-head"><div><div class="row-wrap"><span class="badge ai">AI assist</span><span class="badge">dataset</span><span class="badge info">proposal only</span></div><h3 class="h2 operation-inspector-title">Resolve ambiguities</h3><div class="mono meta">dataset.resolve-ambiguities</div></div></div><div class="panel-body stack"><p class="operation-purpose">Resolve only semantic facts that deterministic analysis could not establish. The model receives a bounded Research Context Pack of linked findings, entities and evidence; it may answer unresolved and never writes directly.</p><div class="operation-contract-grid"><div><span>Kind</span><strong>AI assist</strong></div><div><span>Provider calls</span><strong>1 bounded</strong></div><div><span>Changes data</span><strong>No · proposals</strong></div><div><span>Input</span><strong>Context Pack</strong></div><div><span>Budget</span><strong>8,000 tok</strong></div><div><span>Depends on</span><strong>Analyze dataset</strong></div></div><div class="operation-flow"><div class="section-label">Finite flow</div><div class="operation-step-flow"><div class="operation-step det"><div><span class="badge success">DET</span></div><div><strong>Select unknowns</strong><span class="mono">semantic only</span></div></div><span class="operation-step-arrow">→</span><div class="operation-step ai"><div><span class="badge ai">AI</span></div><div><strong>Resolve</strong><span class="mono">bounded context</span></div></div><span class="operation-step-arrow">→</span><div class="operation-step det"><div><span class="badge success">DET</span></div><div><strong>Validate/store</strong><span class="mono">proposal</span></div></div></div></div><div class="notice info"><strong>Workshop rule.</strong> Compute Results, index Design evidence, apply accepted proposals and run validation gates as internal services. Do not expose implementation mechanics as researcher OPERATIONS.</div></div></section>
+              </div>
+              <div class="help">Workshop pattern: catalog on the left, responsibility and finite flow on the right. Prompt/schema details stay under progressive disclosure in the real Settings page.</div>
+              <div class="notice info"><strong>Assistant Context Pack.</strong> Keep chat memory, turn/character budgets, Research Context Pack budget, answer limit and temperature together in Assistant. The deterministic Context Builder selects the current page, question-matched entities, selection, relevant Results/findings/evidence and bounded history; never send the full experiment by default.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="logs-pattern" data-ui-kit-group="system">
+            <div class="panel-head"><div><h2 class="h2">Logs & diagnostics pattern</h2><div class="meta">Metrics → correlated API transactions → errors → full event stream</div></div><div class="spacer"></div><span class="badge danger">Errors inspectable</span></div>
+            <div class="panel-body stack"><div class="metric-grid logs-metrics"><div class="metric"><div class="metric-label">Events</div><div class="metric-value">128</div><div class="metric-sub">this session</div></div><div class="metric"><div class="metric-label">Errors</div><div class="metric-value">2</div><div class="metric-sub">stack retained</div></div><div class="metric"><div class="metric-label">API calls</div><div class="metric-value">6</div><div class="metric-sub">1 rejected</div></div></div><details class="api-transaction" open><summary><span class="badge danger">Rejected response</span><span class="api-transaction-name"><strong>Analyze ZIP</strong><small>POST · https://provider.example/chat/completions</small></span><span class="api-transaction-stats">HTTP 200 · 842 ms</span></summary><div class="api-transaction-body"><dl class="log-facts"><div><dt>Correlation ID</dt><dd>api_example</dd></div><div><dt>Request ID</dt><dd>req_example</dd></div><div><dt>Model</dt><dd>model-name</dd></div><div><dt>Status</dt><dd>Rejected response · HTTP 200</dd></div><div><dt>Finish reason</dt><dd>length</dd></div></dl><div class="log-payload-grid"><section class="log-payload"><header><strong>Request body / messages</strong><span>structured data</span></header><pre>{"model":"model-name","messages":[{"role":"user","content":"…"}]}</pre></section><section class="log-payload danger"><header><strong>Raw provider response</strong><span>structured data</span></header><pre>{"choices":[{"message":{"content":"{\"summary\":\"partial\""},"finish_reason":"length"}]}</pre></section></div></div></details><div class="help">Secrets are redacted at collection time. Preserve exact sanitized request, raw response, request ID, duration, token and finish metadata, validation error, stack and cause; join transport and model-response events with one local correlation ID.</div></div>
+          </section>
+
+          <section class="panel ui-kit-section" id="foundations" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Foundations</h2></div>
+            <div class="panel-body stack">
+              <div class="swatches">
+                <div class="swatch"><div class="swatch-color swatch-bg"></div><div class="swatch-label">--bg</div></div>
+                <div class="swatch"><div class="swatch-color swatch-surface"></div><div class="swatch-label">--surface</div></div>
+                <div class="swatch"><div class="swatch-color swatch-accent"></div><div class="swatch-label">--accent</div></div>
+                <div class="swatch"><div class="swatch-color swatch-success"></div><div class="swatch-label">--success</div></div>
+                <div class="swatch"><div class="swatch-color swatch-warning"></div><div class="swatch-label">--warning</div></div>
+                <div class="swatch"><div class="swatch-color swatch-danger"></div><div class="swatch-label">--danger</div></div>
+              </div>
+              <div class="two-col">
+                <div><h1 class="h1">Page title · 19 px token</h1><h2 class="h2 mt-2">Section title · compact</h2><p>Body copy is deliberately small and readable. Secondary information uses <span class="meta">muted metadata</span>; identifiers use <span class="mono">monospace</span>.</p></div>
+                <div class="panel"><div class="panel-head"><h2 class="h2">Density and composition</h2></div><div class="panel-body meta">Body 12 px · secondary 10–11 px · micro metadata never below 9 px · controls 31 px · compact controls 27 px · panel padding 8–10 px · standard gap 8 px. Every route starts with its page head, followed by workflow navigation when applicable. Every control has a persistent label bound to its native element. On narrow screens, totem commands wrap below the title and transient notices stay at the lower edge.</div></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="components" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Core components</h2></div>
+            <div class="panel-body ui-demo-grid">
+              <div class="stack"><div class="field-label">Buttons</div><div class="row-wrap"><button class="button primary" disabled>Primary example</button><button class="button" disabled>Secondary</button><button class="button ghost" disabled>Ghost</button><button class="button danger compact" disabled>Danger</button></div><div class="help">Demo buttons are intentionally disabled because this page must not contain fake interactions.</div></div>
+              <div class="stack"><div class="field-label">Badges</div><div class="row-wrap"><span class="badge success">Valid</span><span class="badge warning">Needs attention</span><span class="badge danger">Safety stop</span><span class="badge info">Known</span><span class="badge ai">AI inferred</span></div></div>
+              <div class="stack"><div class="field-label">Compact form controls</div><div class="form-grid ui-widget-grid"><div class="field"><label>Sample identifier</label><input class="input mono" value="N3 1_1A" readonly><span class="help">RAW identity remains traceable.</span></div><div class="field"><label>Classification</label><select class="select" disabled><option>Reference</option><option>Sample</option></select><span class="help">Native select · disabled demo.</span></div><div class="field field-wide"><label>Research note</label><textarea class="textarea compact-textarea" readonly>Preserve measured values and record any conversion in provenance.</textarea></div><div class="field"><label>Read only</label><input class="input" value="Derived value" readonly></div><div class="field"><label>Invalid</label><input class="input invalid" value="Needs review" readonly></div></div><div class="widget-choice-row"><label class="checkbox-row"><input type="checkbox" checked disabled> Eligible only</label><label class="checkbox-row"><input type="radio" checked disabled> FW + RV</label><label class="widget-range"><span>Plot zoom</span><input type="range" min="1" max="10" value="4" disabled></label></div></div>
+              <div class="stack"><div class="field-label">Notices</div><div class="notice success">Deterministic recovery succeeded.</div><div class="notice warning">Human review is required.</div><div class="notice danger">Safety stop: still visible, excluded from best-value rankings and aggregate charts.</div></div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="icons" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Local icon language</h2><div class="spacer"></div><span class="badge success">Lucide · local ISC subset</span></div>
+            <div class="panel-body stack">
+              <div class="row-wrap" aria-label="Local icon examples"><button class="button button-with-icon" disabled><span data-icon="upload"></span><span>Upload</span></button><button class="button button-with-icon" disabled><span data-icon="download"></span><span>Download</span></button><button class="button button-with-icon" disabled><span data-icon="search"></span><span>Search</span></button><button class="button button-with-icon" disabled><span data-icon="file-text"></span><span>Report</span></button><button class="button icon-only" disabled aria-label="Delete example"><span data-icon="trash-2"></span></button></div>
+              <div class="notice info"><strong>Contract.</strong> Icons come from the vendored local Lucide subset, inherit text color, and support labels instead of replacing them. Icon-only controls require an accessible name.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="privacy" data-ui-kit-group="system">
+            <div class="panel-head"><h2 class="h2">Privacy boundary</h2><div class="spacer"></div><span class="badge success">Local-first</span></div>
+            <div class="panel-body stack"><dl class="privacy-facts"><div><dt>Assets</dt><dd>Local CSS, JavaScript, icons and system fonts.</dd></div><div><dt>Tracking</dt><dd>No analytics, cookies, beacons or service workers.</dd></div><div><dt>Network</dt><dd>Only explicit AI actions contact the configured provider.</dd></div><div><dt>Secrets</dt><dd>Credentials are local and redacted from diagnostics.</dd></div></dl><div class="help">The static privacy validator enforces this runtime boundary.</div></div>
+          </section>
+
+          <section class="panel ui-kit-section" id="steps" data-ui-kit-group="workflow">
+            <div class="panel-head"><h2 class="h2">Experiment step navigation</h2><div class="spacer"></div><span class="meta">The complete six-step sequence stays visible at every width</span></div>
+            <div class="panel-body stack"><nav class="stepper experiment-strip" aria-label="Experiment workflow example"><button class="step done" disabled><span class="step-index">1</span><strong>Upload</strong></button><button class="step done" disabled><span class="step-index">2</span><strong>Review</strong></button><button class="step active" disabled aria-current="step"><span class="step-index">3</span><strong>Results</strong></button><button class="step" disabled><span class="step-index">4</span><strong>Design</strong></button><button class="step" disabled><span class="step-index">5</span><strong>Report</strong></button><button class="step" disabled><span class="step-index">6</span><strong>NOMAD</strong></button></nav><div class="help">Desktop and tablet use one fluid row. On phones, each number stacks above its label so all destinations remain readable and directly reachable without horizontal scrolling.</div></div>
+          </section>
+
+          <section class="panel ui-kit-section" id="import-receipt" data-ui-kit-group="workflow">
+            <div class="panel-head"><div><h2 class="h2">Uploaded ZIP receipt</h2><div class="meta">Step 1 after import · deterministic information only</div></div><div class="spacer"></div><span class="badge success">RAW preserved</span></div>
+            <div class="panel-body stack">
+              <div class="import-path"><div class="import-stage done"><span>1</span><div><strong>Read archive</strong><small>Browser memory</small></div></div><div class="import-stage done"><span>2</span><div><strong>Inventory files</strong><small>86 entries classified</small></div></div><div class="import-stage done"><span>3</span><div><strong>Parse evidence</strong><small>Local deterministic rules</small></div></div><div class="import-stage done"><span>4</span><div><strong>Build working view</strong><small>RAW unchanged</small></div></div></div>
+              <div class="import-family-grid"><div class="import-family"><span>Summary</span><strong>2</strong><small>FW and RV tables</small></div><div class="import-family"><span>JV</span><strong>24</strong><small>measurements and curves</small></div><div class="import-family"><span>Parameters</span><strong>24</strong><small>acquisition evidence</small></div><div class="import-family"><span>Tracking</span><strong>24</strong><small>time-series evidence</small></div><div class="import-family"><span>Other</span><strong>12</strong><small>retained in manifest</small></div></div>
+              <div class="notice info"><strong>Navigation contract.</strong> A successful import opens Review immediately. Upload remains available as the immutable source receipt and ZIP replacement point.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="scientific" data-ui-kit-group="data">
+            <div class="panel-head"><h2 class="h2">Scientific data patterns</h2></div>
+            <div class="panel-body stack">
+              <div class="metric-grid results-kpis"><div class="metric"><div class="metric-label">Samples</div><div class="metric-value">31</div><div class="metric-sub">canonical groups</div></div><div class="metric"><div class="metric-label">JV measurements</div><div class="metric-value">72</div><div class="metric-sub">FW/RV pairs</div></div><div class="metric"><div class="metric-label">Ranking eligible</div><div class="metric-value">49</div><div class="metric-sub">finite PCE · no safety stop</div></div><div class="metric"><div class="metric-label">Safety stop</div><div class="metric-value">23</div><div class="metric-sub">visible, excluded from aggregate results</div></div></div><div class="notice info"><strong>Ranking eligibility.</strong> Best values and aggregate performance plots exclude manual exclusions, missing/non-finite PCE and measurements with danger-level policy flags. Every RAW/parsed measurement remains inspectable.</div>
+              <nav class="tabs results-tabs" aria-label="Results view example"><button class="tab active" aria-selected="true" disabled>Overview</button><button class="tab" aria-selected="false" disabled>Rankings</button><button class="tab" aria-selected="false" disabled>Measurements</button><button class="tab" aria-selected="false" disabled>Warnings</button><button class="tab" aria-selected="false" disabled>JV curves</button><button class="tab" aria-selected="false" disabled>Compare</button></nav>
+              <div class="results-overview-grid"><section class="panel"><div class="panel-head"><h3 class="h2">Best JV curve</h3></div><div class="sample-chart"><div class="meta">RAW curve from canonical measurement</div></div></section><section class="panel"><div class="panel-head"><h3 class="h2">PCE distribution</h3></div><div class="sample-chart"><div class="meta">Deterministic histogram</div></div></section><section class="panel"><div class="panel-head"><h3 class="h2">PCE by group</h3></div><div class="sample-chart"><div class="meta">Mean of ranking-eligible measurements</div></div></section></div><div class="notice info"><strong>Results contract.</strong> Results read measurements and samples directly from the current working copy and never depend on Design. Tables remain inside explicit horizontal scroll containers; warning/status columns keep a usable minimum width.</div>
+              <div class="table-wrap"><table class="data-table"><thead><tr><th>Sample</th><th>Type</th><th class="num">PCE</th><th class="num">Voc</th><th>Quality</th><th>Provenance</th></tr></thead><tbody><tr><td class="mono">R1_25</td><td><span class="badge success">REF</span></td><td class="num">21.33%</td><td class="num">1.12 V</td><td><span class="badge success">Valid</span></td><td class="meta">RAW JV + recovered summary</td></tr><tr><td class="mono">N3_1A</td><td>sample</td><td class="num">18.92%</td><td class="num">1.10 V</td><td><span class="badge warning">Review</span></td><td class="meta">RAW JV</td></tr></tbody></table></div>
+              <div class="validation-pipeline"><div class="validation-stage done"><span>1</span><div><strong>Inspect</strong><small>RAW inventoried</small></div></div><div class="validation-stage done"><span>2</span><div><strong>Validate</strong><small>Markdown rules</small></div></div><div class="validation-stage"><span>3</span><div><strong>Interpret</strong><small>AI + evidence</small></div></div><div class="validation-stage"><span>4</span><div><strong>Fix</strong><small>reviewed patches</small></div></div><div class="validation-stage"><span>5</span><div><strong>Review</strong><small>human decision</small></div></div></div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="curves" data-ui-kit-group="data">
+            <div class="panel-head"><h2 class="h2">JV curve explorer</h2><div class="spacer"></div><span class="badge info">All + single + overlay</span></div>
+            <div class="panel-body stack">
+              <div class="curve-control-grid"><div class="field"><label>View</label><select class="select"><option>All measurements</option><option>Single measurement</option><option>Overlay selection</option></select></div><div class="field"><label>Group</label><select class="select"><option>All groups</option></select></div><div class="field"><label>Scan</label><select class="select"><option>FW + RV</option></select></div><div class="field"><label>Find</label><input class="input" value="N2"></div><label class="checkbox-row curve-eligible"><input type="checkbox"> ranking eligible only</label><div class="curve-count"><strong>72</strong><span>curves available</span></div></div>
+              <div class="curve-gallery">
+                <button class="curve-card" disabled><div class="curve-card-head"><strong>REF 1_1A</strong><span>REF 1</span></div><div class="sample-chart"></div><div class="curve-card-meta"><span>FW 20.8%</span><span>RV 21.3%</span><span>valid</span></div></button>
+                <button class="curve-card" disabled><div class="curve-card-head"><strong>N2 1_1A</strong><span>N2 1</span></div><div class="sample-chart"></div><div class="curve-card-meta"><span>FW 16.2%</span><span>RV 16.8%</span><span>valid</span></div></button>
+                <button class="curve-card" disabled><div class="curve-card-head"><strong>N3 1_1B</strong><span>N3 1</span></div><div class="sample-chart"></div><div class="curve-card-meta"><span>FW 14.9%</span><span>RV 15.2%</span><span>review</span></div></button>
+              </div>
+              <div class="notice info"><strong>Curve contract.</strong> The all-measurement view shows every matching measurement separately. Selecting one opens a large individual chart. Overlay is reserved for direct comparison. None of these interactions invokes AI.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="boxplot" data-ui-kit-group="data">
+            <div class="panel-head"><h2 class="h2">Interactive BoxPlot workbench</h2><div class="spacer"></div><span class="badge info">Deterministic</span></div>
+            <div class="panel-body compare-layout">
+              <aside class="panel"><div class="panel-head"><h3 class="h2">Selection</h3></div><div class="panel-body stack"><div class="field"><label>Metric</label><select class="select"><option>PCE (%)</option></select></div><div class="field"><label>Scan</label><select class="select"><option>FW + RV</option></select></div><label class="checkbox-row"><input type="checkbox" checked> ranking eligible only</label><div class="row-wrap"><button class="button compact" disabled>All</button><button class="button compact" disabled>REF</button><button class="button ghost compact" disabled>Clear</button></div><div class="box-group-list scroll-region"><label class="checkbox-row"><input type="checkbox" checked><span class="mono">REF 1</span></label><label class="checkbox-row"><input type="checkbox" checked><span class="mono">N2 1</span></label><label class="checkbox-row"><input type="checkbox"><span class="mono">N3 1</span></label></div></div></aside>
+              <div class="stack min-w-0"><div class="chart-scroll"><div class="compare-canvas sample-chart"><div class="meta">Stable box + whiskers + raw values · horizontal scroll for many groups</div></div></div><div class="panel box-stats-panel"><div class="table-wrap table-plain"><table class="data-table dense-table"><thead><tr><th>Group</th><th>n</th><th>Q1</th><th>Median</th><th>Q3</th><th>Outliers</th></tr></thead><tbody><tr><td class="mono">REF 1</td><td>8</td><td>18.7</td><td><strong>19.8</strong></td><td>20.6</td><td>0</td></tr><tr><td class="mono">N2 1</td><td>7</td><td>15.4</td><td><strong>16.1</strong></td><td>17.0</td><td>1</td></tr></tbody></table></div></div><div class="help">Compare is intentionally simple: group, metric and scan selection only. No fragile canvas pan/zoom state.</div></div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="design" data-ui-kit-group="workflow">
+            <div class="panel-head"><h2 class="h2">Single-experiment Design</h2><div class="spacer"></div><span class="badge info">One experiment at a time</span></div>
+            <div class="panel-body stack">
+              <div class="design-workbench">
+                <aside class="panel design-variant-rail"><div class="panel-head"><div><h3 class="h2">Experiments</h3><div class="meta">2 reconstructed</div></div></div><div class="panel-body"><button class="design-variant active" disabled><span class="design-variant-number">01</span><span><strong>Reference device</strong><small>Control</small></span><span class="badge success">Confirmed</span><em>2 dataset IDs · 4 evidence files</em></button><button class="design-variant" disabled><span class="design-variant-number">02</span><span><strong>Treatment X</strong><small>Experimental</small></span><span class="badge ai">AI inferred</span><em>3 dataset IDs · 5 evidence files</em></button></div></aside>
+                <div class="design-canvas">
+                  <section class="panel design-experiment-focus"><div class="panel-head"><div><span class="eyebrow">Current experiment</span><h3 class="h2">Reference device</h3><div class="meta">Control</div></div><div class="spacer"></div><span class="badge success">Confirmed</span></div><dl class="design-experiment-facts"><div><dt>Dataset IDs</dt><dd>2</dd></div><div><dt>Formulations</dt><dd>1</dd></div><div><dt>Stack layers</dt><dd>3</dd></div><div><dt>Evidence files</dt><dd>4</dd></div></dl></section>
+                  <section class="panel design-blueprint"><div class="panel-head"><div><h3 class="h2">Experiment map</h3><div class="meta">One experiment from inputs to device.</div></div></div><div class="panel-body"><div class="design-blueprint-flow"><section class="design-blueprint-stage"><header><span>1</span><div><strong>Formulations</strong><small>1 linked</small></div></header><article class="design-solution-node"><div class="design-formulation-block" aria-hidden="true">S01</div><div><strong>Perovskite precursor</strong><span>Active layer</span><small>FAI, PbI₂ · DMF, DMSO · 1.4 M</small></div><span class="badge ai">AI inferred</span></article></section><div class="design-blueprint-arrow" aria-hidden="true"></div><section class="design-blueprint-stage"><header><span>2</span><div><strong>Fabrication</strong><small>this experiment</small></div></header><ol class="design-process-track"><li class="complete"><span>1</span><div><strong>Coat</strong><small>Spin coating</small></div></li><li class="complete"><span>2</span><div><strong>Anneal</strong><small>100 °C · 30 min</small></div></li><li class="complete"><span>3</span><div><strong>Atmosphere</strong><small>N₂ glovebox</small></div></li></ol></section><div class="design-blueprint-arrow" aria-hidden="true"></div><section class="design-blueprint-stage"><header><span>3</span><div><strong>Device stack</strong><small>3 layers</small></div></header><div class="design-stack-graphic"><div class="design-stack-layer layer-tone-0"><span>Electrode</span><strong>Au</strong><small>80 nm</small></div><div class="design-stack-layer layer-tone-2"><span>Absorber</span><strong>Perovskite</strong><small>500 nm</small></div><div class="design-stack-layer layer-tone-5"><span>Substrate</span><strong>FTO glass</strong><small>—</small></div></div></section></div></div></section>
+                  <section class="panel experiment-formulations"><div class="panel-head"><div><h3 class="h2">Formulations in this experiment</h3><div class="meta">Open one formulation to inspect or correct it.</div></div></div><div class="panel-body"><details class="solution-sheet experiment-solution"><summary><span class="solution-sheet-index">S01</span><div><strong>Perovskite precursor</strong><small>Active layer · open to correct</small></div><span class="badge ai">AI inferred</span></summary></details></div></section>
+                  <details class="panel design-editor"><summary><div><strong>Edit this experiment</strong><span>Identity, dataset links, formulations, fabrication, stack and evidence.</span></div><span class="design-editor-action">Open editor</span></summary></details>
+                </div>
+              </div>
+              <div class="notice warning"><strong>Single-experiment Design.</strong> The deterministic workbench is ready immediately after import. The researcher edits the selected experiment directly; optional AI inference is scoped only to its still-missing fields. Proposal review stays below the working canvas and uses progressive disclosure.</div>
+              <div class="notice info"><strong>AI reconstruction contract.</strong> The review draft must list every experiment returned from the supplied inventory. Identity links, formulations, process and stack remain editable; each experiment or formulation is accepted or excluded independently before accepted items are applied as AI inferred.</div>
+              <div class="notice info"><strong>Live dependency contract.</strong> Review/data changes refresh Results, Design identities, generated Report provenance and NOMAD readiness. Design refreshes Report and NOMAD; Report refreshes NOMAD.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="markdown" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Rendered Markdown</h2><div class="spacer"></div><span class="badge info">Required wherever Markdown is editable</span></div>
+            <div class="panel-body two-col">
+              <textarea class="textarea prompt-md-editor" aria-label="Prompt Markdown source example" readonly># Dataset policy
+
+## Evidence boundary
+- Never invent missing metadata.
+- Preserve RAW files.
+
+> Ambiguous repairs require human review.
+
+| State | Meaning |
+|---|---|
+| Valid | usable |
+| Safety stop | visible, excluded from aggregate rankings |</textarea>
+              <article class="markdown-view panel-body"><h1>Dataset policy</h1><h2>Evidence boundary</h2><ul><li>Never invent missing metadata.</li><li>Preserve RAW files.</li></ul><blockquote>Ambiguous repairs require human review.</blockquote><div class="md-table-wrap"><table><thead><tr><th>State</th><th>Meaning</th></tr></thead><tbody><tr><td>Valid</td><td>usable</td></tr><tr><td>Safety stop</td><td>visible, excluded from aggregate rankings</td></tr></tbody></table></div></article>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="report" data-ui-kit-group="workflow">
+            <div class="panel-head"><h2 class="h2">Report Studio</h2><div class="spacer"></div><span class="badge success">PDF/DOCX are real file exports</span></div>
+            <div class="panel-body stack"><section class="report-document-switcher"><div class="report-document-switcher-head"><div><span class="eyebrow">Two independent documents</span><h3 class="h2">What are you working on?</h3></div><span class="meta">Switching never merges their text.</span></div><div class="report-document-tabs"><button class="report-document-choice active" disabled><span class="report-document-icon" data-icon="file-text"></span><span><strong>Laboratory report</strong><small>Internal record · 842 words</small></span><em>Editing now</em></button><button class="report-document-choice" disabled><span class="report-document-icon" data-icon="notebook-text"></span><span><strong>Scientific paper</strong><small>Manuscript draft · 1,208 words</small></span><em>Open</em></button></div></section><section class="report-active-document lab"><span class="report-active-kicker">Editing and exporting</span><div><strong>Laboratory report</strong><small>842 words · files start with <span class="mono">experiment_lab_report</span></small></div><span class="badge info">ACTIVE</span></section><div class="report-toolbar"><div class="segmented"><button class="button compact" disabled>Editor</button><button class="button primary compact" disabled>Split</button><button class="button compact" disabled>Preview</button></div><div class="report-markdown-tools"><button class="button ghost compact" disabled>H2</button><button class="button ghost compact" disabled><strong>B</strong></button><button class="button ghost compact" disabled><em>I</em></button><button class="button ghost compact" disabled>List</button><button class="button ghost compact" disabled>Table</button></div></div><details class="panel report-figure-selector" open><summary class="panel-head"><div><strong>Figures in export</strong><span class="meta">The editor is the text source; selected deterministic figures are appended.</span></div><div class="spacer"></div><span class="badge info">4 selected</span></summary><div class="panel-body"><div class="report-figure-options"><label class="report-figure-option"><input type="checkbox" checked disabled><span>PCE distribution</span></label><label class="report-figure-option"><input type="checkbox" checked disabled><span>Best JV curve</span></label><label class="report-figure-option"><input type="checkbox" checked disabled><span>PCE vs hysteresis</span></label><label class="report-figure-option"><input type="checkbox" checked disabled><span>Group comparison</span></label><label class="report-figure-option"><input type="checkbox" disabled><span>Top efficiency</span></label></div></div></details><div class="report-export-strip"><div class="report-export-identity"><span>Exporting</span><strong>Report</strong><small>Current editor text · 842 words · selected figures only</small></div><div class="spacer"></div><button class="button compact" disabled>Report MD</button><button class="button compact" disabled>LaTeX</button><button class="button compact" disabled>Report DOCX</button><button class="button primary compact" disabled>Report PDF</button></div><div class="two-col"><textarea class="textarea" aria-label="Report Markdown source example" readonly># Results
+
+The best quality-eligible device reached **21.33% PCE**.
+
+## Validation
+Measurements with a safety stop remain visible but are excluded from best-value rankings and aggregate performance charts.</textarea><article class="report-preview markdown-view"><div class="report-preview-cover lab"><span>LABORATORY REPORT</span><strong>Experiment report</strong><small>Current editor source</small></div><h1>Results</h1><p>The best ranking-eligible device reached <strong>21.33% PCE</strong>.</p><h2>Validation</h2><p>Measurements with a safety stop remain visible but are excluded from best-value rankings and aggregate performance charts.</p></article></div><div class="help">The active-document banner, editor label, export labels and generated cover must always name the same document. Export synchronizes the visible textarea immediately before file generation.</div></div>
+          </section>
+
+          <section class="panel ui-kit-section" id="nomad-pattern" data-ui-kit-group="workflow">
+            <div class="panel-head"><div><h2 class="h2">NOMAD staging & mock upload</h2><div class="meta">One deterministic artifact from validation through manual inspection</div></div><div class="spacer"></div><span class="badge warning">Deployment validation required</span></div>
+              <div class="panel-body stack"><div class="nomad-flow"><div class="active"><b>1</b><span>Map</span></div><div><b>2</b><span>Validate</span></div><div><b>3</b><span>Package</span></div><div><b>4</b><span>Mock upload</span></div><div><b>5</b><span>Process</span></div><div><b>6</b><span>Inspect</span></div></div><div class="notice info"><strong>Artifact identity.</strong> The mock upload retains the exact generated Blob. “Download simulated upload ZIP” returns that same artifact for manual inspection, while “Download staging ZIP” generates a fresh package from current state.</div><div class="row-wrap"><button type="button" class="button primary" disabled>Simulate upload to NOMAD</button><button type="button" class="button" disabled>Download simulated upload ZIP</button><button type="button" class="button" disabled>Download staging ZIP</button></div><div class="help">The ZIP separates immutable RAW, canonical/derived tables, applied patch provenance, schema/entry files and a machine-readable manifest. The Canonical → NOMAD map is deterministic and is the single source used by the mapping table, validation and generated archive entry; AI never decides readiness. The six-stage map remains one row when wide, reflows to 3 × 2 on tablets and 2 × 3 on phones.</div></div>
+          </section>
+
+          <section class="panel ui-kit-section" id="ai" data-ui-kit-group="ai">
+            <div class="panel-head"><h2 class="h2">AI assistant & returned telemetry</h2><div class="spacer"></div><span class="badge ai">Explicit actions only</span></div>
+            <div class="panel-body stack">
+              <div class="ui-demo-grid">
+                <div class="chat-message user"><div class="chat-meta">You</div><div class="chat-body">Explain why this measurement is blocked.</div></div>
+                <div class="stack"><div class="chat-message ai chat-pending"><span class="chat-spinner" aria-hidden="true"></span><div><strong>Reading Results</strong><span>Using the current page and experiment data…</span></div></div><div class="chat-message ai"><div class="chat-meta">glm-4.7-flash · stop</div><div class="chat-body markdown-view"><p>The quality gate found a value outside the active Markdown policy. The RAW measurement remains untouched.</p></div><div class="ai-metrics"><span>Time <b>2.8 s</b></span><span>Input <b>1,220 tok</b></span><span>Output <b>186 tok</b></span><span>Total <b>1,406 tok</b></span><span>Speed <b>66.43 tok/s</b></span></div></div></div>
+              </div>
+              <div class="chat-compose"><div class="chat-commandbar"><textarea rows="1" aria-label="Assistant message example" placeholder="Question, interpretation, or next action" disabled></textarea><button class="chat-command-send" type="button" disabled>Send</button></div><div class="chat-compose-foot"><span>Current experiment context</span><span>Enter sends · Shift+Enter adds a line</span></div></div>
+              <div class="assistant-panel ui-kit-assistant-empty"><header class="assistant-head"><div><strong>Assistant</strong><span>Upload</span></div></header><div class="chat-log is-empty"><div class="assistant-empty"><strong>Upload a ZIP to activate the assistant</strong><span>AI stays disabled until the RAW experiment source is loaded.</span></div></div><div class="chat-compose"><div class="chat-commandbar"><textarea rows="1" aria-label="Disabled assistant message example" placeholder="Upload a ZIP first" disabled></textarea><button class="chat-command-send" type="button" disabled>Send</button></div></div></div>
+              <div class="activity-totem activity-demo activity-demo-ai"><div class="activity-head"><div><strong>OPERATION · Correct ambiguities</strong><span>Checkpoint 2 of 4 · AI · one bounded request</span></div><div class="activity-head-actions"><button class="button compact activity-button" disabled>View logs</button><button class="button danger compact activity-button" disabled>Stop</button></div></div><div class="activity-progress-shell"><div class="activity-progress-meta"><span>Operation progress</span><strong class="activity-percent">48%</strong></div><div class="progress activity-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="48"><span></span></div></div><div class="activity-current"><div class="activity-stage-row"><span class="badge ai">AI</span><strong>Resolving semantic ambiguities</strong></div><div class="meta activity-message">The deterministic dossier is already complete. Only unresolved semantic findings and their directly related evidence are sent.</div></div><div class="activity-checklist"><div class="done"><span data-icon="check"></span><div><strong>Collect ambiguity slice</strong></div></div><div class="active"><i>•</i><strong>Propose corrections</strong><small>single request</small></div><div class="pending"><span>3</span><div><strong>Validate proposal</strong></div></div><div class="pending"><span>4</span><div><strong>Store proposal</strong></div></div></div><div class="activity-ai-trace"><details class="activity-disclosure activity-request"><summary><span>Data sent to provider</span><strong>Key redacted</strong></summary><div class="activity-request-body">Formatted request details</div></details><details class="activity-disclosure activity-output"><summary><span>Provider output</span><strong>Closed by default</strong></summary><div class="activity-response"><pre class="json-highlight compact"><code><span class="tok-punct">{</span>
+  <span class="tok-json-key">&quot;status&quot;</span><span class="tok-punct">:</span> <span class="tok-string">&quot;ready&quot;</span><span class="tok-punct">,</span>
+  <span class="tok-json-key">&quot;measurements&quot;</span><span class="tok-punct">:</span> <span class="tok-number">72</span>
+<span class="tok-punct">}</span></code></pre></div></details></div></div>
+              <div class="two-col"><div class="notice info"><strong>Assistant chat.</strong> Questions stay inline and show returned telemetry.</div><div class="notice warning"><strong>User control.</strong> A running OPERATION can be stopped. On error, Retry checkpoint resumes from the failed checkpoint.</div></div>
+              <div class="notice info"><strong>Prompt-first.</strong> Every AI OPERATION instruction is a versioned operation-local Markdown file. The Operations Workshop previews source contracts but does not override them at runtime.</div>
+              <div class="notice info"><strong>Direct provider connection.</strong> Connection settings show the effective provider endpoint. LabFlow adds no proxy/backend layer.</div>
+              <div class="notice warning"><strong>AI proposes; code applies.</strong> Structured corrections, selected-experiment design inference and NOMAD staging are reviewable proposals. Scientific meaning is never changed silently.</div>
+            </div>
+          </section>
+
+          <section class="panel ui-kit-section" id="overflow" data-ui-kit-group="core">
+            <div class="panel-head"><h2 class="h2">Overflow & scrollbar requirement</h2><div class="spacer"></div><span class="badge success">Visible</span></div>
+            <div class="panel-body ui-demo-grid">
+              <div><div class="field-label">Vertical scientific panel</div><div class="panel-body scroll-region ui-kit-scroll-demo"><div class="finding-list"><div class="finding">Finding 01 · naming</div><div class="finding">Finding 02 · missing value</div><div class="finding">Finding 03 · range</div><div class="finding">Finding 04 · pairing</div><div class="finding">Finding 05 · provenance</div><div class="finding">Finding 06 · recovery</div><div class="finding">Finding 07 · review</div></div></div></div>
+              <div><div class="field-label">Horizontal dense editor</div><div class="scroll-x-region ui-kit-xscroll-demo"><div class="stack-layer stack-layer-rich"><div class="order">1</div><input class="input" aria-label="Layer role example" value="Perovskite"><input class="input" aria-label="Layer material example" value="FA/Cs Pb(I/Br)3"><input class="input" aria-label="Layer thickness example" value="500 nm"><input class="input" aria-label="Layer process example" value="spin coating"><input class="input" aria-label="Layer evidence example" value="protocol.md"><label class="mini-confirm"><input type="checkbox" checked> confirmed</label><div class="row"><button class="button compact icon-only" disabled aria-label="Move layer up"><span data-icon="arrow-up"></span></button><button class="button compact icon-only" disabled aria-label="Move layer down"><span data-icon="arrow-down"></span></button></div></div></div></div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </section>
   </div>
-  <div id="global-overlays"></div>
-  <div class="modal-backdrop" id="modal" hidden></div>
-  <script defer src="assets/js/runtime.js"></script>
-  <script defer src="assets/js/workbook.js"></script>
-  <script defer src="assets/js/app.js"></script>
+  <script src="assets/js/ui/icons.js"></script>
+  <script src="assets/js/logger.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/ui/theme.js"></script>
+  <script src="assets/js/pages/ui-kit-page.js"></script>
 </body>
 </html>

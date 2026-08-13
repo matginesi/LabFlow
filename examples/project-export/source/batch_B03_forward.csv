@@ -1,6 +1,0 @@
-sample,voltage_V,current_density_mA_cm2,direction,timestamp
-S04,-0.10,-23.42,forward,2026-08-02T10:14:05Z
-S04,0.00,-23.31,forward,2026-08-02T10:14:06Z
-S04,0.50,-22.18,forward,2026-08-02T10:14:09Z
-S04,1.00,-8.41,forward,2026-08-02T10:14:13Z
-S04,1.12,0.00,forward,2026-08-02T10:14:15Z

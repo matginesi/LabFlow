@@ -1,57 +1,125 @@
 <!doctype html>
-<html lang="en" data-theme="light" data-palette="blue" data-density="compact">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="LabFlow static research workspace for structured laboratory projects, AI-assisted analysis and NOMAD-ready export.">
-  <meta name="author" content="Matteo Ginesi">
-  <meta name="copyright" content="© 2026 Matteo Ginesi">
-  <meta name="theme-color" content="#0c1119">
-  <title>Workspace · LabFlow</title>
-  <link rel="icon" href="assets/brand/favicon.svg" type="image/svg+xml">
-  <link rel="preload" href="assets/brand/logo-horizontal-shell.svg" as="image" type="image/svg+xml">
-  <script src="ui/theme-controller.js"></script>
-  <link rel="stylesheet" href="ui/labflow.bundle.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0D1F3D">
+  <meta name="referrer" content="no-referrer">
+  <title>LabFlow</title>
+  <link rel="icon" href="assets/icons/labflow-favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/ui.css">
+  <link rel="stylesheet" href="assets/css/app.css">
 </head>
-<body data-page="workspace">
-  <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="app-shell" id="app">
+<body>
+  <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
-      <div class="sidebar-brand-row"><a class="brand" href="index.html" aria-label="LabFlow — Manage experiments. Accelerate discovery.">
-        <img class="brand-lockup" src="assets/brand/logo-horizontal-shell.svg" width="188" height="41" alt="LabFlow">
-      </a><button class="btn btn-ghost icon-btn sidebar-close" data-action="menu" type="button" aria-label="Close navigation"><svg class="icon icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-      <div class="sidebar-scroll">
-        <div class="nav-label">Research</div>
-        <nav class="nav" aria-label="Research workspace"><a class="nav-link active" aria-current="page" href="index.html"><svg class="icon icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg><span>Workspace</span></a><a class="nav-link" href="cabinet.html"><svg class="icon icon-cabinet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v12h14V8M10 12h4"/></svg><span>Lab Cabinet</span></a><a class="nav-link" href="knowledge.html"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg><span>AI & Models</span></a><a class="nav-link" href="robotics.html"><svg class="icon icon-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="8" width="10" height="8" rx="2"/><path d="M12 4v4M9 20h6M10 16v4M14 16v4M5 11H3v3h2M19 11h2v3h-2"/><circle cx="10" cy="12" r="1"/><circle cx="14" cy="12" r="1"/></svg><span>Robotics</span></a><a class="nav-link" href="tools.html"><svg class="icon icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 20 4-1 11-11-3-3L5 16l-1 4ZM14 7l3 3"/></svg><span>Tools</span></a><a class="nav-link" href="settings.html"><svg class="icon icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V21h-4v-.08A1.7 1.7 0 0 0 8.97 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.03H3v-4h.08A1.7 1.7 0 0 0 4.6 8.97a1.7 1.7 0 0 0-.34-1.88l-.06-.06L7.03 4.2l.06.06A1.7 1.7 0 0 0 8.97 4.6 1.7 1.7 0 0 0 10 3.08V3h4v.08a1.7 1.7 0 0 0 1.03 1.55 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg><span>Settings</span></a></nav>
-        <div class="nav-label">Reference</div>
-        <nav class="nav" aria-label="Product reference"><a class="nav-link" href="documentation.html"><svg class="icon icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H4V4Z"/><path d="M20 4h-4a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3h4V4Z"/></svg><span>Documentation</span></a><a class="nav-link" href="ui-kit.html"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="10" r="1"/><path d="M15 16c1.2 0 2-1 2-2s-.8-2-2-2h-1a2 2 0 0 0 0 4h1Z"/></svg><span>UI Kit</span></a></nav>
+      <div class="brand">
+        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg" alt=""></span>
+        <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
       </div>
-      <div class="sidebar-footer"><button class="user-chip" data-action="profile" type="button"><span class="avatar">MG</span><span><strong>Matteo Ginesi</strong><span>Perovskite Researcher</span></span></button><div class="sidebar-credit"><span>© 2026 Matteo Ginesi</span><small>LabFlow POC</small></div></div>
+      <div class="nav-label">Workspace</div>
+      <button class="nav-link nav-button" type="button" data-route="experiment-home"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Experiment</strong><small>RAW to NOMAD</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="settings"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Operations</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="logs"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="ui-kit"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></button>
+      <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span>Local-first workspace</div>
     </aside>
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="btn btn-ghost icon-btn mobile-menu" data-action="menu" type="button" aria-label="Open navigation"><svg class="icon icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-        <a class="mobile-brand" href="index.html" aria-label="LabFlow"><img src="assets/brand/logo-mark.svg" width="25" height="25" alt=""><span class="mobile-brand-copy"><strong>LabFlow</strong><small class="mobile-brand-title">Workspace</small></span></a>
-        <div class="topbar-context"><span class="topbar-context-brand">LABFLOW</span><span class="topbar-page-title" id="topbar-page-title">Workspace</span></div>
+
+    <section class="workspace-shell">
+      <header class="topbar no-print">
+        <div class="topbar-title"><strong id="topbarTitle">Upload</strong><span id="topbarSubtitle">No experiment loaded</span></div>
+        <div class="topbar-page-context" id="topbarPageContext" hidden></div><div class="topbar-context" id="topbarContext" hidden></div>
+        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save working copy</button><button class="button ghost compact" type="button" id="resetAll" title="Reset current session">Reset all</button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
+      </header>
+      <main class="main-area" id="main"></main>
+    </section>
+
+    <aside class="assistant-panel" id="assistantPanel" aria-label="AI Assistant">
+      <header class="assistant-head"><div><strong>Assistant</strong><span id="assistantContext">Current page</span></div><div class="spacer"></div><button class="assistant-close" type="button" id="assistantClose" aria-label="Close assistant" title="Close assistant"><span data-icon="x" aria-hidden="true"></span></button></header>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-compose" id="chatCompose">
+        <div class="chat-commandbar">
+          <textarea id="chatInput" rows="1" aria-label="Message" placeholder="Question, interpretation, or next action"></textarea>
+          <button class="chat-command-send" type="button" id="chatSend" aria-label="Send message">Send</button>
+        </div>
+        <div class="chat-compose-foot"><span>Context follows the current page</span><span>Enter sends · Shift+Enter adds a line</span></div>
       </div>
-      <div class="global-search" id="global-search">
-        <svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="global-search-input" name="global-search" type="search" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="global-search-results" aria-autocomplete="list" placeholder="Search projects, knowledge, datasets, models and tools…">
-<div class="global-search-results" id="global-search-results" role="listbox" hidden></div>
-      </div>
-      <div class="topbar-right">
-        <span class="badge top-status" title="Static local proof of concept">LOCAL POC</span>
-        <button class="btn btn-ghost icon-btn mobile-search" data-action="search" type="button" aria-label="Open global search"><svg class="icon icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
-        <button class="btn btn-ghost icon-btn" data-action="assistant" type="button" aria-label="Open Lab Assistant"><svg class="icon icon-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.4 5.6L19 10l-5.6 1.4L12 17l-1.4-5.6L5 10l5.6-1.4L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg></button>
-        <button class="btn btn-ghost icon-btn" data-action="quick-theme" type="button" aria-label="Toggle content theme"><svg class="icon icon-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="10" r="1"/><path d="M15 16c1.2 0 2-1 2-2s-.8-2-2-2h-1a2 2 0 0 0 0 4h1Z"/></svg></button>
-        <button class="top-user" data-action="profile" type="button"><span class="avatar">MG</span><span class="top-user-copy"><strong>Matteo Ginesi</strong><span>Advanced Photovoltaics</span></span></button>
-      </div>
-    </header>
-    <main class="main" id="main-content"><div class="content" id="page-content"><div class="page-bootstrap" aria-hidden="true"><span></span><strong>Workspace</strong><i></i><i></i></div></div></main>
+    </aside>
   </div>
-  <div id="global-overlays"></div>
-  <div class="modal-backdrop" id="modal" hidden></div>
-  <script defer src="assets/js/runtime.js"></script>
-  <script defer src="assets/js/app.js"></script>
+
+  <input class="sr-only" type="file" id="datasetInput" accept=".zip,application/zip">
+  <div class="activity-shade" id="activityShade" hidden aria-live="polite" aria-busy="true">
+    <section class="activity-totem" role="status" aria-label="Current operation">
+      <div class="activity-head">
+        <div><strong id="activityTitle">Working</strong><span id="activitySubtitle"></span></div>
+        <div class="activity-head-actions"><button class="button compact activity-button" type="button" id="activityLogs" hidden>View logs</button><button class="button primary compact activity-button" type="button" id="activityRetry" hidden>Retry checkpoint</button><button class="button danger compact activity-button" type="button" id="activityCancel" hidden>Stop request</button></div>
+      </div>
+      <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Phase progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Operation phase progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
+      <div class="activity-stream" id="activityStream" hidden><div class="activity-stream-head"><span class="badge ai">LIVE SSE</span><strong id="activityStreamState">Waiting for first byte</strong><span id="activityStreamRate">—</span></div><div class="progress activity-stream-progress" id="activityStreamProgress" role="progressbar" aria-label="Estimated output budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityStreamBar"></span></div><div class="activity-stream-stats"><span>Events <strong id="activityStreamEvents">0</strong></span><span>Received <strong id="activityStreamBytes">0 B</strong></span><span>First token <strong id="activityStreamTtft">waiting</strong></span><span>Output <strong id="activityStreamTokens">~0 / — tok</strong></span></div></div>
+      <div class="activity-current">
+        <div class="activity-stage-row"><span class="badge" id="activityKind">LOCAL</span><strong id="activityStage">Starting</strong></div>
+        <div class="meta activity-message" id="activityMessage">Preparing operation…</div>
+      </div>
+      <dl class="activity-details" id="activityDetails"></dl>
+      <div class="activity-checklist" id="activityChecklist"></div>
+      <div class="activity-ai-trace" id="activityAiTrace" hidden>
+        <details class="activity-disclosure activity-request"><summary><span>Data sent to provider</span><strong id="activityRequestState">Prepared request · key redacted</strong></summary><div id="activityRequest" class="activity-request-body">—</div></details>
+        <details class="activity-disclosure activity-output"><summary><span id="activityOutputLabel">Provider output</span><strong id="activityOutputState">Waiting for response</strong></summary><div id="activityResponse" class="activity-response">—</div></details>
+      </div>
+      <div class="activity-history" id="activityHistory"></div>
+    </section>
+  </div>
+
+
+  <div class="result-inspector-shade" id="resultInspectorShade" hidden>
+    <section class="result-inspector" role="dialog" aria-modal="true" aria-labelledby="resultInspectorTitle">
+      <header class="result-inspector-head"><div><strong id="resultInspectorTitle">Measurement</strong><span id="resultInspectorSubtitle"></span></div><div class="spacer"></div><button type="button" class="button ghost compact" id="resultInspectorClose">Close</button></header>
+      <div class="result-inspector-body" id="resultInspectorBody"></div>
+    </section>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+  <script src="vendor/jszip/jszip.min.js"></script>
+  <script src="vendor/report-export/report-export.js"></script>
+  <script src="assets/js/ui/icons.js"></script>
+  <script src="assets/js/logger.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/experiment/data-model.js"></script>
+  <script src="assets/js/state.js"></script>
+  <script src="assets/js/page-context.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/ui/theme.js"></script>
+  <script src="assets/js/ai/providers.js"></script>
+  <script src="assets/js/ai/api-diagnostics.js"></script>
+  <script src="assets/js/ai/prompt-bundle.js"></script>
+  <script src="assets/js/ai/operation-registry.js"></script>
+  <script src="assets/js/ai/operation-steps.js"></script>
+  <script src="assets/js/ai/structured.js"></script>
+  <script src="assets/js/ai/operations.js"></script>
+  <script src="assets/js/data/parser.js"></script>
+  <script src="assets/js/experiment/canonical-store.js"></script>
+  <script src="assets/js/data/importer.js"></script>
+  <script src="assets/js/data/analysis.js"></script>
+  <script src="assets/js/ai/context.js"></script>
+  <script src="assets/js/ai/transport.js"></script>
+  <script src="assets/js/ai/settings.js"></script>
+  <script src="assets/js/export/export.js"></script>
+  <script src="assets/js/report/report.js"></script>
+  <script src="assets/js/nomad/nomad.js"></script>
+  <script src="assets/js/experiment/model.js"></script>
+  <script src="assets/js/ui/feedback.js"></script>
+  <script src="assets/js/pages/logs-page.js"></script>
+  <script src="assets/js/pages/settings-page.js"></script>
+  <script src="assets/js/pages/design-page.js"></script>
+  <script src="assets/js/pages/shared.js"></script>
+  <script src="assets/js/pages/import-page.js"></script>
+  <script src="assets/js/pages/understand-page.js"></script>
+  <script src="assets/js/pages/results-page.js"></script>
+  <script src="assets/js/pages/report-page.js"></script>
+  <script src="assets/js/pages/nomad-page.js"></script>
+  <script src="assets/js/ai/assistant.js"></script>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>

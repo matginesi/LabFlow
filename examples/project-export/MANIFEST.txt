@@ -1,3 +1,0 @@
-LabFlow portable project package
-Generated locally in the browser.
-Includes structured data, native PDF, editable DOCX, analysis workbook, LaTeX report source and linked knowledge.

@@ -1,0 +1,190 @@
+{
+  "id": "design_infer",
+  "title": "Missing design field proposals",
+  "type": "object",
+  "required": [
+    "summary",
+    "solutions",
+    "devices",
+    "unknowns"
+  ],
+  "properties": {
+    "summary": {
+      "type": "string",
+      "maxLength": 1200
+    },
+    "solutions": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "solutes": {
+            "type": "string"
+          },
+          "solvents": {
+            "type": "string"
+          },
+          "concentration": {
+            "type": "string"
+          },
+          "additives": {
+            "type": "string"
+          },
+          "preparation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "provenance_kind": {
+            "type": "string",
+            "enum": [
+              "evidence",
+              "knowledge",
+              "mixed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1200
+          }
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "sample_names"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sample_names": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "group": {
+            "type": "string"
+          },
+          "solution_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "process": {
+            "type": "object",
+            "properties": {
+              "coating": {
+                "type": "string"
+              },
+              "annealing": {
+                "type": "string"
+              },
+              "atmosphere": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "string"
+              }
+            }
+          },
+          "stack": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "required": [
+                "role"
+              ],
+              "properties": {
+                "role": {
+                  "type": "string"
+                },
+                "material": {
+                  "type": "string"
+                },
+                "thickness": {
+                  "type": "string"
+                },
+                "process": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "provenance_kind": {
+                  "type": "string",
+                  "enum": [
+                    "evidence",
+                    "knowledge",
+                    "mixed"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "maxLength": 800
+                }
+              }
+            }
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "provenance_kind": {
+            "type": "string",
+            "enum": [
+              "evidence",
+              "knowledge",
+              "mixed"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1200
+          }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

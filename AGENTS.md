@@ -1,90 +1,393 @@
 # LabFlow agent instructions
 
-These rules apply to the whole repository.
+Before making architectural changes, read in this order:
 
-- Analyse the relevant pages, references, data and documentation before modifying them.
-- Reuse an existing UI block or extend an allowed variant before creating a new block. Keep the UI Kit aligned whenever the product UI changes.
-- Keep the product a static vanilla HTML/CSS/JavaScript POC. Do not add a backend, application framework, CDN runtime dependency or mandatory build step.
-- Do not create mock APIs, repositories, service layers or connected controls that imply a backend exists.
-- Do not add cookies, browser persistence APIs, PWA manifests, service workers, trackers, analytics, telemetry or automatic external requests.
-- Keep secrets and real credentials out of source, runtime state, exports and examples. NOMAD controls remain a local, non-transmitting demonstration.
-- Store mutable UI state only in JavaScript memory. Reloading a page must restore checked-in defaults.
-- Treat `settings.yaml` as the configuration source and rebuild `assets/js/settings-bundle.js` after editing it. The default content theme is light; the shell remains dark.
-- Keep global search local, ephemeral and keyboard/mobile accessible. Never retain queries or introduce network-backed search.
-- Reuse the shared shell, components, tools and pipeline views. Pipeline files describe workflow; they do not duplicate markup or visual systems.
-- Treat `pipelines/chose/pipeline.yaml` plus its referenced `schemas/`, `defaults/`, `mappings/` and `demo/` resources as the CHOSE scientific source of truth. Do not duplicate solution definitions, fabrication operations, stack layers, experiment records, result mappings, quality issues, findings, report defaults or export policy in `app.js`, `data.js` or `workbook.js`.
-- Resolve CHOSE resources only through the checked-in pipeline bundle and `LabFlowPipelineRuntime`. Unknown components, validators, schemas or required paths fail visibly and closed under the strict contract.
-- Keep runtime gates dependent: Process → Experiment → Results → Review. A downstream step cannot report ready while a required upstream step is blocked.
-- Report preview, PDF, DOCX, XLSX, LaTeX and project/NOMAD packages must consume the same canonical report model and resolved pipeline resources.
-- Every new page must use the checked-in shared Application Shell and the documented Page Composition Contract. Keep breadcrumb, header, actions, summary, tabs and toolbar in their canonical order rather than positioning them arbitrarily.
-- Document and render a recurring layout variant in the UI Kit before using it. Do not create one-off page widths or page-specific header, summary or toolbar systems.
-- Every page uses a centered `width: 100%` wrapper. Workspace, Project, Lab Cabinet, AI & Models, Robotics, Tools, Settings, Pipeline Studio, Documentation and UI Kit use the 1600 px wide wrapper. The 1320 px compact wrapper is reserved for a future surface that is intentionally narrow. Documentation controls prose with an inner 72-character measure rather than a narrower page shell. Inner components never add competing page caps.
-- Use the 4/8/12/16/24/32 px spacing scale for page and component layout. Avoid arbitrary gaps, oversized empty areas and page-specific padding overrides.
-- Keep surfaces flat and sober. Do not add decorative gradients, glow, glassmorphism, neon effects or heavy shadows. Use accent color only for state, selection, metric or validation meaning.
-- Never reconstruct the complete application shell after `DOMContentLoaded`. Do not hide first paint with opacity, a global fade or page-entry animation, and do not introduce a SPA or simulated navigation to avoid full-page loads.
-- Remove superseded shell, layout, header, summary and responsive CSS after a migration. Verify first paint and repeated cross-page navigation at desktop, tablet and mobile widths.
-- Keep shared product demonstration records in the checked-in data source. Keep pipeline-specific scientific fixtures inside the pipeline resource tree and access them through `LabFlowPipelineRuntime.resource` / `resourceRef` or small wrappers.
-- Keep Solution Builder/Review and Stack Builder/Review structured, reusable and synchronized with report/export representations.
-- Theme components consume semantic tokens. Keep foundations, theme variants, palettes, components and layout separated under `ui/`.
-- Product-facing Documentation and UI Kit views must not expose raw source/configuration file links or behave like file browsers.
-- Preserve the distinction among raw data, derived results, researcher statements and AI suggestions. AI output requires visible provenance and human control.
-- Treat simplicity and AI readiness as linked product requirements: ordinary project work must produce structured, traceable records without forcing a separate technical workflow on the researcher.
-- Keep one AI & Models workspace with Knowledge, Datasets, Models and Predictions sections. Do not create separate RAG, Graph RAG, ML, DL or prediction products unless a distinct user workflow is proven.
-- Preserve AI-ready records and provenance: dataset snapshots, transformations, features, labels, model versions, training runs, predictions, AI outputs and human reviews must have stable identifiers and explicit source links.
-- A dataset used for training or evaluation must be an immutable versioned snapshot with selection, exclusions, feature/target schema, units and split policy. Do not train from an unidentified live query.
-- Never present a prediction as a measurement or an LLM suggestion as a researcher conclusion. Show uncertainty, applicability/input coverage, model and dataset versions, evidence and review state.
-- Prefer inspectable baselines and grouped scientific validation before advanced ML or DL. Guard against sample, batch, experiment and temporal leakage.
-- Future AI integrations must use small provider-neutral contracts rather than coupling UI code directly to a model vendor, vector database or ML framework.
-- Preserve the domain flow User → Workspace → Project → Process → Experiment; a pipeline step organizes work but does not replace record identity or provenance.
-- Never create parallel files or names such as `old`, `new`, `v2` or `final` for an implementation. Replace the active implementation and remove the superseded one after verifying references.
-- Do not leave broken pages, empty primary actions, dead listeners, console errors or undocumented visual variants.
-- Use the shared `LabFlowLogger` for JavaScript lifecycle, operation and error diagnostics. Do not add ad-hoc `console.log`, remote logging, telemetry or persistent log storage.
-- Log identifiers, counts, status and timings rather than scientific payloads. Never log credentials, API keys, assistant questions, report body text or uploaded file contents.
-- JavaScript pages must fail visibly and safely: log the structured error, preserve the static shell and render a useful local fallback instead of leaving an empty page.
-- Preserve direct `file://` compatibility. Do not call History API URL rewrites for file origins or append appearance parameters to local file navigation.
-- Prefer simple functions, explicit initialization and readable duplication over an internal framework or premature abstraction.
-- Update the relevant canonical document whenever behavior, contracts or validation change. Remove obsolete documentation rather than leaving competing guidance.
-- A change is not complete until the superseded implementation has been removed and the affected documentation has been updated.
-- Rebuild checked-in bundles after editing pipeline YAML or Markdown docs, then run the commands in `docs/VALIDATION_CHECKLIST.md`.
-- Verify that native PDF and professional DOCX consume the current Report Composer state, respect selected sections and author text, and pass structural and visual rendering checks after exporter changes.
-## Static delivery performance
+1. `docs/WORKFLOW.md`
+2. `LABFLOW_POC_SPEC.md`
+3. `docs/ARCHITECTURE.md`
+4. the relevant spec under `docs/specs/`
+5. `ui-kit.html` for visual/UI changes
 
-- Root pages load `ui/labflow.bundle.css` and `assets/js/runtime.js` to avoid a large request waterfall on GitHub Pages.
-- The readable source files remain canonical. After changing shared CSS, settings, data, pipelines, exporters or volatile state, run `python tools/build_frontend_bundles.py`.
-- Keep full documentation, workbook, diagram, Knowledge and Tools modules page-specific; do not add them back to every entry page.
-- Do not add a framework, service worker, remote CDN or runtime build dependency as a performance shortcut.
+The goal is to keep LabFlow small, deterministic-first and understandable to a researcher.
 
+---
 
-## Model visualisation contract
+## 1. Non-negotiable product workflow
 
-- Training curves, metrics, residuals, confusion matrices and comparisons must identify their model, run and dataset snapshot.
-- Demonstration metrics must remain explicitly labelled as demonstration data.
-- Never show a single headline metric without baseline and validation context when the surrounding view is intended for model evaluation.
+The experiment entry point is always:
 
-## LaTeX export contract
+```text
+Upload ZIP → Review → Results → Design → Report → NOMAD
+```
 
-- LaTeX source must consume `buildReportDocument`; it must not rebuild an independent report state.
-- Browser export produces a local compile-ready package, not a claim that TeX was compiled remotely.
-- New report sections must be implemented consistently in preview, native PDF, DOCX and LaTeX where the format supports them.
+Do not add a project loader, hidden pre-import workflow, backend queue or alternate experiment entry point unless explicitly requested.
 
-## Icon and reorder contract
+---
 
-- Use `assets/icons/labflow-icons.json` / `assets/js/icons.js` for product icons; branding assets are excluded.
-- Every drag-reorder interaction must retain visible keyboard-accessible move buttons.
-- Reordering solution components or stack layers must refresh the corresponding review immediately.
+## 2. Source / Working Copy invariant
 
+The uploaded ZIP is immutable source evidence.
 
-## Appearance, tabs and user-directory rules
+At import:
 
-- Preserve `lf_theme`, `lf_palette` and `lf_density` across every internal page navigation, including `file://`; do not use cookies or browser persistence.
-- Use the shared contained `.tabs` and `.segmented` patterns. Do not add page-specific tab bars.
-- User/profile changes remain session-only demonstrations until a backend exists. Never imply account creation, invitations sent or permission enforcement.
-- Keep product attribution consistent with **Matteo Ginesi · 2026** and the MIT copyright notice.
+- clone source bytes;
+- never attach the caller-owned upload buffer directly to mutable state;
+- preserve original archive paths/names/content.
 
-## Lab Cabinet and runtime resilience
+There is exactly one editable scientific state:
 
-- Use the shared Cabinet browser pattern: family filters, search/sort toolbar, visual resource card and one detail inspector. Do not add a second Cabinet card language.
-- Cabinet visuals summarize type and structure only; stable ID, status, metadata, usage and snapshot semantics must remain textual and accessible.
-- Treat Cabinet reuse as snapshot creation. Never suggest that changing a reusable definition mutates existing project or experiment records.
-- Keep page-specific scripts in their validated dependency order. When a renderer depends on a module, add it to the page contract in `tools/validate_poc.py`.
-- Normalize optional arrays and records at module boundaries before mapping, filtering, plotting or formatting. A missing demonstration collection must produce an empty state, not a blank page.
+```text
+LF.State.state.experiment
+```
+
+Every scientific edit applies to that Working Copy only.
+
+Never create:
+
+- a second editable experiment copy;
+- page-owned scientific state that can diverge;
+- hidden autosave state;
+- a separate export data model that becomes more authoritative than the Working Copy.
+
+Only **Save working copy** marks a revision saved, and it creates a new file. Report/NOMAD/other derived exports do not overwrite source and do not clear dirty state.
+
+When modifying export code, preserve the byte-for-byte original-source regression contract.
+
+---
+
+## 3. Canonical Store invariant
+
+`LF.CanonicalStore` is a semantic index/view over the Working Copy, not another editable model.
+
+Use stable IDs, aliases, relations and evidence references instead of repeatedly inferring semantics from filenames in pages/OPERATIONS.
+
+### Naming rule
+
+A filename is provenance, not automatically a sample identity.
+
+Prefer deterministic scientific identity in this order:
+
+1. explicit parsed identity;
+2. known deterministic filename rule;
+3. other deterministic source evidence;
+4. explicit ambiguity.
+
+If identity is uncertain, create a finding. Do not silently guess.
+
+### Evidence rule
+
+If a feature needs to explain *why* a fact exists, add/use a compact evidence item and stable reference rather than copying entire RAW text into multiple objects.
+
+### Relation rule
+
+Connect scientific entities by stable IDs. Avoid page-specific repeated name matching when an explicit relation can exist.
+
+---
+
+## 4. Deterministic-first scientific boundary
+
+Before adding AI, ask:
+
+> Can this be established, calculated, validated or applied by code?
+
+If yes, it belongs in deterministic code.
+
+Deterministic code owns at minimum:
+
+- archive inventory;
+- known-format parsing;
+- canonical identity/alias resolution when unambiguous;
+- FW/RV pairing;
+- JV metrics;
+- hysteresis;
+- ranking/quality gates;
+- safe correction detection/application;
+- proposal target validation/application;
+- Results;
+- NOMAD mapping/readiness validation;
+- save/export serialization.
+
+AI may:
+
+- resolve genuine semantic ambiguity;
+- infer missing Design fields from evidence;
+- interpret already-computed Results;
+- generate/revise scientific prose;
+- answer bounded read-only Chat questions.
+
+AI must never silently mutate scientific state or become the authoritative calculator/readiness gate.
+
+---
+
+## 5. Researcher OPERATIONS
+
+A OPERATION is a researcher-understandable goal, not an implementation function.
+
+The Workshop public catalog is intentionally limited to:
+
+1. Analyze dataset
+2. Apply safe corrections
+3. Resolve ambiguities
+4. Infer missing design
+5. Interpret results
+6. Generate report
+7. Improve report
+8. Prepare NOMAD export
+
+`assistant.chat` is internal and hidden from Workshop.
+
+Do not expose internal services as new public OPERATIONS merely because they have multiple steps.
+
+Examples that should stay internal:
+
+- compute Results;
+- rebuild Canonical Store;
+- validate proposal;
+- apply proposal;
+- rebuild evidence;
+- validate NOMAD;
+- store output.
+
+If adding a public OPERATION, document:
+
+- researcher goal;
+- why it exists;
+- kind (`DETERMINISTIC` or `AI`);
+- role (Automatic / Researcher action / AI assist);
+- required input/dependency;
+- mutation scope;
+- ordered checkpoints;
+- output;
+- what it must not do.
+
+Update `docs/specs/OPERATIONS.md` and `docs/WORKFLOW.md` when the public catalog changes.
+
+---
+
+## 6. Operation sources and build
+
+Sources:
+
+```text
+operations/<id>/operation.json
+operations/<id>/prompt.md       AI only
+operations/schemas/*.json       structured AI output
+prompts/policies/*.md      shared policies
+assets/js/ai/operation-steps.js deterministic checkpoint functions
+assets/js/ai/operations.js      generic runner
+```
+
+Generated files are not hand-edited:
+
+```text
+assets/js/ai/operation-registry.js
+assets/js/ai/prompt-bundle.js
+```
+
+After OPERATION/prompt changes run:
+
+```bash
+python tools/build_prompt_bundle.py
+python tools/build_operation_registry.py
+python tools/validate_operation_contract.py
+```
+
+---
+
+## 7. Operation runtime contract
+
+`LF.OperationRunner` is single-run and sequential.
+
+- successful checkpoints auto-advance;
+- one active run only;
+- Stop aborts the run;
+- AI failure retries after 5 s and 10 s only;
+- after bounded retries expose Retry checkpoint;
+- completed earlier checkpoints are preserved;
+- no manual Continue gate;
+- no provider queue;
+- no background model job;
+- no parallel model fan-out;
+- no unbounded retry loop.
+
+Provider output is closed by default but meaningful streamed content should appear live when opened. Final Markdown/JSON follows the active theme.
+
+---
+
+## 8. Analysis Dossier and Review
+
+`dataset.analyze` is automatic and deterministic.
+
+It refreshes:
+
+- Canonical Store;
+- deterministic Results;
+- Analysis Dossier;
+- safe fixes;
+- true semantic ambiguity classification.
+
+Review must distinguish:
+
+1. deterministic findings;
+2. safe corrections;
+3. AI ambiguity proposals;
+4. unresolved items requiring researcher decision.
+
+Technical warnings such as encoding/parse/missing-file facts are not automatically AI ambiguity work.
+
+Safe corrections can be applied individually/bulk. AI proposals are applied only through local deterministic validation.
+
+---
+
+## 9. Research Context Pack
+
+All AI/chat context uses `LF.ContextBuilder` over Canonical Store references.
+
+Never default to serializing the full experiment or RAW curves.
+
+Context should be selected from:
+
+- current route;
+- user question;
+- current selection;
+- relevant canonical entities;
+- compact measurements/Results;
+- findings;
+- evidence;
+- bounded history/document excerpts.
+
+When context is too large, narrow selection first. Do not solve every context issue by increasing a global budget.
+
+Output budgets belong to individual Operation contracts. Assistant output/context settings are separate.
+
+---
+
+## 10. Results
+
+Results are deterministic and independent from Design.
+
+Keep `ORIGINAL_REQUEST/jv_analyzer.html` as the functional reference for useful JV behaviour.
+
+Preserve:
+
+- overview;
+- rankings;
+- REF/non-REF;
+- measurements;
+- warnings/anomalies;
+- individual/overlay curves;
+- group comparison;
+- backing tables.
+
+AI interpretation is read-only prose layered over deterministic Results.
+
+---
+
+## 11. Design
+
+Use the UI Kit **Single-experiment Design** pattern as ground truth.
+
+Design must be useful before AI:
+
+- deterministic known fields visible immediately;
+- researcher can edit directly;
+- evidence/provenance visible;
+- missing fields explicit.
+
+`design.infer` operates only on the selected experiment/device and only missing fields. Known/user-confirmed values are authoritative and must not be silently regenerated.
+
+---
+
+## 12. Report
+
+The current Markdown editor is the single textual source of truth.
+
+`report.generate` and `report.improve` write into that editor. PDF/DOCX use the current editor text plus only explicitly selected figures.
+
+Do not regenerate different narrative text during export.
+
+When changing Report figures, keep the same figure-selection state for preview and exports.
+
+Derived Report export does not mark the Working Copy saved.
+
+---
+
+## 13. NOMAD
+
+NOMAD is deterministic-first.
+
+One Canonical → NOMAD mapping plan powers:
+
+- page UI;
+- validation;
+- generated entry;
+- exported mapping metadata.
+
+Do not create a second mapping implementation.
+
+Required missing values block readiness. Optional missing values remain visible. AI is not a NOMAD readiness authority.
+
+A relevant Working Copy mutation invalidates stale staging.
+
+---
+
+## 14. UI requirements
+
+`ui-kit.html` is the visual ground truth.
+
+Keep:
+
+- compact scientific layout;
+- sticky top bar;
+- readable sidebar typography;
+- explicit responsive tabs;
+- responsive tables;
+- theme-aware JSON/Markdown;
+- truthful OPERATION progress;
+- provider output closed by default;
+- progressive disclosure for detail.
+
+Avoid oversized headings, giant cards, excessive rounding, duplicate controls and page-specific components that ignore the UI Kit.
+
+---
+
+## 15. Documentation rule
+
+If an architectural change affects any of these, update documentation in the same change:
+
+- source/Working Copy lifecycle;
+- Canonical Store;
+- public OPERATION catalog;
+- AI Context Pack;
+- Review correction workflow;
+- Design inference scope;
+- Report source-of-truth/export;
+- NOMAD mapping/readiness;
+- save/export semantics.
+
+`docs/WORKFLOW.md` is the canonical explanatory document. Other docs should not contradict it.
+
+---
+
+## 16. Verification before packaging
+
+Run:
+
+```bash
+python tools/build_prompt_bundle.py
+python tools/build_operation_registry.py
+python tools/validate_operation_contract.py
+python tools/validate_state_contract.py
+python tools/validate_ui_contract.py
+python tools/validate_privacy_contract.py
+node tests/unit/run.js $(find tests/unit -maxdepth 1 -name '*-test.js' -printf '%p ' | sort)
+find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
+```
+
+For changes to source/edit/save semantics, test that the original archive remains byte-identical after Working Copy mutation.
+
+For broad architectural changes, exercise at least:
+
+```text
+Import → Review → correction → Results → Design → Report → NOMAD → Save working copy
+```

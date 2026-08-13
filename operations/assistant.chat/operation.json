@@ -1,0 +1,27 @@
+{
+  "id": "assistant.chat",
+  "type": "AI",
+  "title": "General experiment assistant",
+  "short_title": "Assistant",
+  "purpose": "Answer a question about the current LabFlow experiment and page.",
+  "output": "text",
+  "max_output_tokens": 8000,
+  "policies": [
+    "policy.scientific-provenance"
+  ],
+  "steps": [
+    {
+      "id": "chat",
+      "type": "AI",
+      "prompt": "prompt.md",
+      "output": "text",
+      "max_output_tokens": 8000,
+      "timeout_ms": 240000
+    }
+  ],
+  "category": "assistant",
+  "role": "interpret",
+  "strategy": "AI is intrinsic: answer only from the current page/experiment context; no scientific Working Copy mutation.",
+  "mutation_scope": "",
+  "visibility": "internal"
+}

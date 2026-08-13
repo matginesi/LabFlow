@@ -1,0 +1,4 @@
+interface:
+  display_name: "LabFlow UI"
+  short_description: "Build coherent LabFlow scientific interfaces"
+  default_prompt: "Use $labflow-ui to implement and validate this LabFlow interface change."

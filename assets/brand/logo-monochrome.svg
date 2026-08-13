@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 96" role="img" aria-label="LabFlow monochrome logo">
-  <g transform="translate(7 6)">
-    <path d="M27 8h26M31 8v18L13 57c-4 7 1 14 9 14h13M49 8v18l18 31c4 7-1 14-9 14H45" fill="none" stroke="#242A31" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M22 65c5-9 27-8 31-20 3-9-5-16-13-11-5 3-7 8-12 11" fill="none" stroke="#242A31" stroke-width="8.2" stroke-linecap="round"/>
-    <circle cx="40" cy="18" r="4.7" fill="#242A31"/><circle cx="40" cy="32" r="4.7" fill="#242A31"/><circle cx="40" cy="70" r="4.7" fill="#242A31"/>
-  </g>
-  <text x="98" y="61" font-family="Noto Sans, Segoe UI, Helvetica Neue, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-2" fill="#242A31">LabFlow</text>
-</svg>

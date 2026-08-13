@@ -1,0 +1,8 @@
+{
+  "id":"dataset.resolve-ambiguities","type":"AI","category":"dataset","role":"ai-assist","title":"Resolve ambiguities","short_title":"Resolve ambiguities",
+  "purpose":"Propose resolutions only for semantic ambiguities that deterministic analysis could not establish.",
+  "strategy":"One bounded Context Pack containing only unresolved findings, linked entities and evidence. AI may answer unresolved; it never writes directly.",
+  "output":"json","max_output_tokens":8000,"mutation_scope":"","requires":["dataset.analyze"],
+  "policies":["policy.data-ground-truth","policy.data-format-repair","policy.scientific-provenance","policy.structured-output"],
+  "steps":[{"id":"collect","type":"DETERMINISTIC","fn":"dataset.collect-ambiguities","weight":0.1},{"id":"resolve","type":"AI","prompt":"prompt.md","output":"json","schema":"dataset_corrections","max_output_tokens":8000,"timeout_ms":180000,"weight":0.8},{"id":"store","type":"DETERMINISTIC","fn":"dataset.store-corrections","weight":0.1}]
+}
