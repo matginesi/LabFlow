@@ -21,6 +21,10 @@
     if(!url)return '';
     url=url.replace(/\/+$/,'').replace(/\/chat\/completions(?:\/chat\/completions)+$/i,'/chat/completions');
     if(/\/chat\/completions$/i.test(url))return url;
+    /* Provider settings store an OpenAI-compatible base URL. Keeping /v1 as the
+       preset avoids accidental double suffixes and makes LM Studio/Ollama use
+       exactly the same Chat Completions contract. */
+    if(/\/v1$/i.test(url))return url+'/chat/completions';
     return url+'/chat/completions';
   }
   function validateHttpUrl(url){
@@ -277,7 +281,8 @@
     if(opts.maxTokens!=null&&!(Number(opts.maxTokens)>0))throw new Error('AI output token budget must be a positive number.');
     const settings=cfg.settings,provider=cfg.provider;
     const model=opts.model||settings.model;
-    const messages=opts.messages||[];
+    const messages=Array.isArray(opts.messages)?opts.messages.filter(function(message){return message&&typeof message==='object'&&typeof message.role==='string'&&message.content!=null;}):[];
+    if(!messages.length)throw new Error('Chat Completions requires at least one message. LabFlow stopped the request before contacting the provider.');
     const wantsStreaming=opts.stream!==false&&settings.streaming!==false&&provider.supportsStreaming!==false;
     const body={model:model,messages:messages,stream:wantsStreaming};
     if(wantsStreaming&&provider.supportsStreamUsage)body.stream_options={include_usage:true};

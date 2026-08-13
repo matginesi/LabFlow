@@ -1,15 +1,15 @@
 ---
 id: policy.data-ground-truth
-title: Laboratory ZIP data ground truth
+title: Laboratory ZIP data contract
 group: Policies
 kind: policy
 output: text
 ---
-# Laboratory ZIP data ground truth
+# Laboratory ZIP data contract
 
 ## Purpose
 
-This document is the **single format ground truth** for the laboratory ZIP consumed by LabFlow. It describes what can exist in the archive, how the files relate to each other, and which fields are evidence versus interpretation. The deterministic parser and every AI OPERATION receive this same ground truth.
+This document is the **authoritative import contract** for laboratory ZIP files consumed by LabFlow. It defines archive structure, file families, identity rules and the boundary between measured evidence and interpretation. The deterministic parser uses it directly; only the ambiguity-repair OPERATION receives it in full. Downstream Design, Results and Report AI receive smaller canonical Context Packs instead of this entire contract.
 
 The source ZIP is immutable. A path, filename, header, unit, value or relationship that is not present in RAW evidence must never be presented as a measured fact.
 
@@ -136,6 +136,14 @@ A **group** is a working classification derived from the sample/device identity 
 
 `REF` is treated as a reference marker only when it is a clear standalone token/prefix in the source evidence.
 
+### Canonical laboratory naming
+
+Once the identity itself is established, formatting that identity to the laboratory naming convention is **deterministic** and must not be delegated to AI. RAW names and paths remain verbatim provenance; the Working Copy exposes a canonical name.
+
+For the current dataset family, canonical device/sample tokens use underscores: `N<batch>_<position>_<cell>`, `REF_<position>_<cell>`, and `NEW_<cell>`. Examples: `N1 3 -1A` → `N1_3_1A`, `N 12-1A` → `N1_2_1A`, `REF 3 -1A` → `REF_3_1A`. Known `Stability (...)` filenames retain their acquisition prefix and family marker while only the trailing device/sample token is canonicalized.
+
+This is a formatting conversion, not a change in scientific identity. It never requires an AI proposal or human semantic review.
+
 The same ZIP may contain many samples/devices and many groups. Design reconstruction must consider all of them. If evidence suggests different stacks, solutions or process variants for different devices/groups, they must be represented separately rather than merged into one generic design.
 
 ## Experimental-design evidence
@@ -258,7 +266,15 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
   "normalization": {
     "trim": true,
     "collapse_whitespace": true,
-    "normalize_separator_spacing": true
+    "normalize_separator_spacing": true,
+    "canonical_separator": "_",
+    "fallback_separator_normalization": false,
+    "canonical_sample_patterns": [
+      {"regex": "^N\\s+(\\d)(\\d+)\\s*[-_]\\s*(\\d+[A-Za-z])$", "replacement": "N$1_$2_$3"},
+      {"regex": "^N\\s*(\\d+)\\s+(\\d+)\\s*[-_]\\s*(\\d+[A-Za-z])$", "replacement": "N$1_$2_$3"},
+      {"regex": "^REF\\s+(\\d+)\\s*[-_]\\s*(\\d+[A-Za-z])$", "replacement": "REF_$1_$2"},
+      {"regex": "^NEW\\s*[-_]\\s*(\\d+[A-Za-z])$", "replacement": "NEW_$1"}
+    ]
   },
   "recovery": {
     "use_summary_files": true,
@@ -283,4 +299,4 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
 
 ## AI constraint
 
-For every OPERATION, this ground truth is authoritative for the ZIP/data model. The model must inspect all supplied entities, not only the first example. It must never collapse multiple devices/solutions/design variants into one without evidence. If context is insufficient, return `unknown` or an explicit unresolved item.
+When semantic ambiguity repair receives this Data Contract, it is authoritative for ZIP interpretation. The model must inspect every entity present in the bounded ambiguity Context Pack, not only the first example. It must never collapse multiple devices, solutions or design variants without evidence. If context is insufficient, return `unknown` or an explicit unresolved item. Downstream Design, Results and Report operations do not receive this full contract; they rely on canonical Context Packs assembled after deterministic import.

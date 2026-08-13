@@ -104,6 +104,21 @@ module.exports = function (t, LF, env) {
     assert(exp.measurements.some(function (m) { return m.summaryRow && m.summaryRow === 'S_shared'; }), false, 'no measurement merged onto a duplicate basename');
   };
 
+  t['canonical naming is deterministic and RAW filenames remain provenance'] = async function () {
+    assert(P.canonicalSample('N1 3 -1A'), 'N1_3_1A', 'canonical sample convention');
+    assert(P.canonicalSample('N 12-1A'), 'N1_2_1A', 'compact malformed N1 position');
+    assert(P.canonicalSample('REF 3 -1A'), 'REF_3_1A', 'reference convention');
+    const raw='0000_2026-01-22_19.55.06_Stability (Parameters)_N1 3 -1A.txt';
+    assert(P.canonicalFileName(raw), '0000_2026-01-22_19.55.06_Stability (Parameters)_N1_3_1A.txt', 'canonical filename');
+    const exp = await Im.parseDataset(loadFixture('2026_01_22.zip'), '2026_01_22.zip');
+    const f=exp.files.find(function(x){return x.rawName===raw;});
+    truthy(f,'raw filename retained');
+    assert(f.name,'0000_2026-01-22_19.55.06_Stability (Parameters)_N1_3_1A.txt','working canonical filename');
+    assert(f.path.indexOf(raw)>=0,true,'raw archive path remains untouched');
+    assert(exp.findings.some(function(x){return x.type==='naming';}),false,'cosmetic naming is not an AI ambiguity finding');
+    truthy(exp.measurements.some(function(m){return m.sample==='N1_3_1A';}),'measurement uses canonical sample identity');
+  };
+
   t['rejects missing JSZip cleanly'] = async function () {
     const prev = window.JSZip;
     window.JSZip = null;

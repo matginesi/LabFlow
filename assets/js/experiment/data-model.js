@@ -275,7 +275,7 @@
     opts = opts || {};
     return {
       meta: n.meta,
-      files: n.files.map(function (f) { return { id: f.id, path: f.path, family: f.family, type: f.type }; }),
+      files: n.files.map(function (f) { return { id: f.id, path: f.path, rawPath: f.rawPath || f.path, name: f.name || '', rawName: f.rawName || f.name || '', canonicalName: f.canonicalName || f.name || '', canonicalPath: f.canonicalPath || f.path, family: f.family, type: f.type }; }),
       entities: n.entities.map(function (e) { return { id: e.id, kind: e.kind, name: e.name, isRef: !!e.isRef, group: e.group || '' }; }),
       blocks: n.blocks.map(function (b) {
         const limit = Number.isInteger(opts.rows) && opts.rows >= 0 ? opts.rows : b.data.rows.length;

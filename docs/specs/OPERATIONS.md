@@ -30,7 +30,7 @@ The UI additionally describes the researcher-facing role:
 | `report.improve` | Improve report | AI assist | Yes | Report only | current Report Markdown |
 | `nomad.prepare` | Prepare NOMAD export | Researcher action | No | No scientific mutation | current Canonical Store |
 
-`assistant.chat` is an internal AI capability and is intentionally hidden from the Workshop.
+`assistant.chat` is an AI capability and is visible in the Workshop so every executable OPERATION can be inspected and edited there. Non-operation helper functions remain hidden.
 
 ## 3. Source files
 
@@ -254,7 +254,7 @@ A OPERATION should request the smallest budget that safely fits its intended out
 
 ## 8. Workshop requirements
 
-Settings → Operations Workshop is read-only. For each public OPERATION show:
+Settings → Operations Workshop is the runtime catalog/editor. Settings → AI Helpers is a filtered view of the same definitions with AI checkpoints. For each OPERATION show:
 
 - researcher label;
 - role/kind;
@@ -266,4 +266,4 @@ Settings → Operations Workshop is read-only. For each public OPERATION show:
 - output budget when AI;
 - last run state.
 
-Do not turn the Workshop into a runtime operation-contract editor.
+Runtime edits are browser-local overrides; versioned `operation.json` / `prompt.md` source remains unchanged and is the reset target. AI Helpers must never create duplicate prompt/configuration state.

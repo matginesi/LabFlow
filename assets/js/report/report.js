@@ -12,6 +12,9 @@
     if (!exp.report.kind) exp.report.kind = 'lab';
     exp.report.markdown = exp.report.kind === 'paper' ? exp.report.paperMarkdown : exp.report.labMarkdown;
     if (!exp.report.title) exp.report.title = (exp.meta && exp.meta.name ? exp.meta.name : 'LabFlow experiment') + ' — Scientific report';
+    if (!exp.report.labTitle) exp.report.labTitle = exp.report.title;
+    if (!exp.report.paperTitle) exp.report.paperTitle = (exp.meta && exp.meta.name ? exp.meta.name : 'LabFlow experiment') + ' — Manuscript draft';
+    exp.report.title = exp.report.kind === 'paper' ? exp.report.paperTitle : exp.report.labTitle;
     if (exp.report.author == null || !String(exp.report.author).trim()) { const profile=LF.Storage&&LF.Storage.getUserProfile?LF.Storage.getUserProfile():null; exp.report.author=profile&&profile.defaultAuthor?profile.defaultAuthor:''; }
     if (exp.report.lab == null) exp.report.lab = '';
     if (exp.report.project == null) exp.report.project = '';
@@ -150,12 +153,14 @@
     if(r.kind==='paper'){r.paperMarkdown=value;r.paperUpdatedAt=now;}else{r.labMarkdown=value;r.labUpdatedAt=now;}
     r.markdown=value;r.updatedAt=now;return value;
   }
-  function setKind(exp, kind) { const r=ensureReport(exp); r.kind=kind==='paper'?'paper':'lab'; r.markdown=r.kind==='paper'?r.paperMarkdown:r.labMarkdown; return r.kind; }
+  function setKind(exp, kind) { const r=ensureReport(exp); r.kind=kind==='paper'?'paper':'lab'; r.markdown=r.kind==='paper'?r.paperMarkdown:r.labMarkdown; r.title=r.kind==='paper'?r.paperTitle:r.labTitle; return r.kind; }
+  function activeTitle(exp){ const r=ensureReport(exp); return r.kind==='paper'?r.paperTitle:r.labTitle; }
+  function setActiveTitle(exp,title){ const r=ensureReport(exp),value=String(title||''); if(r.kind==='paper')r.paperTitle=value; else r.labTitle=value; r.title=value; r.updatedAt=new Date().toISOString(); return value; }
 
   /** Compact identity used by the editor, export controls and diagnostics. */
   function documentInfo(exp) {
     const r=ensureReport(exp), kind=r.kind==='paper'?'paper':'lab', markdown=activeMarkdown(exp), words=(markdown.trim().match(/\S+/g)||[]).length;
-    return {kind:kind,label:kind==='paper'?'Scientific paper draft':'Laboratory report',shortLabel:kind==='paper'?'Paper':'Report',markdown:markdown,words:words,chars:markdown.length,updatedAt:kind==='paper'?r.paperUpdatedAt:r.labUpdatedAt,suffix:kind==='paper'?'_paper_draft':'_lab_report'};
+    return {kind:kind,label:kind==='paper'?'Scientific paper draft':'Laboratory report',shortLabel:kind==='paper'?'Paper':'Report',title:activeTitle(exp),markdown:markdown,words:words,chars:markdown.length,updatedAt:kind==='paper'?r.paperUpdatedAt:r.labUpdatedAt,suffix:kind==='paper'?'_paper_draft':'_lab_report'};
   }
 
 
@@ -329,7 +334,7 @@
     const sync=exp.sync||{},dirty=LF.State&&LF.State.isDirty?LF.State.isDirty():!!sync.dirty,openFindings=(findings||[]).filter(function(f){return f.status!=='resolved';}),unresolvedAI=exp.aiCorrectionPlan&&Array.isArray(exp.aiCorrectionPlan.unresolved)?exp.aiCorrectionPlan.unresolved:[],designMissing=[];(exp.design&&exp.design.devices||[]).forEach(function(dev){const sols=(exp.design.solutions||[]).filter(function(sol){return(dev.solutionIds||[]).includes(sol.id);});if(!sols.length)designMissing.push((dev.name||'experiment')+': formulation');if(!(dev.stack||[]).length)designMissing.push((dev.name||'experiment')+': stack');const pr=dev.process||{};['coating','annealing','atmosphere'].forEach(function(k){if(!String(pr[k]||'').trim())designMissing.push((dev.name||'experiment')+': '+k);});});const nomadMissing=exp.nomad&&exp.nomad.mappingPlan&&Array.isArray(exp.nomad.mappingPlan.missing)?exp.nomad.mappingPlan.missing:[];
     const document=documentInfo(exp);
     return {
-      title: exp.report.title, author: exp.report.author, lab: exp.report.lab, project: exp.report.project, generatedAt: new Date().toISOString(), sourceZip: exp.meta.sourceName || '—', analysisSource: 'LabFlow working interpretation; RAW archive immutable',
+      title: document.title, author: exp.report.author, lab: exp.report.lab, project: exp.report.project, generatedAt: new Date().toISOString(), sourceZip: exp.meta.sourceName || '—', analysisSource: 'LabFlow working interpretation; RAW archive immutable',
       dataState:{basis:(dirty||(exp.patches||[]).length)?'Modified Working Copy':'Original import interpretation',revision:Number(sync.revision||0),savedRevision:Number(sync.savedRevision||0),dirty:!!dirty,appliedChanges:(exp.patches||[]).length,rawImmutable:true},
       missingInformation:{openFindings:openFindings.length,unresolvedAI:unresolvedAI.length,designMissing:designMissing.slice(0,40),nomadMissing:nomadMissing.slice(0,40),total:openFindings.length+unresolvedAI.length+designMissing.length+nomadMissing.length},
       markdown: document.markdown, reportKind: document.kind, documentLabel:document.label, sourceWords:document.words, sourceChars:document.chars, contentUpdatedAt:document.updatedAt, metrics: { rawJV: fileCounts.jv || 0, analyzerEligible: ((analysis.summary || {})).eligibleCount || 0 }, validationCounts: severity,
@@ -358,5 +363,5 @@
     const info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});const model=reportModel(exp),blob=window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);end({filename:filename,bytes:blob.size,figures:model.figures.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

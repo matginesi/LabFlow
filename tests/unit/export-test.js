@@ -78,7 +78,7 @@ module.exports = function (t, LF, env) {
 
     const manifest = JSON.parse(await zip.file('manifest.json').async('string'));
     assert(manifest.files.length, 3, 'manifest lists all files');
-    assert(manifest.files[1], { path: 'demo/run1/Stability (JV)_A.txt', sha256: '', family: 'jv', type: 'jv' }, 'manifest file entry');
+    assert(manifest.files[1], { path: 'demo/run1/Stability (JV)_A.txt', rawName: 'Stability (JV)_A.txt', canonicalName: 'Stability (JV)_A.txt', canonicalPath: 'demo/run1/Stability (JV)_A.txt', sha256: '', family: 'jv', type: 'jv' }, 'manifest file entry');
 
     const expJson = JSON.parse(await zip.file('experiment.json').async('string'));
     const expected = JSON.parse(JSON.stringify(LF.DataModel.toWorkingJSON(exp, { rows: null })));

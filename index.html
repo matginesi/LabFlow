@@ -13,7 +13,7 @@
 </head>
 <body>
   <div class="app-shell">
-    <aside class="sidebar" aria-label="Primary navigation">
+    <aside class="sidebar" id="primarySidebar" aria-label="Primary navigation">
       <div class="brand">
         <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg" alt=""></span>
         <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
@@ -25,12 +25,14 @@
       <button class="nav-link nav-button" type="button" data-route="ui-kit"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></button>
       <div class="sidebar-foot" id="modelStatus" title="AI model connection status"><span class="status-dot" aria-hidden="true"></span><span class="sidebar-status-copy"><strong>AI model</strong><small id="modelStatusDetail">Not configured</small></span></div>
     </aside>
+    <button class="mobile-nav-shade" id="mobileNavShade" type="button" aria-label="Close navigation" tabindex="-1"></button>
 
     <section class="workspace-shell">
       <header class="topbar no-print">
+        <button class="button ghost compact mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="Open navigation" aria-controls="primarySidebar" aria-expanded="false"><span data-icon="menu" aria-hidden="true"></span></button>
         <div class="topbar-title"><strong id="topbarTitle">Upload</strong><span id="topbarSubtitle">No experiment loaded</span></div>
         <div class="topbar-page-context" id="topbarPageContext" hidden></div><div class="topbar-context" id="topbarContext" hidden></div>
-        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save working copy</button><button class="button ghost compact" type="button" id="resetAll" title="Reset current session">Reset all</button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
+        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save</button><button class="button primary compact" type="button" id="exportWorkingCopy" hidden>Export</button><button class="button ghost compact" type="button" id="resetAll" title="Reset current session">Reset all</button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
       </header>
       <main class="main-area" id="main"></main>
     </section>
@@ -118,6 +120,7 @@
   <script src="assets/js/pages/understand-page.js"></script>
   <script src="assets/js/pages/results-page.js"></script>
   <script src="assets/js/pages/report-page.js"></script>
+  <script src="assets/js/pages/changes-page.js"></script>
   <script src="assets/js/pages/nomad-page.js"></script>
   <script src="assets/js/ai/assistant.js"></script>
   <script src="assets/js/app.js"></script>

@@ -13,7 +13,7 @@ Structured JSON is a scientific data surface, not a terminal surface. It follows
 
 ## Operations Workshop
 
-Use a compact workshop metaphor: grouped researcher goals at left, detailed selected goal at right, visible Automatic / Action / AI-assist responsibility and finite flow. Show only the eight user-facing goals; implementation services stay hidden. Do not expose raw editable JSON as the primary experience. On narrow screens stack catalog above inspector.
+Use a compact workshop metaphor: grouped researcher goals at left, detailed selected goal at right, visible Automatic / Action / AI-assist responsibility and finite flow. Operations Workshop contains every executable OPERATION, including `assistant.chat`; implementation services stay hidden. AI Helpers is a filtered Settings view of the same AI-backed OPERATION definitions, never a duplicate prompt store. On narrow screens stack catalog above inspector.
 
 ## Compact status and comparison surfaces
 

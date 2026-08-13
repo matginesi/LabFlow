@@ -51,7 +51,7 @@
       experimentId: exp.id,
       generatedAt: new Date().toISOString(),
       files: (exp.files || []).map(function (f) {
-        return { path: f.path, sha256: f.sha256 || '', family: f.family || '', type: f.type || '' };
+        return { path: f.path, rawName: f.rawName || f.name || '', canonicalName: f.canonicalName || f.name || '', canonicalPath: f.canonicalPath || f.path, sha256: f.sha256 || '', family: f.family || '', type: f.type || '' };
       })
     };
   }
@@ -82,14 +82,14 @@
     const store = LF.CanonicalStore ? LF.CanonicalStore.ensure(exp) : null;
     function measurement(m) {
       return {
-        id:m.id, file:m.path||m.file||'', sample:m.sample||'', rawSample:m.rawSample||'', group:m.group||'', isRef:!!m.isRef,
+        id:m.id, file:m.file||'', rawFile:m.rawFile||'', path:m.path||'', sample:m.sample||'', rawSample:m.rawSample||'', group:m.group||'', isRef:!!m.isRef,
         fw:m.fw||null, rv:m.rv||null, meta:m.meta||{}, excluded:!!m.excluded, qualityStatus:m.qualityStatus||'', rankingEligible:!!m.rankingEligible,
         bestEff:m.bestEff, hysteresis:m.hysteresis, flags:m.flags||[], recoveries:m.recoveries||[]
       };
     }
     return {
       format:'labflow-canonical-v1', experiment:store&&store.experiment||{id:exp.id,name:exp.meta&&exp.meta.name||''}, revision:exp.sync&&exp.sync.revision||0,
-      files:(exp.files||[]).map(function(f){return{id:f.id,path:f.path,name:f.name,family:f.family||'',type:f.type||'',sha256:f.sha256||''};}),
+      files:(exp.files||[]).map(function(f){return{id:f.id,path:f.path,rawPath:f.rawPath||f.path,name:f.name,rawName:f.rawName||f.name,canonicalName:f.canonicalName||f.name,canonicalPath:f.canonicalPath||f.path,family:f.family||'',type:f.type||'',sha256:f.sha256||''};}),
       samples:(exp.samples||[]).map(function(x){return{id:x.id,name:x.name,rawName:x.rawName||'',aliases:x.aliases||[],group:x.group||'',isRef:!!x.isRef,measurementIds:x.measurementIds||[]};}),
       measurements:(exp.measurements||[]).map(measurement), aliases:store&&store.aliases||[], relations:store&&store.relations||[], evidence:store&&store.evidence||[],
       findings:exp.findings||[], patches:exp.patches||[], design:exp.design||{}, analysis:exp.analysis||{}, provenance:exp.provenance||[]

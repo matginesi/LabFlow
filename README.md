@@ -5,7 +5,7 @@ Local-first browser workbench for perovskite/JV laboratory experiments.
 The researcher workflow is deliberately small:
 
 ```text
-Upload ZIP → Review → Results → Design → Report → NOMAD
+Upload ZIP → Review → Results → Design → Report → Changes → NOMAD
 ```
 
 The uploaded ZIP is immutable source evidence. LabFlow immediately snapshots its bytes and performs all work on one separate in-memory **Working Copy**.
@@ -46,7 +46,7 @@ Original filenames remain provenance and aliases; they are not blindly treated a
 
 ## Researcher OPERATIONS
 
-Settings → Operations Workshop exposes only eight researcher goals:
+Settings → Operations Workshop exposes every executable OPERATION in the webapp:
 
 - Analyze dataset — deterministic automatic;
 - Apply safe corrections — deterministic action;
@@ -57,7 +57,7 @@ Settings → Operations Workshop exposes only eight researcher goals:
 - Improve report — AI assist;
 - Prepare NOMAD export — deterministic action.
 
-`assistant.chat` is an internal capability using the same bounded Context Builder.
+`assistant.chat` is also visible in the Workshop so its prompt/runtime definition can be inspected and edited. Internal helper functions remain implementation details rather than OPERATIONS.
 
 Internal compute/index/apply/validation functions are not Workshop OPERATIONS.
 
@@ -65,9 +65,9 @@ Internal compute/index/apply/validation functions are not Workshop OPERATIONS.
 
 The uploaded source is never rewritten.
 
-**Save working copy** creates a new LabFlow ZIP and is the only action that marks the current revision saved.
+**Save** persists the internal LabFlow representation in browser storage and marks that revision saved. **Export** explicitly creates the LabFlow ZIP; it does not replace the saved internal state.
 
-Report PDF/DOCX and NOMAD ZIP are derived exports: they read the current Working Copy but do not clear unsaved state.
+LabFlow ZIP, Report PDF/DOCX and NOMAD ZIP are explicit derived exports: they read the current Working Copy but do not implicitly mark later edits saved.
 
 Normal LabFlow export includes `canonical.json`, a compact portable semantic snapshot with identities, aliases, measurements, relations, evidence, findings, patches, Design and provenance. RAW source remains separate.
 
@@ -82,6 +82,8 @@ NOMAD is deterministic-first. One Canonical → NOMAD mapping plan powers the UI
 ## Run
 
 No Node.js application server or backend is required. The POC is static. AI providers are called directly from the browser and connection settings are stored locally in the browser.
+
+For **local LLM providers**, do not open `index.html` through `file://`. Start the bundled static server with `python tools/serve_static.py --port 8765` and open `http://127.0.0.1:8765`. Ollama accepts localhost web origins by default. LM Studio direct browser access additionally requires CORS; start its server with `lms server start --cors` (or enable the equivalent CORS option in LM Studio). LabFlow uses the OpenAI-compatible `/v1/chat/completions` contract and always sends a `messages` array.
 
 ## Build and verify
 

@@ -50,9 +50,9 @@ Working Copy:
 - used by every OPERATION/page;
 - serialized only on explicit save/export.
 
-## 4. Save working copy
+## 4. Save internal state and export Working Copy
 
-**Save working copy** creates a new LabFlow ZIP representing the current revision.
+**Save** persists the current internal LabFlow representation in browser storage. **Export** creates a new LabFlow ZIP representing the current Working Copy revision.
 
 It is the only action that marks the current revision saved.
 

@@ -137,7 +137,7 @@ Scientific mutation advances the Working Copy revision and invalidates dependent
 
 Derived objects must either match the current revision or be visibly stale/absent.
 
-Only **Save working copy** marks a revision saved. Derived exports do not.
+Only **Save** marks the internal browser representation as saved. **Export** and other derived exports create files and do not implicitly mark later changes saved.
 
 ## 11. Export architecture
 

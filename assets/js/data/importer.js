@@ -5,7 +5,7 @@
    * ZIP -> canonical ExperimentData importer.
    *
    * The importer owns the mechanics of reading a RAW ZIP (via JSZip), applying
-   * the Markdown-driven ground truth (LF.Parser.rules), and producing the
+   * the Markdown-driven Data Contract (LF.Parser.rules), and producing the
    * canonical ExperimentData: files (identity by archive `path`, never
    * basename), entities, and blocks (table / series / key_value) carrying the
    * parsed scientific data. RAW bytes are immutable and retained verbatim.
@@ -105,14 +105,18 @@
       let record = null;
       if (bytes) {
         bytesByPath.set(entry.path, bytes);
+        const canonicalName = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
         const file = DM.addFile(exp, {
-          path: entry.path, name: entry.name, extension: (entry.name.match(/\.[^.]+$/) || [''])[0].toLowerCase(),
+          path: entry.path, rawPath: entry.path, name: canonicalName, rawName: entry.name, canonicalName: canonicalName,
+          canonicalPath: P.canonicalFilePath ? P.canonicalFilePath(entry.path) : entry.path,
+          extension: (entry.name.match(/\.[^.]+$/) || [''])[0].toLowerCase(),
           family: familyOf(entry.type), type: entry.type, size: bytes.byteLength, sha256: await sha256Hex(bytes), unreadable: false
         });
         fileRecords.push(file);
         record = file;
       } else {
-        const file = DM.addFile(exp, { path: entry.path, name: entry.name, extension: (entry.name.match(/\.[^.]+$/) || [''])[0].toLowerCase(), family: familyOf(entry.type), type: entry.type, size: 0, sha256: '', unreadable: true });
+        const canonicalName = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
+        const file = DM.addFile(exp, { path: entry.path, rawPath: entry.path, name: canonicalName, rawName: entry.name, canonicalName: canonicalName, canonicalPath: P.canonicalFilePath ? P.canonicalFilePath(entry.path) : entry.path, extension: (entry.name.match(/\.[^.]+$/) || [''])[0].toLowerCase(), family: familyOf(entry.type), type: entry.type, size: 0, sha256: '', unreadable: true });
         fileRecords.push(file);
         record = file;
       }
@@ -138,9 +142,9 @@
       try { return new RegExp(pattern, 'i'); } catch (err) { Log.error('rules.regex-invalid', { pattern: pattern, error: err }); return null; }
     })();
     const nameOdd = namingRegex ? fileEntries.filter(function (x) { return namingRegex.test(x.name); }) : [];
-    if (nameOdd.length) {
-      Log.warn('dataset.naming-candidates', { count: nameOdd.length });
-      findings.push(finding('warning', 'naming', 'Filename normalization candidates', nameOdd.length + ' files contain spacing patterns covered by the Markdown repair policy.', nameOdd[0].path, nameOdd.slice(0, 8).map(function (x) { return x.path; })));
+    const normalizedNames = fileRecords.filter(function (f) { return String(f.rawName || f.name) !== String(f.name || ''); });
+    if (nameOdd.length || normalizedNames.length) {
+      Log.info('dataset.naming-normalized', { candidates: nameOdd.length, normalized: normalizedNames.length, examples: normalizedNames.slice(0, 4).map(function(f){return {raw:f.rawName,canonical:f.name};}) });
     }
     const enc = r.encoding_checks || {};
     const replacement = String(enc.replacement_character || '');
@@ -209,7 +213,8 @@
       const group = P.groupFromSample(sample);
       const isRef = P.isReference(sample);
       const s = sampleEntity(sample, fileKey, group, isRef);
-      const m = { id: C.uid('m'), file: fileKey, path: path || '', rawSample: fileKey, sample: sample, sampleAliases: [fileKey], identitySource: 'filename', group: group, isRef: isRef, fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {}, source: 'summary', excluded: false, recoveries: [] };
+      const canonicalFile = P.canonicalFileName ? P.canonicalFileName(fileKey) : fileKey;
+      const m = { id: C.uid('m'), file: canonicalFile, rawFile: fileKey, path: path || '', rawSample: fileKey, sample: sample, sampleAliases: Array.from(new Set([fileKey, canonicalFile].filter(Boolean))), identitySource: 'filename', group: group, isRef: isRef, fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {}, source: 'summary', excluded: false, recoveries: [] };
       s.measurementIds.push(m.id);
       return m;
     }
@@ -249,7 +254,8 @@
         const group = P.groupFromSample(sample);
         const isRef = P.isReference(sample);
         const s = sampleEntity(sample, parsed.sample, group, isRef);
-        m = { id: C.uid('m'), file: entry.name, path: entry.path, rawSample: parsed.sample, sample: sample, sampleAliases: [entry.name, parsed.sample].filter(Boolean), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename', group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file', excluded: false, recoveries: [] };
+        const canonicalFile = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
+        m = { id: C.uid('m'), file: canonicalFile, rawFile: entry.name, path: entry.path, rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile, parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename', group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file', excluded: false, recoveries: [] };
         s.measurementIds.push(m.id);
         measurementMap.set(entry.path, m);
       }
@@ -266,6 +272,9 @@
         m.identitySource='jv-internal-device';m.sampleAliases=Array.from(new Set([previousSample,m.file,parsed.sample].filter(Boolean)));
       }
       m.path = entry.path;
+      m.rawFile = m.rawFile || entry.name;
+      m.file = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
+      m.sampleAliases = Array.from(new Set((m.sampleAliases||[]).concat([entry.name,m.file]).filter(Boolean)));
       m.meta = parsed.meta;
       m.curve = parsed.curve;
       const parsedFw = fwDirection ? parsed.metrics[String(fwDirection).toUpperCase()] : null;

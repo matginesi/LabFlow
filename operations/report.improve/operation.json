@@ -1,7 +1,31 @@
 {
-  "id":"report.improve","type":"AI","category":"report","role":"ai-assist","title":"Improve report","short_title":"Improve report",
-  "purpose":"Revise the current scientific document in one explicit mode without changing scientific source data.",
-  "strategy":"Current document + deterministic evidence pack + requested revision mode; AI edits prose only.","output":"text","max_output_tokens":16000,"mutation_scope":"report",
-  "policies":["policy.data-ground-truth","policy.scientific-provenance"],
-  "steps":[{"id":"improve","type":"AI","prompt":"prompt.md","output":"text","max_output_tokens":16000,"timeout_ms":240000},{"id":"store","type":"DETERMINISTIC","fn":"report.store"}]
+  "id": "report.improve",
+  "type": "AI",
+  "category": "report",
+  "role": "ai-assist",
+  "title": "Improve report",
+  "short_title": "Improve report",
+  "purpose": "Revise the current scientific document in one explicit mode without changing scientific source data.",
+  "strategy": "Current document + deterministic evidence pack + requested revision mode; AI edits prose only.",
+  "output": "text",
+  "max_output_tokens": 16000,
+  "mutation_scope": "report",
+  "policies": [
+    "policy.scientific-provenance"
+  ],
+  "steps": [
+    {
+      "id": "improve",
+      "type": "AI",
+      "prompt": "prompt.md",
+      "output": "text",
+      "max_output_tokens": 16000,
+      "timeout_ms": 240000
+    },
+    {
+      "id": "store",
+      "type": "DETERMINISTIC",
+      "fn": "report.store"
+    }
+  ]
 }

@@ -44,8 +44,44 @@
     let s = String(raw == null ? '' : raw);
     if (n.trim === true) s = s.trim();
     if (n.collapse_whitespace === true) s = s.replace(/\s+/g, ' ');
+
+    /* Canonical laboratory identities are deterministic formatting, not an AI
+       interpretation. Patterns live in the Data Contract so the browser does
+       not invent a second naming policy. The first matching pattern wins. */
+    const patterns = Array.isArray(n.canonical_sample_patterns) ? n.canonical_sample_patterns : [];
+    for (let i = 0; i < patterns.length; i++) {
+      const item = patterns[i] || {}, re = configuredRegex(item.regex, 'i');
+      if (re && re.test(s)) { s = s.replace(re, String(item.replacement || '$&')); break; }
+    }
     if (n.normalize_separator_spacing === true) s = s.replace(/\s*([_-])\s*/g, '$1');
+    if (n.canonical_separator === '_' && n.fallback_separator_normalization === true) {
+      s = s.replace(/[\s-]+/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+    }
     return s || String(((rules().sample_identity||{}).unknown_label)||'');
+  }
+
+  function canonicalFileName(raw) {
+    const name = basename(raw);
+    const cfg = rules().file_patterns || {};
+    const ext = (name.match(/\.[^.]+$/) || [''])[0];
+    const stem = ext ? name.slice(0, -ext.length) : name;
+    const markers = [cfg.jv_marker, cfg.parameters_marker, cfg.tracking_marker].filter(Boolean);
+    for (let i = 0; i < markers.length; i++) {
+      const marker = String(markers[i]), token = '_' + marker + '_', at = stem.lastIndexOf(token);
+      if (at >= 0) {
+        const prefix = stem.slice(0, at + token.length), rawIdentity = stem.slice(at + token.length);
+        const identity = canonicalSample(rawIdentity);
+        return prefix + identity + ext;
+      }
+    }
+    return name;
+  }
+
+  function canonicalFilePath(rawPath) {
+    const path = String(rawPath || '').replace(/\\/g, '/'), parts = path.split('/');
+    if (!parts.length) return path;
+    parts[parts.length - 1] = canonicalFileName(parts[parts.length - 1]);
+    return parts.join('/');
   }
 
   function configuredRegex(pattern, flags) {
@@ -264,5 +300,5 @@
   }
 
 
-  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, sampleFromFilename, groupFromSample, isReference, rules, basename, classify, formatEvidence };
+  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, canonicalFileName, canonicalFilePath, sampleFromFilename, groupFromSample, isReference, rules, basename, classify, formatEvidence };
 }());

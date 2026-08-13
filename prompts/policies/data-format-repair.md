@@ -9,7 +9,7 @@ output: text
 
 ## Purpose
 
-This file is the **source of truth for validation and repair decisions**. The ZIP/file format itself is defined separately by `policy.data-ground-truth`. This policy is both:
+This file is the **source of truth for validation and repair decisions**. The ZIP/file format itself is defined separately by the Data Contract (`policy.data-ground-truth`). This policy is both:
 
 1. a prompt/context document for AI operations; and
 2. a machine-readable source of deterministic repair guardrails used by the browser code.
@@ -40,10 +40,13 @@ If two high-priority sources disagree materially, do not silently choose one. Cr
 - Preserve the original filename verbatim in provenance.
 - Leading/trailing whitespace may be normalized in the working interpretation.
 - Repeated internal whitespace may be collapsed when the meaning is otherwise unchanged.
-- Spaces immediately around `_` and `-` separators may be normalized in the working interpretation.
+- Once device/sample identity is established, canonical laboratory naming is deterministic: use the patterns declared by the Data Contract (for the current dataset family, e.g. `N1 3 -1A` → `N1_3_1A`).
+- Known `Stability (...)` filenames keep their acquisition prefix/family marker and canonicalize only the trailing device/sample token.
+- RAW filename/path remains verbatim provenance; canonical naming affects only the Working Copy representation.
+- A purely cosmetic canonical rename is never an AI ambiguity and never needs human semantic review.
 - `REF` is a semantic reference marker when it appears as a standalone token or clear sample prefix.
 - Do not infer a new sample identity solely from cosmetic normalization.
-- If multiple plausible sample/group interpretations remain, propose alternatives with evidence and confidence.
+- If multiple plausible sample/group interpretations remain after canonical formatting, propose alternatives with evidence and confidence.
 
 ## Missing-data policy
 
@@ -57,7 +60,7 @@ If two high-priority sources disagree materially, do not silently choose one. Cr
 
 Apply these rules when reviewing a RAW file-to-canonical conversion:
 
-1. Identify the file family from an explicit basename/marker and archive position defined by the data ground truth. Content similarity alone is insufficient to silently reclassify an unknown file.
+1. Identify the file family from an explicit basename/marker and archive position defined by the Data Contract. Content similarity alone is insufficient to silently reclassify an unknown file.
 2. Report the observed physical format: extension, delimiter, encoding evidence, section markers, header row, column count, direction layout and explicit units.
 3. Map only evidenced fields to canonical names. Record the RAW header/value and canonical field separately.
 4. Treat trimming, stable header aliases, `FW`/`RV` key mapping, finite-number parsing and the documented decimal-comma fallback as mechanical conversions.
@@ -109,7 +112,7 @@ Require human review when a proposed change:
 
 ## Deterministic guardrails
 
-The following fenced JSON block contains **repair/analysis guardrails only**. ZIP/file structure is defined exclusively in `policy.data-ground-truth`. Keep this block valid JSON.
+The following fenced JSON block contains **repair/analysis guardrails only**. ZIP/file structure is defined exclusively in the Data Contract (`policy.data-ground-truth`). Keep this block valid JSON.
 
 ```json labflow-rules
 {

@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 
 
 BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
-ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_OPERATIONS.zip").resolve()
+ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_TASKS.zip").resolve()
 VIEWPORTS = ((1440, 900), (1100, 800), (900, 800), (700, 800), (390, 844))
 ROUTES = (
     "experiment-understand",
@@ -37,8 +37,8 @@ AUDIT_JS = r"""() => {
   };
   const localScroll = node => node.closest([
     '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
-    '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar'
+    '.stack-editor-scroll', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
+    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -107,14 +107,14 @@ def main() -> int:
                 # Route-internal views often carry their own grids and are
                 # part of the responsive contract, not optional test detail.
                 if route == "experiment-results":
-                    for tab in ("overview", "top", "measurements", "anomalies", "curves", "boxplots"):
+                    for tab in ("overview", "measurements", "curves", "boxplots"):
                         page.locator(f'[data-result-tab="{tab}"]').first.click()
                         page.wait_for_timeout(80)
                         nested = page.evaluate(AUDIT_JS)
                         nested["surface"] = f"results:{tab}"
                         findings.append(nested)
                 elif route == "experiment-report":
-                    for mode in ("editor", "split", "preview"):
+                    for mode in ("editor", "preview"):
                         page.locator(f'[data-report-mode="{mode}"]').click()
                         page.wait_for_timeout(60)
                         nested = page.evaluate(AUDIT_JS)
@@ -131,7 +131,7 @@ def main() -> int:
                     frame = next(candidate for candidate in page.frames if candidate.url.endswith("/ui-kit.html"))
                     inner = frame.evaluate("""() => {
                       const main=document.querySelector('.main-area'), edge=main.getBoundingClientRect().left+main.clientWidth;
-                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap,.report-ai-tools,.report-toolbar';
+                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.design-variant-rail-v3 .panel-body,.code-block,.md-table-wrap,.report-ai-tools,.report-toolbar';
                       const offenders=[...main.querySelectorAll('*')].filter(node => {
                         const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
                         return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
@@ -148,7 +148,7 @@ def main() -> int:
         item["documentOverflow"] or item["mainOverflow"] or item["offenders"] or
         item.get("uiKitDocument", {}).get("documentOverflow") or
         item.get("uiKitDocument", {}).get("mainOverflow") or
-        (item["viewport"]["width"] <= 1100 and item["sidebar"]["width"] != item["viewport"]["width"]) or
+        (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item.get("stepper") and (
             item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1 or
             len(item["stepper"]["steps"]) != 6 or

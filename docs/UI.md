@@ -2,7 +2,7 @@
 
 `ui-kit.html` is the visual ground truth.
 
-The experiment workflow is Upload, Review, Results, Design, Report, NOMAD. Pages use the shared compact shell, stepper, panels, tables, visible tab tracks and progressive disclosures.
+The experiment workflow is Upload, Review, Results, Design, Report, Changes, NOMAD. Pages use the shared compact shell, stepper, panels, tables, visible tab tracks and progressive disclosures.
 
 There is one in-memory scientific Working Copy, separate from the byte-for-byte RAW source snapshot. `LF.CanonicalStore` adds aliases/relations/evidence as a deterministic index rather than a second editable data copy. The top bar shows dirty/saved state. All edits operate only on the Working Copy; explicit Save/normal export/NOMAD export create new files from its current revision and never overwrite RAW.
 
@@ -21,9 +21,9 @@ Primary sidebar labels use the shared small UI scale (11 px) and secondary descr
 
 Review Data is deterministic-first: **Analyze dataset** automatically refreshes Canonical Store, Results and the compact Analysis Dossier; **Apply safe corrections** performs only provable repairs; **Resolve ambiguities** is enabled only for semantic unknowns on the current revision. AI only proposes; accepted application is a local internal service that mutates the one Working Copy and triggers deterministic refresh.
 
-## Operations Workshop
+## Operations Workshop and AI Helpers
 
-Settings → Operations Workshop uses a two-pane catalog/inspector layout on desktop and stacks responsively. It shows only eight researcher-understandable goals; internal computation/application/validation services are hidden. The inspector explains kind, why the goal exists, dependencies, mutation scope, finite checkpoints, prompt/schema for AI assists, budget and last run. It is read-only: Operation source remains under `operations/`.
+Settings → Operations Workshop uses a two-pane catalog/inspector layout on desktop and stacks responsively. It shows every executable OPERATION, including Assistant; internal helper functions that are not OPERATION definitions remain hidden. Settings → AI Helpers is a filtered view of the same runtime catalog containing only OPERATION definitions with AI checkpoints. It is not a second prompt store. Both views edit the same browser-local runtime override for definition and prompt, used by subsequent executions and resettable to source.
 
 ## Single-experiment Design and live provider output
 
@@ -42,3 +42,11 @@ Assistant and AI-assist surfaces use a bounded Context Pack selected from the Ca
 Report Studio has one textual source: the active Markdown editor. MD, LaTeX, DOCX and PDF exports synchronize that editor immediately before generation. PDF/DOCX may append only the deterministic figures explicitly selected in **Figures in export**; figure selection never rewrites the editor text.
 
 Review Data exposes corrections at the place they are found: deterministic safe fixes can be applied individually or in bulk, valid AI ambiguity proposals can be applied individually or in bulk, and researcher-confirmed sample identity can be entered through the manual correction disclosure.
+
+
+## 2026-08-13 compact interaction rules
+
+- Results mirrors the functional flow of `ORIGINAL_REQUEST/jv_analyzer.html`: Overview, All data, Best measurements, Anomalies, Top non-REF, Top REF, JV curves, Overlay and Compare are explicit views rather than hidden modes.
+- Experiment Design keeps the selected experiment, optional AI suggestions and three direct editors (Formulation, Fabrication, Device stack) in that order. AI suggestions are visible above the editors when present.
+- Report and Paper are separate Markdown documents with separate titles. On desktop source and rendered preview are always visible together; Write/Preview switching is a small-screen control only.
+- On small screens operation and result totems remain viewport-contained cards with internal scrolling; the Assistant remains a dedicated full-screen surface.

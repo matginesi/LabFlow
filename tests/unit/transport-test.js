@@ -87,7 +87,7 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000}};
-    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');}
+    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(!!sent.messages[0].content,true,'connection test content');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -122,6 +122,19 @@ module.exports = function (t, LF) {
     assert(spec.body.response_format.type, 'json_schema', 'structured type');
     assert(spec.body.response_format.json_schema.name, 'dataset_corrections', 'schema name');
     assert(spec.body.response_format.json_schema.schema, schema, 'schema payload');
+    delete LF.Storage; delete LF.AIProviders;
+  };
+
+
+  t['buildRequest rejects an empty Chat Completions messages array before fetch'] = function () {
+    LF.Storage = {
+      getAiSettings: function () { return { provider: 'ollama', endpoint: 'http://127.0.0.1:11434/v1', model: 'gemma3', inactivityTimeoutMs: 60000, streaming: false }; },
+      getApiKey: function () { return ''; }
+    };
+    LF.AIProviders = { ollama: { keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true } };
+    let message='';
+    try { AI.buildRequest({ messages: [], stream: false }); } catch (err) { message=err.message; }
+    assert(/at least one message/i.test(message), true, 'empty messages rejected locally');
     delete LF.Storage; delete LF.AIProviders;
   };
 

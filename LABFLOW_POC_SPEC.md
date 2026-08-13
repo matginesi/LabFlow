@@ -6,7 +6,7 @@
 
 LabFlow is a static, local-first laboratory workbench with a deliberately small mental model:
 
-**Upload ZIP → Review → Results → Design → Report → NOMAD**
+**Upload ZIP → Review → Results → Design → Report → Changes → NOMAD**
 
 The ZIP is the only experiment entry point. No project loader, backend, queue or hidden background workflow precedes it.
 
@@ -24,7 +24,7 @@ After import, `LF.State.state.experiment` is the one scientific Working Copy. `L
 
 Scientific collections remain on the Working Copy; Canonical Store indexes/reference them rather than copying RAW curves into another mega-object. RAW bytes remain at `raw.sourceArchive` and are never rewritten.
 
-Every manual edit, safe correction and accepted AI proposal changes only the same in-memory Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares that mutable state. **Save working copy**, normal export and NOMAD export are explicit user actions that create new files from the current revision; they never overwrite the uploaded source. There is no hidden autosave copy.
+Every manual edit, safe correction and accepted AI proposal changes only the same in-memory Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares that mutable state. **Save** is an explicit user action that persists the internal LabFlow representation in the browser. **Export** and NOMAD export explicitly create new files from the current revision; they never overwrite the uploaded source. There is no hidden autosave copy.
 
 Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
 
@@ -64,9 +64,9 @@ The public set is intentionally limited to eight goals:
 7. `report.improve` — **AI assist**. Revise the current scientific document in one explicit mode.
 8. `nomad.prepare` — **Action / DETERMINISTIC**. Build known mappings and run authoritative local staging validation. Missing semantics remain visible for researcher review.
 
-`assistant.chat` is an internal capability, not a Workshop goal. It is read-only with respect to scientific Working Copy state.
+`assistant.chat` is visible in Operations Workshop like every executable OPERATION, while remaining read-only with respect to scientific Working Copy state.
 
-Settings contains a read-only **Operations Workshop** grouped as Automatic, Researcher action and AI assist. Internal implementation services remain hidden.
+Settings contains an editable **Operations Workshop** for every executable OPERATION plus **AI Helpers**, a filtered view of the exact same runtime definitions containing only AI-backed OPERATIONS. Both surfaces edit the same browser-local definition/prompt override; internal implementation services remain hidden.
 
 ## 6. Operation runtime
 

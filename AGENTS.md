@@ -17,7 +17,7 @@ The goal is to keep LabFlow small, deterministic-first and understandable to a r
 The experiment entry point is always:
 
 ```text
-Upload ZIP → Review → Results → Design → Report → NOMAD
+Upload ZIP → Review → Results → Design → Report → Changes → NOMAD
 ```
 
 Do not add a project loader, hidden pre-import workflow, backend queue or alternate experiment entry point unless explicitly requested.
@@ -49,7 +49,7 @@ Never create:
 - hidden autosave state;
 - a separate export data model that becomes more authoritative than the Working Copy.
 
-Only **Save working copy** marks a revision saved, and it creates a new file. Report/NOMAD/other derived exports do not overwrite source and do not clear dirty state.
+Only **Save** marks the internal browser representation as saved. **Export** creates the Working Copy ZIP; Report/NOMAD/other derived exports do not overwrite source.
 
 When modifying export code, preserve the byte-for-byte original-source regression contract.
 
@@ -134,7 +134,7 @@ The Workshop public catalog is intentionally limited to:
 7. Improve report
 8. Prepare NOMAD export
 
-`assistant.chat` is internal and hidden from Workshop.
+`assistant.chat` is visible in Workshop so every executable OPERATION can be inspected and edited; it remains non-mutating.
 
 Do not expose internal services as new public OPERATIONS merely because they have multiple steps.
 
@@ -176,6 +176,8 @@ prompts/policies/*.md      shared policies
 assets/js/ai/operation-steps.js deterministic checkpoint functions
 assets/js/ai/operations.js      generic runner
 ```
+
+Settings exposes the same executable definitions in two views: **Operations Workshop** (all OPERATIONS) and **AI Helpers** (only OPERATIONS with AI checkpoints). AI Helpers must never create duplicate prompt/configuration state; both views edit the same browser-local runtime overrides.
 
 Generated files are not hand-edited:
 

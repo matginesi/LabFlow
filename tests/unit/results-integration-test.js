@@ -35,6 +35,14 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('data-label="Warnings"')>=0,'mobile warning label');
   };
 
+  t['real 2026_01_22 JV curves open as a compact list before plotting'] = async function(){
+    await ready('curves');const html=LF.ResultsPage.render();
+    truthy(html.indexOf('JV measurements')>=0,'list heading');
+    truthy(html.indexOf('curve-list-table')>=0,'list table');
+    assert(html.indexOf('curve-gallery'),-1,'legacy gallery removed');
+    truthy(html.indexOf('data-open-single-curve=')>=0,'open curve action');
+  };
+
   t['real 2026_01_22 Compare renders group controls, boxplot and statistics'] = async function(){
     await ready('boxplots');const html=LF.ResultsPage.render();
     truthy(html.indexOf('id="boxCanvas"')>=0,'boxplot SVG');

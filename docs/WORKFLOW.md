@@ -209,7 +209,7 @@ Read-only operations do not create a scientific revision merely because they ran
 
 The top bar communicates whether the current Working Copy has changes that have not been saved into a new LabFlow package.
 
-Only **Save working copy** marks the current scientific revision as saved.
+Only **Save** marks the current internal browser representation as saved. **Export** creates a ZIP explicitly.
 
 Derived exports do not clear dirty state:
 
@@ -220,7 +220,7 @@ Derived exports do not clear dirty state:
 
 ### Save never overwrites the upload
 
-Even Save working copy creates a **new file**. The uploaded ZIP remains immutable.
+Export creates a **new file**. Save persists only the internal LabFlow representation. The uploaded ZIP remains immutable.
 
 ---
 
@@ -241,7 +241,7 @@ These are examples of **internal services**, not public OPERATIONS:
 - validate NOMAD mappings;
 - store a OPERATION result.
 
-The Workshop exposes only eight researcher goals.
+Settings exposes every executable OPERATION in Operations Workshop. AI Helpers is a filtered view of those same definitions containing only AI-backed OPERATIONS; both surfaces edit the same browser-local runtime definition/prompt override.
 
 | Goal | Kind | Main outcome |
 |---|---|---|
@@ -254,7 +254,7 @@ The Workshop exposes only eight researcher goals.
 | Improve report | AI assist | revised current Markdown |
 | Prepare NOMAD export | Researcher action · deterministic | canonical→NOMAD mapping + readiness validation |
 
-`assistant.chat` uses the same Context Builder but is an internal capability, not a Workshop goal.
+`assistant.chat` uses the same Context Builder and is visible in Workshop; it remains a non-mutating Assistant capability.
 
 ---
 
@@ -655,9 +655,7 @@ Scientific mutation invalidates stale mapping/staging.
 
 # 7. Assistant Chat
 
-`assistant.chat` is deliberately separate from Workshop OPERATIONS.
-
-It is read-only with respect to scientific state.
+`assistant.chat` is an AI OPERATION exposed in Operations Workshop and AI Helpers. Its conversation/output settings remain separate, but its executable prompt/contract is edited through the same OPERATION runtime editor. It is read-only with respect to scientific state.
 
 ## Context selection
 
@@ -888,7 +886,7 @@ find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 For architectural changes also test at least one real/synthetic ZIP through:
 
 ```text
-import → Review → correction → Results → Design → Report → NOMAD → Save working copy
+import → Review → correction → Results → Design → Report → Changes → NOMAD → Save / Export
 ```
 
 The original upload must remain byte-identical throughout.

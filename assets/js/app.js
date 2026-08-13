@@ -75,14 +75,15 @@
 
   /** The global topbar owns route-specific tools; pages never add a second chrome row. */
   function renderWorkingCopyState(){
-    const status=document.getElementById('workingCopyState'),save=document.getElementById('saveWorkingCopy');
+    const status=document.getElementById('workingCopyState'),save=document.getElementById('saveWorkingCopy'),exportButton=document.getElementById('exportWorkingCopy');
     if(!status||!save)return;
-    if(!hasExperiment()){status.hidden=true;save.hidden=true;return;}
+    if(!hasExperiment()){status.hidden=true;save.hidden=true;if(exportButton)exportButton.hidden=true;return;}
     const exp=S.state.experiment,sync=exp.sync||{},dirty=S.isDirty?S.isDirty():!!sync.dirty;
-    status.hidden=false;save.hidden=false;save.disabled=!dirty;
+    status.hidden=false;save.hidden=false;if(exportButton)exportButton.hidden=false;save.disabled=false;
     status.className='working-copy-state '+(dirty?'dirty':'saved');
-    status.textContent=dirty?'Working copy · unsaved changes':'Working copy · unchanged';
-    save.textContent=dirty?'Save working copy':'No changes';
+    status.textContent=dirty?'Working copy · not saved':'Working copy · saved internally';
+    save.textContent='Save';
+    if(exportButton)exportButton.textContent='Export ZIP';
   }
 
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
@@ -122,7 +123,7 @@
     renderWorkingCopyState();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.assistantOpen);if(assistant)assistant.hidden=!S.state.assistantOpen;if(toggle){const assistantLabel=S.state.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();
+    let html='';if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-changes')html=LF.ChangesPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();
     main.innerHTML=html;
     renderPageContext();
     C.bindFieldLabels(main);
@@ -177,20 +178,27 @@
   async function importDataset(file){
     const end=Log.timer('dataset.import',{name:file&&file.name,size:file&&file.size,type:file&&file.type});
     LF.UI.activityStart({title:'Import experiment ZIP',subtitle:'Local parsing · RAW remains unchanged',kind:'ZIP',stage:'Reading source file',progress:.01,message:file&&file.name||'',details:activityDetails(file)});
-    try{const buffer=await file.arrayBuffer();LF.UI.activityUpdate({stage:'Opening ZIP',progress:.03,details:{Bytes:buffer.byteLength}});const exp=await LF.Importer.parseDataset(buffer,file.name,function(info){importProgress(file,info);});exp.meta.sourceModifiedAt=file.lastModified?new Date(file.lastModified).toISOString():null;exp.meta.sourceType=file.type||'application/zip';exp.meta.importMethod='Local browser import · JSZip';LF.UI.activityUpdate({stage:'Analyzing measurements',progress:.94,message:'Deterministic analysis only',details:{Measurements:exp.measurements.length,Samples:exp.samples.length}});LF.ExperimentModel.ensureShape(exp,S.state);if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(exp);LF.UI.activityUpdate({stage:'Preparing experiment state',progress:.98,details:{Findings:exp.findings.length}});exp.report=exp.report||{};exp.report.kind='lab';exp.report.labMarkdown=LF.Report.defaultMarkdown(exp);exp.report.paperMarkdown=LF.Report.defaultPaperMarkdown(exp);exp.report.markdown=exp.report.labMarkdown;exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};S.setExperiment(exp);S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';S.setRoute('experiment-understand');end({experimentId:exp.id,samples:exp.samples.length,measurements:exp.measurements.length,findings:exp.findings.length,nextRoute:'experiment-understand'},'info');LF.UI.activityFinish({message:'ZIP parsed. Review opened automatically.',details:{Measurements:exp.measurements.length,Samples:exp.samples.length,Findings:exp.findings.length}});LF.UI.toast('Dataset imported. Review is ready.','success');}catch(err){Log.error('dataset.import-failed',{name:file&&file.name,error:err});end({error:err},'error');LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
+    try{const buffer=await file.arrayBuffer();LF.UI.activityUpdate({stage:'Opening ZIP',progress:.03,details:{Bytes:buffer.byteLength}});const exp=await LF.Importer.parseDataset(buffer,file.name,function(info){importProgress(file,info);});exp.meta.sourceModifiedAt=file.lastModified?new Date(file.lastModified).toISOString():null;exp.meta.sourceType=file.type||'application/zip';exp.meta.importMethod='Local browser import · JSZip';LF.UI.activityUpdate({stage:'Analyzing measurements',progress:.94,message:'Deterministic analysis only',details:{Measurements:exp.measurements.length,Samples:exp.samples.length}});LF.ExperimentModel.ensureShape(exp,S.state);if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(exp);LF.UI.activityUpdate({stage:'Preparing experiment state',progress:.98,details:{Findings:exp.findings.length}});exp.report=exp.report||{};exp.report.kind='lab';exp.report.labMarkdown=LF.Report.defaultMarkdown(exp);exp.report.paperMarkdown=LF.Report.defaultPaperMarkdown(exp);exp.report.markdown=exp.report.labMarkdown;exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};if(LF.Changes&&LF.Changes.captureBaseline)LF.Changes.captureBaseline(exp);S.setExperiment(exp);S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';S.setRoute('experiment-understand');end({experimentId:exp.id,samples:exp.samples.length,measurements:exp.measurements.length,findings:exp.findings.length,nextRoute:'experiment-understand'},'info');LF.UI.activityFinish({message:'ZIP parsed. Review opened automatically.',details:{Measurements:exp.measurements.length,Samples:exp.samples.length,Findings:exp.findings.length}});LF.UI.toast('Dataset imported. Review is ready.','success');}catch(err){Log.error('dataset.import-failed',{name:file&&file.name,error:err});end({error:err},'error');LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
   }
 
   async function saveWorkingCopy(){
     if(!hasExperiment())return;
-    const exp=S.state.experiment;
-    LF.UI.activityStart({title:'Save working copy',kind:'LOCAL',stage:'Building working-copy ZIP',progress:.15,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});
+    flushDrafts();const exp=S.state.experiment;
+    LF.UI.activityStart({title:'Save LabFlow state',kind:'LOCAL',stage:'Persisting internal representation',progress:.22,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});
+    const previousSync=Object.assign({},exp.sync||{});
     try{
-      const blob=await LF.Export.modified(exp);
-      C.downloadBlob(blob,LF.Export.fileName(exp,'modified'));
-      if(S.markSaved)S.markSaved('modified-zip');
-      LF.UI.activityFinish({message:'Working-copy ZIP created from the current in-memory revision.',details:{Revision:exp.sync&&exp.sync.revision||0,Bytes:blob.size},holdMs:0});
-      LF.UI.toast('Modifications saved to a working-copy ZIP.','success');
-    }catch(err){Log.error('working-copy.save-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
+      if(S.markSaved)S.markSaved('internal-workspace');
+      const saved=await LF.Storage.saveExperiment(exp,S.state.ui||{});
+      LF.UI.activityFinish({message:'Internal LabFlow representation saved in this browser.',details:{Revision:exp.sync&&exp.sync.revision||0,Saved:saved.savedAt},holdMs:0});
+      LF.UI.toast('LabFlow state saved internally.','success');
+    }catch(err){exp.sync=Object.assign(exp.sync||{},previousSync);Log.error('working-copy.save-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
+  }
+  async function exportWorkingCopy(){
+    if(!hasExperiment())return;
+    flushDrafts();const exp=S.state.experiment;
+    LF.UI.activityStart({title:'Export working copy',kind:'ZIP',stage:'Building export ZIP',progress:.15,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});
+    try{const blob=await LF.Export.modified(exp);C.downloadBlob(blob,LF.Export.fileName(exp,'working-copy'));LF.UI.activityFinish({message:'Export ZIP created from the current LabFlow representation.',details:{Revision:exp.sync&&exp.sync.revision||0,Bytes:blob.size},holdMs:0});LF.UI.toast('Working Copy exported as ZIP.','success');}
+    catch(err){Log.error('working-copy.export-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
   }
 
   async function downloadNomadPackage(){
@@ -230,6 +238,10 @@
     Log.debug('validation.finding-filter',{filter:filter});
   }
 
+  /* ---------- mobile navigation ---------- */
+  function setMobileNav(open){const next=!!open;document.body.classList.toggle('mobile-nav-open',next);const toggle=document.getElementById('mobileNavToggle');if(toggle){toggle.setAttribute('aria-expanded',next?'true':'false');toggle.setAttribute('aria-label',next?'Close navigation':'Open navigation');}const sidebar=document.getElementById('primarySidebar');if(sidebar)sidebar.setAttribute('aria-hidden',(!next&&window.matchMedia&&window.matchMedia('(max-width:1100px)').matches)?'true':'false');}
+  function closeMobileNav(){setMobileNav(false);}
+
   /* ---------- delegated user interaction ---------- */
   function bindEvents(){
     Log.debug('events.bind.start');
@@ -237,10 +249,13 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');S.setRoute(route.dataset.route);return;}
+        if(route){e.preventDefault();closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');S.setRoute(route.dataset.route);return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
-        if(e.target.closest('#saveWorkingCopy')){flushDrafts();await saveWorkingCopy();renderWorkingCopyState();return;}
+        if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
+        if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
         if(e.target.closest('#resetAll')){if(!window.confirm('Reset the current LabFlow session? Unsaved Working Copy changes, operations, chat, report/design state and the in-memory RAW snapshot will be cleared. Provider/theme preferences are kept.'))return;S.resetSession();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
+        if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
         if(e.target.closest('#assistantToggle')){S.state.assistantOpen=!S.state.assistantOpen;LF.Storage.saveUiSettings({assistantOpen:S.state.assistantOpen});render();return;}
         if(e.target.closest('[data-theme-toggle]')){LF.Theme.toggle();return;}
@@ -248,12 +263,13 @@
         if(e.target.closest('#resultInspectorClose')){LF.ResultsPage.closeResultInspector();return;}
 
         const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;render();return;}
+        const changesTab=e.target.closest('[data-changes-tab]');if(changesTab){S.state.changesTab=changesTab.dataset.changesTab;render();return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;S.setRoute('experiment-design');return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
-        const operationWorkshop=e.target.closest('[data-operation-workshop]');if(operationWorkshop){S.state.settingsOperationId=operationWorkshop.dataset.operationWorkshop;render();return;}
+        const operationWorkshop=e.target.closest('[data-operation-workshop]');if(operationWorkshop){S.state.settingsOperationId=operationWorkshop.dataset.operationWorkshop;S.state.ui.settingsOperationId=operationWorkshop.dataset.operationWorkshop;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
         const reportMode=e.target.closest('[data-report-mode]');if(reportMode){S.state.reportMode=reportMode.dataset.reportMode;render();return;}
-        const reportKind=e.target.closest('[data-report-kind]');if(reportKind){syncActiveReportEditor('document-switch');LF.Report.setKind(S.state.experiment,reportKind.dataset.reportKind);markModified('report');render();return;}
+        const reportKind=e.target.closest('[data-report-kind]');if(reportKind){syncActiveReportEditor('document-switch');LF.Report.setKind(S.state.experiment,reportKind.dataset.reportKind);render();return;}
         const markdownTool=e.target.closest('[data-markdown-tool]');if(markdownTool){applyMarkdownTool(markdownTool.dataset.markdownTool);return;}
         const applyReview=e.target.closest('[data-apply-review-proposal]');if(applyReview){
           const idx=Number(applyReview.dataset.applyReviewProposal),plan=S.state.experiment.aiCorrectionPlan,p=plan&&plan.proposals&&plan.proposals[idx];
@@ -266,12 +282,12 @@
         const ignoreSafeFix=e.target.closest('[data-ignore-safe-fix]');if(ignoreSafeFix){const fix=S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.safeFixes&&S.state.experiment.datasetAnalysis.safeFixes[Number(ignoreSafeFix.dataset.ignoreSafeFix)];if(fix){fix.decision='rejected';render();LF.UI.toast('Safe correction left unapplied.','info');}return;}
         if(e.target.closest('#applyAllAiCorrections')){
           const plan=S.state.experiment.aiCorrectionPlan,items=plan&&plan.proposals||[];let applied=0,targets=0,errors=0;
-          items.forEach(function(p){if(p.applied||p.decision!=='accepted')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
+          items.forEach(function(p){if(p.applied||p.decision==='rejected')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
           if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);}
           render();LF.UI.toast(applied+' AI proposal'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' could not be mapped':''),errors?'warning':'success');return;
         }
         const reviewProposal=e.target.closest('[data-review-proposal]');if(reviewProposal){updateProposalDecision(Number(reviewProposal.dataset.reviewProposal),reviewProposal.dataset.decision||'pending');render();return;}
-        if(e.target.closest('#runReportAiAction')){const select=document.getElementById('reportAiAction'),value=select&&select.value||'';if(!value)return;const parts=value.split(':');if(parts[0]==='generate')LF.Assistant.send('report.generate','',{params:{document_kind:parts[1]||'report'}});else LF.Assistant.send('report.improve','',{params:{mode:parts[1]||'scientific_review'}});return;}
+        if(e.target.closest('#runReportAiAction')){const select=document.getElementById('reportAiAction'),value=select&&select.value||'';if(!value)return;syncActiveReportEditor('before-ai-edit');const parts=value.split(':');if(parts[0]==='generate')await LF.Assistant.send('report.generate','',{params:{document_kind:parts[1]||'report'}});else await LF.Assistant.send('report.improve','',{params:{mode:parts[1]||'scientific_review'}});S.state.reportMode='editor';render();LF.UI.toast('AI changes applied to the active document text.','success');return;}
         const localFix=e.target.closest('[data-local-fix]');if(localFix){
           const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude';m.excluded=exclude;S.state.experiment.patches=S.state.experiment.patches||[];S.state.experiment.patches.push({id:C.uid('patch'),type:exclude?'exclude_measurement':'restore_measurement',target:m.id,from:!exclude,to:exclude,source:'user',reason:'Review data local correction',createdAt:new Date().toISOString()});markModified('dataset');if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast(exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.','success');}return;
         }
@@ -280,7 +296,9 @@
         if(e.target.closest('#revalidateDataset')){LF.DatasetCorrections.refresh(S.state.experiment);delete S.state.experiment.aiCorrectionPlan;render();LF.UI.toast('Canonical analysis rebuilt from the current Working Copy.','success');return;}
         
         if(e.target.closest('#refreshDesignEvidence')){if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);render();LF.UI.toast('Deterministic Design evidence refreshed.','success');return;}
+        if(e.target.closest('#applyAllDesignSuggestions')){try{const out=LF.DesignAnalysis.applyAll(S.state.experiment);if(out.changed){markModified('design');render();LF.UI.toast('Applied '+out.changed+' AI-proposed missing field'+(out.changed===1?'':'s')+' to Design.','success');}else{render();LF.UI.toast('No missing field could be filled without overwriting existing values.','info');}}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment);markModified('design');render();LF.UI.toast('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        const applyDesignProposal=e.target.closest('[data-apply-design-proposal]');if(applyDesignProposal){try{const out=LF.DesignAnalysis.applyOne(S.state.experiment,applyDesignProposal.dataset.applyDesignProposal,Number(applyDesignProposal.dataset.proposalIndex),applyDesignProposal.dataset.proposalPart||'all');markModified('design');render();LF.UI.toast('AI suggestion applied to '+out.changed+' missing field'+(out.changed===1?'':'s')+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD validation refreshed.','success');return;}
 
         const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.curveView='single';S.state.resultsTab='curves';render();return;}
@@ -303,6 +321,8 @@
 
         if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim()||'Matteo Ginesi',defaultAuthor:document.getElementById('userDefaultAuthor').value.trim()||document.getElementById('userName').value.trim()||'Matteo Ginesi',organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});if(hasExperiment()){const r=LF.Report.ensureReport(S.state.experiment);if(!r.author){r.author=LF.Storage.getUserProfile().defaultAuthor;markModified('report');}}LF.UI.toast('Profile saved.','success');render();return;}
         if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,memoryTurns:Number(document.getElementById('assistantMemoryTurns').value),memoryChars:Number(document.getElementById('assistantMemoryChars').value),messageChars:Number(document.getElementById('assistantMessageChars').value),maxOutputTokens:Number(document.getElementById('assistantMaxOutputTokens').value),temperature:Number(document.getElementById('assistantTemperature').value),contextChars:Number(document.getElementById('assistantContextChars').value)});LF.UI.toast('Assistant settings saved.','success');render();return;}
+        if(e.target.closest('#saveOperationWorkshop')){const btn=e.target.closest('#saveOperationWorkshop'),id=btn.dataset.operationId,defText=document.getElementById('operationDefinitionEditor').value,promptText=document.getElementById('operationPromptEditor').value;try{const def=JSON.parse(defText);if(!def||def.id!==id)throw new Error('Operation id must remain '+id+'.');if(!Array.isArray(def.steps)||!def.steps.length)throw new Error('Operation definition requires at least one step.');LF.Storage.saveOperationOverride(id,{definition:def,prompt:promptText});LF.UI.toast('Operation runtime configuration saved.','success');render();}catch(err){LF.UI.toast('Operation not saved: '+(err.message||String(err)),'error');}return;}
+        if(e.target.closest('#resetOperationWorkshop')){const btn=e.target.closest('#resetOperationWorkshop'),id=btn.dataset.operationId;if(LF.UI.confirmAction('Reset '+id+' to its source operation.json and prompt.md?')){LF.Storage.resetOperationOverride(id);LF.UI.toast('Operation reset to source definition.','success');render();}return;}
         if(e.target.closest('#clearAssistantConversation')){if(hasExperiment()&&LF.UI.confirmAction('Clear the current Assistant conversation and its memory?')){const d=LF.State.ensureDerived(S.state.experiment);d.chat=d.chat||{conversation:[]};d.chat.conversation=[];markModified('ai');LF.UI.toast('Assistant conversation cleared.','success');render();}return;}
         if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({enabled:document.getElementById('logEnabled').checked,level:document.getElementById('logLevel').value,maxEntries:Number(document.getElementById('logMaxEntries').value)||2500,interactions:document.getElementById('logInteractions').checked,network:document.getElementById('logNetwork').checked});LF.UI.toast('Logging settings applied. Reload only if you changed network instrumentation.','success');render();return;}
         const logLevel=e.target.closest('[data-log-level]');if(logLevel){LF.LogsPage.setLevel(logLevel.dataset.logLevel);render();return;}
@@ -337,6 +357,7 @@
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';postUiKitFilter();return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
+        if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;render();return;}
         if(e.target.id==='curveView'){S.state.curveView=e.target.value;render();return;}
         if(e.target.id==='curveGroup'){S.state.curveGroup=e.target.value;render();return;}
         if(e.target.id==='curveDirection'){S.state.curveDirection=e.target.value;render();return;}
@@ -366,10 +387,11 @@
         if(e.target.id==='measurementSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#measurementTable tbody tr').forEach(function(tr){tr.hidden=q&&!tr.dataset.search.includes(q);});return;}
         if(e.target.id==='reportMarkdown'){
           LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);const preview=document.getElementById('reportMarkdownRendered');if(preview)preview.innerHTML=C.markdown(e.target.value);markDraft('report');
-          const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Saved now · export ready';return;
+          const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';const len=document.getElementById('reportPreviewLength');if(len)len.textContent=info.words+' words';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Saved now · export ready';return;
         }
+        const reportTitle=e.target.closest('[data-report-title]');if(reportTitle){LF.Report.setActiveTitle(S.state.experiment,reportTitle.value);markDraft('report');const cover=document.querySelector('.report-preview-cover strong');if(cover)cover.textContent=reportTitle.value;return;}
         const reportMeta=e.target.closest('[data-report-meta]');if(reportMeta){const r=LF.Report.ensureReport(S.state.experiment);r[reportMeta.dataset.reportMeta]=reportMeta.value;r.updatedAt=new Date().toISOString();markDraft('report');return;}
-        const solField=e.target.closest('[data-solution-field]');if(solField){const sol=S.state.experiment.design.solutions[Number(solField.dataset.solutionIndex)];if(sol){sol[solField.dataset.solutionField]=solField.value;sol.userEdited=true;markDraft('design');refreshDesignProjection();}return;}
+        const solField=e.target.closest('[data-solution-field]');if(solField){const sol=S.state.experiment.design.solutions[Number(solField.dataset.solutionIndex)];if(sol){sol[solField.dataset.solutionField]=solField.value;sol.userEdited=true;sol.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const proposalSolutionField=e.target.closest('[data-proposal-solution-index]');if(proposalSolutionField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.solutions&&proposal.solutions[Number(proposalSolutionField.dataset.proposalSolutionIndex)];if(item){const field=proposalSolutionField.dataset.proposalField,previous=item[field];item[field]=proposalSolutionField.value;if(field==='name'&&String(previous)!==item.name)(proposal.devices||[]).forEach(function(device){device.solution_names=(device.solution_names||[]).map(function(name){return String(name)===String(previous)?item.name:name;});});if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
         const proposalLayerField=e.target.closest('[data-proposal-layer-field]');if(proposalLayerField){const proposal=S.state.experiment.aiDesignProposal,device=proposal&&proposal.devices&&proposal.devices[Number(proposalLayerField.dataset.proposalDeviceIndex)],layer=device&&device.stack&&device.stack[Number(proposalLayerField.dataset.proposalLayerIndex)];if(layer){layer[proposalLayerField.dataset.proposalLayerField]=proposalLayerField.value;if(device.applied){device.applied=false;device.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
         const proposalProcessField=e.target.closest('[data-proposal-process-field]');if(proposalProcessField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.devices&&proposal.devices[Number(proposalProcessField.dataset.proposalDeviceIndex)];if(item){item.process=item.process||{};item.process[proposalProcessField.dataset.proposalProcessField]=proposalProcessField.value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
@@ -397,7 +419,7 @@
       }
     });
 
-    const inspectorShade=document.getElementById('resultInspectorShade');if(inspectorShade)inspectorShade.addEventListener('click',function(ev){if(ev.target===inspectorShade)LF.ResultsPage.closeResultInspector();});document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.resultInspectorId){LF.ResultsPage.closeResultInspector();}});
+    const inspectorShade=document.getElementById('resultInspectorShade');if(inspectorShade)inspectorShade.addEventListener('click',function(ev){if(ev.target===inspectorShade)LF.ResultsPage.closeResultInspector();});document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&document.body.classList.contains('mobile-nav-open')){closeMobileNav();return;}if(ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.resultInspectorId){LF.ResultsPage.closeResultInspector();}});
     window.addEventListener('message',function(event){const frame=document.querySelector('.ui-kit-frame');if(!frame||event.source!==frame.contentWindow||!event.data||event.data.type!=='labflow-ui-kit-count')return;const count=document.getElementById('uiKitGlobalCount');if(count)count.textContent=Number(event.data.count||0)+' pattern'+(Number(event.data.count)===1?'':'s');});
     document.getElementById('datasetInput').addEventListener('change',function(){const f=this.files[0];this.value='';if(f)importDataset(f);});
     Log.debug('events.bind.end');
@@ -406,9 +428,14 @@
   /** Export an inline deterministic SVG chart as PNG. */
 
   /* ---------- bootstrap ---------- */
-  function init(){
+  async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
-    try{S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);bindEvents();LF.Assistant.bind();S.subscribe(function(){render();});render();end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');}
+    try{
+      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
+      if(saved&&saved.experiment&&saved.experiment.meta&&saved.experiment.meta.sourceName){S.setExperiment(saved.experiment);if(LF.Changes&&LF.Changes.ensureBaseline)LF.Changes.ensureBaseline(S.state.experiment);const ui=saved.ui||{};S.state.resultsTab=ui.resultsTab||S.state.resultsTab;S.state.selectedMeasurementId=ui.selectedMeasurementId||S.state.selectedMeasurementId;S.state.selectedDesignDeviceId=ui.selectedDesignDeviceId||S.state.selectedDesignDeviceId;S.state.route=/^experiment-/.test(ui.route||'')?ui.route:'experiment-understand';S.state.ui.route=S.state.route;S.state.ui.lastExperimentRoute=S.state.route;Log.info('workspace.restored',{experimentId:S.state.experiment.id,route:S.state.route});}
+      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});LF.Assistant.bind();S.subscribe(function(){render();});render();if(saved&&saved.experiment)LF.UI.toast('Saved LabFlow state restored.','info');end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');
+    }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }
   document.addEventListener('DOMContentLoaded',init);

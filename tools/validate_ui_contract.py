@@ -12,5 +12,11 @@ for marker,label in [('data-operation="dataset.analyze"','Analyze dataset'),('da
     if marker not in pages:errors.append(label+' UI missing')
 for cls in ('.operation-workshop','.operation-catalog','.operation-inspector','.operation-step-flow'):
     if cls not in css:errors.append('Workshop style missing '+cls)
+
+settings=(ROOT/'assets/js/pages/settings-page.js').read_text()
+if "['ai-helpers','AI Helpers']" not in settings:errors.append('AI Helpers Settings tab missing')
+if "operationWorkshopPanel({aiOnly:true})" not in settings:errors.append('AI Helpers must reuse OPERATION Workshop definitions')
+if "AI Helpers are Operations." not in settings:errors.append('AI Helpers OPERATION contract copy missing')
+
 if errors:print('UI contract: FAILED');[print(' - '+e) for e in errors];raise SystemExit(1)
 print('UI contract: OK')

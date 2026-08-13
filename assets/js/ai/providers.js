@@ -17,12 +17,12 @@
       note:'Gemini OpenAI-compatibility endpoint.'
     },
     ollama: {
-      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1/chat/completions', model:'gemma3', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, reasoningEffort:'none', requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
-      note:'Local OpenAI-compatible endpoint. JSON mode and non-reasoning output are requested for structured OPERATIONS.'
+      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, reasoningEffort:'none', requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
+      note:'Local OpenAI-compatible endpoint. LabFlow resolves the base URL to /v1/chat/completions. When opened in a browser, the provider must allow the page origin.'
     },
     lmstudio: {
-      id:'lmstudio', name:'LM Studio (local)', endpoint:'http://127.0.0.1:1234/v1/chat/completions', model:'local-model', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonSchema:true, requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
-      note:'Local OpenAI-compatible endpoint. The local preset does not send a stored remote-provider API key. Structured OPERATIONS use LM Studio JSON Schema output when available.'
+      id:'lmstudio', name:'LM Studio (local)', endpoint:'http://127.0.0.1:1234/v1', model:'local-model', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonSchema:true, requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
+      note:'Local OpenAI-compatible endpoint. LabFlow resolves the base URL to /v1/chat/completions and never reuses a cloud API key. LM Studio must be started with CORS enabled for direct browser access.'
     },
     custom: {
       id:'custom', name:'Custom OpenAI-compatible', endpoint:'', model:'', keyRequired:false, optionalKey:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,

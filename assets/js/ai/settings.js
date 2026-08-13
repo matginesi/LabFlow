@@ -62,10 +62,16 @@
       const local = document.createElement('div');
       local.className = 'meta mt-1';
       local.textContent = providerId === 'lmstudio'
-        ? 'LM Studio local endpoint · 127.0.0.1:1234 · no cloud API key is attached.'
-        : 'Ollama local endpoint · 127.0.0.1:11434 · no cloud API key is attached.';
+        ? 'LM Studio · OpenAI-compatible base http://127.0.0.1:1234/v1 · LabFlow sends POST /v1/chat/completions with a messages array. For browser access start LM Studio with CORS enabled (lms server start --cors).'
+        : 'Ollama · OpenAI-compatible base http://127.0.0.1:11434/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Ollama allows localhost web origins by default.';
       note.appendChild(local);
-      if(providerId==='lmstudio'&&endpoint){
+      if(location.protocol==='file:'){
+        const origin=document.createElement('div');
+        origin.className='notice danger mt-1';
+        origin.innerHTML='<strong>Local providers + file://</strong><br>Open LabFlow through its local HTTP server instead: <code>python tools/serve_static.py --port 8765</code>, then use <code>http://127.0.0.1:8765</code>. A file:// page has an opaque browser origin and local APIs commonly reject it during CORS/preflight.';
+        note.appendChild(origin);
+      }
+      if((providerId==='lmstudio'||providerId==='ollama')&&endpoint){
         const probeKey=providerId+'|'+endpoint;
         if(probeKey!==lastModelProbeKey&&!modelProbePending){modelProbePending=true;window.setTimeout(function(){loadModels({silent:true}).finally(function(){lastModelProbeKey=probeKey;modelProbePending=false;});},0);}
       }
