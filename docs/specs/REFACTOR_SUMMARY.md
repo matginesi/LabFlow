@@ -25,7 +25,7 @@ Only eight researcher goals are exposed:
 7. Improve report — AI assist;
 8. Prepare NOMAD export — deterministic action.
 
-Assistant Chat uses the Context Builder but is not a Workshop OPERATION.
+Assistant Chat uses the Context Builder but is not a Action.
 
 ## Core boundaries
 

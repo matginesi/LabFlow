@@ -37,7 +37,7 @@ No editable state shares the caller-owned upload buffer. Exporting the original 
 
 `LF.State.state.experiment` is the only mutable scientific experiment.
 
-Pages and OPERATIONS must not create alternate editable scientific models.
+Pages and Actions must not create alternate editable scientific models.
 
 The Working Copy contains parsed scientific collections plus report/NOMAD/derived state belonging to the current experiment.
 
@@ -93,8 +93,8 @@ Scientific calculation and validation belong here, not in AI prompts.
 Primary modules:
 
 - `assets/js/ai/context.js` — shared bounded Context Pack builder;
-- `assets/js/ai/operation-steps.js` — deterministic OPERATION checkpoint functions;
-- `assets/js/ai/operations.js` — generic sequential Operation runner;
+- `assets/js/ai/action-steps.js` — deterministic Action checkpoint functions;
+- `assets/js/ai/actions.js` — generic sequential Action runner;
 - `assets/js/ai/transport.js` — provider request/SSE transport;
 - `assets/js/ai/structured.js` — structured output parse/validation;
 - `assets/js/ai/assistant.js` — Assistant integration.
@@ -160,7 +160,7 @@ Do not add:
 - AI parsing/calculation;
 - background workflow server;
 - provider queue;
-- parallel model calls for one operation;
+- parallel model calls for one Action;
 - full experiment serialization as default model context;
 - alternate NOMAD mapping implementation;
 - export-specific regenerated Report prose.

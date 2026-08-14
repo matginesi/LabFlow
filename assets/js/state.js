@@ -6,8 +6,8 @@
   /*
    * One app-wide in-memory state object. The experiment slot holds the single
    * canonical ExperimentData. Scientific collections and documents live on
-   * that object; `experiment.derived` is reserved for transient Operation history
-   * and chat. Route and selection state live under `ui`. `operationRun`
+   * that object; `experiment.derived` is reserved for transient Action history
+   * and chat. Route and selection state live under `ui`. `actionRun`
    * records the one active workflow so navigation/abort/staleness checks
    * never start a second request behind the user's back.
    */
@@ -34,7 +34,7 @@
     workspace: { theme: 'instrument' },
     project: {},
     experiment: emptyExperiment(),
-    operationRun: null,
+    actionRun: null,
     ui: {
       route: 'experiment-import',
       uploadLanding: false,
@@ -54,8 +54,8 @@
       reportMode: 'editor',
       boxPlot: { metric: 'eff', direction: 'both', groups: [], eligibleOnly: true, experimentId: null },
       settingsSection: 'provider',
-      settingsOperationId: 'dataset.analyze',
-      settingsOperationDocKind: 'lab',
+      settingsActionId: 'dataset.analyze',
+      settingsActionDocKind: 'lab',
       logFilters: { level: 'all', category: 'all', query: '', scope: 'all' },
       pageContext: { page: '', view: '', selected: {}, filters: {}, visible: [] }
     }
@@ -73,7 +73,9 @@
   function ensureDerived(exp) {
     if (!exp.derived || typeof exp.derived !== 'object') exp.derived = {};
     const d = exp.derived;
-    d.operations = d.operations && typeof d.operations === 'object' ? d.operations : {};
+    if(!d.actions && d.operations && typeof d.operations === 'object') d.actions=d.operations;
+    d.actions = d.actions && typeof d.actions === 'object' ? d.actions : {};
+    if(Object.prototype.hasOwnProperty.call(d,'operations')) delete d.operations;
     d.chat = d.chat || { conversation: [] };
     d.chat.conversation = Array.isArray(d.chat.conversation) ? d.chat.conversation : [];
     return d;
@@ -184,24 +186,24 @@
     Log.debug('state.mutate', { scope: reason || 'metadata', before: before, after: { revision: state.experiment.sync && state.experiment.sync.revision } });
   }
 
-  /** The one active workflow record examined by every data-operation path. */
-  function startOperationRun(record) {
-    state.operationRun = {
-      operationId: record && record.operationId || '',
+  /** The one active Action run examined by every execution path. */
+  function startActionRun(record) {
+    state.actionRun = {
+      actionId: record && record.actionId || '',
       stepIndex: record && record.stepIndex || 0,
       sourceRevision: state.experiment && state.experiment.sync ? state.experiment.sync.revision : 0,
       status: 'running',
       startedAt: nowIso(),
       aborted: false
     };
-    notify('operationRun');
-    return state.operationRun;
+    notify('actionRun');
+    return state.actionRun;
   }
 
-  function endOperationRun(status) {
-    if (state.operationRun) state.operationRun.status = status || 'done';
-    notify('operationRun');
-    return state.operationRun;
+  function endActionRun(status) {
+    if (state.actionRun) state.actionRun.status = status || 'done';
+    notify('actionRun');
+    return state.actionRun;
   }
 
 
@@ -233,7 +235,7 @@
   function commitAllDrafts(){return commitDraft();}
 
   function resetSession() {
-    state.experiment=emptyExperiment(); state.operationRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
+    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
   }
 
   function isDirty() {
@@ -253,8 +255,8 @@
     setExperiment: setExperiment,
     touch: touch,
     mutate: mutate,
-    startOperationRun: startOperationRun,
-    endOperationRun: endOperationRun,
+    startActionRun: startActionRun,
+    endActionRun: endActionRun,
     markSaved: markSaved,
     isDirty: isDirty,
     markDraft: markDraft,

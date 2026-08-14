@@ -59,7 +59,7 @@ When modifying export code, preserve the byte-for-byte original-source regressio
 
 `LF.CanonicalStore` is a semantic index/view over the Working Copy, not another editable model.
 
-Use stable IDs, aliases, relations and evidence references instead of repeatedly inferring semantics from filenames in pages/OPERATIONS.
+Use stable IDs, aliases, relations and evidence references instead of repeatedly inferring semantics from filenames in pages/Actions.
 
 ### Naming rule
 
@@ -115,15 +115,21 @@ AI may:
 - generate/revise scientific prose;
 - answer bounded read-only Chat questions.
 
+A configured provider may also run the internal `analysis.enrich` step immediately after deterministic import analysis. Its output is a shared, provenance-marked Experiment Brief used by downstream AI contexts. It must not recalculate deterministic metrics or become a second scientific state. Invalidate the AI brief on scientific-input changes, not on Report/Paper text edits.
+
 AI must never silently mutate scientific state or become the authoritative calculator/readiness gate.
+
+### Report / Paper rule
+
+A fresh import starts with empty Report and Paper documents. Do not insert placeholder/template prose automatically. Drafting is an explicit researcher action. `report.generate` and `report.improve` must receive the shared Experiment Brief plus bounded Results/Design/findings/provenance context; split large drafting or editing jobs into deterministic document blocks/sections. Keep Common, Report-specific and Paper-specific writing aids as modes of the same bounded Actions rather than unrelated ad-hoc model calls.
 
 ---
 
-## 5. Researcher OPERATIONS
+## 5. Researcher Actions
 
-A OPERATION is a researcher-understandable goal, not an implementation function.
+A Action is a researcher-understandable goal, not an implementation function.
 
-The Workshop public catalog is intentionally limited to:
+The Action manager public catalog is intentionally limited to:
 
 1. Analyze dataset
 2. Apply safe corrections
@@ -134,9 +140,9 @@ The Workshop public catalog is intentionally limited to:
 7. Improve report
 8. Prepare NOMAD export
 
-`assistant.chat` is visible in Workshop so every executable OPERATION can be inspected and edited; it remains non-mutating.
+`assistant.chat` is visible in Settings → Actions so every executable Action can be inspected and edited; it remains non-mutating.
 
-Do not expose internal services as new public OPERATIONS merely because they have multiple steps.
+Do not expose internal services as new public Actions merely because they have multiple steps.
 
 Examples that should stay internal:
 
@@ -148,9 +154,9 @@ Examples that should stay internal:
 - validate NOMAD;
 - store output.
 
-`analysis.summarize` is an internal deterministic OPERATION (auto-run with `dataset.analyze`): it stores the Analysis Dossier statistics bundle on the Working Copy. It is inspectable in the Workshop but is not a public researcher action. Its per-scan `groupStatistics` and `metrics` are the single deterministic source shared by the Results Compare table, Report statistics/figures and NOMAD derived `analysis.json`.
+`analysis.summarize` is an internal deterministic Action (auto-run with `dataset.analyze`): it stores the Analysis Dossier statistics bundle on the Working Copy. It is inspectable in Settings → Actions but is not a public researcher action. Its per-scan `groupStatistics` and `metrics` are the single deterministic source shared by the Results Compare table, Report statistics/figures and NOMAD derived `analysis.json`.
 
-If adding a public OPERATION, document:
+If adding a public Action, document:
 
 - researcher goal;
 - why it exists;
@@ -162,45 +168,45 @@ If adding a public OPERATION, document:
 - output;
 - what it must not do.
 
-Update `docs/specs/OPERATIONS.md` and `docs/WORKFLOW.md` when the public catalog changes.
+Update `docs/specs/ACTIONS.md` and `docs/WORKFLOW.md` when the public catalog changes.
 
 ---
 
-## 6. Operation sources and build
+## 6. Action sources and build
 
 Sources:
 
 ```text
-operations/<id>/operation.json
-operations/<id>/prompt.md       AI only
-operations/schemas/*.json       structured AI output
+actions/<id>/action.json
+actions/<id>/prompt.md       AI only
+actions/schemas/*.json       structured AI output
 prompts/policies/*.md      shared policies
-assets/js/ai/operation-steps.js deterministic checkpoint functions
-assets/js/ai/operations.js      generic runner
+assets/js/ai/action-steps.js deterministic checkpoint functions
+assets/js/ai/actions.js      generic runner
 ```
 
-Settings exposes the same executable definitions in two views: **Operations Workshop** (all OPERATIONS) and **AI Helpers** (only OPERATIONS with AI checkpoints). AI Helpers must never create duplicate prompt/configuration state; both views edit the same browser-local runtime overrides.
+Settings exposes one **Actions** view for every executable Action. Deterministic, AI-assisted and hybrid Actions share the same registry, runner, totem and browser-local runtime overrides.
 
 Generated files are not hand-edited:
 
 ```text
-assets/js/ai/operation-registry.js
+assets/js/ai/action-registry.js
 assets/js/ai/prompt-bundle.js
 ```
 
-After OPERATION/prompt changes run:
+After Action/prompt changes run:
 
 ```bash
 python tools/build_prompt_bundle.py
-python tools/build_operation_registry.py
-python tools/validate_operation_contract.py
+python tools/build_action_registry.py
+python tools/validate_action_contract.py
 ```
 
 ---
 
-## 7. Operation runtime contract
+## 7. Action runtime contract
 
-`LF.OperationRunner` is single-run and sequential.
+`LF.ActionRunner` is single-run and sequential.
 
 - successful checkpoints auto-advance;
 - one active run only;
@@ -262,7 +268,7 @@ Context should be selected from:
 
 When context is too large, narrow selection first. Do not solve every context issue by increasing a global budget.
 
-Output budgets belong to individual Operation contracts. Assistant output/context settings are separate.
+Output budgets belong to individual Action contracts. Assistant output/context settings are separate.
 
 ---
 
@@ -347,7 +353,7 @@ Keep:
 - explicit responsive tabs;
 - responsive tables;
 - theme-aware JSON/Markdown;
-- truthful OPERATION progress;
+- truthful Action progress;
 - provider output closed by default;
 - progressive disclosure for detail.
 
@@ -361,7 +367,7 @@ If an architectural change affects any of these, update documentation in the sam
 
 - source/Working Copy lifecycle;
 - Canonical Store;
-- public OPERATION catalog;
+- public Action catalog;
 - AI Context Pack;
 - Review correction workflow;
 - Design inference scope;
@@ -379,8 +385,8 @@ Run:
 
 ```bash
 python tools/build_prompt_bundle.py
-python tools/build_operation_registry.py
-python tools/validate_operation_contract.py
+python tools/build_action_registry.py
+python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
 python tools/validate_privacy_contract.py

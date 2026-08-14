@@ -38,7 +38,7 @@
       analysis: { summary: {}, bestBySample: [], topNonRef: [], topRef: [] },
       design: { status: 'unknown', solutions: [], process: { coating: '', annealing: '', atmosphere: '', notes: '' }, stack: [], devices: [] },
       report: {}, nomad: {}, interpretationOverrides: {},
-      derived: { operations: {}, chat: { conversation: [] } },
+      derived: { actions: {}, chat: { conversation: [] } },
       sync: { revision: 0, savedRevision: 0, dirty: false, lastChange: null, savedAt: null, savedKind: '' }
     };
   }
@@ -76,7 +76,9 @@
     exp.nomad = exp.nomad && typeof exp.nomad === 'object' ? exp.nomad : {};
     exp.interpretationOverrides = exp.interpretationOverrides && typeof exp.interpretationOverrides === 'object' ? exp.interpretationOverrides : {};
     exp.derived = exp.derived && typeof exp.derived === 'object' ? exp.derived : {};
-    exp.derived.operations = exp.derived.operations && typeof exp.derived.operations === 'object' ? exp.derived.operations : {};
+    if(!exp.derived.actions && exp.derived.operations && typeof exp.derived.operations === 'object') exp.derived.actions=exp.derived.operations;
+    exp.derived.actions = exp.derived.actions && typeof exp.derived.actions === 'object' ? exp.derived.actions : {};
+    if(Object.prototype.hasOwnProperty.call(exp.derived,'operations')) delete exp.derived.operations;
     exp.derived.chat = exp.derived.chat && typeof exp.derived.chat === 'object' ? exp.derived.chat : { conversation: [] };
     exp.derived.chat.conversation = Array.isArray(exp.derived.chat.conversation) ? exp.derived.chat.conversation : [];
     exp.sync = Object.assign(base.sync, exp.sync || {});

@@ -1,6 +1,0 @@
-{
-  "id":"dataset.correct-safe","type":"DETERMINISTIC","category":"dataset","role":"action","title":"Apply safe corrections","short_title":"Safe corrections",
-  "purpose":"Apply only mechanically provable corrections from the current Analysis Dossier.",
-  "strategy":"Validate targets, apply safe changes once, advance the Working Copy revision, then rebuild canonical analysis automatically.","output":"json","mutation_scope":"dataset","requires":["dataset.analyze"],
-  "steps":[{"id":"scan","type":"DETERMINISTIC","fn":"dataset.scan-safe-fixes"},{"id":"apply","type":"DETERMINISTIC","fn":"dataset.apply-safe-fixes","capture_result":true},{"id":"commit","type":"DETERMINISTIC","fn":"dataset.commit-and-refresh"}]
-}

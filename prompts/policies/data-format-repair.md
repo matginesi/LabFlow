@@ -11,7 +11,7 @@ output: text
 
 This file is the **source of truth for validation and repair decisions**. The ZIP/file format itself is defined separately by the Data Contract (`policy.data-ground-truth`). This policy is both:
 
-1. a prompt/context document for AI operations; and
+1. a prompt/context document for AI Actions; and
 2. a machine-readable source of deterministic repair guardrails used by the browser code.
 
 Do not move semantic repair rules into JavaScript when they belong here. JavaScript may implement the mechanics of reading a ZIP, parsing tables, applying patches and calculating metrics, but the policy for interpreting broken or irregular data must remain explicit in Markdown.
@@ -182,15 +182,15 @@ The following fenced JSON block contains **repair/analysis guardrails only**. ZI
 
 ## Expected AI behavior
 
-When this policy is supplied to an AI operation, the model must use it as a constraint, not as optional advice. The model may explain or propose patches, but it must not claim that a patch has been applied unless the application confirms it.
+When this policy is supplied to an AI Action, the model must use it as a constraint, not as optional advice. The model may explain or propose patches, but it must not claim that a patch has been applied unless the application confirms it.
 
 ## Export and NOMAD readiness
 
-An export package must contain the current reviewed working interpretation and enough provenance to reconstruct how it differs from RAW. Apply these rules to every NOMAD OPERATION and pre-upload review:
+An export package must contain the current reviewed working interpretation and enough provenance to reconstruct how it differs from RAW. Apply these rules to every NOMAD Action and pre-upload review:
 
 - Never export an AI proposal as an applied correction. A correction affects exported canonical data only after the application records an accepted patch with target, before/after values, source, evidence, review status and timestamp.
 - Keep the original RAW archive separate from corrected/canonical tables. Never rewrite the RAW ZIP to make it look compliant.
 - Preserve unknown or missing scientific values as null/blank with status metadata. Never replace them with `0`, an empty scientific claim or an AI estimate.
 - Treat unresolved danger findings, accepted-but-unapplied corrections, stale mapping reviews and missing provenance for a scientific correction as export blockers or explicit review items.
 - Export derived values only when their deterministic source and active conversion factor are recorded. Keep AI-inferred Design values labelled `ai_inferred` until human confirmation.
-- A NOMAD OPERATION may assess, map or recommend. It must not claim that the ZIP conforms to the target deployment; only deterministic local checks plus processing by the selected NOMAD deployment can establish that.
+- A NOMAD Action may assess, map or recommend. It must not claim that the ZIP conforms to the target deployment; only deterministic local checks plus processing by the selected NOMAD deployment can establish that.

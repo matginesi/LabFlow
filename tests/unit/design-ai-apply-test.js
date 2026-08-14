@@ -1,6 +1,6 @@
 'use strict';
 require('../../assets/js/logger.js');
-require('../../assets/js/ai/operation-steps.js');
+require('../../assets/js/ai/action-steps.js');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
   t['AI Design apply fills missing solution fields without overwriting researcher values']=function(){

@@ -1,6 +1,6 @@
 # AI, Research Context Packs and model boundaries
 
-Read [`WORKFLOW.md`](WORKFLOW.md) and [`specs/OPERATIONS.md`](specs/OPERATIONS.md) first.
+Read [`WORKFLOW.md`](WORKFLOW.md) and [`specs/ACTIONS.md`](specs/ACTIONS.md) first.
 
 ## 1. Core rule
 
@@ -25,7 +25,7 @@ AI must not own:
 
 Module: `assets/js/ai/context.js`.
 
-Every AI entry point uses a bounded **Research Context Pack** generated from the current Canonical Store and UI/request context.
+Every AI entry point uses a bounded **Research Context Pack** generated from the current Canonical Store and UI/request context. Every pack also carries the shared Experiment Brief: deterministic facts always, plus optional `analysis.enrich` interpretation when that enrichment is fresh for the current scientific signature.
 
 Do not default to `JSON.stringify(experiment)`.
 
@@ -88,13 +88,16 @@ Includes:
 
 Includes:
 
-- requested mode/document kind;
-- current Markdown when relevant;
+- shared Experiment Brief;
+- requested mode/document kind and current work block;
+- current Markdown only when relevant;
 - current figure selection;
 - deterministic Results summary;
 - Design summary;
 - findings;
 - provenance.
+
+Fresh Report/Paper documents are empty. `report.generate` drafts only after an explicit researcher action and splits long jobs into bounded ordered sections; `report.improve` similarly targets the relevant section(s). The UI groups improvement modes into Common, Report and Paper aids.
 
 ## 4. Context budgeting
 
@@ -106,15 +109,15 @@ A narrow user question should produce a narrow context instead of increasing the
 
 ## 5. Output budgeting
 
-There is no single global output-token setting for every model operation.
+There is no single global output-token setting for every model Action.
 
-Each AI OPERATION owns an output budget appropriate to its job in `operation.json`.
+Each AI Action owns an output budget appropriate to its job in `action.json`.
 
-Assistant output is configured separately from Operation contracts.
+Assistant output is configured separately from Action contracts.
 
 ## 6. Structured AI output
 
-Structured OPERATIONS use schemas under `operations/schemas/` and are validated locally after provider output is parsed.
+Structured Actions use schemas under `actions/schemas/` and are validated locally after provider output is parsed.
 
 If structured output is invalid:
 
@@ -153,7 +156,7 @@ No unbounded retry loop or provider queue.
 
 Provider, endpoint, model and API key are browser-local settings.
 
-OPERATION output budgets remain in Operation contracts. Connection settings must not become a hidden global scientific policy.
+Action output budgets remain in Action contracts. Connection settings must not become a hidden global scientific policy.
 
 ## 10. Assistant safety boundary
 

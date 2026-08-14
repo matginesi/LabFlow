@@ -1,3 +1,7 @@
-Refractor Operations / AI Helpers. 
-Niente divisione tra Operations e AI Helpers. Voglio una cosa standardizzata, con un nome giusto, che unisce tutto, anche deterministici, ai, etc... definiti tutti da un json e alla necessità un markdown per i prompts. Devono essere in grado di lavorare con i dati della webapp (ovvero la rappresentazione dei dati aggiornata).
-Anche in settings fai una pagina sola per la loro gestione.
+La pagina chagnes non funziona, se cambio le cose nei report/paper non da nulla. E poi non ha un bel layout. Rifalla. Anche a livello di logica più robusta.
+Aggiungi la lettura per tutti i providers del massimo numero di tokens in output e usalo invece di fissarlo a 8K, se necessario metti anche il setting per forzarlo ad un massimo.
+Manca la scelta delle immagini sia in report che paper: aggiungila. 
+
+Unisci Upload e review insieme. Ma sempre upload obbligatorio.
+
+Changes: se scrivo sui report (non se scrive l'ai) non vedo differenze. Rifai la pagina con le sezioni con scrollbar più corte.

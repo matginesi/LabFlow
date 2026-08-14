@@ -20,7 +20,7 @@
       </div>
       <div class="nav-label">Workspace</div>
       <button class="nav-link nav-button" type="button" data-route="experiment-home"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Experiment</strong><small>RAW to NOMAD</small></span></button>
-      <button class="nav-link nav-button" type="button" data-route="settings"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Operations</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="settings"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Actions</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="logs"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="ui-kit"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></button>
       <div class="sidebar-foot" id="modelStatus" title="AI model connection status"><span class="status-dot" aria-hidden="true"></span><span class="sidebar-status-copy"><strong>AI model</strong><small id="modelStatusDetail">Not configured</small></span></div>
@@ -52,16 +52,16 @@
 
   <input class="sr-only" type="file" id="datasetInput" accept=".zip,application/zip">
   <div class="activity-shade" id="activityShade" hidden aria-live="polite" aria-busy="true">
-    <section class="activity-totem" role="status" aria-label="Current operation">
+    <section class="activity-totem" role="status" aria-label="Current action">
       <div class="activity-head">
         <div><strong id="activityTitle">Working</strong><span id="activitySubtitle"></span></div>
         <div class="activity-head-actions"><button class="button compact activity-button" type="button" id="activityLogs" hidden>View logs</button><button class="button primary compact activity-button" type="button" id="activityRetry" hidden>Retry checkpoint</button><button class="button danger compact activity-button" type="button" id="activityCancel" hidden>Stop request</button></div>
       </div>
-      <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Phase progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Operation phase progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
+      <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Phase progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Action progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
       <div class="activity-stream" id="activityStream" hidden><div class="activity-stream-head"><span class="badge ai">LIVE SSE</span><strong id="activityStreamState">Waiting for first byte</strong><span id="activityStreamRate">—</span></div><div class="progress activity-stream-progress" id="activityStreamProgress" role="progressbar" aria-label="Estimated output budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityStreamBar"></span></div><div class="activity-stream-stats"><span>Events <strong id="activityStreamEvents">0</strong></span><span>Received <strong id="activityStreamBytes">0 B</strong></span><span>First token <strong id="activityStreamTtft">waiting</strong></span><span>Output <strong id="activityStreamTokens">~0 / — tok</strong></span></div></div>
       <div class="activity-current">
         <div class="activity-stage-row"><span class="badge" id="activityKind">LOCAL</span><strong id="activityStage">Starting</strong></div>
-        <div class="meta activity-message" id="activityMessage">Preparing operation…</div>
+        <div class="meta activity-message" id="activityMessage">Preparing action…</div>
       </div>
       <dl class="activity-details" id="activityDetails"></dl>
       <div class="activity-checklist" id="activityChecklist"></div>
@@ -96,10 +96,10 @@
   <script src="assets/js/ai/providers.js"></script>
   <script src="assets/js/ai/api-diagnostics.js"></script>
   <script src="assets/js/ai/prompt-bundle.js"></script>
-  <script src="assets/js/ai/operation-registry.js"></script>
-  <script src="assets/js/ai/operation-steps.js"></script>
+  <script src="assets/js/ai/action-registry.js"></script>
+  <script src="assets/js/ai/action-steps.js"></script>
   <script src="assets/js/ai/structured.js"></script>
-  <script src="assets/js/ai/operations.js"></script>
+  <script src="assets/js/ai/actions.js"></script>
   <script src="assets/js/data/parser.js"></script>
   <script src="assets/js/experiment/canonical-store.js"></script>
   <script src="assets/js/data/importer.js"></script>
@@ -123,6 +123,7 @@
   <script src="assets/js/pages/report-page.js"></script>
   <script src="assets/js/pages/changes-page.js"></script>
   <script src="assets/js/pages/nomad-page.js"></script>
+  <script src="assets/js/ai/action-ui.js"></script>
   <script src="assets/js/ai/assistant.js"></script>
   <script src="assets/js/app.js"></script>
 </body>

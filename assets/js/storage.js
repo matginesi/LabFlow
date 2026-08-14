@@ -16,14 +16,20 @@
   function getApiKey(){try{return localStorage.getItem('labflow.ai.key')||'';}catch(_){return'';}}
   function saveApiKey(key){try{if(key)localStorage.setItem('labflow.ai.key',key);else localStorage.removeItem('labflow.ai.key');}catch(err){Log.warn('api-key.save-failed',{error:err});}}
 
-  /* Operation Workshop overrides are the executable runtime configuration.
-     Source JSON/Markdown remains the resettable default. */
-  function operationOverrides(){return read('labflow.operation.overrides',{});}
-  function getOperationOverride(id){const all=operationOverrides();return all&&all[id]?clone(all[id]):null;}
-  function saveOperationOverride(id,override){const all=operationOverrides();all[id]=Object.assign({},all[id]||{},clone(override||{}),{updatedAt:new Date().toISOString()});write('labflow.operation.overrides',all);Log.info('operation.override-saved',{operationId:id,hasDefinition:!!(override&&override.definition),hasPrompt:override&&typeof override.prompt==='string'});return getOperationOverride(id);}
-  function resetOperationOverride(id){const all=operationOverrides();delete all[id];write('labflow.operation.overrides',all);Log.info('operation.override-reset',{operationId:id});}
-  function getEffectiveOperation(id){const base=LF.OperationRegistry&&LF.OperationRegistry.operation?LF.OperationRegistry.operation(id):null,ov=getOperationOverride(id);if(!base)return null;if(!ov||!ov.definition)return base;return Object.assign({},base,clone(ov.definition),{id:base.id});}
-  function getEffectivePrompt(id){const ov=getOperationOverride(id);if(ov&&typeof ov.prompt==='string')return ov.prompt;return LF.OperationRegistry&&LF.OperationRegistry.prompt?LF.OperationRegistry.prompt(id):'';}
+  /* Action overrides are the one browser-local runtime configuration layer.
+     Versioned action.json / prompt.md files remain the resettable source defaults. */
+  function actionOverrides(){
+    const current=read('labflow.action.overrides',null);
+    if(current&&typeof current==='object')return current;
+    const legacy=read('labflow.operation.overrides',{});
+    if(legacy&&Object.keys(legacy).length)write('labflow.action.overrides',legacy);
+    return legacy||{};
+  }
+  function getActionOverride(id){const all=actionOverrides();return all&&all[id]?clone(all[id]):null;}
+  function saveActionOverride(id,override){const all=actionOverrides();all[id]=Object.assign({},all[id]||{},clone(override||{}),{updatedAt:new Date().toISOString()});write('labflow.action.overrides',all);Log.info('action.override-saved',{actionId:id,hasDefinition:!!(override&&override.definition),hasPrompt:override&&typeof override.prompt==='string'});return getActionOverride(id);}
+  function resetActionOverride(id){const all=actionOverrides();delete all[id];write('labflow.action.overrides',all);Log.info('action.override-reset',{actionId:id});}
+  function getEffectiveAction(id){const base=LF.ActionRegistry&&LF.ActionRegistry.action?LF.ActionRegistry.action(id):null,ov=getActionOverride(id);if(!base)return null;if(!ov||!ov.definition)return base;return Object.assign({},base,clone(ov.definition),{id:base.id});}
+  function getEffectivePrompt(id){const ov=getActionOverride(id);if(ov&&typeof ov.prompt==='string')return ov.prompt;return LF.ActionRegistry&&LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(id):'';}
 
   function getUserProfile(){return Object.assign({name:'Matteo Ginesi',organization:'',email:'',defaultAuthor:'Matteo Ginesi'},read('labflow.user.profile',{}));}
   function saveUserProfile(v){write('labflow.user.profile',Object.assign({},getUserProfile(),v||{}));}
@@ -37,5 +43,5 @@
   async function loadExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readonly'),req=tx.objectStore(EXP_STORE).get('current');req.onsuccess=function(){const v=req.result||null;d.close();resolve(v);};req.onerror=function(){const err=req.error||new Error('Could not read saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.load-failed',{error:err});return null;}}
   async function clearSavedExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite');tx.objectStore(EXP_STORE).delete('current');tx.oncomplete=function(){d.close();resolve(true);};tx.onerror=function(){const err=tx.error||new Error('Could not clear saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.clear-failed',{error:err});return false;}}
 
-  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getOperationOverride:getOperationOverride,saveOperationOverride:saveOperationOverride,resetOperationOverride:resetOperationOverride,getEffectiveOperation:getEffectiveOperation,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getNomadSettings:getNomadSettings,saveNomadSettings:saveNomadSettings,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
+  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getNomadSettings:getNomadSettings,saveNomadSettings:saveNomadSettings,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
 }());

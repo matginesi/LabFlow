@@ -5,7 +5,7 @@
    * Global feedback service.
    *
    * This is the only module allowed to own toast notifications and the single
-   * operation totem. It does not start work, call providers, navigate the app,
+   * Action totem. It does not start work, call providers, navigate the app,
    * or maintain experiment state; callers report lifecycle changes through the
    * public `LabFlow.UI` methods exported at the bottom of the file.
    */
@@ -90,21 +90,21 @@
   }
 
   /**
-   * Normalize string or object operation declarations into one renderable shape.
-   * @param {Array<string|Object>} operations Caller-provided checklist items.
+   * Normalize string or object Action-step declarations into one renderable shape.
+   * @param {Array<string|Object>} steps Caller-provided checklist items.
    * @returns {Array<{id:string,label:string,status:string,note:string}>}
    */
-  function normalizeOperations(operations) {
-    return (Array.isArray(operations) ? operations : []).map(function (operation, index) {
-      if (typeof operation === 'string') {
-        return {id:'operation-' + index, label:operation, status:'pending', note:''};
+  function normalizeSteps(steps) {
+    return (Array.isArray(steps) ? steps : []).map(function (step, index) {
+      if (typeof step === 'string') {
+        return {id:'step-' + index, label:step, status:'pending', note:''};
       }
-      operation = operation || {};
+      step = step || {};
       return {
-        id:operation.id || ('operation-' + index),
-        label:operation.label || operation.title || ('Step ' + (index + 1)),
-        status:operation.status || 'pending',
-        note:operation.note || ''
+        id:step.id || ('step-' + index),
+        label:step.label || step.title || ('Step ' + (index + 1)),
+        status:step.status || 'pending',
+        note:step.note || ''
       };
     });
   }
@@ -246,7 +246,7 @@
     renderedContent.set(element, key);
   }
 
-  /** Update the definition list of compact operation facts. */
+  /** Update the definition list of compact Action facts. */
   function renderActivityDetails(details) {
     const list = byId('activityDetails');
     if (!list) return;
@@ -267,11 +267,11 @@
   function renderActivityTimeline() {
     const checklist = byId('activityChecklist');
     if (checklist) {
-      checklist.innerHTML = (activity.operations || []).map(function (operation) {
-        const iconName = operation.status === 'done' ? 'check' : operation.status === 'error' ? 'triangle-alert' : '';
-        const mark = iconName && LF.Icons ? LF.Icons.icon(iconName) : operation.status === 'active' ? '•' : '';
-        return '<div class="activity-check-item ' + operation.status + '"><i>' + mark + '</i><strong>' +
-          C.escapeHtml(operation.label) + '</strong><span>' + C.escapeHtml(operation.note || '') + '</span></div>';
+      checklist.innerHTML = (activity.steps || []).map(function (step) {
+        const iconName = step.status === 'done' ? 'check' : step.status === 'error' ? 'triangle-alert' : '';
+        const mark = iconName && LF.Icons ? LF.Icons.icon(iconName) : step.status === 'active' ? '•' : '';
+        return '<div class="activity-check-item ' + step.status + '"><i>' + mark + '</i><strong>' +
+          C.escapeHtml(step.label) + '</strong><span>' + C.escapeHtml(step.note || '') + '</span></div>';
       }).join('');
     }
 
@@ -317,7 +317,7 @@
     });
   }
 
-  /** Render command labels and enabled states from the operation lifecycle. */
+  /** Render command labels and enabled states from the Action lifecycle. */
   function renderActivityCommands() {
     const finished = activity.status !== 'running';
     const cancel = byId('activityCancel');
@@ -434,7 +434,7 @@
   }
 
   /**
-   * Restore the operation surface to a neutral, closed state.
+   * Restore the Action surface to a neutral, closed state.
    *
    * A fresh action must never inherit payloads, disclosure state, progress
    * classes or timers from the previous action. This function deliberately
@@ -512,7 +512,7 @@
   }
 
   /**
-   * Open the one global operation totem.
+   * Open the one global Action totem.
    * @param {Object} [options] Initial display state and optional cancel callback.
    */
   function activityStart(options) {
@@ -539,7 +539,7 @@
       requestIsJson:Boolean(input.requestIsJson),
       response:text(input.response),
       responseIsJson:Boolean(input.responseIsJson),
-      operations:normalizeOperations(input.operations),
+      steps:normalizeSteps(input.steps),
       stream:input.stream ? Object.assign({}, input.stream) : null,
       onCancel:typeof input.onCancel === 'function' ? input.onCancel : null,
       onRetry:typeof input.onRetry === 'function' ? input.onRetry : null,
@@ -560,7 +560,7 @@
 
   /**
    * Merge an incremental activity update without replacing unspecified fields.
-   * A operation can be updated by passing `operationId`, `operationStatus`, and `operationNote`.
+   * An Action step can be updated by passing `stepId`, `stepStatus`, and `stepNote`.
    * @param {Object} [options] Partial activity state.
    */
   function activityUpdate(options) {
@@ -579,13 +579,13 @@
     if (input.showAiTrace != null) activity.showAiTrace = Boolean(input.showAiTrace);
     if (input.details) activity.details = Object.assign({}, activity.details, input.details);
     if (input.stream) activity.stream = Object.assign({}, activity.stream || {}, input.stream);
-    if (Array.isArray(input.operations)) activity.operations = normalizeOperations(input.operations);
+    if (Array.isArray(input.steps)) activity.steps = normalizeSteps(input.steps);
 
-    if (input.operationId) {
-      activity.operations.forEach(function (operation) {
-        if (operation.id !== input.operationId) return;
-        if (input.operationStatus) operation.status = input.operationStatus;
-        if (input.operationNote != null) operation.note = text(input.operationNote);
+    if (input.stepId) {
+      activity.steps.forEach(function (step) {
+        if (step.id !== input.stepId) return;
+        if (input.stepStatus) step.status = input.stepStatus;
+        if (input.stepNote != null) step.note = text(input.stepNote);
       });
     }
     if (input.stage != null && text(input.stage) !== activity.stage) {
@@ -613,19 +613,19 @@
     if (delay > 0) hideTimer = window.setTimeout(activityHide, delay);
   }
 
-  /** Mark the current operation complete and freeze its final duration. */
+  /** Mark the current Action complete and freeze its final duration. */
   function activityFinish(options) {
     if (!activity) return;
     const input = options || {};
     activity.status = 'complete';
     if(activity.stream)activity.stream=Object.assign({},activity.stream,{active:false,status:'complete'});
     stopActivityClock();
-    activity.operations.forEach(function (operation) {
-      if (operation.status === 'active' || operation.status === 'pending') operation.status = 'done';
+    activity.steps.forEach(function (step) {
+      if (step.status === 'active' || step.status === 'pending') step.status = 'done';
     });
     activityUpdate({
       stage:input.stage || 'Complete',
-      message:input.message || 'Operation completed.',
+      message:input.message || 'Action completed.',
       progress:1,
       indeterminate:false,
       cancellable:false,
@@ -642,17 +642,17 @@
     scheduleActivityHide(input.holdMs, activity.showAiTrace ? 3000 : 650);
   }
 
-  /** Mark the current operation failed, preserve its detail, and freeze time. */
+  /** Mark the current Action failed, preserve its detail, and freeze time. */
   function activityError(error, options) {
     if (!activity) return;
     const input = options || {};
-    const message = input.message || (error && error.message) || String(error || 'Operation failed.');
+    const message = input.message || (error && error.message) || String(error || 'Action failed.');
     activity.kind = 'ERROR';
     activity.status = 'error';
     if(activity.stream)activity.stream=Object.assign({},activity.stream,{active:false,status:'interrupted'});
     stopActivityClock();
-    const activeOperation = activity.operations.find(function (operation) { return operation.status === 'active'; });
-    if (activeOperation) activeOperation.status = 'error';
+    const activeStep = activity.steps.find(function (step) { return step.status === 'active'; });
+    if (activeStep) activeStep.status = 'error';
     activityUpdate({
       stage:input.stage || 'Failed',
       message:message,
@@ -674,7 +674,7 @@
   }
 
   /**
-   * Cancel a running operation, or close a completed/failed one.
+   * Cancel a running Action, or close a completed/failed one.
    * @returns {boolean} Whether a close/cancel action was accepted.
    */
   function activityCancel() {
@@ -700,7 +700,7 @@
     return Boolean(stopped);
   }
 
-  /** Return whether the global operation surface currently owns the UI. */
+  /** Return whether the global Action surface currently owns the UI. */
   function isActivityOpen() {
     return Boolean(activity);
   }

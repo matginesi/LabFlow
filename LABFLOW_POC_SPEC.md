@@ -1,6 +1,6 @@
 # LabFlow POC specification
 
-> **Primary detailed guide:** [`docs/WORKFLOW.md`](docs/WORKFLOW.md). This specification defines the compact product contract; the workflow document explains the full lifecycle, OPERATION behavior, data layers and developer rules.
+> **Primary detailed guide:** [`docs/WORKFLOW.md`](docs/WORKFLOW.md). This specification defines the compact product contract; the workflow document explains the full lifecycle, Action behavior, data layers and developer rules.
 
 ## 1. Product model
 
@@ -28,11 +28,13 @@ Every manual edit, safe correction and accepted AI proposal changes only the sam
 
 Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
 
-## 3. Analysis Dossier
+## 3. Analysis Dossier and Experiment Brief
 
-`dataset.analyze` is automatic and fully deterministic. It refreshes canonical identity/evidence, calculates deterministic Results and produces a compact Analysis Dossier for the current revision.
+`dataset.analyze` is automatic and fully deterministic. It refreshes canonical identity/evidence, calculates deterministic Results and produces a compact Analysis Dossier for the current scientific state.
 
 The dossier is a **view**, not another dataset copy. It contains counts, compact sample/measurement references, findings, safe fixes, true semantic ambiguities and coverage/evidence summaries. Large RAW arrays, full curves and duplicate auxiliary evidence do not belong in the dossier.
+
+LabFlow also derives one shared **Experiment Brief**. Its deterministic part summarizes scope, performance, group comparisons, quality, Design coverage and unresolved questions. When an AI provider is configured at import, the internal `analysis.enrich` Action may add a bounded scientific interpretation layer (goal, variables, meaningful comparisons, interpretations, knowledge gaps and recommended focus). This enrichment is explicitly derived/provenanced, never replaces deterministic facts, and is reused by every later AI Context Pack. It is invalidated only when scientific inputs change, not when the researcher merely edits Report/Paper prose.
 
 ## 4. Research Context Packs
 
@@ -44,14 +46,14 @@ Profiles select only what the request needs, for example:
 - ambiguity — unresolved findings plus directly linked records/evidence;
 - design — one selected experiment, researcher-entered known values, explicit missing fields and linked evidence;
 - results — deterministic summary/rankings/anomalies/relevant findings;
-- report — current document plus compact scientific evidence;
+- report — shared Experiment Brief, current document/work block plus compact scientific evidence;
 - nomad — canonical staging facts only when required.
 
 RAW JV point arrays are excluded by default. AI works with stable LabFlow IDs/references and may cite them; it must not invent evidence that is not present in the Context Pack.
 
-## 5. Researcher OPERATIONS
+## 5. Researcher Actions
 
-A OPERATION represents a researcher-understandable goal. Internal functions such as parsing, result computation, Design evidence indexing, applying accepted proposals and validation gates are **steps/services**, not separate Workshop OPERATIONS.
+A Action represents a researcher-understandable goal. Internal functions such as parsing, result computation, Design evidence indexing, applying accepted proposals and validation gates are **steps/services**, not separate Actions.
 
 The public set is intentionally limited to eight goals:
 
@@ -64,13 +66,15 @@ The public set is intentionally limited to eight goals:
 7. `report.improve` — **AI assist**. Revise the current scientific document in one explicit mode.
 8. `nomad.prepare` — **Action / DETERMINISTIC**. Build known mappings and run authoritative local staging validation. Missing semantics remain visible for researcher review.
 
-`assistant.chat` is visible in Operations Workshop like every executable OPERATION, while remaining read-only with respect to scientific Working Copy state.
+`analysis.enrich` is an **internal automatic AI enrichment**, not a researcher-facing action. It runs only when a provider is configured and never blocks import if unavailable.
 
-Settings contains an editable **Operations Workshop** for every executable OPERATION plus **AI Helpers**, a filtered view of the exact same runtime definitions containing only AI-backed OPERATIONS. Both surfaces edit the same browser-local definition/prompt override; internal implementation services remain hidden.
+`assistant.chat` is visible in Actions like every executable Action, while remaining read-only with respect to scientific Working Copy state.
 
-## 6. Operation runtime
+Settings contains one editable **Actions** catalog for deterministic, AI-assisted and hybrid Actions. Each Action has one JSON definition and, only when needed, one Markdown prompt. Browser-local overrides never duplicate the source definition.
 
-AI and deterministic checkpoints execute sequentially in `LF.OperationRunner` with one AbortController. Success auto-advances. Stop aborts the run. An AI checkpoint failure may retry exactly twice, after 5 seconds and 10 seconds; after those bounded attempts the user may Retry checkpoint. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
+## 6. Action runtime
+
+AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Success auto-advances. Stop aborts the run. An AI checkpoint failure may retry exactly twice, after 5 seconds and 10 seconds; after those bounded attempts the user may Retry checkpoint. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
 
 Provider output is closed by default but streams live content/reasoning when available. Markdown/JSON rendering follows the active theme.
 
@@ -86,7 +90,7 @@ The Design page is researcher-first and useful without AI. Deterministic analysi
 
 `design.infer` is optional and receives only the currently selected experiment, its explicit missing fields and linked evidence. It produces proposals only; accepted values are merged locally without overwriting user-confirmed fields.
 
-The active Report Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF. PDF/DOCX append only figures explicitly selected in Report Studio.
+The active Report/Paper Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF. A fresh import starts with both documents empty. Prose is created only by researcher typing or an explicit Draft action. Drafting and AI editing use the shared Experiment Brief and bounded scientific Context Packs; long documents are generated/revised as ordered sections rather than one monolithic prompt. PDF/DOCX append only figures explicitly selected in Report Studio.
 
 ## 9. NOMAD
 
@@ -94,8 +98,8 @@ NOMAD staging and readiness are deterministic. One revision-scoped Canonical →
 
 ## 10. UI, privacy and validation
 
-`ui-kit.html` is the visual ground truth. Keep layouts compact/responsive, tables readable, tabs explicit and OPERATION progress truthful.
+`ui-kit.html` is the visual ground truth. Keep layouts compact/responsive, tables readable, tabs explicit and Action progress truthful.
 
 No runtime `.env`, analytics, trackers, cookies, WebSocket or remote runtime assets. API keys are local browser settings and redacted from logs.
 
-Before packaging, pass OPERATION/state/UI/privacy validators, unit tests and JavaScript syntax checks.
+Before packaging, pass Action/state/UI/privacy validators, unit tests and JavaScript syntax checks.

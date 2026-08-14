@@ -1,6 +1,6 @@
 # LabFlow workflow and operating model
 
-This is the primary architectural guide for LabFlow. Read this before changing the data model, OPERATION system, Review, Design, Results, Report, NOMAD or AI context logic.
+This is the primary architectural guide for LabFlow. Read this before changing the data model, Action system, Review, Design, Results, Report, NOMAD or AI context logic.
 
 LabFlow is intentionally built around one simple researcher workflow:
 
@@ -59,7 +59,7 @@ The original source preserves:
 - original RAW and auxiliary files;
 - provenance needed for auditing and round-trip export.
 
-No OPERATION, manual correction, Design edit, Report edit or NOMAD operation is allowed to mutate the original source.
+No Action, manual correction, Design edit, Report edit or NOMAD Action is allowed to mutate the original source.
 
 ### 1.2 Working Copy
 
@@ -74,7 +74,7 @@ Everything the researcher changes is applied here:
 - report text and figure selection;
 - other scientific settings belonging to the experiment.
 
-There must never be a second editable experiment projection hidden in a page, OPERATION or export module.
+There must never be a second editable experiment projection hidden in a page, Action or export module.
 
 ### 1.3 Canonical Store
 
@@ -109,14 +109,17 @@ It contains the information required to understand the dataset quickly:
 
 It is a **summary**, not the entire dataset.
 
+A shared **Experiment Brief** is then derived from those deterministic facts. Its deterministic layer covers scope, performance, comparisons, quality, Design coverage and unresolved questions. If the AI provider is configured, internal `analysis.enrich` may add a provenance-marked scientific interpretation layer. That layer is reused downstream and is keyed to a scientific-input signature, so writing Report/Paper text does not invalidate it. AI enrichment failure never blocks import.
+
 ### 1.5 Research Context Pack
 
-The Context Pack is built only when Chat or an AI OPERATION needs context.
+The Context Pack is built only when Chat or an AI Action needs context.
 
 It contains only the slice relevant to the current request. It is produced deterministically from the Canonical Store and current UI selection.
 
 A Context Pack may include:
 
+- the shared Experiment Brief (deterministic + optional fresh AI enrichment);
 - current page and selection;
 - selected sample/device/measurement/group;
 - compact measurement values;
@@ -199,7 +202,7 @@ Scientific mutation advances the revision. Examples:
 - changing Design data;
 - changing scientific report content when report state is part of the current Working Copy.
 
-Read-only operations do not create a scientific revision merely because they ran:
+Read-only Actions do not create a scientific revision merely because they ran:
 
 - Chat;
 - AI interpretation of Results;
@@ -226,13 +229,13 @@ Export creates a **new file**. Save persists only the internal LabFlow represent
 
 ---
 
-## 4. OPERATION philosophy
+## 4. Action philosophy
 
-A researcher OPERATION exists only if it represents a goal a researcher can understand.
+A researcher Action exists only if it represents a goal a researcher can understand.
 
-A function is not automatically a OPERATION.
+A function is not automatically a Action.
 
-These are examples of **internal services**, not public OPERATIONS:
+These are examples of **internal services**, not public Actions:
 
 - parse one file;
 - calculate Results;
@@ -241,11 +244,11 @@ These are examples of **internal services**, not public OPERATIONS:
 - apply a proposal;
 - rebuild Design evidence;
 - validate NOMAD mappings;
-- store a OPERATION result.
+- store a Action result.
 
-`analysis.summarize` (§6.1.1) is an internal deterministic OPERATION packaged for Workshop inspectability; it is auto-run, not offered as a public researcher action.
+`analysis.summarize` (§6.1.1) is an internal deterministic Action packaged for Settings → Actions inspectability; it is auto-run, not offered as a public researcher action. `analysis.enrich` is an internal automatic AI enrichment that runs only when a provider is configured and stores the optional scientific layer of the shared Experiment Brief.
 
-Settings exposes every executable OPERATION in Operations Workshop. AI Helpers is a filtered view of those same definitions containing only AI-backed OPERATIONS; both surfaces edit the same browser-local runtime definition/prompt override.
+Settings exposes every executable Action in Actions. Actions is a filtered view of those same definitions containing only AI-backed Actions; both surfaces edit the same browser-local runtime definition/prompt override.
 
 | Goal | Kind | Main outcome |
 |---|---|---|
@@ -258,28 +261,28 @@ Settings exposes every executable OPERATION in Operations Workshop. AI Helpers i
 | Improve report | AI assist | revised current Markdown |
 | Prepare NOMAD export | Researcher action · deterministic | canonical→NOMAD mapping + readiness validation |
 
-`assistant.chat` uses the same Context Builder and is visible in Workshop; it remains a non-mutating Assistant capability.
+`assistant.chat` uses the same Context Builder and is visible in Settings → Actions; it remains a non-mutating Assistant capability.
 
 ---
 
-## 5. OPERATION execution model
+## 5. Action execution model
 
-Operation definitions live in:
+Action definitions live in:
 
 ```text
-operations/<operation-id>/operation.json
+actions/<action-id>/action.json
 ```
 
-AI OPERATIONS additionally own:
+AI Actions additionally own:
 
 ```text
-operations/<operation-id>/prompt.md
+actions/<action-id>/prompt.md
 ```
 
-Structured AI OPERATIONS may reference a schema in:
+Structured AI Actions may reference a schema in:
 
 ```text
-operations/schemas/*.json
+actions/schemas/*.json
 ```
 
 ### Sequential execution
@@ -287,7 +290,7 @@ operations/schemas/*.json
 A run is always finite and sequential:
 
 ```text
-OPERATION
+Action
   ↓
 checkpoint 1
   ↓ success
@@ -321,7 +324,7 @@ Provider output is closed by default. When opened it must show meaningful stream
 
 ---
 
-# 6. Detailed OPERATION workflow
+# 6. Detailed Action workflow
 
 ## 6.1 Analyze dataset — `dataset.analyze`
 
@@ -365,9 +368,9 @@ The current Analysis Dossier for the current Working Copy revision.
 - change data to make warnings disappear;
 - use AI to decide deterministic facts.
 
-### 6.1.1 Analysis Summary Operation — `analysis.summarize` (internal, auto-run)
+### 6.1.1 Analysis Summary Action — `analysis.summarize` (internal, auto-run)
 
-After analysis is fresh, an internal deterministic OPERATION stores the **Analysis Dossier statistics bundle** (`exp.analysisSummary`) on the Working Copy. It is not a public researcher OPERATION: it runs automatically, never needs a trigger, and never mutates scientific fields.
+After analysis is fresh, an internal deterministic Action stores the **Analysis Dossier statistics bundle** (`exp.analysisSummary`) on the Working Copy. It is not a public researcher Action: it runs automatically, never needs a trigger, and never mutates scientific fields.
 
 The bundle is the **single deterministic source** for:
 
@@ -470,7 +473,7 @@ AI output is a **proposal**, never an authoritative write.
 
 ### Applying proposals
 
-Applying a valid proposal is an internal deterministic operation:
+Applying a valid proposal is an internal deterministic service:
 
 1. resolve the target against the current revision;
 2. verify the `before` state still matches;
@@ -526,7 +529,7 @@ Known or user-confirmed fields are authoritative and must not be regenerated.
 
 A proposal for missing fields only, with evidence/confidence where supported.
 
-The researcher remains able to edit the Design manually without running the OPERATION.
+The researcher remains able to edit the Design manually without running the Action.
 
 ---
 
@@ -594,8 +597,11 @@ A deterministic Report Context Pack includes:
 
 ### Checkpoints
 
-1. **generate** — model writes Markdown;
-2. **store** — current Report editor receives the Markdown.
+1. **collect blocks** — deterministically plan bounded document sections;
+2. **draft blocks** — model writes each requested section using the shared Experiment Brief and bounded evidence;
+3. **merge/store** — ordered sections become the current Report/Paper editor content.
+
+Fresh imports keep both Report and Paper empty. Drafting occurs only after the researcher explicitly chooses Draft.
 
 ### Source-of-truth rule
 
@@ -610,7 +616,7 @@ The current Report Markdown editor is the single textual source used by Report e
 
 ### Why it exists
 
-Revision is the same conceptual operation regardless of whether the researcher wants to improve Methods, Results, Discussion, scientific review or general style.
+Revision is the same conceptual Action regardless of whether the researcher wants to improve Methods, Results, Discussion, scientific review or general style.
 
 ### Inputs
 
@@ -620,9 +626,9 @@ Revision is the same conceptual operation regardless of whether the researcher w
 
 ### Output
 
-Revised Markdown returned to the same editor/source of truth.
+Revised Markdown returned to the same editor/source of truth. Common aids (for example tighten, clarify, evidence check) and Report/Paper-specific aids are modes of this Action. Long documents are split by section/block so each model call receives the relevant text plus the same bounded scientific basis.
 
-The OPERATION must preserve factual consistency with deterministic Results and provenance.
+The Action must preserve factual consistency with deterministic Results and provenance.
 
 ---
 
@@ -673,7 +679,7 @@ Scientific mutation invalidates stale mapping/staging.
 
 # 7. Assistant Chat
 
-`assistant.chat` is an AI OPERATION exposed in Operations Workshop and AI Helpers. Its conversation/output settings remain separate, but its executable prompt/contract is edited through the same OPERATION runtime editor. It is read-only with respect to scientific state.
+`assistant.chat` is an AI Action exposed in Actions. Its conversation/output settings remain separate, but its executable prompt/contract is edited through the same Action runtime editor. It is read-only with respect to scientific state.
 
 ## Context selection
 
@@ -711,7 +717,7 @@ The Context Pack should prioritize mapping readiness, missing fields and validat
 
 ## Budgeting
 
-Chat context and output have their own bounded settings. AI OPERATION output budgets live in their Operation contracts. There is no one global output-token budget controlling every OPERATION.
+Chat context and output have their own bounded settings. AI Action output budgets live in their Action contracts. There is no one global output-token budget controlling every Action.
 
 ---
 
@@ -788,10 +794,10 @@ AI must never overwrite user-confirmed values silently.
 
 # 11. Report workflow
 
-The editor is authoritative.
+The editor is authoritative and starts empty on a fresh import. There is no automatically generated placeholder prose.
 
 ```text
-Generate / Improve
+Draft / Improve
        ↓
 Markdown editor
        ↓
@@ -888,12 +894,12 @@ optional AI assist
 
 # 15. Developer verification workflow
 
-After OPERATION, prompt, state, model or UI changes run the repository validators and unit suite:
+After Action, prompt, state, model or UI changes run the repository validators and unit suite:
 
 ```bash
 python tools/build_prompt_bundle.py
-python tools/build_operation_registry.py
-python tools/validate_operation_contract.py
+python tools/build_action_registry.py
+python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
 python tools/validate_privacy_contract.py

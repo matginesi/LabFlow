@@ -1,0 +1,31 @@
+{
+  "id": "analysis.summarize",
+  "title": "Summarize deterministic analysis",
+  "short_title": "Analysis summary",
+  "category": "analysis",
+  "type": "DETERMINISTIC",
+  "role": "automatic",
+  "mutation_scope": "",
+  "output": "Analysis Dossier statistics bundle (per-scan groupStatistics, metrics, chartData) reused by Compare, Report and NOMAD.",
+  "purpose": "Refresh a compact deterministic statistics bundle over the analysis. It is the single source the Compare table, Report figures and NOMAD derived analysis reuse, so they cannot diverge when the Working Copy changes.",
+  "description": "Recomputes and stores the analysisStatistics bundle. Deterministic computation only; never mutates scientific fields.",
+  "strategy": "Automatic deterministic computation. No provider, no prompt, no mutation of scientific values: the bundle is a derived index over the already-computed analysis.",
+  "steps": [
+    {
+      "id": "analysis.collect",
+      "type": "DETERMINISTIC",
+      "fn": "analysis.collect",
+      "label": "Read deterministic analysis statistics"
+    },
+    {
+      "id": "analysis.store",
+      "type": "DETERMINISTIC",
+      "fn": "analysis.store",
+      "label": "Store bundle on the Working Copy"
+    }
+  ],
+  "version": 1,
+  "input_scope": "working-copy.analysis",
+  "visibility": "internal",
+  "requires": []
+}

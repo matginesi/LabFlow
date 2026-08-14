@@ -3,7 +3,7 @@
 
 Markdown files remain the source of truth. This helper has no runtime role.
 
-Operation definitions and their prompts live under operations/** and are compiled by tools/build_operation_registry.py. This script compiles only shared policies and system utilities.
+Action definitions and their prompts live under actions/** and are compiled by tools/build_action_registry.py. This script compiles only shared policies and system utilities.
 """
 from __future__ import annotations
 import json

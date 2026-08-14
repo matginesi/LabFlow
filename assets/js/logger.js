@@ -236,7 +236,7 @@
   function installInteractionHooks() {
     document.addEventListener('click', function (ev) {
       if (!settings.interactions) return;
-      const el = ev.target && ev.target.closest ? ev.target.closest('button,a,[data-route],[data-operation]') : null;
+      const el = ev.target && ev.target.closest ? ev.target.closest('button,a,[data-route],[data-action]') : null;
       if (el) trace('ui.event', 'click', interactionDescriptor(el));
     }, true);
     document.addEventListener('change', function (ev) {

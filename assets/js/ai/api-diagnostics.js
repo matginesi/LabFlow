@@ -27,7 +27,7 @@
   function errorSummary(error){
     const e=error||{},status=Number(e.status||0),code=String(e.providerCode||e.code||'');
     let category='Provider error',next='Review the endpoint, model and provider status.';
-    if(e.cancelled){category='Cancelled';next='Run the operation again when ready.';}
+    if(e.cancelled){category='Cancelled';next='Run the Action again when ready.';}
     else if(e.timedOut){category='Timeout';next='Retry the request or increase the provider timeout for a slow local model.';}
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');

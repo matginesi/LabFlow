@@ -1,0 +1,45 @@
+{
+  "id": "report.improve",
+  "type": "HYBRID",
+  "category": "report",
+  "role": "researcher",
+  "title": "AI writing help",
+  "short_title": "Writing help",
+  "purpose": "Improve a selected document section or, for common actions, revise the current document in bounded blocks without changing scientific source data.",
+  "strategy": "LabFlow selects only the relevant Markdown section(s), supplies the shared Experiment Brief and evidence pack, asks the model for replacement blocks, then merges them back into the document.",
+  "output": "text",
+  "max_output_tokens": 8000,
+  "mutation_scope": "report",
+  "policies": [
+    "policy.scientific-provenance"
+  ],
+  "steps": [
+    {
+      "id": "collect",
+      "type": "DETERMINISTIC",
+      "fn": "report.collect-edit-blocks",
+      "weight": 0.08
+    },
+    {
+      "id": "edit",
+      "type": "AI",
+      "prompt": "prompt.md",
+      "output": "text",
+      "max_output_tokens": 8000,
+      "timeout_ms": 240000,
+      "foreach": "collect.blocks",
+      "weight": 0.84
+    },
+    {
+      "id": "store",
+      "type": "DETERMINISTIC",
+      "fn": "report.store-edit-blocks",
+      "weight": 0.08,
+      "capture_result": true
+    }
+  ],
+  "version": 1,
+  "input_scope": "working-copy.active-document",
+  "visibility": "public",
+  "requires": []
+}

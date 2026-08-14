@@ -234,18 +234,18 @@ Files:
 - `tools/validate_operation_contract.py`: add `'analysis.summarize'` to the `PUBLIC` set (the deterministic-only set is derived from steps). Re-run.
 - Re-run `python tools/build_prompt_bundle.py` and `python tools/build_operation_registry.py`.
 
-Tests: covered by `validate_operation_contract.py` + the new step's return shape asserted in Task #1 tests (call `LF.OperationSteps` steps directly is not needed; the integration test runs the op through the runner). Commit.
+Tests: covered by `validate_operation_contract.py` + the new step's return shape asserted in Task #1 tests (call `LF.ActionSteps` steps directly is not needed; the integration test runs the op through the runner). Commit.
 
 ### Task #3 — invalidation + defaults + normalization
 
 Files: `assets/js/ai/state.js`, `assets/js/ai/model.js`.
 
-- `state.js` defaults object (near line 54): add `reportMode: 'editor'` and `settingsOperationDocKind: 'lab'` to the initial state (persist via existing save/restore machinery).
+- `state.js` defaults object (near line 54): add `reportMode: 'editor'` and `settingsActionDocKind: 'lab'` to the initial state (persist via existing save/restore machinery).
 - `state.js` `touch` (near line 153–161): in the existing `dataset` branch, add `delete exp.analysisSummary;` and add an `analysis` branch that also deletes it (mismatch-factor changes re-derive analysis).
-- `state.js` `normalize` (near line 76–80): `reportMode` allowed `'editor'|'preview'` only (drop `'split'`); coerce `settingsOperationDocKind` to `'lab'|'paper'`.
+- `state.js` `normalize` (near line 76–80): `reportMode` allowed `'editor'|'preview'` only (drop `'split'`); coerce `settingsActionDocKind` to `'lab'|'paper'`.
 - `assets/js/ai/model.js` line ~78: the `reportMode` normalization list currently accepts `'split'` — remove it (only `'editor'|'preview'`).
 
-Tests: extend `tests/unit/state-test.js`: serialize → restore keeps `reportMode` and `settingsOperationDocKind`; `analysisSummary` survives a Working Copy save round-trip; `touch('dataset')` clears `analysisSummary`.
+Tests: extend `tests/unit/state-test.js`: serialize → restore keeps `reportMode` and `settingsActionDocKind`; `analysisSummary` survives a Working Copy save round-trip; `touch('dataset')` clears `analysisSummary`.
 
 ### Task #4 — Report reads the bundle; figures become memoized lazy
 
@@ -383,7 +383,7 @@ Files: `assets/js/pages/design-page.js`, `assets/js/ai/operation-steps.js`, `ass
     <button type="button" class="design-chip <active? 'active'>" data-design-device="<id>"><strong><name></strong><small><samples>/<n> measurements</small></button>
   </div>
   <div class="design-completion"><strong>42%</strong><span>5 missing</span></div>
-  <button class="button primary compact" data-operation="design.infer" data-operation-device="<selectedId>">AI fill gaps</button>
+  <button class="button primary compact" data-action="design.infer" data-action-device="<selectedId>">AI fill gaps</button>
   <button class="button primary compact" data-apply-design-device="<selectedId>">Apply experiment</button>
   <button class="button ghost compact" id="refreshDesignEvidence">Refresh evidence</button>
 </div>
@@ -424,20 +424,20 @@ Files: `assets/js/pages/report-page.js`, `assets/js/pages/settings-page.js`, `as
 
 - `report-page.js`:
   - The `#runReportAiAction` handler (`app.js:290`) already targets the **active document** for `improve:*` (via `report.store` → `setActiveMarkdown` on the current kind) and passes `document_kind` for `generate:*`. No handler change needed; the two-document selector plus active-doc writing is the per-document behavior the spec wants.
-  - Add an "Improve selection" button in `.report-toolbar` next to the markdown tools. The existing generic binding in `assistant.js` (`button[data-operation]`, line 28) already handles it — `params(el)` reads `data-operation-mode` → `mode`, and `selection(el)` fires only when `data-operation="report.improve"` + `data-operation-mode="improve_selection"` and reads the `#reportMarkdown` selection:
+  - Add an "Improve selection" button in `.report-toolbar` next to the markdown tools. The existing generic binding in `assistant.js` (`button[data-operation]`, line 28) already handles it — `params(el)` reads `data-action-mode` → `mode`, and `selection(el)` fires only when `data-action="report.improve"` + `data-action-mode="improve_selection"` and reads the `#reportMarkdown` selection:
 
 ```html
-<button type="button" class="button ghost compact" id="reportImproveSelection" data-operation="report.improve" data-operation-kind="<kind>" data-operation-mode="improve_selection">Improve selection</button>
+<button type="button" class="button ghost compact" id="reportImproveSelection" data-action="report.improve" data-action-kind="<kind>" data-action-mode="improve_selection">Improve selection</button>
 ```
 
     Disable it until the editor `<textarea id="reportMarkdown">` has a non-empty selection: after each render, add listeners (`mouseup`/`keyup`/`selectionchange`) that toggle `disabled` based on `selectionStart !== selectionEnd`. No app.js handler needed — the generic runner picks it up.
   - Keep the mobile Write/Preview toggle working (`reportMode` now only `editor|preview`).
-- `settings-page.js` `operationWorkshopPanel`:
-  - when `selected.id` is `report.generate` or `report.improve`, render a compact select `#operationReportDocKind` (lab/paper) beside the Run button, defaulting from `LF.State.state.settingsOperationDocKind`; when a choice is made the Run button gets `data-operation-kind="<chosen>"` and the choice persists via `LF.State.state.settingsOperationDocKind`.
+- `settings-page.js` `actionEditorPanel`:
+  - when `selected.id` is `report.generate` or `report.improve`, render a compact select `#actionReportDocKind` (lab/paper) beside the Run button, defaulting from `LF.State.state.settingsActionDocKind`; when a choice is made the Run button gets `data-action-kind="<chosen>"` and the choice persists via `LF.State.state.settingsActionDocKind`.
   - AI Helpers view reuses the same panel — no duplicate config (AGENTS §6).
-- `app.js` `change` handler: add `#operationReportDocKind` → set `S.state.settingsOperationDocKind = value; S.persist && S.persist(); LF.SettingsPage.render();`.
+- `app.js` `change` handler: add `#actionReportDocKind` → set `S.state.settingsActionDocKind = value; S.persist && S.persist(); LF.SettingsPage.render();`.
 
-Tests — extend `tests/unit/settings-integration-test.js` (or nearest existing): selecting a report doc kind persists and the Run button carries the matching `data-operation-kind`.
+Tests — extend `tests/unit/settings-integration-test.js` (or nearest existing): selecting a report doc kind persists and the Run button carries the matching `data-action-kind`.
 
 ### Task #10 — OPERATIONS docs + WORKFLOW update
 

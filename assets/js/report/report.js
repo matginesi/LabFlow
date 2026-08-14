@@ -6,9 +6,9 @@
 
   function ensureReport(exp) {
     exp.report = exp.report || {};
-    /* An intentionally emptied document is valid once it has an edit timestamp. */
-    if (typeof exp.report.labMarkdown !== 'string' || (!exp.report.labMarkdown && !exp.report.labUpdatedAt)) exp.report.labMarkdown = exp.report.markdown || defaultMarkdown(exp);
-    if (typeof exp.report.paperMarkdown !== 'string' || (!exp.report.paperMarkdown && !exp.report.paperUpdatedAt)) exp.report.paperMarkdown = defaultPaperMarkdown(exp);
+    /* Report and Paper intentionally start empty. Drafting is an explicit researcher action. */
+    if (typeof exp.report.labMarkdown !== 'string') exp.report.labMarkdown = (typeof exp.report.markdown === 'string' && exp.report.kind !== 'paper') ? exp.report.markdown : '';
+    if (typeof exp.report.paperMarkdown !== 'string') exp.report.paperMarkdown = (typeof exp.report.markdown === 'string' && exp.report.kind === 'paper') ? exp.report.markdown : '';
     if (!exp.report.kind) exp.report.kind = 'lab';
     exp.report.markdown = exp.report.kind === 'paper' ? exp.report.paperMarkdown : exp.report.labMarkdown;
     if (!exp.report.title) exp.report.title = (exp.meta && exp.meta.name ? exp.meta.name : 'LabFlow experiment') + ' — Scientific report';

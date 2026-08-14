@@ -1,0 +1,51 @@
+{
+  "id": "design.infer",
+  "type": "HYBRID",
+  "category": "design",
+  "role": "researcher",
+  "title": "Complete design with AI",
+  "short_title": "Complete design",
+  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first and model knowledge only for missing information.",
+  "strategy": "One bounded request for one selected experiment. Known Working Copy values are preserved; evidence-backed and knowledge-only proposals are labelled separately.",
+  "output": "json",
+  "max_output_tokens": 8000,
+  "mutation_scope": "",
+  "policies": [
+    "policy.scientific-provenance",
+    "policy.structured-output"
+  ],
+  "steps": [
+    {
+      "id": "collect",
+      "type": "DETERMINISTIC",
+      "fn": "design.collect-selected",
+      "weight": 0.1
+    },
+    {
+      "id": "infer",
+      "type": "AI",
+      "prompt": "prompt.md",
+      "output": "json",
+      "schema": "design_reconstruct",
+      "max_output_tokens": 8000,
+      "timeout_ms": 180000,
+      "weight": 0.8
+    },
+    {
+      "id": "validate",
+      "type": "DETERMINISTIC",
+      "fn": "design.validate-coverage",
+      "weight": 0.05
+    },
+    {
+      "id": "store",
+      "type": "DETERMINISTIC",
+      "fn": "design.store-proposal",
+      "weight": 0.05
+    }
+  ],
+  "version": 1,
+  "input_scope": "working-copy.design-selection",
+  "visibility": "public",
+  "requires": []
+}

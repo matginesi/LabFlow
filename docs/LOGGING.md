@@ -90,12 +90,12 @@ AI logging records:
 - provider `finish_reason`, JSON-mode state and requested reasoning effort.
 
 If the provider returns HTTP 200 but the model output is empty, truncated,
-malformed JSON, or violates an Operation contract, LabFlow records an `ERROR`
+malformed JSON, or violates an Action contract, LabFlow records an `ERROR`
 event named `assistant.response.rejected`. It shares the transport
 `requestLogId`, so **Provider transactions** shows the call as **Rejected
 response** and exposes the sanitized raw provider envelope, model output,
 finish reason, token usage, validation error, stack and cause. A successful
-HTTP response is therefore never mistaken for a usable OPERATION result.
+HTTP response is therefore never mistaken for a usable Action result.
 
 It does **not** intentionally dump API keys. Common secret fields are redacted by the logger.
 

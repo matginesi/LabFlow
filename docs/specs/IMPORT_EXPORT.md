@@ -47,7 +47,7 @@ Original source:
 Working Copy:
 
 - mutable in memory;
-- used by every OPERATION/page;
+- used by every Action/page;
 - serialized only on explicit save/export.
 
 ## 4. Save internal state and export Working Copy

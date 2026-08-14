@@ -81,6 +81,21 @@ module.exports = function (t, LF) {
     assert(LF.AnalysisSummary.fresh(e), false, 'stale after revision bump');
   };
 
+  t['Experiment Brief AI survives non-scientific revision bumps but invalidates on scientific changes'] = function () {
+    const e = experiment();
+    LF.Analysis.analyze(e);
+    let brief = LF.ExperimentBrief.ensure(e), signature = LF.ExperimentBrief.signature(e);
+    brief.ai = { summary: 'Shared scientific context', inputSignature: signature, sourceRevision: e.sync.revision };
+    e.sync.revision += 1; // e.g. report/editor metadata changed; scientific inputs are identical
+    assert(LF.ExperimentBrief.fresh(e), true, 'non-scientific revision does not stale brief');
+    brief = LF.ExperimentBrief.ensure(e);
+    assert(brief.ai.summary, 'Shared scientific context', 'AI enrichment preserved');
+    e.measurements[0].fw.eff = 99;
+    assert(LF.ExperimentBrief.fresh(e), false, 'scientific edit invalidates brief');
+    brief = LF.ExperimentBrief.ensure(e);
+    assert(brief.ai, null, 'stale AI enrichment dropped');
+  };
+
   t['findings rollup only counts open findings by severity'] = function () {
     const e = experiment();
     e.findings = [

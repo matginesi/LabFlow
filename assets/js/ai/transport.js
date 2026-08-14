@@ -7,7 +7,7 @@
   let activeRequest=null;
   let injectedController=null;
 
-  /** The OperationRunner hands over the single shared AbortController for a run. */
+  /** The ActionRunner hands over the single shared AbortController for a run. */
   function acceptController(c){injectedController=c||null;}
 
   function connectionTestPrompt(){
@@ -271,7 +271,7 @@
   }
 
   /**
-   * Build the exact provider request. The caller (OperationRunner or Settings)
+   * Build the exact provider request. The caller (ActionRunner or Settings)
    * owns the already-assembled messages; this is transport only. Deep thinking
    * and temperature overrides for structured actions are explicit caller opts.
    */

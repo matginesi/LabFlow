@@ -1,6 +1,6 @@
 'use strict';
 require('../../assets/js/logger.js');
-require('../../assets/js/ai/operation-registry.js');
+require('../../assets/js/ai/action-registry.js');
 require('../../assets/js/ai/structured.js');
 
 function assert(actual, expected, label) {
@@ -15,11 +15,11 @@ module.exports = function (t, LF) {
   t['parse extracts fenced JSON'] = function(){assert(SO.parse('```json\n{"a":1}\n```').value,{a:1},'fenced JSON');};
   t['parse repairs comments and trailing commas'] = function(){const r=SO.parse('{//x\n"rows":[1,],}');assert(r.value,{rows:[1]},'repair');assert(r.repaired,true,'repaired flag');};
   t['parse diagnoses truncation'] = function(){const r=SO.parse('{"a":[');assert(r.value,null,'no value');assert(/truncat/i.test(r.diagnosis),true,'diagnosis');};
-  t['operation registry schemas validate structured operation output'] = function(){
-    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[{sample_names:['DEVICE A'],provenance_kind:'evidence',confidence:1,reason:'test evidence'}],unknowns:[]},{registry:LF.OperationRegistry});
+  t['Action registry schemas validate structured Action output'] = function(){
+    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[{sample_names:['DEVICE A'],provenance_kind:'evidence',confidence:1,reason:'test evidence'}],unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
-  t['schema enforces array minimums']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.OperationRegistry});assert(e.some(function(x){return /at least 1/.test(x);}),true,'min items');};
+  t['schema enforces array minimums']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.ActionRegistry});assert(e.some(function(x){return /at least 1/.test(x);}),true,'min items');};
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

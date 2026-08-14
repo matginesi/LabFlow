@@ -105,5 +105,46 @@
 
   function ensure(exp) { return fresh(exp) ? exp.analysisSummary : collect(exp); }
 
+  function designCoverage(exp) {
+    const d=exp.design||{},devices=d.devices||[],solutions=d.solutions||[];
+    const fields={stack:0,solutions:0,coating:0,annealing:0,atmosphere:0};
+    devices.forEach(function(dev){if((dev.stack||[]).length)fields.stack++;if((dev.solutionIds||[]).length)fields.solutions++;const p=dev.process||{};['coating','annealing','atmosphere'].forEach(function(k){if(String(p[k]||'').trim())fields[k]++;});});
+    return {devices:devices.length,solutions:solutions.length,known:fields,missing_device_fields:devices.reduce(function(n,dev){const p=dev.process||{};return n+((dev.stack||[]).length?0:1)+((dev.solutionIds||[]).length?0:1)+(String(p.coating||'').trim()?0:1)+(String(p.annealing||'').trim()?0:1)+(String(p.atmosphere||'').trim()?0:1);},0)};
+  }
+  function fileProfile(exp){const counts={};(exp.files||[]).forEach(function(f){const k=String(f.family||f.type||f.extension||'unknown');counts[k]=(counts[k]||0)+1;});return Object.keys(counts).sort().map(function(k){return{family:k,count:counts[k]};});}
+  function fnv1a(text){let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}return('00000000'+(h>>>0).toString(16)).slice(-8);}
+  function scientificSignature(exp){
+    const payload={
+      files:(exp.files||[]).map(function(f){return[f.id||'',f.family||f.type||'',f.canonicalPath||f.path||'',f.canonicalName||f.name||''];}),
+      measurements:(exp.measurements||[]).map(function(m){return[m.id||'',m.sample||'',m.group||'',!!m.isRef,!!m.excluded,m.qualityStatus||'',m.bestEff,m.hysteresis,m.fw||null,m.rv||null];}),
+      samples:(exp.samples||[]).map(function(s){return[s.id||'',s.name||'',s.group||'',!!s.isRef,(s.measurementIds||[]).slice()];}),
+      design:{devices:(exp.design&&exp.design.devices||[]),solutions:(exp.design&&exp.design.solutions||[])},
+      findings:(exp.findings||[]).map(function(f){return[f.id||'',f.type||'',f.status||'',f.severity||'',f.target||'',f.measurementId||'',f.title||'',f.detail||''];}),
+      analysisSettings:exp.analysisSettings||{}
+    };
+    return 'sci-'+fnv1a(JSON.stringify(payload));
+  }
+  function deterministicBrief(exp){
+    const bundle=ensure(exp),summary=(A.analysisOf(exp)||{}).summary||{},groups=bundle.groupStatistics||[],topRef=bundle.topRef||[],topNonRef=bundle.topNonRef||[],open=(exp.findings||[]).filter(function(f){return f.status!=='resolved';});
+    return {
+      source_revision:Number(exp.sync&&exp.sync.revision)||0,
+      scope:{samples:Number(summary.sampleCount||0),measurements:Number(summary.measurementCount||0),eligible:Number(summary.eligibleCount||0),files:(exp.files||[]).length,file_families:fileProfile(exp)},
+      performance:{best_sample:summary.bestSample||'',best_efficiency:summary.bestEfficiency,mean_efficiency:summary.meanEfficiency,median_efficiency:summary.medianEfficiency,top_reference:topRef.slice(0,5),top_non_reference:topNonRef.slice(0,5)},
+      comparisons:groups.slice(0,16),
+      quality:{valid:Number(summary.validCount||0),review:Number(summary.reviewCount||0),blocked:Number(summary.blockedCount||0),open_findings:open.length,anomalies:(bundle.anomalies||[]).slice(0,12)},
+      design:designCoverage(exp),
+      unresolved:open.slice(0,16).map(function(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',title:f.title||'',target:f.target||'',detail:String(f.detail||'').slice(0,360)};})
+    };
+  }
+  function briefFresh(exp){return !!(exp.experimentBrief&&String(exp.experimentBrief.inputSignature||'')===scientificSignature(exp));}
+  function brief(exp){
+    const rev=Number(exp.sync&&exp.sync.revision)||0,signature=scientificSignature(exp),prev=exp.experimentBrief||{},det=deterministicBrief(exp),ai=prev.ai&&String(prev.ai.inputSignature||prev.inputSignature||'')===signature?prev.ai:null;
+    exp.experimentBrief={version:2,generatedAt:new Date().toISOString(),sourceRevision:rev,inputSignature:signature,deterministic:det,ai:ai};
+    if(ai){ai.sourceRevision=rev;ai.inputSignature=signature;}
+    return exp.experimentBrief;
+  }
+  function ensureBrief(exp){return briefFresh(exp)?exp.experimentBrief:brief(exp);}
+
   LF.AnalysisSummary = { stats: stats, collect: collect, fresh: fresh, ensure: ensure };
+  LF.ExperimentBrief = { collect:brief, ensure:ensureBrief, fresh:briefFresh, deterministic:deterministicBrief, signature:scientificSignature };
 }());

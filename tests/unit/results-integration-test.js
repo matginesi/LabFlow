@@ -34,14 +34,17 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('quality-col')>=0,'warning column');
     truthy(html.indexOf('stack-table')>=0,'mobile table mode');
     truthy(html.indexOf('data-label="Warnings"')>=0,'mobile warning label');
+    truthy(html.indexOf('results-master-detail')>=0,'desktop master/detail layout');
+    truthy(html.indexOf('result-inline-inspector')>=0,'inline measurement detail');
   };
 
-  t['real 2026_01_22 JV curves open as a compact list before plotting'] = async function(){
+  t['real 2026_01_22 JV curves use a compact multi-selection rail'] = async function(){
     await ready('curves');const html=LF.ResultsPage.render();
-    truthy(html.indexOf('JV measurements')>=0,'list heading');
-    truthy(html.indexOf('curve-list-table')>=0,'list table');
-    assert(html.indexOf('curve-gallery'),-1,'legacy gallery removed');
-    truthy(html.indexOf('data-open-single-curve=')>=0,'open curve action');
+    truthy(html.indexOf('Choose curves')>=0,'selector heading');
+    truthy(html.indexOf('curve-selector-list')>=0,'selector rail');
+    truthy(html.indexOf('data-curve-check=')>=0,'multi-select checkboxes');
+    truthy(html.indexOf('id=\"curveCanvas\"')>=0,'curve chart');
+    assert(html.indexOf('id=\"curveMeasurement\"'),-1,'measurement select removed');
   };
 
   t['real 2026_01_22 Compare renders group controls, boxplot and statistics'] = async function(){
@@ -81,7 +84,8 @@ module.exports=function(t,LF,env){
     truthy((html.match(/data-direction="both"/g)||[]).length===2,'both groups render FW+RV boxes');
     truthy((html.match(/box-rect/g)||[]).length===4,'four boxes total (FW+RV per group)');
     truthy(html.indexOf('Forward (FW)')>=0&&html.indexOf('Reverse (RV)')>=0,'per-scan legend');
-    truthy(html.indexOf('n=4 · FW 2 / RV 2')>=0,'per-group scan counts');
+    truthy(html.indexOf('n=4')>=0,'compact per-group counts');
+    truthy(html.indexOf('viewBox=\"0 0 560 238\"')>=0,'compact chart geometry');
   };
 
   t['Compare statistics reuse the fresh bundle as single source'] = function(){

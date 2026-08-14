@@ -177,7 +177,7 @@ input[type="file"]::file-selector-button { min-height: var(--control-h-compact);
 .progress > span { display: block; height: 100%; background: var(--accent); }
 
 
-/* Global operation totem: presentation only, never a job/queue abstraction. */
+/* Global Action totem: presentation only, never a job/queue abstraction. */
 body.activity-open { overflow: hidden; }
 .activity-shade {
   position: fixed;

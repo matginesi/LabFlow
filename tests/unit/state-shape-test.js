@@ -15,11 +15,11 @@ module.exports = function (t, LF) {
   const S = LF.State;
 
   t['state has the canonical nested shape'] = function () {
-    assert(Object.keys(S.state).sort(), ['experiment', 'operationRun', 'project', 'ui', 'user', 'workspace'], 'state top-level keys');
+    assert(Object.keys(S.state).sort(), ['actionRun', 'experiment', 'project', 'ui', 'user', 'workspace'], 'state top-level keys');
     assert(S.state.user.name, '', 'user default');
     assert(S.state.workspace.theme, 'instrument', 'workspace theme default');
     assert(S.state.project, {}, 'project slot');
-    assert(S.state.operationRun, null, 'operationRun starts null');
+    assert(S.state.actionRun, null, 'actionRun starts null');
     assert(typeof S.state.ui.route, 'string', 'ui.route');
     assert(S.state.ui.route, 'experiment-import', 'app starts on upload screen');
     assert(S.state.ui.uploadLanding, false, 'uploadLanding starts false');
@@ -42,7 +42,7 @@ module.exports = function (t, LF) {
     truthy(exp.derived, 'derived exists');
     assert(exp.derived.chat && typeof exp.derived.chat, 'object', 'derived.chat');
     assert(Array.isArray(exp.derived.chat.conversation), true, 'derived.chat.conversation');
-    assert(exp.derived.operations && typeof exp.derived.operations, 'object', 'derived.operations');
+    assert(exp.derived.actions && typeof exp.derived.actions, 'object', 'derived.actions');
     assert(exp.analysis && typeof exp.analysis, 'object', 'analysis');
     assert(exp.design && typeof exp.design, 'object', 'design');
     assert(exp.report && typeof exp.report, 'object', 'report');
@@ -106,18 +106,18 @@ module.exports = function (t, LF) {
     assert(S.state.experiment.nomad.staleReason, undefined, 'no staleness marker for ai scope');
   };
 
-  t['operationRun records the single active workflow'] = function () {
+  t['actionRun records the single active workflow'] = function () {
     const exp = LF.DataModel.create({ sourceName: 'run.zip' });
     S.setExperiment(exp);
-    const run = S.startOperationRun({ operationId: 'dataset.analyze', stepIndex: 1 });
-    assert(run.operationId, 'dataset.analyze', 'operationId');
+    const run = S.startActionRun({ actionId: 'dataset.analyze', stepIndex: 1 });
+    assert(run.actionId, 'dataset.analyze', 'actionId');
     assert(run.stepIndex, 1, 'stepIndex');
     assert(run.status, 'running', 'status');
     assert(run.aborted, false, 'aborted flag');
     assert(run.sourceRevision, S.state.experiment.sync.revision, 'sourceRevision');
-    assert(S.state.operationRun === run, true, 'recorded on state');
-    S.endOperationRun('done');
-    assert(S.state.operationRun.status, 'done', 'terminal status');
+    assert(S.state.actionRun === run, true, 'recorded on state');
+    S.endActionRun('done');
+    assert(S.state.actionRun.status, 'done', 'terminal status');
   };
 
   t['values routed to designed nest, surface methods intact'] = function () {
@@ -156,9 +156,9 @@ module.exports = function (t, LF) {
     assert(S.state.ui.uploadLanding, false, 'resetSession clears uploadLanding');
   };
 
-  t['reportMode and workshop report doc kind have deterministic defaults'] = function () {
+  t['reportMode and Action manager report doc kind have deterministic defaults'] = function () {
     assert(S.state.ui.reportMode, 'editor', 'reportMode defaults to editor (no split mode)');
-    assert(S.state.ui.settingsOperationDocKind, 'lab', 'workshop report document default is lab');
+    assert(S.state.ui.settingsActionDocKind, 'lab', 'workshop report document default is lab');
   };
 
   t['reportMode normalization only accepts editor or preview'] = function () {

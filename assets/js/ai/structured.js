@@ -144,8 +144,8 @@
     return errors;
   }
 
-  function schemaIdFor(operationId, OperationRegistry) {
-    const def = OperationRegistry && OperationRegistry.operation ? OperationRegistry.operation(operationId) : null;
+  function schemaIdFor(actionId, ActionRegistry) {
+    const def = ActionRegistry && ActionRegistry.action ? ActionRegistry.action(actionId) : null;
     if (!def || !Array.isArray(def.steps)) return null;
     for (let i = def.steps.length - 1; i >= 0; i--) {
       const step = def.steps[i];
@@ -169,7 +169,7 @@
 
   function validate(schemaId, value, opts) {
     opts = opts || {};
-    const registry = opts.registry || (LF.OperationRegistry || null);
+    const registry = opts.registry || (LF.ActionRegistry || null);
     const schema = (registry && registry.schema) ? registry.schema(schemaId) : (registry && registry.schemas ? registry.schemas[schemaId] : null);
     if (!schema) return ['SCHEMA_UNKNOWN:' + schemaId];
     return schemaErrors(schema, value);
@@ -180,7 +180,7 @@
     if (!errors.length) return null;
     const diagnosis = (parseDiagnosis(opts)) || '';
     const truncated = /truncat/i.test(diagnosis);
-    const error = new Error(truncated ? 'The model stopped before completing the JSON OPERATION response. Nothing was stored.' : 'The provider response does not match the Operation contract. Nothing was stored.');
+    const error = new Error(truncated ? 'The model stopped before completing the JSON Action response. Nothing was stored.' : 'The provider response does not match the Action contract. Nothing was stored.');
     error.isContract = true;
     error.code = truncated ? 'MODEL_OUTPUT_TRUNCATED' : 'MODEL_OUTPUT_INVALID';
     error.providerResponse = errors.join('\n') + (diagnosis ? '\n\nParser diagnosis\n' + diagnosis : '') + '\n\n' + String(opts && opts.providerResponse || '');

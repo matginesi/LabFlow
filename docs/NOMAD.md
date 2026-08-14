@@ -16,9 +16,9 @@ Canonical Store
 Canonical → NOMAD mapping
 ```
 
-## 2. Researcher OPERATION
+## 2. Researcher Action
 
-The only NOMAD Workshop OPERATION is:
+The only NOMAD Action is:
 
 ```text
 nomad.prepare

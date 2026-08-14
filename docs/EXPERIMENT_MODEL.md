@@ -26,7 +26,7 @@ It references current Working Copy arrays and rebuilds its indexes for the curre
 
 ## Analysis Dossier
 
-Compact deterministic status view for Review and OPERATION scoping. It is not another dataset copy.
+Compact deterministic status view for Review and Action scoping. It is not another dataset copy.
 
 ## Research Context Pack
 

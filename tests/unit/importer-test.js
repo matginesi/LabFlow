@@ -146,7 +146,7 @@ module.exports = function (t, LF, env) {
     assert(Array.isArray(exp.findings), true, 'findings');
     assert(Array.isArray(exp.rawFormatEvidence), true, 'rawFormatEvidence');
     assert(Array.isArray(exp.auxiliaryEvidence), true, 'auxiliaryEvidence');
-    assert(exp.derived && Object.keys(exp.derived).sort(), ['chat', 'operations'], 'derived is runtime-only');
+    assert(exp.derived && Object.keys(exp.derived).sort(), ['actions', 'chat'], 'derived is runtime-only');
   };
 
   t['importer and data-model agree: block ids resolve via readBlock'] = async function () {

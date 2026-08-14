@@ -138,7 +138,7 @@ catalog), regenerated registry bundle. AGENTS.md §5/§16 apply.
 - New per-device button **"Apply experiment"** →
   `DesignAnalysis.applyOne(exp,'device',<idx>,'all')` scoped to the selected
   device (scope `applyAllDesign` in operation-steps.js:70 by `deviceId`).
-- "AI fill gaps" (`design.infer`) remains per-device (`data-operation-device`).
+- "AI fill gaps" (`design.infer`) remains per-device (`data-action-device`).
 - Proposal panel (`proposalPanel`, design-page.js:10‑13) filters to the
   selected device (today it shows the whole stored proposal).
 

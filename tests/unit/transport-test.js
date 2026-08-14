@@ -111,7 +111,7 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
-  t['LM Studio structured OPERATIONS use JSON Schema response format'] = function () {
+  t['LM Studio structured Actions use JSON Schema response format'] = function () {
     LF.Storage = {
       getAiSettings: function () { return { provider: 'lmstudio', endpoint: 'http://127.0.0.1:1234/v1', model: 'local-model', temperature: 0.2, maxTokens: 4096, inactivityTimeoutMs: 180000, streaming: true }; },
       getApiKey: function () { return ''; }

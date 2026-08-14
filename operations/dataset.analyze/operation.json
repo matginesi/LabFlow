@@ -1,6 +1,0 @@
-{
-  "id":"dataset.analyze","type":"DETERMINISTIC","category":"dataset","role":"automatic","title":"Analyze dataset","short_title":"Analyze dataset",
-  "purpose":"Build the canonical scientific Working Copy, evidence graph, deterministic results and compact Analysis Dossier from the current revision.",
-  "strategy":"Automatic facts-first analysis. No provider, no prompt, no mutation of scientific values.","output":"json","mutation_scope":"",
-  "steps":[{"id":"analyze","type":"DETERMINISTIC","fn":"dataset.analyze"}]
-}

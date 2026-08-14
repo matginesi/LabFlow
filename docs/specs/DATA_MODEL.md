@@ -37,7 +37,7 @@ The normalized experiment contains the scientific collections and derived state 
 - Results analysis;
 - Report;
 - NOMAD state;
-- derived OPERATION/chat state;
+- derived Action/chat state;
 - sync/revision metadata.
 
 Do not create separate mutable copies of these collections for individual pages.
@@ -115,7 +115,7 @@ They can be classified for Review as:
 - informational/technical;
 - resolved.
 
-A finding is not automatically an error and is not automatically a OPERATION.
+A finding is not automatically an error and is not automatically an Action.
 
 ## 8. Patches and provenance
 

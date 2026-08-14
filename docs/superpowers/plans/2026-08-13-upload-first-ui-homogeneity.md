@@ -160,7 +160,7 @@ Replace `<section ... id="design">...</section>` (currently `ui-kit.html:203-219
 
 - `.design-experiment-bar` containing `.design-chip-list` with `.design-chip` buttons (`<strong>` name + `<span>` sample count; one `.active`)
 - `.design-completion` (`<strong>%</strong>` + `<small>N missing</small>`)
-- Buttons: `AI fill gaps` (`.button.primary.compact`, `data-operation="design.infer" data-operation-device="…"`), `Apply experiment` (`.button.primary.compact`), `Refresh evidence` (`.button.ghost.compact`)
+- Buttons: `AI fill gaps` (`.button.primary.compact`, `data-action="design.infer" data-action-device="…"`), `Apply experiment` (`.button.primary.compact`), `Refresh evidence` (`.button.ghost.compact`)
 - `.design-proposal` panel (progressive disclosure) with `.badge.ai` proposal pills and per-device rows
 - Three `.design-table-section` panels with `.panel-head` (`eyebrow` + `h2.h2` + `meta`): Solutions & solvents (`.data-table` with name/role/linked evidence), Fabrication (process steps), Device stack (layer order). Use `.badge info/success/ai` for status.
 - Keep the three `.notice` contract lines at the bottom (Single-experiment Design / AI reconstruction / Live dependency), updated wording only if it contradicts the chip pattern.
@@ -174,7 +174,7 @@ Replace `<section ... id="report">...</section>` (currently `ui-kit.html:240-244
 - `.report-document-switcher` with `.report-document-tabs` and two `.report-document-choice` buttons (`role="tab"`, `aria-selected`, `.active`, icon via `data-icon`, `<strong>` + `<small>` with word count, `<em>` Editing now / Open)
 - `.report-toolbar`: `.segmented.report-mobile-mode-toggle` with Write / Preview (`.button.compact` + `.primary` on active) — **no Split**
 - `.markdown-tools` with ghost compact buttons (Heading / Bold / Italic / Evidence note / Table)
-- `#reportImproveSelection` button (`.button.ghost.compact`, disabled, `data-operation="report.improve"`) labelled "Improve selection"
+- `#reportImproveSelection` button (`.button.ghost.compact`, disabled, `data-action="report.improve"`) labelled "Improve selection"
 - The report-figure selector and export strip as currently rendered
 - A `.notice` line: editor is the single text source; lab/paper switch never merges text; derived exports do not mark saved.
 

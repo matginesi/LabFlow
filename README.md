@@ -12,7 +12,7 @@ The uploaded ZIP is immutable source evidence. LabFlow immediately snapshots its
 
 ## Start here
 
-For architecture, data lifecycle, OPERATION behavior, Review/Design/Results/Report/NOMAD flow and AI boundaries, read:
+For architecture, data lifecycle, Action behavior, Review/Design/Results/Report/NOMAD flow and AI boundaries, read:
 
 **[`docs/WORKFLOW.md`](docs/WORKFLOW.md)**
 
@@ -20,7 +20,7 @@ Supporting specifications:
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/specs/DATA_MODEL.md`](docs/specs/DATA_MODEL.md)
-- [`docs/specs/OPERATIONS.md`](docs/specs/OPERATIONS.md)
+- [`docs/specs/ACTIONS.md`](docs/specs/ACTIONS.md)
 - [`docs/AI.md`](docs/AI.md)
 - [`docs/specs/IMPORT_EXPORT.md`](docs/specs/IMPORT_EXPORT.md)
 - [`docs/NOMAD.md`](docs/NOMAD.md)
@@ -44,9 +44,9 @@ Chat / AI assists / Report
 
 Original filenames remain provenance and aliases; they are not blindly treated as scientific identity.
 
-## Researcher OPERATIONS
+## Researcher Actions
 
-Settings → Operations Workshop exposes every executable OPERATION in the webapp:
+Settings → Actions exposes every executable Action in the webapp:
 
 - Analyze dataset — deterministic automatic;
 - Apply safe corrections — deterministic action;
@@ -57,9 +57,9 @@ Settings → Operations Workshop exposes every executable OPERATION in the webap
 - Improve report — AI assist;
 - Prepare NOMAD export — deterministic action.
 
-`assistant.chat` is also visible in the Workshop so its prompt/runtime definition can be inspected and edited. Internal helper functions remain implementation details rather than OPERATIONS.
+`assistant.chat` is also visible in Actions so its prompt/runtime definition can be inspected and edited. Internal helper functions remain implementation details rather than Actions.
 
-Internal compute/index/apply/validation functions are not Workshop OPERATIONS.
+Internal compute/index/apply/validation functions are not Actions.
 
 ## Save and export
 
@@ -89,8 +89,8 @@ For **local LLM providers**, do not open `index.html` through `file://`. Start t
 
 ```bash
 python tools/build_prompt_bundle.py
-python tools/build_operation_registry.py
-python tools/validate_operation_contract.py
+python tools/build_action_registry.py
+python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
 python tools/validate_privacy_contract.py

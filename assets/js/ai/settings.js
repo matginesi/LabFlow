@@ -156,14 +156,14 @@
       showAiTrace: true,
       response: 'No provider response yet.',
       details: {Provider:provider.name || settings.provider, Model:settings.model, Endpoint:endpointHost(settings.endpoint), Timeout:Math.round((provider.connectionTestTimeoutMs||60000)/1000)+' s', Payload:'No experiment data'},
-      operations: [{id:'request', label:'Send minimal provider request', status:'active'}, {id:'response', label:'Read provider response', status:'pending'}]
+      steps: [{id:'request', label:'Send minimal provider request', status:'active'}, {id:'response', label:'Read provider response', status:'pending'}]
     });
     try {
       LF.UI.activityUpdate({stage:'Waiting for provider', indeterminate:true, message:'The direct browser request is in progress.'});
       const result = await LF.AI.testConnection();
       if(settings.provider==='lmstudio'&&result.model){const modelField=field('aiModel');if(modelField)modelField.value=result.model;if(result.model!==settings.model)LF.Storage.saveAiSettings(Object.assign({},settings,{model:result.model}));}
-      LF.UI.activityUpdate({operationId:'request', operationStatus:'done', operationNote:result.elapsedMs + ' ms'});
-      LF.UI.activityUpdate({operationId:'response', operationStatus:'done'});
+      LF.UI.activityUpdate({stepId:'request', stepStatus:'done', stepNote:result.elapsedMs + ' ms'});
+      LF.UI.activityUpdate({stepId:'response', stepStatus:'done'});
       LF.UI.activityFinish({
         message: 'Provider responded successfully.',
         response: result.content || 'Provider returned an empty test response.',

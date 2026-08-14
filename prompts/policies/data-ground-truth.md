@@ -9,7 +9,7 @@ output: text
 
 ## Purpose
 
-This document is the **authoritative import contract** for laboratory ZIP files consumed by LabFlow. It defines archive structure, file families, identity rules and the boundary between measured evidence and interpretation. The deterministic parser uses it directly; only the ambiguity-repair OPERATION receives it in full. Downstream Design, Results and Report AI receive smaller canonical Context Packs instead of this entire contract.
+This document is the **authoritative import contract** for laboratory ZIP files consumed by LabFlow. It defines archive structure, file families, identity rules and the boundary between measured evidence and interpretation. The deterministic parser uses it directly; only the ambiguity-repair Action receives it in full. Downstream Design, Results and Report AI Actions receive smaller canonical Context Packs instead of this entire contract.
 
 The source ZIP is immutable. A path, filename, header, unit, value or relationship that is not present in RAW evidence must never be presented as a measured fact.
 
@@ -299,4 +299,4 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
 
 ## AI constraint
 
-When semantic ambiguity repair receives this Data Contract, it is authoritative for ZIP interpretation. The model must inspect every entity present in the bounded ambiguity Context Pack, not only the first example. It must never collapse multiple devices, solutions or design variants without evidence. If context is insufficient, return `unknown` or an explicit unresolved item. Downstream Design, Results and Report operations do not receive this full contract; they rely on canonical Context Packs assembled after deterministic import.
+When semantic ambiguity repair receives this Data Contract, it is authoritative for ZIP interpretation. The model must inspect every entity present in the bounded ambiguity Context Pack, not only the first example. It must never collapse multiple devices, solutions or design variants without evidence. If context is insufficient, return `unknown` or an explicit unresolved item. Downstream Design, Results and Report Actions do not receive this full contract; they rely on canonical Context Packs assembled after deterministic import.
