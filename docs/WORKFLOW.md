@@ -138,7 +138,7 @@ It does **not** send the full experiment or RAW JV curves by default.
 
 Import is the only experiment entry point.
 
-The app always opens on the Upload ZIP screen, even when a workspace was previously saved: the first page is the same empty Upload ZIP page reached after Reset all, and the researcher resumes the saved flow manually via the stepper or Open Review. A previous experiment route is never resumed automatically on reload.
+The app always enters through **Upload & Review**. Every page load starts a fresh scientific session with **no ZIP restored**, so the first page is a mandatory ZIP upload gate. Provider/model settings, API key and UI preferences remain browser-local. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
 
 ```text
 Researcher selects ZIP
@@ -248,7 +248,7 @@ These are examples of **internal services**, not public Actions:
 
 `analysis.summarize` (§6.1.1) is an internal deterministic Action packaged for Settings → Actions inspectability; it is auto-run, not offered as a public researcher action. `analysis.enrich` is an internal automatic AI enrichment that runs only when a provider is configured and stores the optional scientific layer of the shared Experiment Brief.
 
-Settings exposes every executable Action in Actions. Actions is a filtered view of those same definitions containing only AI-backed Actions; both surfaces edit the same browser-local runtime definition/prompt override.
+Settings exposes every executable Action in one Actions catalog. Deterministic, hybrid, Assistant and other AI-backed Actions share the same versioned definitions, runner and browser-local runtime override model; there is no separate AI Helpers surface.
 
 | Goal | Kind | Main outcome |
 |---|---|---|
@@ -605,7 +605,7 @@ Fresh imports keep both Report and Paper empty. Drafting occurs only after the r
 
 ### Source-of-truth rule
 
-The current Report Markdown editor is the single textual source used by Report exports. PDF/DOCX must not silently regenerate different prose during export.
+The current Report Markdown editor is the single textual source used by Report exports. It supports standard inline `$...$` and display `$$...$$` LaTeX. Preview typesets formulas locally; `.tex` preserves them and DOCX/PDF render display equations into the exported document. PDF/DOCX must not silently regenerate different prose during export.
 
 ---
 
@@ -681,19 +681,13 @@ Scientific mutation invalidates stale mapping/staging.
 
 `assistant.chat` is an AI Action exposed in Actions. Its conversation/output settings remain separate, but its executable prompt/contract is edited through the same Action runtime editor. It is read-only with respect to scientific state.
 
-## Context selection
+## Read-only tool selection
 
-The Context Builder uses:
+The Assistant starts from a small bounded bootstrap context containing the user question, current page/selection, bounded conversation memory and the explicit read-only tool policy. It does **not** receive the whole experiment or an automatically expanded giant chat Context Pack.
 
-- user question;
-- current page;
-- selected measurement;
-- selected Design item;
-- Results tab and Compare groups;
-- query-matched canonical sample aliases;
-- relevant open findings;
-- linked evidence;
-- bounded conversation memory.
+The model may then request one allowed read Tool per bounded planning round. Current capabilities include experiment/sample summaries, measurement queries, deterministic Results, findings, Design, Report/Paper, selected figures, evidence, provenance and NOMAD state. The Tool Registry validates the tool ID/access and arguments, executes it against the current Canonical Data Model, and returns a bounded observation.
+
+The runner stops when the model declares that the collected observations are sufficient, when the round limit is reached, or when an identical call would repeat. It then makes the normal final response call from the bootstrap context plus those explicit observations. Write Tools and mutating Actions are unavailable to this loop.
 
 Examples:
 
@@ -701,23 +695,23 @@ Examples:
 
 > Why is Treatment B worse than REF?
 
-The Context Pack should prioritize group Results, selected groups, anomalies and relevant Design/evidence instead of unrelated files.
+The Assistant should retrieve `results.get` / `measurements.query` and only the relevant findings/Design/evidence needed for the comparison instead of unrelated files.
 
 ### Question from Design
 
 > What is missing for NEW-1A?
 
-The Context Pack should prioritize selected Design, linked sample/measurements and evidence.
+The Assistant should retrieve the selected sample/Design and linked measurements/evidence through the corresponding read Tools.
 
 ### Question from NOMAD
 
 > What blocks the export?
 
-The Context Pack should prioritize mapping readiness, missing fields and validation warnings.
+The Assistant should read the current NOMAD state and only the evidence needed to explain missing mappings or validation warnings.
 
 ## Budgeting
 
-Chat context and output have their own bounded settings. AI Action output budgets live in their Action contracts. There is no one global output-token budget controlling every Action.
+Chat context remains bounded separately. Output tokens are resolved from the active provider/model capability, then optionally reduced by Assistant, Action or provider-level caps. `0` means automatic; LabFlow does not inject a fixed 8k ceiling.
 
 ---
 
@@ -756,7 +750,8 @@ Expected capabilities include:
 - REF/non-REF separation;
 - all measurements;
 - warnings/anomalies;
-- individual and overlay JV curves;
+- JV Analyzer for one measurement: FW/RV curve, deterministic parameter deltas, RAW scan-integrity checks and descriptive FW/RV separation;
+- Overlay with its own independent multi-measurement selection for direct visual comparison;
 - group comparison;
 - responsive statistics tables;
 - optional AI interpretation layered on top.
@@ -910,7 +905,30 @@ find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 For architectural changes also test at least one real/synthetic ZIP through:
 
 ```text
-import → Review → correction → Results → Design → Report → Changes → NOMAD → Save / Export
+Upload & Review → correction → Results → Design → Report → Changes → NOMAD → Save / Export
 ```
 
 The original upload must remain byte-identical throughout.
+
+
+# 16. Current interaction contracts (2026-08-14)
+
+## Upload & Review
+
+Upload is mandatory and Review is not a second route. `experiment-understand` is retained only as a compatibility alias to `experiment-import`. After successful import the first page renders the source receipt and deterministic-first review together.
+
+## Report/Paper figures
+
+`report.figureSelections.lab` and `report.figureSelections.paper` are independent. Legacy `report.figureSelection` is migrated to both once and then kept only as the active-document compatibility alias. Preview, Context Pack and export always read the active document selection.
+
+## Changes baseline and edit provenance
+
+`LF.Changes.captureBaseline()` captures the post-import Working Copy, including both document texts and both figure selections. `LF.Report.setActiveMarkdown()` records bounded document edit provenance with `source: user|ai`; AI storage steps pass `ai`, while editor input defaults to `user`. Changes computes text differences directly from current in-memory Markdown, so manual edits do not wait for blur/focusout. Large diffs are bounded and scroll internally.
+
+## Provider output limits
+
+The AI transport resolves model capabilities and caches them by provider/endpoint/model. Exact output maxima are preferred; when only a context ceiling is available, the runner subtracts estimated input plus reserve. Unknown limits remain unknown and the token parameter is omitted. Settings can force a lower global cap, and Assistant can force a lower chat-only cap; zero means automatic.
+
+## Assistant streaming
+
+Chat displays semantic state only: waiting, thinking and writing. Raw SSE chunk/event/byte counters stay in logs. Reasoning is separated from final text and completed replies retain model/provider, latency, TTFT, usage and throughput metadata when available.

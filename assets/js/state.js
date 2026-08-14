@@ -116,10 +116,24 @@
 
   function subscribe(fn) { listeners.push(fn); Log.debug('state.subscribe', { listeners: listeners.length }); return function () { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; }
 
+  /** Normalize navigation aliases before any workflow gate is evaluated.
+   * `Experiment` is a safe entry point even before a ZIP exists; only the
+   * downstream scientific steps require an imported source archive. */
+  function normalizeRoute(route) {
+    route = String(route || '');
+    if (route === 'experiment-home' || route === 'experiment-understand') return 'experiment-import';
+    return route;
+  }
+
+  function routeRequiresExperiment(route) {
+    const normalized = normalizeRoute(route);
+    return /^experiment-/.test(normalized) && normalized !== 'experiment-import';
+  }
+
   function setRoute(route) {
     const previous = state.ui.route;
+    route = normalizeRoute(route);
     ensureExperiment('route:' + route);
-    if (route === 'experiment-home') route = 'experiment-import';
     state.ui.route = route;
     state.ui.uploadLanding = false;
     Log.info('route.changed', { from: previous, to: route });
@@ -251,6 +265,8 @@
     ensureExperiment: ensureExperiment,
     subscribe: subscribe,
     notify: notify,
+    normalizeRoute: normalizeRoute,
+    routeRequiresExperiment: routeRequiresExperiment,
     setRoute: setRoute,
     setExperiment: setExperiment,
     touch: touch,

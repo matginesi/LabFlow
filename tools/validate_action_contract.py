@@ -12,13 +12,13 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     except Exception as e:errors.append(f'{p}: invalid JSON: {e}');continue
     aid=d.get('id');defs[aid]=d
     if aid!=p.parent.name:errors.append(f'{p}: id must match directory')
-    for k in ('version','id','title','category','role','purpose','strategy','type','input_scope','output','mutation_scope','steps','visibility'):
+    for k in ('version','id','title','category','role','purpose','strategy','type','input','output','mutation_scope','steps','visibility'):
         if k not in d:errors.append(f'{aid}: missing {k}')
     if d.get('version')!=1:errors.append(f'{aid}: version must be 1')
     if d.get('type') not in TYPES:errors.append(f'{aid}: invalid type')
     if d.get('role') not in ROLES:errors.append(f'{aid}: invalid role {d.get("role")}')
     if d.get('visibility') not in VIS:errors.append(f'{aid}: invalid visibility')
-    if not str(d.get('input_scope') or '').strip():errors.append(f'{aid}: empty input_scope')
+    if not isinstance(d.get('input'),dict) or not str((d.get('input') or {}).get('context') or '').strip():errors.append(f'{aid}: input.context must declare the Context Pack profile')
     if d.get('mutation_scope') not in ('','dataset','design','report','metadata','nomad'):errors.append(f'{aid}: invalid mutation_scope')
     if d.get('mutation_scope') and d.get('role')!='researcher':errors.append(f'{aid}: mutating Actions must be researcher-triggered')
     for text_field in ('title','purpose','strategy','output'):
@@ -28,6 +28,9 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     step_ids=[s.get('id') for s in steps]
     if None in step_ids or len(step_ids)!=len(set(step_ids)):errors.append(f'{aid}: step ids must be present and unique')
     ai=[s for s in steps if s.get('type')=='AI']; det=[s for s in steps if s.get('type')=='DETERMINISTIC']
+    for s in det:
+        if not str(s.get('tool') or '').strip():errors.append(f'{aid}/{s.get("id")}: deterministic step requires tool')
+        if s.get('fn'):errors.append(f'{aid}/{s.get("id")}: legacy fn is not allowed; use tool')
     if len(ai)+len(det)!=len(steps):errors.append(f'{aid}: unsupported step type')
     expected_type='HYBRID' if ai and det else ('AI' if ai else 'DETERMINISTIC')
     if d.get('type')!=expected_type:errors.append(f'{aid}: type must be {expected_type} for its declared steps')
@@ -37,8 +40,11 @@ for p in sorted(ACTIONS.glob('*/action.json')):
         if not d.get('policies'):errors.append(f'{aid}: AI Action requires provenance/policy contract')
         for s in ai:
             if s.get('prompt')!='prompt.md':errors.append(f'{aid}/{s.get("id")}: AI step must use action-local prompt.md')
-            budget=int(s.get('max_output_tokens') or d.get('max_output_tokens') or 0)
-            if not 256<=budget<=32768:errors.append(f'{aid}/{s.get("id")}: output budget must be 256..32768')
+            budget=s.get('max_output_tokens',d.get('max_output_tokens'))
+            if budget is not None:
+                try: budget=int(budget)
+                except Exception: errors.append(f'{aid}/{s.get("id")}: max_output_tokens must be an integer when present'); budget=0
+                if budget and not 16<=budget<=1048576:errors.append(f'{aid}/{s.get("id")}: optional output cap must be 16..1048576')
             if s.get('output')=='json':
                 sid=s.get('schema')
                 if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: JSON output requires a registered schema')
@@ -48,11 +54,21 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     for req in d.get('requires') or []:
         if req not in EXPECTED:errors.append(f'{aid}: unknown dependency {req}')
 if set(defs)!=EXPECTED:errors.append(f'Action ids differ: missing={sorted(EXPECTED-set(defs))}, extra={sorted(set(defs)-EXPECTED)}')
-step_source=(ROOT/'assets/js/ai/action-steps.js').read_text()
+tool_source=(ROOT/'assets/js/tools/registry.js').read_text()
+tool_ids=set(re.findall(r"'([a-z0-9_.-]+)'\s*:\s*(?:\{|\[)",tool_source))
 for aid,d in defs.items():
     for s in d.get('steps',[]):
-        fn=s.get('fn')
-        if fn and ("'"+fn+"':function") not in step_source:errors.append(f'{aid}/{s.get("id")}: unknown deterministic fn {fn}')
+        tid=s.get('tool')
+        if tid and tid not in tool_ids:errors.append(f'{aid}/{s.get("id")}: unknown deterministic tool {tid}')
+        agent=s.get('agent')
+        if agent:
+            if s.get('type')!='AI':errors.append(f'{aid}/{s.get("id")}: agent configuration is valid only on AI steps')
+            if agent.get('mode')!='read_only_tools':errors.append(f'{aid}/{s.get("id")}: unsupported agent mode')
+            if not agent.get('tools'):errors.append(f'{aid}/{s.get("id")}: agent tool allowlist is empty')
+            for tid in agent.get('tools') or []:
+                if tid not in tool_ids:errors.append(f'{aid}/{s.get("id")}: unknown agent tool {tid}')
+            sid=agent.get('choice_schema')
+            if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: agent requires a registered choice_schema')
 # Static UI references must resolve to an Action id when literal.
 ui='\n'.join(p.read_text(errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))
 rendered=set(re.findall(r'data-action="([^"]+)"',ui)); unknown={x for x in rendered-set(defs) if '+' not in x and 'escapeHtml' not in x}

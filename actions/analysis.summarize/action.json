@@ -14,18 +14,21 @@
     {
       "id": "analysis.collect",
       "type": "DETERMINISTIC",
-      "fn": "analysis.collect",
-      "label": "Read deterministic analysis statistics"
+      "label": "Read deterministic analysis statistics",
+      "tool": "analysis.collect"
     },
     {
       "id": "analysis.store",
       "type": "DETERMINISTIC",
-      "fn": "analysis.store",
-      "label": "Store bundle on the Working Copy"
+      "label": "Store bundle on the Working Copy",
+      "tool": "analysis.store"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.analysis",
   "visibility": "internal",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "analysis"
+  }
 }

@@ -8,7 +8,6 @@
   "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief so every LabFlow AI feature can reuse the same context.",
   "strategy": "Facts first. The model may identify likely experimental intent, variables and useful comparisons, but must label inference and uncertainty. It never changes source data or deterministic results.",
   "output": "json",
-  "max_output_tokens": 8000,
   "mutation_scope": "",
   "policies": [
     "policy.scientific-provenance",
@@ -21,19 +20,21 @@
       "prompt": "prompt.md",
       "output": "json",
       "schema": "experiment_brief",
-      "max_output_tokens": 8000,
       "timeout_ms": 180000,
       "weight": 0.85
     },
     {
       "id": "store",
       "type": "DETERMINISTIC",
-      "fn": "analysis.store-brief-enrichment",
-      "weight": 0.15
+      "weight": 0.15,
+      "tool": "analysis.store-brief-enrichment"
     }
   ],
   "visibility": "internal",
   "version": 1,
   "input_scope": "experiment-brief",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "brief"
+  }
 }

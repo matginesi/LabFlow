@@ -50,17 +50,21 @@
     let replacement=selected,selectStart=start,selectEnd=end;
     function wrap(a,b,placeholder){const body=selected||placeholder;replacement=a+body+b;selectStart=start+a.length;selectEnd=selectStart+body.length;}
     if(tool==='h2') { const body=selected||'Section title'; replacement='## '+body+'\n\n'; selectStart=start+3; selectEnd=selectStart+body.length; }
+    else if(tool==='h3') { const body=selected||'Subsection title'; replacement='### '+body+'\n\n'; selectStart=start+4; selectEnd=selectStart+body.length; }
     else if(tool==='bold') wrap('**','**','important text');
     else if(tool==='italic') wrap('_','_','emphasized text');
     else if(tool==='quote') { const body=(selected||'Evidence-based note').split(/\r?\n/).map(function(line){return '> '+line;}).join('\n'); replacement=body+'\n\n'; selectStart=start; selectEnd=start+body.length; }
-    else if(tool==='list') { const body=(selected||'First item\nSecond item').split(/\r?\n/).map(function(line){return '- '+line;}).join('\n'); replacement=body+'\n\n'; selectStart=start; selectEnd=start+body.length; }
+    else if(tool==='ul'||tool==='list') { const body=(selected||'First item\nSecond item').split(/\r?\n/).map(function(line){return '- '+line;}).join('\n'); replacement=body+'\n\n'; selectStart=start; selectEnd=start+body.length; }
     else if(tool==='table') { replacement='| Field | Value | Evidence |\n|---|---|---|\n| Example |  |  |\n\n'; selectStart=start; selectEnd=start+replacement.length-2; }
     else if(tool==='code') wrap('`','`','value');
+    else if(tool==='link'){const body=selected||'link text';replacement='['+body+'](https://example.org)';selectStart=start+1;selectEnd=selectStart+body.length;}
+    else if(tool==='inline-math'){const body=selected||'\\eta = \\frac{P_{out}}{P_{in}}';replacement='$'+body+'$';selectStart=start+1;selectEnd=selectStart+body.length;}
+    else if(tool==='block-math'){const body=selected||'\\mathrm{PCE} = \\frac{V_{OC} J_{SC} FF}{P_{in}}';replacement='$$\n'+body+'\n$$\n\n';selectStart=start+3;selectEnd=selectStart+body.length;}
     else return;
     el.setRangeText(replacement,start,end,'end');
     el.focus();
     el.setSelectionRange(selectStart,selectEnd);
-    const exp=S.state.experiment;LF.Report.setActiveMarkdown(exp,el.value);markDraft('report');const preview=document.getElementById('reportMarkdownRendered');if(preview)preview.innerHTML=C.markdown(el.value);
+    const exp=S.state.experiment;LF.Report.setActiveMarkdown(exp,el.value);markDraft('report');const preview=document.getElementById('reportMarkdownRendered');if(preview){preview.innerHTML=C.markdown(el.value);if(LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,40);}
     Log.debug('report.markdown-tool',{tool:tool,selectionChars:selected.length,replacementChars:replacement.length});
   }
 
@@ -162,7 +166,7 @@
     LF.AISettings.decorate();
     LF.Theme.syncControls(LF.Theme.current());
     Log.trace('render.html',{route:S.state.route,chars:html.length});
-    LF.Assistant.render();if(LF.Icons)LF.Icons.hydrate(document);LF.ResultsPage.renderResultInspector();end({htmlChars:html.length});
+    LF.Assistant.render();if(LF.Icons)LF.Icons.hydrate(document);LF.ResultsPage.renderResultInspector();if(LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(document,70);end({htmlChars:html.length});
   }
 
   function markModified(scope){
@@ -222,7 +226,7 @@
       exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};
       if(LF.Changes&&LF.Changes.captureBaseline)LF.Changes.captureBaseline(exp);
       S.setExperiment(exp);
-      S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';
+      S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveOverlaySelection=[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';
       let briefMode='deterministic',briefAiStatus='not used';
       if(aiConfiguredSilently()&&LF.ActionRunner){
         const action=LF.ActionRunner.effective?LF.ActionRunner.effective('analysis.enrich'):null,settings=LF.Storage.getAiSettings();
@@ -235,8 +239,8 @@
         if(enriched&&enriched.status==='done'){briefMode='deterministic + AI';briefAiStatus='completed';LF.UI.activityUpdate({response:(enriched.aiOutput!=null&&typeof enriched.aiOutput==='object')?JSON.stringify(enriched.aiOutput,null,2):String(enriched.aiOutput!=null?enriched.aiOutput:(enriched.result||'Completed.')),responseIsJson:!!(enriched.aiOutput!=null&&typeof enriched.aiOutput==='object'),stream:{active:false,status:'complete'}});}
         else{briefAiStatus='failed · deterministic brief kept';LF.UI.activityUpdate({response:'## Experiment Brief enrichment unavailable\n\n'+((enriched&&enriched.message)||'The AI enrichment did not complete. The deterministic Experiment Brief remains valid.'),responseIsJson:false,stream:{active:false,status:'error'}});Log.warn('dataset.import-brief-enrichment-skipped',{status:enriched&&enriched.status,code:enriched&&enriched.code,message:enriched&&enriched.message});}
       }
-      S.setRoute('experiment-understand');
-      end({experimentId:exp.id,samples:exp.samples.length,measurements:exp.measurements.length,findings:exp.findings.length,brief:briefMode,nextRoute:'experiment-understand'},'info');
+      S.setRoute('experiment-import');
+      end({experimentId:exp.id,samples:exp.samples.length,measurements:exp.measurements.length,findings:exp.findings.length,brief:briefMode,nextRoute:'experiment-import'},'info');
       LF.UI.activityFinish({message:'ZIP parsed. Review is ready.',details:{Measurements:exp.measurements.length,Samples:exp.samples.length,Findings:exp.findings.length,'Experiment brief':briefMode,'AI enrichment':briefAiStatus}});
       LF.UI.toast('Dataset imported. Review is ready.','success');
     }catch(err){Log.error('dataset.import-failed',{name:file&&file.name,error:err});end({error:err},'error');LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
@@ -286,6 +290,12 @@
     catch(err){Log.error('report.docx-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
   }
 
+  async function downloadReportPdf(){
+    const exp=S.state.experiment,doc=syncActiveReportEditor('pdf-export');LF.UI.activityStart({title:'Export '+doc.shortLabel+' PDF',subtitle:doc.label+' from the current editor',kind:'REPORT',stage:'Preparing '+doc.shortLabel.toLowerCase(),progress:.02,details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words,Characters:doc.chars}});
+    try{await LF.Report.exportPdf(exp,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,message:'',details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words}});});LF.UI.activityFinish({message:doc.label+' PDF created from '+doc.words+' words.'});}
+    catch(err){Log.error('report.pdf-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
+  }
+
 
   function saveNomadSettings(){Log.debug('settings.nomad.save-request');LF.Storage.saveNomadSettings({instance:document.getElementById('nomadInstance').value.trim(),endpoint:document.getElementById('nomadEndpoint').value.trim(),includeRaw:document.getElementById('nomadRaw').checked,includeDerived:document.getElementById('nomadDerived').checked,includeReport:document.getElementById('nomadReport').checked});LF.UI.toast('NOMAD settings saved.','success');}
 
@@ -310,11 +320,11 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(/^experiment-/.test(target)&&target!=='experiment-import'&&!hasExperiment()){LF.UI.toast('Load a ZIP before opening the workflow.','info');return;}S.setRoute(target);return;}
+        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!window.confirm('Reset the current LabFlow session? Unsaved Working Copy changes, action history, chat, report/design state and the in-memory RAW snapshot will be cleared. Provider/theme preferences are kept.'))return;S.resetSession();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('Unsaved Working Copy changes, action history, chat, report/design state and the in-memory RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
@@ -385,15 +395,15 @@
         if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim()||'Matteo Ginesi',defaultAuthor:document.getElementById('userDefaultAuthor').value.trim()||document.getElementById('userName').value.trim()||'Matteo Ginesi',organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});if(hasExperiment()){const r=LF.Report.ensureReport(S.state.experiment);if(!r.author){r.author=LF.Storage.getUserProfile().defaultAuthor;markModified('report');}}LF.UI.toast('Profile saved.','success');render();return;}
         if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,memoryTurns:Number(document.getElementById('assistantMemoryTurns').value),memoryChars:Number(document.getElementById('assistantMemoryChars').value),messageChars:Number(document.getElementById('assistantMessageChars').value),maxOutputTokens:Number(document.getElementById('assistantMaxOutputTokens').value),temperature:Number(document.getElementById('assistantTemperature').value),contextChars:Number(document.getElementById('assistantContextChars').value)});LF.UI.toast('Assistant settings saved.','success');render();return;}
         if(e.target.closest('#saveActionEditor')){const btn=e.target.closest('#saveActionEditor'),id=btn.dataset.actionId,defText=document.getElementById('actionDefinitionEditor').value,promptText=document.getElementById('actionPromptEditor').value;try{const def=JSON.parse(defText);if(!def||def.id!==id)throw new Error('Action id must remain '+id+'.');if(!Array.isArray(def.steps)||!def.steps.length)throw new Error('Action definition requires at least one step.');LF.Storage.saveActionOverride(id,{definition:def,prompt:promptText});LF.UI.toast('Action runtime configuration saved.','success');render();}catch(err){LF.UI.toast('Action not saved: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#resetActionEditor')){const btn=e.target.closest('#resetActionEditor'),id=btn.dataset.actionId;if(LF.UI.confirmAction('Reset '+id+' to its source action.json and prompt.md?')){LF.Storage.resetActionOverride(id);LF.UI.toast('Action reset to source definition.','success');render();}return;}
-        if(e.target.closest('#clearAssistantConversation')){if(hasExperiment()&&LF.UI.confirmAction('Clear the current Assistant conversation and its memory?')){const d=LF.State.ensureDerived(S.state.experiment);d.chat=d.chat||{conversation:[]};d.chat.conversation=[];markModified('ai');LF.UI.toast('Assistant conversation cleared.','success');render();}return;}
+        if(e.target.closest('#resetActionEditor')){const btn=e.target.closest('#resetActionEditor'),id=btn.dataset.actionId;if(await LF.UI.confirmAction('Reset '+id+' to its source action.json and prompt.md?',{title:'Reset Action configuration',confirmLabel:'Reset Action'})){LF.Storage.resetActionOverride(id);LF.UI.toast('Action reset to source definition.','success');render();}return;}
+        if(e.target.closest('#clearAssistantConversation')){if(hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation and its memory?',{title:'Clear Assistant memory',confirmLabel:'Clear conversation',danger:true})){const d=LF.State.ensureDerived(S.state.experiment);d.chat=d.chat||{conversation:[]};d.chat.conversation=[];markModified('ai');LF.UI.toast('Assistant conversation cleared.','success');render();}return;}
         if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({enabled:document.getElementById('logEnabled').checked,level:document.getElementById('logLevel').value,maxEntries:Number(document.getElementById('logMaxEntries').value)||2500,interactions:document.getElementById('logInteractions').checked,network:document.getElementById('logNetwork').checked});LF.UI.toast('Logging settings applied. Reload only if you changed network instrumentation.','success');render();return;}
         const logLevel=e.target.closest('[data-log-level]');if(logLevel){LF.LogsPage.setLevel(logLevel.dataset.logLevel);render();return;}
         const logCategory=e.target.closest('[data-log-category]');if(logCategory){LF.LogsPage.setCategory(logCategory.dataset.logCategory);render();return;}
         if(e.target.closest('#refreshLogs')){render();return;}
         if(e.target.closest('#downloadDiagnostics')){LF.Logger.downloadDiagnostics();return;}
         if(e.target.closest('#downloadLogs')){LF.Logger.download();return;}
-        if(e.target.closest('#clearLogs')){if(LF.UI.confirmAction('Clear all buffered LabFlow logs? Download them first if you need to keep this diagnostic history.')){LF.Logger.clear();render();}return;}
+        if(e.target.closest('#clearLogs')){if(await LF.UI.confirmAction('Clear all buffered LabFlow logs? Download them first if you need to keep this diagnostic history.',{title:'Clear runtime logs',confirmLabel:'Clear logs',danger:true})){LF.Logger.clear();render();}return;}
         if(e.target.closest('#saveAiSettings')){LF.AISettings.saveFromForm();return;}
         if(e.target.closest('#loadProviderModels')){LF.AISettings.loadModels();return;}
         if(e.target.closest('#testAiConnection')){await LF.AISettings.testConnection(e.target.closest('#testAiConnection'));return;}
@@ -406,7 +416,7 @@
         if(e.target.closest('#reportMd')){const doc=syncActiveReportEditor('markdown-export'),result=LF.Report.exportMarkdown(S.state.experiment);LF.UI.toast(doc.label+' exported from '+result.words+' words.','success');return;}
         if(e.target.closest('#reportTex')){const doc=syncActiveReportEditor('latex-export');LF.Report.exportLatex(S.state.experiment);LF.UI.toast(doc.label+' exported as LaTeX.','success');return;}
         if(e.target.closest('#reportDocx')){downloadReportDocx();return;}
-        if(e.target.closest('#reportPdf')){try{const doc=syncActiveReportEditor('pdf-export');LF.Report.exportPdf(S.state.experiment);LF.UI.toast(doc.label+' PDF created from '+doc.words+' words.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        if(e.target.closest('#reportPdf')){downloadReportPdf();return;}
         if(e.target.closest('#exportCurvePng')){LF.ResultsPage.exportCanvas('curveCanvas',C.safeName(S.state.experiment.meta.name)+'_jv_curves.png');return;}
         if(e.target.closest('#boxSelectAll')){S.state.boxPlot.groups=Array.from(new Set(S.state.experiment.measurements.map(function(m){return LF.ResultsPage.groupName(m);}))).sort();render();return;}
         if(e.target.closest('#boxSelectRef')){S.state.boxPlot.groups=Array.from(new Set(S.state.experiment.measurements.filter(function(m){return m.isRef;}).map(function(m){return LF.ResultsPage.groupName(m);}))).sort();render();return;}
@@ -422,12 +432,14 @@
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
         if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;render();return;}
         if(e.target.id==='actionReportDocKind'){S.state.settingsActionDocKind=e.target.value==='paper'?'paper':'lab';if(S.persist)S.persist();render();return;}
+        if(e.target.id==='markdownBlockStyle'){if(e.target.value)applyMarkdownTool(e.target.value);e.target.value='';return;}
         if(e.target.id==='curveView'){S.state.curveView=e.target.value;render();return;}
         if(e.target.id==='curveGroup'){S.state.curveGroup=e.target.value;render();return;}
         if(e.target.id==='curveDirection'){S.state.curveDirection=e.target.value;render();return;}
         if(e.target.id==='curveEligibleOnly'){S.state.curveEligibleOnly=e.target.checked;render();return;}
         if(e.target.id==='curveMeasurement'){S.state.selectedMeasurementId=e.target.value;render();return;}
-        const curve=e.target.closest('[data-curve-check]');if(curve){S.state.curveSelection=S.state.curveSelection||[];if(curve.checked&&!S.state.curveSelection.includes(curve.dataset.curveCheck))S.state.curveSelection.push(curve.dataset.curveCheck);if(!curve.checked)S.state.curveSelection=S.state.curveSelection.filter(function(id){return id!==curve.dataset.curveCheck;});S.state.selectedMeasurementId=curve.checked?curve.dataset.curveCheck:(S.state.curveSelection[0]||null);render();return;}
+        const curveSelect=e.target.closest('[data-curve-select]');if(curveSelect){S.state.selectedMeasurementId=curveSelect.dataset.curveSelect;S.state.curveSelection=[curveSelect.dataset.curveSelect];render();return;}
+        const curve=e.target.closest('[data-curve-check]');if(curve){S.state.curveOverlaySelection=S.state.curveOverlaySelection||[];if(curve.checked&&!S.state.curveOverlaySelection.includes(curve.dataset.curveCheck))S.state.curveOverlaySelection.push(curve.dataset.curveCheck);if(!curve.checked)S.state.curveOverlaySelection=S.state.curveOverlaySelection.filter(function(id){return id!==curve.dataset.curveCheck;});render();return;}
         const boxGroup=e.target.closest('[data-box-group]');if(boxGroup){const name=boxGroup.dataset.boxGroup;S.state.boxPlot.groups=S.state.boxPlot.groups||[];if(boxGroup.checked&&!S.state.boxPlot.groups.includes(name))S.state.boxPlot.groups.push(name);if(!boxGroup.checked)S.state.boxPlot.groups=S.state.boxPlot.groups.filter(function(x){return x!==name;});render();return;}
         if(e.target.id==='boxMetric'){S.state.boxPlot.metric=e.target.value;render();return;}
         if(e.target.id==='boxDirection'){S.state.boxPlot.direction=e.target.value;render();return;}
@@ -438,7 +450,7 @@
         const deviceSolution=e.target.closest('[data-device-solution-id]');if(deviceSolution){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){const id=deviceSolution.dataset.deviceSolutionId;dev.solutionIds=dev.solutionIds||[];if(deviceSolution.checked&&!dev.solutionIds.includes(id))dev.solutionIds.push(id);if(!deviceSolution.checked)dev.solutionIds=dev.solutionIds.filter(function(x){return x!==id;});dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceSample=e.target.closest('[data-device-sample-name]');if(deviceSample){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;}),name=deviceSample.dataset.deviceSampleName;if(dev){dev.sampleNames=dev.sampleNames||[];if(deviceSample.checked){d.devices.forEach(function(other){if(other.id!==dev.id)other.sampleNames=(other.sampleNames||[]).filter(function(x){return x!==name;});});if(!dev.sampleNames.includes(name))dev.sampleNames.push(name);d.devices=d.devices.filter(function(other){return other.id===dev.id||other.status!=='raw_evidence'||(other.sampleNames||[]).length>0;});}else dev.sampleNames=dev.sampleNames.filter(function(x){return x!==name;});dev.status='user_confirmed';markModified('design');render();}return;}
         if(e.target.id==='confirmSelectedDevice'){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev.status=e.target.checked?'user_confirmed':'raw_evidence';markModified('design');render();}return;}
-        const reportFigure=e.target.closest('[data-report-figure]');if(reportFigure){const r=LF.Report.ensureReport(S.state.experiment);r.figureSelection=r.figureSelection||{};r.figureSelection[reportFigure.dataset.reportFigure]=reportFigure.checked;r.includeCharts=Object.keys(r.figureSelection).some(function(k){return r.figureSelection[k]!==false;});r.updatedAt=new Date().toISOString();markModified('report');render();return;}
+        const reportFigure=e.target.closest('[data-report-figure]');if(reportFigure){LF.Report.setFigure(S.state.experiment,reportFigure.dataset.reportFigure,reportFigure.checked);markModified('report');render();return;}
         const reportOption=e.target.closest('[data-report-option]');if(reportOption){const r=LF.Report.ensureReport(S.state.experiment);r[reportOption.dataset.reportOption]=reportOption.checked;r.updatedAt=new Date().toISOString();markDraft('report');return;}
       } catch(err){Log.error('ui.change-handler-failed',{target:e.target&&e.target.id||'',error:err});}
     });
@@ -450,7 +462,7 @@
         if(e.target.id==='curveSearch'){S.state.curveSearch=e.target.value;clearTimeout(S.state._curveSearchTimer);S.state._curveSearchTimer=setTimeout(function(){render();},140);return;}
         if(e.target.id==='measurementSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#measurementTable tbody tr').forEach(function(tr){tr.hidden=q&&!tr.dataset.search.includes(q);});return;}
         if(e.target.id==='reportMarkdown'){
-          LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);const preview=document.getElementById('reportMarkdownRendered');if(preview){preview.classList.toggle('report-preview-empty',!e.target.value.trim());preview.classList.toggle('markdown-view',!!e.target.value.trim());preview.innerHTML=e.target.value.trim()?C.markdown(e.target.value):'<strong>No document content yet.</strong><span>The preview stays empty until you write or create a draft.</span>';}const hint=document.querySelector('.report-empty-hint');if(hint)hint.hidden=!!e.target.value.trim();const wc=document.getElementById('reportSaveState');if(wc)wc.textContent=((e.target.value.trim().match(/\S+/g)||[]).length)+' words';markDraft('report');
+          LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);const preview=document.getElementById('reportMarkdownRendered');if(preview){preview.classList.toggle('report-preview-empty',!e.target.value.trim());preview.classList.toggle('markdown-view',!!e.target.value.trim());preview.innerHTML=e.target.value.trim()?C.markdown(e.target.value):'<strong>No document content yet.</strong><span>The preview stays empty until you write or create a draft.</span>';if(LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,180);}const hint=document.querySelector('.report-empty-hint');if(hint)hint.hidden=!!e.target.value.trim();const wc=document.getElementById('reportSaveState');if(wc)wc.textContent=((e.target.value.trim().match(/\S+/g)||[]).length)+' words';markDraft('report');
           const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';const len=document.getElementById('reportPreviewLength');if(len)len.textContent=info.words+' words';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Saved now · export ready';return;
         }
         const reportTitle=e.target.closest('[data-report-title]');if(reportTitle){LF.Report.setActiveTitle(S.state.experiment,reportTitle.value);markDraft('report');const cover=document.querySelector('.report-preview-cover strong');if(cover)cover.textContent=reportTitle.value;return;}
@@ -496,9 +508,13 @@
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
       S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
-      if(saved&&saved.experiment&&saved.experiment.meta&&saved.experiment.meta.sourceName){S.setExperiment(saved.experiment);if(LF.Changes&&LF.Changes.ensureBaseline)LF.Changes.ensureBaseline(S.state.experiment);const ui=saved.ui||{};S.state.resultsTab=ui.resultsTab||S.state.resultsTab;S.state.selectedMeasurementId=ui.selectedMeasurementId||S.state.selectedMeasurementId;S.state.selectedDesignDeviceId=ui.selectedDesignDeviceId||S.state.selectedDesignDeviceId;S.state.route='experiment-import';S.state.ui.route=S.state.route;S.state.ui.uploadLanding=true;Log.info('workspace.restored',{experimentId:S.state.experiment.id,route:S.state.route});}
-      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(){render();});render();if(saved&&saved.experiment)LF.UI.toast('Saved LabFlow state restored.','info');end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');
+      /* Provider credentials/preferences are browser-persistent, but scientific
+         Working Copy state is deliberately session-only. Every page load starts
+         at Upload & Review with no ZIP attached. */
+      S.resetSession();S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      if(LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();
+      Log.info('workspace.fresh-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey()});
+      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(){render();});render();end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

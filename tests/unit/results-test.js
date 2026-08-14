@@ -1,4 +1,5 @@
 'use strict';
+const fs=require('fs'),path=require('path');
 require('../../assets/js/logger.js');
 
 function assert(actual, expected, label) {
@@ -23,6 +24,14 @@ module.exports=function(t,LF){
     assert(q.med,2,'median');
     assert(q.outliers,[100],'outlier');
     assert(q.values,[1,2,2,3,100],'raw values');
+  };
+
+  t['JV Analyzer is a single-measurement diagnostic surface distinct from Overlay'] = function(){
+    const source=fs.readFileSync(path.resolve(__dirname,'../../assets/js/pages/results-page.js'),'utf8');
+    assert(source.includes('RAW scan integrity'),true,'analyzer diagnostics');
+    assert(source.includes('FW / RV separation'),true,'scan separation diagnostics');
+    assert(source.includes('curveOverlaySelection'),true,'overlay owns an independent selection set');
+    assert(source.includes('data-curve-select'),true,'analyzer uses a single measurement selector');
   };
   return t;
 };

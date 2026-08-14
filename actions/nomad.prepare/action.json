@@ -13,23 +13,26 @@
     {
       "id": "prepare",
       "type": "DETERMINISTIC",
-      "fn": "nomad.build-plan",
-      "capture_result": true
+      "capture_result": true,
+      "tool": "nomad.build-plan"
     },
     {
       "id": "store",
       "type": "DETERMINISTIC",
-      "fn": "nomad.store-deterministic-plan"
+      "tool": "nomad.store-deterministic-plan"
     },
     {
       "id": "validate",
       "type": "DETERMINISTIC",
-      "fn": "nomad.validate",
-      "capture_result": true
+      "capture_result": true,
+      "tool": "nomad.validate"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.canonical",
   "visibility": "public",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "canonical"
+  }
 }

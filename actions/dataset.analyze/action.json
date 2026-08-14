@@ -13,11 +13,14 @@
     {
       "id": "analyze",
       "type": "DETERMINISTIC",
-      "fn": "dataset.analyze"
+      "tool": "dataset.analyze"
     }
   ],
   "version": 1,
   "input_scope": "working-copy",
   "visibility": "public",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "canonical"
+  }
 }

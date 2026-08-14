@@ -18,9 +18,20 @@ Immutable-by-contract source snapshot:
 
 `LF.State.state.experiment` is the one editable scientific state.
 
-### Canonical Store
+### Canonical Data Model / Store
 
-`LF.CanonicalStore` is a deterministic semantic index/view over the Working Copy, not another editable state.
+`LF.CanonicalStore` is the deterministic internal representation and semantic index/view over the Working Copy, not another editable state. Internal format `labflow-canonical-v2` groups data into explicit domains for UI, Tools and Actions while retaining compatibility aliases for existing modules.
+
+Current grouped domains are:
+
+- `experiment` and `source`;
+- `entities.files`, `entities.samples`, `entities.measurements`;
+- `scientific.design`, `scientific.results`, `scientific.findings`;
+- `documents.lab`, `documents.paper`, `documents.active_kind`;
+- `evidence`, `relations`, `aliases`;
+- `provenance.patches`, `provenance.document_edits`, `provenance.records`.
+
+This internal v2 representation is rebuilt/cached from the Working Copy. It does not own independent scientific mutations.
 
 ## 2. Working Copy root
 
@@ -166,11 +177,11 @@ It may contain:
 
 It must not duplicate full RAW curves or giant source text.
 
-## 11. Context Pack
+## 11. Tool views and Context Packs
 
-Context Pack is an ephemeral bounded view, not persistent scientific truth.
+A Tool result and a Context Pack are ephemeral bounded views, not persistent scientific truth. Read Tools retrieve named slices of the Canonical Data Model with typed arguments. AI Actions receive a profile declared in `action.json` under `input.context`.
 
-It contains only the fields selected for one AI/chat request. Stable IDs/evidence references should be preferred over copied raw data.
+The Assistant begins from a small bootstrap Context Pack and obtains additional data only through explicit allowlisted read Tools. Returned observations are bounded before reuse. Stable IDs/evidence references should be preferred over copied raw data.
 
 ## 12. Serialization
 

@@ -1719,7 +1719,7 @@ body.ui-kit-page { overflow: hidden; }
 .report-toolbar{min-height:36px;padding:5px 6px!important;overflow:visible!important;flex-wrap:wrap!important}
 .report-export-strip{position:static!important;min-height:38px;padding:5px 6px}
 .report-export-identity{min-width:170px}
-.report-layout,.report-layout.report-mode-editor,.report-layout.report-mode-preview{display:grid!important;grid-template-columns:150px minmax(390px,1fr) minmax(340px,.84fr)!important;gap:7px!important;height:min(66dvh,720px)!important;min-height:470px!important}
+.report-layout,.report-layout.report-mode-editor,.report-layout.report-mode-preview{display:grid!important;grid-template-columns:140px minmax(0,1.08fr) minmax(270px,.92fr)!important;gap:7px!important;height:min(66dvh,720px)!important;min-height:470px!important}
 .report-layout .report-outline,.report-layout .report-editor,.report-layout .report-preview{display:grid!important;height:100%!important;min-height:0!important}
 .report-outline{grid-template-rows:auto minmax(0,1fr)!important}
 .report-outline>.panel-head,.report-editor>.panel-head{min-height:38px;padding:6px 8px}
@@ -1827,3 +1827,201 @@ body.ui-kit-page { overflow: hidden; }
 .review-workbench{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(270px,.55fr);gap:9px;align-items:start}.review-main,.review-side{min-width:0}.review-side{position:sticky;top:calc(var(--topbar-h,46px) + 8px)}.review-step{min-width:0}.review-step .panel-body{padding:8px}.review-step-head{min-height:50px}.review-decisions-complete .panel-head{padding-bottom:9px}.review-brief-card .panel-head{align-items:flex-start;gap:6px;flex-wrap:wrap}.review-brief-card p{margin:0;font-size:11px;line-height:1.5}.review-brief-goal{display:grid;gap:2px;padding:7px;border-left:2px solid var(--ai);background:var(--ai-soft);border-radius:0 var(--radius-sm) var(--radius-sm) 0}.review-brief-goal span{font-size:var(--font-micro);color:var(--text-muted);text-transform:uppercase;font-weight:800}.review-brief-goal strong{font-size:10px;line-height:1.4}.review-advanced-card>.panel-body{padding:6px;gap:6px}.review-advanced{margin:0;border-radius:var(--radius-sm);box-shadow:none}.review-advanced>summary.panel-head{padding:7px 8px;cursor:pointer}.review-advanced>.panel-body{padding:8px}.review-name-normalizations:not([open]){background:var(--surface-2)}
 @media(max-width:1020px){.review-workbench{grid-template-columns:1fr}.review-side{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}.review-advanced-card{grid-column:1/-1}}
 @media(max-width:680px){.review-side{grid-template-columns:1fr}.review-advanced-card{grid-column:auto}.review-step .panel-body{padding:6px}.review-workbench{gap:7px}}
+
+/* 2026-08 · Upload/Review + compact Changes audit */
+.upload-review-page{max-width:1540px;margin:0 auto}
+.upload-review-source{margin:0}.upload-review-source>summary{min-height:44px;gap:8px}.upload-review-source>summary strong{font-size:10px}.upload-review-source .compact-metrics{margin:0}.upload-review-manifest{max-height:190px;overflow:auto;scrollbar-width:thin;margin-top:6px;padding:6px;border:1px solid var(--border);background:var(--surface-2)}
+.changes-category-body{display:grid;gap:0;padding:0!important}.changes-table-scroll{max-height:260px;overflow:auto!important;scrollbar-width:thin}.changes-document-diffs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:6px;padding:6px;border-top:1px solid var(--border);background:var(--surface-2)}
+.changes-doc-card{min-width:0;overflow:hidden;border:1px solid var(--border);border-radius:5px;background:var(--surface)}.changes-doc-card>header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border)}.changes-doc-card h3{margin:1px 0 0;font-size:10px}.changes-doc-stats{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--border);scrollbar-width:thin}.changes-doc-stats span{flex:1 0 105px;padding:4px 7px;border-right:1px solid var(--border);color:var(--text-muted);font-size:7px;text-transform:uppercase;letter-spacing:.02em}.changes-doc-stats span:last-child{border-right:0}.changes-doc-stats strong{display:block;margin-top:1px;color:var(--text);font:800 10px var(--font-mono);text-transform:none}.changes-diff-scroll{max-height:240px!important;font-size:8px!important;line-height:1.4!important;scrollbar-width:thin}.changes-provenance-scroll{max-height:235px;overflow:auto!important;scrollbar-width:thin}.changes-provenance .panel-body{padding:0!important}
+@media(max-width:760px){.changes-document-diffs{grid-template-columns:1fr}.changes-doc-card>header{flex-direction:column}.upload-review-source>summary{align-items:flex-start;flex-wrap:wrap}.changes-table-scroll{max-height:320px}}
+
+/* 2026-08 · Assistant aligned with the instrument UI --------------------- */
+.assistant-panel .chat-log{gap:0;padding:6px 7px;background:var(--surface-2)}
+.assistant-panel .chat-row{display:flex;width:100%;margin:0;padding:0!important;border-top:1px solid color-mix(in srgb,var(--assistant-border) 72%,transparent)}
+.assistant-panel .chat-row:first-of-type{border-top:0}.assistant-panel .chat-row.assistant-row{justify-content:flex-start}.assistant-panel .chat-row.user-row{justify-content:flex-end;background:color-mix(in srgb,var(--accent) 5%,transparent)}
+.assistant-panel .chat-message{width:100%;max-width:none!important;margin:0;padding:7px 8px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.assistant-panel .chat-row.user-row .chat-message{width:min(88%,760px);border-left:2px solid color-mix(in srgb,var(--accent) 55%,var(--border))!important;background:color-mix(in srgb,var(--accent) 8%,var(--surface))!important}
+.assistant-panel .chat-row.assistant-row .chat-message{border-left:2px solid var(--border-strong)!important}
+.assistant-panel .chat-body{padding:0;font-size:10.5px;line-height:1.46}.assistant-panel .chat-body> :first-child{margin-top:0}.assistant-panel .chat-body> :last-child{margin-bottom:0}
+.assistant-panel .chat-meta{display:flex;align-items:center;gap:5px;min-height:18px;margin:5px 0 -1px;padding:4px 0 0;border-top:1px solid color-mix(in srgb,var(--assistant-border) 58%,transparent);border-bottom:0}
+.chat-metrics{display:flex;align-items:center;flex-wrap:wrap;gap:3px}.chat-metrics>span{padding:1px 4px;border:1px solid var(--border);border-radius:3px;background:var(--surface-2);color:var(--text-muted);font:7px/1.35 var(--font-mono)}
+.chat-thinking{margin:0 0 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface-2);overflow:hidden}.chat-thinking>summary{display:flex;align-items:center;gap:7px;padding:4px 6px;cursor:pointer;color:var(--text-muted);font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.025em}.chat-thinking>summary small{margin-left:auto;color:var(--text-muted);font:7px var(--font-mono);text-transform:none}.chat-thinking-body{max-height:190px;overflow:auto;padding:6px;border-top:1px solid var(--border);color:var(--text-muted);font-size:9px;line-height:1.42;scrollbar-width:thin}.chat-thinking.streaming{border-left:2px solid var(--accent)}
+.chat-status-row{display:flex;align-items:center;gap:7px;margin:3px 0;padding:5px 7px;border:1px solid var(--border);border-radius:4px;background:var(--surface)}.chat-status-row>div{min-width:0}.chat-status-row strong,.chat-status-row small{display:block}.chat-status-row strong{font-size:9px}.chat-status-row small{margin-top:1px;color:var(--text-muted);font:7px var(--font-mono)}
+.chat-streaming-output{margin:0;white-space:normal;overflow-wrap:anywhere;font-size:10px;line-height:1.45}.chat-message.streaming{opacity:.94}.assistant-context-card{border-radius:4px!important}
+@media(max-width:700px){.assistant-panel .chat-row.user-row .chat-message{width:94%}.chat-metrics>span{font-size:6.5px}}
+
+/* 2026-08 · Assistant dark instrument palette restoration ---------------- */
+/* Keep the compact row layout, but use the assistant/nav palette rather than
+   the bright scientific canvas tokens. This prevents pale message surfaces in
+   the default instrument theme. */
+.assistant-panel .chat-log{
+  background:var(--assistant-bg);
+}
+.assistant-panel .chat-row{
+  border-top-color:color-mix(in srgb,var(--assistant-border) 72%,transparent);
+  background:transparent;
+}
+.assistant-panel .chat-row.user-row{
+  background:color-mix(in srgb,var(--assistant-bg) 88%,var(--accent) 12%);
+}
+.assistant-panel .chat-message{
+  color:var(--assistant-text)!important;
+}
+.assistant-panel .chat-row.assistant-row .chat-message{
+  border-left-color:color-mix(in srgb,var(--sidebar-active-edge) 58%,var(--assistant-border))!important;
+  background:var(--assistant-surface-2)!important;
+}
+.assistant-panel .chat-row.user-row .chat-message{
+  border-left-color:color-mix(in srgb,var(--accent) 70%,var(--assistant-border))!important;
+  background:color-mix(in srgb,var(--assistant-surface) 84%,var(--accent) 16%)!important;
+}
+.assistant-panel .chat-meta{
+  color:var(--assistant-muted);
+  border-top-color:color-mix(in srgb,var(--assistant-border) 64%,transparent);
+}
+.assistant-panel .chat-metrics>span{
+  border-color:var(--assistant-border);
+  background:var(--assistant-surface-2);
+  color:var(--assistant-muted);
+}
+.assistant-panel .chat-thinking{
+  border-color:var(--assistant-border);
+  background:var(--assistant-surface-2);
+}
+.assistant-panel .chat-thinking>summary,
+.assistant-panel .chat-thinking>summary small,
+.assistant-panel .chat-thinking-body{
+  color:var(--assistant-muted);
+}
+.assistant-panel .chat-thinking-body{
+  border-top-color:var(--assistant-border);
+}
+.assistant-panel .chat-status-row{
+  border-color:var(--assistant-border);
+  background:var(--assistant-surface);
+  color:var(--assistant-text);
+}
+.assistant-panel .assistant-context-card,
+.assistant-panel .structured-response,
+.assistant-panel .structured-kv>div,
+.assistant-panel .structured-item,
+.assistant-panel .structured-nested,
+.assistant-panel .structured-raw{
+  border-color:var(--assistant-border)!important;
+  background:var(--assistant-surface-2)!important;
+  color:var(--assistant-text)!important;
+}
+.assistant-panel .structured-item{
+  background:var(--assistant-surface)!important;
+}
+.assistant-panel .chat-commandbar{
+  border-radius:var(--radius-md);
+  background:var(--assistant-surface-2);
+}
+.assistant-panel .chat-command-send{
+  border-radius:var(--radius-sm);
+}
+
+/* 2026-08 · message totems -------------------------------------------------- */
+.message-shade{position:fixed;inset:0;z-index:1450;display:grid;place-items:center;padding:20px;background:rgba(5,13,22,.54);backdrop-filter:blur(2px)}
+.message-shade[hidden]{display:none!important}
+.message-totem{width:min(460px,calc(100vw - 28px));border:1px solid var(--border-strong);border-top:3px solid var(--accent);border-radius:var(--radius-md);background:var(--surface);box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+.message-totem .message-totem-head{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.message-totem .message-totem-marker{width:3px;align-self:stretch;background:var(--accent)}.message-totem .message-totem-head strong{display:block;margin-top:2px;font-size:13px}.message-totem .message-totem-body{padding:14px 16px;color:var(--text);font-size:12px;line-height:1.55}
+.message-totem .message-totem-actions{display:flex;justify-content:flex-end;gap:7px;padding:10px 16px 14px;border-top:1px solid var(--border)}
+.totem-toast{display:grid!important;grid-template-columns:3px minmax(0,1fr);gap:9px;align-items:stretch;min-width:min(360px,calc(100vw - 30px));max-width:430px;padding:0!important;overflow:hidden;border:1px solid var(--border-strong)!important;border-radius:var(--radius-sm)!important;background:var(--surface)!important;box-shadow:0 14px 34px rgba(0,0,0,.18)}
+.totem-toast-marker{display:block;background:var(--accent)}
+.totem-toast.success .totem-toast-marker{background:var(--success)}.totem-toast.warning .totem-toast-marker{background:var(--warning)}.totem-toast.error .totem-toast-marker,.totem-toast.danger .totem-toast-marker{background:var(--danger)}
+.totem-toast>div{padding:8px 10px 9px 0}.totem-toast strong,.totem-toast span{display:block}.totem-toast strong{margin-bottom:2px;font-size:9px;text-transform:uppercase;letter-spacing:.045em}.totem-toast>div>span{font-size:10px;line-height:1.38;color:var(--text-muted)}
+.totem-toast.leaving{opacity:0;transform:translateY(-4px);transition:opacity .18s ease,transform .18s ease}
+
+/* Assistant composer: the empty placeholder must always remain one line. */
+.assistant-panel .chat-commandbar textarea{box-sizing:border-box;height:30px;min-height:30px;max-height:92px;padding:5px 2px;line-height:18px;overflow-y:hidden;white-space:pre-wrap}
+.assistant-panel .chat-commandbar textarea:placeholder-shown{height:30px!important;min-height:30px!important;overflow:hidden!important;white-space:nowrap;text-overflow:ellipsis}
+.assistant-panel .chat-commandbar{align-items:end}
+
+/* Report Studio · command palette rather than a formatting-button strip. */
+.markdown-editorbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 8px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.markdown-commandbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.markdown-style-control{display:flex;align-items:center;gap:5px}.markdown-style-control>span{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.045em;color:var(--text-muted)}
+.compact-select{min-height:27px;height:27px;padding:2px 24px 2px 7px;font-size:9px}
+.markdown-command-group{display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+.md-command{min-width:28px;height:26px;padding:0 7px;border:0;border-right:1px solid var(--border);background:transparent;color:var(--text-muted);font:700 9px var(--font-mono);cursor:pointer}.md-command:last-child{border-right:0}.md-command:hover{background:var(--surface-2);color:var(--text)}
+.markdown-insert{position:relative}.markdown-insert>summary{list-style:none;display:flex;align-items:center;height:27px;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font-size:9px;font-weight:700;cursor:pointer}.markdown-insert>summary::-webkit-details-marker{display:none}
+.markdown-insert-menu{position:absolute;z-index:30;top:calc(100% + 4px);left:0;display:grid;min-width:170px;padding:4px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-lg)}
+.markdown-insert-menu button{display:flex;justify-content:space-between;gap:14px;padding:7px 8px;border:0;border-radius:2px;background:transparent;color:var(--text);text-align:left;font-size:9px;cursor:pointer}.markdown-insert-menu button:hover{background:var(--surface-2)}
+.markdown-syntax-state{margin-left:auto;color:var(--text-muted);font:8px var(--font-mono);white-space:nowrap}
+.math-display{margin:12px 0;padding:10px 12px;overflow-x:auto;border-left:2px solid color-mix(in srgb,var(--accent) 68%,var(--border));background:var(--surface-2);text-align:center}.math-inline{white-space:nowrap}.markdown-view mjx-container[jax="SVG"]{max-width:100%;overflow-x:auto;overflow-y:hidden}.markdown-view mjx-container[display="true"]{margin:.35em 0!important}
+
+/* Results · JV Analyzer is a diagnostic workbench; Overlay remains comparison. */
+.jv-analyzer-layout{display:grid;grid-template-columns:minmax(210px,260px) minmax(0,1fr);gap:10px;align-items:start}.jv-analyzer-main{display:grid;gap:10px;min-width:0}.jv-analyzer-selector{position:sticky;top:8px}.jv-analyzer-list{display:grid;gap:2px;max-height:590px;padding:5px!important}.jv-analyzer-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;width:100%;padding:7px 8px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);text-align:left;cursor:pointer}.jv-analyzer-row:hover{background:var(--surface-2)}.jv-analyzer-row.active{border-color:var(--border-strong);border-left:3px solid var(--accent);background:var(--surface-2)}.jv-analyzer-row span,.jv-analyzer-row strong,.jv-analyzer-row small{display:block;min-width:0}.jv-analyzer-row strong{overflow:hidden;text-overflow:ellipsis;font-size:10px}.jv-analyzer-row small{margin-top:2px;overflow:hidden;text-overflow:ellipsis;color:var(--text-muted);font-size:7.5px;white-space:nowrap}.jv-analyzer-row-metrics{text-align:right}.jv-analyzer-row-metrics b{font:700 9px var(--font-mono)}
+.jv-diagnostic-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border-top:1px solid var(--border);background:var(--border)}.jv-diagnostic-card{min-width:0;padding:8px 10px;background:var(--surface)}.jv-diagnostic-card span,.jv-diagnostic-card strong,.jv-diagnostic-card small{display:block}.jv-diagnostic-card span{font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.035em;color:var(--text-muted)}.jv-diagnostic-card strong{margin-top:3px;font:700 14px var(--font-mono)}.jv-diagnostic-card small{margin-top:2px;color:var(--text-muted);font-size:7px;line-height:1.35}
+.jv-analyzer-lower{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.jv-separation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.jv-separation>div{padding:7px 8px;border:1px solid var(--border);background:var(--surface-2)}.jv-separation span,.jv-separation strong{display:block}.jv-separation span{font-size:7px;text-transform:uppercase;color:var(--text-muted)}.jv-separation strong{margin-top:3px;font:700 10px var(--font-mono)}.jv-separation>small{grid-column:1/-1;color:var(--text-muted);font-size:7.5px}.jv-separation.empty{display:block}.jv-separation.empty strong{margin:3px 0}.jv-source{margin-top:10px;padding-top:8px;border-top:1px solid var(--border);color:var(--text-muted);font-size:8px;overflow-wrap:anywhere}.jv-integrity-table td,.jv-integrity-table th{white-space:nowrap}
+@media(max-width:900px){.jv-analyzer-layout{grid-template-columns:1fr}.jv-analyzer-selector{position:static}.jv-analyzer-list{max-height:220px}.jv-diagnostic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.markdown-syntax-state{width:100%;margin-left:0}.jv-analyzer-lower,.jv-separation{grid-template-columns:1fr}.jv-diagnostic-grid{grid-template-columns:1fr 1fr}.jv-separation>small{grid-column:1}}
+
+/* 2026-08 · Chat density + sidebar model status regression fix ---------- */
+.assistant-panel .chat-row.user-row{
+  padding:3px 0!important;
+  background:transparent;
+}
+.assistant-panel .chat-row.user-row .chat-message{
+  position:relative;
+  width:fit-content!important;
+  max-width:min(82%,760px)!important;
+  min-width:0;
+  padding:5px 28px 5px 7px!important;
+}
+.assistant-panel .chat-row.user-row .chat-body{
+  line-height:1.36;
+}
+.assistant-panel .chat-user-tools{
+  position:absolute;
+  top:3px;
+  right:3px;
+  display:flex;
+  align-items:center;
+  opacity:.5;
+}
+.assistant-panel .chat-row.user-row:hover .chat-user-tools,
+.assistant-panel .chat-row.user-row:focus-within .chat-user-tools{opacity:1}
+.assistant-panel .chat-user-tools .chat-copy{width:20px;height:20px;min-width:20px;padding:0!important}
+@media(max-width:700px){.assistant-panel .chat-row.user-row .chat-message{max-width:90%!important;width:fit-content!important}}
+
+.sidebar-foot#modelStatus{
+  display:grid!important;
+  grid-template-columns:6px minmax(0,1fr);
+  align-items:start;
+  column-gap:7px;
+}
+.sidebar-foot#modelStatus .status-dot{
+  width:6px;height:6px;margin:4px 0 0;
+}
+.sidebar-status-copy{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:1px;
+  min-width:0;
+}
+.sidebar-status-copy>strong,
+.sidebar-status-copy>small{
+  display:block;
+  min-width:0;
+}
+.sidebar-status-copy>strong{
+  color:var(--sidebar-muted);
+  font-size:7px;
+  line-height:1.25;
+  text-transform:uppercase;
+  letter-spacing:.045em;
+}
+.sidebar-status-copy>small{
+  color:var(--sidebar-foot);
+  font:7.5px/1.32 var(--font-mono);
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* 2026-08 · Action results in chat + Report/Paper sequential helper ---------- */
+.assistant-panel .chat-metrics>span:first-child{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.report-ai-all{min-width:38px;font-weight:800}

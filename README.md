@@ -5,7 +5,7 @@ Local-first browser workbench for perovskite/JV laboratory experiments.
 The researcher workflow is deliberately small:
 
 ```text
-Upload ZIP → Review → Results → Design → Report → Changes → NOMAD
+Upload & Review → Results → Design → Report → Changes → NOMAD
 ```
 
 The uploaded ZIP is immutable source evidence. LabFlow immediately snapshots its bytes and performs all work on one separate in-memory **Working Copy**.
@@ -21,6 +21,7 @@ Supporting specifications:
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/specs/DATA_MODEL.md`](docs/specs/DATA_MODEL.md)
 - [`docs/specs/ACTIONS.md`](docs/specs/ACTIONS.md)
+- [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md)
 - [`docs/AI.md`](docs/AI.md)
 - [`docs/specs/IMPORT_EXPORT.md`](docs/specs/IMPORT_EXPORT.md)
 - [`docs/NOMAD.md`](docs/NOMAD.md)
@@ -33,13 +34,17 @@ Original ZIP (immutable)
         ↓
 Working Copy
         ↓
-Canonical Store
+Canonical Data Model / Store
         ↓
-Analysis Dossier / deterministic Results
-        ↓
-Research Context Packs
-        ↓
-Chat / AI assists / Report
+Tool Registry
+   ┌────┴──────────────┐
+   ↓                   ↓
+Actions          Assistant (read-only)
+   ↓                   ↓
+validated writes   selected observations
+   └──────────┬────────┘
+              ↓
+          Working Copy
 ```
 
 Original filenames remain provenance and aliases; they are not blindly treated as scientific identity.
@@ -61,19 +66,27 @@ Settings → Actions exposes every executable Action in the webapp:
 
 Internal compute/index/apply/validation functions are not Actions.
 
+## Tools and bounded agentic Assistant
+
+LabFlow separates **Tools** from **Actions**. A Tool is a small typed capability over the Canonical Data Model; an Action is a researcher-understandable workflow that composes deterministic tools and optional AI steps. Deterministic Action checkpoints now reference Tool IDs from the shared registry instead of calling page-specific logic.
+
+The Assistant is the first deliberately constrained agentic consumer of that registry. It may ask the model to choose among an explicit allowlist of **read-only** tools, execute one tool per bounded round, then answer from the returned observations. It cannot invoke write tools, mutate the Working Copy or autonomously run mutating Actions. See [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md).
+
 ## Save and export
 
 The uploaded source is never rewritten.
 
-**Save** persists the internal LabFlow representation in browser storage and marks that revision saved. **Export** explicitly creates the LabFlow ZIP; it does not replace the saved internal state.
+**Save** marks/persists the current Working Copy for the active browser session. A new LabFlow page load deliberately starts with **no experiment loaded** and clears any stored experiment snapshot; provider/model settings, API key and UI preferences remain browser-local. **Export** explicitly creates the LabFlow ZIP and is the durable way to carry the Working Copy forward.
 
 LabFlow ZIP, Report PDF/DOCX and NOMAD ZIP are explicit derived exports: they read the current Working Copy but do not implicitly mark later edits saved.
+
+Changes audits the current Working Copy against the immutable post-import baseline, including manual versus AI-attributed Report/Paper edits.
 
 Normal LabFlow export includes `canonical.json`, a compact portable semantic snapshot with identities, aliases, measurements, relations, evidence, findings, patches, Design and provenance. RAW source remains separate.
 
 ## Report
 
-The current Markdown editor is the textual source of truth for document exports. PDF/DOCX use that text plus only the figures explicitly selected in Report Studio.
+Report and Paper keep separate Markdown text, titles and figure selections. The active editor is the textual source of truth and supports standard inline `$...$` and display `$$...$$` LaTeX. Preview typesets equations locally; `.tex` preserves LaTeX and DOCX/PDF embed display equations together with only the explicitly selected deterministic figures.
 
 ## NOMAD
 

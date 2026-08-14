@@ -53,26 +53,40 @@
    * @param {string} [type] Optional semantic class such as `success` or `danger`.
    */
   function toast(message, type) {
-    Log.debug('toast', {type:type || '', message:text(message).slice(0, 300)});
+    const semantic=type || 'info',titles={success:'Completed',error:'Action failed',danger:'Action failed',warning:'Attention',info:'LabFlow'};
+    Log.debug('toast', {type:semantic, message:text(message).slice(0, 300)});
     const region = byId('toastRegion');
     if (!region) return;
-
     const element = document.createElement('div');
-    element.className = 'toast ' + (type || '');
-    element.textContent = text(message);
+    element.className = 'toast totem-toast ' + semantic;
+    const marker=document.createElement('span');marker.className='totem-toast-marker';marker.setAttribute('aria-hidden','true');
+    const body=document.createElement('div'),title=document.createElement('strong'),copy=document.createElement('span');
+    title.textContent=titles[semantic]||'LabFlow';copy.textContent=text(message);body.appendChild(title);body.appendChild(copy);element.appendChild(marker);element.appendChild(body);
     region.appendChild(element);
-    window.setTimeout(function () { element.remove(); }, 3800);
+    window.setTimeout(function () { element.classList.add('leaving');window.setTimeout(function(){element.remove();},180); }, 4200);
   }
 
-  /**
-   * Ask for explicit confirmation and record only the prompt and decision.
-   * @param {string} message Confirmation question.
-   * @returns {boolean} The native dialog result.
-   */
-  function confirmAction(message) {
-    const result = window.confirm(message);
-    Log.info('confirm', {message:text(message).slice(0, 300), result:result});
-    return result;
+  let confirmPending=null;
+  function closeConfirmation(result){
+    if(!confirmPending)return;const pending=confirmPending;confirmPending=null;
+    const shade=byId('messageShade');if(shade)shade.hidden=true;
+    document.removeEventListener('keydown',pending.keyHandler,true);
+    Log.info('confirm', {message:pending.message.slice(0,300),result:!!result});pending.resolve(!!result);
+  }
+
+  /** Render confirmation as a LabFlow totem rather than a browser-owned modal. */
+  function confirmAction(message, options) {
+    options=options||{};if(confirmPending)closeConfirmation(false);
+    const shade=byId('messageShade'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
+    if(!shade||!title||!body||!confirm||!cancel)return Promise.resolve(false);
+    title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LABFLOW CONFIRMATION');confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
+    confirm.className='button '+(options.danger?'danger':'primary');shade.hidden=false;
+    return new Promise(function(resolve){
+      const keyHandler=function(event){if(event.key==='Escape'){event.preventDefault();closeConfirmation(false);}else if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeConfirmation(true);}};
+      confirmPending={resolve:resolve,message:text(message),keyHandler:keyHandler};document.addEventListener('keydown',keyHandler,true);
+      confirm.onclick=function(){closeConfirmation(true);};cancel.onclick=function(){closeConfirmation(false);};shade.onclick=function(event){if(event.target===shade)closeConfirmation(false);};
+      window.setTimeout(function(){confirm.focus();},0);
+    });
   }
 
   /** Return elapsed milliseconds, frozen at the terminal timestamp when set. */

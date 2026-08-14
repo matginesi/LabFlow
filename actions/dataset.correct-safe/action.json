@@ -16,21 +16,24 @@
     {
       "id": "scan",
       "type": "DETERMINISTIC",
-      "fn": "dataset.scan-safe-fixes"
+      "tool": "dataset.scan-safe-fixes"
     },
     {
       "id": "apply",
       "type": "DETERMINISTIC",
-      "fn": "dataset.apply-safe-fixes",
-      "capture_result": true
+      "capture_result": true,
+      "tool": "dataset.apply-safe-fixes"
     },
     {
       "id": "commit",
       "type": "DETERMINISTIC",
-      "fn": "dataset.commit-and-refresh"
+      "tool": "dataset.commit-and-refresh"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.findings",
-  "visibility": "public"
+  "visibility": "public",
+  "input": {
+    "context": "findings"
+  }
 }

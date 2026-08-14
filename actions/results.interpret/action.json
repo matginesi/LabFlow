@@ -8,7 +8,6 @@
   "purpose": "Explain deterministic results scientifically without recalculating or changing them.",
   "strategy": "AI receives a compact Results Context Pack: summary, rankings, anomalies and relevant findings only.",
   "output": "text",
-  "max_output_tokens": 8000,
   "mutation_scope": "",
   "policies": [
     "policy.scientific-provenance"
@@ -19,17 +18,19 @@
       "type": "AI",
       "prompt": "prompt.md",
       "output": "text",
-      "max_output_tokens": 8000,
       "timeout_ms": 240000
     },
     {
       "id": "store",
       "type": "DETERMINISTIC",
-      "fn": "results.store-interpretation"
+      "tool": "results.store-interpretation"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.results",
   "visibility": "public",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "results"
+  }
 }

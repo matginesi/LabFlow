@@ -38,13 +38,15 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('result-inline-inspector')>=0,'inline measurement detail');
   };
 
-  t['real 2026_01_22 JV curves use a compact multi-selection rail'] = async function(){
+  t['real 2026_01_22 JV Analyzer diagnoses one measurement instead of duplicating Overlay'] = async function(){
     await ready('curves');const html=LF.ResultsPage.render();
-    truthy(html.indexOf('Choose curves')>=0,'selector heading');
-    truthy(html.indexOf('curve-selector-list')>=0,'selector rail');
-    truthy(html.indexOf('data-curve-check=')>=0,'multi-select checkboxes');
+    truthy(html.indexOf('Select one JV scan')>=0,'single selector heading');
+    truthy(html.indexOf('jv-analyzer-list')>=0,'single selector rail');
+    truthy(html.indexOf('data-curve-select=')>=0,'single measurement controls');
+    truthy(html.indexOf('RAW scan integrity')>=0,'raw integrity diagnostics');
+    truthy(html.indexOf('FW / RV separation')>=0,'scan separation diagnostics');
     truthy(html.indexOf('id=\"curveCanvas\"')>=0,'curve chart');
-    assert(html.indexOf('id=\"curveMeasurement\"'),-1,'measurement select removed');
+    assert(html.indexOf('data-curve-check='),-1,'analyzer has no multi-select checkboxes');
   };
 
   t['real 2026_01_22 Compare renders group controls, boxplot and statistics'] = async function(){

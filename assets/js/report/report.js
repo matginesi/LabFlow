@@ -19,14 +19,21 @@
     if (exp.report.lab == null) exp.report.lab = '';
     if (exp.report.project == null) exp.report.project = '';
     if (exp.report.includeCharts == null) exp.report.includeCharts = true;
-    exp.report.figureSelection = Object.assign({
-      pceDistribution: true,
-      hysteresisDistribution: true,
-      bestJvmCurve: true,
-      efficiencyHysteresis: true,
-      topEfficiency: true,
-      groupComparison: true
-    }, exp.report.figureSelection || {});
+    const defaultFigures={
+      pceDistribution:true,
+      hysteresisDistribution:true,
+      bestJvmCurve:true,
+      efficiencyHysteresis:true,
+      topEfficiency:true,
+      groupComparison:true
+    };
+    /* Figure choices are document-owned. Older saved experiments had one shared
+       figureSelection; migrate it once to both documents so no choice is lost. */
+    const legacyFigures=exp.report.figureSelection&&typeof exp.report.figureSelection==='object'?exp.report.figureSelection:null;
+    exp.report.figureSelections=exp.report.figureSelections&&typeof exp.report.figureSelections==='object'?exp.report.figureSelections:{};
+    exp.report.figureSelections.lab=Object.assign({},defaultFigures,legacyFigures||{},exp.report.figureSelections.lab||{});
+    exp.report.figureSelections.paper=Object.assign({},defaultFigures,legacyFigures||{},exp.report.figureSelections.paper||{});
+    exp.report.figureSelection=exp.report.figureSelections[exp.report.kind]; /* compatibility alias */
     if (exp.report.includeValidation == null) exp.report.includeValidation = true;
     /*
      * Do not refresh generated evidence here. This function is also used by
@@ -148,12 +155,24 @@
   }
 
   function activeMarkdown(exp) { const r=ensureReport(exp); return r.kind === 'paper' ? r.paperMarkdown : r.labMarkdown; }
-  function setActiveMarkdown(exp, text) {
-    const r=ensureReport(exp), value=String(text||''), now=new Date().toISOString();
-    if(r.kind==='paper'){r.paperMarkdown=value;r.paperUpdatedAt=now;}else{r.labMarkdown=value;r.labUpdatedAt=now;}
-    r.markdown=value;r.updatedAt=now;return value;
+  function recordDocumentEdit(exp,kind,before,after,source,now){
+    if(before===after)return;
+    exp.documentEdits=Array.isArray(exp.documentEdits)?exp.documentEdits:[];
+    const src=source==='ai'?'ai':source==='system'?'system':'user',last=exp.documentEdits[exp.documentEdits.length-1],ts=Date.parse(now),lastTs=last?Date.parse(last.updatedAt||last.createdAt||''):NaN;
+    if(last&&last.kind===kind&&last.source===src&&Number.isFinite(lastTs)&&Number.isFinite(ts)&&ts-lastTs<300000){last.after=after;last.updatedAt=now;last.afterWords=(after.trim().match(/\S+/g)||[]).length;return;}
+    exp.documentEdits.push({id:C.uid?C.uid('docedit'):'docedit_'+Date.now(),kind:kind,source:src,before:before,after:after,createdAt:now,updatedAt:now,beforeWords:(before.trim().match(/\S+/g)||[]).length,afterWords:(after.trim().match(/\S+/g)||[]).length});
+    if(exp.documentEdits.length>80)exp.documentEdits=exp.documentEdits.slice(-80);
   }
-  function setKind(exp, kind) { const r=ensureReport(exp); r.kind=kind==='paper'?'paper':'lab'; r.markdown=r.kind==='paper'?r.paperMarkdown:r.labMarkdown; r.title=r.kind==='paper'?r.paperTitle:r.labTitle; return r.kind; }
+  function setActiveMarkdown(exp, text, source) {
+    const r=ensureReport(exp), value=String(text||''), kind=r.kind==='paper'?'paper':'lab', before=kind==='paper'?r.paperMarkdown:r.labMarkdown, now=new Date().toISOString();
+    if(before===value)return value;
+    if(kind==='paper'){r.paperMarkdown=value;r.paperUpdatedAt=now;}else{r.labMarkdown=value;r.labUpdatedAt=now;}
+    r.markdown=value;r.updatedAt=now;recordDocumentEdit(exp,kind,String(before||''),value,source||'user',now);return value;
+  }
+  function setKind(exp, kind) { const r=ensureReport(exp); r.kind=kind==='paper'?'paper':'lab'; r.markdown=r.kind==='paper'?r.paperMarkdown:r.labMarkdown; r.title=r.kind==='paper'?r.paperTitle:r.labTitle; r.figureSelection=r.figureSelections[r.kind]; return r.kind; }
+  function figureSelection(exp,kind){const r=ensureReport(exp),k=kind==='paper'?'paper':kind==='lab'?'lab':r.kind;return r.figureSelections[k];}
+  function setFigure(exp,key,enabled,kind){const r=ensureReport(exp),k=kind==='paper'?'paper':kind==='lab'?'lab':r.kind,sel=r.figureSelections[k];sel[String(key||'')]=!!enabled;if(k===r.kind)r.figureSelection=sel;r.updatedAt=new Date().toISOString();return sel;}
+  function figuresEnabled(exp,kind){const sel=figureSelection(exp,kind);return Object.keys(sel).some(function(k){return sel[k]!==false;});}
   function activeTitle(exp){ const r=ensureReport(exp); return r.kind==='paper'?r.paperTitle:r.labTitle; }
   function setActiveTitle(exp,title){ const r=ensureReport(exp),value=String(title||''); if(r.kind==='paper')r.paperTitle=value; else r.labTitle=value; r.title=value; r.updatedAt=new Date().toISOString(); return value; }
 
@@ -165,17 +184,27 @@
 
 
   function latexEscape(s) {
-    return String(s || '').replace(/\\/g, '\\textbackslash{}').replace(/([#$%&_{}])/g, '\\$1').replace(/~/g, '\\textasciitilde{}').replace(/\^/g, '\\textasciicircum{}');
+    return String(s||'').replace(/\\/g,'\\textbackslash{}').replace(/([#$%&_{}])/g,'\\$1').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}');
   }
-
+  function latexInline(text){
+    const src=String(text||''),re=/(\$[^$\n]+\$|\\\([^\n]*?\\\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*|\[[^\]]+\]\([^)]*\))/g;let out='',last=0,m;
+    while((m=re.exec(src))){if(m.index>last)out+=latexEscape(src.slice(last,m.index));const t=m[0];if(t[0]==='$'||t.startsWith('\\('))out+=t;else if(t.startsWith('**'))out+='\\textbf{'+latexInline(t.slice(2,-2))+'}';else if(t.startsWith('`'))out+='\\texttt{'+latexEscape(t.slice(1,-1))+'}';else if(t.startsWith('*'))out+='\\emph{'+latexInline(t.slice(1,-1))+'}';else{const mm=t.match(/^\[([^\]]+)\]\(([^)]+)\)$/);out+=mm?'\\href{'+latexEscape(mm[2])+'}{'+latexInline(mm[1])+'}':latexEscape(t);}last=m.index+t.length;}
+    if(last<src.length)out+=latexEscape(src.slice(last));return out;
+  }
   function toLatex(md) {
-    let out = String(md || '');
-    out = out.replace(/^# (.+)$/gm, function (_, t) { return '\\section*{' + latexEscape(t) + '}'; })
-      .replace(/^## (.+)$/gm, function (_, t) { return '\\section{' + latexEscape(t) + '}'; })
-      .replace(/^### (.+)$/gm, function (_, t) { return '\\subsection{' + latexEscape(t) + '}'; })
-      .replace(/\*\*(.+?)\*\*/g, '\\textbf{$1}')
-      .replace(/`([^`]+)`/g, '\\texttt{$1}');
-    return '\\documentclass[11pt,a4paper]{article}\n\\usepackage[margin=24mm]{geometry}\n\\usepackage{booktabs}\n\\usepackage{graphicx}\n\\usepackage{xcolor}\n\\definecolor{labflow}{HTML}{1967D2}\n\\begin{document}\n' + out + '\n\\end{document}\n';
+    const lines=String(md||'').replace(/\r\n/g,'\n').split('\n'),out=[];let list=null;
+    function closeList(){if(list){out.push('\\end{'+list+'}');list=null;}}
+    for(let i=0;i<lines.length;){const line=lines[i];
+      const same=line.match(/^\s*\$\$([\s\S]*?)\$\$\s*$/);if(same){closeList();out.push('\\['+same[1].trim()+'\\]');i++;continue;}
+      if(/^\s*\$\$\s*$/.test(line)){closeList();const eq=[];i++;while(i<lines.length&&!/^\s*\$\$\s*$/.test(lines[i])){eq.push(lines[i]);i++;}if(i<lines.length)i++;out.push('\\[\n'+eq.join('\n').trim()+'\n\\]');continue;}
+      const bracket=line.match(/^\s*\\\[([\s\S]*?)\\\]\s*$/);if(bracket){closeList();out.push('\\['+bracket[1].trim()+'\\]');i++;continue;}
+      if(/^\s*\\\[\s*$/.test(line)){closeList();const eq=[];i++;while(i<lines.length&&!/^\s*\\\]\s*$/.test(lines[i])){eq.push(lines[i]);i++;}if(i<lines.length)i++;out.push('\\[\n'+eq.join('\n').trim()+'\n\\]');continue;}
+      const h=line.match(/^(#{1,4})\s+(.+)$/);if(h){closeList();const cmd=h[1].length===1?'section*':h[1].length===2?'section':h[1].length===3?'subsection':'subsubsection';out.push('\\'+cmd+'{'+latexInline(h[2])+'}');i++;continue;}
+      const ul=line.match(/^\s*[-*]\s+(.+)$/),ol=line.match(/^\s*\d+[.)]\s+(.+)$/);if(ul||ol){const wanted=ul?'itemize':'enumerate';if(list!==wanted){closeList();list=wanted;out.push('\\begin{'+list+'}');}out.push('\\item '+latexInline((ul||ol)[1]));i++;continue;}
+      closeList();if(!line.trim()){out.push('');i++;continue;}if(/^>\s?/.test(line)){out.push('\\begin{quote}'+latexInline(line.replace(/^>\s?/,''))+'\\end{quote}');i++;continue;}out.push(latexInline(line));i++;
+    }
+    closeList();
+    return '\\documentclass[11pt,a4paper]{article}\n\\usepackage[margin=24mm]{geometry}\n\\usepackage{booktabs}\n\\usepackage{graphicx}\n\\usepackage{xcolor}\n\\usepackage{hyperref}\n\\definecolor{labflow}{HTML}{1967D2}\n\\begin{document}\n'+out.join('\n')+'\n\\end{document}\n';
   }
 
   function values(exp, direction, key) {
@@ -287,6 +316,8 @@
     return { solutions: solutions, stack: stack, notes: (d.process && d.process.notes) || d.notes || '' };
   }
 
+  function figureSelectionForModel(exp){return Object.assign({},figureSelection(exp));}
+
   function reportModelData(exp) {
     ensureReport(exp);
     const measurements = LF.Analysis.measurementsOf(exp);
@@ -338,7 +369,7 @@
       }).sort(function (a, b) { return Number(b.medianEff || 0) - Number(a.medianEff || 0); });
     })() : legacyGroupStatistics;
     const warningHysteresis=Number((((LF.PromptRegistry.effectiveRules() || {}).pair_checks || {}).hysteresis_abs_warning) || .30) * 100;
-    const figureSelection=ensureReport(exp).figureSelection||{};
+    const figureSelection=figureSelectionForModel(exp);
     const bestCompact=(analysis.bestBySample||[])[0],bestMeasurement=bestCompact&&measurements.find(function(m){return m.id===bestCompact.id;});
     const bestCurve=bestMeasurement&&bestMeasurement.curve?{
       sample:bestMeasurement.sample,
@@ -361,7 +392,7 @@
       groupStatistics: groupStatistics,
       anomalies: measurements.filter(function (m) { return m.qualityStatus !== 'valid'; }).slice(0, 40).map(function (m) { return { cell: m.sample, file: m.file, issue: (m.flags || []).map(function (f) { return f.label || f; }).join(', ') || m.qualityStatus, effRV: m.rv && Number.isFinite(m.rv.eff) ? m.rv.eff / factor : null, effFW: m.fw && Number.isFinite(m.fw.eff) ? m.fw.eff / factor : null, hysteresisPct: Number.isFinite(m.hysteresis) ? m.hysteresis * 100 : null, jscRV: m.rv && Number.isFinite(m.rv.jsc) ? m.rv.jsc / factor : null, jscFW: m.fw && Number.isFinite(m.fw.jsc) ? m.fw.jsc / factor : null }; }),
       chartData: bundle ? Object.assign({}, bundle.chartData, { groupStatistics: groupStatistics, figureSelection: figureSelection }) : { efficiencies: pce, hysteresis: hyst, scatter: scatterPoints.map(function (p) { return { cell: p.cell, eff: p.x, hysteresisPct: p.y }; }), bestCurve: bestCurve, groupStatistics: groupStatistics, figureSelection: figureSelection, thresholds: { hysteresisPct: warningHysteresis } },
-      includeCharts: exp.report.includeCharts !== false, includeValidation: exp.report.includeValidation !== false
+      includeCharts: figuresEnabled(exp), includeValidation: exp.report.includeValidation !== false
     };
   }
 
@@ -371,7 +402,7 @@
   /* Memoized on-demand rasterizer. Preview and DOCX/PDF export share the exact
      same PNG dataUrls (cache keyed by experiment + revision + selection). */
   function reportFigurePreviews(exp) {
-    const r = ensureReport(exp), sel = r.figureSelection || {}, includeCharts = exp.report.includeCharts !== false;
+    const r = ensureReport(exp), sel = figureSelection(exp), includeCharts = figuresEnabled(exp);
     const key = figureFingerprint(exp, sel, includeCharts);
     if (figureCache[key]) return figureCache[key];
     const model = reportModelData(exp);
@@ -400,14 +431,14 @@
 
   async function exportDocx(exp,onProgress) {
     ensureReport(exp); if (!window.ReportExport) throw new Error('Local ReportExport library is unavailable.');
-    const progress=typeof onProgress==='function'?onProgress:function(){};
-    const info=documentInfo(exp),end=Log.timer('export.docx',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.12});const model=reportModel(exp);progress({stage:'Building editable DOCX',progress:.42});const blob=await window.ReportExport.buildDocx(model);progress({stage:'DOCX ready',progress:1});const filename=C.safeName(exp.meta.name)+info.suffix+'.docx';C.downloadBlob(blob,filename);end({filename:filename,bytes:blob.size,figures:model.figures.length,sourceChars:info.chars},'info');return blob;
+    const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.docx',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});
+    progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.28});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Building editable DOCX',progress:.48});const blob=await window.ReportExport.buildDocx(model);progress({stage:'DOCX ready',progress:1});const filename=C.safeName(exp.meta.name)+info.suffix+'.docx';C.downloadBlob(blob,filename);end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  function exportPdf(exp) {
+  async function exportPdf(exp,onProgress) {
     if (!window.ReportExport) throw new Error('Local ReportExport utility is not available.');
-    const info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});const model=reportModel(exp),blob=window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);end({filename:filename,bytes:blob.size,figures:model.figures.length,sourceChars:info.chars},'info');return blob;
+    const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.30});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Rendering PDF',progress:.55});const blob=window.ReportExport.buildPdfAsync?await window.ReportExport.buildPdfAsync(model,function(x){progress({stage:x.stage||'Rendering PDF',progress:.55+Number(x.progress||0)*.4});}):window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);progress({stage:'PDF ready',progress:1});end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

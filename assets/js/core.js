@@ -75,7 +75,11 @@
   function markdownInline(text) {
     let src = String(text || '');
     const protectedHtml = [];
-    function protect(html) { const token='%%LFMD_'+protectedHtml.length+'%%'; protectedHtml.push(html); return token; }
+    function protect(html) { const token='@@LFPROTECTED'+protectedHtml.length+'@@'; protectedHtml.push(html); return token; }
+    /* Protect TeX before Markdown emphasis: underscores and asterisks are valid
+       mathematical syntax and must never be interpreted as Markdown. */
+    src = src.replace(/\\\(([^\n]+?)\\\)/g, function(_m,math){ return protect('<span class="math-inline">\\('+escapeHtml(math)+'\\)</span>'); });
+    src = src.replace(/(^|[^\\$])\$([^$\n]+?)\$/g, function(_m,prefix,math){ return prefix+protect('<span class="math-inline">\\('+escapeHtml(math)+'\\)</span>'); });
     src = src.replace(/`([^`]+)`/g, function(_m,code){ return protect('<code>'+escapeHtml(code)+'</code>'); });
     src = src.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, function(_m,label,href){ const safe=safeMarkdownUrl(href); return safe?protect('<a href="'+escapeHtml(safe)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(label)+'</a>'):label; });
     let out=escapeHtml(src);
@@ -84,14 +88,14 @@
       .replace(/~~([^~]+)~~/g,'<del>$1</del>')
       .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>')
       .replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
-    protectedHtml.forEach(function(html,i){out=out.replace('%%LFMD_'+i+'%%',html);});
+    protectedHtml.forEach(function(html,i){out=out.replace('@@LFPROTECTED'+i+'@@',html);});
     return out;
   }
 
   function markdown(text) {
     const source=String(text||'').replace(/\r\n/g,'\n');
-    const codeBlocks=[];
-    const protectedSource=source.replace(/```([^\n]*)\n([\s\S]*?)```/g,function(_m,lang,code){
+    const codeBlocks=[],mathBlocks=[];
+    let protectedSource=source.replace(/```([^\n]*)\n([\s\S]*?)```/g,function(_m,lang,code){
       const token='@@LFCODE_'+codeBlocks.length+'@@';
       const escaped=highlightCode(code.replace(/\n$/,''),String(lang||'').trim());
       const normalizedLang=String(lang||'').trim().toLowerCase();
@@ -99,6 +103,7 @@
       codeBlocks.push('<div class="'+shellClass+'"><div class="code-toolbar"><span>'+escapeHtml(String(lang||'code').trim()||'code')+'</span><button class="button ghost compact" type="button" data-copy-code>Copy code</button></div><pre class="code-block"><code data-lang="'+escapeHtml(String(lang||'').trim())+'">'+escaped+'</code></pre></div>');
       return token;
     });
+    protectedSource=protectedSource.replace(/\$\$([\s\S]*?)\$\$/g,function(_m,math){const token='@@LFMATH_'+mathBlocks.length+'@@';mathBlocks.push(String(math||'').trim());return token;}).replace(/\\\[([\s\S]*?)\\\]/g,function(_m,math){const token='@@LFMATH_'+mathBlocks.length+'@@';mathBlocks.push(String(math||'').trim());return token;});
     const lines=protectedSource.split('\n'), out=[];
     let listType=null;
     function closeList(){if(listType){out.push('</'+listType+'>');listType=null;}}
@@ -107,6 +112,7 @@
       const raw=lines[i], line=raw.trimEnd();
       if(!line.trim()){closeList();continue;}
       const tok=line.trim().match(/^@@LFCODE_(\d+)@@$/); if(tok){closeList();out.push(codeBlocks[Number(tok[1])]);continue;}
+      const mathTok=line.trim().match(/^@@LFMATH_(\d+)@@$/); if(mathTok){closeList();const math=mathBlocks[Number(mathTok[1])]||'';out.push('<div class="math-display" data-latex="'+escapeHtml(math)+'">\\['+escapeHtml(math)+'\\]</div>');continue;}
       if(/^\s*(?:---+|___+|\*\*\*+)\s*$/.test(line)){closeList();out.push('<hr>');continue;}
       const h=line.match(/^(#{1,6})\s+(.+)$/); if(h){closeList();const level=Math.min(6,h[1].length);out.push('<h'+level+'>'+markdownInline(h[2])+'</h'+level+'>');continue;}
       if(line.includes('|')&&i+1<lines.length&&/^\s*\|?\s*:?-{3,}/.test(lines[i+1])){
@@ -150,6 +156,24 @@
     return String(s || '').trim().replace(/\s+/g, ' ');
   }
 
+
+  function cleanModelText(text) {
+    let out = String(text == null ? '' : text);
+    /* Some local models occasionally emit opaque Markdown-protection tokens
+       (for example %%LFMD0%%) as if they were user-visible evidence. These
+       markers are never part of the LabFlow scientific model and must not leak
+       into the workbench. Keep the cleanup deliberately narrow. */
+    out = out
+      .replace(/%%LF(?:MD|CODE)[^%]*%%\s+tool/gi, 'LabFlow read tool')
+      .replace(/\u0000LF(?:MD|CODE)[^\u0000]*\u0000\s+tool/gi, 'LabFlow read tool')
+      .replace(/%%LF(?:MD|CODE)[^%]*%%/gi, '')
+      .replace(/\u0000LF(?:MD|CODE)[^\u0000]*\u0000/gi, '')
+      .replace(/@@LF(?:PROTECTED|CODE|MATH)_?\d+@@/gi, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n[ \t]+/g, '\n');
+    return out.trim();
+  }
+
   function safeName(s) {
     return String(s || 'experiment').replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '') || 'experiment';
   }
@@ -169,5 +193,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, safeName, bindFieldLabels };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, bindFieldLabels };
 }());

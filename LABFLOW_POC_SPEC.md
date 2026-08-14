@@ -6,25 +6,26 @@
 
 LabFlow is a static, local-first laboratory workbench with a deliberately small mental model:
 
-**Upload ZIP → Review → Results → Design → Report → Changes → NOMAD**
+**Upload & Review → Results → Design → Report → Changes → NOMAD**
 
-The ZIP is the only experiment entry point. No project loader, backend, queue or hidden background workflow precedes it.
+The ZIP is the only experiment entry point. Upload and Review are one first step: before a ZIP exists the page is an upload gate; after import the same page shows the immutable source receipt and the deterministic-first review workbench. No project loader, backend, queue or hidden background workflow precedes it.
 
 ## 2. Source, Canonical Store and Working Copy
 
 The uploaded ZIP is immutable source evidence. Original paths/names are always preserved for provenance and round-trip export; they do not define the application's semantic model.
 
-After import, `LF.State.state.experiment` is the one scientific Working Copy. `LF.CanonicalStore` indexes that object instead of creating a second editable projection. It provides:
+After import, `LF.State.state.experiment` is the one scientific Working Copy. `LF.CanonicalStore` indexes that object instead of creating a second editable projection. Its internal `labflow-canonical-v2` view is the common application representation used by Tools and Actions. It groups stable domains (`experiment`, `source`, `entities`, `scientific`, `documents`, `evidence`, `relations`, `provenance`) while keeping compatibility aliases for existing modules. It provides:
 
 - stable file/sample/measurement identity;
 - sample aliases derived from original naming;
 - explicit relations between samples, measurements, files, Design and evidence;
-- evidence references with source/locator provenance;
+- current Results/findings/Design and Report/Paper document views;
+- evidence and provenance references with source/locator provenance;
 - deterministic lookup indexes.
 
 Scientific collections remain on the Working Copy; Canonical Store indexes/reference them rather than copying RAW curves into another mega-object. RAW bytes remain at `raw.sourceArchive` and are never rewritten.
 
-Every manual edit, safe correction and accepted AI proposal changes only the same in-memory Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares that mutable state. **Save** is an explicit user action that persists the internal LabFlow representation in the browser. **Export** and NOMAD export explicitly create new files from the current revision; they never overwrite the uploaded source. There is no hidden autosave copy.
+Every manual edit, safe correction and accepted AI proposal changes only the same in-memory Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares that mutable state. A new LabFlow page load always starts with no experiment/ZIP restored; provider/model/API-key/UI preferences may persist. **Save** marks/persists the current session revision, while **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
 
 Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
 
@@ -38,11 +39,13 @@ LabFlow also derives one shared **Experiment Brief**. Its deterministic part sum
 
 ## 4. Research Context Packs
 
-All AI entry points use one deterministic `LF.ContextBuilder` over the Canonical Store. A Context Pack is bounded and profile-specific; the default Assistant budget is about 12,000 characters (roughly a few thousand tokens), not the full experiment.
+AI Actions use deterministic, profile-specific `LF.ContextBuilder` views over the Canonical Store. The context profile is declared by each Action in `input.context` rather than inferred from the Action ID.
 
-Profiles select only what the request needs, for example:
+The Assistant is different: its bootstrap context is intentionally small (question, current page/selection, bounded history and tool policy). It may then retrieve only the evidence it needs through allowlisted read-only Tools. Tool observations are bounded before final model reuse, so the full experiment is never sent by default.
 
-- chat — current page, question-matched entities, selection, relevant Results/findings/evidence and bounded history;
+Profiles select only what a workflow needs, for example:
+
+- assistant — small bootstrap context plus explicit read-tool observations;
 - ambiguity — unresolved findings plus directly linked records/evidence;
 - design — one selected experiment, researcher-entered known values, explicit missing fields and linked evidence;
 - results — deterministic summary/rankings/anomalies/relevant findings;
@@ -53,7 +56,7 @@ RAW JV point arrays are excluded by default. AI works with stable LabFlow IDs/re
 
 ## 5. Researcher Actions
 
-A Action represents a researcher-understandable goal. Internal functions such as parsing, result computation, Design evidence indexing, applying accepted proposals and validation gates are **steps/services**, not separate Actions.
+An Action represents a researcher-understandable goal. Internal functions such as parsing, result computation, Design evidence indexing, applying accepted proposals and validation gates are **steps/services**, not separate Actions.
 
 The public set is intentionally limited to eight goals:
 
@@ -68,19 +71,19 @@ The public set is intentionally limited to eight goals:
 
 `analysis.enrich` is an **internal automatic AI enrichment**, not a researcher-facing action. It runs only when a provider is configured and never blocks import if unavailable.
 
-`assistant.chat` is visible in Actions like every executable Action, while remaining read-only with respect to scientific Working Copy state.
+`assistant.chat` is visible in Actions like every executable Action. It is **tool-aware but read-only**: a bounded model planning loop may select only allowlisted read Tools, after which the final response is generated from those observations. It cannot invoke write Tools, mutate the Working Copy or autonomously execute mutating Actions.
 
 Settings contains one editable **Actions** catalog for deterministic, AI-assisted and hybrid Actions. Each Action has one JSON definition and, only when needed, one Markdown prompt. Browser-local overrides never duplicate the source definition.
 
 ## 6. Action runtime
 
-AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Success auto-advances. Stop aborts the run. An AI checkpoint failure may retry exactly twice, after 5 seconds and 10 seconds; after those bounded attempts the user may Retry checkpoint. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
+AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Deterministic checkpoints resolve `tool` IDs through `LF.ToolRegistry`. `requires[]` is an actual current-revision prerequisite gate: stale/missing prerequisites block execution before step 1. Success auto-advances. Stop aborts the run. An AI checkpoint failure may retry exactly twice, after 5 seconds and 10 seconds; after those bounded attempts the user may Retry checkpoint. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
 
 Provider output is closed by default but streams live content/reasoning when available. Markdown/JSON rendering follows the active theme.
 
 ## 7. Results
 
-Results read canonical measurements/samples directly and never require Design. Deterministic code owns FW/RV pairing, hysteresis, ranking, quality gates, Top REF/non-REF, anomalies, curve data and group comparison. `ORIGINAL_REQUEST/jv_analyzer.html` is the functional reference for useful JV analysis behavior.
+Results read canonical measurements/samples directly and never require Design. Deterministic code owns FW/RV pairing, hysteresis, ranking, quality gates, Top REF/non-REF, anomalies, curve data and group comparison. JV Analyzer inspects one measurement with FW/RV parameter deltas, RAW point integrity and descriptive scan separation; Overlay is a separate multi-curve comparison view.
 
 AI Results interpretation is optional prose layered on these deterministic values.
 
@@ -90,7 +93,7 @@ The Design page is researcher-first and useful without AI. Deterministic analysi
 
 `design.infer` is optional and receives only the currently selected experiment, its explicit missing fields and linked evidence. It produces proposals only; accepted values are merged locally without overwriting user-confirmed fields.
 
-The active Report/Paper Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF. A fresh import starts with both documents empty. Prose is created only by researcher typing or an explicit Draft action. Drafting and AI editing use the shared Experiment Brief and bounded scientific Context Packs; long documents are generated/revised as ordered sections rather than one monolithic prompt. PDF/DOCX append only figures explicitly selected in Report Studio.
+The active Report/Paper Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF and supports standard inline/display LaTeX formulas. A fresh import starts with both documents empty. Prose is created only by researcher typing or an explicit Draft action. Drafting and AI editing use the shared Experiment Brief and bounded scientific Context Packs; long documents are generated/revised as ordered sections rather than one monolithic prompt. PDF/DOCX append only figures explicitly selected in Report Studio.
 
 ## 9. NOMAD
 

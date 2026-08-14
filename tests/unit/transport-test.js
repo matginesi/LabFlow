@@ -80,6 +80,52 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
+
+  t['buildRequest omits output token field when no cap is resolved'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'x',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
+    LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    const spec=AI.buildRequest({messages:[{role:'user',content:'hi'}],stream:false});
+    assert(Object.prototype.hasOwnProperty.call(spec.body,'max_tokens'),false,'no invented 8K limit');delete LF.Storage;delete LF.AIProviders;
+  };
+
+  t['provider capability and user caps resolve to the tightest valid budget'] = function () {
+    assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
+    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'known ZAI limit');
+    assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
+    assert(AI.resolveOutputBudget({maxOutputTokens:128000},32000,64000,1000),32000,'action/assistant cap');
+    assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5936,'context ceiling subtracts input and reserve');
+    assert(AI.resolveOutputBudget({},0,0,1000),null,'unknown remains provider default');
+  };
+
+  t['Gemini capability probe reads outputTokenLimit from the native Models API'] = async function () {
+    const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({name:'models/gemini-test',inputTokenLimit:1000000,outputTokenLimit:65536});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',model:'gemini-test'};},getApiKey:function(){return'key';}};LF.AIProviders={gemini:{keyRequired:true}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',model:'gemini-test',apiKey:'key',force:true});assert(/v1beta\/models\/gemini-test/.test(seen),true,'native model endpoint');assert(cap.maxOutputTokens,65536,'output limit');assert(cap.contextWindow,1000000,'input/context limit');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+
+  t['Ollama capability probe reads num_predict and model context'] = async function () {
+    const oldFetch=global.fetch;let seen={};global.fetch=async function(url,opts){seen={url:url,body:JSON.parse(opts.body)};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({parameters:'temperature 0.2\nnum_predict 12288',model_info:{'qwen.context_length':65536}});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen-test'};},getApiKey:function(){return'';}};LF.AIProviders={ollama:{keyRequired:false}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen-test',force:true});assert(seen.url,'http://127.0.0.1:11434/api/show','native show URL');assert(seen.body.model,'qwen-test','show model');assert(cap.maxOutputTokens,12288,'num_predict');assert(cap.contextWindow,65536,'model context');assert(cap.exactOutput,true,'explicit output limit');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['LM Studio capability probe reads loaded context without inventing output max'] = async function () {
+    const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{id:'local-model',max_context_length:32768,loaded_instances:[{id:'local-model:1',context_length:16384}]}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{keyRequired:false}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',force:true});assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(cap.contextWindow,16384,'loaded context wins');assert(cap.maxOutputTokens,null,'no fabricated output max');assert(cap.exactOutput,false,'context is not exact output');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Custom provider capability probe accepts explicit OpenAI-compatible model metadata'] = async function () {
+    const oldFetch=global.fetch;global.fetch=async function(){return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'custom-model',max_output_tokens:24576,context_window:131072}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://models.example/v1',model:'custom-model'};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'custom',endpoint:'https://models.example/v1',model:'custom-model',force:true});assert(cap.maxOutputTokens,24576,'custom output metadata');assert(cap.contextWindow,131072,'custom context metadata');assert(cap.exactOutput,true,'custom output exact');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['LM Studio loopback fetch stays a plain direct request'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let seen=null;
     global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};

@@ -42,7 +42,7 @@
       <div class="chat-log" id="chatLog"></div>
       <div class="chat-compose" id="chatCompose">
         <div class="chat-commandbar">
-          <textarea id="chatInput" rows="1" aria-label="Message" placeholder="Question, interpretation, or next action"></textarea>
+          <textarea id="chatInput" rows="1" aria-label="Message" placeholder="Ask LabFlow…"></textarea>
           <button class="chat-command-send" type="button" id="chatSend" aria-label="Send message">Send</button>
         </div>
         <div class="chat-compose-foot"><span>Context follows the current page</span><span>Enter sends · Shift+Enter adds a line</span></div>
@@ -83,11 +83,24 @@
 
   <div class="toast-region" id="toastRegion" aria-live="polite"></div>
 
+  <div class="message-shade" id="messageShade" hidden>
+    <section class="message-totem" role="dialog" aria-modal="true" aria-labelledby="messageTotemTitle" aria-describedby="messageTotemBody">
+      <div class="message-totem-head"><span class="message-totem-marker" aria-hidden="true"></span><div><span class="eyebrow" id="messageTotemEyebrow">LABFLOW</span><strong id="messageTotemTitle">Confirm action</strong></div></div>
+      <div class="message-totem-body" id="messageTotemBody"></div>
+      <div class="message-totem-actions"><button class="button ghost" type="button" id="messageTotemCancel">Cancel</button><button class="button primary" type="button" id="messageTotemConfirm">Confirm</button></div>
+    </section>
+  </div>
+
+  <script>
+    window.MathJax={loader:{load:[]},tex:{inlineMath:[["\\(","\\)"]],displayMath:[["\\[","\\]"]],processEscapes:true},svg:{fontCache:"local"},options:{skipHtmlTags:["script","noscript","style","textarea","pre","code"]},startup:{typeset:false}};
+  </script>
+  <script src="vendor/mathjax/es5/tex-svg-full.js"></script>
   <script src="vendor/jszip/jszip.min.js"></script>
   <script src="vendor/report-export/report-export.js"></script>
   <script src="assets/js/ui/icons.js"></script>
   <script src="assets/js/logger.js"></script>
   <script src="assets/js/core.js"></script>
+  <script src="assets/js/math.js"></script>
   <script src="assets/js/experiment/data-model.js"></script>
   <script src="assets/js/state.js"></script>
   <script src="assets/js/page-context.js"></script>
@@ -98,6 +111,7 @@
   <script src="assets/js/ai/prompt-bundle.js"></script>
   <script src="assets/js/ai/action-registry.js"></script>
   <script src="assets/js/ai/action-steps.js"></script>
+  <script src="assets/js/tools/registry.js"></script>
   <script src="assets/js/ai/structured.js"></script>
   <script src="assets/js/ai/actions.js"></script>
   <script src="assets/js/data/parser.js"></script>

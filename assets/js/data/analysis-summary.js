@@ -45,7 +45,7 @@
       scatter: eligible.filter(function (m) { return num(m.bestEff) !== null && num(m.hysteresis) !== null; }).map(function (m) { return { cell: m.sample, eff: num(m.bestEff), hysteresisPct: (num(m.hysteresis) || 0) * 100 }; }),
       bestCurve: bestM ? { sample: bestM.sample, fw: (bestM.curve && bestM.curve.fw || []).map(factorY), rv: (bestM.curve && bestM.curve.rv || []).map(factorY) } : null,
       thresholds: { hysteresisPct: warningHysteresis },
-      figureSelection: (exp.report && exp.report.figureSelection) || {}
+      figureSelection: (LF.Report&&LF.Report.figureSelection?LF.Report.figureSelection(exp):(exp.report && exp.report.figureSelection)) || {}
     };
   }
 

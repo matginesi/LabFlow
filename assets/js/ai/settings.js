@@ -93,7 +93,8 @@
       temperature: Number.isFinite(Number(previous.temperature)) ? Number(previous.temperature) : 0.7,
       thinking: false,
       streaming: field('aiStreaming') ? field('aiStreaming').checked : previous.streaming !== false,
-      inactivityTimeoutMs: field('aiInactivityTimeout') ? Math.max(15000,Number(field('aiInactivityTimeout').value||90)*1000) : previous.inactivityTimeoutMs
+      inactivityTimeoutMs: field('aiInactivityTimeout') ? Math.max(15000,Number(field('aiInactivityTimeout').value||90)*1000) : previous.inactivityTimeoutMs,
+      maxOutputTokensCap: field('aiMaxOutputTokensCap') ? Math.max(0,Number(field('aiMaxOutputTokensCap').value)||0) : previous.maxOutputTokensCap||0
     };
     LF.Storage.saveAiSettings(settings);
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom;
@@ -115,24 +116,26 @@
   async function loadModels(options) {
     options=options||{};
     const providerId=(field('aiProvider')&&field('aiProvider').value)||LF.Storage.getAiSettings().provider;
-    if(providerId!=='lmstudio'&&providerId!=='ollama'&&!options.force)return[];
     const endpoint=(field('aiEndpoint')&&field('aiEndpoint').value.trim())||LF.Storage.getAiSettings().endpoint;
+    const apiKey=(field('aiKey')&&field('aiKey').value.trim())||LF.Storage.getApiKey();
     const button=field('loadProviderModels'),hint=field('aiModelHint'),list=field('aiModelList'),model=field('aiModel');
     if(button){button.disabled=true;button.textContent='Reading…';}
-    if(hint)hint.textContent='Reading models from the local provider…';
+    if(hint)hint.textContent='Reading model list and output capability…';
+    let models=[],listError=null;
     try{
-      const result=await LF.AI.listModels(providerId,endpoint);
-      if(list){list.replaceChildren();result.models.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}
-      const current=String(model&&model.value||'').trim();
-      if(model&&result.models.length&&(!current||current==='local-model'||(providerId==='lmstudio'&&!result.models.includes(current))))model.value=result.models[0];
-      if(hint)hint.textContent=result.models.length?result.models.length+' model'+(result.models.length===1?'':'s')+' available · '+result.elapsedMs+' ms':'Provider returned no visible models.';
-      Log.info('models.loaded',{provider:providerId,count:result.models.length,elapsedMs:result.elapsedMs});
-      return result.models;
+      try{const result=await LF.AI.listModels(providerId,endpoint,apiKey);models=result.models||[];if(list){list.replaceChildren();models.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}const current=String(model&&model.value||'').trim();if(model&&models.length&&(!current||current==='local-model'||(providerId==='lmstudio'&&!models.includes(current))))model.value=models[0];}
+      catch(error){listError=error;Log.warn('models.list-failed',{provider:providerId,error:error});}
+      const selected=String(model&&model.value||LF.Storage.getAiSettings().model||'').trim(),cap=LF.AI.resolveModelCapabilities?await LF.AI.resolveModelCapabilities({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,force:true}):null;
+      const capText=cap&&cap.maxOutputTokens?('max output '+Number(cap.maxOutputTokens).toLocaleString()+' tokens'):(cap&&cap.contextWindow?('context ceiling '+Number(cap.contextWindow).toLocaleString()+' tokens'):'output limit not exposed');
+      if(hint)hint.textContent=(models.length?models.length+' model'+(models.length===1?'':'s')+' available · ':'')+capText+(cap&&cap.source?' · '+cap.source:'')+(listError?' · model list unavailable':'');
+      Log.info('models.loaded',{provider:providerId,count:models.length,model:selected,capability:cap});
+      if(listError&&!cap&&!options.silent)LF.UI.toast('Could not read provider metadata. You can still type the model name manually.','warning');
+      return models;
     }catch(error){
-      if(hint)hint.textContent='Could not read models: '+(error.message||String(error));
+      if(hint)hint.textContent='Could not read provider capability: '+(error.message||String(error));
       Log.warn('models.load-failed',{provider:providerId,error:error});
-      if(!options.silent)LF.UI.toast('Could not read provider models. You can still type the model name manually.','warning');
-      return[];
+      if(!options.silent)LF.UI.toast('Could not read provider capability. The request will use the provider default unless you force a cap.','warning');
+      return models;
     }finally{if(button){button.disabled=false;button.textContent='Detect';}}
   }
 

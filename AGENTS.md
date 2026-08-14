@@ -17,7 +17,7 @@ The goal is to keep LabFlow small, deterministic-first and understandable to a r
 The experiment entry point is always:
 
 ```text
-Upload ZIP → Review → Results → Design → Report → Changes → NOMAD
+Upload & Review → Results → Design → Report → Changes → NOMAD
 ```
 
 Do not add a project loader, hidden pre-import workflow, backend queue or alternate experiment entry point unless explicitly requested.
@@ -49,7 +49,7 @@ Never create:
 - hidden autosave state;
 - a separate export data model that becomes more authoritative than the Working Copy.
 
-Only **Save** marks the internal browser representation as saved. **Export** creates the Working Copy ZIP; Report/NOMAD/other derived exports do not overwrite source.
+Only **Save** marks the current session revision as saved. A fresh app load must still begin with no experiment/ZIP restored; provider/API-key/UI preferences may persist. **Export** creates the durable Working Copy ZIP; Report/NOMAD/other derived exports do not overwrite source.
 
 When modifying export code, preserve the byte-for-byte original-source regression contract.
 
@@ -57,7 +57,7 @@ When modifying export code, preserve the byte-for-byte original-source regressio
 
 ## 3. Canonical Store invariant
 
-`LF.CanonicalStore` is a semantic index/view over the Working Copy, not another editable model.
+`LF.CanonicalStore` is the internal Canonical Data Model / semantic index over the Working Copy, not another editable model. New cross-cutting capabilities should consume its grouped `labflow-canonical-v2` domains rather than invent page-specific representations.
 
 Use stable IDs, aliases, relations and evidence references instead of repeatedly inferring semantics from filenames in pages/Actions.
 
@@ -121,13 +121,13 @@ AI must never silently mutate scientific state or become the authoritative calcu
 
 ### Report / Paper rule
 
-A fresh import starts with empty Report and Paper documents. Do not insert placeholder/template prose automatically. Drafting is an explicit researcher action. `report.generate` and `report.improve` must receive the shared Experiment Brief plus bounded Results/Design/findings/provenance context; split large drafting or editing jobs into deterministic document blocks/sections. Keep Common, Report-specific and Paper-specific writing aids as modes of the same bounded Actions rather than unrelated ad-hoc model calls.
+A fresh import starts with empty Report and Paper documents. Do not insert placeholder/template prose automatically. Drafting is an explicit researcher action. `report.generate` and `report.improve` must receive the shared Experiment Brief plus bounded Results/Design/findings/provenance context; split large drafting or editing jobs into deterministic document blocks/sections. Keep Common, Report-specific and Paper-specific writing aids as modes of the same bounded Actions rather than unrelated ad-hoc model calls. Report/Paper Markdown may contain standard inline `$...$` and display `$$...$$` LaTeX; prompts may use equations only when evidence supports them, and exports must preserve/render them.
 
 ---
 
 ## 5. Researcher Actions
 
-A Action is a researcher-understandable goal, not an implementation function.
+An Action is a researcher-understandable goal, not an implementation function.
 
 The Action manager public catalog is intentionally limited to:
 
@@ -171,6 +171,12 @@ If adding a public Action, document:
 Update `docs/specs/ACTIONS.md` and `docs/WORKFLOW.md` when the public catalog changes.
 
 ---
+
+### Tool rule
+
+A Tool is a small typed capability over the Canonical Data Model; an Action is a researcher goal/workflow that may compose Tools and AI steps. New deterministic Action checkpoints should use `tool` IDs registered in `LF.ToolRegistry`, not new direct runner branches. Keep algorithm implementations in ordinary modules / `ActionSteps` services behind the Tool Registry.
+
+Read Tools intended for the Assistant must be explicitly `agent_visible` and `access: read`. Never expose a write Tool to the Assistant merely because the underlying function is convenient.
 
 ## 6. Action sources and build
 
@@ -251,7 +257,7 @@ Safe corrections can be applied individually/bulk. AI proposals are applied only
 
 ## 9. Research Context Pack
 
-All AI/chat context uses `LF.ContextBuilder` over Canonical Store references.
+AI Action contexts use `LF.ContextBuilder` over Canonical Store references. Each Action declares its profile in `input.context`. Assistant chat uses only a small bootstrap Context Pack plus observations explicitly retrieved through its allowlisted read Tools.
 
 Never default to serializing the full experiment or RAW curves.
 

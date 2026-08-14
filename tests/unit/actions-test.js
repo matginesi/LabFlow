@@ -94,5 +94,43 @@ module.exports=function(t,LF){
     assert(second.status,'done','retry status');assert(calls,['a','b','b','c','finish'],'resume from b only');assert(second.outputs.batch,['A','B','C'],'merged work-unit results');
   };
 
+
+
+  t['runner does not double-touch an Action that committed its own revision'] = async function(){
+    const exp={id:'exp_commit',sync:{revision:4},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.commit',type:'DETERMINISTIC',mutation_scope:'dataset',steps:[{id:'commit',type:'DETERMINISTIC',fn:'commit'}]};
+    let touches=0;
+    LF.Storage={getEffectiveAction:function(){return def;}};
+    LF.ActionSteps={commit:function(){LF.State.touch('dataset');return{revision:exp.sync.revision};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){touches++;exp.sync.revision++;}};
+    LF.AI={acceptController:function(){}};
+    const out=await LF.ActionRunner.run('test.commit');
+    assert(out.status,'done','status');
+    assert(touches,1,'one commit only');
+    assert(exp.sync.revision,5,'one revision advance');
+  };
+
+  t['requires is an actual current-revision prerequisite gate'] = async function(){
+    const exp={id:'exp_gate',sync:{revision:3},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.consumer',type:'DETERMINISTIC',requires:['test.producer'],steps:[{id:'consume',type:'DETERMINISTIC',fn:'consume'}]};
+    let calls=0;
+    LF.Storage={getEffectiveAction:function(){return def;}};
+    LF.ActionSteps={consume:function(){calls++;return'ok';}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){}};
+    const blocked=await LF.ActionRunner.run('test.consumer');
+    assert(blocked.status,'error','blocked status');
+    assert(blocked.code,'ACTION_PREREQUISITE_REQUIRED','blocked code');
+    assert(blocked.requires,['test.producer'],'required action');
+    assert(calls,0,'consumer did not run');
+    exp.derived.actions['test.producer']={runs:[{status:'done',sourceRevision:2}]};
+    const stale=await LF.ActionRunner.run('test.consumer');
+    assert(stale.code,'ACTION_PREREQUISITE_REQUIRED','stale prerequisite blocked');
+    exp.derived.actions['test.producer'].runs.push({status:'done',sourceRevision:3});
+    const out=await LF.ActionRunner.run('test.consumer');
+    assert(out.status,'done','fresh prerequisite accepted');
+    assert(calls,1,'consumer ran once');
+  };
+
   return t;
 };

@@ -8,7 +8,6 @@
   "purpose": "Draft the active Lab Report or Scientific Paper from the current Experiment Brief, deterministic results, design provenance and findings.",
   "strategy": "Deterministically split the requested document into bounded writing blocks. The model writes one block at a time from the same evidence pack; LabFlow then assembles the blocks in order.",
   "output": "text",
-  "max_output_tokens": 8000,
   "mutation_scope": "report",
   "policies": [
     "policy.scientific-provenance"
@@ -17,15 +16,14 @@
     {
       "id": "collect",
       "type": "DETERMINISTIC",
-      "fn": "report.collect-draft-blocks",
-      "weight": 0.08
+      "weight": 0.08,
+      "tool": "report.collect-draft-blocks"
     },
     {
       "id": "draft",
       "type": "AI",
       "prompt": "prompt.md",
       "output": "text",
-      "max_output_tokens": 8000,
       "timeout_ms": 240000,
       "foreach": "collect.blocks",
       "weight": 0.84
@@ -33,13 +31,16 @@
     {
       "id": "store",
       "type": "DETERMINISTIC",
-      "fn": "report.store-draft-blocks",
       "weight": 0.08,
-      "capture_result": true
+      "capture_result": true,
+      "tool": "report.store-draft-blocks"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.report-context",
   "visibility": "public",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "report"
+  }
 }

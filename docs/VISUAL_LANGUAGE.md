@@ -13,7 +13,7 @@ Structured JSON is a scientific data surface, not a terminal surface. It follows
 
 ## Actions
 
-Use a compact workshop metaphor: grouped researcher goals at left, detailed selected goal at right, visible Automatic / Action / AI-assist responsibility and finite flow. Actions contains every executable Action, including `assistant.chat`; implementation services stay hidden. Actions is a filtered Settings view of the same AI-backed Action definitions, never a duplicate prompt store. On narrow screens stack catalog above inspector.
+Use a compact workshop metaphor: grouped researcher goals at left, detailed selected goal at right, visible Automatic / Action / AI-assist responsibility and finite flow. Actions contains every executable Action, including `assistant.chat`; implementation services stay hidden. It is the single Settings catalog for deterministic, hybrid and AI-backed definitions, never a duplicate prompt store. On narrow screens stack catalog above inspector.
 
 ## Compact status and comparison surfaces
 
@@ -21,3 +21,19 @@ Badges/pills are atomic labels: do not wrap them over two lines. On narrow scree
 
 
 Research Context Packs are visualized as bounded evidence/context, not as giant JSON payloads. When context detail is shown, prefer counts, referenced entities/evidence and progressive disclosure.
+
+## Upload & Review
+
+Upload and Review are one first-step workbench. Before a ZIP exists, the page is an upload gate; after import, the same page keeps a compact source receipt above the review controls. Do not add a second Review workflow step. The source receipt is collapsible and the original ZIP remains the immutable entry point.
+
+## Report, Paper and figures
+
+Laboratory Report and Paper are separate document surfaces. Figure inclusion is selected independently for each document and the preview/export must reflect the active document's selection exactly. Keep figure controls compact and adjacent to the editor/preview workflow rather than hiding them in global settings.
+
+## Changes
+
+Changes is an audit surface, not a raw object dump. Start with compact counters, then separate data/design changes from Report/Paper document changes and provenance. Long tables, diffs and provenance histories use short bounded regions with their own vertical scroll. Manual writing and AI writing remain distinguishable; editing a document must become visible without requiring blur, save or an AI Action.
+
+## Assistant response surface
+
+Assistant messages use flat, compact scientific-workspace rows with modest radii rather than oversized chat bubbles. Do not expose transport bookkeeping such as chunk/event/byte counters during streaming. Show only meaningful state (waiting, thinking, writing), keep model reasoning in a separate bounded disclosure, and attach useful response telemetry such as provider/model, latency, time-to-first-token, token counts, throughput and finish reason when the provider supplies it. Missing telemetry is omitted rather than invented.

@@ -30,3 +30,21 @@ Manuscript-like and concise. Separate Abstract/Introduction/Methods/Results/Disc
 - Mention material exclusions or missing metadata where they limit conclusions.
 - Do not embed chart images or links; selected deterministic figures are appended separately at export.
 - Avoid repeated provenance boilerplate across blocks.
+
+# Mathematics and LaTeX
+
+LabFlow Markdown supports scientific equations. Use standard LaTeX only when an equation makes the evidence or a derived relationship materially clearer.
+
+- Inline mathematics: `$...$`.
+- Display mathematics: `$$...$$` on its own block.
+- Define every non-obvious symbol and unit in the surrounding prose.
+- Prefer short, conventional equations; do not use custom packages or macros.
+- Do not invent equations, fitted models, derived quantities or numerical substitutions that are not justified by the supplied Context Pack.
+- If a relationship is relevant but the supplied evidence is insufficient to evaluate it, present the relationship symbolically and state that it was not evaluated.
+- Equations are document content and must be consistent with the deterministic values and terminology used elsewhere in the work unit.
+
+For example, when supported by the supplied scan summaries, a comparison may be written as:
+
+$$
+\Delta \mathrm{PCE} = \mathrm{PCE}_{RV} - \mathrm{PCE}_{FW}
+$$

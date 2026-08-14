@@ -8,7 +8,6 @@
   "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first and model knowledge only for missing information.",
   "strategy": "One bounded request for one selected experiment. Known Working Copy values are preserved; evidence-backed and knowledge-only proposals are labelled separately.",
   "output": "json",
-  "max_output_tokens": 8000,
   "mutation_scope": "",
   "policies": [
     "policy.scientific-provenance",
@@ -18,8 +17,8 @@
     {
       "id": "collect",
       "type": "DETERMINISTIC",
-      "fn": "design.collect-selected",
-      "weight": 0.1
+      "weight": 0.1,
+      "tool": "design.collect-selected"
     },
     {
       "id": "infer",
@@ -27,25 +26,27 @@
       "prompt": "prompt.md",
       "output": "json",
       "schema": "design_reconstruct",
-      "max_output_tokens": 8000,
       "timeout_ms": 180000,
       "weight": 0.8
     },
     {
       "id": "validate",
       "type": "DETERMINISTIC",
-      "fn": "design.validate-coverage",
-      "weight": 0.05
+      "weight": 0.05,
+      "tool": "design.validate-coverage"
     },
     {
       "id": "store",
       "type": "DETERMINISTIC",
-      "fn": "design.store-proposal",
-      "weight": 0.05
+      "weight": 0.05,
+      "tool": "design.store-proposal"
     }
   ],
   "version": 1,
   "input_scope": "working-copy.design-selection",
   "visibility": "public",
-  "requires": []
+  "requires": [],
+  "input": {
+    "context": "design"
+  }
 }

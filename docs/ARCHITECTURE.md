@@ -13,18 +13,18 @@ Immutable Source Vault
         ↓
 Working Copy
         ↓
-Canonical Store
+Canonical Data Model / Store
         ↓
-Derived deterministic views
-        ├─ Analysis Dossier
-        ├─ Analysis Summary statistics bundle (single statistics source)
-        ├─ Results
-        ├─ Design evidence status
-        └─ NOMAD mapping
-        ↓
-Context Builder
-        ↓
-Chat / AI assists / Report generation
+Tool Registry
+   ┌────┴──────────────────┐
+   ↓                       ↓
+Actions                Assistant
+(explicit workflows)   (read-only tool loop)
+   ↓                       ↓
+validated writes        observations
+   └────────────┬──────────┘
+                ↓
+           Working Copy
 ```
 
 ## 2. Source Vault
@@ -47,14 +47,15 @@ Module: `assets/js/experiment/canonical-store.js`
 
 Responsibilities:
 
+- provide the internal `labflow-canonical-v2` grouped representation used across LabFlow;
 - normalize semantic access over imperfect naming;
 - maintain sample aliases;
-- build evidence items;
-- build relations;
+- expose current scientific domains (Design, Results, findings) and current Report/Paper document views;
+- build evidence items, relations and provenance views;
 - build lookup indexes;
 - expose compact retrieval helpers.
 
-The Canonical Store references Working Copy arrays rather than duplicating RAW arrays.
+The Canonical Store is still a deterministic view/index over the one Working Copy, not a second editable model. It references Working Copy scientific arrays rather than duplicating RAW arrays. Compatibility aliases keep older modules working while new Tools consume the grouped domains.
 
 ### Current relation families
 
@@ -88,18 +89,19 @@ Primary modules:
 
 Scientific calculation and validation belong here, not in AI prompts.
 
-## 6. AI architecture
+## 6. Tools, Actions and AI architecture
 
 Primary modules:
 
-- `assets/js/ai/context.js` — shared bounded Context Pack builder;
-- `assets/js/ai/action-steps.js` — deterministic Action checkpoint functions;
-- `assets/js/ai/actions.js` — generic sequential Action runner;
+- `assets/js/tools/registry.js` — shared typed Tool Registry; read Tools expose Canonical data, internal service Tools wrap deterministic implementation functions;
+- `assets/js/ai/context.js` — bounded, declarative Context Pack builder;
+- `assets/js/ai/action-steps.js` — deterministic service implementations behind internal Tools;
+- `assets/js/ai/actions.js` — generic sequential Action runner, prerequisite gate and bounded Assistant read-tool loop;
 - `assets/js/ai/transport.js` — provider request/SSE transport;
 - `assets/js/ai/structured.js` — structured output parse/validation;
 - `assets/js/ai/assistant.js` — Assistant integration.
 
-AI never owns parsing, deterministic Results or NOMAD readiness.
+Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant may choose only from an Action-declared allowlist of read-only Tools and cannot invoke write Tools or mutating Actions.
 
 ## 7. Page architecture
 

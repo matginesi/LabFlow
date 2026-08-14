@@ -145,6 +145,22 @@ module.exports = function (t, LF) {
     assert(S.state.ui.route, 'experiment-import', 'experiment-home resolves to upload without experiment');
   };
 
+
+  t['workflow gate is evaluated after route alias normalization'] = function () {
+    S.resetSession();
+    assert(S.normalizeRoute('experiment-home'), 'experiment-import', 'Experiment nav normalizes to upload');
+    assert(S.routeRequiresExperiment('experiment-home'), false, 'Experiment nav never requires a prior ZIP');
+    assert(S.routeRequiresExperiment('experiment-understand'), false, 'legacy Review alias never requires a prior ZIP');
+    assert(S.routeRequiresExperiment('experiment-import'), false, 'Upload & Review is the entry point');
+    assert(S.routeRequiresExperiment('experiment-results'), true, 'Results remains gated');
+    assert(S.routeRequiresExperiment('experiment-report'), true, 'Report remains gated');
+  };
+
+
+  t['legacy Review route aliases to merged Upload & Review'] = function () {
+    const exp=LF.DataModel.create({sourceName:'merged.zip'});S.setExperiment(exp);S.setRoute('experiment-understand');assert(S.state.ui.route,'experiment-import','legacy review route aliases to merged first step');
+  };
+
   t['uploadLanding is cleared by any navigation'] = function () {
     const exp = LF.DataModel.create({ sourceName: 'landing.zip' });
     S.setExperiment(exp);

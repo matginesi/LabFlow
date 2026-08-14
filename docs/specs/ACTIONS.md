@@ -42,8 +42,9 @@ actions/<id>/action.json       Action contract
 actions/<id>/prompt.md       AI prompt only
 actions/schemas/*.json       structured output schema
 prompts/policies/*.md      shared policies
-assets/js/ai/action-steps.js deterministic checkpoint services
-assets/js/ai/actions.js      generic sequential runner
+assets/js/tools/registry.js shared Tool contracts / routing
+assets/js/ai/action-steps.js deterministic service implementations
+assets/js/ai/actions.js      generic sequential runner + prerequisite gate
 ```
 
 Generated files:
@@ -87,6 +88,14 @@ Do not introduce:
 - background jobs;
 - polling job manager;
 - unbounded retries.
+
+### Declarative input and Tool checkpoints
+
+Every Action declares its context profile in `input.context`. The runner does not infer a profile from the Action ID. Deterministic checkpoints declare `tool`, not a direct function name. The shared `LF.ToolRegistry` resolves that Tool to a typed capability/service. This keeps the workflow JSON readable while leaving scientific algorithms in normal JavaScript.
+
+`requires[]` is executable contract, not documentation: before step 1 the runner verifies that every prerequisite has a successful run for the **current Working Copy revision**. `dataset.analyze` may also be satisfied by the current deterministic analysis marker. A stale prerequisite fails closed with `ACTION_PREREQUISITE_REQUIRED`.
+
+An Action may contain an AI step with `agent.mode: read_only_tools`. This is currently reserved for `assistant.chat`; its tool allowlist is validated at build time and again at runtime.
 
 ## 5. Detailed contracts
 
@@ -212,7 +221,7 @@ AI improve each bounded block
 merge/store in current document editor
 ```
 
-Common aids include tightening, clarity and evidence checking. Report/Paper aids target the scientific sections appropriate to that document. Do not create separate Actions for Methods/Results/Discussion when they are only modes of the same document revision Action.
+Common aids include tightening, clarity and evidence checking. Report/Paper aids target the scientific sections appropriate to that document. Do not create separate Actions for Methods/Results/Discussion when they are only modes of the same document revision Action. The Report and Paper groups each expose an **All** UI orchestration that executes their section-specific modes sequentially using the same `report.improve` Action. `All` is not a new autonomous Action and does not include the Common whole-document passes. Successful researcher-triggered Actions leave a useful result in Assistant chat; textual Actions preserve their text, while non-text Actions emit a compact outcome summary.
 
 ### `nomad.prepare`
 
@@ -268,17 +277,11 @@ If a new proposed Action merely wraps one of these implementation details, it sh
 
 ## 7. AI output budgets
 
-Output budgets belong to the individual AI Action contract, not to a single global provider setting.
+AI Actions do **not** carry a mandatory 8k ceiling. `max_output_tokens` is optional at Action or AI-step level and acts only as an additional cap when a specific workflow needs one.
 
-Current contracts define Action-appropriate budgets. AI work units currently use an 8k output ceiling; block-based Report/Paper Actions can execute multiple bounded work units rather than demanding one giant output:
+At runtime the Action Runner asks the transport for the active model capability. The effective output budget is the minimum of any known exact model output limit, safe context-window headroom, optional Action/step cap, optional Assistant cap, and the provider-level forced cap from Settings. If none is known or forced, the request omits the provider token-limit parameter and uses the provider default.
 
-- ambiguity resolution: up to 8k output tokens;
-- Design inference: up to 8k;
-- Results interpretation: up to 8k;
-- each Report/Paper generation or editing block: up to 8k;
-- Assistant: separate chat output setting, bounded by its Action/provider contract.
-
-An Action should request the smallest budget that safely fits its intended output.
+This keeps the POC robust across OpenAI, Z.AI, Gemini, Ollama, LM Studio and custom OpenAI-compatible endpoints without pretending that every `/models` response exposes the same metadata. Large Report/Paper jobs remain split into bounded sequential writing blocks for reliability even when the model can emit much more.
 
 ## 8. Settings → Actions requirements
 

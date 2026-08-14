@@ -7,7 +7,7 @@ Before changing LabFlow, read:
 1. `docs/WORKFLOW.md`
 2. `LABFLOW_POC_SPEC.md`
 3. `ui-kit.html`
-4. the relevant technical spec (`docs/specs/OPERATIONS.md`, `DATA_MODEL.md`, `IMPORT_EXPORT.md`, `docs/AI.md`, `docs/NOMAD.md`).
+4. the relevant technical spec (`docs/specs/ACTIONS.md`, `DATA_MODEL.md`, `IMPORT_EXPORT.md`, `docs/AI.md`, `docs/NOMAD.md`).
 
 `ui-kit.html` is the visual ground truth. `docs/WORKFLOW.md` is the workflow/architecture ground truth.
 
@@ -18,14 +18,10 @@ Before changing LabFlow, read:
 Keep the main researcher flow:
 
 ```text
-Upload ZIP → Review → Results → Design → Report → NOMAD
+Upload & Review → Results → Design → Report → Changes → NOMAD
 ```
 
-Upload is always the experiment entry point. The app always opens on the Upload
-ZIP screen, even when a workspace was previously saved: the first page is the
-same empty Upload ZIP page reached after Reset all, and the researcher resumes
-the saved flow manually via the stepper or Open Review. Do not resume a previous
-experiment route on reload.
+Upload is always the experiment entry point. **Upload & Review is one first page**: every app load starts with no experiment and the mandatory ZIP gate; after a new import it shows the immutable source receipt and Review workbench together. Provider/API-key/UI preferences may persist, but the experiment snapshot must not auto-restore. `experiment-understand` may exist only as a compatibility alias.
 
 Do not add project/workflow layers ahead of ZIP import unless explicitly required.
 
@@ -58,7 +54,7 @@ The top bar must clearly show Working Copy dirty/saved state.
 
 ## Canonical Store and naming
 
-`LF.CanonicalStore` is a semantic index/view over the Working Copy, not a second model.
+`LF.CanonicalStore` is the internal canonical-v2 representation/semantic index over the Working Copy, not a second editable model. UI, Actions and shared Tools should consume this representation instead of inventing parallel page models.
 
 Use stable IDs, aliases, relations and evidence.
 
@@ -68,11 +64,11 @@ If identity cannot be established deterministically, surface an ambiguity instea
 
 ---
 
-## OPERATION philosophy
+## Action philosophy
 
-A visible OPERATION is a researcher goal, not a code function.
+A visible Action is a researcher goal, not a code function.
 
-The Workshop public set is limited to:
+The public researcher set is limited to:
 
 - Analyze dataset;
 - Apply safe corrections;
@@ -83,11 +79,17 @@ The Workshop public set is limited to:
 - Improve report;
 - Prepare NOMAD export.
 
-Assistant Chat is an internal capability, not a Workshop OPERATION.
+`assistant.chat` is an internal/read-only Action that is inspectable in Settings → Actions but is not a scientific mutation goal.
 
 Internal services such as Results calculation, proposal application, evidence rebuilding and validation stay hidden.
 
-### OPERATION types
+### Tools versus Actions
+
+A **Tool** is a small typed capability over the Canonical Data Model. An **Action** is a researcher-understandable finite workflow that composes deterministic Tools and optional AI steps. Deterministic Action checkpoints use `tool` IDs from `LF.ToolRegistry`; do not add special runner branches for individual Actions.
+
+`requires[]` must be enforced for the current revision. Missing/stale prerequisites fail closed before execution.
+
+### Action types
 
 - `DETERMINISTIC` — logic + sequential checkpoints, no prompt/provider.
 - `AI` — deterministic preparation + bounded model step + deterministic validation/storage as needed.
@@ -114,19 +116,19 @@ Heavy work may expose bounded sequential work units only when they represent rea
 
 Show:
 
-- OPERATION title/kind;
+- Action title/kind;
 - checkpoint progress;
 - meaningful unit progress when present;
 - Stop/Retry controls;
 - provider output disclosure for AI.
 
-Provider output is closed by default. It streams meaningful content/reasoning live and renders final Markdown/JSON using the active theme. Do not show a separate OPERATION/provider-note block.
+Provider output is closed by default. It streams meaningful content/reasoning live and renders final Markdown/JSON using the active theme. Do not show a separate Action/provider-note block.
 
 ---
 
 ## Deterministic-first Review
 
-Review Data is useful immediately after import.
+Review is useful immediately after import and lives on the same mandatory Upload & Review page.
 
 Show a compact Analysis Dossier with:
 
@@ -155,7 +157,7 @@ Unresolved items must remain visible and manually correctable. Do not hide them 
 
 ## Research Context Pack
 
-Chat and AI assists use bounded Context Packs built from Canonical Store references.
+AI assists use bounded Context Packs built from Canonical Store references and declare their profile in `action.json`. Assistant chat starts from a small bootstrap pack and retrieves additional experiment data only through explicit read-only Tools.
 
 Context follows:
 
@@ -171,7 +173,7 @@ Never imply or implement that the whole experiment or RAW curves are sent by def
 
 When more context is needed, narrow/select relevant records before increasing budgets.
 
-Output budgets belong to individual Operation contracts. Assistant has separate chat settings.
+Never assume an 8k output ceiling. Resolve the active model/provider capability when possible. Optional Action, Assistant and provider settings are lower caps only; `0` means automatic. If no safe limit is known, omit the token-limit parameter and let the provider default apply.
 
 ---
 
@@ -186,7 +188,8 @@ Preserve:
 - REF/non-REF separation;
 - measurement table;
 - warnings;
-- JV curves;
+- JV Analyzer for one measurement (RAW integrity + FW/RV diagnostics);
+- Overlay for an independent multi-measurement comparison set;
 - Compare/group statistics;
 - backing tables.
 
@@ -233,7 +236,7 @@ Known and user-confirmed values are authoritative. AI proposals appear in progre
 
 ## Report Studio
 
-The Markdown editor is the textual source of truth.
+The Markdown editor is the textual source of truth. Use the compact command-palette pattern rather than a long formatting-button strip. Standard inline `$...$` and display `$$...$$` LaTeX must render in preview and survive MD/LaTeX/DOCX/PDF export.
 
 `Generate report` and `Improve report` update this editor. Researcher edits remain authoritative.
 
@@ -241,7 +244,7 @@ PDF/DOCX must export the current editor text, not regenerated parallel prose.
 
 The editor uses a Write / Preview segmented control (`report-document-choice`, `role="tablist"`), not a three-way Split. "Improve selection" (`report.improve`) rewrites only the selected editor region and is exposed as an explicit action in the toolbar.
 
-Figure selection is explicit and shared by preview/exports. Current available figure choices include PCE distribution, hysteresis distribution, best JV curve, PCE vs hysteresis, top efficiency and group comparison.
+Figure selection is explicit and shared by preview/exports **within each document**, but Report and Paper keep independent selections. Current available figure choices include PCE distribution, hysteresis distribution, best JV curve, PCE vs hysteresis, top efficiency and group comparison.
 
 Report layout should be compact, professional and scientific: restrained headings, balanced margins, readable tables/figures and no oversized decorative blocks.
 
@@ -282,7 +285,7 @@ Keep badge/pill labels atomic and single-line. Let the surrounding layout reflow
 
 ## Theme-aware Markdown and JSON
 
-Chat, totems, Provider output and raw/structured views must use the active theme.
+Chat, totems, Provider output and raw/structured views must use the active theme. Do not use native browser confirm/alert UI for normal LabFlow interaction; use the shared message/activity totems. The empty Assistant composer remains one line and grows only from user-entered content.
 
 In light mode JSON/code surfaces remain light and readable. In dark mode text/surface contrast must remain accessible.
 
@@ -290,24 +293,23 @@ Markdown fenced JSON uses the same semantic JSON palette as dedicated structured
 
 ---
 
-## Operations Workshop
+## Settings → Actions
 
-Settings → Operations Workshop is a read-only inspector.
+Settings → Actions is the single catalog/editor for deterministic, AI-assisted and hybrid Actions. It is not split into Operations versus AI Helpers.
 
-Group by researcher role/category and show:
+For each Action show its purpose, role/category, mutation scope, finite checkpoint flow, prompt/schema when applicable, optional cap when explicitly declared, and last run. Browser-local overrides may be edited and reset to versioned source. Internal implementation services remain hidden.
 
-- why the OPERATION exists;
-- kind/role;
-- dependencies;
-- mutation scope;
-- finite checkpoint flow;
-- prompt/schema for AI;
-- output budget for AI;
-- last run.
+The runtime Action Runner is sequential, cancellable and bounded. Do not add provider queues, background workflows or a second AI execution system.
 
-Never turn Workshop into a runtime contract editor or expose internal implementation services as researcher goals.
+## Changes
 
----
+Changes is an audit against the immutable post-import baseline, not a patch-list viewer. It must compare current Data, analysis settings, Design and both scientific documents directly. Manual Report/Paper edits are recorded from editor input with `source: user`; model writing uses `source: ai`. Keep category tables and document diffs compact with bounded internal scroll areas. Large Markdown diffs must be bounded so a long paper cannot freeze the page.
+
+## Assistant
+
+The Assistant is a bounded read-only tool-aware agent. It may select only allowlisted Tools marked `agent_visible` + `read`; it must never receive write Tools, invoke mutating Actions autonomously or edit the Working Copy as a chat side effect. Keep planner/tool-routing output internal; show only useful status such as the current read Tool and final telemetry.
+
+Use compact instrument-style rows rather than oversized rounded bubbles. Do not expose raw stream chunk/event/byte counters in chat; those belong in logs. Show model reasoning/thinking separately from final answer text. Completed answers should retain and display useful telemetry when available: model/provider, elapsed time, TTFT, input/output/total tokens, cached tokens and generation rate.
 
 ## Documentation discipline
 

@@ -1,7 +1,6 @@
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
-  const C=LF.Core||{};
   const cache=new WeakMap();
 
   function clean(v){return String(v==null?'':v).trim();}
@@ -40,7 +39,7 @@
   function buildRelations(exp,evidence){
     const out=[],seen=new Set();
     function add(type,from,to,meta){if(!from||!to)return;const key=type+'|'+from+'|'+to;if(seen.has(key))return;seen.add(key);out.push({id:'rel:'+out.length,type:type,from:from,to:to,meta:meta||{}});}
-    const samples=exp.samples||[],files=exp.files||[],measurements=exp.measurements||[];
+    const samples=exp.samples||[],measurements=exp.measurements||[];
     const sampleByName=new Map();samples.forEach(function(s){[s.name,s.rawName].concat(s.aliases||[]).map(norm).filter(Boolean).forEach(function(a){sampleByName.set(a,s);});});
     measurements.forEach(function(m){const sample=sampleByName.get(norm(m.sample))||sampleByName.get(norm(m.rawSample));if(sample)add('sample_measurement',sample.id,m.id);const f=fileByPath(exp,m.path||m.file);if(f)add('measurement_file',m.id,f.id);if(sample&&f)add('sample_file',sample.id,f.id);});
     evidence.forEach(function(ev){(ev.entity_ids||[]).forEach(function(id){add('entity_evidence',id,ev.id);});if(ev.source_id)add('file_evidence',ev.source_id,ev.id);});
@@ -58,19 +57,34 @@
     (exp.samples||[]).forEach(function(s){(s.aliases||[s.name]).forEach(function(a){idx.sampleByAlias.set(norm(a),s);});});
     return idx;
   }
+  function reportDocuments(exp){
+    const r=exp.report||{},legacy=r.figureSelection&&typeof r.figureSelection==='object'?r.figureSelection:{},selections=r.figureSelections||{};
+    function doc(kind){const paper=kind==='paper',md=String(paper?r.paperMarkdown:r.labMarkdown||''),title=String(paper?r.paperTitle:r.labTitle||r.title||'');return{kind:kind,title:title,markdown:md,words:(md.trim().match(/\S+/g)||[]).length,chars:md.length,updated_at:paper?r.paperUpdatedAt:r.labUpdatedAt||r.updatedAt||'',figure_selection:Object.assign({},legacy,selections[kind]||{})};}
+    return{lab:doc('lab'),paper:doc('paper'),active_kind:r.kind==='paper'?'paper':'lab'};
+  }
+  function resultView(exp){const a=exp.analysis||{};return{summary:compact(a.summary||{},600),top_non_ref:compact((a.topNonRef||[]).slice(0,12),500),top_ref:compact((a.topRef||[]).slice(0,12),500),best_by_sample:compact((a.bestBySample||[]).slice(0,48),500),interpretation:a.aiInterpretation?{markdown:String(a.aiInterpretation.markdown||''),source_revision:a.aiInterpretation.sourceRevision,generated_at:a.aiInterpretation.generatedAt||''}:null};}
+  function stamp(exp){const s=exp&&exp.sync||{},r=exp&&exp.report||{};return[Number(s.revision||0),String(s.lastChange||''),String(r.labUpdatedAt||''),String(r.paperUpdatedAt||''),String(r.updatedAt||''),String(r.kind||''),JSON.stringify(r.figureSelections||r.figureSelection||{})].join('|');}
   function build(exp){
     if(!exp||typeof exp!=='object')return null;
-    const aliases=buildAliases(exp),evidence=buildEvidence(exp),relations=buildRelations(exp,evidence),revision=Number(exp.sync&&exp.sync.revision||0);
-    const store={version:1,revision:revision,generatedAt:new Date().toISOString(),experiment:{id:exp.id||'',name:exp.meta&&exp.meta.name||'',sourceName:exp.meta&&exp.meta.sourceName||''},files:exp.files||[],samples:exp.samples||[],measurements:exp.measurements||[],findings:exp.findings||[],patches:exp.patches||[],design:exp.design||{},evidence:evidence,relations:relations,aliases:aliases};
-    exp.canonical=store;cache.set(exp,{revision:revision,store:store,index:indexes(exp,evidence,relations)});return store;
+    const aliases=buildAliases(exp),evidence=buildEvidence(exp),relations=buildRelations(exp,evidence),revision=Number(exp.sync&&exp.sync.revision||0),documents=reportDocuments(exp),results=resultView(exp);
+    const experiment={id:exp.id||'',name:exp.meta&&exp.meta.name||'',sourceName:exp.meta&&exp.meta.sourceName||''};
+    const source={archive_name:experiment.sourceName,immutable:true,file_count:(exp.files||[]).length};
+    const entities={files:exp.files||[],samples:exp.samples||[],measurements:exp.measurements||[]};
+    const scientific={design:exp.design||{},results:results,findings:exp.findings||[]};
+    const provenance={patches:exp.patches||[],document_edits:exp.documentEdits||[],records:exp.provenance||[]};
+    const store={format:'labflow-canonical-v2',version:2,revision:revision,generatedAt:new Date().toISOString(),experiment:experiment,source:source,entities:entities,scientific:scientific,documents:documents,evidence:evidence,relations:relations,aliases:aliases,provenance:provenance,
+      /* Compatibility aliases for existing POC code. Canonical v2 consumers should prefer the grouped domains above. */
+      files:entities.files,samples:entities.samples,measurements:entities.measurements,findings:scientific.findings,patches:provenance.patches,design:scientific.design,results:scientific.results};
+    exp.canonical=store;cache.set(exp,{stamp:stamp(exp),store:store,index:indexes(exp,evidence,relations)});return store;
   }
-  function ensure(exp){const hit=cache.get(exp),rev=Number(exp&&exp.sync&&exp.sync.revision||0);if(hit&&hit.revision===rev&&exp.canonical===hit.store)return hit.store;return build(exp);}
+  function ensure(exp){const hit=cache.get(exp),sig=stamp(exp);if(hit&&hit.stamp===sig&&exp.canonical===hit.store)return hit.store;return build(exp);}
   function index(exp){ensure(exp);return(cache.get(exp)||{}).index||null;}
-  function summary(exp){const s=ensure(exp)||{};return{revision:s.revision||0,files:(s.files||[]).length,samples:(s.samples||[]).length,measurements:(s.measurements||[]).length,findings:(s.findings||[]).filter(function(f){return f.status!=='resolved';}).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,x){return n+(x.aliases||[]).length;},0)};}
+  function summary(exp){const s=ensure(exp)||{};return{revision:s.revision||0,files:(s.files||[]).length,samples:(s.samples||[]).length,measurements:(s.measurements||[]).length,findings:(s.findings||[]).filter(function(f){return f.status!=='resolved';}).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,x){return n+(x.aliases||[]).length;},0),documents:Object.keys(s.documents||{}).filter(function(k){return k==='lab'||k==='paper';}).length};}
   function entity(exp,id){const idx=index(exp);return idx&&idx.byId.get(String(id))||null;}
   function sample(exp,nameOrId){const idx=index(exp);return entity(exp,nameOrId)||(idx&&idx.sampleByAlias.get(norm(nameOrId)))||null;}
   function related(exp,id,type){const idx=index(exp);const list=idx&&idx.relationsByNode.get(String(id))||[];return type?list.filter(function(r){return r.type===type;}):list.slice();}
   function evidence(exp,opts){opts=opts||{};const store=ensure(exp),ids=new Set((opts.entity_ids||opts.entityIds||[]).map(String)),types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,Number(opts.limit)||20);let rows=(store&&store.evidence||[]).filter(function(ev){if(ids.size&&!Array.from(ids).some(function(id){return(ev.entity_ids||[]).includes(id)||ev.source_id===id;}))return false;if(types.size&&!types.has(ev.type))return false;if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
   function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;}),store=ensure(exp),out=[];if(!terms.length)return out;(store.samples||[]).forEach(function(s){const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});});return out.slice(0,limit||12);}
-  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,entity:entity,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,compact:compact};
+  function domain(exp,name){const s=ensure(exp);if(!s)return null;const map={experiment:s.experiment,source:s.source,entities:s.entities,scientific:s.scientific,documents:s.documents,results:s.results,design:s.design,findings:s.findings,evidence:s.evidence,relations:s.relations,aliases:s.aliases,provenance:s.provenance};return map[name]!==undefined?map[name]:null;}
+  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,entity:entity,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,domain:domain,compact:compact};
 }());

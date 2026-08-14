@@ -33,6 +33,9 @@ module.exports=function(t,LF){
   t['active document can be replaced directly'] = function(){const e=exp();LF.Report.setActiveMarkdown(e,'# New');assert(LF.Report.activeMarkdown(e),'# New','new text');};
   t['report model uses the current editor Markdown as its exact text source'] = function(){const e=exp();LF.Report.setActiveMarkdown(e,'# Editor source\n\nOnly this text.');const model=LF.Report.reportModel(e);assert(model.markdown,'# Editor source\n\nOnly this text.','model markdown');assert(model.figures.length,0,'disabled figures stay out');};
   t['paper and laboratory documents remain separate'] = function(){const e=exp();LF.Report.setKind(e,'paper');LF.Report.setActiveMarkdown(e,'# Changed paper');LF.Report.setKind(e,'lab');assert(LF.Report.activeMarkdown(e),'# Old','lab kept');LF.Report.setKind(e,'paper');assert(LF.Report.activeMarkdown(e),'# Changed paper','paper kept');};
+
+  t['report and paper keep independent figure selections'] = function(){const e=expWithData();LF.Report.setKind(e,'lab');LF.Report.setFigure(e,'pceDistribution',false);LF.Report.setKind(e,'paper');assert(LF.Report.figureSelection(e,'paper').pceDistribution,true,'paper keeps default');LF.Report.setFigure(e,'hysteresisDistribution',false);assert(LF.Report.figureSelection(e,'lab').hysteresisDistribution,true,'lab unaffected by paper');assert(LF.Report.figureSelection(e,'lab').pceDistribution,false,'lab choice retained');};
+  t['manual and AI document edits are attributed separately'] = function(){const e=exp();LF.Report.setActiveMarkdown(e,'# Manual');LF.Report.setActiveMarkdown(e,'# AI','ai');assert(e.documentEdits.length,2,'two edit sessions');assert(e.documentEdits[0].source,'user','manual source');assert(e.documentEdits[1].source,'ai','ai source');};
   t['figure previews are memoized and shared with reportModel'] = function(){
     const e=expWithData();LF.Analysis.analyze(e);
     const p1=LF.Report.reportFigurePreviews(e),p2=LF.Report.reportFigurePreviews(e);
@@ -61,6 +64,13 @@ module.exports=function(t,LF){
     assert(g.minEff,g.scans.rv.min,'minEff from scans.rv min');
     assert(g.maxEff,g.scans.rv.max,'maxEff from scans.rv max');
     assert(g.medianVoc,1,'medianVoc still resolved for the vendor');
+  };
+
+  t['report Markdown preserves LaTeX in preview and TeX export'] = function(){
+    const source='## Scan comparison\n\nInline $J_{SC}$ is retained.\n\n$$\n\\Delta \\mathrm{PCE} = \\frac{PCE_{RV}}{PCE_{FW}}\n$$';
+    const html=LF.Core.markdown(source),tex=LF.Report.toLatex(source);
+    assert(html.includes('math-inline'),true,'inline math protected in preview');assert(html.includes('math-display'),true,'display math protected in preview');
+    assert(tex.includes('$J_{SC}$'),true,'inline LaTeX preserved');assert(tex.includes('\\frac{PCE_{RV}}{PCE_{FW}}'),true,'display formula preserved');assert(tex.includes('\\section{Scan comparison}'),true,'heading converted');
   };
   return t;
 };

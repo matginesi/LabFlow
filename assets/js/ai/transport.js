@@ -107,7 +107,7 @@
       state.content=mergeStreamContent(state.content,content);state.reasoning=mergeStreamContent(state.reasoning,reasoning);state.finishReason=choice.finish_reason||state.finishReason;
       if(meaningful){state.meaningfulEvents++;if(onMeaningful)onMeaningful();}
       if(outputLoopDetected(state.content)||outputLoopDetected(state.reasoning)){const repeated=outputLoopDetected(state.content)?state.content:state.reasoning,loop=new Error('The model entered a repeated-output loop. The checkpoint was stopped before storing duplicated content.');loop.code='MODEL_OUTPUT_LOOP';loop.providerResponse=repeated.slice(-12000);throw loop;}
-      const charGuard=Math.max(24000,Number(budgetTokens||0)*8);if(state.content.length+state.reasoning.length>charGuard){const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;}
+      const charGuard=budgetTokens?Math.max(24000,Number(budgetTokens)*8):4000000;if(state.content.length+state.reasoning.length>charGuard){const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;}
       state.usage=obj.usage||state.usage;state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;state.events++;
       if(onProgress)onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs:Math.round(performance.now()-started),budgetTokens:budgetTokens||null});
     }
@@ -156,7 +156,7 @@
       const contentType=String(response.headers.get('content-type')||'').toLowerCase();
       let text='',obj=null,streamMeta=null;
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:null,bodyChars:0,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||'',stream:null};
-      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw+=chunk;},onProgress,resetInactivity,started,Number.isFinite(Number(body.max_tokens))?Number(body.max_tokens):null);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;}
+      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw+=chunk;},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens));text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;}
       else{text=await response.text();resetInactivity();}
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
@@ -245,9 +245,82 @@
     return u.toString();
   }
 
-  async function listModels(providerId,endpoint){
+
+  function positiveInt(value){const n=Math.floor(Number(value));return Number.isFinite(n)&&n>0?n:null;}
+  function capabilityValue(row,names){
+    const places=[row,row&&row.capabilities,row&&row.limits,row&&row.metadata,row&&row.config,row&&row.parameters];
+    for(const place of places){if(!place||typeof place!=='object')continue;for(const name of names){const value=positiveInt(place[name]);if(value)return value;}}
+    return null;
+  }
+  function capabilityFromRow(row,source){
+    if(!row||typeof row!=='object')return null;
+    const output=capabilityValue(row,['max_output_tokens','maxOutputTokens','output_token_limit','outputTokenLimit','max_completion_tokens','maxCompletionTokens','max_tokens_to_sample']);
+    const context=capabilityValue(row,['context_length','contextLength','max_context_length','maxContextLength','context_window','contextWindow','input_token_limit','inputTokenLimit']);
+    if(!output&&!context)return null;
+    return{maxOutputTokens:output,contextWindow:context,exactOutput:!!output,source:source||'provider metadata'};
+  }
+  function knownCapability(providerId,model){
+    const id=String(providerId||'').toLowerCase(),m=String(model||'').toLowerCase();
+    if(id==='openai'){
+      if(/^gpt-5(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+      if(/^gpt-4\.1(?:[.-]|$)/.test(m))return{maxOutputTokens:32768,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+      if(/^gpt-4o(?:[.-]|$)/.test(m))return{maxOutputTokens:16384,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+      if(/^gpt-4(?:[.-]|$)/.test(m))return{maxOutputTokens:8192,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+      if(/^(o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+    }
+    if(id==='zai'){
+      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:null,exactOutput:true,source:'Z.AI model specification'};
+      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:null,exactOutput:true,source:'Z.AI model specification'};
+    }
+    return null;
+  }
+  const capabilityCache=new Map();
+  function capabilityKey(providerId,endpoint,model){return[String(providerId||''),String(endpoint||''),String(model||'')].join('|');}
+  function authHeaders(provider,key){const h={'Accept':'application/json'};if(key&&(provider.keyRequired||provider.optionalKey))h.Authorization='Bearer '+key;return h;}
+  async function fetchJson(url,options){const response=await fetch(url,Object.assign({cache:'no-store',credentials:'omit'},options||{})),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'');try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
+  function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
+  function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
+  async function genericCapability(providerId,endpoint,model,provider,key){
+    const url=resolveModelsUrl(endpoint),obj=await fetchJson(url,{method:'GET',headers:authHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,'provider model metadata');
+  }
+  async function geminiCapability(model,key){
+    if(!key)return null;const name=String(model||'').replace(/^models\//,'');if(!name)return null;
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(name)+'?key='+encodeURIComponent(key),obj=await fetchJson(url,{method:'GET',headers:{Accept:'application/json'}});
+    const output=positiveInt(obj.outputTokenLimit),input=positiveInt(obj.inputTokenLimit);return output||input?{maxOutputTokens:output,contextWindow:input,exactOutput:!!output,source:'Gemini Models API'}:null;
+  }
+  async function ollamaCapability(endpoint,model){
+    const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=chat.origin+'/api/show',obj=await fetchJson(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({model:model})});
+    let numPredict=null;if(typeof obj.parameters==='string'){const match=obj.parameters.match(/(?:^|\n)\s*num_predict\s+(-?\d+)/);if(match&&Number(match[1])>0)numPredict=positiveInt(match[1]);}
+    if(!numPredict&&obj.parameters&&typeof obj.parameters==='object')numPredict=positiveInt(obj.parameters.num_predict);
+    let context=null;Object.keys(obj.model_info||{}).some(function(k){if(/context_length$/i.test(k)){context=positiveInt(obj.model_info[k]);return !!context;}return false;});
+    return numPredict||context?{maxOutputTokens:numPredict,contextWindow:context,exactOutput:!!numPredict,source:numPredict?'Ollama num_predict':'Ollama model context'}:null;
+  }
+  async function lmStudioCapability(endpoint,model){
+    const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=chat.origin+'/api/v1/models',obj=await fetchJson(url,{method:'GET',headers:{Accept:'application/json'}}),row=matchingRow(obj,model)||modelRows(obj)[0]||null;
+    let cap=capabilityFromRow(row,'LM Studio model metadata');
+    if(row&&Array.isArray(row.loaded_instances)&&row.loaded_instances.length){const instance=capabilityFromRow(row.loaded_instances[0],'LM Studio loaded context');if(instance)cap=Object.assign({},cap||{},instance,{maxOutputTokens:cap&&cap.maxOutputTokens||instance.maxOutputTokens,source:instance.source});}
+    return cap;
+  }
+  async function resolveModelCapabilities(options){
+    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(),cacheKey=capabilityKey(providerId,endpoint,model);
+    if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
+    const known=knownCapability(providerId,model);
+    if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:''},known);capabilityCache.set(cacheKey,immediate);return immediate;}
+    let detected=null,error=null;
+    try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
+    const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,source:'provider default',probeError:error?String(error.message||error):''},known||{},detected||{});
+    capabilityCache.set(cacheKey,cap);Log.info('capability.resolved',{provider:providerId,model:model,maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,exactOutput:cap.exactOutput,source:cap.source});return cap;
+  }
+  function resolveOutputBudget(capability,requestedCap,globalCap,inputTokens){
+    capability=capability||{};const candidates=[],detected=positiveInt(capability.maxOutputTokens),context=positiveInt(capability.contextWindow),input=Math.max(0,Number(inputTokens)||0);
+    if(detected)candidates.push(detected);else if(context)candidates.push(Math.max(16,context-input-256));
+    const requested=positiveInt(requestedCap),forced=positiveInt(globalCap);if(requested)candidates.push(requested);if(forced)candidates.push(forced);
+    return candidates.length?Math.max(16,Math.min.apply(Math,candidates)):null;
+  }
+
+  async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const key=LF.Storage.getApiKey(),url=resolveModelsUrl(endpoint||settings.endpoint),headers={'Accept':'application/json'};
+    const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(),url=resolveModelsUrl(endpoint||settings.endpoint),headers={'Accept':'application/json'};
     if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     const started=performance.now(),response=await fetch(url,{method:'GET',headers:headers,cache:'no-store',credentials:'omit'});
     const text=await response.text();
@@ -278,7 +351,7 @@
   function buildRequest(opts){
     opts=opts||{};
     const cfg=requestConfig();
-    if(opts.maxTokens!=null&&!(Number(opts.maxTokens)>0))throw new Error('AI output token budget must be a positive number.');
+    if(opts.maxTokens!=null&&!(Number(opts.maxTokens)>0))throw new Error('AI output token budget must be a positive number when explicitly set.');
     const settings=cfg.settings,provider=cfg.provider;
     const model=opts.model||settings.model;
     const messages=Array.isArray(opts.messages)?opts.messages.filter(function(message){return message&&typeof message==='object'&&typeof message.role==='string'&&message.content!=null;}):[];
@@ -287,7 +360,7 @@
     const body={model:model,messages:messages,stream:wantsStreaming};
     if(wantsStreaming&&provider.supportsStreamUsage)body.stream_options={include_usage:true};
     const tokenParam=provider.tokenParam||'max_tokens';
-    body[tokenParam]=Math.max(16,Number(opts.maxTokens)||8192);
+    if(opts.maxTokens!=null)body[tokenParam]=Math.max(16,Math.floor(Number(opts.maxTokens)));
     if(provider.supportsTemperature!==false)body.temperature=Number.isFinite(Number(opts.temperature))?Number(opts.temperature):(Number.isFinite(Number(settings.temperature))?Number(settings.temperature):0.7);
     if(provider.supportsThinking)body.thinking={type:'disabled'};
     if(provider.reasoningEffort)body.reasoning_effort=provider.reasoningEffort;
@@ -335,6 +408,10 @@
     outputLoopDetected:outputLoopDetected,
     resolveModelsUrl:resolveModelsUrl,
     listModels:listModels,
+    capabilityFromRow:capabilityFromRow,
+    knownCapability:knownCapability,
+    resolveModelCapabilities:resolveModelCapabilities,
+    resolveOutputBudget:resolveOutputBudget,
     testConnection:testConnection
   };
 }());

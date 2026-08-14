@@ -19,10 +19,11 @@ BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
 ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_TASKS.zip").resolve()
 VIEWPORTS = ((1440, 900), (1100, 800), (900, 800), (700, 800), (390, 844))
 ROUTES = (
-    "experiment-understand",
+    "experiment-import",
     "experiment-results",
     "experiment-design",
     "experiment-report",
+    "experiment-changes",
     "experiment-nomad",
     "settings",
     "logs",
@@ -39,7 +40,7 @@ AUDIT_JS = r"""() => {
     '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
     '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip',
-    '.review-compact-status'
+    '.review-compact-status', '.changes-table-scroll', '.changes-diff-scroll', '.changes-provenance-scroll'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -87,7 +88,7 @@ def main() -> int:
         # Audit the upload-first state before adding experiment data.
         findings.append(page.evaluate(AUDIT_JS))
         page.locator("#datasetInput").set_input_files(str(ZIP_PATH))
-        page.wait_for_function("window.LabFlow.State.state.route === 'experiment-understand'")
+        page.wait_for_function("window.LabFlow.State.state.route === 'experiment-import'")
         page.wait_for_timeout(200)
         page.evaluate("window.LabFlow.UI.activityHide()")
         if page.locator("#assistantClose").is_visible():
@@ -153,7 +154,7 @@ def main() -> int:
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item.get("stepper") and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
-            len(item["stepper"]["steps"]) != 7 or
+            len(item["stepper"]["steps"]) != 6 or
             not all(step["visible"] for step in item["stepper"]["steps"])
         ))
     )]

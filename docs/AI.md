@@ -97,7 +97,7 @@ Includes:
 - findings;
 - provenance.
 
-Fresh Report/Paper documents are empty. `report.generate` drafts only after an explicit researcher action and splits long jobs into bounded ordered sections; `report.improve` similarly targets the relevant section(s). The UI groups improvement modes into Common, Report and Paper aids.
+Fresh Report/Paper documents are empty. `report.generate` drafts only after an explicit researcher action and splits long jobs into bounded ordered sections; `report.improve` similarly targets the relevant section(s). The UI groups improvement modes into Common, Report and Paper aids. Each document-specific group also exposes **All**, which runs only that group's section-specific helpers sequentially (never in parallel); whole-document Common passes remain explicit researcher choices.
 
 ## 4. Context budgeting
 
@@ -109,11 +109,11 @@ A narrow user question should produce a narrow context instead of increasing the
 
 ## 5. Output budgeting
 
-There is no single global output-token setting for every model Action.
+LabFlow does not impose a hidden 8k output ceiling. The transport resolves a model capability before an AI Action whenever the provider exposes one. Gemini is read from model metadata; local providers use their model/runtime metadata; providers whose model-list API does not expose an output limit use the maintained model specification table when known. If no safe limit is known, LabFlow omits the token-limit field and lets the provider apply its own default rather than inventing a value.
 
-Each AI Action owns an output budget appropriate to its job in `action.json`.
+The effective request budget is the tightest applicable value among: detected model maximum, context-window headroom when only a context ceiling is known, an optional Action-specific cap, the optional Assistant cap, and **Settings → Provider → Force max output**. A value of `0` means automatic. A user cap may lower a request but never raise it above a detected model limit.
 
-Assistant output is configured separately from Action contracts.
+`action.json` may therefore omit `max_output_tokens`; that field is an optional per-Action safety cap, not a mandatory budget.
 
 ## 6. Structured AI output
 
@@ -158,8 +158,10 @@ Provider, endpoint, model and API key are browser-local settings.
 
 Action output budgets remain in Action contracts. Connection settings must not become a hidden global scientific policy.
 
-## 10. Assistant safety boundary
+## 10. Assistant read-tool loop and safety boundary
 
-Chat is read-only with respect to scientific Working Copy state.
+Chat is tool-aware but read-only with respect to scientific Working Copy state. `assistant.chat` declares its allowed Tools in `action.json`. The runner performs at most the configured bounded number of planning rounds (currently four): each round may request one exact read Tool with JSON arguments or declare that enough evidence has been gathered. Duplicate identical calls stop the loop.
 
-If the Assistant identifies something that should be corrected, it may explain it or direct the researcher to Review/Design, but it must not mutate the experiment as a side effect of conversation.
+Only Tools marked both `agent_visible: true` and `access: read` can execute with `agent: true`; the registry rejects write/internal Tools even if the model names them. Tool arguments are validated against each Tool's small input contract and observations are bounded before they are added to the final Assistant context. Planner JSON is an internal control result, not user-visible thinking.
+
+The final answer is generated only after this retrieval phase and may expose which read Tools were used as telemetry. If the Assistant identifies something that should be corrected, it may explain it or direct the researcher to the appropriate Action/Review/Design control, but it cannot invoke mutating Actions, apply patches, edit Report/Paper or modify Design as a side effect of conversation.

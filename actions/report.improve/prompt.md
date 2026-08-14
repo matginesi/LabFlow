@@ -47,3 +47,13 @@ Use the supplied `experiment_brief`, deterministic results/statistics, design pr
 # Output
 
 Return only the replacement Markdown for the current work item. Preserve its heading when one is supplied. No commentary, change log, preamble or code fence.
+
+# Mathematics and LaTeX
+
+The editor supports standard LaTeX in Markdown: inline `$...$` and display `$$...$$` blocks.
+
+- Preserve valid existing equations unless the requested edit or supplied evidence requires a correction.
+- Add an equation only when it improves scientific precision or compactness.
+- Define symbols and units in prose and keep notation consistent across the block.
+- Never introduce an unsupported fitted law, model, derived value or numerical substitution.
+- Do not use custom LaTeX packages/macros or fenced code blocks for mathematics.
