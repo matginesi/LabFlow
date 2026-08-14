@@ -39,6 +39,22 @@ module.exports=function(t,LF){
     assert(assistantSource.includes("Action · '+m.actionTitle"),'Action source not visible in chat telemetry');
   };
 
+  t['Design inference publishes a useful proposal summary instead of an empty structured result']=async function(){
+    const env=loadUi(function(){return Promise.resolve(null);});
+    LF.ActionUI.publishActionResult(
+      {id:'design.infer',output:'json'},
+      {status:'done',actionId:'design.infer',aiOutput:{summary:'Filled only unresolved fabrication gaps.',devices:[{id:'d1'}],solutions:[{id:'s1'}],unknowns:['thickness']},result:{stored:true},requestMeta:{}},
+      850
+    );
+    assert(env.messages.length===1,'Design Action should publish one chat message');
+    const msg=env.messages[0].content;
+    assert(msg.includes('Filled only unresolved fabrication gaps.'),'Design proposal summary missing');
+    assert(msg.includes('proposed variants: 1'),'Design variant count missing');
+    assert(msg.includes('proposed formulations: 1'),'Design formulation count missing');
+    assert(msg.includes('still unknown: 1'),'Design unknown count missing');
+    assert(msg.includes('Design Experiment'),'Design review destination missing');
+  };
+
   t['Report and Paper All helpers execute section modes sequentially and aggregate one chat result']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){calls.push(cb.params.mode);return Promise.resolve({status:'done',actionId:id,aiOutput:'Edited '+cb.params.mode,result:{stored:true},requestMeta:{}});});
@@ -50,6 +66,25 @@ module.exports=function(t,LF){
     assert(env.messages[0].content.includes('Completed 7 / 7'),'All completion count missing');
     assert(env.messages[0].content.includes('### Abstract')&&env.messages[0].content.includes('### Conclusions'),'All section results missing');
     assert((reportSource.match(/data-action-sequence="report-all"/g)||[]).length===2,'Report/Paper All buttons missing');
+  };
+
+
+  t['Design All runs only incomplete variants sequentially and publishes one aggregate chat result']=async function(){
+    const calls=[];
+    const env=loadUi(function(id,cb){calls.push({id:id,deviceId:cb.params.deviceId});return Promise.resolve({status:'done',actionId:id,aiOutput:{summary:'Proposal '+cb.params.deviceId,devices:[],solutions:[],unknowns:[]},result:{stored:true},requestMeta:{}});});
+    LF.State.state.experiment.design={solutions:[{id:'s1',name:'Known'}],devices:[
+      {id:'complete',name:'Complete',sampleNames:['S0'],solutionIds:['s1'],stack:[{material:'ITO'}],process:{coating:'spin',annealing:'100 C',atmosphere:'N2'}},
+      {id:'missing-a',name:'Missing A',sampleNames:['S1'],solutionIds:[],stack:[],process:{}},
+      {id:'missing-b',name:'Missing B',sampleNames:['S2'],solutionIds:[],stack:[],process:{coating:'spin'}}
+    ]};
+    LF.State.state.selectedDesignDeviceId='complete';
+    const out=await LF.ActionUI.runSequence('design-all',{});
+    assert(JSON.stringify(calls.map(function(x){return x.deviceId;}))===JSON.stringify(['missing-a','missing-b']),'Design All must run incomplete variants one at a time in source order');
+    assert(out&&out.status==='done'&&out.result.completed===2,'Design All completion count mismatch');
+    assert(env.messages.length===1,'Design All should publish one aggregate chat message');
+    assert(env.messages[0].content.includes('Prepared AI completion for 2 / 2'),'Design All aggregate summary missing');
+    assert(env.messages[0].content.includes('Missing A')&&env.messages[0].content.includes('Missing B'),'Design All variant names missing');
+    assert(LF.State.state.selectedDesignDeviceId==='missing-a','Design All should land on the first proposal ready for review');
   };
   return t;
 };

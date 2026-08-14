@@ -128,7 +128,22 @@ They can be classified for Review as:
 
 A finding is not automatically an error and is not automatically an Action.
 
-## 8. Patches and provenance
+## 8. Design source projection
+
+`design` is populated from explicit source evidence before AI. LabFlow scans relevant imported auxiliary metadata (for example notes containing stack, precursor/passivation formulation, coating, antisolvent, annealing or atmosphere), normalizes it, and groups replicates that share the same source-backed design signature.
+
+The Design model records:
+
+- `sourceEvidence`: bounded RAW-backed fabrication notes with sample/group/path references;
+- `evidenceSummary`: source record count, parsed record count, covered samples and recovered variants;
+- `sourceProjection`: projection version/summary used to make normal rendering idempotent;
+- source-derived solutions, stack and process fields with `raw_evidence` provenance.
+
+The projection is fill-only for existing Design records. Once the researcher edits a field, a normal `ensureShape()` / re-render must not restore the RAW value over that edit. An explicit **Re-read source** operation may rerun projection deliberately.
+
+If the archive contains measurements but no fabrication recipe, LabFlow preserves the experimental/sample structure and explicit unknown fields; absence of source Design evidence must never be represented as an empty or silently inferred experiment.
+
+## 9. Patches and provenance
 
 Every applied correction must be traceable.
 
@@ -148,7 +163,7 @@ Patch records should preserve, as applicable:
 
 AI proposals are not patches until they are deterministically validated and applied.
 
-## 9. Derived state
+## 10. Derived state
 
 Derived state includes data such as:
 
@@ -159,7 +174,7 @@ Derived state includes data such as:
 
 Derived state is revision-scoped and must not masquerade as current after relevant scientific mutation.
 
-## 10. Analysis Dossier
+## 11. Analysis Dossier
 
 The dossier is compact by design.
 
@@ -177,13 +192,13 @@ It may contain:
 
 It must not duplicate full RAW curves or giant source text.
 
-## 11. Tool views and Context Packs
+## 12. Tool views and Context Packs
 
 A Tool result and a Context Pack are ephemeral bounded views, not persistent scientific truth. Read Tools retrieve named slices of the Canonical Data Model with typed arguments. AI Actions receive a profile declared in `action.json` under `input.context`.
 
 The Assistant begins from a small bootstrap Context Pack and obtains additional data only through explicit allowlisted read Tools. Returned observations are bounded before reuse. Stable IDs/evidence references should be preferred over copied raw data.
 
-## 12. Serialization
+## 13. Serialization
 
 ### Working package
 
@@ -191,7 +206,7 @@ The Assistant begins from a small bootstrap Context Pack and obtains additional 
 
 ### Canonical snapshot
 
-`canonical.json` (`labflow-canonical-v1`) contains a portable compact semantic snapshot:
+`canonical.json` (`labflow-canonical-v2`) contains a portable compact semantic snapshot:
 
 - canonical identities;
 - aliases;

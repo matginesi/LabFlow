@@ -492,7 +492,9 @@ Applying a valid proposal is an internal deterministic service:
 
 ### Why it exists
 
-Experiment Design must already be usable before AI. The researcher can inspect and edit known data directly. AI is only for remaining missing fields.
+Experiment Design must already be useful before AI. LabFlow first projects explicit fabrication evidence from the imported RAW metadata into the Design model. The researcher can inspect and edit those source-backed values directly. AI is only for remaining missing fields.
+
+A missing recipe is itself meaningful provenance: a measurement-only archive must show the sample/group structure and state that fabrication details are absent from the source rather than rendering an empty Design or fabricating them.
 
 ### Deterministic preparation
 
@@ -504,6 +506,8 @@ Before inference, LabFlow already knows or indexes:
 - formulations/solutions already known;
 - stack/process values already known;
 - evidence IDs;
+- source-recovered Design notes such as stack, precursor/passivation formulation, coating, antisolvent, annealing and atmosphere when present;
+- grouped experimental variants/replicates derived from that evidence;
 - explicit missing-field inventory.
 
 ### Context
@@ -516,7 +520,7 @@ The model receives only:
 - selected sample/measurement summaries;
 - linked evidence.
 
-Known or user-confirmed fields are authoritative and must not be regenerated.
+Known, RAW-backed or user-confirmed fields are authoritative and must not be regenerated. `scope.unknown_fields` is the exact completion target for `design.infer`.
 
 ### Checkpoints
 
@@ -774,7 +778,7 @@ Optional AI inference for missing fields
 
 Use the UI Kit **Single-experiment Design** pattern:
 
-- experiment/device rail;
+- experiment/device coverage rail/card board with explicit completion state;
 - selected experiment canvas;
 - formulations;
 - fabrication/process;
@@ -784,6 +788,8 @@ Use the UI Kit **Single-experiment Design** pattern:
 - AI proposal only as progressive disclosure.
 
 AI must never overwrite user-confirmed values silently.
+
+`Complete all missing with AI` is a finite UI orchestration, not a new autonomous Action: it scans the current Design variants, skips complete variants and variants that already have a proposal, then runs `design.infer` sequentially for each remaining variant. Proposals are retained per variant so the researcher can review them independently from the coverage board. No parallel provider calls are allowed.
 
 ---
 

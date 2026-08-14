@@ -219,18 +219,20 @@ Use `role="tablist"`, `role="tab"` and `aria-selected` for real tabs.
 
 Use the UI Kit **Single-experiment Design** pattern as the ground truth.
 
-The page must be useful with no provider:
+The page must be useful with no provider and must be **source-first**:
 
-- experiment bar with `design-chip` selector chips and a completion readout;
-- AI suggestions panel (`design-ai-table-panel`) that fills only missing fields and never overwrites researcher-entered values;
+- compact experiment/variant selector with completion and missing-field count;
+- a visible Design status overview showing samples, recovered required areas, missing fields and ZIP evidence count;
+- explicit `Source design found` versus `No recipe in source` state;
+- expandable RAW fabrication evidence when present;
+- AI suggestions panel (`design-ai-table-panel`) that fills only missing fields and never overwrites researcher-entered or RAW-backed values;
 - three editable scientific tables: solutions & solvents, fabrication, device stack;
-- known/missing status;
-- evidence/provenance;
-- researcher edits.
+- provenance badges that distinguish Researcher / AI / ZIP / Unknown;
+- researcher edits must survive normal re-rendering.
 
-`Infer missing design` is optional and works only on the currently selected experiment/device and missing fields.
+`Infer missing design` is optional and works only on the currently selected experiment/device and its exact unresolved fields. If the source-backed Design is complete, disable the AI completion action. If the archive is measurement-only, keep the sample/group structure visible and explain that recipe/fabrication metadata are absent rather than showing an empty workbench.
 
-Known and user-confirmed values are authoritative. AI proposals appear in progressive disclosure and must not silently overwrite them.
+Known, RAW-backed and user-confirmed values are authoritative. AI proposals appear in progressive disclosure and must not silently overwrite them.
 
 ---
 

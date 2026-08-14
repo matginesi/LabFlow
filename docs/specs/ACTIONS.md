@@ -159,7 +159,7 @@ The model is allowed to return unresolved. It does not apply changes directly.
 
 ### `design.infer`
 
-Purpose: propose missing fields of the currently selected Design experiment/device only.
+Purpose: propose missing fields of the currently selected Design experiment/device only. Explicit RAW fabrication evidence is projected deterministically before this Action runs; `scope.unknown_fields` is therefore the exact AI completion target, not a request to regenerate the full experiment.
 
 Checkpoints:
 

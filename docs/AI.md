@@ -60,6 +60,8 @@ Includes only:
 
 ### Design
 
+Design is **source-first**. Before AI is called, LabFlow deterministically projects explicit fabrication metadata from RAW evidence into normalized Design variants. Repeated samples with the same group/recipe are grouped as replicates; source values keep RAW provenance and normal re-rendering never overwrites later researcher edits.
+
 Includes only:
 
 - one selected Design experiment/device;
@@ -72,7 +74,7 @@ Includes only:
 
 For the perovskite POC, `prompts/knowledge/perovskite-design.md` is the bounded fallback used by `design.infer`. It is **not** experiment evidence and must never be presented as something imported from the ZIP. Knowledge-only candidates must retain `provenance_kind: "knowledge"`, a low confidence (at most `0.45`), and a reason explaining that they are domain hypotheses rather than RAW facts. Quantitative recipe details that are not supported by RAW evidence remain unknown.
 
-A measurement-only dataset can therefore still produce a useful qualitative candidate design, while the UI and stored proposal continue to distinguish imported evidence from inferred knowledge.
+A measurement-only dataset therefore remains useful even when fabrication metadata is absent: the UI still shows experimental groups/samples, coverage and explicit missing fields. `design.infer` may produce conservative qualitative knowledge-only candidates when supported by the bounded knowledge note, but it must not return an effectively empty proposal merely because the ZIP lacks a recipe, and it must not invent unsupported quantitative details.
 
 ### Results
 

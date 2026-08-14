@@ -47,4 +47,16 @@ module.exports=function(t,LF){
     const bare={design:{devices:[],solutions:[]}};let threwMissing=false;try{LF.DesignAnalysis.applySelectedDevice(bare,'deviceB');}catch(e){threwMissing=true;}
     assert(threwMissing,'missing proposal throws');
   };
+  t['Design proposals are stored per experimental variant for sequential review']=function(){
+    const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    const exp={design:{devices:[{id:'a'},{id:'b'}],solutions:[]}};
+    const store=LF.ActionSteps['design.store-proposal'];
+    store({exp:exp,outputs:{infer:{summary:'A',solutions:[],devices:[{sample_names:['A1']}]}},lastResult:null,params:{deviceId:'a'},sourceRevision:3});
+    store({exp:exp,outputs:{infer:{summary:'B',solutions:[],devices:[{sample_names:['B1']}]}},lastResult:null,params:{deviceId:'b'},sourceRevision:3});
+    assert(exp.aiDesignProposals&&exp.aiDesignProposals.a&&exp.aiDesignProposals.b,'proposals should be retained for both variants');
+    assert(exp.aiDesignProposals.a.summary==='A'&&exp.aiDesignProposals.b.summary==='B','per-variant proposals must not overwrite each other');
+    assert(exp.aiDesignProposal===exp.aiDesignProposals.b,'legacy active proposal alias should point at latest proposal');
+    LF.ExperimentModel=oldModel;
+  };
+
 };

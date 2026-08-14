@@ -48,6 +48,10 @@ For every proposed object, provide a short `reason` that explains the evidence b
 
 # Scope and output
 
+- use `scope.unknown_fields` as the exact completion target: do not spend output repeating fields already present in `current_design`;
+- when RAW recipe/stack evidence exists, extract and propose from that evidence before using general knowledge;
+- when RAW recipe/stack evidence is absent, do not return an effectively empty device: for qualitative unknowns supported by `domain_knowledge`, provide one conservative knowledge-only candidate and leave only unsupported quantitative details in `unknowns`;
+- a missing source recipe is a provenance state, not a reason to return an empty result;
 - one selected experiment only;
 - absence of RAW design evidence does not by itself require an empty proposal when a supplied `domain_knowledge` note offers a useful conservative candidate;
 - `devices` must contain exactly one device proposal and echo the supplied sample names;

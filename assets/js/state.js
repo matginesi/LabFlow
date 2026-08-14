@@ -174,6 +174,7 @@
       delete exp.aiCorrectionPlan;
       delete exp.designAnalysis;
       delete exp.aiDesignProposal;
+      delete exp.aiDesignProposals;
       delete exp.analysisSummary;
       if (exp.analysis) delete exp.analysis.aiInterpretation;
       if (exp.nomad) delete exp.nomad.mappingPlan;

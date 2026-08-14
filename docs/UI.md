@@ -27,9 +27,11 @@ Settings → Actions uses one two-pane catalog/inspector layout on desktop and s
 
 ## Single-experiment Design and live provider output
 
-- Experiment Design is researcher-first: deterministic sample/device structure and evidence are ready after ZIP import, and manual edits remain available without AI.
-- `Infer selected` sends only the currently selected experiment and its unresolved fields. It never reconstructs all experiments in one provider request.
-- AI proposal review is secondary progressive disclosure below the working canvas.
+- Experiment Design is researcher-first and source-first: explicit RAW fabrication notes are projected into formulations, process and stack before AI; manual edits remain available without a provider and survive normal re-rendering.
+- The status overview must show source coverage and distinguish `Source design found` from `No recipe in source`; measurement-only archives still show their sample/group structure instead of an empty Design.
+- `Complete missing with AI` sends only the currently selected experiment and its exact unresolved fields. It is disabled when the required source-backed Design is already complete.
+- A compact variant coverage board is the primary Design navigator: green = complete, amber = complete but AI-assisted, AI accent = proposal awaiting review, warning = missing required fields. `Complete all missing with AI` processes only incomplete variants without an existing proposal, strictly one at a time, and retains one reviewable proposal per variant.
+- AI proposal review is secondary progressive disclosure above the editable working tables.
 - Provider output in the global totem updates during meaningful streamed text/reasoning chunks; there is no separate Action/provider-note block.
 - Status badges are atomic one-line labels on desktop and truncate instead of wrapping on narrow screens.
 
@@ -47,7 +49,7 @@ Review Data exposes corrections at the place they are found: deterministic safe 
 ## 2026-08-13 compact interaction rules
 
 - Results keeps Overview, All data, Best measurements, Anomalies, Top non-REF, Top REF, **JV Analyzer**, Overlay and Compare as explicit views. JV Analyzer is a single-measurement diagnostic workbench (FW/RV summary deltas, RAW point integrity and scan separation); Overlay owns an independent multi-measurement selection and is only for visual comparison.
-- Experiment Design keeps the selected experiment, optional AI suggestions and three direct editors (Formulation, Fabrication, Device stack) in that order. AI suggestions are visible above the editors when present.
+- Experiment Design keeps a compact variant coverage board, source-coverage status, optional AI suggestions and three direct editors (Formulation, Fabrication, Device stack) in that order. RAW evidence and missing-source state are explicit; AI suggestions are visible above the editors only when relevant.
 - Report and Paper are separate Markdown documents with separate titles. On desktop source and rendered preview are always visible together; Write/Preview switching is a small-screen control only.
 - On small screens Action and result totems remain viewport-contained cards with internal scrolling; the Assistant remains a dedicated full-screen surface.
 

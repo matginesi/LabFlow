@@ -30,9 +30,14 @@
     if(!root)return;const apply=function(){root.querySelectorAll('*').forEach(function(el){const state=scrollMemory.get(scrollNodeKey(el,root,route));if(!state)return;if(el.scrollHeight>el.clientHeight+1)el.scrollTop=Math.min(state.top,Math.max(0,el.scrollHeight-el.clientHeight));if(el.scrollWidth>el.clientWidth+1)el.scrollLeft=Math.min(state.left,Math.max(0,el.scrollWidth-el.clientWidth));});};apply();if(window.requestAnimationFrame)window.requestAnimationFrame(apply);
   }
 
+  function activateDesignProposal(deviceId){
+    const exp=S.state.experiment;if(!exp)return null;const map=exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:null,p=map&&map[deviceId]||null;if(p)exp.aiDesignProposal=p;else if(exp.aiDesignProposal&&exp.aiDesignProposal.targetDeviceId&&String(exp.aiDesignProposal.targetDeviceId)!==String(deviceId))delete exp.aiDesignProposal;return p;
+  }
+
   function renderDesign() {
     if (!hasExperiment()) return needExperiment();
     const experiment = ensureExperimentShape(S.state.experiment);
+    activateDesignProposal(S.state.selectedDesignDeviceId||experiment.design&&experiment.design.devices&&experiment.design.devices[0]&&experiment.design.devices[0].id);
     return LF.DesignPage.render({
       experiment: experiment,
       selectedDeviceId: S.state.selectedDesignDeviceId,
@@ -335,7 +340,8 @@
 
         const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;render();return;}
         const changesTab=e.target.closest('[data-changes-tab]');if(changesTab){S.state.changesTab=changesTab.dataset.changesTab;render();return;}
-        const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;S.setRoute('experiment-design');return;}
+        const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
+        const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
@@ -367,7 +373,7 @@
         if(e.target.closest('#discardRepairPlan')){discardRepairPlan();return;}
         if(e.target.closest('#revalidateDataset')){LF.DatasetCorrections.refresh(S.state.experiment);delete S.state.experiment.aiCorrectionPlan;render();LF.UI.toast('Canonical analysis rebuilt from the current Working Copy.','success');return;}
         
-        if(e.target.closest('#refreshDesignEvidence')){if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);render();LF.UI.toast('Deterministic Design evidence refreshed.','success');return;}
+        if(e.target.closest('#refreshDesignEvidence')){if(LF.ExperimentModel&&LF.ExperimentModel.projectRawDesign)LF.ExperimentModel.projectRawDesign(S.state.experiment,true);if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);render();LF.UI.toast('Design evidence re-read from the original source metadata.','success');return;}
         if(e.target.closest('#applyAllDesignSuggestions')){try{const out=LF.DesignAnalysis.applyAll(S.state.experiment);if(out.changed){markModified('design');render();LF.UI.toast('Applied '+out.changed+' AI-proposed missing field'+(out.changed===1?'':'s')+' to Design.','success');}else{render();LF.UI.toast('No missing field could be filled without overwriting existing values.','info');}}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment);markModified('design');render();LF.UI.toast('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         const applyDesignProposal=e.target.closest('[data-apply-design-proposal]');if(applyDesignProposal){try{const out=LF.DesignAnalysis.applyOne(S.state.experiment,applyDesignProposal.dataset.applyDesignProposal,Number(applyDesignProposal.dataset.proposalIndex),applyDesignProposal.dataset.proposalPart||'all');markModified('design');render();LF.UI.toast('AI suggestion applied to '+out.changed+' missing field'+(out.changed===1?'':'s')+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
@@ -390,7 +396,7 @@
         if(e.target.closest('#addLayer')){S.state.experiment.design.stack.push({id:C.uid('layer'),role:'',material:'',thickness:'',process:'',evidence:'User entry',notes:'',status:'user_confirmed'});Log.info('design.layer-added',{count:S.state.experiment.design.stack.length});markModified('design');render();return;}
         const designProposalDecision=e.target.closest('[data-design-proposal-decision]');if(designProposalDecision){updateDesignProposalDecision(designProposalDecision.dataset.designProposalDecision,Number(designProposalDecision.dataset.proposalIndex),designProposalDecision.dataset.decision||'pending');return;}
         if(e.target.closest('#acceptAllDesignProposal')){const proposal=S.state.experiment.aiDesignProposal;if(proposal){(proposal.solutions||[]).concat(proposal.devices||[]).forEach(function(item){if(!item.applied&&(item.decision||'pending')==='pending')item.decision='accepted';});proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');render();}return;}
-        if(e.target.closest('#discardDesignProposal')){delete S.state.experiment.aiDesignProposal;Log.info('design.proposal-discarded');markModified('ai');render();LF.UI.toast('AI design proposal discarded.','info');return;}
+        if(e.target.closest('#discardDesignProposal')){const exp=S.state.experiment,id=S.state.selectedDesignDeviceId;if(exp.aiDesignProposals&&id)delete exp.aiDesignProposals[id];delete exp.aiDesignProposal;Log.info('design.proposal-discarded',{deviceId:id||''});markModified('ai');render();LF.UI.toast('AI design proposal discarded.','info');return;}
 
         if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim()||'Matteo Ginesi',defaultAuthor:document.getElementById('userDefaultAuthor').value.trim()||document.getElementById('userName').value.trim()||'Matteo Ginesi',organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});if(hasExperiment()){const r=LF.Report.ensureReport(S.state.experiment);if(!r.author){r.author=LF.Storage.getUserProfile().defaultAuthor;markModified('report');}}LF.UI.toast('Profile saved.','success');render();return;}
         if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,memoryTurns:Number(document.getElementById('assistantMemoryTurns').value),memoryChars:Number(document.getElementById('assistantMemoryChars').value),messageChars:Number(document.getElementById('assistantMessageChars').value),maxOutputTokens:Number(document.getElementById('assistantMaxOutputTokens').value),temperature:Number(document.getElementById('assistantTemperature').value),contextChars:Number(document.getElementById('assistantContextChars').value)});LF.UI.toast('Assistant settings saved.','success');render();return;}
@@ -430,7 +436,7 @@
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';postUiKitFilter();return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
-        if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;render();return;}
+        if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         if(e.target.id==='actionReportDocKind'){S.state.settingsActionDocKind=e.target.value==='paper'?'paper':'lab';if(S.persist)S.persist();render();return;}
         if(e.target.id==='markdownBlockStyle'){if(e.target.value)applyMarkdownTool(e.target.value);e.target.value='';return;}
         if(e.target.id==='curveView'){S.state.curveView=e.target.value;render();return;}
