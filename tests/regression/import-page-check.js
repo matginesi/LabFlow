@@ -34,6 +34,8 @@ async function main(){
   ok(!appSource.includes('await LF.Storage.loadExperiment()'),'startup no longer restores an experiment automatically');
   ok(feedbackSource.includes('messageShade'),'confirmations use the LabFlow message totem');
   ok(!/window\.confirm|window\.alert/.test(appSource+feedbackSource),'no native browser confirmation/alert remains');
+  ok(appSource.includes("briefAiStatus='failed · deterministic brief kept'"),'AI brief failure explicitly keeps deterministic import');
+  ok(appSource.includes("if(enriched&&enriched.status==='done')"),'import treats enrichment as optional completion');
 
   const buf=fs.readFileSync(path.join(root,'TEST_DATA','01_PRECISO_PERFETTO_COMPLETO.zip'));
   const ab=buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.byteLength);

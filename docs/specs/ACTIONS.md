@@ -277,11 +277,13 @@ If a new proposed Action merely wraps one of these implementation details, it sh
 
 ## 7. AI output budgets
 
-AI Actions do **not** carry a mandatory 8k ceiling. `max_output_tokens` is optional at Action or AI-step level and acts only as an additional cap when a specific workflow needs one.
+Every AI step declares a bounded `max_output_tokens` target. It is the amount appropriate for that workflow, not a copy of the model's advertised maximum. The model/provider capability is only an upper ceiling.
 
-At runtime the Action Runner asks the transport for the active model capability. The effective output budget is the minimum of any known exact model output limit, safe context-window headroom, optional Action/step cap, optional Assistant cap, and the provider-level forced cap from Settings. If none is known or forced, the request omits the provider token-limit parameter and uses the provider default.
+At runtime the effective output budget is the minimum of the declared Action/step target, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. If a future AI Action omits a target, the runner defensively falls back to 4096 tokens and the contract validator rejects the definition so the omission cannot ship unnoticed.
 
-This keeps the POC robust across OpenAI, Z.AI, Gemini, Ollama, LM Studio and custom OpenAI-compatible endpoints without pretending that every `/models` response exposes the same metadata. Large Report/Paper jobs remain split into bounded sequential writing blocks for reliability even when the model can emit much more.
+The current targets are intentionally task-shaped: compact Experiment Brief/Results work is around 3k, structured Design/repair work around 4k, and individual Report/Paper writing blocks around 6k. Large documents remain split into bounded sequential writing blocks even when a model can emit 64k/128k tokens.
+
+AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 90 s absolute deadline and zero automatic retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
 
 ## 8. Settings → Actions requirements
 

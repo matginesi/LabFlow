@@ -4,7 +4,7 @@ Use `ui-kit.html` as the canonical visual reference: compact scientific workspac
 
 Tabs use a bordered track, not a faint underline-only treatment. The active tab has a filled surface, stronger border and accent edge. Long tab sets scroll horizontally while labels remain intact.
 
-AI is explicit. The Action totem shows Action checkpoint and work-unit progress, truthful provider telemetry, Stop, finite 5 s / 10 s automatic retry when applicable, and Retry checkpoint only after final failure. Provider output stays collapsed until requested. JSON/Markdown follow the selected LabFlow theme; streaming removes redundant blank lines. Never fabricate model progress or hidden reasoning.
+AI is explicit. The Action totem shows Action checkpoint and work-unit progress, truthful provider telemetry, an explicit Cancel action button while running, a separate Close button when terminal, bounded automatic retry only when declared by the Action, and Retry checkpoint only after final failure. Esc follows the same lifecycle: cancel while running, close when terminal. Provider output stays collapsed until requested. JSON/Markdown follow the selected LabFlow theme; streaming removes redundant blank lines. Never fabricate model progress or hidden reasoning.
 
 Results emphasize measurements and reliable plots rather than decorative cards. Tables have explicit responsive overflow and readable warning/status columns. Compare uses stable box/whisker/raw-value rendering with a statistics table rather than fragile canvas pan/zoom state. Design emphasizes evidence and provenance. Reports remain readable/editable Markdown. NOMAD separates validation, mapping and package Actions clearly.
 

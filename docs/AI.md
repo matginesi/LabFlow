@@ -111,11 +111,11 @@ A narrow user question should produce a narrow context instead of increasing the
 
 ## 5. Output budgeting
 
-LabFlow does not impose a hidden 8k output ceiling. The transport resolves a model capability before an AI Action whenever the provider exposes one. Gemini is read from model metadata; local providers use their model/runtime metadata; providers whose model-list API does not expose an output limit use the maintained model specification table when known. If no safe limit is known, LabFlow omits the token-limit field and lets the provider apply its own default rather than inventing a value.
+LabFlow does not impose one hidden global output ceiling. Every AI step declares its own `max_output_tokens` **target budget** in `action.json`; the detected provider/model capability is only a hard ceiling, never the requested target by itself. This prevents a model that supports 64k/128k output from being asked for that amount when an Action only needs a compact brief or interpretation.
 
-The effective request budget is the tightest applicable value among: detected model maximum, context-window headroom when only a context ceiling is known, an optional Action-specific cap, the optional Assistant cap, and **Settings → Provider → Force max output**. A value of `0` means automatic. A user cap may lower a request but never raise it above a detected model limit.
+The effective request budget is the tightest applicable value among: the Action/step target, detected exact model maximum (or safe context headroom when only that is known), the optional Assistant override for `assistant.chat`, and **Settings → Provider → Force max output**. Provider `0` means “do not add a global cap”; it does not mean “request the provider maximum”. A positive user cap can only lower the request.
 
-`action.json` may therefore omit `max_output_tokens`; that field is an optional per-Action safety cap, not a mandatory budget.
+Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately fail-fast: `analysis.enrich` targets 3072 output tokens, has a 90 s absolute deadline and does not auto-retry. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
 
 ## 6. Structured AI output
 
@@ -167,3 +167,8 @@ Chat is tool-aware but read-only with respect to scientific Working Copy state. 
 Only Tools marked both `agent_visible: true` and `access: read` can execute with `agent: true`; the registry rejects write/internal Tools even if the model names them. Tool arguments are validated against each Tool's small input contract and observations are bounded before they are added to the final Assistant context. Planner JSON is an internal control result, not user-visible thinking.
 
 The final answer is generated only after this retrieval phase and may expose which read Tools were used as telemetry. If the Assistant identifies something that should be corrected, it may explain it or direct the researcher to the appropriate Action/Review/Design control, but it cannot invoke mutating Actions, apply patches, edit Report/Paper or modify Design as a side effect of conversation.
+
+
+## Provider rate limits
+
+LabFlow treats provider rate limiting separately from model/output failures. For Z.AI `glm-4.7-flash`, consecutive requests are paced to avoid burst traffic. HTTP 429 or provider code `1305` triggers a bounded transport-level cooldown and retry of the exact same request; `Retry-After` is honored when present. This retry does not rebuild prompts, rerun deterministic checkpoints, or count as an Action semantic retry. Quota-exhaustion codes such as 1308/1310 are not retried automatically.

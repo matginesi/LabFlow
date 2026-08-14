@@ -5,8 +5,8 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, supportsThinking:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000,
-      note:'Default. Z.AI general Chat Completions endpoint.'
+      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, supportsThinking:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500},
+      note:'Default Z.AI Chat Completions endpoint. The shared free glm-4.7-flash model is automatically paced; HTTP 429 / code 1305 uses bounded transport backoff without rerunning the Action.'
     },
     openai: {
       id:'openai', name:'OpenAI', endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false,

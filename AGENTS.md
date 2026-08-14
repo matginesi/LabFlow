@@ -115,7 +115,7 @@ AI may:
 - generate/revise scientific prose;
 - answer bounded read-only Chat questions.
 
-A configured provider may also run the internal `analysis.enrich` step immediately after deterministic import analysis. Its output is a shared, provenance-marked Experiment Brief used by downstream AI contexts. It must not recalculate deterministic metrics or become a second scientific state. Invalidate the AI brief on scientific-input changes, not on Report/Paper text edits.
+A configured provider may also run the internal `analysis.enrich` step immediately after deterministic import analysis. Its output is a shared, provenance-marked Experiment Brief used by downstream AI contexts. It must not recalculate deterministic metrics or become a second scientific state. This automatic enrichment is fail-fast: target 3072 output tokens, 90 s absolute deadline, zero automatic retries, and deterministic-Brief fallback so ZIP import always completes. Invalidate the AI brief on scientific-input changes, not on Report/Paper text edits.
 
 AI must never silently mutate scientific state or become the authoritative calculator/readiness gate.
 
@@ -217,7 +217,7 @@ python tools/validate_action_contract.py
 - successful checkpoints auto-advance;
 - one active run only;
 - Stop aborts the run;
-- AI failure retries after 5 s and 10 s only;
+- AI retry count is declared per step (`max_retries`, 0..2); retry delays are 5 s then 10 s when enabled;
 - after bounded retries expose Retry checkpoint;
 - completed earlier checkpoints are preserved;
 - no manual Continue gate;
@@ -274,7 +274,7 @@ Context should be selected from:
 
 When context is too large, narrow selection first. Do not solve every context issue by increasing a global budget.
 
-Output budgets belong to individual Action contracts. Assistant output/context settings are separate.
+Every AI step declares an Action-specific output target; provider/model maxima are ceilings, never automatic request sizes. Output budgets belong to individual Action contracts. Assistant output/context settings are separate. Automatic import enrichment must remain fail-fast and non-blocking.
 
 ---
 
@@ -407,3 +407,7 @@ For broad architectural changes, exercise at least:
 ```text
 Import → Review → correction → Results → Design → Report → NOMAD → Save working copy
 ```
+
+
+### Provider rate-limit handling
+Treat model/provider ceilings, Action output budgets, semantic retries, and transport rate-limit retries as separate concerns. Z.AI 1305/HTTP 429 may use bounded pacing/backoff of the identical request; quota exhaustion must fail clearly and must not create unbounded retry loops.

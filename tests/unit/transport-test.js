@@ -66,6 +66,16 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
+  t['buildRequest preserves an absolute Action deadline independently of inactivity timeout'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'x',inactivityTimeoutMs:180000,streaming:false};},getApiKey:function(){return'';}};
+    LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,requestTimeoutMs:90000}};
+    const spec=AI.buildRequest({messages:[{role:'user',content:'brief'}],stream:false,maxTokens:3072,timeoutMs:180000,hardTimeoutMs:90000});
+    assert(spec.body.max_tokens,3072,'bounded Action target');
+    assert(spec.timeoutMs,180000,'inactivity window remains distinct');
+    assert(spec.hardTimeoutMs,90000,'absolute deadline');
+    delete LF.Storage;delete LF.AIProviders;
+  };
+
   t['buildRequest honors jsonMode and disables thinking'] = function () {
     LF.Storage = {
       getAiSettings: function () { return { provider: 'ollama', endpoint: 'http://127.0.0.1:11434/v1', model: 'gemma3', temperature: 0.2, maxTokens: 512, inactivityTimeoutMs: 60000, streaming: false }; },
@@ -196,6 +206,47 @@ module.exports = function (t, LF) {
   t['isBusy and abort are inert without an active request'] = function () {
     assert(AI.isBusy(), false, 'not busy');
     assert(AI.abort(), false, 'no-op abort');
+  };
+
+
+  t['Z.AI free Flash uses burst pacing and bounded rate-limit retries'] = function () {
+    const policy=AI.ratePolicy({settings:{provider:'zai',model:'glm-4.7-flash'},provider:{id:'zai',rateLimit:{retries:2,delaysMs:[6000,15000],freeFlashMinIntervalMs:2500}},model:'glm-4.7-flash'});
+    assert(policy.minIntervalMs,2500,'free Flash pacing');
+    assert(policy.retries,2,'bounded transport retries');
+    assert(policy.delaysMs,[6000,15000],'bounded backoff');
+    assert(AI.isRateLimitError({providerCode:'1305'}),true,'provider code 1305');
+    assert(AI.isRateLimitError({status:429}),true,'HTTP 429');
+    assert(AI.isRateLimitError({providerCode:'1310'}),false,'quota exhaustion is distinct');
+    assert(AI.ratePolicy({settings:{provider:'custom',model:'x'},provider:{},model:'x'}).retries,1,'default transport retry is finite');
+  };
+
+  t['Retry-After parsing supports seconds and HTTP dates'] = function () {
+    const seconds={get:function(name){return name==='retry-after'?'2':'';}};
+    assert(AI.retryAfterMs(seconds),2000,'seconds retry-after');
+    const future=new Date(Date.now()+4000).toUTCString(),dated={get:function(name){return name==='retry-after'?future:'';}};
+    const parsed=AI.retryAfterMs(dated);
+    assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
+  };
+
+  t['transport retries the identical request once after Z.AI 1305 and then succeeds'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location,oldSetTimeout=global.setTimeout;let calls=0,bodies=[];
+    global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.setTimeout=function(fn,ms){return oldSetTimeout(fn,Math.min(Number(ms)||0,2));};
+    global.fetch=async function(url,opts){
+      calls++;bodies.push(opts.body);
+      if(calls===1)return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){if(name==='retry-after')return'0';return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};
+      return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'ok',model:'glm-test',choices:[{message:{content:'done'},finish_reason:'stop'}],usage:{prompt_tokens:4,completion_tokens:2,total_tokens:6}});}};
+    };
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:1,delaysMs:[1],maxDelayMs:10,minIntervalMs:0}}};
+    try{
+      const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});
+      const out=await AI.send(spec,{label:'rate-test'});
+      assert(out.content,'done','eventual success');
+      assert(calls,2,'two HTTP attempts');
+      assert(bodies[0],bodies[1],'identical request body');
+      assert(out.rateLimitRetries,1,'transport retry count');
+    }finally{global.fetch=oldFetch;global.setTimeout=oldSetTimeout;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
   return t;

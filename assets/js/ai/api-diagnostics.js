@@ -18,7 +18,7 @@
   function statusHint(status,code){
     if(status===401||status===403)return' Check provider credentials and permissions.';
     if(status===404)return' Check the endpoint path and model name.';
-    if(status===429)return' The provider rate limit or quota was reached.';
+    if(status===429||String(code||'')==='1305')return' The provider rate limit was reached. LabFlow applies a bounded cooldown before retrying the same request.';
     if(status>=500)return' The provider reported a server-side error.';
     if(String(code||'')==='1261')return' The model context window was exceeded.';
     return'';
@@ -38,7 +38,7 @@
     }
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
-    else if(status===429){category='Rate limit';next='Retry later or choose another available model/provider.';}
+    else if(status===429||code==='1305'){category='Rate limit';next='LabFlow already applied bounded backoff. If it still fails, wait briefly or switch from the shared free Flash endpoint to another model/provider.';}
     else if(status>=500){category='Provider server';next='Check the provider logs and retry.';}
     return{category:category,next:next,status:status||'',providerCode:code};
   }

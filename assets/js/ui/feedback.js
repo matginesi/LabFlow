@@ -336,10 +336,17 @@
     const finished = activity.status !== 'running';
     const cancel = byId('activityCancel');
     if (cancel) {
-      cancel.hidden = !finished && !activity.cancellable;
-      cancel.disabled = !finished && activity.cancelling;
-      cancel.textContent = finished ? (activity.closeLabel || 'Close details') : activity.cancelling ? 'Stopping…' : 'Stop';
-      cancel.className = 'button compact activity-button ' + (finished ? 'primary' : 'danger');
+      cancel.hidden = finished || !activity.cancellable;
+      cancel.disabled = !!activity.cancelling;
+      cancel.textContent = activity.cancelling ? 'Cancelling…' : 'Cancel action';
+      cancel.className = 'button danger compact activity-button';
+    }
+    const close = byId('activityClose');
+    if (close) {
+      close.hidden = !finished;
+      close.disabled = false;
+      close.textContent = activity.closeLabel || 'Close';
+      close.className = 'button primary compact activity-button';
     }
 
     const logs = byId('activityLogs');
@@ -721,6 +728,8 @@
 
   const activityCancelButton = byId('activityCancel');
   if (activityCancelButton) activityCancelButton.addEventListener('click', activityCancel);
+  const activityCloseButton = byId('activityClose');
+  if (activityCloseButton) activityCloseButton.addEventListener('click', activityHide);
 
   const activityLogsButton = byId('activityLogs');
   if (activityLogsButton) {
@@ -738,9 +747,10 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape' || !activity) return;
-    if (!activity.cancellable && activity.status === 'running') return;
+    if (activity.status === 'running' && !activity.cancellable) return;
     event.preventDefault();
-    activityCancel();
+    if (activity.status === 'running') activityCancel();
+    else activityHide();
   });
 
   // Keep this stable public surface small. Callers should not reach into

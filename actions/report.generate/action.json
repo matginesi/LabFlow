@@ -26,7 +26,10 @@
       "output": "text",
       "timeout_ms": 240000,
       "foreach": "collect.blocks",
-      "weight": 0.84
+      "weight": 0.84,
+      "max_output_tokens": 6144,
+      "deadline_ms": 180000,
+      "max_retries": 1
     },
     {
       "id": "store",

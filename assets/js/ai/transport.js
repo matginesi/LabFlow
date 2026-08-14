@@ -6,6 +6,7 @@
   let inFlight=false;
   let activeRequest=null;
   let injectedController=null;
+  const rateStates=new Map();
 
   /** The ActionRunner hands over the single shared AbortController for a run. */
   function acceptController(c){injectedController=c||null;}
@@ -51,14 +52,40 @@
   }
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
 
-  function parseProviderError(text,status,requestId){
+  function retryAfterMs(headers){
+    if(!headers||typeof headers.get!=='function')return 0;
+    const raw=String(headers.get('retry-after')||'').trim();if(!raw)return 0;
+    const seconds=Number(raw);if(Number.isFinite(seconds)&&seconds>=0)return Math.round(seconds*1000);
+    const when=Date.parse(raw);return Number.isFinite(when)?Math.max(0,when-Date.now()):0;
+  }
+  function parseProviderError(text,status,requestId,headers){
     let code='',message='';
     try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');}
     catch(_){message=String(text||'').replace(/\s+/g,' ').slice(0,420);}
-    const label=status===429?'API rate limit reached':status?'AI request failed ('+status+')':'AI request failed';
+    const rateLimited=Number(status)===429||code==='1305';
+    const label=rateLimited?'API rate limit reached':status?'AI request failed ('+status+')':'AI request failed';
     const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(status,code):'';
     const err=new Error(label+(code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=status||0;err.providerCode=code;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';return err;
+    err.status=status||0;err.providerCode=code;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);return err;
+  }
+  function isRateLimitError(err){return!!(err&&(Number(err.status)===429||String(err.providerCode||'')==='1305'));}
+  function rateKey(spec){return[String(spec&&spec.settings&&spec.settings.provider||''),String(spec&&spec.model||spec&&spec.settings&&spec.settings.model||'')].join('|');}
+  function ratePolicy(spec){
+    const provider=spec&&spec.provider||{},settings=spec&&spec.settings||{},cfg=provider.rateLimit||{},providerId=String(settings.provider||provider.id||''),model=String(spec&&spec.model||settings.model||''),freeZaiFlash=providerId==='zai'&&/^glm-4\.7-flash$/i.test(model);
+    const delays=Array.isArray(cfg.delaysMs)&&cfg.delaysMs.length?cfg.delaysMs.map(function(x){return Math.max(0,Number(x)||0);}):[5000,12000];
+    const retryCount=Number(cfg.retries);return{key:rateKey(spec),retries:Number.isFinite(retryCount)?Math.max(0,Math.min(3,retryCount)):1,delaysMs:delays,maxDelayMs:Math.max(1000,Number(cfg.maxDelayMs)||30000),minIntervalMs:freeZaiFlash?Math.max(0,Number(cfg.freeFlashMinIntervalMs)||2500):Math.max(0,Number(cfg.minIntervalMs)||0),providerId:providerId,model:model};
+  }
+  function rateState(key){if(!rateStates.has(key))rateStates.set(key,{lastStartedAt:0,nextAllowedAt:0,rateLimitCount:0});return rateStates.get(key);}
+  function cancelledWaitError(){const e=new Error('AI request cancelled by the user.');e.cancelled=true;e.code='ACTION_ABORTED';return e;}
+  function waitFor(ms){
+    ms=Math.max(0,Math.round(Number(ms)||0));if(!ms)return Promise.resolve();
+    return new Promise(function(resolve,reject){const parent=injectedController&&injectedController.signal;let timer=null;function clean(){if(timer)clearTimeout(timer);if(parent)parent.removeEventListener('abort',aborted);}function done(){clean();resolve();}function aborted(){clean();reject(cancelledWaitError());}if(parent&&parent.aborted){aborted();return;}if(parent)parent.addEventListener('abort',aborted,{once:true});timer=setTimeout(done,ms);});
+  }
+  function deadlineError(label,hardTimeoutMs){const e=new Error((label||'AI request')+' reached its '+Math.round(Number(hardTimeoutMs||0)/1000)+' second work-unit deadline while waiting for the provider.');e.timedOut=true;e.timeoutReason='deadline';e.timeoutMs=Number(hardTimeoutMs)||0;return e;}
+  async function waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy){
+    policy=policy||ratePolicy(spec);const state=rateState(policy.key),now=Date.now(),target=Math.max(state.nextAllowedAt||0,(state.lastStartedAt||0)+policy.minIntervalMs),wait=Math.max(0,target-now);
+    if(wait){const elapsed=performance.now()-overallStarted;if(hardTimeoutMs&&elapsed+wait>=hardTimeoutMs)throw deadlineError(opts&&opts.label,hardTimeoutMs);if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_pacing',waitMs:wait,provider:policy.providerId,model:policy.model});await waitFor(wait);}
+    state.lastStartedAt=Date.now();return state;
   }
 
   function headersObject(headers){
@@ -99,7 +126,7 @@
     function event(data){
       if(!data||data==='[DONE]')return;
       let obj;try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returned an invalid SSE JSON event.');invalid.cause=error;invalid.providerResponse=data;throw invalid;}
-      if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'');
+      if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'',null);
       const choice=obj.choices&&obj.choices[0]||{},delta=choice.delta||choice.message||{};
       const content=streamPart(delta.content||delta.text||choice.text||obj.output_text||obj.response),reasoning=streamPart(delta.reasoning_content||delta.reasoning||delta.reasoning_details||choice.reasoning_content||obj.reasoning_content||obj.reasoning);
       const meaningful=!!(content||reasoning||choice.finish_reason||obj.usage);
@@ -162,7 +189,7 @@
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason}:null};
       Log.info('request.end',{requestLogId:requestLogId,label:label,method:'POST',endpoint:url,elapsedMs:elapsed,response:responseMeta});
-      if(!response.ok)throw parseProviderError(text,response.status,responseRequestId);
+      if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers);
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
       Log.info('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
       return{json:obj,elapsedMs:elapsed,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta};
@@ -277,7 +304,7 @@
   const capabilityCache=new Map();
   function capabilityKey(providerId,endpoint,model){return[String(providerId||''),String(endpoint||''),String(model||'')].join('|');}
   function authHeaders(provider,key){const h={'Accept':'application/json'};if(key&&(provider.keyRequired||provider.optionalKey))h.Authorization='Bearer '+key;return h;}
-  async function fetchJson(url,options){const response=await fetch(url,Object.assign({cache:'no-store',credentials:'omit'},options||{})),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'');try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
+  async function fetchJson(url,options){const response=await fetch(url,Object.assign({cache:'no-store',credentials:'omit'},options||{})),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers);try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
   function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
@@ -324,7 +351,7 @@
     if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     const started=performance.now(),response=await fetch(url,{method:'GET',headers:headers,cache:'no-store',credentials:'omit'});
     const text=await response.text();
-    if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'');
+    if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers);
     let obj={};try{obj=text?JSON.parse(text):{};}catch(error){const e=new Error('Model list returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}
     const rows=Array.isArray(obj.data)?obj.data:Array.isArray(obj.models)?obj.models:[];
     const models=rows.map(function(item){return typeof item==='string'?item:String(item&&item.id||item&&item.model||item&&item.name||'');}).filter(Boolean);
@@ -372,8 +399,18 @@
   }
 
   async function send(spec,opts){
-    opts=opts||{};
-    const r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,spec.hardTimeoutMs);
+    opts=opts||{};const policy=ratePolicy(spec),overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null;
+    while(true){
+      const state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy),elapsedBefore=performance.now()-overallStarted,remainingHard=hardTimeoutMs?Math.max(1,hardTimeoutMs-elapsedBefore):0;
+      try{r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);break;}
+      catch(err){
+        if(!isRateLimitError(err)||rateAttempt>=policy.retries)throw err;
+        const configured=policy.delaysMs[Math.min(rateAttempt,policy.delaysMs.length-1)]||5000,serverDelay=Math.max(0,Number(err.retryAfterMs)||0),penalty=Math.min(policy.maxDelayMs,Math.max(configured,serverDelay));
+        state.rateLimitCount=(state.rateLimitCount||0)+1;state.nextAllowedAt=Math.max(state.nextAllowedAt||0,Date.now()+penalty);rateAttempt++;
+        Log.warn('rate-limit.backoff',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:rateAttempt,maxAttempts:policy.retries,retryInMs:penalty,retryAfterMs:serverDelay||null});
+        if(opts.onProgress)opts.onProgress({transportState:'rate_limit_wait',rateLimit:true,retryInMs:penalty,attempt:rateAttempt,maxAttempts:policy.retries,provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0)});
+      }
+    }
     const obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
     const content=extracted.content,reasoning=extracted.reasoning;
     if(!content){
@@ -389,8 +426,8 @@
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
-    const tps=r.elapsedMs>0?Number((completionTokens/(r.elapsedMs/1000)).toFixed(2)):null;
-    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,latencyMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||r.rawText.length};
+    const totalElapsed=Math.round(performance.now()-overallStarted),tps=totalElapsed>0?Number((completionTokens/(totalElapsed/1000)).toFixed(2)):null;
+    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,latencyMs:totalElapsed,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||r.rawText.length,rateLimitRetries:rateAttempt};
   }
 
   LF.AI={
@@ -406,6 +443,9 @@
     isLocalAddress:isLocalAddress,
     mergeStreamContent:mergeStreamContent,
     outputLoopDetected:outputLoopDetected,
+    retryAfterMs:retryAfterMs,
+    isRateLimitError:isRateLimitError,
+    ratePolicy:ratePolicy,
     resolveModelsUrl:resolveModelsUrl,
     listModels:listModels,
     capabilityFromRow:capabilityFromRow,

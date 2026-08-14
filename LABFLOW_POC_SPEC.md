@@ -35,7 +35,7 @@ Normal package export includes `canonical.json` (`labflow-canonical-v1`) contain
 
 The dossier is a **view**, not another dataset copy. It contains counts, compact sample/measurement references, findings, safe fixes, true semantic ambiguities and coverage/evidence summaries. Large RAW arrays, full curves and duplicate auxiliary evidence do not belong in the dossier.
 
-LabFlow also derives one shared **Experiment Brief**. Its deterministic part summarizes scope, performance, group comparisons, quality, Design coverage and unresolved questions. When an AI provider is configured at import, the internal `analysis.enrich` Action may add a bounded scientific interpretation layer (goal, variables, meaningful comparisons, interpretations, knowledge gaps and recommended focus). This enrichment is explicitly derived/provenanced, never replaces deterministic facts, and is reused by every later AI Context Pack. It is invalidated only when scientific inputs change, not when the researcher merely edits Report/Paper prose.
+LabFlow also derives one shared **Experiment Brief**. Its deterministic part summarizes scope, performance, group comparisons, quality, Design coverage and unresolved questions. When an AI provider is configured at import, the internal `analysis.enrich` Action may add a bounded scientific interpretation layer (goal, variables, meaningful comparisons, interpretations, knowledge gaps and recommended focus). This enrichment is explicitly derived/provenanced, never replaces deterministic facts, and is reused by every later AI Context Pack. It targets 3072 output tokens, has a 90 s absolute deadline, does not auto-retry during import, and falls back to the deterministic Brief if unavailable. It is invalidated only when scientific inputs change, not when the researcher merely edits Report/Paper prose.
 
 ## 4. Research Context Packs
 
@@ -77,7 +77,7 @@ Settings contains one editable **Actions** catalog for deterministic, AI-assiste
 
 ## 6. Action runtime
 
-AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Deterministic checkpoints resolve `tool` IDs through `LF.ToolRegistry`. `requires[]` is an actual current-revision prerequisite gate: stale/missing prerequisites block execution before step 1. Success auto-advances. Stop aborts the run. An AI checkpoint failure may retry exactly twice, after 5 seconds and 10 seconds; after those bounded attempts the user may Retry checkpoint. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
+AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Deterministic checkpoints resolve `tool` IDs through `LF.ToolRegistry`. `requires[]` is an actual current-revision prerequisite gate: stale/missing prerequisites block execution before step 1. Success auto-advances. Cancel aborts the run. Each AI step declares its output target and may declare `deadline_ms` plus `max_retries` (0..2); enabled retries use the bounded 5 s / 10 s delays. Provider/model output limits are ceilings, not request targets. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
 
 Provider output is closed by default but streams live content/reasoning when available. Markdown/JSON rendering follows the active theme.
 
@@ -101,7 +101,7 @@ NOMAD staging and readiness are deterministic. One revision-scoped Canonical →
 
 ## 10. UI, privacy and validation
 
-`ui-kit.html` is the visual ground truth. Keep layouts compact/responsive, tables readable, tabs explicit and Action progress truthful.
+`ui-kit.html` is the visual ground truth. Keep layouts compact/responsive, tables readable, tabs explicit and Action progress truthful. Modal/totem surfaces expose explicit Cancel/Close controls according to lifecycle and support Esc.
 
 No runtime `.env`, analytics, trackers, cookies, WebSocket or remote runtime assets. API keys are local browser settings and redacted from logs.
 

@@ -41,10 +41,21 @@ for p in sorted(ACTIONS.glob('*/action.json')):
         for s in ai:
             if s.get('prompt')!='prompt.md':errors.append(f'{aid}/{s.get("id")}: AI step must use action-local prompt.md')
             budget=s.get('max_output_tokens',d.get('max_output_tokens'))
-            if budget is not None:
+            if budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_output_tokens target')
+            else:
                 try: budget=int(budget)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: max_output_tokens must be an integer when present'); budget=0
-                if budget and not 16<=budget<=1048576:errors.append(f'{aid}/{s.get("id")}: optional output cap must be 16..1048576')
+                except Exception: errors.append(f'{aid}/{s.get("id")}: max_output_tokens must be an integer'); budget=0
+                if budget and not 16<=budget<=1048576:errors.append(f'{aid}/{s.get("id")}: output target must be 16..1048576')
+            retries=s.get('max_retries')
+            if retries is not None:
+                try: retries=int(retries)
+                except Exception: errors.append(f'{aid}/{s.get("id")}: max_retries must be an integer when present'); retries=-1
+                if not 0<=retries<=2:errors.append(f'{aid}/{s.get("id")}: max_retries must be 0..2')
+            deadline=s.get('deadline_ms')
+            if deadline is not None:
+                try: deadline=int(deadline)
+                except Exception: errors.append(f'{aid}/{s.get("id")}: deadline_ms must be an integer when present'); deadline=0
+                if deadline and not 5000<=deadline<=600000:errors.append(f'{aid}/{s.get("id")}: deadline_ms must be 5000..600000')
             if s.get('output')=='json':
                 sid=s.get('schema')
                 if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: JSON output requires a registered schema')

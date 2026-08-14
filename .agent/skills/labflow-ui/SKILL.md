@@ -287,7 +287,7 @@ Keep badge/pill labels atomic and single-line. Let the surrounding layout reflow
 
 ## Theme-aware Markdown and JSON
 
-Chat, totems, Provider output and raw/structured views must use the active theme. Do not use native browser confirm/alert UI for normal LabFlow interaction; use the shared message/activity totems. The empty Assistant composer remains one line and grows only from user-entered content.
+Chat, totems, Provider output and raw/structured views must use the active theme. Do not use native browser confirm/alert UI for normal LabFlow interaction; use the shared message/activity totems. Every modal/totem must expose an explicit Cancel or Close control appropriate to its lifecycle and support Esc; running Actions cancel, terminal surfaces close. The empty Assistant composer remains one line and grows only from user-entered content.
 
 In light mode JSON/code surfaces remain light and readable. In dark mode text/surface contrast must remain accessible.
 

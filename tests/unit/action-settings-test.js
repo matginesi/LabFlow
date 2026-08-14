@@ -15,6 +15,15 @@ module.exports=function(t,LF){
     assert(ids.includes('analysis.enrich'),'shared experiment brief enrichment missing from registry');
     assert(ids.length===11,'expected all 11 Actions');
   };
+  t['AI Actions declare bounded output targets and automatic enrichment is fail-fast']=function(){
+    const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
+    defs.forEach(function(def){(def.steps||[]).filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output target');});});
+    const enrich=LF.ActionRegistry.action('analysis.enrich').steps.find(function(step){return step.id==='enrich';});
+    assert(enrich.max_output_tokens===3072,'analysis.enrich target must be 3072');
+    assert(enrich.deadline_ms===90000,'analysis.enrich hard deadline must be 90s');
+    assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
+  };
+
   t['Action runtime override changes effective definition and prompt and resets cleanly']=function(){
     const id='results.interpret',base=LF.ActionRegistry.action(id),sourcePrompt=LF.ActionRegistry.prompt(id);
     LF.Storage.saveActionOverride(id,{definition:Object.assign({},base,{title:'Runtime title'}),prompt:'Runtime prompt'});
@@ -27,6 +36,17 @@ module.exports=function(t,LF){
   function actionSettingsState(kind,actionId){
     LF.State={state:{settingsSection:'actions',settingsActionDocKind:kind,settingsActionId:actionId,ui:{settingsActionId:actionId},experiment:{meta:{sourceName:'fixture.zip'}}}};
   }
+
+  t['older browser Action overrides inherit new source safety fields']=function(){
+    const id='analysis.enrich',base=LF.ActionRegistry.action(id),oldDef=JSON.parse(JSON.stringify(base));
+    oldDef.steps=oldDef.steps.map(function(step){const copy=Object.assign({},step);delete copy.max_output_tokens;delete copy.deadline_ms;delete copy.max_retries;return copy;});
+    LF.Storage.saveActionOverride(id,{definition:oldDef});
+    const effective=LF.Storage.getEffectiveAction(id),step=effective.steps.find(function(x){return x.id==='enrich';});
+    assert(step.max_output_tokens===3072,'source output target inherited');
+    assert(step.deadline_ms===90000,'source deadline inherited');
+    assert(step.max_retries===0,'source retry policy inherited');
+    LF.Storage.resetActionOverride(id);
+  };
 
   t['Settings exposes one Actions manager and no split AI helper surface']=function(){
     actionSettingsState('lab','dataset.analyze');

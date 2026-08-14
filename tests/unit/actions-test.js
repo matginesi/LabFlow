@@ -25,6 +25,45 @@ module.exports=function(t,LF){
     assert(LF.ActionRunner.autoRetryDelays,[5000,10000],'retry delays');
   };
 
+  t['declared Action budget is the request target while provider maximum is only a ceiling'] = async function(){
+    const exp={id:'exp_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.budget',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
+    let built=null;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'compact brief'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimateTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'done',finishReason:'stop'};}};
+    const out=await LF.ActionRunner.run('test.budget');
+    assert(out.status,'done','status');
+    assert(built.maxTokens,3072,'Action target wins over provider ceiling');
+    assert(built.hardTimeoutMs,90000,'absolute deadline forwarded');
+  };
+
+  t['AI checkpoint with max_retries zero falls back after the first failed attempt'] = async function(){
+    const exp={id:'exp_no_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.no-retry',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,max_retries:0}]};
+    let calls=0,retries=0;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;throw new Error('provider failed');}};
+    const out=await LF.ActionRunner.run('test.no-retry',{onAutoRetry:function(){retries++;}});
+    assert(out.status,'error','status');assert(calls,1,'one provider attempt');assert(retries,0,'no automatic retry');
+  };
+
+
+  t['provider rate limits are not retried again by the Action semantic retry layer'] = async function(){
+    const exp={id:'exp_rate',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.rate',type:'AI',steps:[{id:'chat',type:'AI',output:'text',max_retries:2}]};
+    let calls=0,retries=0;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;const e=new Error('rate');e.status=429;e.providerCode='1305';throw e;}};
+    const out=await LF.ActionRunner.run('test.rate',{onAutoRetry:function(){retries++;}});
+    assert(out.status,'error','status');assert(out.code,'MODEL_RATE_LIMIT','classification');assert(calls,1,'transport exhaustion is not semantically retried');assert(retries,0,'no Action retry');
+  };
+
   t['AI checkpoint auto-retries twice and then continues'] = async function(){
     const exp={id:'exp_ai',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.ai',type:'AI',max_output_tokens:100,steps:[{id:'review',type:'AI',output:'text'}]};

@@ -33,7 +33,10 @@
         ],
         "max_rounds": 4,
         "choice_schema": "assistant_tool_choice"
-      }
+      },
+      "max_output_tokens": 4096,
+      "deadline_ms": 180000,
+      "max_retries": 1
     }
   ],
   "category": "assistant",
