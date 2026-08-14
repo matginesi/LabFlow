@@ -118,23 +118,29 @@
     const providerId=(field('aiProvider')&&field('aiProvider').value)||LF.Storage.getAiSettings().provider;
     const endpoint=(field('aiEndpoint')&&field('aiEndpoint').value.trim())||LF.Storage.getAiSettings().endpoint;
     const apiKey=(field('aiKey')&&field('aiKey').value.trim())||LF.Storage.getApiKey();
-    const button=field('loadProviderModels'),hint=field('aiModelHint'),list=field('aiModelList'),model=field('aiModel');
+    const button=field('loadProviderModels'),hint=field('aiModelHint'),list=field('aiModelList'),model=field('aiModel'),provider=LF.AIProviders[providerId]||LF.AIProviders.custom;
     if(button){button.disabled=true;button.textContent='Reading…';}
     if(hint)hint.textContent='Reading model list and output capability…';
+    LF.UI.activityStart({title:'Detect model capabilities',subtitle:'Provider metadata · no experiment data',kind:'API',stage:'Reading model catalogue',progress:.08,cancellable:false,details:{Provider:provider.name||providerId,Endpoint:endpointHost(endpoint)},steps:[{id:'models',label:'Read available models',status:'active'},{id:'capability',label:'Resolve output / context capability',status:'pending'},{id:'apply',label:'Update provider settings view',status:'pending'}]});
     let models=[],listError=null;
     try{
-      try{const result=await LF.AI.listModels(providerId,endpoint,apiKey);models=result.models||[];if(list){list.replaceChildren();models.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}const current=String(model&&model.value||'').trim();if(model&&models.length&&(!current||current==='local-model'||(providerId==='lmstudio'&&!models.includes(current))))model.value=models[0];}
-      catch(error){listError=error;Log.warn('models.list-failed',{provider:providerId,error:error});}
+      try{const result=await LF.AI.listModels(providerId,endpoint,apiKey);models=result.models||[];if(list){list.replaceChildren();models.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}const current=String(model&&model.value||'').trim();if(model&&models.length&&(!current||current==='local-model'||(providerId==='lmstudio'&&!models.includes(current))))model.value=models[0];LF.UI.activityUpdate({stepId:'models',stepStatus:'done',stepNote:models.length+' found',stage:'Model catalogue received',progress:.42,message:models.length?models.length+' model'+(models.length===1?'':'s')+' available.':'No model list was exposed; capability detection will still be attempted.'});}
+      catch(error){listError=error;Log.warn('models.list-failed',{provider:providerId,error:error});LF.UI.activityUpdate({stepId:'models',stepStatus:'done',stepNote:'list unavailable',stage:'Model list unavailable',progress:.34,message:'The provider did not expose a model list. LabFlow is still checking the configured model capability.'});}
+      LF.UI.activityUpdate({stepId:'capability',stepStatus:'active',stage:'Resolving model capability',progress:.52,message:'Reading output/context limits for the configured model.'});
       const selected=String(model&&model.value||LF.Storage.getAiSettings().model||'').trim(),cap=LF.AI.resolveModelCapabilities?await LF.AI.resolveModelCapabilities({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,force:true}):null;
       const capText=cap&&cap.maxOutputTokens?('max output '+Number(cap.maxOutputTokens).toLocaleString()+' tokens'):(cap&&cap.contextWindow?('context ceiling '+Number(cap.contextWindow).toLocaleString()+' tokens'):'output limit not exposed');
       if(hint)hint.textContent=(models.length?models.length+' model'+(models.length===1?'':'s')+' available · ':'')+capText+(cap&&cap.source?' · '+cap.source:'')+(listError?' · model list unavailable':'');
+      LF.UI.activityUpdate({stepId:'capability',stepStatus:'done',stepNote:capText,stage:'Capability detected',progress:.88,details:{Model:selected,'Model list':models.length||'not exposed','Max output':cap&&cap.maxOutputTokens?Number(cap.maxOutputTokens).toLocaleString()+' tok':'not exposed','Context window':cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tok':'not exposed',Source:cap&&cap.source||'fallback / unknown'}});
+      LF.UI.activityUpdate({stepId:'apply',stepStatus:'done',stage:'Provider metadata ready',progress:.97});
       Log.info('models.loaded',{provider:providerId,count:models.length,model:selected,capability:cap});
+      LF.UI.activityFinish({message:'Provider metadata detection completed.',response:(models.length?models.length+' models detected. ':'')+capText+(listError?'\n\nThe model catalogue itself was unavailable, but the configured model was still probed.':''),holdMs:0});
       if(listError&&!cap&&!options.silent)LF.UI.toast('Could not read provider metadata. You can still type the model name manually.','warning');
       return models;
     }catch(error){
       if(hint)hint.textContent='Could not read provider capability: '+(error.message||String(error));
       Log.warn('models.load-failed',{provider:providerId,error:error});
-      if(!options.silent)LF.UI.toast('Could not read provider capability. The request will use the provider default unless you force a cap.','warning');
+      LF.UI.activityError(error,{message:'Provider metadata detection did not complete.',response:(error.message||String(error))+'\n\nYou can still type the model name manually; LabFlow will keep Action budgets bounded by their own contracts.',details:{Provider:provider.name||providerId,Endpoint:endpointHost(endpoint)},holdMs:0});
+      if(!options.silent)LF.UI.toast('Could not read provider capability. The request will use the Action budget unless you force a lower cap.','warning');
       return models;
     }finally{if(button){button.disabled=false;button.textContent='Detect';}}
   }

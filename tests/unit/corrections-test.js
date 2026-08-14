@@ -20,6 +20,24 @@ module.exports=function(t,LF){
     assert(p.applied,true,'proposal marked applied');
   };
 
+  t['excluded danger diagnostics no longer keep dataset workflow blocked']=function(){
+    const oldStore=LF.CanonicalStore;
+    LF.CanonicalStore={ensure:function(exp){return{experiment:{name:'x',sourceName:'x.zip'},evidence:[]};},summary:function(){return{files:1,samples:1,measurements:1,evidence:0,relations:0,aliases:0};}};
+    const base={sync:{revision:1},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],files:[],samples:[{id:'s1',name:'A',aliases:[]}],findings:[{id:'f1',type:'measurement-quality',severity:'danger',title:'Bad metric',status:'open',measurementId:'m1'}]};
+    const excluded=Object.assign({},base,{measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:true,blockingFlags:[{label:'Bad metric'}]}]});
+    const review=LF.DatasetCorrections.analysis(excluded,1);
+    assert(review.status,'review','excluded diagnostic is review, not blocker');
+    assert(review.summary.blockingFindings,0,'no workflow blockers');
+    const active=Object.assign({},base,{measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:false,blockingFlags:[{label:'Bad metric'}]}]});
+    const blocked=LF.DatasetCorrections.analysis(active,1);
+    assert(blocked.status,'cleanup_required','safe deterministic exclusion is cleanup, not hard blocked');
+    assert(blocked.summary.blockingFindings,0,'safe correction is not counted as hard workflow blocker');
+    const hard=Object.assign({},active,{findings:active.findings.concat([{id:'f-hard',type:'archive',severity:'danger',title:'Archive corruption',status:'open'}])});
+    const hardBlocked=LF.DatasetCorrections.analysis(hard,1);
+    assert(hardBlocked.status,'blocked','non-fixable danger remains hard blocker');
+    LF.CanonicalStore=oldStore;
+  };
+
   t['AI correction storage rejects stale or non-semantic mutations before UI application']=function(){
     const exp={sync:{revision:0},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],samples:[{id:'s1',name:'OLD',rawName:'old',aliases:['old'],group:'TEST',isRef:false}],measurements:[{id:'m1',sample:'OLD',rawSample:'old',path:'a.txt',group:'TEST',isRef:false}],findings:[{id:'f1',type:'identity',status:'open',target:'OLD',measurementId:'m1'}],datasetAnalysis:{sourceRevision:0,ambiguousFindings:[{id:'f1',type:'identity',target:'OLD',measurementId:'m1'}]}};
     const ctx={exp:exp,sourceRevision:0,lastResult:{summary:'x',proposals:[{finding_id:'f1',patch_type:'sample_mapping',target:'f1',before:'OLD',after:'REF-01',requires_human_review:false},{finding_id:'f1',patch_type:'exclude_measurement',target:'m1',before:false,after:true,requires_human_review:true}],unresolved:[]}};

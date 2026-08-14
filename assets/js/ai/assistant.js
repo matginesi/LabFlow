@@ -4,7 +4,7 @@ const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;let active=null;
 function configured(){const s=LF.Storage.getAiSettings(),p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage.getApiKey();if(!s.endpoint||!s.model||(p.keyRequired&&!key)){LF.UI.toast('Configure the AI provider in Settings first.','warning');LF.State.state.ui.settingsSection='provider';LF.State.setRoute('settings');return false;}return true;}
 function busy(){return!!(active||(LF.ActionRunner&&LF.ActionRunner.isRunning()));}
 function conversation(exp){const d=LF.State.ensureDerived(exp);d.chat=d.chat||{conversation:[]};d.chat.conversation=Array.isArray(d.chat.conversation)?d.chat.conversation:[];return d.chat.conversation;}
-function push(exp,msg){const item=Object.assign({id:C.uid('msg'),createdAt:new Date().toISOString()},msg);conversation(exp).push(item);return item;}
+function push(exp,msg){const item=Object.assign({id:C.uid('msg'),createdAt:new Date().toISOString()},msg);conversation(exp).push(item);if(LF.State&&LF.State.notify)LF.State.notify('ai');return item;}
 function compact(v){const raw=C.cleanModelText?C.cleanModelText(v):String(v||'');return raw.replace(/\r\n/g,'\n').replace(/\n[ \t]*\n+/g,'\n');}
 function parseJson(text){const raw=String(text||'').trim();if(!/^[\[{]/.test(raw))return null;try{const v=JSON.parse(raw);return v&&typeof v==='object'?v:null;}catch(_){return null;}}
 function jsonHtml(v){const raw=JSON.stringify(v,null,2),highlighted=C.highlightCode?C.highlightCode(raw,'json'):C.escapeHtml(raw);return '<div class="structured-response"><pre class="json-highlight"><code>'+highlighted+'</code></pre></div>';}

@@ -138,7 +138,7 @@ It does **not** send the full experiment or RAW JV curves by default.
 
 Import is the only experiment entry point.
 
-The app always enters through **Upload & Review**. Every page load starts a fresh scientific session with **no ZIP restored**, so the first page is a mandatory ZIP upload gate. Provider/model settings, API key and UI preferences remain browser-local. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
+The app route contract still enters through **Upload & Review**, but an existing browser-local Working Copy is restored automatically when LabFlow is reopened. With no persisted scientific session, Upload & Review is the mandatory ZIP upload gate. Provider/model settings, API key and UI preferences remain browser-local but separate from the scientific session. **Reset session** clears the persisted Working Copy/RAW snapshot and returns to the empty upload gate. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
 
 ```text
 Researcher selects ZIP
@@ -212,7 +212,7 @@ Read-only Actions do not create a scientific revision merely because they ran:
 
 ### Dirty state
 
-The top bar communicates whether the current Working Copy has changes that have not been saved into a new LabFlow package.
+The top bar communicates whether the current Working Copy is an **autosaved draft** or an explicit **saved checkpoint**. Autosave provides browser-session continuity; Export remains the operation that creates a new durable LabFlow package.
 
 Only **Save** marks the current internal browser representation as saved. **Export** creates a ZIP explicitly.
 

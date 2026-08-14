@@ -525,7 +525,7 @@ body.ui-kit-page { overflow: hidden; }
 .assistant-close { width:25px;height:25px;display:grid;place-items:center;border:0;border-radius:50%;background:transparent;color:var(--assistant-muted);font-size:18px;cursor:pointer; }
 .assistant-close:hover { background:var(--assistant-surface);color:var(--assistant-text); }
 
-.activity-checklist { display:grid; gap:3px; margin:0; padding:7px 10px; border:0; border-bottom:1px solid var(--border); border-radius:0; background:var(--surface-2); }
+.activity-checklist { display:grid; align-content:start; gap:3px; margin:0; padding:7px 10px; max-height:148px; overflow-y:auto; overscroll-behavior:contain; scrollbar-gutter:stable; border:0; border-bottom:1px solid var(--border); border-radius:0; background:var(--surface-2); }
 .activity-checklist:empty { display:none; }
 .activity-check-item { display:grid; grid-template-columns:16px minmax(0,1fr) auto; gap:6px; align-items:center; min-width:0; font-size:9px; color:var(--text-muted); }
 .activity-check-item i { width:12px;height:12px;display:grid;place-items:center;border:1px solid var(--border-strong);border-radius:50%;font-style:normal;font-size:var(--font-micro); }
@@ -2106,3 +2106,11 @@ body.ui-kit-page { overflow: hidden; }
 .report-ai-actions,.report-toolbar,.markdown-commandbar{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
 .report-ai-actions>.button,.report-toolbar>.button,.markdown-commandbar>.button{max-width:100%}
 @media(max-width:760px){.report-layout{grid-template-columns:minmax(0,1fr)!important}.report-editor,.report-preview{width:100%;max-width:100%}}
+
+/* 2026-08 final UI polish: compact distribution, bounded Action checklist and explicit reset. */
+.results-overview-grid{grid-template-columns:minmax(0,1.42fr) minmax(205px,.68fr) minmax(220px,.82fr)}
+.overview-pce-panel .panel-head{align-items:center;gap:6px}.overview-pce-panel .panel-head>div:first-child{min-width:0}.pce-zoom-controls{display:flex;align-items:center;gap:4px;flex:0 0 auto}.pce-distribution-meta{display:flex;gap:6px 12px;flex-wrap:wrap;padding:6px 9px 0;color:var(--text-muted);font-size:var(--font-micro)}.pce-distribution-meta strong{color:var(--text);font-family:var(--font-mono);font-weight:650}.results-overview-grid .overview-pce-panel .pce-distribution-chart .results-svg{max-height:245px;min-height:190px}.chart-stat-line{stroke-width:1.2;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}.chart-stat-median{stroke:var(--accent)}.chart-stat-mean{stroke:var(--warning)}
+.reset-session-button{font-weight:700;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--danger) 18%,transparent)}
+@media(max-width:1180px){.results-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.results-overview-grid>.overview-primary-chart{grid-column:1/-1}.overview-pce-panel{min-width:0}}
+@media(max-width:820px){.results-overview-grid{grid-template-columns:1fr}.overview-pce-panel .panel-head{flex-wrap:wrap}.pce-zoom-controls{margin-left:auto}.results-overview-grid .overview-pce-panel .pce-distribution-chart .results-svg{max-height:260px}.reset-session-button{padding-inline:7px}}
+@media(max-width:520px){.pce-distribution-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 8px}.pce-zoom-controls .button:not(.icon-only){padding-inline:6px}.activity-checklist{max-height:126px}}

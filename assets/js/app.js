@@ -15,6 +15,11 @@
   const badge = PS.badge;
   let renderedRoute = '';
   const scrollMemory=new Map();
+  let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false;
+  function workspaceUiSnapshot(){return{route:S.state.route||S.state.ui&&S.state.ui.route||'experiment-import',resultsTab:S.state.resultsTab||S.state.ui&&S.state.ui.resultsTab||'overview',selectedMeasurementId:S.state.selectedMeasurementId||S.state.ui&&S.state.ui.selectedMeasurementId||null,selectedDesignDeviceId:S.state.selectedDesignDeviceId||S.state.ui&&S.state.ui.selectedDesignDeviceId||null};}
+  async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
+  function scheduleWorkspaceSave(reason){if(!hasExperiment())return;window.clearTimeout(workspaceSaveTimer);workspaceSaveTimer=window.setTimeout(function(){persistWorkspace(reason||'state');},700);}
+  function restoreSavedUi(saved){const ui=saved&&saved.ui||{};if(ui.route)S.state.route=S.normalizeRoute?S.normalizeRoute(ui.route):ui.route;if(ui.resultsTab)S.state.resultsTab=ui.resultsTab;if(ui.selectedMeasurementId)S.state.selectedMeasurementId=ui.selectedMeasurementId;if(ui.selectedDesignDeviceId)S.state.selectedDesignDeviceId=ui.selectedDesignDeviceId;}
 
   function scrollNodeKey(el,root,route){
     if(el.classList&&el.classList.contains('experiment-strip'))return'global:experiment-strip';
@@ -105,7 +110,7 @@
     const exp=S.state.experiment,sync=exp.sync||{},dirty=S.isDirty?S.isDirty():!!sync.dirty;
     status.hidden=false;save.hidden=false;if(exportButton)exportButton.hidden=false;save.disabled=false;
     status.className='working-copy-state '+(dirty?'dirty':'saved');
-    status.textContent=dirty?'Working copy · not saved':'Working copy · saved internally';
+    status.textContent=dirty?'Working copy · autosaved draft':'Working copy · saved checkpoint';
     save.textContent='Save';
     if(exportButton)exportButton.textContent='Export ZIP';
   }
@@ -183,7 +188,7 @@
     if((mutationScope==='dataset'||mutationScope==='analysis')&&LF.DatasetCorrections&&LF.DatasetCorrections.refresh){LF.DatasetCorrections.refresh(exp);}
     else if(mutationScope==='design'){if(LF.CanonicalStore)LF.CanonicalStore.build(exp);if(LF.DesignAnalysis)exp.designAnalysis=LF.DesignAnalysis.build(exp,exp.sync&&exp.sync.revision||0);}
   }
-  function markDraft(scope){if(!hasExperiment())return; if(S.markDraft)S.markDraft(scope||'metadata'); renderWorkingCopyState();}
+  function markDraft(scope){if(!hasExperiment())return; if(S.markDraft)S.markDraft(scope||'metadata'); scheduleWorkspaceSave('draft:'+(scope||'metadata')); renderWorkingCopyState();}
   function commitDraft(scope){if(!hasExperiment())return; if(S.commitDraft)S.commitDraft(scope); if(scope==='dataset'&&LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment); if(scope==='design'){if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);if(LF.DesignAnalysis)S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);} renderWorkingCopyState();}
   function flushDrafts(){if(S.commitAllDrafts)S.commitAllDrafts();}
 
@@ -259,7 +264,7 @@
     const previousSync=Object.assign({},exp.sync||{});
     try{
       if(S.markSaved)S.markSaved('internal-workspace');
-      const saved=await LF.Storage.saveExperiment(exp,S.state.ui||{});
+      const saved=await LF.Storage.saveExperiment(exp,workspaceUiSnapshot());
       LF.UI.activityFinish({message:'Internal LabFlow representation saved in this browser.',details:{Revision:exp.sync&&exp.sync.revision||0,Saved:saved.savedAt},holdMs:0});
       LF.UI.toast('LabFlow state saved internally.','success');
     }catch(err){exp.sync=Object.assign(exp.sync||{},previousSync);Log.error('working-copy.save-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
@@ -328,9 +333,10 @@
         const route=e.target.closest('[data-route]');
         if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
+        const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('Unsaved Working Copy changes, action history, chat, report/design state and the in-memory RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
@@ -520,13 +526,13 @@
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
       S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      /* Provider credentials/preferences are browser-persistent, but scientific
-         Working Copy state is deliberately session-only. Every page load starts
-         at Upload & Review with no ZIP attached. */
-      S.resetSession();S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      if(LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();
-      Log.info('workspace.fresh-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey()});
-      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(){render();});render();end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');
+      /* The current scientific Working Copy persists in IndexedDB. Reset is the
+         explicit boundary that clears it; provider/key/theme remain independent. */
+      const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
+      if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
+      else{S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey()});}
+      S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

@@ -29,9 +29,9 @@ async function main(){
   ok(!empty.includes('data-route="experiment-understand"'),'no separate Review route in stepper');
   ok(count(LF.PageShell.experimentStepper(),'class="step ' )===6,'workflow has six steps');
   const appSource=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),feedbackSource=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
-  ok(appSource.includes('workspace.fresh-session'),'each startup declares a fresh scientific session');
-  ok(appSource.includes('clearSavedExperiment'),'startup clears any previously persisted ZIP Working Copy');
-  ok(!appSource.includes('await LF.Storage.loadExperiment()'),'startup no longer restores an experiment automatically');
+  ok(appSource.includes('await LF.Storage.loadExperiment()'),'startup restores a persisted Working Copy when present');
+  ok(appSource.includes("persistWorkspace('pagehide')"),'workspace is persisted when the app is closed/backgrounded');
+  ok(appSource.includes('LF.Storage.clearSavedExperiment'),'Reset remains the explicit persisted-session clear boundary');
   ok(feedbackSource.includes('messageShade'),'confirmations use the LabFlow message totem');
   ok(!/window\.confirm|window\.alert/.test(appSource+feedbackSource),'no native browser confirmation/alert remains');
   ok(appSource.includes("briefAiStatus='failed · deterministic brief kept'"),'AI brief failure explicitly keeps deterministic import');

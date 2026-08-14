@@ -52,7 +52,7 @@ Working Copy:
 
 ## 4. Save internal state and export Working Copy
 
-**Save** persists the current internal LabFlow representation in browser storage. **Export** creates a new LabFlow ZIP representing the current Working Copy revision.
+LabFlow continuously autosaves the current internal Working Copy in browser storage so it can be restored after closing/reopening. **Save** marks an explicit revision checkpoint in that same persisted representation. **Reset session** clears the persisted scientific session. **Export** creates a new LabFlow ZIP representing the current Working Copy revision.
 
 It is the only action that marks the current revision saved.
 

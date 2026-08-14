@@ -46,10 +46,10 @@ Never create:
 
 - a second editable experiment copy;
 - page-owned scientific state that can diverge;
-- hidden autosave state;
+- a hidden second autosave model that can diverge from the Working Copy;
 - a separate export data model that becomes more authoritative than the Working Copy.
 
-Only **Save** marks the current session revision as saved. A fresh app load must still begin with no experiment/ZIP restored; provider/API-key/UI preferences may persist. **Export** creates the durable Working Copy ZIP; Report/NOMAD/other derived exports do not overwrite source.
+The current Working Copy is **autosaved locally** to IndexedDB so closing/reopening LabFlow restores the same experiment, drafts, chat and Action history. **Save** remains an explicit checkpoint marker for the current revision; **Reset session** is the deliberate boundary that clears the persisted Working Copy/RAW snapshot. Provider/API-key/UI preferences persist separately. **Export** creates the durable Working Copy ZIP; Report/NOMAD/other derived exports do not overwrite source.
 
 When modifying export code, preserve the byte-for-byte original-source regression contract.
 

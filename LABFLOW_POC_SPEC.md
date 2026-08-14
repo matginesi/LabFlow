@@ -25,7 +25,7 @@ After import, `LF.State.state.experiment` is the one scientific Working Copy. `L
 
 Scientific collections remain on the Working Copy; Canonical Store indexes/reference them rather than copying RAW curves into another mega-object. RAW bytes remain at `raw.sourceArchive` and are never rewritten.
 
-Every manual edit, safe correction and accepted AI proposal changes only the same in-memory Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares that mutable state. A new LabFlow page load always starts with no experiment/ZIP restored; provider/model/API-key/UI preferences may persist. **Save** marks/persists the current session revision, while **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
+Every manual edit, safe correction and accepted AI proposal changes only the same Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares mutable scientific state. LabFlow autosaves the current Working Copy, RAW snapshot, drafts, chat and Action history locally and restores them on the next app load. **Save** marks an explicit revision checkpoint; **Reset session** explicitly clears the persisted scientific session. Provider/model/API-key/UI preferences persist separately. **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
 
 Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
 
