@@ -1,5 +1,5 @@
 'use strict';
-const fs=require('fs'),path=require('path');
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
 function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
 module.exports=function(t){
   const root=path.resolve(__dirname,'../..');
@@ -8,6 +8,11 @@ module.exports=function(t){
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
   const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const logs=fs.readFileSync(path.join(root,'assets/js/pages/logs-page.js'),'utf8');
+  const logger=fs.readFileSync(path.join(root,'assets/js/logger.js'),'utf8');
+  const state=fs.readFileSync(path.join(root,'assets/js/state.js'),'utf8');
+  const reportExport=fs.readFileSync(path.join(root,'vendor/report-export/report-export.js'),'utf8');
+  const uiKitInline=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
 
   t['PCE distribution has a compact diagnostic layout with bounded zoom']=function(){
     assert(results.includes('data-pce-zoom="in"'),true,'zoom in control');
@@ -27,6 +32,33 @@ module.exports=function(t){
     assert(settings.includes("title:'Detect model capabilities'"),true,'detect totem title');
     assert(settings.includes("stepId:'capability'"),true,'capability checkpoint');
     assert(settings.includes("LF.UI.activityFinish({message:'Provider metadata detection completed.'"),true,'detect terminal totem');
+  };
+
+  t['Report equations are compact in preview PDF and DOCX']=function(){
+    assert(css.includes('.report-preview .math-display mjx-container[display="true"]{font-size:.86em!important}'),true,'compact preview equation scale');
+    assert(reportExport.includes('maxW=430,maxH=105'),true,'bounded DOCX equation image');
+    assert(reportExport.includes('maxW=Math.min(350'),true,'bounded PDF equation width');
+    assert(reportExport.includes('maxH=82'),true,'bounded PDF equation height');
+  };
+
+  t['Long-session navigation avoids unbounded DOM and log payload work']=function(){
+    assert(app.includes('SCROLL_MEMORY_SELECTOR'),true,'bounded scroll-memory selector');
+    assert(app.includes("main.querySelector('.math-display,.math-inline')"),true,'MathJax only when active page has math');
+    assert(app.includes("LF.LogsPage.bind(main)"),true,'log details bound lazily');
+    assert(logs.includes('RENDER_LIMIT=120'),true,'bounded visible logs');
+    assert(logs.includes('log-lazy-detail'),true,'payload details are lazy');
+    assert(logger.includes('MAX_LOG_STRING_CHARS = 60000'),true,'logger bounds giant payload strings');
+    assert(state.includes('delete compact.outputs'),true,'old duplicated Action output history is compacted');
+  };
+
+  t['UI Kit renders inline in the host shell and is safe under file protocol']=function(){
+    assert(app.includes('LF.UIKitInline.render'),true,'UI Kit uses inline renderer');
+    assert(app.includes("document.querySelector('.ui-kit-frame')"),false,'no iframe dependency in app shell');
+    assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
+    assert(uiKitInline.includes("root.querySelectorAll('[data-ui-kit-group]')"),true,'inline filters operate in host document');
+    assert(html.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog module is loaded');
+    const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
+    assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
   };
 
   t['Working Copy restores from IndexedDB and Reset is the explicit clear boundary']=function(){

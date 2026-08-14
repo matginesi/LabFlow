@@ -18,7 +18,32 @@
   function findingRef(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',title:clean(f.title),detail:clip(f.detail,360),target:clean(f.target),measurement_id:f.measurementId||'',status:f.status||'open'};}
   function measurementRef(m){return{id:m.id||'',sample:clean(m.sample),group:clean(m.group),is_ref:!!m.isRef,file:clean(m.path||m.file),quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,hysteresis:m.hysteresis,fw:compact(m.fw||null),rv:compact(m.rv||null)};}
   function sampleRef(s){return{id:s.id||'',name:clean(s.name),aliases:take(s.aliases||[s.rawName],6).map(clean),group:clean(s.group),is_ref:!!s.isRef,measurement_ids:take(s.measurementIds,20)};}
-  function budgetPack(obj,maxChars){maxChars=Math.max(4000,Number(maxChars)||14000);obj=sanitize(obj);if(JSON.stringify(obj).length<=maxChars)return obj;const copy=JSON.parse(JSON.stringify(obj)),trim=['evidence','findings','measurements','samples','results','relations','history'];trim.forEach(function(k){if(JSON.stringify(copy).length<=maxChars)return;if(Array.isArray(copy[k]))copy[k]=copy[k].slice(0,Math.max(2,Math.floor(copy[k].length/2)));});copy.context_notice='Context was deterministically bounded. Narrow the question to retrieve more detail.';return copy;}
+  function boundValue(value,stringLimit,arrayLimit,keyLimit,depth){
+    depth=Number(depth)||0;if(value==null||typeof value==='number'||typeof value==='boolean')return value;
+    if(typeof value==='string')return clip(value,Math.max(48,stringLimit));
+    if(Array.isArray(value))return value.slice(0,Math.max(1,arrayLimit)).map(function(item){return boundValue(item,stringLimit,arrayLimit,keyLimit,depth+1);});
+    if(typeof value==='object'){
+      if(depth>7)return '[bounded]';
+      const out={},keys=Object.keys(value).slice(0,Math.max(4,keyLimit));
+      keys.forEach(function(key){if(/^(rawText|content|data|rows|curve|curves|points)$/i.test(key))return;out[key]=boundValue(value[key],stringLimit,arrayLimit,keyLimit,depth+1);});
+      return out;
+    }
+    return clip(value,stringLimit);
+  }
+  function budgetPack(obj,maxChars){
+    maxChars=Math.max(1800,Number(maxChars)||14000);obj=sanitize(obj);let json=JSON.stringify(obj);if(json.length<=maxChars)return obj;
+    const copy=JSON.parse(json),trim=['evidence','findings','measurements','samples','results','relations','history','provenance'];
+    trim.forEach(function(k){if(JSON.stringify(copy).length<=maxChars)return;if(Array.isArray(copy[k]))copy[k]=copy[k].slice(0,Math.max(2,Math.min(10,Math.floor(copy[k].length/2))));});
+    copy.context_notice='Context was deterministically bounded to fit the active model. Use a narrower Tool/Action to retrieve omitted detail.';
+    if(JSON.stringify(copy).length<=maxChars)return copy;
+    const levels=[
+      {s:900,a:12,k:32},{s:600,a:10,k:26},{s:420,a:8,k:22},{s:280,a:6,k:18},{s:180,a:4,k:14},{s:110,a:3,k:10}
+    ];
+    for(const level of levels){const bounded=boundValue(copy,level.s,level.a,level.k,0);bounded.context_notice=copy.context_notice;if(JSON.stringify(bounded).length<=maxChars)return bounded;}
+    const fallback={context_pack:boundValue(copy.context_pack||{},120,4,12,0),experiment:boundValue(copy.experiment||{},180,4,14,0),data_state:boundValue(copy.data_state||{},120,4,12,0),experiment_brief:boundValue(copy.experiment_brief||{},140,3,12,0),context_notice:copy.context_notice,omitted_detail:true};
+    if(JSON.stringify(fallback).length<=maxChars)return fallback;
+    return boundValue(fallback,80,2,8,0);
+  }
   function base(exp,profile,question){const sum=LF.CanonicalStore.summary(exp);return{context_pack:{version:3,profile:profile,source_revision:sum.revision,budgeted:true},experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),summary:sum},data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext(),question:clean(question)};}
   function relatedFromQuestion(exp,question){const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(function(x){return x.id;}),samples=ids.map(function(id){return LF.CanonicalStore.entity(exp,id);}).filter(Boolean),names=new Set(samples.map(function(s){return String(s.name);})),measurements=(exp.measurements||[]).filter(function(m){return names.has(String(m.sample));}).slice(0,24);return{matches:matches,samples:samples,measurements:measurements,ids:ids};}
   function pageEntityIds(exp,ctx){const out=[];const s=ctx.selected||{};[s.sample,s.measurement,s.finding,s.experiment,s.mapping].forEach(function(id){if(id){const e=LF.CanonicalStore.entity(exp,id)||LF.CanonicalStore.sample(exp,id);if(e&&e.id)out.push(e.id);else out.push(String(id));}});if(Array.isArray(s.groups)){(exp.samples||[]).filter(function(x){return s.groups.includes(x.group);}).forEach(function(x){out.push(x.id);});}return Array.from(new Set(out));}
@@ -32,6 +57,6 @@
   function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);if(profile==='assistant')return packAssistant(exp,opts);if(profile==='chat')return packChat(exp,opts);if(profile==='ambiguity')return packAmbiguity(exp,opts);if(profile==='design')return packDesign(exp,opts);if(profile==='results')return packResults(exp,opts);if(profile==='brief')return packBrief(exp,opts);if(profile==='report')return packReport(exp,opts);return budgetPack(base(exp,profile||'generic',opts.question||''),10000);}
   function profile(def){const declared=def&&def.input&&clean(def.input.context);return declared||'generic';}
   function system(def,step){const parts=[];(def.policies||[]).forEach(function(id){const p=policy(id);if(p)parts.push('# '+id.toUpperCase()+'\n\n'+p);});const prompt=LF.Storage&&LF.Storage.getEffectivePrompt?LF.Storage.getEffectivePrompt(def.id):(LF.ActionRegistry&&LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(def.id):'');if(prompt)parts.push('# ACTION CONTRACT\n\n'+prompt);if(step&&step.output==='json'&&step.schema){const schema=LF.ActionRegistry.schema(step.schema);parts.push('# OUTPUT CONTRACT\n\nReturn exactly one JSON value matching this schema.\n\n'+JSON.stringify(schema));}return parts.join('\n\n---\n\n');}
-  function build(def,step,opts){opts=opts||{};const prof=profile(def),ctx=pack(prof,{exp:expOf(),question:opts.userText||'',params:opts.params||{},selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{},workItem:opts.workItem||null,agentObservations:opts.agentObservations||[],maxChars:def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings().contextChars:14000):undefined});let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+(req?'\n\n<user_request>\n'+req+'\n</user_request>':'');if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length});return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
+  function build(def,step,opts){opts=opts||{};const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings().contextChars:14000):undefined,requestedMax=Number(opts.maxChars)||assistantMax;let ctx=pack(prof,{exp:expOf(),question:opts.userText||'',params:opts.params||{},selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{},workItem:opts.workItem||null,agentObservations:opts.agentObservations||[],maxChars:requestedMax});if(requestedMax)ctx=budgetPack(ctx,requestedMax);let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+(req?'\n\n<user_request>\n'+req+'\n</user_request>':'');if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length,budgetChars:requestedMax||null});return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
   LF.ContextBuilder={pack:pack};LF.ActionContext={build:build};
 }());

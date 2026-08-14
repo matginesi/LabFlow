@@ -75,6 +75,10 @@
     const d = exp.derived;
     if(!d.actions && d.operations && typeof d.operations === 'object') d.actions=d.operations;
     d.actions = d.actions && typeof d.actions === 'object' ? d.actions : {};
+    /* Completed Action history is diagnostic metadata, not a second copy of model
+       outputs. Older persisted workspaces may contain full outputs/request bodies;
+       discard those duplicates during normalization so long sessions stay small. */
+    Object.keys(d.actions).forEach(function(actionId){const entry=d.actions[actionId];if(!entry||!Array.isArray(entry.runs))return;entry.runs=entry.runs.slice(-12).map(function(run){if(!run||typeof run!=='object')return run;const compact=Object.assign({},run);delete compact.outputs;delete compact.result;if(compact.requestMeta&&typeof compact.requestMeta==='object'){const meta={};Object.keys(compact.requestMeta).slice(-24).forEach(function(key){const m=compact.requestMeta[key]||{};meta[key]={model:m.model||'',provider:m.provider||'',requestId:m.requestId||'',requestLogId:m.requestLogId||'',latencyMs:m.latencyMs,ttftMs:m.ttftMs,tokensPerSecond:m.tokensPerSecond,streamed:!!m.streamed,usage:m.usage||null,finishReason:m.finishReason||''};});compact.requestMeta=meta;}if(Array.isArray(compact.attempts))compact.attempts=compact.attempts.slice(-8).map(function(x){return Object.assign({},x,{message:String(x&&x.message||'').slice(0,900)});});return compact;});});
     if(Object.prototype.hasOwnProperty.call(d,'operations')) delete d.operations;
     d.chat = d.chat || { conversation: [] };
     d.chat.conversation = Array.isArray(d.chat.conversation) ? d.chat.conversation : [];

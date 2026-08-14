@@ -51,6 +51,13 @@
     return {method:'POST',headers:headers,body:requestBody,signal:controller.signal,cache:'no-store',credentials:'omit'};
   }
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
+  function estimatePromptTokens(value){
+    const text=Array.isArray(value)?value.map(function(m){return String(m&&m.content||'');}).join('\n'):String(value||'');
+    /* JSON-heavy scientific Context Packs tokenize less efficiently than prose.
+       Use a conservative estimate for context-fit decisions; provider usage still
+       replaces this estimate whenever the API exposes exact token counts. */
+    return Math.max(0,Math.ceil(text.length/2.7)+(Array.isArray(value)?value.length*8:0));
+  }
 
   function retryAfterMs(headers){
     if(!headers||typeof headers.get!=='function')return 0;
@@ -58,15 +65,25 @@
     const seconds=Number(raw);if(Number.isFinite(seconds)&&seconds>=0)return Math.round(seconds*1000);
     const when=Date.parse(raw);return Number.isFinite(when)?Math.max(0,when-Date.now()):0;
   }
+  function contextOverflowDetails(text,message){
+    const raw=String(text||'')+' '+String(message||''),lower=raw.toLowerCase();
+    if(lower.indexOf('exceed_context_size_error')<0&&lower.indexOf('exceeds the available context size')<0&&lower.indexOf('context length exceeded')<0)return null;
+    const prompt=raw.match(/(?:n_prompt_tokens[\"']?\s*[:=]\s*|request \()([0-9]{2,})\s*(?:tokens)?/i),ctx=raw.match(/(?:n_ctx[\"']?\s*[:=]\s*|context size \()([0-9]{2,})/i),http=raw.match(/returned\s+(4\d\d)\s*:/i);
+    return{promptTokens:prompt?Number(prompt[1]):null,contextWindow:ctx?Number(ctx[1]):null,httpStatus:http?Number(http[1]):null};
+  }
   function parseProviderError(text,status,requestId,headers){
-    let code='',message='';
-    try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');}
+    let code='',message='',providerType='';
+    try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
     catch(_){message=String(text||'').replace(/\s+/g,' ').slice(0,420);}
-    const rateLimited=Number(status)===429||code==='1305';
-    const label=rateLimited?'API rate limit reached':status?'AI request failed ('+status+')':'AI request failed';
-    const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(status,code):'';
-    const err=new Error(label+(code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=status||0;err.providerCode=code;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);return err;
+    const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
+    if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
+    const rateLimited=effectiveStatus===429||code==='1305';
+    const label=overflow?'Model context exceeded':rateLimited?'API rate limit reached':effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
+    const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code):'';
+    const err=new Error(label+(overflow&&overflow.promptTokens&&overflow.contextWindow?' · '+overflow.promptTokens+' input tokens > '+overflow.contextWindow+' context tokens':'')+(!overflow&&code?' · '+code:'')+(message?' · '+message:'')+hint);
+    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;
+    if(overflow){err.promptTokens=overflow.promptTokens;err.contextWindow=overflow.contextWindow;err.isContextOverflow=true;}
+    return err;
   }
   function isRateLimitError(err){return!!(err&&(Number(err.status)===429||String(err.providerCode||'')==='1305'));}
   function rateKey(spec){return[String(spec&&spec.settings&&spec.settings.provider||''),String(spec&&spec.model||spec&&spec.settings&&spec.settings.model||'')].join('|');}
@@ -200,7 +217,7 @@
         const wasCancelled=requestState.cancelled||!!(parentController&&parentController.signal.aborted);
         failure=new Error(wasCancelled?'AI request cancelled by the user.':(requestState.timeoutReason==='deadline'?label+' reached its '+Math.round(hardLimit/1000)+' second work-unit deadline.':label+' stopped after '+Math.round(limit/1000)+' seconds without provider bytes.'));
         failure.isNetwork=!wasCancelled;failure.cancelled=wasCancelled;failure.timedOut=!wasCancelled&&requestState.timedOut;failure.timeoutReason=requestState.timeoutReason;failure.timeoutMs=requestState.timeoutReason==='deadline'?hardLimit:limit;failure.elapsedMs=elapsed;failure.cause=err;
-      }else if(!(err&&err.status)&&!(err&&err.code)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
+      }else if(!(err&&err.status)&&!(err&&err.code)&&!(err&&err.isProvider)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
         const providerId=(LF.Storage.getAiSettings()||{}).provider||'';
         const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId):label+' could not reach the AI service. Check the endpoint and provider status.';
         failure=new Error(message);failure.isNetwork=true;failure.providerId=providerId;failure.elapsedMs=elapsed;failure.cause=err;
@@ -325,22 +342,26 @@
   async function lmStudioCapability(endpoint,model){
     const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=chat.origin+'/api/v1/models',obj=await fetchJson(url,{method:'GET',headers:{Accept:'application/json'}}),row=matchingRow(obj,model)||modelRows(obj)[0]||null;
     let cap=capabilityFromRow(row,'LM Studio model metadata');
-    if(row&&Array.isArray(row.loaded_instances)&&row.loaded_instances.length){const instance=capabilityFromRow(row.loaded_instances[0],'LM Studio loaded context');if(instance)cap=Object.assign({},cap||{},instance,{maxOutputTokens:cap&&cap.maxOutputTokens||instance.maxOutputTokens,source:instance.source});}
+    if(row&&Array.isArray(row.loaded_instances)&&row.loaded_instances.length){
+      const wanted=String(model||''),loaded=row.loaded_instances.find(function(instance){const id=String(instance&&instance.id||'');return id===wanted||(id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id)));})||row.loaded_instances[0],instance=capabilityFromRow(loaded,'LM Studio loaded instance context');
+      if(instance)cap=Object.assign({},cap||{},instance,{maxOutputTokens:cap&&cap.maxOutputTokens||instance.maxOutputTokens,modelMaxContextWindow:cap&&cap.contextWindow||null,runtimeContextWindow:instance.contextWindow||null,source:'LM Studio loaded instance context'});
+    }
     return cap;
   }
   async function resolveModelCapabilities(options){
     options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(),cacheKey=capabilityKey(providerId,endpoint,model);
-    if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
+    if(!options.force&&capabilityCache.has(cacheKey)){const cached=capabilityCache.get(cacheKey),ttl=providerId==='lmstudio'?5000:60000;if(!cached.resolvedAt||Date.now()-cached.resolvedAt<ttl)return cached;capabilityCache.delete(cacheKey);}
     const known=knownCapability(providerId,model);
-    if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:''},known);capabilityCache.set(cacheKey,immediate);return immediate;}
+    if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     let detected=null,error=null;
     try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
-    const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,source:'provider default',probeError:error?String(error.message||error):''},known||{},detected||{});
+    const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
     capabilityCache.set(cacheKey,cap);Log.info('capability.resolved',{provider:providerId,model:model,maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,exactOutput:cap.exactOutput,source:cap.source});return cap;
   }
   function resolveOutputBudget(capability,requestedCap,globalCap,inputTokens){
     capability=capability||{};const candidates=[],detected=positiveInt(capability.maxOutputTokens),context=positiveInt(capability.contextWindow),input=Math.max(0,Number(inputTokens)||0);
-    if(detected)candidates.push(detected);else if(context)candidates.push(Math.max(16,context-input-256));
+    if(detected)candidates.push(detected);
+    if(context)candidates.push(Math.max(16,context-input-512));
     const requested=positiveInt(requestedCap),forced=positiveInt(globalCap);if(requested)candidates.push(requested);if(forced)candidates.push(forced);
     return candidates.length?Math.max(16,Math.min.apply(Math,candidates)):null;
   }
@@ -436,6 +457,7 @@
     resolveChatUrl:resolveChatUrl,
     validateHttpUrl:validateHttpUrl,
     estimateTokens:estimateTokens,
+    estimatePromptTokens:estimatePromptTokens,
     isLocalAddress:isLocalAddress,
     mergeStreamContent:mergeStreamContent,
     outputLoopDetected:outputLoopDetected,

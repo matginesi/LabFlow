@@ -12,7 +12,7 @@ LabFlow POC keeps structured browser diagnostics enabled while the data model, r
 - UI interaction tracing: disabled by default.
 - network request tracing: enabled.
 
-Change these under **Settings → Logging configuration**. Inspect events on the dedicated **Logs** page, filter by level/scope/text, expand complete sanitized details, or download JSONL.
+Change these under **Settings → Logging configuration**. Inspect events on the dedicated **Logs** page, filter by level/scope/text, expand bounded sanitized payload previews on demand, or download the buffered JSONL diagnostic trace. Oversized strings are clipped before they enter the in-memory logger so a long AI session cannot make Logs itself exhaust the browser.
 
 ## Format
 

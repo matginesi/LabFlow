@@ -103,6 +103,7 @@ For **local LLM providers**, do not open `index.html` through `file://`. Start t
 ```bash
 python tools/build_prompt_bundle.py
 python tools/build_action_registry.py
+python tools/build_ui_kit_inline.py
 python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
@@ -111,7 +112,7 @@ node tests/unit/run.js $(find tests/unit -maxdepth 1 -name '*-test.js' -printf '
 find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 ```
 
-`ui-kit.html` is the visual ground truth.
+`ui-kit.html` is the visual ground truth. The in-app UI Kit route renders a generated inline mirror (`assets/js/pages/ui-kit-inline.js`) so the POC remains safe when opened directly with `file://`; rebuild it with `python tools/build_ui_kit_inline.py` after changing the UI Kit.
 
 
 ### Action progress and adaptive output budgets

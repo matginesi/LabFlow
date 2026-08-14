@@ -100,8 +100,8 @@ def main() -> int:
                 page.evaluate("route => window.LabFlow.State.setRoute(route)", route)
                 page.wait_for_timeout(120)
                 if route == "ui-kit":
-                    page.locator(".ui-kit-frame").wait_for()
-                    page.frame_locator(".ui-kit-frame").locator("h1").first.wait_for()
+                    page.locator(".ui-kit-inline-host").wait_for()
+                    page.locator(".ui-kit-inline-host h1").first.wait_for()
                 result = page.evaluate(AUDIT_JS)
                 result["surface"] = "default"
                 findings.append(result)
@@ -131,11 +131,10 @@ def main() -> int:
                         nested["surface"] = f"settings:{section}"
                         findings.append(nested)
                 elif route == "ui-kit":
-                    frame = next(candidate for candidate in page.frames if candidate.url.endswith("/ui-kit.html"))
-                    inner = frame.evaluate("""() => {
-                      const main=document.querySelector('.main-area'), edge=main.getBoundingClientRect().left+main.clientWidth;
+                    inner = page.evaluate("""() => {
+                      const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
                       const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.design-variant-rail-v3 .panel-body,.code-block,.md-table-wrap,.report-ai-tools,.report-toolbar';
-                      const offenders=[...main.querySelectorAll('*')].filter(node => {
+                      const offenders=[...root.querySelectorAll('*')].filter(node => {
                         const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
                         return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
                       }).slice(0,12).map(node => ({tag:node.tagName.toLowerCase(),cls:String(node.className).slice(0,100),right:Math.round(node.getBoundingClientRect().right),width:Math.round(node.getBoundingClientRect().width)}));

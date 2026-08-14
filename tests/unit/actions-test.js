@@ -47,6 +47,24 @@ module.exports=function(t,LF){
     assert(built.hardTimeoutMs,90000,'absolute deadline forwarded');
   };
 
+  t['Action context is compacted before LM Studio request to fit the loaded runtime context'] = async function(){
+    const exp={id:'exp_context_fit',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'analysis.enrich',type:'AI',steps:[{id:'enrich',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
+    const builds=[];let sent=null;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(action,step,opts){
+      const limit=Number(opts&&opts.maxChars)||50000;builds.push(limit);
+      const content='X'.repeat(Math.max(1200,Math.min(50000,limit)));
+      return{context:{payload:content},messageList:[{role:'user',content:content}]};
+    }};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return Math.ceil(String(messages[0].content||'').length/1.5);},resolveModelCapabilities:async function(){return{contextWindow:32768,maxOutputTokens:8192,source:'LM Studio loaded instance context'};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,Math.max(16,cap.contextWindow-inputTokens-512));},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'compact done',finishReason:'stop'};}};
+    const out=await LF.ActionRunner.run('analysis.enrich');
+    assert(out.status,'done','status');
+    if(!(builds.length>=2&&builds.some(function(v){return v<50000;})))throw new Error('context builder must be invoked again with a smaller maxChars budget');
+    if(!sent||!sent.messages||Math.ceil(sent.messages[0].content.length/1.5)>28000)throw new Error('final request must fit comfortably inside the 32k runtime context');
+  };
+
   t['AI checkpoint with max_retries zero falls back after the first failed attempt'] = async function(){
     const exp={id:'exp_no_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.no-retry',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,max_retries:0}]};

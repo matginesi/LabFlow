@@ -114,6 +114,7 @@
     LF.UIKit = bindPatternBrowser();
 
     document.addEventListener('click', function (event) {
+      if(window.self!==window.top){const appLink=event.target.closest('a[href="index.html"]');if(appLink){event.preventDefault();window.parent.postMessage({type:'labflow-ui-kit-route',route:'experiment-import'},'*');return;}}
       const toggle = event.target.closest('[data-theme-toggle]');
       if (toggle) {
         LF.Theme.toggle();

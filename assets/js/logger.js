@@ -3,6 +3,7 @@
 
   const LF = window.LabFlow = window.LabFlow || {};
   const LEVELS = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, off: 99 };
+  const MAX_LOG_STRING_CHARS = 60000;
   const DEFAULTS = {
     enabled: true,
     level: 'info',
@@ -57,10 +58,14 @@
     return /api.?key|authorization|password|passwd|secret|access.?token|refresh.?token|bearer|credential|cookie|session.?token/i.test(String(key || ''));
   }
 
-  function sanitizeString(value) {
-    return String(value)
+  function sanitizeString(value, maxChars) {
+    const cleaned=String(value)
       .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+/gi, 'Bearer [redacted]')
       .replace(/([?&](?:api_?key|access_?token|token|key)=)[^&#\s]+/gi, '$1[redacted]');
+    const limit=Math.max(1200,Number(maxChars)||MAX_LOG_STRING_CHARS);
+    if(cleaned.length<=limit)return cleaned;
+    const head=Math.floor(limit*.78),tail=Math.floor(limit*.18);
+    return cleaned.slice(0,head)+'\n… [LabFlow log payload bounded · '+cleaned.length+' chars total] …\n'+cleaned.slice(-tail);
   }
 
   function normalizeError(value, depth, seen) {
@@ -72,7 +77,10 @@
       if (value[key] != null && value[key] !== '') out[key] = sanitize(value[key], depth + 1, seen);
     });
     if (value.providerResponse) out.providerResponse = sanitizeString(value.providerResponse);
-    if (value.rawProviderResponse) out.rawProviderResponse = sanitizeString(value.rawProviderResponse);
+    if (value.rawProviderResponse) {
+      const raw=String(value.rawProviderResponse),provider=String(value.providerResponse||'');
+      out.rawProviderResponse = raw===provider?'[same as providerResponse]':sanitizeString(raw);
+    }
     if (value.cause) out.cause = sanitize(value.cause, depth + 1, seen);
     return out;
   }

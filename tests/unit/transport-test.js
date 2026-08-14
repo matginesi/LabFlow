@@ -103,7 +103,7 @@ module.exports = function (t, LF) {
     assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'known ZAI limit');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},32000,64000,1000),32000,'action/assistant cap');
-    assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5936,'context ceiling subtracts input and reserve');
+    assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5680,'context ceiling subtracts input and reserve');
     assert(AI.resolveOutputBudget({},0,0,1000),null,'unknown remains provider default');
   };
 
@@ -123,9 +123,9 @@ module.exports = function (t, LF) {
   };
 
   t['LM Studio capability probe reads loaded context without inventing output max'] = async function () {
-    const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{id:'local-model',max_context_length:32768,loaded_instances:[{id:'local-model:1',context_length:16384}]}]});}};};
+    const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'local-model',max_context_length:131072,loaded_instances:[{id:'local-model',config:{context_length:32768,eval_batch_size:512}}]}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{keyRequired:false}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',force:true});assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(cap.contextWindow,16384,'loaded context wins');assert(cap.maxOutputTokens,null,'no fabricated output max');assert(cap.exactOutput,false,'context is not exact output');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',force:true});assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(cap.contextWindow,32768,'loaded instance context wins over theoretical model max');assert(cap.modelMaxContextWindow,131072,'theoretical max retained separately');assert(cap.runtimeContextWindow,32768,'runtime context exposed');assert(cap.maxOutputTokens,null,'no fabricated output max');assert(cap.exactOutput,false,'context is not exact output');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -154,6 +154,21 @@ module.exports = function (t, LF) {
     LF.AIProviders={lmstudio:{keyRequired:false}};
     try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/v1/models','models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'model ids');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+
+  t['LM Studio SSE context overflow is preserved as MODEL_CONTEXT_LENGTH, not CORS'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'file:',origin:'null'};
+    const encoder=new TextEncoder(),payload='event: error\ndata: '+JSON.stringify({error:{message:'Engine protocol predict request returned 400: {\"error\":{\"code\":400,\"message\":\"request (37174 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":37174,\"n_ctx\":32768}}'}})+'\n\n';
+    global.fetch=async function(){let done=false;return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return name==='content-type'?'text/event-stream':null;},forEach:function(){}},body:{getReader:function(){return{read:async function(){if(done)return{done:true};done=true;return{done:false,value:encoder.encode(payload)};},cancel:async function(){}};}}};};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'large'}],stream:true,maxTokens:512,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'analysis.enrich.enrich.response'});}catch(e){err=e;}assert(!!err,true,'context error raised');assert(err.code,'MODEL_CONTEXT_LENGTH','classified context code');assert(err.isNetwork===true,false,'not rewritten as network/CORS');assert(err.promptTokens,37174,'provider prompt token count');assert(err.contextWindow,32768,'provider context size');assert(/Model context exceeded/.test(err.message),true,'actionable message');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['prompt estimator is conservative for JSON-heavy context preflight'] = function () {
+    const text=JSON.stringify({rows:Array.from({length:100},function(_,i){return{id:i,value:'sample_'+i,detail:'measurement evidence'};})});
+    assert(AI.estimatePromptTokens([{role:'user',content:text}])>AI.estimateTokens(text),true,'preflight estimate is more conservative than display estimate');
   };
 
   t['local providers never inherit a stored cloud API key'] = function () {

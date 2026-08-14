@@ -188,6 +188,17 @@ module.exports = function (t, LF) {
     assert(S.state.ui.reportMode, 'preview', 'preview preserved');
   };
 
+  t['ensureDerived compacts legacy Action history payload duplicates'] = function () {
+    const exp=LF.DataModel.create({sourceName:'history.zip'});
+    exp.derived={actions:{'report.improve':{runs:[{status:'done',sourceRevision:0,outputs:{draft:'X'.repeat(5000)},result:'Y'.repeat(5000),requestMeta:{edit:{model:'m',provider:'lmstudio',content:'Z'.repeat(5000),reasoning:'R'.repeat(5000),usage:{totalTokens:10}}}}]}},chat:{conversation:[]}};
+    S.ensureDerived(exp);
+    const run=exp.derived.actions['report.improve'].runs[0];
+    assert(run.outputs,undefined,'duplicated outputs removed');
+    assert(run.result,undefined,'duplicated result removed');
+    assert(run.requestMeta.edit.content,undefined,'full model content removed from history metadata');
+    assert(run.requestMeta.edit.usage.totalTokens,10,'usage metadata preserved');
+  };
+
   t['dataset and analysis touches invalidate the statistics bundle'] = function () {
     const exp = LF.DataModel.create({ sourceName: 'bundle.zip' });
     exp.analysisSummary = { version: 1, sourceRevision: 0 };

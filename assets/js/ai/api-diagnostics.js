@@ -20,7 +20,7 @@
     if(status===404)return' Check the endpoint path and model name.';
     if(status===429||String(code||'')==='1305')return' The provider rate limit was reached. LabFlow applies a bounded cooldown before retrying the same request.';
     if(status>=500)return' The provider reported a server-side error.';
-    if(String(code||'')==='1261')return' The model context window was exceeded.';
+    if(String(code||'')==='1261'||String(code||'')==='MODEL_CONTEXT_LENGTH')return' The loaded model context window was exceeded. LabFlow will compact bounded Action context before the next request.';
     return'';
   }
 
@@ -36,6 +36,7 @@
       else if(providerId==='ollama')next='Run LabFlow from http://127.0.0.1 (not file://). Ollama allows localhost web origins by default; configure OLLAMA_ORIGINS only for a different origin.';
       else next='Check that the provider process is running and the endpoint is reachable from this browser.';
     }
+    else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. LabFlow uses the runtime context capability and compacts the Action Context Pack; if this persists, increase the loaded context or narrow the Action.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
     else if(status===429||code==='1305'){category='Rate limit';next='LabFlow already applied bounded backoff. If it still fails, wait briefly or switch from the shared free Flash endpoint to another model/provider.';}

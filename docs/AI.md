@@ -103,9 +103,9 @@ Fresh Report/Paper documents are empty. `report.generate` drafts only after an e
 
 ## 4. Context budgeting
 
-Context is bounded by characters before sending the request. If necessary, lower-priority arrays are deterministically reduced.
+Context is bounded before sending the request. Context Packs have a hard serialized-size budget; if necessary, lower-priority arrays and long evidence strings are deterministically reduced.
 
-The pack includes a notice when it had to be bounded.
+When a provider exposes a runtime context window, LabFlow also performs an Action preflight so estimated input + reserved output + safety margin fit the loaded context. For LM Studio, the loaded instance `context_length` takes priority over the model's theoretical maximum context. If compaction is required, the pack includes a notice and the runtime logs `context.compacted`.
 
 A narrow user question should produce a narrow context instead of increasing the global budget.
 
@@ -131,7 +131,7 @@ Do not loosen schemas by inventing missing scientific values.
 
 ## 7. Streaming
 
-`assets/js/ai/transport.js` is the only provider transport owner.
+`assets/js/ai/transport.js` is the only provider transport owner. Provider errors delivered inside an SSE stream are still provider responses: they must retain their real category (for example `MODEL_CONTEXT_LENGTH`) and must never be rewritten as browser CORS/network failures merely because the stream ended with an error event.
 
 Provider output should expose meaningful streamed content/reasoning while it arrives. Empty heartbeat traffic must not be presented as scientific progress.
 

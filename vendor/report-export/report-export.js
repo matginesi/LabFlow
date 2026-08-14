@@ -197,7 +197,7 @@
       else if(b.type==='table')out.push(docxTable(b.head,b.rows));
       else if(b.type==='equation'){
         const asset=(mathImages||[]).find(x=>Number(x.index)===Number(b.equationIndex)&&x.dataUrl);
-        if(asset&&registerImage){const im=registerImage(asset,'equation');const maxW=600,w=Math.max(1,Number(asset.widthPx)||560),h=Math.max(1,Number(asset.heightPx)||100),scale=Math.min(1,maxW/w);out.push(docxImage(im.rId,im.id,`Equation ${b.equationIndex+1}`,Math.round(w*scale),Math.round(h*scale)));}
+        if(asset&&registerImage){const im=registerImage(asset,'equation');const maxW=430,maxH=105,w=Math.max(1,Number(asset.widthPx)||520),h=Math.max(1,Number(asset.heightPx)||90),scale=Math.min(.82,maxW/w,maxH/h);out.push(docxImage(im.rId,im.id,`Equation ${b.equationIndex+1}`,Math.max(90,Math.round(w*scale)),Math.max(28,Math.round(h*scale))));}
         else out.push(docxParagraph(latexReadable(b.latex),{shade:'F7FAFB',borderLeft:'5D91B5',spacingAfter:140}));
       }
     }
@@ -308,7 +308,7 @@
     equation(asset,index,latex){
       const parsed=asset&&dataUrlPayload(asset.dataUrl),pw=Number(asset&&asset.pixelWidth),ph=Number(asset&&asset.pixelHeight);
       if(!parsed||parsed.ext!=='jpg'||!Number.isFinite(pw)||!Number.isFinite(ph)||pw<=0||ph<=0){this.paragraph(latexReadable(latex),{size:9.4,color:'#315F8C',indent:12,gap:10});return;}
-      const maxW=A4.w-2*this.margin-20,maxH=150,ratio=pw/ph;let w=Math.min(maxW,Math.max(150,(Number(asset.widthPx)||600)*.75)),h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}this.ensure(h+22);const x=this.margin+(A4.w-2*this.margin-w)/2,y=this.y+7,name=`ImEq${Number(index)+1}`;this.usedMathImages[name]=asset;this.cmd(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(A4.h-y-h).toFixed(2)} cm /${name} Do Q`);this.y+=h+18;
+      const maxW=Math.min(350,A4.w-2*this.margin-70),maxH=82,ratio=pw/ph;let w=Math.min(maxW,Math.max(125,(Number(asset.widthPx)||520)*.52)),h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}this.ensure(h+18);const x=this.margin+(A4.w-2*this.margin-w)/2,y=this.y+7,name=`ImEq${Number(index)+1}`;this.usedMathImages[name]=asset;this.cmd(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(A4.h-y-h).toFixed(2)} cm /${name} Do Q`);this.y+=h+14;
     }
     heading(text,level=1){const size=level===1?17:level===2?13:11.2,gap=level===1?14:10,lines=this.wrap(stripInline(text),A4.w-2*this.margin,size),lineH=size*1.18;this.ensure(lines.length*lineH+gap+12);this.y+=level===1?6:4;for(const ln of lines){this.text(ln,this.margin,this.y+size,{size,bold:true,color:level===1?'#243746':level===2?'#127A8B':'#465762'});this.y+=lineH;}if(level===1){this.y+=2;this.line(this.margin,this.y,A4.w-this.margin,this.y,'#B9C7D1',.7);}this.y+=gap;}
     table(headers,rows,widths,colors){

@@ -20,7 +20,7 @@ Use a compact workshop metaphor: grouped researcher goals at left, detailed sele
 Badges/pills are atomic labels: do not wrap them over two lines. On narrow screens prefer truncation, horizontal flow, or moving the label to the next row. Results Compare uses responsive SVG: up to six groups fit the available width; larger sets use fixed readable slots with horizontal scrolling rather than shrinking labels and distributions until unreadable.
 
 
-Research Context Packs are visualized as bounded evidence/context, not as giant JSON payloads. When context detail is shown, prefer counts, referenced entities/evidence and progressive disclosure.
+Research Context Packs are visualized as bounded evidence/context, not as giant JSON payloads. Display mathematics is compact and proportional to body text; formulas must never become poster-sized blocks in Report/Paper preview or exports. When context detail is shown, prefer counts, referenced entities/evidence and progressive disclosure.
 
 ## Upload & Review
 

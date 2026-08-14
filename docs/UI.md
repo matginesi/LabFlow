@@ -1,6 +1,6 @@
 # UI contract
 
-`ui-kit.html` is the visual ground truth.
+`ui-kit.html` is the visual ground truth. The live **UI Kit** route renders its generated catalog inline in the main LabFlow document instead of an iframe, because Chromium treats framed sibling `file://` documents as opaque origins. Regenerate `assets/js/pages/ui-kit-inline.js` with `python tools/build_ui_kit_inline.py` whenever the standalone UI Kit changes.
 
 The experiment workflow is Upload & Review, Results, Design, Report, Changes, NOMAD. Upload remains mandatory; after import the same first page combines the source receipt with the review workbench. Pages use the shared compact shell, stepper, panels, tables, visible tab tracks and progressive disclosures.
 
@@ -41,7 +41,7 @@ Assistant and AI-assist surfaces use a bounded Context Pack selected from the Ca
 
 ## Report export contract
 
-Report Studio has one textual source: the active Markdown editor. Its command palette supports Markdown plus standard inline `$...$` and display `$$...$$` LaTeX; the rendered preview typesets math locally. MD, LaTeX, DOCX and PDF exports synchronize that editor immediately before generation. `.tex` preserves formulas, while DOCX/PDF embed rendered display equations and readable inline math. PDF/DOCX may append only the deterministic figures explicitly selected for the active document. Report and Paper keep independent figure selections.
+Report Studio has one textual source: the active Markdown editor. Its command palette supports Markdown plus standard inline `$...$` and display `$$...$$` LaTeX; the rendered preview typesets math locally. MD, LaTeX, DOCX and PDF exports synchronize that editor immediately before generation. `.tex` preserves formulas, while DOCX/PDF embed rendered display equations and readable inline math. Display equations are deliberately scaled below body-width hero graphics: they should read as part of the scientific prose, not dominate an export page. PDF/DOCX may append only the deterministic figures explicitly selected for the active document. Report and Paper keep independent figure selections.
 
 Review Data exposes corrections at the place they are found: deterministic safe fixes can be applied individually or in bulk, valid AI ambiguity proposals can be applied individually or in bulk, and researcher-confirmed sample identity can be entered through the manual correction disclosure.
 
