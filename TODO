@@ -1,6 +1,3 @@
-1. "Open review" se non è stato caricato uno zip... non deve funzionare.
-2. Migliora Operations analisi sia deterministica sia AI con correzione cose, poi sistema la sua applicaizone.
-3. Results: Overview falla meglio più compatta e più responsive.
-4. Review compare: il grafico fallo più responsive e non incapsulato dentro una div dentro una div: ha la sua card, fallo meglio e più responsive.
-5. Allarga poi leggermente la sidebar in modo che la scritta "Manage experiments. Accelerate discovery." si mantenga su due righe.
-6. Tutte quelle barre per cui in mobile mode c'è la scrollbar (verticale o orizontale) spesso ad ogni click ritornano in posizione iniziale: risolvi.
+Refractor Operations / AI Helpers. 
+Niente divisione tra Operations e AI Helpers. Voglio una cosa standardizzata, con un nome giusto, che unisce tutto, anche deterministici, ai, etc... definiti tutti da un json e alla necessità un markdown per i prompts. Devono essere in grado di lavorare con i dati della webapp (ovvero la rappresentazione dei dati aggiornata).
+Anche in settings fai una pagina sola per la loro gestione.

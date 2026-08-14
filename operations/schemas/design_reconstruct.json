@@ -19,7 +19,10 @@
       "items": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "provenance_kind",
+          "confidence",
+          "reason"
         ],
         "properties": {
           "name": {
@@ -73,7 +76,10 @@
       "items": {
         "type": "object",
         "required": [
-          "sample_names"
+          "sample_names",
+          "provenance_kind",
+          "confidence",
+          "reason"
         ],
         "properties": {
           "name": {
@@ -118,7 +124,10 @@
             "items": {
               "type": "object",
               "required": [
-                "role"
+                "role",
+                "provenance_kind",
+                "confidence",
+                "reason"
               ],
               "properties": {
                 "role": {

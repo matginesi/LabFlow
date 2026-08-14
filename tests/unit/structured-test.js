@@ -16,7 +16,7 @@ module.exports = function (t, LF) {
   t['parse repairs comments and trailing commas'] = function(){const r=SO.parse('{//x\n"rows":[1,],}');assert(r.value,{rows:[1]},'repair');assert(r.repaired,true,'repaired flag');};
   t['parse diagnoses truncation'] = function(){const r=SO.parse('{"a":[');assert(r.value,null,'no value');assert(/truncat/i.test(r.diagnosis),true,'diagnosis');};
   t['operation registry schemas validate structured operation output'] = function(){
-    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[{sample_names:['DEVICE A']}],unknowns:[]},{registry:LF.OperationRegistry});
+    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[{sample_names:['DEVICE A'],provenance_kind:'evidence',confidence:1,reason:'test evidence'}],unknowns:[]},{registry:LF.OperationRegistry});
     assert(errors,[],'schema passes');
   };
   t['schema enforces array minimums']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.OperationRegistry});assert(e.some(function(x){return /at least 1/.test(x);}),true,'min items');};

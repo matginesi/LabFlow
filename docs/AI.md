@@ -66,7 +66,13 @@ Includes only:
 - its sample entities;
 - current known Design;
 - explicit unknown fields;
-- directly linked measurements/evidence.
+- directly linked measurements/evidence;
+- a `design_evidence_summary` that states whether RAW design/fabrication evidence was actually found;
+- when RAW design evidence is absent, an optional domain-knowledge note explicitly marked as non-experimental suggestion basis.
+
+For the perovskite POC, `prompts/knowledge/perovskite-design.md` is the bounded fallback used by `design.infer`. It is **not** experiment evidence and must never be presented as something imported from the ZIP. Knowledge-only candidates must retain `provenance_kind: "knowledge"`, a low confidence (at most `0.45`), and a reason explaining that they are domain hypotheses rather than RAW facts. Quantitative recipe details that are not supported by RAW evidence remain unknown.
+
+A measurement-only dataset can therefore still produce a useful qualitative candidate design, while the UI and stored proposal continue to distinguish imported evidence from inferred knowledge.
 
 ### Results
 

@@ -31,11 +31,11 @@ Do not invent exact concentrations, ratios, temperatures or times from generic k
 
 # Fabrication
 
-Propose deposition/coating, annealing, atmosphere and notes only when evidence supports them. Knowledge-only fabrication suggestions must be conservative and clearly marked `knowledge` with confidence no higher than 0.6.
+Prefer supplied evidence. If `design_evidence_summary.raw_design_evidence_found` is false and the Context Pack contains `domain_knowledge`, return conservative qualitative candidate values for fields explicitly supported by that note instead of returning all of those fields empty. These are hypotheses for researcher review, not recovered experiment facts. Knowledge-only fabrication suggestions must be clearly marked `knowledge` with confidence no higher than 0.45. Do not invent quantitative settings.
 
 # Device stack
 
-Return the physical layer order from substrate toward the top contact. Each layer must have a clear role and material when known. Do not fabricate thicknesses or process details. Leave unsupported fields empty.
+Return the physical layer order from substrate toward the top contact. Each layer must have a clear role and material when known. If RAW stack evidence is absent but `domain_knowledge` supplies a conservative candidate architecture, return that candidate with `provenance_kind: knowledge`, confidence no higher than 0.45 and a reason that it is not present in RAW. Do not fabricate thicknesses or quantitative process details; leave those unsupported fields empty.
 
 # Provenance
 
@@ -49,6 +49,7 @@ For every proposed object, provide a short `reason` that explains the evidence b
 # Scope and output
 
 - one selected experiment only;
+- absence of RAW design evidence does not by itself require an empty proposal when a supplied `domain_knowledge` note offers a useful conservative candidate;
 - `devices` must contain exactly one device proposal and echo the supplied sample names;
 - `solutions` contains only solutions needed by that device;
 - `unknowns` lists unresolved fields explicitly;

@@ -21,7 +21,7 @@ Do not propose cosmetic filename/sample formatting or separator cleanup. Canonic
 
 Every proposal must:
 - resolve one supplied ambiguity only;
-- use the exact canonical target ID whenever one is available;
+- use the exact canonical target ID whenever one is available; never return a display filename as the target when a canonical measurement/finding target exists;
 - set `finding_id` to the deterministic finding being resolved;
 - preserve the supplied `before` value;
 - provide one explicit `after` value that LabFlow can apply immediately;
@@ -30,7 +30,7 @@ Every proposal must:
 - set confidence conservatively;
 - set `requires_human_review: true` for every semantic correction.
 
-If two interpretations remain plausible, do not choose one. Put the item in `unresolved` and state what evidence would distinguish them.
+If two interpretations remain plausible, or if you cannot identify one concrete canonical target to mutate, do not choose one. Put the item in `unresolved` and state what evidence would distinguish them.
 
 # Output
 

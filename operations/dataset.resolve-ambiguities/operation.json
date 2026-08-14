@@ -1,6 +1,6 @@
 {
-  "id":"dataset.resolve-ambiguities","type":"AI","category":"dataset","role":"ai-assist","title":"Resolve ambiguities","short_title":"Resolve ambiguities",
-  "purpose":"Propose resolutions only for semantic ambiguities that deterministic analysis could not establish.",
+  "id":"dataset.resolve-ambiguities","type":"AI","category":"dataset","role":"ai-assist","title":"Suggest resolutions","short_title":"Suggest resolutions",
+  "purpose":"Suggest evidence-backed resolutions for records whose canonical meaning the deterministic analysis cannot establish.",
   "strategy":"One bounded Context Pack containing only unresolved findings, linked entities and evidence. AI may answer unresolved; it never writes directly.",
   "output":"json","max_output_tokens":8000,"mutation_scope":"","requires":["dataset.analyze"],
   "policies":["policy.data-ground-truth","policy.data-format-repair","policy.scientific-provenance","policy.structured-output"],

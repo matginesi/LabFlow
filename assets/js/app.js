@@ -14,6 +14,21 @@
   const needExperiment = PS.needExperiment;
   const badge = PS.badge;
   let renderedRoute = '';
+  const scrollMemory=new Map();
+
+  function scrollNodeKey(el,root,route){
+    if(el.classList&&el.classList.contains('experiment-strip'))return'global:experiment-strip';
+    if(el.id)return String(route||'')+':id:'+el.id;
+    const attrs=['data-result-tab','data-changes-tab','data-operation-workshop'];
+    for(let i=0;i<attrs.length;i++){const v=el.getAttribute&&el.getAttribute(attrs[i]);if(v)return String(route||'')+':'+attrs[i]+':'+v;}
+    const parts=[];let cur=el;while(cur&&cur!==root&&parts.length<7){const parent=cur.parentElement;if(!parent)break;const tag=(cur.tagName||'node').toLowerCase(),siblings=Array.from(parent.children).filter(function(x){return x.tagName===cur.tagName;}),idx=Math.max(0,siblings.indexOf(cur));parts.unshift(tag+':'+idx);cur=parent;}return String(route||'')+':path:'+parts.join('/');
+  }
+  function captureScrollableState(root,route){
+    if(!root)return;root.querySelectorAll('*').forEach(function(el){const vertical=el.scrollHeight>el.clientHeight+1,horizontal=el.scrollWidth>el.clientWidth+1;if(!(vertical||horizontal))return;if(!el.scrollTop&&!el.scrollLeft)return;scrollMemory.set(scrollNodeKey(el,root,route),{top:el.scrollTop,left:el.scrollLeft});});
+  }
+  function restoreScrollableState(root,route){
+    if(!root)return;const apply=function(){root.querySelectorAll('*').forEach(function(el){const state=scrollMemory.get(scrollNodeKey(el,root,route));if(!state)return;if(el.scrollHeight>el.clientHeight+1)el.scrollTop=Math.min(state.top,Math.max(0,el.scrollHeight-el.clientHeight));if(el.scrollWidth>el.clientWidth+1)el.scrollLeft=Math.min(state.left,Math.max(0,el.scrollWidth-el.clientWidth));});};apply();if(window.requestAnimationFrame)window.requestAnimationFrame(apply);
+  }
 
   function renderDesign() {
     if (!hasExperiment()) return needExperiment();
@@ -126,6 +141,8 @@
     if (hasExperiment()) ensureExperimentShape(S.state.experiment);
     const end=Log.timer('render',{route:S.state.route,experimentId:S.state.experiment&&S.state.experiment.id,resultsTab:S.state.resultsTab});
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
+    const previousRoute=renderedRoute||S.state.route;
+    captureScrollableState(main,previousRoute);
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-home'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
@@ -140,6 +157,7 @@
     if(S.state.route==='ui-kit')bindUiKitFrame();
     if(renderedRoute!==S.state.route)main.scrollTop=0;
     renderedRoute=S.state.route;
+    restoreScrollableState(main,S.state.route);
     main.querySelectorAll('button:not([type])').forEach(function(b){b.type='button';});
     LF.AISettings.decorate();
     LF.Theme.syncControls(LF.Theme.current());
@@ -259,7 +277,7 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(/^experiment-/.test(target)&&target!=='experiment-import'&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Load a ZIP before opening the workflow.','info');}else{S.setRoute(target);}return;}
+        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(/^experiment-/.test(target)&&target!=='experiment-import'&&!hasExperiment()){LF.UI.toast('Load a ZIP before opening the workflow.','info');return;}S.setRoute(target);return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}

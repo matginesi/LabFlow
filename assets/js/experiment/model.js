@@ -133,15 +133,15 @@
     function confidence(value) { const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):null; }
     function layer(item) {
       item=item&&typeof item==='object'?item:{};
-      return {role:text(item.role||item.layer||item.function),material:text(item.material||item.composition),thickness:text(item.thickness),process:text(item.process||item.deposition),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),status:'ai_inferred'};
+      return {role:text(item.role||item.layer||item.function),material:text(item.material||item.composition),thickness:text(item.thickness),process:text(item.process||item.deposition),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
     }
     const solutions=list(source.solutions||source.formulations||source.recipes).map(function (item,index) {
       item=item&&typeof item==='object'?item:{};
-      return {name:text(item.name||item.title||('Solution '+(index+1))),role:text(item.role||item.type),solutes:text(item.solutes||item.materials),solvents:text(item.solvents||item.solvent),concentration:text(item.concentration||item.composition),additives:text(item.additives),preparation:text(item.preparation||item.process||item.notes),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),status:'ai_inferred'};
+      return {name:text(item.name||item.title||('Solution '+(index+1))),role:text(item.role||item.type),solutes:text(item.solutes||item.materials),solvents:text(item.solvents||item.solvent),concentration:text(item.concentration||item.composition),additives:text(item.additives),preparation:text(item.preparation||item.process||item.notes),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
     });
     const devices=list(source.devices||source.variants||source.device_variants).map(function (item,index) {
       item=item&&typeof item==='object'?item:{};
-      return {name:text(item.name||item.title||item.group||('Device '+(index+1))),sample_names:list(item.sample_names||item.sampleNames||item.samples).map(text),group:text(item.group),solution_names:list(item.solution_names||item.solutionNames||item.solutions).map(function(v){return typeof v==='object'?text(v.name):text(v);}),process:item.process&&typeof item.process==='object'?item.process:{notes:text(item.process)},stack:list(item.stack||item.layers).map(layer),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),status:'ai_inferred'};
+      return {name:text(item.name||item.title||item.group||('Device '+(index+1))),sample_names:list(item.sample_names||item.sampleNames||item.samples).map(text),group:text(item.group),solution_names:list(item.solution_names||item.solutionNames||item.solutions).map(function(v){return typeof v==='object'?text(v.name):text(v);}),process:item.process&&typeof item.process==='object'?item.process:{notes:text(item.process)},stack:list(item.stack||item.layers).map(layer),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
     });
     const process=source.process&&typeof source.process==='object'?source.process:{};
     const coverage=source.coverage&&typeof source.coverage==='object'?source.coverage:{};
