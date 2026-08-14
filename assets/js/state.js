@@ -37,7 +37,7 @@
     operationRun: null,
     ui: {
       route: 'experiment-import',
-      lastExperimentRoute: 'experiment-import',
+      uploadLanding: false,
       assistantOpen: true,
       resultsTab: 'overview',
       selectedMeasurementId: null,
@@ -117,9 +117,9 @@
   function setRoute(route) {
     const previous = state.ui.route;
     ensureExperiment('route:' + route);
-    if (route === 'experiment-home') route = state.experiment && state.experiment.id ? (state.ui.lastExperimentRoute || 'experiment-understand') : 'experiment-import';
+    if (route === 'experiment-home') route = 'experiment-import';
     state.ui.route = route;
-    if (/^experiment-/.test(route)) state.ui.lastExperimentRoute = route;
+    state.ui.uploadLanding = false;
     Log.info('route.changed', { from: previous, to: route });
     notify('route');
   }
@@ -233,7 +233,7 @@
   function commitAllDrafts(){return commitDraft();}
 
   function resetSession() {
-    state.experiment=emptyExperiment(); state.operationRun=null; state.ui.route='experiment-import'; state.ui.lastExperimentRoute='experiment-import'; state.ui.resultsTab='overview'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
+    state.experiment=emptyExperiment(); state.operationRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
   }
 
   function isDirty() {

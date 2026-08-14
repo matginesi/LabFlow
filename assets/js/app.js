@@ -259,7 +259,7 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');S.setRoute(route.dataset.route);return;}
+        if(route){e.preventDefault();closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(/^experiment-/.test(target)&&target!=='experiment-import'&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Load a ZIP before opening the workflow.','info');}else{S.setRoute(target);}return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
@@ -445,7 +445,7 @@
     try{
       S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
-      if(saved&&saved.experiment&&saved.experiment.meta&&saved.experiment.meta.sourceName){S.setExperiment(saved.experiment);if(LF.Changes&&LF.Changes.ensureBaseline)LF.Changes.ensureBaseline(S.state.experiment);const ui=saved.ui||{};S.state.resultsTab=ui.resultsTab||S.state.resultsTab;S.state.selectedMeasurementId=ui.selectedMeasurementId||S.state.selectedMeasurementId;S.state.selectedDesignDeviceId=ui.selectedDesignDeviceId||S.state.selectedDesignDeviceId;S.state.route=/^experiment-/.test(ui.route||'')?ui.route:'experiment-understand';S.state.ui.route=S.state.route;S.state.ui.lastExperimentRoute=S.state.route;Log.info('workspace.restored',{experimentId:S.state.experiment.id,route:S.state.route});}
+      if(saved&&saved.experiment&&saved.experiment.meta&&saved.experiment.meta.sourceName){S.setExperiment(saved.experiment);if(LF.Changes&&LF.Changes.ensureBaseline)LF.Changes.ensureBaseline(S.state.experiment);const ui=saved.ui||{};S.state.resultsTab=ui.resultsTab||S.state.resultsTab;S.state.selectedMeasurementId=ui.selectedMeasurementId||S.state.selectedMeasurementId;S.state.selectedDesignDeviceId=ui.selectedDesignDeviceId||S.state.selectedDesignDeviceId;S.state.route='experiment-import';S.state.ui.route=S.state.route;S.state.ui.uploadLanding=true;Log.info('workspace.restored',{experimentId:S.state.experiment.id,route:S.state.route});}
       bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});LF.Assistant.bind();S.subscribe(function(){render();});render();if(saved&&saved.experiment)LF.UI.toast('Saved LabFlow state restored.','info');end({route:S.state.route,logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}

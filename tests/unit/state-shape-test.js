@@ -22,6 +22,7 @@ module.exports = function (t, LF) {
     assert(S.state.operationRun, null, 'operationRun starts null');
     assert(typeof S.state.ui.route, 'string', 'ui.route');
     assert(S.state.ui.route, 'experiment-import', 'app starts on upload screen');
+    assert(S.state.ui.uploadLanding, false, 'uploadLanding starts false');
     assert(typeof S.state.ui.assistantOpen, 'boolean', 'ui.assistantOpen');
     assert(S.state.ui.resultsTab, 'overview', 'ui.resultsTab default');
   };
@@ -124,12 +125,35 @@ module.exports = function (t, LF) {
     const unsub = S.subscribe(function () { seen.push(1); });
     S.setRoute('logs');
     assert(S.state.ui.route, 'logs', 'route routed');
-    assert(S.state.ui.lastExperimentRoute, 'experiment-import', 'last experiment route preserved');
     assert(seen.length >= 1, true, 'notify fired');
     unsub();
     const n = seen.length;
     S.notify('x');
     assert(seen.length, n, 'unsubscribe stops notifications');
+  };
+
+  t['experiment-home always lands on upload, with an experiment'] = function () {
+    const exp = LF.DataModel.create({ sourceName: 'home.zip' });
+    S.setExperiment(exp);
+    S.setRoute('experiment-home');
+    assert(S.state.ui.route, 'experiment-import', 'experiment-home resolves to upload with experiment');
+  };
+
+  t['experiment-home always lands on upload, without an experiment'] = function () {
+    S.resetSession();
+    S.setRoute('experiment-home');
+    assert(S.state.ui.route, 'experiment-import', 'experiment-home resolves to upload without experiment');
+  };
+
+  t['uploadLanding is cleared by any navigation'] = function () {
+    const exp = LF.DataModel.create({ sourceName: 'landing.zip' });
+    S.setExperiment(exp);
+    S.state.ui.uploadLanding = true;
+    S.setRoute('experiment-understand');
+    assert(S.state.ui.uploadLanding, false, 'navigation clears uploadLanding');
+    S.state.ui.uploadLanding = true;
+    S.resetSession();
+    assert(S.state.ui.uploadLanding, false, 'resetSession clears uploadLanding');
   };
 
   t['reportMode and workshop report doc kind have deterministic defaults'] = function () {

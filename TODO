@@ -1,0 +1,6 @@
+1. "Open review" se non è stato caricato uno zip... non deve funzionare.
+2. Migliora Operations analisi sia deterministica sia AI con correzione cose, poi sistema la sua applicaizone.
+3. Results: Overview falla meglio più compatta e più responsive.
+4. Review compare: il grafico fallo più responsive e non incapsulato dentro una div dentro una div: ha la sua card, fallo meglio e più responsive.
+5. Allarga poi leggermente la sidebar in modo che la scritta "Manage experiments. Accelerate discovery." si mantenga su due righe.
+6. Tutte quelle barre per cui in mobile mode c'è la scrollbar (verticale o orizontale) spesso ad ogni click ritornano in posizione iniziale: risolvi.

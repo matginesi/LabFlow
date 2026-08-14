@@ -135,6 +135,8 @@ It does **not** send the full experiment or RAW JV curves by default.
 
 Import is the only experiment entry point.
 
+The app always opens on the Upload ZIP screen, even when a workspace was previously saved: the first page is the same empty Upload ZIP page reached after Reset all, and the researcher resumes the saved flow manually via the stepper or Open Review. A previous experiment route is never resumed automatically on reload.
+
 ```text
 Researcher selects ZIP
         ↓

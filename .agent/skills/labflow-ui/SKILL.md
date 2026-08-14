@@ -21,7 +21,11 @@ Keep the main researcher flow:
 Upload ZIP → Review → Results → Design → Report → NOMAD
 ```
 
-Upload is always the experiment entry point.
+Upload is always the experiment entry point. The app always opens on the Upload
+ZIP screen, even when a workspace was previously saved: the first page is the
+same empty Upload ZIP page reached after Reset all, and the researcher resumes
+the saved flow manually via the stepper or Open Review. Do not resume a previous
+experiment route on reload.
 
 Do not add project/workflow layers ahead of ZIP import unless explicitly required.
 
@@ -190,7 +194,7 @@ Charts should use reliable responsive rendering (current implementation favors i
 
 Tables live in explicit responsive containers. Warning/status columns keep usable width. Badges remain single-line atomic labels.
 
-Compare must prioritize readability and stable statistics over fragile interaction tricks. For many groups, use readable horizontal overflow instead of compressing labels to illegibility.
+Compare uses the **Compare workbench** pattern: a compact control panel (metric, scan, eligible-only, All/REF/Clear, group list) next to a per-scan FW/RV box chart and a comparison-statistics table whose `Group | n | FW median±IQR | FW min–max | RV median±IQR | RV min–max` columns reuse the single deterministic analysis bundle shared with Report and NOMAD. Prioritize readability and stable statistics over fragile interaction tricks. For many groups, use readable horizontal overflow instead of compressing labels to illegibility.
 
 AI interpretation is optional prose and must be visually distinguished from deterministic data.
 
@@ -214,11 +218,9 @@ Use the UI Kit **Single-experiment Design** pattern as the ground truth.
 
 The page must be useful with no provider:
 
-- experiment/device rail;
-- selected experiment editor;
-- formulations/solutions;
-- fabrication/process;
-- stack;
+- experiment bar with `design-chip` selector chips and a completion readout;
+- AI suggestions panel (`design-ai-table-panel`) that fills only missing fields and never overwrites researcher-entered values;
+- three editable scientific tables: solutions & solvents, fabrication, device stack;
 - known/missing status;
 - evidence/provenance;
 - researcher edits.
@@ -236,6 +238,8 @@ The Markdown editor is the textual source of truth.
 `Generate report` and `Improve report` update this editor. Researcher edits remain authoritative.
 
 PDF/DOCX must export the current editor text, not regenerated parallel prose.
+
+The editor uses a Write / Preview segmented control (`report-document-choice`, `role="tablist"`), not a three-way Split. "Improve selection" (`report.improve`) rewrites only the selected editor region and is exposed as an explicit action in the toolbar.
 
 Figure selection is explicit and shared by preview/exports. Current available figure choices include PCE distribution, hysteresis distribution, best JV curve, PCE vs hysteresis, top efficiency and group comparison.
 

@@ -34,7 +34,7 @@
   function render(state, deps) {
     const d=deps||{},C=d.C||LF.Core,S=d.S||LF.State,Log=d.Log||(LF.Logger&&LF.Logger.scope('import-page'))||null;
     const shell=d.PageShell||LF.PageShell;
-    if(!shell.hasExperiment())return shell.needExperiment();
+    if(!shell.hasExperiment()||(S.state.ui&&S.state.ui.uploadLanding))return shell.needExperiment();
     const e=S.state.experiment,sum=e.analysis.summary||{},files=e.manifest.filter(function(x){return !x.directory;}),directories=e.manifest.length-files.length;
     const families=importFamilyCounts(e.manifest),recoveries=e.measurements.reduce(function(total,m){return total+(m.recoveries||[]).length;},0);
     const tree=e.manifest.filter(function(x){return !x.directory;}).slice(0,220).map(function(x){return '<div>'+C.escapeHtml(x.path)+' <span class="muted">['+C.escapeHtml(x.type)+']</span></div>';}).join('');
