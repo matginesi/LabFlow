@@ -27,9 +27,11 @@
       "timeout_ms": 240000,
       "foreach": "collect.blocks",
       "weight": 0.84,
-      "max_output_tokens": 6144,
+      "max_output_tokens": 12288,
       "deadline_ms": 180000,
-      "max_retries": 1
+      "max_retries": 1,
+      "min_output_tokens": 1600,
+      "target_output_tokens": 6000
     },
     {
       "id": "store",

@@ -36,7 +36,9 @@
       },
       "max_output_tokens": 4096,
       "deadline_ms": 180000,
-      "max_retries": 1
+      "max_retries": 1,
+      "min_output_tokens": 600,
+      "target_output_tokens": 1600
     }
   ],
   "category": "assistant",

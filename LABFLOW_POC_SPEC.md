@@ -106,3 +106,12 @@ NOMAD staging and readiness are deterministic. One revision-scoped Canonical →
 No runtime `.env`, analytics, trackers, cookies, WebSocket or remote runtime assets. API keys are local browser settings and redacted from logs.
 
 Before packaging, pass Action/state/UI/privacy validators, unit tests and JavaScript syntax checks.
+
+
+## Bounded long-running Actions
+
+Long-running Actions report hierarchical progress instead of estimating completion from raw stream size alone. The visible hierarchy is Action → checkpoint → work unit → phase; SSE events and estimated output tokens refine progress only within the model-response phase. Multi-experiment/multi-section sequences retain one monotonic parent progress indicator.
+
+AI steps use adaptive output profiles (`min_output_tokens`, `target_output_tokens`, `max_output_tokens`). Model/provider capability is an absolute ceiling. Report/Paper work units additionally carry word-count targets so scientific drafting receives enough output budget while compact enrich/analysis Actions remain short.
+
+Design can complete missing variants sequentially and can apply all already-generated AI inferences in one reviewed operation. Remaining gaps remain explicitly incomplete. Report and Paper use independent figure selections and export layouts must wrap long prose, identifiers, formulas and table content in PDF/DOCX.

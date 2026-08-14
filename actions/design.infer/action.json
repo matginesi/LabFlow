@@ -28,9 +28,11 @@
       "schema": "design_reconstruct",
       "timeout_ms": 180000,
       "weight": 0.8,
-      "max_output_tokens": 4096,
+      "max_output_tokens": 6144,
       "deadline_ms": 150000,
-      "max_retries": 1
+      "max_retries": 1,
+      "min_output_tokens": 1200,
+      "target_output_tokens": 2800
     },
     {
       "id": "validate",

@@ -358,16 +358,12 @@
     return{models:models,elapsedMs:Math.round(performance.now()-started),url:url};
   }
 
-  async function testConnection(){
-    const cfg=requestConfig();
-    const body={model:cfg.settings.model,messages:[{role:'user',content:connectionTestPrompt()}],stream:false};
-    body[cfg.provider.tokenParam||'max_tokens']=32;
-    if(cfg.provider.supportsThinking)body.thinking={type:'disabled'};
-    if(cfg.provider.reasoningEffort)body.reasoning_effort=cfg.provider.reasoningEffort;
-    const r=await request(cfg.url,cfg.headers,body,'AI connection test',cfg.provider.connectionTestTimeoutMs||60000);
-    const extracted=extractAssistant(r.json);
-    if(!extracted.content)Log.warn('test.empty-content',{model:r.json.model||cfg.settings.model,finishReason:extracted.finishReason,keys:Object.keys(r.json||{})});
-    return{ok:true,elapsedMs:r.elapsedMs,model:r.json.model||cfg.settings.model,content:extracted.content,usage:r.json.usage||null,requestId:r.requestId};
+  async function testConnection(options){
+    options=options||{};const cfg=requestConfig(),hard=Math.max(30000,Math.min(60000,Number(cfg.provider.connectionTestTimeoutMs)||45000));
+    const spec=buildRequest({messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:48,timeoutMs:Math.min(hard,30000),hardTimeoutMs:hard,temperature:0});
+    const r=await send(spec,{label:'AI connection test',onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});
+    if(!r.content)Log.warn('test.empty-content',{model:r.model||cfg.settings.model,finishReason:r.finishReason});
+    return{ok:true,elapsedMs:r.latencyMs,model:r.model||cfg.settings.model,content:r.content,usage:r.usage||null,requestId:r.requestId,rateLimitRetries:r.rateLimitRetries||0};
   }
 
   /**

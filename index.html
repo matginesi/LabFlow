@@ -57,7 +57,7 @@
         <div><strong id="activityTitle">Working</strong><span id="activitySubtitle"></span></div>
         <div class="activity-head-actions"><button class="button compact activity-button" type="button" id="activityLogs" hidden>View logs</button><button class="button primary compact activity-button" type="button" id="activityRetry" hidden>Retry checkpoint</button><button class="button danger compact activity-button" type="button" id="activityCancel" hidden>Cancel action</button><button class="button primary compact activity-button" type="button" id="activityClose" hidden>Close</button></div>
       </div>
-      <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Phase progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Action progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
+      <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Overall progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Action progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
       <div class="activity-stream" id="activityStream" hidden><div class="activity-stream-head"><span class="badge ai">LIVE SSE</span><strong id="activityStreamState">Waiting for first byte</strong><span id="activityStreamRate">—</span></div><div class="progress activity-stream-progress" id="activityStreamProgress" role="progressbar" aria-label="Estimated output budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityStreamBar"></span></div><div class="activity-stream-stats"><span>Events <strong id="activityStreamEvents">0</strong></span><span>Received <strong id="activityStreamBytes">0 B</strong></span><span>First token <strong id="activityStreamTtft">waiting</strong></span><span>Output <strong id="activityStreamTokens">~0 / — tok</strong></span></div></div>
       <div class="activity-current">
         <div class="activity-stage-row"><span class="badge" id="activityKind">LOCAL</span><strong id="activityStage">Starting</strong></div>
@@ -88,6 +88,14 @@
       <div class="message-totem-head"><span class="message-totem-marker" aria-hidden="true"></span><div><span class="eyebrow" id="messageTotemEyebrow">LABFLOW</span><strong id="messageTotemTitle">Confirm action</strong></div></div>
       <div class="message-totem-body" id="messageTotemBody"></div>
       <div class="message-totem-actions"><button class="button ghost" type="button" id="messageTotemCancel">Cancel</button><button class="button primary" type="button" id="messageTotemConfirm">Confirm</button></div>
+    </section>
+  </div>
+
+  <div class="figure-picker-shade" id="figurePickerShade" hidden>
+    <section class="figure-picker-totem" role="dialog" aria-modal="true" aria-labelledby="figurePickerTitle">
+      <header class="figure-picker-head"><div><span class="eyebrow">DOCUMENT FIGURES</span><strong id="figurePickerTitle">Choose figures</strong><small id="figurePickerSubtitle">Independent selection for this document.</small></div><button type="button" class="button ghost compact" id="figurePickerClose">Close</button></header>
+      <div class="figure-picker-body" id="figurePickerBody"></div>
+      <footer class="figure-picker-actions"><button type="button" class="button ghost" id="figurePickerCancel">Cancel</button><button type="button" class="button primary" id="figurePickerApply">Apply selection</button></footer>
     </section>
   </div>
 

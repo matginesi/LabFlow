@@ -25,6 +25,14 @@ module.exports=function(t,LF){
     assert(LF.ActionRunner.autoRetryDelays,[5000,10000],'retry delays');
   };
 
+  t['adaptive token profile uses work size but stays inside Action min target and max']=function(){
+    const p=LF.ActionRunner.tokenProfile({min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288},{target_words:1100});
+    assert(p.minTokens,1800,'minimum');assert(p.targetTokens,2035,'word-sized target');assert(p.maxTokens,12288,'maximum');
+    if(!(p.requestTokens>p.targetTokens&&p.requestTokens<=p.maxTokens))throw new Error('request margin must be above target and below Action maximum');
+    const small=LF.ActionRunner.tokenProfile({min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288},{target_words:280});
+    assert(small.targetTokens,1800,'short work does not fall below minimum useful budget');
+  };
+
   t['declared Action budget is the request target while provider maximum is only a ceiling'] = async function(){
     const exp={id:'exp_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.budget',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};

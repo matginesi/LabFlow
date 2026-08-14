@@ -318,3 +318,8 @@ Use compact instrument-style rows rather than oversized rounded bubbles. Do not 
 When workflow/architecture changes, update `docs/WORKFLOW.md` in the same patch and keep supporting docs/skill consistent.
 
 A UI change that creates a new reusable interaction pattern should also update `ui-kit.html` and this skill.
+
+
+## Long Action progress contract
+
+Use one monotonic parent progress bar for long or sequential Actions. Compose progress from checkpoint, work-unit position and semantic phase; use SSE event/token telemetry only to refine the streaming band. Never show 99% while a provider is still generating. Design proposal cards must preserve incomplete status after applying partial AI inferences. Report/Paper figure selection should use the dedicated compact totem picker and remain document-scoped.

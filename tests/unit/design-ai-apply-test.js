@@ -47,6 +47,23 @@ module.exports=function(t,LF){
     const bare={design:{devices:[],solutions:[]}};let threwMissing=false;try{LF.DesignAnalysis.applySelectedDevice(bare,'deviceB');}catch(e){threwMissing=true;}
     assert(threwMissing,'missing proposal throws');
   };
+  t['apply all per-variant AI proposals preserves researcher values and may leave real gaps']=function(){
+    LF.State={state:{selectedDesignDeviceId:'a'}};
+    const exp={design:{status:'reviewing',solutions:[],devices:[
+      {id:'a',name:'A',sampleNames:['A1'],solutionIds:[],stack:[],process:{coating:'researcher spin',annealing:'',atmosphere:''},status:'user_confirmed'},
+      {id:'b',name:'B',sampleNames:['B1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''},status:'user_confirmed'}
+    ]},aiDesignProposals:{
+      a:{targetDeviceId:'a',solutions:[],devices:[{id:'a',sample_names:['A1'],process:{coating:'AI coating',annealing:'100 C'}}]},
+      b:{targetDeviceId:'b',solutions:[],devices:[{id:'b',sample_names:['B1'],process:{annealing:'120 C'}}]}
+    }};
+    const out=LF.DesignAnalysis.applyAllProposals(exp);
+    assert(out.proposals===2,'both proposals should be applied');
+    assert(exp.design.devices[0].process.coating==='researcher spin','researcher coating protected');
+    assert(exp.design.devices[0].process.annealing==='100 C','A annealing applied');
+    assert(exp.design.devices[1].process.annealing==='120 C','B annealing applied');
+    assert(exp.design.devices[0].stack.length===0&&exp.design.devices[1].stack.length===0,'missing stack remains missing rather than fabricated');
+  };
+
   t['Design proposals are stored per experimental variant for sequential review']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
     const exp={design:{devices:[{id:'a'},{id:'b'}],solutions:[]}};

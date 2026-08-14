@@ -112,3 +112,12 @@ find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 ```
 
 `ui-kit.html` is the visual ground truth.
+
+
+### Action progress and adaptive output budgets
+
+Long Actions expose monotonic semantic progress: checkpoint, work unit, provider phase and bounded SSE/token telemetry. Streaming events refine only the response-generation segment, so a model can no longer leave the UI at 99% while it is still producing output. Sequential helpers such as Design completion and Report/Paper **All** project child progress into one global bar.
+
+AI output uses per-step `min_output_tokens`, `target_output_tokens` and `max_output_tokens`. The selected model/provider maximum is a ceiling, never an automatic generation target. Report/Paper work units also carry word targets so writing requests can be substantially longer than compact analysis/enrichment Actions without requesting unnecessarily huge outputs.
+
+Design supports **Apply all AI inferences** across per-variant proposals. Applying a proposal does not imply that a variant is complete; unresolved source gaps remain visible. Report and Paper have independent figure selections through a dedicated figure picker.

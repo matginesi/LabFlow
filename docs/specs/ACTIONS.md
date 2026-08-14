@@ -300,3 +300,10 @@ Settings → Actions is the single runtime catalog/editor for deterministic, AI-
 - last run state.
 
 Runtime edits are browser-local overrides; versioned `action.json` / optional `prompt.md` source remains unchanged and is the reset target. There is no second AI-helper configuration surface.
+
+
+## Output profile and progress contract
+
+AI steps may declare `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, `deadline_ms`, and `max_retries`. Provider/model maximum output is a ceiling only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
+
+Action UIs must calculate progress from declared checkpoints and work units. Provider SSE/event telemetry may only refine the active AI phase and cannot itself complete an Action.

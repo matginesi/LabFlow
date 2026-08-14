@@ -35,7 +35,9 @@
       "weight": 0.8,
       "max_output_tokens": 4096,
       "deadline_ms": 150000,
-      "max_retries": 1
+      "max_retries": 1,
+      "min_output_tokens": 900,
+      "target_output_tokens": 2200
     },
     {
       "id": "store",

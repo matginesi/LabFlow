@@ -4,6 +4,7 @@ require('../../assets/js/core.js');
 require('../../assets/js/data/analysis.js');
 require('../../assets/js/data/analysis-summary.js');
 require('../../assets/js/report/report.js');
+require('../../assets/js/ai/action-steps.js');
 function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
 /* Figure builders rasterize to canvas; provide a deterministic DOM/canvas stub for Node. */
 if (typeof document === 'undefined') {
@@ -64,6 +65,16 @@ module.exports=function(t,LF){
     assert(g.minEff,g.scans.rv.min,'minEff from scans.rv min');
     assert(g.maxEff,g.scans.rv.max,'maxEff from scans.rv max');
     assert(g.medianVoc,1,'medianVoc still resolved for the vendor');
+  };
+
+  t['Paper draft work units carry substantive word targets for adaptive output budgets']=function(){
+    const e=expWithData();
+    for(let i=0;i<70;i++)e.measurements.push(Object.assign({},e.measurements[0],{id:'extra'+i,sample:'DEVICE A'}));
+    const out=LF.ActionSteps['report.collect-draft-blocks']({exp:e,params:{document_kind:'paper'}});
+    const discussion=(out.blocks||[]).find(function(x){return x.id==='discussion';});
+    assert(!!discussion,true,'discussion block exists');
+    assert(discussion.target_words>=1000,true,'discussion gets substantive target');
+    assert(discussion.min_words<discussion.target_words&&discussion.max_words>discussion.target_words,true,'word target has useful range');
   };
 
   t['report Markdown preserves LaTeX in preview and TeX export'] = function(){

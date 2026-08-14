@@ -420,6 +420,11 @@
     return figures;
   }
 
+  function reportFigureCatalog(exp,kind){
+    const r=ensureReport(exp),k=kind==='paper'?'paper':kind==='lab'?'lab':r.kind,original=r.figureSelections[k],all={pceDistribution:true,hysteresisDistribution:true,bestJvmCurve:true,efficiencyHysteresis:true,topEfficiency:true,groupComparison:true};
+    r.figureSelections[k]=all;if(k===r.kind)r.figureSelection=all;let figures=[];try{figures=reportFigurePreviews(exp).slice();}finally{r.figureSelections[k]=original;if(k===r.kind)r.figureSelection=original;}return figures;
+  }
+
   function reportModel(exp) {
     const model = reportModelData(exp);
     model.figures = reportFigurePreviews(exp);
@@ -440,5 +445,5 @@
     const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.30});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Rendering PDF',progress:.55});const blob=window.ReportExport.buildPdfAsync?await window.ReportExport.buildPdfAsync(model,function(x){progress({stage:x.stage||'Rendering PDF',progress:.55+Number(x.progress||0)*.4});}):window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);progress({stage:'PDF ready',progress:1});end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

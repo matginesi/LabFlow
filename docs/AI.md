@@ -172,3 +172,10 @@ The final answer is generated only after this retrieval phase and may expose whi
 ## Provider rate limits
 
 LabFlow treats provider rate limiting separately from model/output failures. For Z.AI `glm-4.7-flash`, consecutive requests are paced to avoid burst traffic. HTTP 429 or provider code `1305` triggers a bounded transport-level cooldown and retry of the exact same request; `Retry-After` is honored when present. This retry does not rebuild prompts, rerun deterministic checkpoints, or count as an Action semantic retry. Quota-exhaustion codes such as 1308/1310 are not retried automatically.
+
+
+## Adaptive output budgeting
+
+LabFlow separates desired output size from provider capability. Each AI step may declare a minimum, target and maximum output budget. `ActionRunner` adapts the request to the work unit (including Report/Paper target words) and then clamps it to the detected model/provider ceiling and optional user cap. The provider maximum must never become the default requested output size.
+
+Long model calls emit semantic phases (`prepare`, `request`, streaming, `validate`, `store/complete`). SSE events and estimated generated tokens refine streaming progress only; they do not imply that validation or storage has completed. Connection tests use the regular provider transport with a small bounded payload and Z.AI rate-limit handling.

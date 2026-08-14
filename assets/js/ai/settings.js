@@ -148,6 +148,7 @@
     const provider = LF.AIProviders[settings.provider] || LF.AIProviders.custom;
     const oldText = button.textContent;
     button.textContent = 'Testing…';
+    button.disabled = true;
     LF.UI.activityStart({
       title: 'Test AI connection',
       subtitle: 'Minimal request · no experiment data',
@@ -163,7 +164,7 @@
     });
     try {
       LF.UI.activityUpdate({stage:'Waiting for provider', indeterminate:true, message:'The direct browser request is in progress.'});
-      const result = await LF.AI.testConnection();
+      const result = await LF.AI.testConnection({onProgress:function(p){if(!p)return;if(p.transportState==='rate_limit_wait'){LF.UI.activityUpdate({stage:'Provider reachable · rate limited',progress:.48,progressLabel:'Cooling down',message:'The model endpoint answered with a rate limit. Retrying the same probe in '+Math.max(1,Math.ceil(Number(p.retryInMs||0)/1000))+' s.'});}else if(p.transportState==='provider_pacing'){LF.UI.activityUpdate({stage:'Pacing provider probe',progress:.3,progressLabel:'Waiting to send',message:'LabFlow is spacing this Z.AI request to avoid a burst limit.'});}}});
       if(settings.provider==='lmstudio'&&result.model){const modelField=field('aiModel');if(modelField)modelField.value=result.model;if(result.model!==settings.model)LF.Storage.saveAiSettings(Object.assign({},settings,{model:result.model}));}
       LF.UI.activityUpdate({stepId:'request', stepStatus:'done', stepNote:result.elapsedMs + ' ms'});
       LF.UI.activityUpdate({stepId:'response', stepStatus:'done'});
@@ -183,6 +184,7 @@
       });
     } finally {
       button.textContent = oldText;
+      button.disabled = false;
     }
   }
 

@@ -57,3 +57,14 @@ The editor supports standard LaTeX in Markdown: inline `$...$` and display `$$..
 - Define symbols and units in prose and keep notation consistent across the block.
 - Never introduce an unsupported fitted law, model, derived value or numerical substitution.
 - Do not use custom LaTeX packages/macros or fenced code blocks for mathematics.
+
+# Depth and length contract
+
+`request.work_item` contains `target_words`, `min_words`, and `max_words` for the replacement block.
+
+- For section-specific helpers, produce a substantive replacement near `target_words`; do not merely polish the existing sentences if the section is materially underdeveloped.
+- Preserve all supported content, then add evidence-backed detail that belongs in that section: quantitative comparisons, methodological detail, uncertainty, caveats, provenance, interpretation, or supported equations as appropriate.
+- `tighten` is the deliberate exception: become denser and shorter while preserving scientific content.
+- `clarify` and `evidence_check` should normally preserve the document's information density rather than collapsing it into a summary.
+- If evidence cannot support the requested depth, state the limitation instead of inventing filler.
+- Return finished manuscript/report prose, not an outline, TODO list, editing advice, or commentary about what should be written.

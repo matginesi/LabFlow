@@ -228,6 +228,18 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
+  t['connection test uses the normal rate-limit-aware transport for Z.AI'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location,oldSetTimeout=global.setTimeout;let calls=0;
+    global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.setTimeout=function(fn,ms){return oldSetTimeout(fn,Math.min(Number(ms)||0,2));};
+    global.fetch=async function(){calls++;if(calls===1)return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'0':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'probe-ok',model:'glm-4.7-flash',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
+    LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:45000,rateLimit:{retries:1,delaysMs:[1],maxDelayMs:10,minIntervalMs:0,freeFlashMinIntervalMs:0}}};
+    try{const out=await AI.testConnection();assert(out.ok,true,'probe succeeds');assert(calls,2,'probe retries through transport');assert(out.rateLimitRetries,1,'probe exposes retry count');}
+    finally{global.fetch=oldFetch;global.setTimeout=oldSetTimeout;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['transport retries the identical request once after Z.AI 1305 and then succeeds'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location,oldSetTimeout=global.setTimeout;let calls=0,bodies=[];
     global.location={protocol:'https:',origin:'https://labflow.test'};

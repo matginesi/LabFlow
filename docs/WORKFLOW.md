@@ -938,3 +938,10 @@ The AI transport resolves model capabilities and caches them by provider/endpoin
 ## Assistant streaming
 
 Chat displays semantic state only: waiting, thinking and writing. Raw SSE chunk/event/byte counters stay in logs. Reasoning is separated from final text and completed replies retain model/provider, latency, TTFT, usage and throughput metadata when available.
+
+
+## Design and document finishing controls
+
+Design `Complete all missing with AI` creates missing per-variant proposals sequentially. `Apply all AI inferences` applies every currently available safe proposal but does not mark unresolved variants complete.
+
+Report/Paper writing helpers run section-by-section when `All` is used. Each work unit has a target scientific depth. Figure selection is independent for Report and Paper and is applied through the figure picker before preview/export.

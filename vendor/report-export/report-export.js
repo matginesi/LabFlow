@@ -81,6 +81,8 @@
     return blocks;
   }
 
+  function softBreakLongTokens(text){return String(text||'').split(/(\s+)/).map(function(token){if(/^\s+$/.test(token)||token.length<34)return token;let out='',n=0;for(const ch of token){out+=ch;n++;if(/[\/_\-.]/.test(ch)||n>=28){out+='\u200B';n=0;}}return out;}).join('');}
+
   function docxRun(text, opts = {}) {
     const rPr = [];
     if (opts.bold) rPr.push('<w:b/>');
@@ -88,7 +90,7 @@
     if (opts.code) rPr.push('<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>', '<w:shd w:fill="F2F4F5"/>');
     if (opts.color) rPr.push(`<w:color w:val="${opts.color}"/>`);
     if (opts.size) rPr.push(`<w:sz w:val="${opts.size}"/><w:szCs w:val="${opts.size}"/>`);
-    return `<w:r>${rPr.length ? `<w:rPr>${rPr.join('')}</w:rPr>` : ''}<w:t xml:space="preserve">${xml(safeText(text))}</w:t></w:r>`;
+    return `<w:r>${rPr.length ? `<w:rPr>${rPr.join('')}</w:rPr>` : ''}<w:t xml:space="preserve">${xml(softBreakLongTokens(safeText(text)))}</w:t></w:r>`;
   }
 
   function docxInline(text) {
@@ -203,7 +205,7 @@
   }
 
   function stylesXml() {
-    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Aptos" w:hAnsi="Aptos"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:color w:val="303941"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="110" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Aptos" w:hAnsi="Aptos"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:color w:val="303941"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="110" w:line="276" w:lineRule="auto"/><w:wordWrap w:val="1"/></w:pPr></w:pPrDefault></w:docDefaults>
     <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
     <w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Subtitle"/><w:pPr><w:spacing w:before="0" w:after="120"/><w:keepNext/></w:pPr><w:rPr><w:rFonts w:ascii="Aptos Display" w:hAnsi="Aptos Display"/><w:b/><w:sz w:val="38"/><w:color w:val="1F2B33"/></w:rPr></w:style>
     <w:style w:type="paragraph" w:styleId="Subtitle"><w:name w:val="Subtitle"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="260"/></w:pPr><w:rPr><w:sz w:val="22"/><w:color w:val="6B7780"/></w:rPr></w:style>
@@ -298,7 +300,7 @@
     line(x1,y1,x2,y2,color='#D7DCE0',width=.6){this.stroke(color);this.cmd(`${width} w ${x1.toFixed(2)} ${this.yPdf(y1).toFixed(2)} m ${x2.toFixed(2)} ${this.yPdf(y2).toFixed(2)} l S`);}
     text(text,x,y,{size=10,bold=false,color='#303941'}={}){this.fill(color);this.cmd(`BT /${bold?'F2':'F1'} ${size} Tf ${x.toFixed(2)} ${this.yPdf(y).toFixed(2)} Td (${pdfEsc(text)}) Tj ET`);}
     width(text,size=10){return String(text||'').length*size*.49;}
-    wrap(text,maxWidth,size=10){const words=stripInline(text).split(/\s+/).filter(Boolean), lines=[];let cur='';for(const word of words){const test=cur?`${cur} ${word}`:word;if(this.width(test,size)<=maxWidth||!cur)cur=test;else{lines.push(cur);cur=word;}}if(cur)lines.push(cur);return lines.length?lines:[''];}
+    wrap(text,maxWidth,size=10){const source=stripInline(text),words=source.split(/\s+/).filter(Boolean),lines=[];let cur='';const splitWord=(word)=>{const chunks=[];let part='';for(const ch of String(word)){const test=part+ch;if(part&&this.width(test,size)>maxWidth){chunks.push(part);part=ch;}else part=test;}if(part)chunks.push(part);return chunks;};for(const raw of words){const pieces=this.width(raw,size)>maxWidth?splitWord(raw):[raw];for(const word of pieces){const test=cur?`${cur} ${word}`:word;if(this.width(test,size)<=maxWidth)cur=test;else{if(cur)lines.push(cur);cur=word;}}}if(cur)lines.push(cur);return lines.length?lines:[''];}
     ensure(h){if(this.y+h> A4.h-52) this.newPage();}
     header(){ if(this.pageNo===1) return; this.text(this.model.title||'LabFlow Scientific Report',this.margin,28,{size:7.8,bold:true,color:'#71808B'}); this.text(String(this.pageNo),A4.w-this.margin,28,{size:8,color:'#71808B'}); this.line(this.margin,36,A4.w-this.margin,36,'#DDE2E6',.5); }
     footer(){ const y=A4.h-26; this.line(this.margin,y-9,A4.w-this.margin,y-9,'#E0E4E7',.4); this.text(`LabFlow · ${this.model.sourceZip||'research session'}`,this.margin,y,{size:6.8,color:'#88939B'}); this.text(`Page ${this.pageNo}`,A4.w-this.margin-34,y,{size:6.8,color:'#88939B'}); }
@@ -308,10 +310,10 @@
       if(!parsed||parsed.ext!=='jpg'||!Number.isFinite(pw)||!Number.isFinite(ph)||pw<=0||ph<=0){this.paragraph(latexReadable(latex),{size:9.4,color:'#315F8C',indent:12,gap:10});return;}
       const maxW=A4.w-2*this.margin-20,maxH=150,ratio=pw/ph;let w=Math.min(maxW,Math.max(150,(Number(asset.widthPx)||600)*.75)),h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}this.ensure(h+22);const x=this.margin+(A4.w-2*this.margin-w)/2,y=this.y+7,name=`ImEq${Number(index)+1}`;this.usedMathImages[name]=asset;this.cmd(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(A4.h-y-h).toFixed(2)} cm /${name} Do Q`);this.y+=h+18;
     }
-    heading(text,level=1){const size=level===1?17:level===2?13:11.2;const gap=level===1?14:10;this.ensure(size+gap+10); if(level===1){this.y+=6;this.text(stripInline(text),this.margin,this.y+size,{size,bold:true,color:'#243746'});this.y+=size+5;this.line(this.margin,this.y,A4.w-this.margin,this.y,'#B9C7D1',.7);this.y+=gap;} else {this.y+=4;this.text(stripInline(text),this.margin,this.y+size,{size,bold:true,color:level===2?'#127A8B':'#465762'});this.y+=size+gap;}}
+    heading(text,level=1){const size=level===1?17:level===2?13:11.2,gap=level===1?14:10,lines=this.wrap(stripInline(text),A4.w-2*this.margin,size),lineH=size*1.18;this.ensure(lines.length*lineH+gap+12);this.y+=level===1?6:4;for(const ln of lines){this.text(ln,this.margin,this.y+size,{size,bold:true,color:level===1?'#243746':level===2?'#127A8B':'#465762'});this.y+=lineH;}if(level===1){this.y+=2;this.line(this.margin,this.y,A4.w-this.margin,this.y,'#B9C7D1',.7);}this.y+=gap;}
     table(headers,rows,widths,colors){
       const total=A4.w-2*this.margin, ws=widths||Array(headers.length).fill(total/headers.length), scale=total/ws.reduce((a,b)=>a+b,0), cols=ws.map(x=>x*scale), hHead=26;
-      const cellLines=(value,i,bold=false)=>this.wrap(stripInline(value??''),Math.max(22,cols[i]-8),bold?7.2:7.3).slice(0,4);
+      const cellLines=(value,i,bold=false)=>this.wrap(stripInline(value??''),Math.max(22,cols[i]-8),bold?7.2:7.3);
       this.ensure(hHead+64);
       const drawHeader=()=>{let x=this.margin;headers.forEach((h,i)=>{this.rect(x,this.y,cols[i],hHead,{fill:colors?.[i]||'#E9EEF2',stroke:'#C9D1D7',line:.5});const lines=cellLines(h,i,true).slice(0,2);lines.forEach((ln,j)=>this.text(ln,x+4,this.y+9+j*8,{size:7.2,bold:true,color:'#33424D'}));x+=cols[i];});this.y+=hHead;};
       drawHeader();
@@ -330,7 +332,7 @@
       this.rect(0,0,A4.w,74,{fill:'#0D1F3D'});this.rect(0,74,A4.w,3,{fill:'#127A8B'});
       this.text('LABFLOW · '+documentLabel,this.margin,26,{size:7.2,bold:true,color:'#BFE8EA'});
       const title=this.wrap(this.model.title||'Scientific report',A4.w-2*this.margin,18);let yy=48;
-      for(const ln of title.slice(0,2)){this.text(ln,this.margin,yy,{size:18,bold:true,color:'#FFFFFF'});yy+=21;}
+      for(const ln of title.slice(0,4)){this.text(ln,this.margin,yy,{size:18,bold:true,color:'#FFFFFF'});yy+=21;}
       this.y=98;
       const meta=[['Source',this.model.sourceZip||'—'],['Data basis',this.model.dataState?.basis||'Original import interpretation'],['Revision',`r${this.model.dataState?.revision??0} · ${this.model.dataState?.appliedChanges??0} changes`],['Missing / incomplete',String(this.model.missingInformation?.total??0)]];
       const colW=(A4.w-2*this.margin-12)/2;

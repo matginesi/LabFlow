@@ -46,6 +46,18 @@
   function refresh(exp){rebuildSamples(exp);LF.CanonicalStore.build(exp);const analysis=LF.Analysis.analyze(exp);LF.CanonicalStore.build(exp);exp.datasetAnalysis=datasetAnalysis(exp,exp.sync&&exp.sync.revision||0);if(LF.ExperimentModel&&LF.ExperimentModel.ensureShape)LF.ExperimentModel.ensureShape(exp,LF.State&&LF.State.state);LF.CanonicalStore.build(exp);exp.designAnalysis=designAnalysis(exp,exp.sync&&exp.sync.revision||0);return{analysis:analysis,dataset:exp.datasetAnalysis,design:exp.designAnalysis};}
   function currentReport(exp){return LF.Report&&LF.Report.documentInfo?LF.Report.documentInfo(exp):{kind:'lab',markdown:''};}
   function reportKind(ctx){return String(ctx.params&&ctx.params.document_kind||'').toLowerCase()==='paper'?'paper':'lab';}
+  function wordCount(text){return (String(text||'').trim().match(/\S+/g)||[]).length;}
+  function writingTarget(kind,key,currentWords,mode){
+    const paper={front:320,intro:800,methods:900,results:900,discussion:1100,limits:400,conclusion:350,abstract:280,introduction:800,limitations:400,conclusions:350};
+    const report={objective:450,front:450,methods:800,results:900,interpretation:800,limits:400,conclusion:400,conclusions:400};
+    let base=(kind==='paper'?paper:report)[key]||Math.max(350,Number(currentWords)||0);
+    if(mode==='tighten')base=Math.max(120,Math.round((Number(currentWords)||base)*.78));
+    else if(mode==='clarify')base=Math.max(base,Number(currentWords)||0);
+    else if(mode==='evidence_check')base=Math.max(Math.round((Number(currentWords)||base)*.95),Math.min(base,Number(currentWords)||base));
+    else if(mode==='improve_selection')base=Math.max(80,Number(currentWords)||base);
+    return Math.max(80,Math.round(base));
+  }
+  function sizedWork(item,target){target=Math.max(80,Number(target)||300);return Object.assign(item,{target_words:target,min_words:Math.max(60,Math.round(target*.72)),max_words:Math.round(target*1.28)});}
   function draftBlocks(kind,exp){
     const large=(exp.measurements||[]).length>60||(exp.findings||[]).length>24||(exp.design&&exp.design.devices||[]).length>10;
     const reportLarge=[
@@ -69,7 +81,8 @@
       ['front','Title + Abstract + Introduction',['# <paper title>','## Abstract','## Introduction']],['methods','Experimental / Methods',['## Experimental / Methods']],['results','Results',['## Results']],['close','Discussion + Limitations + Conclusions',['## Discussion','## Limitations','## Conclusions']]
     ];
     const spec=kind==='paper'?(large?paperLarge:paperCompact):(large?reportLarge:reportCompact);
-    return spec.map(function(x,i){return{id:x[0],index:i+1,label:x[1],headings:x[2],document_kind:kind,instruction:'Write only these headings in this block: '+x[2].join(', ')};});
+    const compactTargets=kind==='paper'?{front:1100,methods:900,results:900,close:1800}:{front:500,methods:800,results:1600,close:800};
+    return spec.map(function(x,i){const target=large?writingTarget(kind,x[0],0,'draft'):(compactTargets[x[0]]||writingTarget(kind,x[0],0,'draft'));return sizedWork({id:x[0],index:i+1,label:x[1],headings:x[2],document_kind:kind,instruction:'Write only these headings in this block: '+x[2].join(', ')},target);});
   }
   function markdownSections(text){
     text=String(text||'');const re=/^#{1,3}\s+(.+)$/gm,matches=[],out=[];let m;
@@ -90,17 +103,17 @@
     if(!text.trim())throw new Error('The active document is empty. Create a draft or write content before using AI writing help.');
     if(mode==='improve_selection'){
       const sel=ctx.selection||{};if(!String(sel.text||'').trim()||!Number.isFinite(sel.start)||!Number.isFinite(sel.end))throw new Error('Select a passage in the editor first.');
-      return{kind:info.kind,mode:mode,source:text,blocks:[{id:'selection',label:'Selected passage',heading:'',start:sel.start,end:sel.end,text:text.slice(sel.start,sel.end),document_kind:info.kind}]};
+      const wc=wordCount(sel.text),target=writingTarget(info.kind,'selection',wc,mode);return{kind:info.kind,mode:mode,source:text,blocks:[sizedWork({id:'selection',label:'Selected passage',heading:'',start:sel.start,end:sel.end,text:text.slice(sel.start,sel.end),document_kind:info.kind},target)]};
     }
     const target=targetMode(mode),sections=markdownSections(text);
     if(target){
-      const found=sections.find(function(sec){return target.re.test(sec.title);});
-      if(found)return{kind:info.kind,mode:mode,source:text,blocks:[Object.assign({id:'section',label:found.title,document_kind:info.kind},found)]};
-      return{kind:info.kind,mode:mode,source:text,blocks:[{id:'insert',label:target.heading.replace(/^#+\s*/,''),heading:target.heading,start:text.length,end:text.length,text:'',insert:true,document_kind:info.kind,instruction:'Create this missing section: '+target.heading}]};
+      const found=sections.find(function(sec){return target.re.test(sec.title);}),key=mode.replace(/^(paper|report)_/,'');
+      if(found){const wc=wordCount(found.text),goal=Math.max(wc,writingTarget(info.kind,key,wc,mode));return{kind:info.kind,mode:mode,source:text,blocks:[sizedWork(Object.assign({id:'section',label:found.title,document_kind:info.kind},found),goal)]};}
+      const goal=writingTarget(info.kind,key,0,mode);return{kind:info.kind,mode:mode,source:text,blocks:[sizedWork({id:'insert',label:target.heading.replace(/^#+\s*/,''),heading:target.heading,start:text.length,end:text.length,text:'',insert:true,document_kind:info.kind,instruction:'Create this missing section: '+target.heading},goal)]};
     }
     if(!/^(tighten|clarify|evidence_check)$/.test(mode))throw new Error('Unknown report writing mode: '+mode);
-    if(text.length<=8000)return{kind:info.kind,mode:mode,source:text,blocks:[{id:'document',label:'Complete document',heading:'',start:0,end:text.length,text:text,document_kind:info.kind}]};
-    return{kind:info.kind,mode:mode,source:text,blocks:sections.map(function(sec,i){return Object.assign({id:'section-'+i,label:sec.title||('Block '+(i+1)),document_kind:info.kind},sec);})};
+    if(text.length<=8000){const wc=wordCount(text),goal=writingTarget(info.kind,'document',wc,mode);return{kind:info.kind,mode:mode,source:text,blocks:[sizedWork({id:'document',label:'Complete document',heading:'',start:0,end:text.length,text:text,document_kind:info.kind},goal)]};}
+    return{kind:info.kind,mode:mode,source:text,blocks:sections.map(function(sec,i){const wc=wordCount(sec.text),goal=writingTarget(info.kind,'section',wc,mode);return sizedWork(Object.assign({id:'section-'+i,label:sec.title||('Block '+(i+1)),document_kind:info.kind},sec),goal);})};
   }
   function nomadPlan(exp,validation){
     const plan=LF.Nomad&&LF.Nomad.buildMapping?LF.Nomad.buildMapping(exp):{summary:'NOMAD mapping unavailable.',mappings:[],missing:[],readiness:'blocked',sourceRevision:exp.sync&&exp.sync.revision||0,generatedAt:new Date().toISOString()};
@@ -141,6 +154,11 @@
     if(n){if(dst.status!=='user_confirmed')dst.status='ai_inferred';dst.aiAssisted=true;dst.aiAssistedAt=new Date().toISOString();}if(part==='all'){src.applied=true;src.decision='accepted';}src.appliedParts=src.appliedParts||{};src.appliedParts[part]=true;return n;}
   function applyOneDesign(exp,kind,index,part){const p=exp.aiDesignProposal;if(!p)throw new Error('No AI design proposal is available.');let changed=0;if(kind==='solution'){const src=(p.solutions||[])[index];if(!src)throw new Error('Design solution proposal not found.');changed=applyDesignSolution(exp,src);}else{const src=(p.devices||[])[index];if(!src)throw new Error('Design device proposal not found.');changed=applyDesignDevice(exp,src,part||'all');}if(!changed)throw new Error('The proposed values are already present or protected by researcher-entered values.');exp.design.status='reviewing';return{changed:changed};}
   function applyAllDesign(exp){const p=exp.aiDesignProposal;if(!p)throw new Error('No AI design proposal is available.');let changed=0,items=0;(p.solutions||[]).forEach(function(src){if(src.applied)return;const n=applyDesignSolution(exp,src);changed+=n;if(n)items++;});(p.devices||[]).forEach(function(src){const parts=src.appliedParts||{};if(src.solution_names&&src.solution_names.length&&!parts.solutions){const n=applyDesignDevice(exp,src,'solutions');changed+=n;if(n)items++;}if(src.process&&Object.keys(src.process).some(function(k){return String(src.process[k]==null?'':src.process[k]).trim()!=='';})&&!parts.process){const n=applyDesignDevice(exp,src,'process');changed+=n;if(n)items++;}if(src.stack&&src.stack.length&&!parts.stack){const n=applyDesignDevice(exp,src,'stack');changed+=n;if(n)items++;}});exp.design.status='reviewing';return{changed:changed,items:items};}
+  function applyAllDesignProposals(exp){
+    const map=exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:{},ids=Object.keys(map),previous=exp.aiDesignProposal;let changed=0,items=0,proposals=0;
+    ids.forEach(function(id){const proposal=map[id];if(!proposal)return;exp.aiDesignProposal=proposal;const out=applyAllDesign(exp);if(out.changed){changed+=out.changed;items+=out.items||0;proposals++;}});
+    const selected=LF.State&&LF.State.state&&LF.State.state.selectedDesignDeviceId;exp.aiDesignProposal=selected&&map[selected]?map[selected]:(previous||ids.length&&map[ids[0]]||null);exp.design.status='reviewing';return{changed:changed,items:items,proposals:proposals,totalProposals:ids.length};
+  }
   function applyAcceptedDesign(exp){
     const p=exp.aiDesignProposal;if(!p)throw new Error('No AI design proposal is available.');
     const acceptedSolutions=(p.solutions||[]).filter(function(x){return x.decision==='accepted'&&!x.applied;}),acceptedDevices=(p.devices||[]).filter(function(x){return x.decision==='accepted'&&!x.applied;});
@@ -160,5 +178,5 @@
   }
   LF.ActionSteps=steps;
   LF.DatasetCorrections={applyProposal:applyProposal,rebuildSamples:rebuildSamples,proposalMeasurements:proposalMeasurements,safeFixes:safeFixes,analysis:datasetAnalysis,refresh:refresh};
-  LF.DesignAnalysis={build:designAnalysis,applyAccepted:applyAcceptedDesign,applyOne:applyOneDesign,applyAll:applyAllDesign,applySelectedDevice:applySelectedDevice};
+  LF.DesignAnalysis={build:designAnalysis,applyAccepted:applyAcceptedDesign,applyOne:applyOneDesign,applyAll:applyAllDesign,applyAllProposals:applyAllDesignProposals,applySelectedDevice:applySelectedDevice};
 }());

@@ -376,8 +376,10 @@
     panel.hidden = !stream;
     if (!stream) return;
     const tokens = Math.max(0, Number(stream.tokens) || 0);
+    const target = Math.max(0, Number(stream.targetTokens) || 0);
     const budget = Math.max(0, Number(stream.budgetTokens) || 0);
-    const used = budget ? Math.min(1, tokens / budget) : 0;
+    const denominator = target || budget;
+    const used = denominator ? Math.min(1, tokens / denominator) : 0;
     const percent = Math.round(used * 100);
     const state = stream.status === 'complete' ? 'Stream complete'
       : stream.status === 'interrupted' ? 'Stream interrupted'
@@ -387,13 +389,13 @@
     byId('activityStreamEvents').textContent = String(Math.max(0, Number(stream.events) || 0));
     byId('activityStreamBytes').textContent = formatBytes(stream.bytes);
     byId('activityStreamTtft').textContent = Number.isFinite(Number(stream.ttftMs)) ? Math.round(Number(stream.ttftMs)) + ' ms' : 'waiting';
-    byId('activityStreamTokens').textContent = (stream.estimated === false ? '' : '~') + Math.round(tokens) + (budget ? ' / ' + budget : '') + ' tok';
+    byId('activityStreamTokens').textContent = (stream.estimated === false ? '' : '~') + Math.round(tokens) + (target ? ' / ~' + target + ' target' : budget ? ' / ' + budget : '') + (budget&&target&&budget!==target?' · max '+budget:'') + ' tok';
     const bar = byId('activityStreamBar');
     const progress = byId('activityStreamProgress');
     if (bar) bar.style.width = (used * 100).toFixed(1) + '%';
     if (progress) {
       progress.setAttribute('aria-valuenow', String(percent));
-      progress.setAttribute('aria-valuetext', (stream.estimated === false ? '' : 'Estimated ') + Math.round(tokens) + (budget ? ' of ' + budget : '') + ' output tokens');
+      progress.setAttribute('aria-valuetext', (stream.estimated === false ? '' : 'Estimated ') + Math.round(tokens) + (denominator ? ' of approximately ' + denominator : '') + ' target output tokens');
     }
   }
 
@@ -591,7 +593,7 @@
     textFields.forEach(function (field) {
       if (input[field] != null) activity[field] = text(input[field]);
     });
-    if (input.progress != null) activity.progress = clampProgress(input.progress);
+    if (input.progress != null) { const next=clampProgress(input.progress); activity.progress=activity.status==='running'?Math.max(clampProgress(activity.progress),next):next; }
     if (input.indeterminate != null) activity.indeterminate = Boolean(input.indeterminate);
     if (input.cancellable != null) activity.cancellable = Boolean(input.cancellable);
     if (input.cancelling != null) activity.cancelling = Boolean(input.cancelling);

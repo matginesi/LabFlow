@@ -61,3 +61,10 @@ Changes compares the current Working Copy to a baseline captured immediately aft
 ## Assistant response surface
 
 Assistant messages use compact instrument-style rows rather than large rounded bubbles. The empty composer stays one line; only researcher input expands it. Browser-owned confirm/alert dialogs are not part of the UI contract: confirmations and short application messages use LabFlow totems. Modal/totem surfaces must always expose an explicit Cancel or Close control as appropriate and support `Esc`. Streaming transport counters (chunk/event/byte counts) are implementation diagnostics and are not shown in chat. Thinking/reasoning, when provided by the model, is shown in a separate disclosure from final answer text. Completed AI responses expose useful telemetry such as model/provider, elapsed time, TTFT when known, input/output/total tokens and generation rate when available. Researcher-triggered Actions also publish a compact Assistant-row result: text Actions publish their textual result, while structured/deterministic Actions publish a concise completion summary. Report/Paper **All** sequences aggregate their section results into one chat message rather than flooding the conversation.
+
+
+## Long Action progress
+
+The Action Totem uses one monotonic progress bar. Checkpoint and work-unit position establish coarse progress; semantic phases establish reserved bands; streaming events/tokens provide fine movement inside the response band. Sequential Design/Report/Paper helpers must keep a single parent bar rather than resetting for each child Action.
+
+Design exposes compact variant state cards and separate commands for generating missing AI proposals and applying all existing proposals. Report/Paper use a document-scoped figure picker with Apply, Cancel, Close and Escape behavior.

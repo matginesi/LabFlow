@@ -48,3 +48,14 @@ For example, when supported by the supplied scan summaries, a comparison may be 
 $$
 \Delta \mathrm{PCE} = \mathrm{PCE}_{RV} - \mathrm{PCE}_{FW}
 $$
+
+# Depth and length contract
+
+`request.work_item` contains `target_words`, `min_words`, and `max_words`. Treat these as a scientific content budget, not as optional decoration.
+
+- Aim near `target_words` when the supplied evidence supports it.
+- Do not return an outline, stub, teaser, or one/two-paragraph summary when a full section is requested.
+- Develop the evidence rather than padding: report quantitative values, relevant comparisons, uncertainty/quality limits, provenance implications, and observation-vs-interpretation distinctions where they belong.
+- Use multiple coherent paragraphs, compact tables, or supported equations when they improve scientific communication.
+- If evidence is genuinely insufficient to reach the target responsibly, stop earlier and state the specific limitation. Never fill length with invented background, citations, mechanisms, or measurements.
+- A Scientific Paper should read like a substantive manuscript draft. A Lab Report should read like a complete, traceable laboratory record rather than a summary card.

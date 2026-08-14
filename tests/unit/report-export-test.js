@@ -17,6 +17,14 @@ module.exports=function(t){
     truthy(text.indexOf('Top RV efficiency')<0,'unselected ranking absent');
   };
 
+  t['DOCX enables word wrapping and soft-breaks pathological long scientific tokens']=async function(){
+    const token='very_long_measurement_identifier_without_spaces_1234567890_ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const model={title:token,author:'A',lab:'L',sourceZip:'demo.zip',reportKind:'lab',sourceWords:3,markdown:'# '+token+'\n\n'+token,includeCharts:false,figures:[],chartData:{figureSelection:{}}};
+    const docx=await RE.buildDocx(model),zip=await JSZip.loadAsync(await docx.arrayBuffer()),xml=await zip.file('word/document.xml').async('string'),styles=await zip.file('word/styles.xml').async('string');
+    truthy(styles.indexOf('w:wordWrap')>=0,'DOCX word wrap enabled');
+    truthy(xml.indexOf('&#8203;')>=0||xml.indexOf('\u200b')>=0||xml.indexOf(String.fromCharCode(8203))>=0,'long token receives a soft break');
+  };
+
   t['Markdown parser keeps display LaTeX as an equation block']=function(){
     const blocks=RE.parseMarkdown('Inline $J_{SC}$ stays inline.\n\n$$\n\\Delta \mathrm{PCE}=\mathrm{PCE}_{RV}-\mathrm{PCE}_{FW}\n$$');
     truthy(blocks.some(function(b){return b.type==='equation'&&b.latex.indexOf('PCE')>=0;}),'equation block');

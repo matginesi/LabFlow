@@ -28,6 +28,18 @@ module.exports=function(t,LF){
     return{messages:messages};
   }
 
+  t['SSE events refine progress inside the streaming band without reaching completion']=function(){
+    loadUi(function(){return Promise.resolve({status:'done'});});
+    const a=LF.ActionUI.streamFraction({content:'x'.repeat(400),targetTokens:1000,events:1});
+    const b=LF.ActionUI.streamFraction({content:'x'.repeat(400),targetTokens:1000,events:40});
+    assert(b.fraction>a.fraction,'events should refine streaming progress');
+    assert(b.fraction<=.82,'streaming events must reserve validate/store progress');
+    const d={steps:[{id:'infer',weight:.8},{id:'store',weight:.2}]};
+    const first=LF.ActionUI.actionProgress(d,0,0,3,.5),second=LF.ActionUI.actionProgress(d,0,1,3,.1),third=LF.ActionUI.actionProgress(d,1,0,1,.1);
+    assert(second>first,'next work unit must move global progress forward');
+    assert(third>second,'next checkpoint must move global progress forward');
+  };
+
   t['Completed visible text Actions publish their actual result into Assistant chat']=async function(){
     const env=loadUi(function(id,cb){return Promise.resolve({status:'done',actionId:id,aiOutput:'Evidence-backed interpretation.',result:{stored:true},requestMeta:{edit:{model:'test-model',provider:'lmstudio',usage:{promptTokens:10,completionTokens:5,totalTokens:15}}}});});
     const out=await LF.ActionUI.run('report.improve','',{params:{document_kind:'paper',mode:'paper_results'}});

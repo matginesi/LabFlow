@@ -411,3 +411,13 @@ Import → Review → correction → Results → Design → Report → NOMAD →
 
 ### Provider rate-limit handling
 Treat model/provider ceilings, Action output budgets, semantic retries, and transport rate-limit retries as separate concerns. Z.AI 1305/HTTP 429 may use bounded pacing/backoff of the identical request; quota exhaustion must fail clearly and must not create unbounded retry loops.
+
+
+## Long Action progress and AI output contract
+
+- Progress MUST be monotonic and composed from Action checkpoint, foreach/work-unit position, semantic phase, and bounded SSE/token telemetry. Provider events may refine the streaming phase but MUST NOT consume validation/store completion bands.
+- Sequential multi-Action UI (Design all, Report/Paper All) MUST project child progress into one parent progress bar and MUST NOT reset to zero between items.
+- Provider/model output limits are ceilings. AI steps SHOULD declare `min_output_tokens`, `target_output_tokens`, and `max_output_tokens`; the runner sizes the request from the current work item and then clamps it to user/provider ceilings.
+- Report/Paper work items SHOULD declare `target_words`, `min_words`, and `max_words`; prompts must produce finished substantive prose when evidence supports the requested depth.
+- Applying all Design AI proposals fills only safe missing fields and MUST NOT imply completeness when source gaps remain.
+- Report and Paper figure selections are document-scoped and are reviewed through the figure picker before export.
