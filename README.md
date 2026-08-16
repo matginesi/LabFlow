@@ -76,7 +76,7 @@ The Assistant is the first deliberately constrained agentic consumer of that reg
 
 The uploaded source is never rewritten.
 
-**Save** marks/persists the current Working Copy for the active browser session. A new LabFlow page load deliberately starts with **no experiment loaded** and clears any stored experiment snapshot; provider/model settings, API key and UI preferences remain browser-local. **Export** explicitly creates the LabFlow ZIP and is the durable way to carry the Working Copy forward.
+**Save** marks an explicit checkpoint for the current revision. The Working Copy is autosaved locally and restored when LabFlow is reopened; **Reset session** deliberately clears that persisted scientific session. Provider/model settings, API key and UI preferences remain browser-local but separate. **Export** explicitly creates the durable LabFlow ZIP.
 
 LabFlow ZIP, Report PDF/DOCX and NOMAD ZIP are explicit derived exports: they read the current Working Copy but do not implicitly mark later edits saved.
 
@@ -96,7 +96,7 @@ NOMAD is deterministic-first. One Canonical → NOMAD mapping plan powers the UI
 
 No Node.js application server or backend is required. The POC is static. AI providers are called directly from the browser and connection settings are stored locally in the browser.
 
-For **local LLM providers**, do not open `index.html` through `file://`. Start the bundled static server with `python tools/serve_static.py --port 8765` and open `http://127.0.0.1:8765`. Ollama accepts localhost web origins by default. LM Studio direct browser access additionally requires CORS; start its server with `lms server start --cors` (or enable the equivalent CORS option in LM Studio). LabFlow uses the OpenAI-compatible `/v1/chat/completions` contract and always sends a `messages` array.
+For **local LLM providers**, LabFlow calls LM Studio or Ollama directly through the OpenAI-compatible `/v1/chat/completions` contract; no Python application server is required. The provider only needs to be running and accept the current browser origin. Active-model detection runs only when **Detect** or the connection test is explicitly started; thinking/no-thinking fields are applied only when the provider adapter declares them. See [`docs/specs/AI_PROVIDERS.md`](docs/specs/AI_PROVIDERS.md).
 
 ## Build and verify
 

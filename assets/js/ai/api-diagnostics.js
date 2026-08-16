@@ -7,10 +7,8 @@
     const name=provider&&provider.name?provider.name:'AI provider';
     const local=providerId==='lmstudio'||providerId==='ollama';
     if(local){
-      const fileOrigin=typeof location!=='undefined'&&location.protocol==='file:';
-      const originHint=fileOrigin?' LabFlow is running from file://, which is commonly rejected as a browser origin. Serve the app over http://127.0.0.1 instead.':'';
-      const providerHint=providerId==='lmstudio'?' LM Studio direct browser access requires CORS (for example: lms server start --cors).':' Ollama accepts localhost web origins by default; custom/file origins may require OLLAMA_ORIGINS.';
-      return label+' was blocked before LabFlow could read an HTTP response from '+name+'. This is usually browser CORS/preflight, not a missing messages payload.'+originHint+providerHint;
+      const providerHint=providerId==='lmstudio'?' Check that LM Studio has its local API enabled and accepts this browser origin.':' Check that Ollama is running and accepts this browser origin.';
+      return label+' ended before LabFlow could read an HTTP response from '+name+'. This may be connectivity or browser-origin policy; it is not evidence of a malformed messages payload.'+providerHint;
     }
     return label+' could not reach '+name+'. Check that the service is running and that the configured endpoint is correct.';
   }
@@ -32,11 +30,13 @@
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
       category=(providerId==='lmstudio'||providerId==='ollama')?'Browser / CORS':'Network';
-      if(providerId==='lmstudio')next='Run LabFlow from http://127.0.0.1 (not file://) and start LM Studio with CORS enabled, e.g. lms server start --cors. Then retry.';
-      else if(providerId==='ollama')next='Run LabFlow from http://127.0.0.1 (not file://). Ollama allows localhost web origins by default; configure OLLAMA_ORIGINS only for a different origin.';
+      if(providerId==='lmstudio')next='Confirm that the LM Studio local API is running at the configured endpoint and accepts the current browser origin, then retry.';
+      else if(providerId==='ollama')next='Confirm that Ollama is running at the configured endpoint and accepts the current browser origin, then retry.';
       else next='Check that the provider process is running and the endpoint is reachable from this browser.';
     }
     else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. LabFlow uses the runtime context capability and compacts the Action Context Pack; if this persists, increase the loaded context or narrow the Action.';}
+    else if(e.isContract&&String(e.finishReason||'')==='length'){category='Probe output limit';next='The provider is reachable, but the model used the bounded probe budget before returning final text. Press Detect again so LabFlow can refresh its reasoning capabilities, or select a model with a smaller reasoning budget.';}
+    else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load it in the provider, then press Detect or run the connection test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
     else if(status===429||code==='1305'){category='Rate limit';next='LabFlow already applied bounded backoff. If it still fails, wait briefly or switch from the shared free Flash endpoint to another model/provider.';}

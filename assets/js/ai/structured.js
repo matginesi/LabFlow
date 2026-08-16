@@ -5,7 +5,7 @@
   const Log = LF.Logger ? LF.Logger.scope('structured') : null;
 
   /* ------------------------------------------------------------------ *
-   * JSON transport parsing (ported unchanged from the old assistant.js)
+   * Provider JSON parsing shared by every schema-backed AI Action
    * ------------------------------------------------------------------ */
 
   /** Locate complete JSON values without confusing braces inside quoted text. */
@@ -94,8 +94,6 @@
     return { value: null, strategy: 'failed', repaired: false, diagnosis: diagnosis, raw: raw };
   }
 
-  function extractJson(text) { return parse(text).value; }
-
   /* ------------------------------------------------------------------ *
    * Schema validation (no per-handler code)
    * ------------------------------------------------------------------ */
@@ -144,16 +142,6 @@
     return errors;
   }
 
-  function schemaIdFor(actionId, ActionRegistry) {
-    const def = ActionRegistry && ActionRegistry.action ? ActionRegistry.action(actionId) : null;
-    if (!def || !Array.isArray(def.steps)) return null;
-    for (let i = def.steps.length - 1; i >= 0; i--) {
-      const step = def.steps[i];
-      if (step.schema) return step.schema;
-    }
-    return null;
-  }
-
   function normalizeForSchema(schemaId, value) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = Object.assign({}, value);
@@ -198,12 +186,9 @@
 
   LF.StructuredOutput = {
     parse: parse,
-    extractJson: extractJson,
     validate: validate,
     normalizeForSchema: normalizeForSchema,
-    contractError: contractError,
-    schemaErrors: schemaErrors,
-    schemaIdFor: schemaIdFor
+    contractError: contractError
   };
   if (Log) Log.info('structured.ready', { parsers: ['balanced-json', 'syntax-normalize'], validator: 'schema-based' });
 }());

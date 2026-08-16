@@ -76,18 +76,39 @@ module.exports = function (t, LF) {
     delete LF.Storage;delete LF.AIProviders;
   };
 
-  t['buildRequest honors jsonMode and disables thinking'] = function () {
+  t['buildRequest honors jsonMode and provider-declared thinking controls'] = function () {
     LF.Storage = {
       getAiSettings: function () { return { provider: 'ollama', endpoint: 'http://127.0.0.1:11434/v1', model: 'gemma3', temperature: 0.2, maxTokens: 512, inactivityTimeoutMs: 60000, streaming: false }; },
       getApiKey: function () { return ''; }
     };
-    LF.AIProviders = { ollama: { keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true, supportsTemperature: true, supportsJsonMode: true, supportsThinking: true, reasoningEffort: 'none' } };
-    const spec = AI.buildRequest({ provider: 'ollama', messages: [{ role: 'user', content: 'j' }], stream: false, jsonMode: true });
+    LF.AIProviders = { ollama: { keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true, supportsTemperature: true, supportsJsonMode: true, thinkingModes:{off:{reasoning_effort:'none'}} } };
+    const spec = AI.buildRequest({ provider: 'ollama', messages: [{ role: 'user', content: 'j' }], stream: false, jsonMode: true, thinkingMode:'off' });
     assert(spec.body.response_format, { type: 'json_object' }, 'json mode');
-    assert(spec.body.thinking, { type: 'disabled' }, 'thinking disabled');
     assert(spec.body.stream, false, 'stream false honored');
     assert(spec.body.reasoning_effort, 'none', 'reasoning effort');
+    assert(spec.thinkingMode, 'off', 'applied thinking mode');
     delete LF.Storage; delete LF.AIProviders;
+  };
+
+  t['thinking adapter applies only provider-declared request fields'] = function () {
+    const auto={},unsupported={},off={},on={};
+    assert(AI.applyThinkingMode(auto,{thinkingModes:{off:{reasoning_effort:'none'}}},'auto').applied,'auto','auto mode');
+    assert(auto,{},'auto sends no override');
+    assert(AI.applyThinkingMode(unsupported,{},'off').applied,'auto','unsupported fallback');
+    assert(unsupported,{},'unsupported provider receives no invented field');
+    const modes={off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}};
+    assert(AI.applyThinkingMode(off,{thinkingModes:modes},'off').applied,'off','off applied');assert(off.thinking,{type:'disabled'},'off payload');
+    assert(AI.applyThinkingMode(on,{thinkingModes:modes},'on').applied,'on','on applied');assert(on.thinking,{type:'enabled'},'on payload');
+  };
+
+  t['connection probe respects models that require reasoning']=function(){
+    const provider={connectionTestMaxTokens:128};
+    const optional=AI.connectionProbePolicy(provider,{reasoningAllowedOptions:['off','low','on']});
+    assert(optional.thinkingMode,'off','disable reasoning when model permits it');assert(optional.maxTokens,128,'small no-thinking probe');
+    const required=AI.connectionProbePolicy(provider,{reasoningAllowedOptions:['on']});
+    assert(required.thinkingMode,'auto','do not force unsupported off mode');assert(required.maxTokens,2048,'reasoning model gets final-answer budget');assert(required.reasoningRequired,true,'required reasoning marked');
+    const unknownLocal=AI.connectionProbePolicy({id:'lmstudio',connectionTestMaxTokens:128},null);
+    assert(unknownLocal.thinkingMode,'auto','unknown local capability gets portable payload');assert(unknownLocal.maxTokens,2048,'unknown local model can still reach final text');
   };
 
 
@@ -125,7 +146,14 @@ module.exports = function (t, LF) {
   t['LM Studio capability probe reads loaded context without inventing output max'] = async function () {
     const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'local-model',max_context_length:131072,loaded_instances:[{id:'local-model',config:{context_length:32768,eval_batch_size:512}}]}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{keyRequired:false}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',force:true});assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(cap.contextWindow,32768,'loaded instance context wins over theoretical model max');assert(cap.modelMaxContextWindow,131072,'theoretical max retained separately');assert(cap.runtimeContextWindow,32768,'runtime context exposed');assert(cap.maxOutputTokens,null,'no fabricated output max');assert(cap.exactOutput,false,'context is not exact output');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',force:true});assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(cap.loadedModel,'local-model','loaded model identity');assert(cap.contextWindow,32768,'loaded instance context wins over theoretical model max');assert(cap.modelMaxContextWindow,131072,'theoretical max retained separately');assert(cap.runtimeContextWindow,32768,'runtime context exposed');assert(cap.maxOutputTokens,null,'no fabricated output max');assert(cap.exactOutput,false,'context is not exact output');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['LM Studio capability detects a different actually loaded model'] = async function () {
+    const oldFetch=global.fetch;global.fetch=async function(){return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'qwen/unavailable',max_context_length:65536,loaded_instances:[]},{key:'gemma/loaded',max_context_length:32768,loaded_instances:[{id:'gemma/loaded',config:{context_length:16384}}]}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'qwen/unavailable'};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{keyRequired:false}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'qwen/unavailable',force:true});assert(cap.loadedModel,'gemma/loaded','active loaded model');assert(cap.runtimeContextWindow,16384,'active runtime context');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -142,8 +170,8 @@ module.exports = function (t, LF) {
     global.fetch=async function(url,opts){seen={url:url,opts:opts};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'test',model:'local-model',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
-    LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000}};
-    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(!!sent.messages[0].content,true,'connection test content');}
+    LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
+    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(!!sent.messages[0].content,true,'connection test content');assert(sent.max_tokens,256,'reasoning-capable probe budget');assert(sent.reasoning_effort,'none','LM Studio reasoning disabled');assert(sent.chat_template_kwargs.enable_thinking,false,'LM Studio thinking template disabled');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -251,7 +279,7 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
     LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:45000,rateLimit:{retries:1,delaysMs:[1],maxDelayMs:10,minIntervalMs:0,freeFlashMinIntervalMs:0}}};
-    try{const out=await AI.testConnection();assert(out.ok,true,'probe succeeds');assert(calls,2,'probe retries through transport');assert(out.rateLimitRetries,1,'probe exposes retry count');}
+    try{const out=await AI.testConnection();assert(out.ok,true,'probe succeeds');assert(calls,2,'probe retries through transport');assert(out.rateLimitRetries,1,'probe exposes retry count');assert(out.elapsedMs>=out.requestElapsedMs,true,'total timing includes successful request');assert(out.finishReason,'stop','probe exposes finish reason');}
     finally{global.fetch=oldFetch;global.setTimeout=oldSetTimeout;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 

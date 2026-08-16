@@ -6,6 +6,7 @@ module.exports=function(t){
   const results=fs.readFileSync(path.join(root,'assets/js/pages/results-page.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
+  const settingsPage=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
   const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const logs=fs.readFileSync(path.join(root,'assets/js/pages/logs-page.js'),'utf8');
@@ -31,7 +32,24 @@ module.exports=function(t){
   t['Detect provider metadata uses the Action totem lifecycle']=function(){
     assert(settings.includes("title:'Detect model capabilities'"),true,'detect totem title');
     assert(settings.includes("stepId:'capability'"),true,'capability checkpoint');
-    assert(settings.includes("LF.UI.activityFinish({message:'Provider metadata detection completed.'"),true,'detect terminal totem');
+    assert(settings.includes("activity.activityFinish({message:'Provider metadata detection completed.'"),true,'detect terminal totem');
+  };
+
+  t['Provider detection runs only from Detect or connection test']=function(){
+    assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
+    assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
+    assert(settings.includes('await loadModels({silent:true})'),true,'connection test performs silent detection first');
+    assert(settingsPage.includes('only when you press Detect or run the connection test'),true,'trigger policy is visible');
+    assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
+    assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
+  };
+
+  t['Provider settings expose portable thinking policy and rich connection diagnostics']=function(){
+    assert(settingsPage.includes('id="aiThinkingMode"'),true,'thinking policy selector');
+    assert(settingsPage.includes('Automatic (model default)'),true,'provider-neutral default');
+    assert(settings.includes('## Connection diagnostics'),true,'rich connection diagnostics');
+    assert(settings.includes('Successful provider round trip'),true,'round-trip metric');
+    assert(settings.includes('Thinking override'),true,'applied thinking mode is reported');
   };
 
   t['Report equations are compact in preview PDF and DOCX']=function(){

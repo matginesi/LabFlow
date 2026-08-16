@@ -85,30 +85,6 @@
     return lines.length ? lines.join('\n') : 'No experimental-design details have been confirmed or inferred yet.';
   }
 
-  function defaultMarkdown(exp) {
-    const s = (LF.Analysis.analysisOf(exp) || {}).summary || {};
-    return '# ' + ((exp.meta && exp.meta.name) || 'Experiment report') + '\n\n' +
-      '## Purpose and scope\n\nThis laboratory report documents the photovoltaic experiment contained in `' + ((exp.meta && exp.meta.sourceName) || 'the imported dataset') + '`. It connects the experimental design, deterministic JV analysis, data-quality review and resulting scientific interpretation while preserving the uploaded archive as immutable source evidence.\n\n' +
-      '## Experimental design\n\nDescribe the device variants, precursor formulations, solutes, solvents, additives and layer stack confirmed in the Design workspace. Distinguish values taken directly from source evidence from researcher-confirmed or AI-inferred values.\n\n' +
-      '## Fabrication and measurement methods\n\nDocument deposition, annealing, atmosphere and measurement conditions in chronological order. Record missing parameters explicitly; do not replace them with assumed standard practice. Explain the FW/RV acquisition convention and the deterministic eligibility criteria used by LabFlow.\n\n' +
-      '## Dataset and quality control\n\nThe current Working Copy contains **' + (s.sampleCount || 0) + ' samples** and **' + (s.measurementCount || 0) + ' measurements**. Of these, **' + (s.eligibleCount || 0) + '** are eligible for ranking after deterministic validation. There are **' + (s.findingCount || 0) + '** open findings. Summarize material corrections and exclusions here, including their evidence and effect on interpretation.\n\n' +
-      '## Results\n\nThe best eligible device is **' + (s.bestSample || 'not yet established') + '** with a PCE of **' + C.fmt(s.bestEfficiency, 2) + '%**; the median best efficiency is **' + C.fmt(s.medianEfficiency, 2) + '%**. Present reference and non-reference performance separately, report variability alongside central values, and describe hysteresis using the paired FW/RV measurements.\n\n' +
-      '## Discussion\n\nInterpret the observed ranking, group-level spread, reference behavior and hysteresis in relation to the confirmed design. Separate direct observations from mechanistic hypotheses. Address measurement exclusions, incomplete metadata and the limits these impose on causal conclusions.\n\n' +
-      '## Conclusions\n\nState the principal result, the strength of the supporting evidence and the most important unresolved question. Keep conclusions proportional to the validated dataset.\n\n' +
-      '## Data provenance and reuse\n\nThe original ZIP remains unchanged. This report is derived from the current LabFlow Working Copy; corrections are tracked as provenance patches and NOMAD readiness is evaluated independently in the export step.\n';
-  }
-
-  function defaultPaperMarkdown(exp) {
-    return '# ' + ((exp.meta && exp.meta.name) || 'Experiment') + '\n\n' +
-      '## Abstract\n\nWrite a self-contained account of the research question, experimental approach, principal quantitative result and main limitation. Avoid citations and claims that are not supported by the current experiment.\n\n' +
-      '## Introduction\n\nDefine the material or device question addressed by the experiment and explain why the selected comparison is informative. Add literature context only after verified references are available.\n\n' +
-      '## Experimental methods\n\nDescribe precursor preparation, deposition, annealing, atmosphere, device architecture and JV acquisition from the confirmed Design record. Identify missing information and distinguish evidence-backed values from inference.\n\n' +
-      '## Results\n\nPresent deterministic JV outcomes with sample counts, reference and non-reference comparisons, variability, FW/RV pairing and hysteresis. Refer only to figures selected in Report Studio.\n\n' +
-      '## Discussion\n\nRelate performance differences to confirmed experimental variables. Separate observation, interpretation and hypothesis, and discuss exclusions or incomplete metadata that limit generalization.\n\n' +
-      '## Conclusions\n\nSummarize the result supported by the current measurements and identify the next experiment needed to resolve the principal uncertainty.\n\n' +
-      '## Data availability and provenance\n\nState that the manuscript derives from the current LabFlow Working Copy, while the uploaded source archive remains byte-preserved. Record the status of correction provenance and NOMAD export readiness.\n';
-  }
-
   function upsertDesignProvenance(markdown, exp) {
     const heading='## Experimental design provenance', block=heading+'\n\n'+designEvidenceMarkdown(exp), md=String(markdown||'').trimEnd();
     const re=/(^|\n)## Experimental design provenance\s*\n[\s\S]*?(?=\n## |\s*$)/;
@@ -120,37 +96,6 @@
     r.labMarkdown=upsertDesignProvenance(r.labMarkdown,exp);
     r.paperMarkdown=upsertDesignProvenance(r.paperMarkdown,exp);
     r.markdown=r.kind==='paper'?r.paperMarkdown:r.labMarkdown;
-    return r;
-  }
-
-  function analysisEvidenceMarkdown(exp) {
-    const summary = (LF.Analysis.analysisOf(exp) || {}).summary || {};
-    const factor = LF.Analysis.settingsOf(exp);
-    return [
-      '- Samples: **' + Number(summary.sampleCount || 0) + '**',
-      '- Measurements: **' + Number(summary.measurementCount || 0) + '**',
-      '- Ranking-eligible: **' + Number(summary.eligibleCount || 0) + '**',
-      '- Best eligible efficiency: **' + C.fmt(summary.bestEfficiency, 2) + '%** (' + (summary.bestSample || '—') + ')',
-      '- Open findings: **' + Number(summary.findingCount || 0) + '**',
-      '- Applied working-state patches: **' + Number((exp.patches || []).length) + '**',
-      '- Display mismatch factor: **' + C.fmt(factor, 3) + '**'
-    ].join('\n');
-  }
-
-  function syncAnalysisEvidence(exp) {
-    const r = exp.report || {};
-    if (!r.labMarkdown || !r.paperMarkdown) return r;
-    const heading = '## Current results provenance';
-    const block = heading + '\n\n' + analysisEvidenceMarkdown(exp);
-    const pattern = /(^|\n)## Current results provenance\s*\n[\s\S]*?(?=\n## |\s*$)/;
-    function upsert(markdown) {
-      const source = String(markdown || '').trimEnd();
-      if (pattern.test(source)) return source.replace(pattern, function (match, prefix) { return (prefix || '') + block; }) + '\n';
-      return source + '\n\n' + block + '\n';
-    }
-    r.labMarkdown = upsert(r.labMarkdown);
-    r.paperMarkdown = upsert(r.paperMarkdown);
-    r.markdown = r.kind === 'paper' ? r.paperMarkdown : r.labMarkdown;
     return r;
   }
 
@@ -445,5 +390,5 @@
     const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.30});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Rendering PDF',progress:.55});const blob=window.ReportExport.buildPdfAsync?await window.ReportExport.buildPdfAsync(model,function(x){progress({stage:x.stage||'Rendering PDF',progress:.55+Number(x.progress||0)*.4});}):window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);progress({stage:'PDF ready',progress:1});end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, defaultMarkdown: defaultMarkdown, defaultPaperMarkdown:defaultPaperMarkdown, designEvidenceMarkdown:designEvidenceMarkdown, analysisEvidenceMarkdown:analysisEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, syncAnalysisEvidence:syncAnalysisEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, designEvidenceMarkdown:designEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

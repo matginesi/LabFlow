@@ -101,6 +101,8 @@ Primary modules:
 - `assets/js/ai/structured.js` — structured output parse/validation;
 - `assets/js/ai/assistant.js` — Assistant integration.
 
+Provider/model discovery, endpoint adaptation, thinking modes and normalized response behavior are specified in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md). The complete source ownership map is in [`docs/specs/JAVASCRIPT_MODULES.md`](specs/JAVASCRIPT_MODULES.md).
+
 Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant may choose only from an Action-declared allowlist of read-only Tools and cannot invoke write Tools or mutating Actions.
 
 ## 7. Page architecture

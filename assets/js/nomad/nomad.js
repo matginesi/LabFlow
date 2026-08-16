@@ -282,5 +282,5 @@
     return lastMockPackage.blob;
   }
 
-  LF.Nomad = { exportZip:exportZip, buildPackage:buildPackage, validate:validate, buildMapping:buildMapping, ensureMapping:ensureMapping, simulateUpload:simulateUpload, hasMockPackage:hasMockPackage, downloadMockPackage:downloadMockPackage, schemaYaml:schemaYaml, dataYaml:dataYaml, schemaReference:SCHEMA_REFERENCE };
+  LF.Nomad = { exportZip:exportZip, buildPackage:buildPackage, validate:validate, buildMapping:buildMapping, ensureMapping:ensureMapping, simulateUpload:simulateUpload, hasMockPackage:hasMockPackage, downloadMockPackage:downloadMockPackage, schemaYaml:schemaYaml, dataYaml:dataYaml };
 }());

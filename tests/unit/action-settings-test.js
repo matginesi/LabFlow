@@ -24,6 +24,16 @@ module.exports=function(t,LF){
     assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
   };
 
+  t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local',thinking:true,thinkingMode:'unsupported'}));
+    const migrated=LF.Storage.getAiSettings();
+    assert(migrated.thinkingMode==='auto','invalid thinking mode must fall back to auto');
+    assert(!Object.prototype.hasOwnProperty.call(migrated,'thinking'),'obsolete boolean thinking flag must not escape storage');
+    LF.Storage.saveAiSettings(Object.assign({},migrated,{thinkingMode:'off'}));
+    assert(LF.Storage.getAiSettings().thinkingMode==='off','validated explicit mode must persist');
+    localStorage.removeItem('labflow.ai.settings');
+  };
+
   t['Action runtime override changes effective definition and prompt and resets cleanly']=function(){
     const id='results.interpret',base=LF.ActionRegistry.action(id),sourcePrompt=LF.ActionRegistry.prompt(id);
     LF.Storage.saveActionOverride(id,{definition:Object.assign({},base,{title:'Runtime title'}),prompt:'Runtime prompt'});

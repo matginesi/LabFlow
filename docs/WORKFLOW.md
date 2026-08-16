@@ -935,6 +935,8 @@ Upload is mandatory and Review is not a second route. `experiment-understand` is
 
 The AI transport resolves model capabilities and caches them by provider/endpoint/model. Exact output maxima are preferred; when only a context ceiling is available, the runner subtracts estimated input plus reserve. Unknown limits remain unknown and the token parameter is omitted. Settings can force a lower global cap, and Assistant can force a lower chat-only cap; zero means automatic.
 
+Settings also separates thinking policy from output budget. `Automatic` sends no override. `Off` and `On` apply only request fields declared by the active provider adapter; unsupported modes fall back to the model default rather than guessing fields. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from **Detect** or immediately before an explicit connection test; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
+
 ## Assistant streaming
 
 Chat displays semantic state only: waiting, thinking and writing. Raw SSE chunk/event/byte counters stay in logs. Reasoning is separated from final text and completed replies retain model/provider, latency, TTFT, usage and throughput metadata when available.
