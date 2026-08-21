@@ -241,7 +241,7 @@ body.activity-open { overflow: hidden; }
 .activity-demo { width: 100%; max-width: 520px; box-shadow: none; }
 .activity-demo .activity-progress > span { width: 64%; }
 
-.toast-region { position: fixed; right: 14px; bottom: 14px; z-index: 80; display: grid; gap: 8px; max-width: 360px; }
+.toast-region { position: fixed; right: 14px; bottom: 14px; z-index: 1500; display: grid; gap: 8px; max-width: 360px; }
 body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--assistant-w) + 14px); }
 .toast { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-float); padding: 9px 10px; font-size: var(--font-sm); }
 .toast.error { border-left: 3px solid var(--danger); }

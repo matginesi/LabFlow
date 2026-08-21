@@ -121,6 +121,12 @@
   --sidebar-label-size: var(--font-xs);
   --assistant-w: 360px;
   --topbar-h: 48px;
+
+  /* Legacy aliases referenced by a few rules; derived from real tokens so
+     both themes adapt automatically. */
+  --muted: var(--text-muted);
+  --text-soft: var(--text-muted);
+  --accent-border: color-mix(in srgb, var(--accent) 36%, var(--border));
 }
 
 /* Scrollbar contract: scrollable scientific panels must visibly communicate overflow. */

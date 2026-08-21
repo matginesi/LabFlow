@@ -1192,7 +1192,7 @@ body.ui-kit-page { overflow: hidden; }
 }
 
 @media (max-width:430px){
-  .topbar #saveWorkingCopy{display:none!important}.curve-control-grid{grid-template-columns:1fr!important}.curve-control-grid .field:nth-child(4){grid-column:auto}.compare-control-grid.compact{grid-template-columns:1fr}.report-export-strip .button{flex:1 1 100%}.review-step table td,.curve-list-table td{grid-template-columns:82px minmax(0,1fr)!important}.data-contract-panel .panel-head>.badge{display:none}
+  .topbar #saveWorkingCopy{display:none!important}.topbar #resetAll{display:inline-flex!important;min-height:27px;padding-inline:7px;font-size:9px!important}.curve-control-grid{grid-template-columns:1fr!important}.curve-control-grid .field:nth-child(4){grid-column:auto}.compare-control-grid.compact{grid-template-columns:1fr}.report-export-strip .button{flex:1 1 100%}.review-step table td,.curve-list-table td{grid-template-columns:82px minmax(0,1fr)!important}.data-contract-panel .panel-head>.badge{display:none}
 }
 
 /* ================================================================
@@ -1280,7 +1280,9 @@ body.ui-kit-page { overflow: hidden; }
   /* Totems are cards, never edge-to-edge; their content scrolls inside. */
   .activity-shade,.result-inspector-shade{padding:max(10px,env(safe-area-inset-top)) 8px max(10px,env(safe-area-inset-bottom))!important;display:grid!important;place-items:center!important}
   .activity-totem,.result-inspector{position:relative!important;inset:auto!important;width:min(100%,520px)!important;max-width:calc(100vw - 16px)!important;height:auto!important;min-height:0!important;max-height:calc(100dvh - 20px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important;border:1px solid var(--border-strong)!important;border-radius:9px!important;overflow:hidden!important;background:var(--surface)!important;box-shadow:var(--shadow-float)!important}
-  .activity-totem{display:grid!important;grid-template-rows:auto minmax(0,1fr)!important}.activity-history{min-height:0!important;overflow:auto!important}.result-inspector{grid-template-rows:auto minmax(0,1fr)!important}.result-inspector-body{min-height:0!important;overflow:auto!important}.activity-head,.result-inspector-head{padding:6px 7px!important}.activity-head h2,.result-inspector-head h2{font-size:12px!important}.activity-history,.result-inspector-body{padding:5px!important}.activity-request,.activity-response{padding:5px!important}.result-inspector-chart{min-height:210px!important}
+  /* The Action totem has a variable number of sections: it must scroll as one
+   column (sticky head included) instead of forcing rows onto arbitrary children. */
+.activity-totem{display:block!important;overflow:hidden auto!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch}.activity-history{min-height:0!important;overflow:auto!important}.result-inspector{grid-template-rows:auto minmax(0,1fr)!important}.result-inspector-body{min-height:0!important;overflow:auto!important}.activity-head,.result-inspector-head{padding:6px 7px!important}.activity-head h2,.result-inspector-head h2{font-size:12px!important}.activity-history,.result-inspector-body{padding:5px!important}.activity-request,.activity-response{padding:5px!important}.result-inspector-chart{min-height:210px!important}
   /* Assistant alone remains full-screen on phone. */
   .assistant-panel{inset:0!important;width:100vw!important;max-width:none!important;height:100dvh!important;border:0!important;border-radius:0!important}
 }
@@ -2118,3 +2120,41 @@ body.ui-kit-page { overflow: hidden; }
 /* UI Kit is rendered inside the host shell so file:// never crosses an iframe origin. */
 .ui-kit-inline-host{min-width:0;min-height:0;width:100%;}
 .ui-kit-inline-host>.page{min-width:0;}
+
+/* ================================================================
+   Mobile readability floor (2026-08-21): micro-labels never drop
+   below the 9px micro token on phones and dense action buttons stay
+   tappable. Presentation floor only; desktop density is unchanged.
+   ================================================================ */
+@media (max-width:700px){
+  .eyebrow,
+  .review-dense-table td::before,.review-name-table td:nth-child(1)::before,.review-name-table td:nth-child(2)::before,
+  .design-edit-table td::before,
+  .changes-summary span,.changes-summary small,.changes-doc-stats span,
+  .jv-analyzer-row small,.jv-diagnostic-card span,.jv-diagnostic-card small,.jv-separation span,.jv-separation>small,.jv-source,
+  .design-variant-card-meta,.design-variant-card-status,
+  .chat-metrics>span,.chat-thinking>summary small,.chat-status-row small,
+  .report-context-bar span,.report-context-bar strong,.report-context-bar small,
+  .sidebar-status-copy>strong,.sidebar-status-copy>small { font-size:9px !important; }
+  .experiment-strip .step-index{width:17px;height:17px;flex-basis:17px;font-size:9px!important}
+  .experiment-strip .step strong{font-size:8.5px!important}
+  .review-action-cell .button{min-height:28px!important;padding-block:4px}
+  .report-ai-actions .button{min-height:27px;font-size:9px}
+  /* Content text (never labels): readable body/data size on phones. */
+  .review-dense-table td,.review-step table td,.results-table td,.curve-list-table td,
+  .changes-table td,.changes-patch-table td,.design-edit-table td,
+  .design-edit-table .input,.jv-analyzer-row strong,
+  .assistant-panel .chat-body { font-size:11px !important; }
+}
+
+/* The workflow strip overflows on narrow phones: a right-edge fade says so
+   without stacking or crushing the six destinations (UI Kit contract). */
+@media (max-width:480px){
+  .experiment-strip.stepper{
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),rgba(0,0,0,.22));
+    mask-image:linear-gradient(90deg,#000 calc(100% - 26px),rgba(0,0,0,.22));
+  }
+}
+
+/* Receipt labels sit above their value instead of glued to the filename. */
+.upload-review-source .eyebrow{display:block;margin-bottom:1px}
