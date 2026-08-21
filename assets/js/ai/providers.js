@@ -7,7 +7,7 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}},      connectionTestTimeoutMs:60000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,minIntervalMs:1200,freeFlashMinIntervalMs:2500},
+      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, connectionTestTimeoutMs:60000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500},
       note:'Default Z.AI Chat Completions endpoint. The shared free glm-4.7-flash model is automatically paced; HTTP 429 / code 1305 uses bounded transport backoff without rerunning the Action.'
     },
     openai: {
