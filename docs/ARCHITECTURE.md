@@ -111,10 +111,11 @@ Pages read the current Working Copy/Canonical Store. They do not own parallel sc
 
 - Review — Analysis Dossier, safe corrections, AI proposals/human decisions;
 - Results — deterministic measurements/results; Compare statistics read the Analysis Summary bundle when fresh;
-- Design — deterministic known Design + researcher edits + optional missing-field inference; per-device "Apply experiment" uses a deterministic gate over the AI proposal;
+- Design — deterministic known Design + researcher edits + explicit fill-only reuse from the separate local Knowledge Base + optional missing-field inference; per-device application uses deterministic gates;
 - Report — current Markdown editor + explicit figure selection; statistics and the six figures read the Analysis Summary bundle when fresh and figures are rasterized on demand and cached per revision;
 - NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
 - Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.
+- Knowledge Base — browser-local management of reusable Design records; it remains outside the Working Copy and mutates scientific state only through explicit fill-only application to the selected device.
 
 ## 8. Report architecture
 

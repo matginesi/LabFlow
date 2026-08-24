@@ -7,7 +7,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `core.js` — escaping, Markdown rendering, IDs, cloning and shared formatting helpers.
 - `logger.js` — structured in-browser logs with credential-aware request redaction.
 - `math.js` — deterministic numeric and statistical helpers.
-- `storage.js` — browser-local preferences, provider-scoped API keys and persisted Working Copy access plus bounded compatibility migrations.
+- `storage.js` — browser-local preferences, provider-scoped API keys, versioned Design Knowledge Base and persisted Working Copy access plus bounded compatibility migrations.
 - `state.js` — the sole Working Copy lifecycle, autosave, dirty/revision tracking and compact Action history.
 - `page-context.js` — current route/selection context shared with bounded AI contexts.
 - `app.js` — boot, route normalization, event delegation and top-level page orchestration.
@@ -21,6 +21,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `experiment/data-model.js` — normalized experiment construction.
 - `experiment/model.js` — Working Copy query/mutation helpers.
 - `experiment/canonical-store.js` — canonical-v2 semantic index, stable relations, aliases and evidence.
+- `knowledge/knowledge-base.js` — separate versioned local Design library, JSON interchange and deterministic fill-only application with provenance.
 
 ## AI, Actions and Tools
 
@@ -45,6 +46,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `pages/understand-page.js` — review-workbench renderer composed by Import; it is not an alternate route.
 - `pages/results-page.js` — deterministic Results tables, plots and comparisons.
 - `pages/design-page.js` — direct Design editing, provenance and bounded missing-field proposals.
+- `pages/knowledge-page.js` — searchable Knowledge Base catalog and record editor, available independently of an experiment.
 - `pages/report-page.js` — Report/Paper editor, writing controls, preview and figure picker.
 - `pages/changes-page.js` — Working Copy versus immutable-baseline audit.
 - `pages/nomad-page.js` — deterministic mapping, readiness and export controls.

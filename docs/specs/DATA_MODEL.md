@@ -143,6 +143,18 @@ The projection is fill-only for existing Design records. Once the researcher edi
 
 If the archive contains measurements but no fabrication recipe, LabFlow preserves the experimental/sample structure and explicit unknown fields; absence of source Design evidence must never be represented as an empty or silently inferred experiment.
 
+## 8.1 Local Design Knowledge Base
+
+The Knowledge Base is a separate browser-local library with schema version `1`:
+
+- `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, timestamps and kind-specific `data`;
+- supported kinds: `material`, `solution`, `process`, `stack`;
+- stack layers keep role, material, thickness and process in physical order.
+
+It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase it. Import merges records by stable ID; export serializes the complete versioned library.
+
+Application is an explicit deterministic transfer, not synchronization. Solution records add and link one formulation, process records fill only empty process properties, and stack records apply only when the selected device has no layers. Material records are reference-only. Copied values use `status: knowledge_base`, retain `knowledgeBaseId`/evidence, and create an accepted `design_knowledge_apply` patch. Subsequent edits remain ordinary Working Copy edits and do not mutate the library record.
+
 ## 9. Patches and provenance
 
 Every applied correction must be traceable.

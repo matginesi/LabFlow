@@ -38,6 +38,11 @@
     docsSlug: 'guides--getting-started',
     docsQuery: '',
     docsSection: 'all',
+    knowledgeSelectedId: null,
+    knowledgeQuery: '',
+    knowledgeKind: 'all',
+    knowledgeCreating: false,
+    knowledgeDraftKind: 'material',
     ui: {
       route: 'experiment-import',
       uploadLanding: false,

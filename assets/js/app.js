@@ -110,7 +110,7 @@
   function renderWorkingCopyState(){
     const status=document.getElementById('workingCopyState'),save=document.getElementById('saveWorkingCopy'),exportButton=document.getElementById('exportWorkingCopy');
     if(!status||!save)return;
-    if(!hasExperiment()){status.hidden=true;save.hidden=true;if(exportButton)exportButton.hidden=true;return;}
+    if(!hasExperiment()||S.state.route==='knowledge-base'){status.hidden=true;save.hidden=true;if(exportButton)exportButton.hidden=true;return;}
     const exp=S.state.experiment,sync=exp.sync||{},dirty=S.isDirty?S.isDirty():!!sync.dirty;
     status.hidden=false;save.hidden=false;if(exportButton)exportButton.hidden=false;save.disabled=false;
     status.className='working-copy-state '+(dirty?'dirty':'saved');
@@ -157,12 +157,12 @@
     const previousRoute=renderedRoute||S.state.route;
     try{captureScrollableState(main,previousRoute);}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-home'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
-    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
+    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Local reusable design library':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderWorkingCopyState();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.assistantOpen);if(assistant)assistant.hidden=!S.state.assistantOpen;if(toggle){const assistantLabel=S.state.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-changes')html=LF.ChangesPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
+    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-changes')html=LF.ChangesPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='knowledge-base')html=LF.KnowledgePage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
     main.innerHTML=html;
     try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.route,error:err});}
     try{bindReportImproveSelection();}catch(err){Log.warn('render.report-bind-skipped',{route:S.state.route,error:err});}
@@ -342,7 +342,7 @@
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The Knowledge Base, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
@@ -355,6 +355,12 @@
         const changesTab=e.target.closest('[data-changes-tab]');if(changesTab){S.state.changesTab=changesTab.dataset.changesTab;render();return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
+        const knowledgeSelect=e.target.closest('[data-knowledge-select]');if(knowledgeSelect){S.state.knowledgeSelectedId=knowledgeSelect.dataset.knowledgeSelect;S.state.knowledgeCreating=false;render();return;}
+        if(e.target.closest('#knowledgeNew')){S.state.knowledgeCreating=true;S.state.knowledgeSelectedId=null;S.state.knowledgeDraftKind='material';render();return;}
+        if(e.target.closest('#knowledgeImport')){const input=document.getElementById('knowledgeImportInput');if(input)input.click();return;}
+        if(e.target.closest('#knowledgeExport')){C.downloadBlob(C.textBlob(LF.KnowledgeBase.exportLibrary(),'application/json;charset=utf-8'),'labflow-design-knowledge-base.json');LF.UI.toast('Knowledge Base exported.','success');return;}
+        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id);if(record&&await LF.UI.confirmAction('Delete “'+record.name+'” from the local Knowledge Base? Existing Design values previously applied from it are kept with their provenance.',{title:'Delete knowledge record',confirmLabel:'Delete record',danger:true})){LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record deleted.','success');}return;}
+        const applyKnowledge=e.target.closest('[data-apply-knowledge]');if(applyKnowledge){const out=LF.KnowledgeBase.applyToDesign(S.state.experiment,S.state.selectedDesignDeviceId,applyKnowledge.dataset.applyKnowledge);markModified('design');render();LF.UI.toast('Applied '+out.changed+' empty Design field'+(out.changed===1?'':'s')+' from “'+out.record.name+'”.','success');return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
@@ -451,6 +457,9 @@
 
     document.addEventListener('change',function(e){
       try {
+        if(e.target.id==='knowledgeEntryKind'){S.state.knowledgeDraftKind=e.target.value;S.state.knowledgeCreating=true;render();return;}
+        if(e.target.id==='knowledgeKindFilter'){S.state.knowledgeKind=e.target.value||'all';render();return;}
+        if(e.target.id==='knowledgeImportInput'){const file=e.target.files&&e.target.files[0];e.target.value='';if(file)file.text().then(function(content){const out=LF.KnowledgeBase.importLibrary(content);S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Imported '+out.imported+' record'+(out.imported===1?'':'s')+' · '+out.total+' total.','success');}).catch(function(err){LF.UI.toast(err.message||String(err),'error');});return;}
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
@@ -482,6 +491,7 @@
 
     document.addEventListener('input',function(e){
       try {
+        if(e.target.id==='knowledgeSearch'){S.state.knowledgeQuery=e.target.value;clearTimeout(S.state._knowledgeSearchTimer);S.state._knowledgeSearchTimer=setTimeout(function(){render();const input=document.getElementById('knowledgeSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},140);return;}
         if(e.target.id==='uiKitGlobalSearch'){S.state.uiKitQuery=e.target.value;applyUiKitFilter();return;}
         if(e.target.id==='docsSearch'){S.state.docsQuery=e.target.value;LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='logSearch'){LF.LogsPage.setQuery(e.target.value);clearTimeout(S.state._logSearchTimer);S.state._logSearchTimer=setTimeout(function(){render();const search=document.getElementById('logSearch');if(search){search.focus();search.setSelectionRange(search.value.length,search.value.length);}},180);return;}
@@ -500,7 +510,7 @@
         const proposalDeviceField=e.target.closest('[data-proposal-device-index][data-proposal-field]');if(proposalDeviceField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.devices&&proposal.devices[Number(proposalDeviceField.dataset.proposalDeviceIndex)];if(item){const value=proposalDeviceField.dataset.proposalArray==='true'?proposalDeviceField.value.split(',').map(function(x){return x.trim();}).filter(Boolean):proposalDeviceField.value;item[proposalDeviceField.dataset.proposalField]=value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
         const deviceField=e.target.closest('[data-device-field]');if(deviceField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev[deviceField.dataset.deviceField]=deviceField.value;dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceLayerField=e.target.closest('[data-device-layer-field]');if(deviceLayerField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;}),item=dev&&dev.stack[Number(deviceLayerField.dataset.deviceLayerIndex)];if(item){item[deviceLayerField.dataset.deviceLayerField]=deviceLayerField.value;item.status='user_confirmed';dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
-        const deviceProcessField=e.target.closest('[data-device-process-field]');if(deviceProcessField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev.process=dev.process||{};dev.process[deviceProcessField.dataset.deviceProcessField]=deviceProcessField.value;dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
+        const deviceProcessField=e.target.closest('[data-device-process-field]');if(deviceProcessField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){const field=deviceProcessField.dataset.deviceProcessField;dev.process=dev.process||{};dev.process[field]=deviceProcessField.value;dev.processProvenance=dev.processProvenance||{};dev.processProvenance[field]={status:'user_confirmed',evidence:'User entry'};dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const processField=e.target.closest('[data-process-field]');if(processField){S.state.experiment.design.process[processField.dataset.processField]=processField.value;S.state.experiment.design.processProvenance=S.state.experiment.design.processProvenance||{};S.state.experiment.design.processProvenance[processField.dataset.processField]={status:'user_confirmed',evidence:'User entry'};markDraft('design');refreshDesignProjection();return;}
         const layerField=e.target.closest('[data-layer-field]');if(layerField){const item=S.state.experiment.design.stack[Number(layerField.dataset.layerIndex)];if(item){item[layerField.dataset.layerField]=layerField.value;if(item.status==='ai_inferred')item.status='user_confirmed';markDraft('design');}return;}
       } catch(err){Log.error('ui.input-handler-failed',{target:e.target&&e.target.id||'',error:err});}
@@ -509,6 +519,11 @@
     document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='reportMarkdown'){commitDraft('report');return;}if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}});
 
     document.addEventListener('submit',function(e){
+      if(e.target.id==='knowledgeEntryForm'){
+        e.preventDefault();
+        try{const record=LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved locally.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
+        return;
+      }
       if(e.target.id==='samplePatchForm'){
         e.preventDefault();
         try {

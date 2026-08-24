@@ -25,7 +25,7 @@ After import, `LF.State.state.experiment` is the one scientific Working Copy. `L
 
 Scientific collections remain on the Working Copy; Canonical Store indexes/reference them rather than copying RAW curves into another mega-object. RAW bytes remain at `raw.sourceArchive` and are never rewritten.
 
-Every manual edit, safe correction and accepted AI proposal changes only the same Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares mutable scientific state. LabFlow autosaves the current Working Copy, RAW snapshot, drafts, chat and Action history locally and restores them on the next app load. **Save** marks an explicit revision checkpoint; **Reset session** explicitly clears the persisted scientific session. Provider/model/API-key/UI preferences persist separately. **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
+Every manual edit, safe correction and accepted AI proposal changes only the same Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares mutable scientific state. LabFlow autosaves the current Working Copy, RAW snapshot, drafts, chat and Action history locally and restores them on the next app load. **Save** marks an explicit revision checkpoint; **Reset session** explicitly clears the persisted scientific session. The reusable Design Knowledge Base and provider/model/API-key/UI preferences persist separately. **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
 
 Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
 
@@ -91,7 +91,9 @@ AI Results interpretation is optional prose layered on these deterministic value
 
 The Design page is researcher-first and useful without AI. Deterministic analysis prepares the experiment rail, identity links, available formulations/process/stack data, evidence and missing-field inventory immediately after import. The researcher edits the selected experiment directly.
 
-`design.infer` is optional and receives only the currently selected experiment, its explicit missing fields and linked evidence. It produces proposals only; accepted values are merged locally without overwriting user-confirmed fields.
+A separate local **Design Knowledge Base** manages reusable materials, formulations, processes and device stacks. It is not scientific experiment state. Applying a library record is explicit and deterministic: only compatible empty fields on the selected device are filled, and a provenance patch links the resulting Working Copy values to the record. Existing source/researcher values are protected. The library can be searched, edited and imported/exported as versioned JSON from its own page and survives **Reset session**.
+
+`design.infer` is optional and receives only the currently selected experiment, its explicit missing fields, linked evidence and a bounded set of relevant local Knowledge Base records. Local records remain non-experimental knowledge context unless RAW evidence independently supports them. The Action produces proposals only; accepted values are merged locally without overwriting user-confirmed fields.
 
 The active Report/Paper Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF and supports standard inline/display LaTeX formulas. A fresh import starts with both documents empty. Prose is created only by researcher typing or an explicit Draft action. Drafting and AI editing use the shared Experiment Brief and bounded scientific Context Packs; long documents are generated/revised as ordered sections rather than one monolithic prompt. PDF/DOCX append only figures explicitly selected in Report Studio.
 
