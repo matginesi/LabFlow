@@ -207,6 +207,8 @@ merge/store in current document editor
 
 Every block receives the shared Experiment Brief plus bounded Results, Design, findings and provenance. Large datasets therefore do not require one giant prompt. The current editor becomes the source of truth for exports.
 
+The runner reconciles each block's word range with the detected provider/researcher output ceiling before building its prompt. A `finish_reason: length` response is never merged into the document: when the step's bounded retry is enabled, the same block is rewritten once with a smaller coherent word range and only the complete replacement is stored.
+
 ### `report.improve`
 
 Purpose: revise non-empty Markdown using an explicit requested mode. Modes are grouped in the UI as **Common**, **Report** and **Paper** aids.
@@ -284,6 +286,8 @@ At runtime the effective output budget is the minimum of the declared Action/ste
 The current targets are intentionally task-shaped: compact Experiment Brief/Results work is around 3k, structured Design/repair work around 4k, and individual Report/Paper writing blocks around 6k. Large documents remain split into bounded sequential writing blocks even when a model can emit 64k/128k tokens.
 
 AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 90 s absolute deadline and zero automatic retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
+
+For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, an enabled semantic retry receives a deterministically reduced range and must rewrite the complete unit; truncated content is retained only in request diagnostics and never becomes the Action output.
 
 ## 8. Settings → Actions requirements
 

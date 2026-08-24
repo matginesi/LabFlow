@@ -47,6 +47,41 @@ module.exports=function(t,LF){
     assert(built.hardTimeoutMs,90000,'absolute deadline forwarded');
   };
 
+  t['word-sized drafting work is reduced before prompting when the provider output ceiling is smaller'] = async function(){
+    const exp={id:'exp_draft_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.draft-budget',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:0}]};
+    let contextWorkItem=null,built=null;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:2048};}};
+    LF.ActionContext={build:function(action,step,opts){contextWorkItem=opts.workItem;return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
+    LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:4096};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'# Discussion\n\nCompleted within the available budget.',finishReason:'stop'};}};
+    const out=await LF.ActionRunner.run('test.draft-budget',{params:{},selection:null});
+    assert(out.status,'done','status');
+    if(!contextWorkItem||!contextWorkItem.output_budget_adjusted)throw new Error('prompt work item must record the output-budget adjustment');
+    assert(contextWorkItem.requested_target_words,1800,'original target retained for provenance');
+    if(!(contextWorkItem.min_words<contextWorkItem.target_words&&contextWorkItem.max_words>=contextWorkItem.target_words&&contextWorkItem.target_words<1800))throw new Error('adapted word range must be coherent and smaller');
+    assert(built.maxTokens,2048,'provider/user ceiling still controls the request');
+  };
+
+  t['a truncated drafting block uses its one bounded retry for a complete shorter rewrite'] = async function(){
+    const exp={id:'exp_draft_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.draft-retry',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:1}]};
+    const targets=[];let calls=0;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(action,step,opts){targets.push(opts.workItem.target_words);return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
+    LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},buildRequest:function(opts){return opts;},send:async function(){calls++;return calls===1?{content:Array(901).join('partial '),finishReason:'length'}:{content:'# Discussion\n\nComplete shorter rewrite.',finishReason:'stop'};}};
+    const realSetTimeout=global.setTimeout;global.setTimeout=function(fn){return realSetTimeout(fn,0);};
+    try{
+      const out=await LF.ActionRunner.run('test.draft-retry');
+      assert(out.status,'done','status');assert(calls,2,'one bounded retry');
+      if(!(targets.length===2&&targets[1]<targets[0]))throw new Error('retry must advertise a smaller coherent work item');
+      assert(out.aiOutput,['# Discussion\n\nComplete shorter rewrite.'],'only the complete rewrite is stored');
+    }finally{global.setTimeout=realSetTimeout;}
+  };
+
   t['Action context is compacted before LM Studio request to fit the loaded runtime context'] = async function(){
     const exp={id:'exp_context_fit',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'analysis.enrich',type:'AI',steps:[{id:'enrich',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};

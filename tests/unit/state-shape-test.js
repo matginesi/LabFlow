@@ -15,7 +15,7 @@ module.exports = function (t, LF) {
   const S = LF.State;
 
   t['state has the canonical nested shape'] = function () {
-    assert(Object.keys(S.state).sort(), ['actionRun', 'experiment', 'project', 'ui', 'user', 'workspace'], 'state top-level keys');
+    assert(Object.keys(S.state).sort(), ['actionRun', 'docsQuery', 'docsSection', 'docsSlug', 'experiment', 'project', 'ui', 'user', 'workspace'], 'state top-level keys');
     assert(S.state.user.name, '', 'user default');
     assert(S.state.workspace.theme, 'instrument', 'workspace theme default');
     assert(S.state.project, {}, 'project slot');

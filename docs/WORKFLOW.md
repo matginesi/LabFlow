@@ -313,6 +313,7 @@ On failure:
 
 - AI checkpoint retries automatically after 5 seconds;
 - retries once more after 10 seconds;
+- when a bounded text work unit reaches the provider output limit, its enabled retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
 - after those bounded retries, **Retry checkpoint** is available;
 - retry resumes the failed checkpoint, not the completed checkpoints.
 
@@ -934,6 +935,8 @@ Upload is mandatory and Review is not a second route. `experiment-understand` is
 ## Provider output limits
 
 The AI transport resolves model capabilities and caches them by provider/endpoint/model. Exact output maxima are preferred; when only a context ceiling is available, the runner subtracts estimated input plus reserve. Unknown limits remain unknown and the token parameter is omitted. Settings can force a lower global cap, and Assistant can force a lower chat-only cap; zero means automatic.
+
+For Report/Paper and other word-sized work units, a known provider or researcher ceiling is applied to `target_words`, `min_words` and `max_words` before the Context Pack is built. If a provider still returns `finish_reason: length` (for example because hidden reasoning consumed part of the allowance), the declared bounded retry requests one complete shorter rewrite instead of resending the same impossible target or storing partial prose.
 
 Settings also separates thinking policy from output budget. `Automatic` sends no override. `Off` and `On` apply only request fields declared by the active provider adapter; unsupported modes fall back to the model default rather than guessing fields. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from **Detect** or immediately before an explicit connection test; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
 
