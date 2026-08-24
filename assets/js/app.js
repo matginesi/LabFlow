@@ -157,7 +157,7 @@
     const previousRoute=renderedRoute||S.state.route;
     try{captureScrollableState(main,previousRoute);}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-home'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
-    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Local reusable design library':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
+    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Folder-backed reusable design library':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderWorkingCopyState();
     renderModelStatus();
@@ -342,7 +342,7 @@
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The Knowledge Base, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The connected Knowledge Base folder, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
@@ -356,10 +356,14 @@
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         const knowledgeSelect=e.target.closest('[data-knowledge-select]');if(knowledgeSelect){S.state.knowledgeSelectedId=knowledgeSelect.dataset.knowledgeSelect;S.state.knowledgeCreating=false;render();return;}
+        if(e.target.closest('#knowledgeConnect')){const out=await LF.KnowledgeBase.connectDirectory();S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Knowledge Base connected: '+out.folder+'/'+out.file+'.','success');return;}
+        if(e.target.closest('#knowledgeChangeFolder')){const out=await LF.KnowledgeBase.connectDirectory({choose:true});S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Knowledge Base folder changed to '+out.folder+'.','success');return;}
+        if(e.target.closest('#knowledgeRefresh')){const out=await LF.KnowledgeBase.refresh();render();LF.UI.toast('Knowledge Base refreshed · '+out.records+' record'+(out.records===1?'':'s')+'.','success');return;}
+        if(e.target.closest('#knowledgeDisconnect')){await LF.KnowledgeBase.disconnect();S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Knowledge Base folder disconnected. Files were not changed.','info');return;}
         if(e.target.closest('#knowledgeNew')){S.state.knowledgeCreating=true;S.state.knowledgeSelectedId=null;S.state.knowledgeDraftKind='material';render();return;}
         if(e.target.closest('#knowledgeImport')){const input=document.getElementById('knowledgeImportInput');if(input)input.click();return;}
         if(e.target.closest('#knowledgeExport')){C.downloadBlob(C.textBlob(LF.KnowledgeBase.exportLibrary(),'application/json;charset=utf-8'),'labflow-design-knowledge-base.json');LF.UI.toast('Knowledge Base exported.','success');return;}
-        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id);if(record&&await LF.UI.confirmAction('Delete “'+record.name+'” from the local Knowledge Base? Existing Design values previously applied from it are kept with their provenance.',{title:'Delete knowledge record',confirmLabel:'Delete record',danger:true})){LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record deleted.','success');}return;}
+        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id);if(record&&await LF.UI.confirmAction('Delete “'+record.name+'” from the Knowledge Base folder? Existing Design values previously applied from it are kept with their provenance.',{title:'Delete knowledge record',confirmLabel:'Delete record',danger:true})){await LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record deleted from library.json.','success');}return;}
         const applyKnowledge=e.target.closest('[data-apply-knowledge]');if(applyKnowledge){const out=LF.KnowledgeBase.applyToDesign(S.state.experiment,S.state.selectedDesignDeviceId,applyKnowledge.dataset.applyKnowledge);markModified('design');render();LF.UI.toast('Applied '+out.changed+' empty Design field'+(out.changed===1?'':'s')+' from “'+out.record.name+'”.','success');return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
@@ -459,7 +463,7 @@
       try {
         if(e.target.id==='knowledgeEntryKind'){S.state.knowledgeDraftKind=e.target.value;S.state.knowledgeCreating=true;render();return;}
         if(e.target.id==='knowledgeKindFilter'){S.state.knowledgeKind=e.target.value||'all';render();return;}
-        if(e.target.id==='knowledgeImportInput'){const file=e.target.files&&e.target.files[0];e.target.value='';if(file)file.text().then(function(content){const out=LF.KnowledgeBase.importLibrary(content);S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Imported '+out.imported+' record'+(out.imported===1?'':'s')+' · '+out.total+' total.','success');}).catch(function(err){LF.UI.toast(err.message||String(err),'error');});return;}
+        if(e.target.id==='knowledgeImportInput'){const file=e.target.files&&e.target.files[0];e.target.value='';if(file)file.text().then(function(content){return LF.KnowledgeBase.importLibrary(content);}).then(function(out){if(!out)return;S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Imported '+out.imported+' record'+(out.imported===1?'':'s')+' · '+out.total+' total in library.json.','success');}).catch(function(err){LF.UI.toast(err.message||String(err),'error');});return;}
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
@@ -520,10 +524,10 @@
 
     document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='reportMarkdown'){commitDraft('report');return;}if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}});
 
-    document.addEventListener('submit',function(e){
+    document.addEventListener('submit',async function(e){
       if(e.target.id==='knowledgeEntryForm'){
         e.preventDefault();
-        try{const record=LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved locally.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
+        try{const record=await LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved to library.json.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
         return;
       }
       if(e.target.id==='samplePatchForm'){
@@ -549,7 +553,7 @@
   async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
-      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);if(LF.KnowledgeBase&&LF.KnowledgeBase.initialize)await LF.KnowledgeBase.initialize();
       /* The current scientific Working Copy persists in IndexedDB. Reset is the
          explicit boundary that clears it; provider/key/theme remain independent. */
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;

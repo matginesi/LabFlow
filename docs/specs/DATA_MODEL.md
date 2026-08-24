@@ -145,13 +145,13 @@ If the archive contains measurements but no fabrication recipe, LabFlow preserve
 
 ## 8.1 Local Design Knowledge Base
 
-The Knowledge Base is a separate browser-local library with schema version `1`:
+The Knowledge Base is a separate folder-backed `library.json` with schema version `1`:
 
 - `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, timestamps and kind-specific `data`;
 - supported kinds: `material`, `solution`, `process`, `stack`;
 - stack layers keep role, material, thickness and process in physical order.
 
-It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase it. Import merges records by stable ID; export serializes the complete versioned library.
+It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase or rewrite it. The management page writes create/update/delete operations directly to the connected file. Import merges records by stable ID into that file; export serializes the complete versioned library as a backup. The directory handle may be remembered in IndexedDB, but the records themselves are not stored in browser `localStorage`.
 
 Application is an explicit deterministic transfer, not synchronization. Solution records add and link one formulation, process records fill only empty process properties, and stack records apply only when the selected device has no layers. Material records are reference-only. Copied values use `status: knowledge_base`, retain `knowledgeBaseId`/evidence, and create an accepted `design_knowledge_apply` patch. Subsequent edits remain ordinary Working Copy edits and do not mutate the library record.
 

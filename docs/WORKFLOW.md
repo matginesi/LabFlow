@@ -138,7 +138,7 @@ It does **not** send the full experiment or RAW JV curves by default.
 
 Import is the only experiment entry point.
 
-The app route contract still enters through **Upload & Review**, but an existing browser-local Working Copy is restored automatically when LabFlow is reopened. With no persisted scientific session, Upload & Review is the mandatory ZIP upload gate. The Design Knowledge Base, provider/model settings, API key and UI preferences remain browser-local but separate from the scientific session. **Reset session** clears the persisted Working Copy/RAW snapshot and returns to the empty upload gate; it does not erase the reusable Knowledge Base. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
+The app route contract still enters through **Upload & Review**, but an existing browser-local Working Copy is restored automatically when LabFlow is reopened. With no persisted scientific session, Upload & Review is the mandatory ZIP upload gate. The Design Knowledge Base is a separately selected local folder; provider/model settings, API key and UI preferences remain browser-local. **Reset session** clears the persisted Working Copy/RAW snapshot and returns to the empty upload gate; it does not alter or disconnect the Knowledge Base folder. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
 
 ```text
 Researcher selects ZIP
@@ -511,7 +511,7 @@ Before inference, LabFlow already knows or indexes:
 - grouped experimental variants/replicates derived from that evidence;
 - explicit missing-field inventory.
 
-The separate browser-local **Design Knowledge Base** can store reusable materials, formulations, process descriptions and device stacks. It is not part of the Working Copy and cannot become a second editable experiment. A researcher explicitly applies one record to the selected device; deterministic code then fills only compatible empty fields and records a `design_knowledge_apply` patch with `knowledge_base` provenance. Existing RAW-backed or researcher values are never overwritten. Material records are references used while authoring formulations/stacks and are not applied directly.
+The separate folder-backed **Design Knowledge Base** stores reusable materials, formulations, process descriptions and device stacks in `library.json` inside a researcher-selected directory. It is not part of the Working Copy and cannot become a second editable experiment. The folder handle is remembered separately in IndexedDB when the browser permits it; record data is not persisted in `localStorage`. A researcher explicitly applies one record to the selected device; deterministic code then fills only compatible empty fields and records a `design_knowledge_apply` patch with `knowledge_base` provenance. Existing RAW-backed or researcher values are never overwritten. Material records are references used while authoring formulations/stacks and are not applied directly.
 
 An empty Knowledge Base does not block inference. In that case LabFlow can still provide bounded general domain guidance for qualitative hypotheses, while unsupported quantitative recipe/process values remain explicit unknowns.
 
@@ -798,7 +798,7 @@ Use the UI Kit **Single-experiment Design** pattern:
 
 AI must never overwrite user-confirmed values silently.
 
-Knowledge Base management is available without loading a ZIP. Records are local, searchable and editable, and the complete versioned library can be imported/exported as JSON. This management route does not alter the mandatory experiment workflow or advance the Working Copy revision. Only an explicit application from the Design page mutates the Working Copy.
+Knowledge Base management is available without loading a ZIP. The researcher connects a read/write folder, after which records are searchable and editable and every create/update/delete is written directly to that folder's versioned `library.json`. JSON import merges into the connected file and JSON export remains an explicit backup. Existing legacy browser records are migrated only after a folder is explicitly connected and successfully written. This management route does not alter the mandatory experiment workflow or advance the Working Copy revision. Only an explicit application from the Design page mutates the Working Copy.
 
 `Complete all missing with AI` is a finite UI orchestration, not a new autonomous Action: it scans the current Design variants, skips complete variants and variants that already have a proposal, then runs `design.infer` sequentially for each remaining variant. Proposals are retained per variant so the researcher can review them independently from the coverage board. No parallel provider calls are allowed. The sequence stops on the first failed variant and keeps the actual variant, checkpoint, normalized code and provider/validation cause visible with a retry control.
 

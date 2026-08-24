@@ -115,7 +115,7 @@ Pages read the current Working Copy/Canonical Store. They do not own parallel sc
 - Report — current Markdown editor + explicit figure selection; statistics and the six figures read the Analysis Summary bundle when fresh and figures are rasterized on demand and cached per revision;
 - NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
 - Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.
-- Knowledge Base — browser-local management of reusable Design records; it remains outside the Working Copy and mutates scientific state only through explicit fill-only application to the selected device.
+- Knowledge Base — folder-backed management of reusable Design records in a versioned `library.json`; the browser remembers only the directory handle/permission. It remains outside the Working Copy and mutates scientific state only through explicit fill-only application to the selected device.
 
 ## 8. Report architecture
 
