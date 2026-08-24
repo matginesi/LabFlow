@@ -195,3 +195,15 @@
   --shadow-float: 0 12px 32px rgba(32, 53, 70, 0.16);
   --overlay-shade: rgba(49, 65, 80, 0.34);
 }
+
+/* Phones keep the dense workbench rhythm, but one measured step larger than
+   desktop so body copy and metadata remain legible at arm's length. */
+@media (max-width: 700px) {
+  :root {
+    --font-micro: 10px;
+    --font-xs: 11px;
+    --font-sm: 12px;
+    --font-md: 13px;
+    --font-lg: 14px;
+  }
+}

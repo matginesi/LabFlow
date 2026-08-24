@@ -2129,9 +2129,9 @@ body.ui-kit-page { overflow: hidden; }
 .ui-kit-inline-host>.page{min-width:0;}
 
 /* ================================================================
-   Mobile readability floor (2026-08-21): micro-labels never drop
-   below the 9px micro token on phones and dense action buttons stay
-   tappable. Presentation floor only; desktop density is unchanged.
+   Mobile readability floor: preserve the compact scientific layout while
+   keeping supporting text at 10px and content at 12px or above. Desktop
+   density is unchanged.
    ================================================================ */
 @media (max-width:700px){
   .eyebrow,
@@ -2142,16 +2142,24 @@ body.ui-kit-page { overflow: hidden; }
   .design-variant-card-meta,.design-variant-card-status,
   .chat-metrics>span,.chat-thinking>summary small,.chat-status-row small,
   .report-context-bar span,.report-context-bar strong,.report-context-bar small,
-  .sidebar-status-copy>strong,.sidebar-status-copy>small { font-size:9px !important; }
-  .experiment-strip .step-index{width:17px;height:17px;flex-basis:17px;font-size:9px!important}
-  .experiment-strip .step strong{font-size:8.5px!important}
+  .report-active-document .report-active-kicker,.report-active-document small,
+  .sidebar-status-copy>strong,.sidebar-status-copy>small { font-size:10px !important; }
+  .page-head h1{font-size:17px!important}
+  .page-head p{font-size:11px!important;line-height:1.45}
+  .h2,.activity-head h2,.result-inspector-head h2{font-size:14px!important}
+  .topbar-title strong{font-size:12px}
+  .topbar #saveWorkingCopy,.topbar #exportWorkingCopy,.topbar #resetAll{font-size:10px!important}
+  .experiment-strip .step-index{width:17px;height:17px;flex-basis:17px;font-size:10px!important}
+  .experiment-strip .step strong{font-size:9.5px!important}
+  .review-dense-table th,.results-table th,.design-edit-table th,
+  .results-table .quality-badge,.results-table .badge{font-size:10px!important}
   .review-action-cell .button{min-height:28px!important;padding-block:4px}
-  .report-ai-actions .button{min-height:27px;font-size:9px}
+  .report-ai-actions .button{min-height:29px;font-size:10px}
   /* Content text (never labels): readable body/data size on phones. */
   .review-dense-table td,.review-step table td,.results-table td,.curve-list-table td,
   .changes-table td,.changes-patch-table td,.design-edit-table td,
   .design-edit-table .input,.jv-analyzer-row strong,
-  .assistant-panel .chat-body { font-size:11px !important; }
+  .assistant-panel .chat-body { font-size:12px !important; }
 }
 
 /* The workflow strip overflows on narrow phones: a right-edge fade says so
