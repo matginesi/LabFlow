@@ -50,6 +50,8 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `pages/nomad-page.js` — deterministic mapping, readiness and export controls.
 - `pages/settings-page.js` — provider, Action and preference forms.
 - `pages/logs-page.js` — local structured diagnostic log viewer.
+- `pages/docs-page.js` — searchable Markdown documentation browser and local Mermaid flowchart renderer.
+- `pages/docs-bundle.js` — generated `file://`-safe bundle of canonical Markdown sources; edit `docs/**/*.md`, not this file.
 - `pages/ui-kit-page.js` — in-app UI Kit route.
 - `pages/ui-kit-inline.js` — generated inline UI Kit mirror for `file://` use.
 - `ui/feedback.js` — toasts, progress totem and provider-output disclosure.

@@ -35,6 +35,9 @@
     project: {},
     experiment: emptyExperiment(),
     actionRun: null,
+    docsSlug: 'guides--getting-started',
+    docsQuery: '',
+    docsSection: 'all',
     ui: {
       route: 'experiment-import',
       uploadLanding: false,

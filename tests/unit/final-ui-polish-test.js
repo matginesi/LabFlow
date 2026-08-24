@@ -80,6 +80,7 @@ module.exports=function(t){
     assert(app.includes('LF.UIKitInline.render'),true,'UI Kit uses inline renderer');
     assert(app.includes("document.querySelector('.ui-kit-frame')"),false,'no iframe dependency in app shell');
     assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
+    assert(uiKitInline.includes('id="documentation-pattern"'),true,'full catalog includes patterns after nested main elements');
     assert(uiKitInline.includes("root.querySelectorAll('[data-ui-kit-group]')"),true,'inline filters operate in host document');
     assert(html.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog module is loaded');
     const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');

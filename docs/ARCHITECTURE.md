@@ -114,6 +114,7 @@ Pages read the current Working Copy/Canonical Store. They do not own parallel sc
 - Design — deterministic known Design + researcher edits + optional missing-field inference; per-device "Apply experiment" uses a deterministic gate over the AI proposal;
 - Report — current Markdown editor + explicit figure selection; statistics and the six figures read the Analysis Summary bundle when fresh and figures are rasterized on demand and cached per revision;
 - NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
+- Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.
 
 ## 8. Report architecture
 

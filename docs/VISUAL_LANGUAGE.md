@@ -2,6 +2,8 @@
 
 Use `ui-kit.html` as the canonical visual reference: compact scientific workspace, restrained typography, stable spacing, small badges, clear tables, progressive disclosure and responsive layouts.
 
+Documentation uses the same scientific workbench grammar: compact topic catalog, readable Markdown document, optional page outline and explicit source provenance. Mermaid diagrams clarify workflows and ownership relationships; they remain bounded, horizontally scrollable on small screens, and expose their Markdown source through progressive disclosure.
+
 Tabs use a bordered track, not a faint underline-only treatment. The active tab has a filled surface, stronger border and accent edge. Long tab sets scroll horizontally while labels remain intact.
 
 AI is explicit. The Action totem shows Action checkpoint and work-unit progress, truthful provider telemetry, an explicit Cancel action button while running, a separate Close button when terminal, bounded automatic retry only when declared by the Action, and Retry checkpoint only after final failure. Esc follows the same lifecycle: cancel while running, close when terminal. Provider output stays collapsed until requested. JSON/Markdown follow the selected LabFlow theme; streaming removes redundant blank lines. Never fabricate model progress or hidden reasoning.

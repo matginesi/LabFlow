@@ -17,7 +17,7 @@
   function ensureExperimentShape(exp) { return exp === LF.State.state.experiment ? LF.State.ensureExperiment('pages') : LF.ExperimentModel.ensureShape(exp, LF.State.state); }
 
   function routeTitle(route) {
-    return ({'experiment-import':'Upload & Review','experiment-understand':'Upload & Review','experiment-results':'Results','experiment-design':'Design','experiment-report':'Report','experiment-changes':'Changes','experiment-nomad':'NOMAD',settings:'Settings',logs:'Logs','ui-kit':'UI Kit'})[route] || 'LabFlow';
+    return ({'experiment-import':'Upload & Review','experiment-understand':'Upload & Review','experiment-results':'Results','experiment-design':'Design','experiment-report':'Report','experiment-changes':'Changes','experiment-nomad':'NOMAD',settings:'Settings',logs:'Logs',documentation:'Documentation','ui-kit':'UI Kit'})[route] || 'LabFlow';
   }
 
   function experimentStepper() {

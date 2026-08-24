@@ -17,10 +17,15 @@ TARGET = ROOT / "assets/js/pages/ui-kit-inline.js"
 
 
 def extract_main(source: str) -> str:
-    match = re.search(r'<main class="main-area">\s*(.*?)\s*</main>', source, re.S)
-    if not match:
+    opening = re.search(r'<main class="main-area">', source)
+    if not opening:
         raise SystemExit("Could not find <main class=\"main-area\"> in ui-kit.html")
-    return match.group(1).strip()
+    depth = 1
+    for tag in re.finditer(r'</?main\b[^>]*>', source[opening.end():], re.I):
+        depth += -1 if tag.group(0).startswith('</') else 1
+        if depth == 0:
+            return source[opening.end():opening.end() + tag.start()].strip()
+    raise SystemExit("Could not find the closing </main> for the UI Kit catalog")
 
 
 def js_template_escape(value: str) -> str:
