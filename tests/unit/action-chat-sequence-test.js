@@ -10,7 +10,7 @@ module.exports=function(t,LF){
 
   function loadUi(runImpl){
     delete require.cache[require.resolve(uiPath)];
-    let messages=[],errors=[];
+    let messages=[],errors=[],updates=[],finishes=[];
     LF.Storage={
       getAiSettings:function(){return{endpoint:'http://127.0.0.1:1234/v1',model:'test-model',provider:'lmstudio'};},
       getApiKey:function(){return'';}
@@ -18,14 +18,14 @@ module.exports=function(t,LF){
     LF.AIProviders={lmstudio:{keyRequired:false}};
     LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;}};
     LF.PageContext={summary:function(){return'Report · Paper';}};
-    LF.UI={activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(error,options){errors.push({error:error,options:options});},toast:function(){}};
+    LF.UI={activityStart:function(){},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},toast:function(){}};
     LF.Assistant={addActionMessage:function(m){messages.push(m);return m;},render:function(){}};
     LF.ActionRunner={
       effective:function(id){if(id==='report.improve')return{id:id,title:'AI writing help',short_title:'Writing help',output:'text',steps:[{id:'edit',type:'AI'}]};return{id:id,title:id,output:'text',steps:[]};},
       isRunning:function(){return false;},cancel:function(){return true;},retry:function(cb){return runImpl('report.improve',cb);},run:function(id,cb){return runImpl(id,cb);}
     };
     require(uiPath);
-    return{messages:messages,errors:errors};
+    return{messages:messages,errors:errors,updates:updates,finishes:finishes};
   }
 
   t['SSE events refine progress inside the streaming band without reaching completion']=function(){
@@ -49,6 +49,15 @@ module.exports=function(t,LF){
     assert(env.messages[0].actionTitle==='Writing help','Action title not attached');
     assert(env.messages[0].usage&&env.messages[0].usage.totalTokens===15,'Action token metadata not attached');
     assert(assistantSource.includes("Action · '+m.actionTitle"),'Action source not visible in chat telemetry');
+  };
+
+  t['Action totem receives live and final output throughput']=async function(){
+    const env=loadUi(function(id,cb){cb.onProgress({content:'streaming response',tokens:4,rate:22.5,estimated:true,events:2,meaningfulEvents:2,bytes:64,ttftMs:90,targetTokens:100,maxTokens:120});return Promise.resolve({status:'done',actionId:id,aiOutput:'Done.',result:{stored:true},requestMeta:{edit:{model:'test-model',provider:'lmstudio',tokensPerSecond:24.25,usage:{promptTokens:10,completionTokens:4,totalTokens:14}}}});});
+    const out=await LF.ActionUI.run('report.improve','',{params:{document_kind:'paper',mode:'paper_results'}});
+    assert(out.status==='done','Action did not finish');
+    const live=env.updates.find(function(update){return update.stream&&Number(update.stream.rate)>0;});
+    assert(live&&live.stream.rate===22.5&&live.stream.estimated===true,'live tok/s telemetry not passed to totem');
+    assert(env.finishes[0]&&env.finishes[0].details['Output rate']==='24.3 tok/s','final tok/s missing from totem details');
   };
 
   t['Design inference publishes a useful proposal summary instead of an empty structured result']=async function(){

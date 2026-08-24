@@ -37,6 +37,14 @@ module.exports = function (t, LF) {
     assert(AI.outputLoopDetected(block+'y'.repeat(512)+block), false, 'non repeated stream');
   };
 
+  t['SSE progress exposes live output tokens and tok/s'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let progress=null;global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.fetch=async function(){const body=new ReadableStream({start:function(controller){setTimeout(function(){controller.enqueue(encoder.encode('data: {"id":"rate-test","model":"test-model","choices":[{"delta":{"content":"abcdefgh"}}],"usage":{"completion_tokens":2}}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'));controller.close();},20);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'test-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'rate'}],stream:true,maxTokens:64}),result=await AI.send(spec,{onProgress:function(value){progress=value;}});assert(result.content,'abcdefgh','stream content');assert(progress.tokens,2,'reported completion tokens');assert(progress.estimated,false,'provider usage is exact');assert(Number(progress.rate)>0,true,'live tok/s');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['local endpoint detection covers loopback and RFC1918 addresses'] = function () {
     assert(AI.isLocalAddress('http://127.0.0.1:1234/v1/chat/completions'), true, 'loopback');
     assert(AI.isLocalAddress('http://localhost:1234/v1/chat/completions'), true, 'localhost');
