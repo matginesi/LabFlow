@@ -147,7 +147,7 @@ If the archive contains measurements but no fabrication recipe, LabFlow preserve
 
 The Knowledge Base is a separate folder-backed `library.json` with schema version `1`:
 
-- `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, timestamps and kind-specific `data`;
+- `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, primary `sources[]`, timestamps and kind-specific `data`;
 - supported kinds: `material`, `solution`, `process`, `stack`;
 - stack layers keep role, material, thickness and process in physical order.
 

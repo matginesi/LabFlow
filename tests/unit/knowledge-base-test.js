@@ -2,6 +2,7 @@
 require('../../assets/js/logger.js');
 require('../../assets/js/storage.js');
 require('../../assets/js/knowledge/knowledge-base.js');
+const seedLibrary=require('../../knowledge-base/library.json');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
   LF.Storage.saveKnowledgeDirectoryHandle=async function(){return true;};
@@ -10,8 +11,12 @@ module.exports=function(t,LF){
   async function connect(initial){localStorage.clear();await LF.KnowledgeBase.disconnect();const handle=directory(initial);await LF.KnowledgeBase.connectDirectory({handle:handle});return handle;}
   function experiment(){return{design:{solutions:[],devices:[{id:'dev1',name:'Reference',solutionIds:[],stack:[],process:{coating:'researcher coating',annealing:'',atmosphere:'',notes:''},status:'user_confirmed'}]},patches:[]};}
   t['Knowledge Base persists versioned reusable records in library.json']=async function(){
-    const handle=await connect(),record=await LF.KnowledgeBase.upsert({kind:'solution',name:'Baseline ink',tags:'reference, perovskite',data:{role:'absorber',solutes:'FAI, PbI2',solvents:'DMF:DMSO'}}),loaded=LF.KnowledgeBase.get(record.id),library=JSON.parse(handle.content());
-    assert(library.version===1,'library schema version');assert(library.records.length===1,'record persisted');assert(loaded.tags.length===2,'tags normalized');assert(loaded.data.solvents==='DMF:DMSO','kind data preserved');
+    const handle=await connect(),record=await LF.KnowledgeBase.upsert({kind:'solution',name:'Baseline ink',tags:'reference, perovskite',sources:[{title:'Primary paper',doi:'10.1000/example',note:'Recipe'}],data:{role:'absorber',solutes:'FAI, PbI2',solvents:'DMF:DMSO'}}),loaded=LF.KnowledgeBase.get(record.id),library=JSON.parse(handle.content());
+    assert(library.version===1,'library schema version');assert(library.records.length===1,'record persisted');assert(loaded.tags.length===2,'tags normalized');assert(loaded.sources[0].doi==='10.1000/example','source provenance preserved');assert(loaded.data.solvents==='DMF:DMSO','kind data preserved');
+  };
+  t['Versioned starter library contains sourced records for every supported kind']=function(){
+    const library=LF.KnowledgeBase.normalizeLibrary(seedLibrary),kinds=new Set(library.records.map(function(record){return record.kind;}));
+    assert(library.records.length===21,'expected curated starter record count');assert(LF.KnowledgeBase.kinds.every(function(kind){return kinds.has(kind); }),'every supported record kind is represented');assert(library.records.every(function(record){return record.sources.length>0;}),'every curated record has a primary source');assert(library.records.every(function(record){return record.sources.every(function(source){return source.url&&source.doi;});}),'curated sources retain URL and DOI');
   };
   t['Process application fills only empty fields and records provenance']=async function(){
     await connect();const record=await LF.KnowledgeBase.upsert({kind:'process',name:'Reference anneal',data:{coating:'AI should not replace',annealing:'100 C · 30 min',atmosphere:'N2'}}),exp=experiment(),out=LF.KnowledgeBase.applyToDesign(exp,'dev1',record.id),dev=exp.design.devices[0];

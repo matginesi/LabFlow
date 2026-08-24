@@ -1,5 +1,384 @@
 {
   "version": 1,
-  "records": [],
-  "updatedAt": null
+  "records": [
+    {
+      "id": "kb_solution_mixed_fa_cs_ma_135m",
+      "kind": "solution",
+      "name": "FA0.90Cs0.07MA0.03 mixed-halide precursor · 1.35 M",
+      "summary": "Published absorber precursor with 3% PbI2 excess; use as a literature reference, not as evidence for the imported experiment.",
+      "tags": ["perovskite", "mixed-cation", "mixed-halide", "n-i-p", "published-recipe"],
+      "sources": [
+        {
+          "title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-019-10985-5",
+          "doi": "10.1038/s41467-019-10985-5",
+          "note": "Methods: precursor composition, concentration, solvent ratio and PbI2 excess."
+        }
+      ],
+      "data": {
+        "role": "Perovskite absorber precursor",
+        "solutes": "FAI, FABr, MAI, CsI, PbI2, PbBr2",
+        "solvents": "DMF:DMSO = 4:1 v/v",
+        "concentration": "1.35 M; FA0.90Cs0.07MA0.03Pb(I0.92Br0.08)3; 3% PbI2 excess",
+        "additives": "None beyond stated 3% PbI2 excess",
+        "preparation": "Prepared under argon according to the cited Methods."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_solution_mapbi3_12m_gbl_dmso",
+      "kind": "solution",
+      "name": "MAPbI3 precursor · 1.2 M · GBL:DMSO",
+      "summary": "Published MAPbI3 control precursor for inverted devices, with preparation temperature and solvent ratio reported explicitly.",
+      "tags": ["MAPbI3", "perovskite", "p-i-n", "published-recipe"],
+      "sources": [
+        {
+          "title": "Engineering fluorinated-cation containing inverted perovskite solar cells with an efficiency of >21% and improved stability towards humidity",
+          "url": "https://www.nature.com/articles/s41467-020-20272-3",
+          "doi": "10.1038/s41467-020-20272-3",
+          "note": "Methods: 1.2 M PbI2 and MAI in GBL:DMSO 7:3."
+        }
+      ],
+      "data": {
+        "role": "MAPbI3 absorber precursor",
+        "solutes": "PbI2, MAI",
+        "solvents": "GBL:DMSO = 7:3 v/v",
+        "concentration": "1.2 M PbI2 and 1.2 M MAI",
+        "additives": "None in the control formulation",
+        "preparation": "Stir at 65 °C for 2 h, then overnight at room temperature; inert conditions in the cited work."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_solution_spiro_85mg_cb",
+      "kind": "solution",
+      "name": "Doped spiro-OMeTAD · 85 mg mL-1",
+      "summary": "Published hole-transport formulation for an n-i-p perovskite device; dopant quantities are tied to 1 mL chlorobenzene.",
+      "tags": ["spiro-OMeTAD", "HTL", "n-i-p", "published-recipe"],
+      "sources": [
+        {
+          "title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-019-10985-5",
+          "doi": "10.1038/s41467-019-10985-5",
+          "note": "Methods: spiro-OMeTAD, LiTFSI and tBP quantities."
+        }
+      ],
+      "data": {
+        "role": "Hole-transport layer solution",
+        "solutes": "85 mg spiro-OMeTAD per 1 mL chlorobenzene",
+        "solvents": "Chlorobenzene; LiTFSI stock uses acetonitrile",
+        "concentration": "85 mg mL-1 spiro-OMeTAD",
+        "additives": "17.8 µL LiTFSI stock (520 mg mL-1 in acetonitrile) and 28.8 µL 4-tert-butylpyridine per 1 mL",
+        "preparation": "Prepare and coat using the cited laboratory protocol; quantities should not be scaled without researcher review."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_mixed_cation_cb_anneal",
+      "kind": "process",
+      "name": "Mixed-cation film · chlorobenzene quench · 150 °C",
+      "summary": "Published two-step spin coating and antisolvent crystallization process for the 1.35 M FA/Cs/MA precursor record.",
+      "tags": ["spin-coating", "antisolvent", "chlorobenzene", "annealing", "n-i-p"],
+      "sources": [
+        {
+          "title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-019-10985-5",
+          "doi": "10.1038/s41467-019-10985-5",
+          "note": "Methods: two-step spin, 200 µL chlorobenzene and annealing."
+        }
+      ],
+      "data": {
+        "coating": "Two-step spin coating at 1000 rpm then 6000 rpm; drop 200 µL chlorobenzene during spinning",
+        "annealing": "150 °C for 30–40 min",
+        "atmosphere": "Dry-air box, relative humidity below 2% in the cited work",
+        "notes": "Linked literature process for kb_solution_mixed_fa_cs_ma_135m; timing of the two spin steps was not stated in the accessible Methods text."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_mapbi3_toluene_anneal",
+      "kind": "process",
+      "name": "MAPbI3 film · toluene quench · 100 °C",
+      "summary": "Published two-step spin process for the 1.2 M MAPbI3 GBL:DMSO precursor.",
+      "tags": ["spin-coating", "toluene", "antisolvent", "MAPbI3", "p-i-n"],
+      "sources": [
+        {
+          "title": "Engineering fluorinated-cation containing inverted perovskite solar cells with an efficiency of >21% and improved stability towards humidity",
+          "url": "https://www.nature.com/articles/s41467-020-20272-3",
+          "doi": "10.1038/s41467-020-20272-3",
+          "note": "Methods: exact spin program, antisolvent volume/timing and anneal."
+        },
+        {
+          "title": "Solvent engineering for high-performance inorganic–organic hybrid perovskite solar cells",
+          "url": "https://www.nature.com/articles/nmat4014",
+          "doi": "10.1038/nmat4014",
+          "note": "Primary report of DMSO-intermediate solvent engineering with toluene drop-casting."
+        }
+      ],
+      "data": {
+        "coating": "1000 rpm for 10 s, then 5000 rpm for 80 s; drop 200 µL toluene 15 s into the second step",
+        "annealing": "100 °C for 30 min",
+        "atmosphere": "Nitrogen glovebox; O2 and H2O below 1 ppm in the cited work",
+        "notes": "Linked literature process for kb_solution_mapbi3_12m_gbl_dmso."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_eai_surface_passivation",
+      "kind": "process",
+      "name": "EAI surface passivation · 3 mg mL-1",
+      "summary": "Published ethylammonium iodide surface treatment applied after cooling the perovskite film.",
+      "tags": ["passivation", "EAI", "surface-treatment", "n-i-p"],
+      "sources": [
+        {
+          "title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-019-10985-5",
+          "doi": "10.1038/s41467-019-10985-5",
+          "note": "Methods and reported optimized EAI concentration."
+        }
+      ],
+      "data": {
+        "coating": "Spin coat EAI in isopropanol at 6000 rpm for 30 s after the absorber cools to room temperature",
+        "annealing": "70 °C for 10–15 min",
+        "atmosphere": "Dry-air box below 2% relative humidity in the cited work",
+        "notes": "EAI concentration 3 mg mL-1 was used for the reported EAI result; treat as a paper-specific condition."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_ptaa_pfn_p2_bottom_contact",
+      "kind": "process",
+      "name": "PTAA/PFN-P2 bottom contact for inverted PSC",
+      "summary": "Published PTAA hole-contact and PFN-P2 wetting-layer preparation on patterned ITO.",
+      "tags": ["PTAA", "PFN-P2", "HTL", "p-i-n", "ITO"],
+      "sources": [
+        {
+          "title": "Engineering fluorinated-cation containing inverted perovskite solar cells with an efficiency of >21% and improved stability towards humidity",
+          "url": "https://www.nature.com/articles/s41467-020-20272-3",
+          "doi": "10.1038/s41467-020-20272-3",
+          "note": "Methods: ITO cleaning, PTAA and PFN-P2 deposition."
+        }
+      ],
+      "data": {
+        "coating": "PTAA 2.5 mg mL-1 in toluene: 6000 rpm for 30 s; after cooling, PFN-P2 0.5 mg mL-1 in methanol: 5000 rpm for 20 s",
+        "annealing": "PTAA: 100 °C for 10 min; cool 5 min before PFN-P2",
+        "atmosphere": "ITO preparation in clean room; subsequent fabrication under inert conditions below 1 ppm O2/H2O",
+        "notes": "PFN-P2 was used as a wetting layer between PTAA and perovskite."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_sputtered_sno2_40nm",
+      "kind": "process",
+      "name": "Room-temperature sputtered SnO2 ETL · 40 nm",
+      "summary": "Published RF-sputtered SnO2 electron-contact process evaluated on rigid and flexible substrates.",
+      "tags": ["SnO2", "ETL", "sputtering", "n-i-p", "flexible"],
+      "sources": [
+        {
+          "title": "Room-Temperature Sputtered SnO2 as Robust Electron Transport Layer for Air-Stable and Efficient Perovskite Solar Cells on Rigid and Flexible Substrates",
+          "url": "https://www.nature.com/articles/s41598-019-42962-9",
+          "doi": "10.1038/s41598-019-42962-9",
+          "note": "Primary study: 40 nm SnO2, room-temperature sputtering and device architecture."
+        }
+      ],
+      "data": {
+        "coating": "RF magnetron sputtering at room temperature; reported reference thickness 40 nm at 60 W",
+        "annealing": "The cited vapor-deposited MAPbI3 absorber was annealed at 130 °C for 10 min",
+        "atmosphere": "SnO2 deposited at room temperature; absorber annealed in ambient air in the cited study",
+        "notes": "Do not transfer sputtering pressure or gas-flow settings without consulting the full paper and local equipment constraints."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_stack_mesoscopic_nip_tio2_spiro_au",
+      "kind": "stack",
+      "name": "Mesoscopic n-i-p · TiO2 / perovskite / spiro / Au",
+      "summary": "Published device architecture used for mixed-cation absorber and ammonium-salt passivation experiments.",
+      "tags": ["n-i-p", "mesoscopic", "TiO2", "spiro-OMeTAD", "Au"],
+      "sources": [
+        {
+          "title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-019-10985-5",
+          "doi": "10.1038/s41467-019-10985-5",
+          "note": "Complete device structure and layer thicknesses stated in Methods."
+        }
+      ],
+      "data": {
+        "layers": [
+          {"role": "Substrate / transparent electrode", "material": "Glass / FTO", "thickness": "", "process": "Ultrasonic clean; oxygen plasma"},
+          {"role": "Compact electron transport layer", "material": "c-TiO2", "thickness": "30 nm", "process": "Spray pyrolysis at 450 °C"},
+          {"role": "Mesoporous electron transport scaffold", "material": "m-TiO2", "thickness": "150 nm", "process": "Spin coat; sinter 450 °C for 30 min"},
+          {"role": "Absorber", "material": "Mixed-cation mixed-halide perovskite", "thickness": "", "process": "Spin coat and anneal"},
+          {"role": "Optional surface passivation", "material": "EAI, IAI or GuaI treatment", "thickness": "", "process": "Spin coat from IPA; low-temperature anneal"},
+          {"role": "Hole transport layer", "material": "spiro-OMeTAD", "thickness": "", "process": "Spin coat"},
+          {"role": "Top electrode", "material": "Au", "thickness": "approximately 80 nm", "process": "Thermal evaporation"}
+        ]
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_stack_inverted_ptaa_pfn_c60_bcp_cu",
+      "kind": "stack",
+      "name": "Inverted p-i-n · PTAA/PFN-P2 / perovskite / C60/BCP/Cu",
+      "summary": "Published inverted architecture with polymeric bottom contact, vacuum-deposited electron contacts and copper cathode.",
+      "tags": ["p-i-n", "inverted", "PTAA", "C60", "BCP", "Cu"],
+      "sources": [
+        {
+          "title": "Engineering fluorinated-cation containing inverted perovskite solar cells with an efficiency of >21% and improved stability towards humidity",
+          "url": "https://www.nature.com/articles/s41467-020-20272-3",
+          "doi": "10.1038/s41467-020-20272-3",
+          "note": "Complete device fabrication sequence and vacuum-deposited thicknesses."
+        }
+      ],
+      "data": {
+        "layers": [
+          {"role": "Substrate / transparent electrode", "material": "Glass / patterned ITO", "thickness": "", "process": "Sequential ultrasonic clean; UV-ozone"},
+          {"role": "Hole transport layer", "material": "PTAA", "thickness": "", "process": "Spin coat from toluene; anneal"},
+          {"role": "Wetting / interfacial layer", "material": "PFN-P2", "thickness": "", "process": "Spin coat from methanol"},
+          {"role": "Absorber", "material": "MAPbI3 or fluorinated-cation-modified MAPbI3", "thickness": "", "process": "Two-step spin coat; toluene antisolvent; anneal"},
+          {"role": "Electron transport layer", "material": "C60", "thickness": "20 nm", "process": "High-vacuum deposition"},
+          {"role": "Electron-contact interlayer", "material": "BCP", "thickness": "7.5 nm", "process": "High-vacuum deposition"},
+          {"role": "Top electrode", "material": "Cu", "thickness": "100 nm", "process": "Vacuum deposition"}
+        ]
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_stack_planar_nip_sno2_spiro_au",
+      "kind": "stack",
+      "name": "Planar n-i-p · SnO2 / MAPbI3 / spiro / Au",
+      "summary": "Published planar architecture compatible with rigid FTO-glass and flexible ITO-PEN substrates.",
+      "tags": ["n-i-p", "planar", "SnO2", "MAPbI3", "flexible"],
+      "sources": [
+        {
+          "title": "Room-Temperature Sputtered SnO2 as Robust Electron Transport Layer for Air-Stable and Efficient Perovskite Solar Cells on Rigid and Flexible Substrates",
+          "url": "https://www.nature.com/articles/s41598-019-42962-9",
+          "doi": "10.1038/s41598-019-42962-9",
+          "note": "Device architecture and representative SnO2 thickness."
+        }
+      ],
+      "data": {
+        "layers": [
+          {"role": "Substrate / transparent electrode", "material": "FTO-glass or ITO-PEN", "thickness": "", "process": "Substrate-specific cleaning"},
+          {"role": "Electron transport layer", "material": "SnO2", "thickness": "40 nm reference", "process": "Room-temperature RF sputtering"},
+          {"role": "Absorber", "material": "MAPbI3", "thickness": "", "process": "Two-step vapor deposition in the cited work"},
+          {"role": "Hole transport layer", "material": "spiro-OMeTAD", "thickness": "", "process": "Spin coat"},
+          {"role": "Top electrode", "material": "Au", "thickness": "", "process": "Thermal evaporation"}
+        ]
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_fai",
+      "kind": "material",
+      "name": "Formamidinium iodide (FAI)",
+      "summary": "A-site organic iodide precursor used in mixed-cation lead-halide perovskite absorbers.",
+      "tags": ["precursor", "A-site", "iodide", "mixed-cation"],
+      "sources": [{"title": "Cesium-containing triple cation perovskite solar cells", "url": "https://pubs.rsc.org/doi/c5ee03874j", "doi": "10.1039/C5EE03874J", "note": "Primary triple-cation perovskite study."}],
+      "data": {"role": "A-site cation precursor", "formula": "CH(NH2)2I", "supplier": "", "purity": "", "notes": "Supplier and purity are experiment-specific and intentionally unset."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_mai",
+      "kind": "material",
+      "name": "Methylammonium iodide (MAI)",
+      "summary": "A-site organic iodide precursor used in MAPbI3 and mixed-cation absorbers.",
+      "tags": ["precursor", "A-site", "iodide", "MAPbI3"],
+      "sources": [{"title": "Solvent engineering for high-performance inorganic–organic hybrid perovskite solar cells", "url": "https://www.nature.com/articles/nmat4014", "doi": "10.1038/nmat4014", "note": "Primary MAPb(I,Br)3 solvent-engineering study."}],
+      "data": {"role": "A-site cation precursor", "formula": "CH3NH3I", "supplier": "", "purity": "", "notes": "Supplier and purity are experiment-specific and intentionally unset."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_csi",
+      "kind": "material",
+      "name": "Cesium iodide (CsI)",
+      "summary": "Inorganic A-site precursor used at low fraction in triple-cation perovskite compositions.",
+      "tags": ["precursor", "A-site", "cesium", "triple-cation"],
+      "sources": [{"title": "Cesium-containing triple cation perovskite solar cells", "url": "https://pubs.rsc.org/doi/c5ee03874j", "doi": "10.1039/C5EE03874J", "note": "Primary study of Cs addition to MA/FA perovskites."}],
+      "data": {"role": "Inorganic A-site cation precursor", "formula": "CsI", "supplier": "", "purity": "", "notes": "The cited study reports improved robustness and suppression of yellow-phase impurities; composition remains recipe-specific."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_pbi2",
+      "kind": "material",
+      "name": "Lead(II) iodide (PbI2)",
+      "summary": "Lead-halide precursor used in iodide-rich perovskite absorber solutions.",
+      "tags": ["precursor", "B-site", "lead-halide", "iodide"],
+      "sources": [{"title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells", "url": "https://www.nature.com/articles/s41467-019-10985-5", "doi": "10.1038/s41467-019-10985-5", "note": "Methods specify PbI2 in the mixed-cation precursor."}],
+      "data": {"role": "Lead and iodide precursor", "formula": "PbI2", "supplier": "", "purity": "", "notes": "Supplier, grade and handling controls must be set by the laboratory."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_pbbr2",
+      "kind": "material",
+      "name": "Lead(II) bromide (PbBr2)",
+      "summary": "Lead-halide precursor used to introduce bromide into mixed-halide absorber compositions.",
+      "tags": ["precursor", "B-site", "lead-halide", "bromide"],
+      "sources": [{"title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells", "url": "https://www.nature.com/articles/s41467-019-10985-5", "doi": "10.1038/s41467-019-10985-5", "note": "Methods specify PbBr2 in the mixed-halide precursor."}],
+      "data": {"role": "Lead and bromide precursor", "formula": "PbBr2", "supplier": "", "purity": "", "notes": "Supplier, grade and handling controls must be set by the laboratory."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_sno2",
+      "kind": "material",
+      "name": "Tin(IV) oxide (SnO2)",
+      "summary": "Wide-bandgap electron-transport and hole-blocking material used in planar n-i-p devices.",
+      "tags": ["ETL", "electron-transport", "n-i-p", "oxide"],
+      "sources": [{"title": "Room-Temperature Sputtered SnO2 as Robust Electron Transport Layer for Air-Stable and Efficient Perovskite Solar Cells", "url": "https://www.nature.com/articles/s41598-019-42962-9", "doi": "10.1038/s41598-019-42962-9", "note": "Primary evaluation of sputtered SnO2 ETLs."}],
+      "data": {"role": "Electron transport layer", "formula": "SnO2", "supplier": "", "purity": "", "notes": "Deposition route and surface treatment strongly affect applicability."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_spiro_ometad",
+      "kind": "material",
+      "name": "spiro-OMeTAD",
+      "summary": "Molecular hole-transport material widely used above the absorber in n-i-p devices.",
+      "tags": ["HTL", "hole-transport", "n-i-p", "organic-semiconductor"],
+      "sources": [{"title": "Atomic-level passivation mechanism of ammonium salts enabling highly efficient perovskite solar cells", "url": "https://www.nature.com/articles/s41467-019-10985-5", "doi": "10.1038/s41467-019-10985-5", "note": "Methods provide one doped spiro-OMeTAD formulation."}],
+      "data": {"role": "Hole transport layer", "formula": "spiro-OMeTAD", "supplier": "", "purity": "", "notes": "Dopants and oxidation protocol are formulation-specific; see the linked solution record."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_ptaa",
+      "kind": "material",
+      "name": "PTAA",
+      "summary": "Poly(triarylamine) hole-selective contact used below the absorber in inverted p-i-n devices.",
+      "tags": ["HTL", "hole-transport", "p-i-n", "polymer"],
+      "sources": [{"title": "Engineering fluorinated-cation containing inverted perovskite solar cells", "url": "https://www.nature.com/articles/s41467-020-20272-3", "doi": "10.1038/s41467-020-20272-3", "note": "Methods specify PTAA concentration and coating conditions."}],
+      "data": {"role": "Hole transport layer", "formula": "Poly[bis(4-phenyl)(2,4,6-trimethylphenyl)amine]", "supplier": "", "purity": "", "notes": "Wetting modification may be needed before perovskite coating; see PFN-P2 process record."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_c60",
+      "kind": "material",
+      "name": "C60 fullerene",
+      "summary": "Vacuum-deposited electron-transport layer used above the absorber in inverted p-i-n devices.",
+      "tags": ["ETL", "electron-transport", "p-i-n", "fullerene"],
+      "sources": [{"title": "Engineering fluorinated-cation containing inverted perovskite solar cells", "url": "https://www.nature.com/articles/s41467-020-20272-3", "doi": "10.1038/s41467-020-20272-3", "note": "Methods report a 20 nm C60 layer."}],
+      "data": {"role": "Electron transport layer", "formula": "C60", "supplier": "", "purity": "", "notes": "Representative thickness is stored in the linked inverted stack record."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_bcp",
+      "kind": "material",
+      "name": "Bathocuproine (BCP)",
+      "summary": "Thin electron-contact interlayer used between fullerene transport layers and metal cathodes.",
+      "tags": ["interlayer", "electron-contact", "p-i-n", "BCP"],
+      "sources": [{"title": "Engineering fluorinated-cation containing inverted perovskite solar cells", "url": "https://www.nature.com/articles/s41467-020-20272-3", "doi": "10.1038/s41467-020-20272-3", "note": "Methods report 7.5 nm BCP between C60 and Cu."}],
+      "data": {"role": "Electron-contact interlayer", "formula": "C26H20N2", "supplier": "", "purity": "", "notes": "Layer thickness and adjacent electrode are device-specific."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    }
+  ],
+  "updatedAt": "2026-08-25T00:00:00.000Z"
 }
