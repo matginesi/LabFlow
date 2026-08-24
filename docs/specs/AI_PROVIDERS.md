@@ -13,13 +13,15 @@ POST <base>/chat/completions
 
 `assets/js/ai/providers.js` is the declarative capability registry. `assets/js/ai/transport.js` owns URL normalization, authentication, token parameter names, streaming/SSE parsing, response normalization, timing, bounded rate-limit retry and diagnostics. Actions and prompts must not add provider-specific request fields.
 
-The built-in adapters cover Z.AI, OpenAI Chat Completions, the Gemini OpenAI-compatible endpoint, Ollama, LM Studio and a generic OpenAI-compatible endpoint. A custom endpoint receives only common fields unless its registry entry explicitly declares another capability.
+The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NIM, the Gemini OpenAI-compatible endpoint, Ollama, LM Studio and a generic OpenAI-compatible endpoint. A custom endpoint receives only common fields unless its registry entry explicitly declares another capability.
 
 ## Endpoint and authentication rules
 
 - A base ending in `/v1` resolves to `/v1/chat/completions`; an already complete endpoint is preserved and duplicated suffixes are normalized.
 - Only `http:` and `https:` endpoints are accepted.
 - A bearer key is sent only for providers declaring `keyRequired` or `optionalKey`. Ollama and LM Studio never inherit a key saved for a cloud provider.
+- Cloud API keys are stored separately by provider. The legacy single-key setting is migrated once to the provider that was active when it was saved.
+- Provider-declared static headers are allowlisted in the registry. Z.AI sends its documented `Accept-Language`; OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
 - Browser-origin access remains a provider responsibility. LabFlow does not prescribe a separate application server: LM Studio or Ollama only needs to accept requests from the browser origin currently running LabFlow.
 
 ## Model discovery and capability detection
@@ -46,7 +48,7 @@ Current declared mappings are:
 | Z.AI | `thinking.type = disabled` | `thinking.type = enabled` |
 | LM Studio | `reasoning_effort = none`, `chat_template_kwargs.enable_thinking = false` | `reasoning_effort = medium`, `enable_thinking = true` |
 | Ollama OpenAI-compatible | `reasoning_effort = none` | model default |
-| OpenAI, Gemini, custom | model default | model default |
+| OpenAI, OpenRouter, NVIDIA NIM, Gemini, custom | model default | model default |
 
 An unsupported explicit mode safely degrades to `auto`; LabFlow never guesses undocumented request fields. The connection probe requests `off` only when the active model permits it. LM Studio's loaded-instance metadata is authoritative: reasoning-only models keep their native mode and receive a larger, still bounded probe budget so they can reach final text.
 
@@ -57,6 +59,7 @@ Provider reasoning is normalized separately from final content. LabFlow accepts 
 - `tokenParam` selects `max_tokens` or `max_completion_tokens` per provider.
 - JSON Schema and JSON mode are sent only when declared by the provider.
 - Temperature and stream-usage options are sent only when supported.
+- Z.AI streaming deliberately omits OpenAI's `stream_options` extension because it is not part of Z.AI's documented Chat Completions request. Usage is still parsed when Z.AI returns it and otherwise estimated locally.
 - Streaming and non-streaming responses use the same normalized result contract.
 - Action output targets are clamped by detected model/provider ceilings and researcher caps. Unknown ceilings remain unknown; the transport does not invent a global maximum.
 - Transport rate-limit retries repeat the identical HTTP request with bounded provider-specific backoff. They do not rerun an Action or create a queue.

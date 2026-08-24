@@ -7,7 +7,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `core.js` — escaping, Markdown rendering, IDs, cloning and shared formatting helpers.
 - `logger.js` — structured in-browser logs with credential-aware request redaction.
 - `math.js` — deterministic numeric and statistical helpers.
-- `storage.js` — browser-local preferences, API key and persisted Working Copy access plus bounded compatibility migrations.
+- `storage.js` — browser-local preferences, provider-scoped API keys and persisted Working Copy access plus bounded compatibility migrations.
 - `state.js` — the sole Working Copy lifecycle, autosave, dirty/revision tracking and compact Action history.
 - `page-context.js` — current route/selection context shared with bounded AI contexts.
 - `app.js` — boot, route normalization, event delegation and top-level page orchestration.

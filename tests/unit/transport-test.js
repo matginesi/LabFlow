@@ -66,6 +66,27 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
+  t['provider-declared headers are applied and Z.AI omits unsupported stream options'] = function () {
+    let requestedProvider='';
+    LF.Storage = {
+      getAiSettings: function () { return { provider: 'zai', endpoint: 'https://api.z.ai/api/paas/v4', model: 'glm-4.7-flash', inactivityTimeoutMs: 90000, streaming: true }; },
+      getApiKey: function (providerId) { requestedProvider=providerId;return 'zai-key'; }
+    };
+    LF.AIProviders = { zai: { keyRequired:true, supportsStreaming:true, tokenParam:'max_tokens', headers:{'Accept-Language':'en-US,en'} } };
+    const spec=AI.buildRequest({messages:[{role:'user',content:'hi'}],stream:true,maxTokens:128});
+    assert(requestedProvider,'zai','provider-scoped credential lookup');
+    assert(spec.headers['Accept-Language'],'en-US,en','documented Z.AI header');
+    assert(Object.prototype.hasOwnProperty.call(spec.body,'stream_options'),false,'undocumented extension omitted');
+    delete LF.Storage;delete LF.AIProviders;
+  };
+
+  t['OpenRouter nested model metadata exposes output and context limits'] = function () {
+    const cap=AI.capabilityFromRow({context_length:131072,top_provider:{max_completion_tokens:32768}},'OpenRouter model metadata');
+    assert(cap.maxOutputTokens,32768,'nested output limit');
+    assert(cap.contextWindow,131072,'context limit');
+    assert(cap.exactOutput,true,'exact output capability');
+  };
+
   t['buildRequest preserves an absolute Action deadline independently of inactivity timeout'] = function () {
     LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'x',inactivityTimeoutMs:180000,streaming:false};},getApiKey:function(){return'';}};
     LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,requestTimeoutMs:90000}};

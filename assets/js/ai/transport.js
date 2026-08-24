@@ -262,13 +262,13 @@
 
   function requestConfig(){
     const settings=LF.Storage.getAiSettings();
-    const key=LF.Storage.getApiKey();
+    const key=LF.Storage.getApiKey(settings.provider);
     const provider=(LF.AIProviders&&LF.AIProviders[settings.provider])||{};
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||settings.provider)+' requires an API key. Open Settings.');
     const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
     const headers={'Content-Type':'application/json','Accept':'application/json'};
-    if(settings.provider==='zai')headers['Accept-Language']='en-US,en';
+    Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
     if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     return{settings:settings,provider:provider,url:url,headers:headers};
   }
@@ -311,7 +311,7 @@
 
   function positiveInt(value){const n=Math.floor(Number(value));return Number.isFinite(n)&&n>0?n:null;}
   function capabilityValue(row,names){
-    const places=[row,row&&row.capabilities,row&&row.limits,row&&row.metadata,row&&row.config,row&&row.parameters];
+    const places=[row,row&&row.capabilities,row&&row.limits,row&&row.metadata,row&&row.config,row&&row.parameters,row&&row.top_provider];
     for(const place of places){if(!place||typeof place!=='object')continue;for(const name of names){const value=positiveInt(place[name]);if(value)return value;}}
     return null;
   }
@@ -377,7 +377,7 @@
     return cap;
   }
   async function resolveModelCapabilities(options){
-    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(),cacheKey=capabilityKey(providerId,endpoint,model);
+    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId),cacheKey=capabilityKey(providerId,endpoint,model);
     if(!options.force&&capabilityCache.has(cacheKey)){const cached=capabilityCache.get(cacheKey),ttl=providerId==='lmstudio'?5000:60000;if(!cached.resolvedAt||Date.now()-cached.resolvedAt<ttl)return cached;capabilityCache.delete(cacheKey);}
     const known=knownCapability(providerId,model);
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
@@ -396,7 +396,8 @@
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(),url=resolveModelsUrl(endpoint||settings.endpoint),headers={'Accept':'application/json'};
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),url=resolveModelsUrl(endpoint||settings.endpoint),headers={'Accept':'application/json'};
+    Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
     if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     const started=performance.now(),response=await metadataFetch(url,{method:'GET',headers:headers});
     const text=await response.text();

@@ -156,7 +156,7 @@ No unbounded retry loop or provider queue.
 
 ## 9. Provider settings
 
-Provider, endpoint, model and API key are browser-local settings.
+Provider, endpoint and model are browser-local settings. API keys are browser-local and isolated by provider; switching providers does not reuse another provider's credential.
 
 Action output budgets remain in Action contracts. Connection settings must not become a hidden global scientific policy.
 

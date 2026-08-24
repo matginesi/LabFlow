@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;let active=null;
-function configured(){const s=LF.Storage.getAiSettings(),p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage.getApiKey();if(!s.endpoint||!s.model||(p.keyRequired&&!key)){LF.UI.toast('Configure the AI provider in Settings first.','warning');LF.State.state.ui.settingsSection='provider';LF.State.setRoute('settings');return false;}return true;}
+function configured(){const s=LF.Storage.getAiSettings(),p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage.getApiKey(s.provider);if(!s.endpoint||!s.model||(p.keyRequired&&!key)){LF.UI.toast('Configure the AI provider in Settings first.','warning');LF.State.state.ui.settingsSection='provider';LF.State.setRoute('settings');return false;}return true;}
 function busy(){return!!(active||(LF.ActionRunner&&LF.ActionRunner.isRunning()));}
 function conversation(exp){const d=LF.State.ensureDerived(exp);d.chat=d.chat||{conversation:[]};d.chat.conversation=Array.isArray(d.chat.conversation)?d.chat.conversation:[];return d.chat.conversation;}
 function push(exp,msg){const item=Object.assign({id:C.uid('msg'),createdAt:new Date().toISOString()},msg);conversation(exp).push(item);if(LF.State&&LF.State.notify)LF.State.notify('ai');return item;}

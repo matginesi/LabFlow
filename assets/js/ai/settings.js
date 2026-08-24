@@ -74,7 +74,7 @@
     }
     const keyField=field('aiKey');
     const providerUsesKey=!!(provider&&(provider.keyRequired||provider.optionalKey));
-    if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored only in this browser…':'Not used by this provider';if(!providerUsesKey)keyField.value='';else if(!keyField.value)keyField.value=LF.Storage.getApiKey();}
+    if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored separately for this provider…':'Not used by this provider';if(!providerUsesKey)keyField.value='';}
     if (providerId === 'lmstudio' || providerId === 'ollama') {
       const local = document.createElement('div');
       local.className = 'meta mt-1';
@@ -105,7 +105,7 @@
     };
     LF.Storage.saveAiSettings(settings);
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom;
-    if(provider.keyRequired||provider.optionalKey)LF.Storage.saveApiKey(field('aiKey').value.trim());
+    if(provider.keyRequired||provider.optionalKey)LF.Storage.saveApiKey(field('aiKey').value.trim(),settings.provider);
     Log.info('saved', {provider:settings.provider, endpoint:settings.endpoint, model:settings.model});
     if (!options || options.toast !== false) LF.UI.toast('AI provider saved.', 'success');
     return settings;
@@ -116,6 +116,7 @@
     const provider = LF.AIProviders[providerId] || LF.AIProviders.custom;
     field('aiEndpoint').value = provider.endpoint || '';
     field('aiModel').value = provider.model || '';
+    if(field('aiKey'))field('aiKey').value=(provider.keyRequired||provider.optionalKey)?LF.Storage.getApiKey(provider.id):'';
     Log.info('provider-selected', {provider:provider.id, model:provider.model, endpoint:provider.endpoint});
     decorate();
   }
@@ -125,7 +126,7 @@
     const activity=options.silent?{activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(){}}:LF.UI;
     const providerId=(field('aiProvider')&&field('aiProvider').value)||LF.Storage.getAiSettings().provider;
     const endpoint=(field('aiEndpoint')&&field('aiEndpoint').value.trim())||LF.Storage.getAiSettings().endpoint;
-    const apiKey=(field('aiKey')&&field('aiKey').value.trim())||LF.Storage.getApiKey();
+    const apiKey=(field('aiKey')&&field('aiKey').value.trim())||LF.Storage.getApiKey(providerId);
     const button=field('loadProviderModels'),hint=field('aiModelHint'),list=field('aiModelList'),model=field('aiModel'),provider=LF.AIProviders[providerId]||LF.AIProviders.custom;
     if(button){button.disabled=true;button.textContent='Reading…';}
     if(hint)hint.textContent='Reading model list and output capability…';

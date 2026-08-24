@@ -132,7 +132,7 @@
   }
   function renderModelStatus(){
     const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
-    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey()));
+    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider)));
     host.classList.toggle('available',ready);host.classList.toggle('unavailable',!ready);
     detail.textContent=ready?settings.model:'Not configured';host.title=ready?'AI model available: '+settings.model:'Configure the AI provider in Settings';
   }
@@ -220,7 +220,7 @@
   function activityDetails(file,extra){return Object.assign({File:file&&file.name||'',Size:file&&file.size?C.bytes(file.size):''},extra||{});}
   function importProgress(file,info){const p=info||{},raw=Number(p.progress),progress=Number.isFinite(raw)?Math.max(0,Math.min(.44,raw*.44)):0;LF.UI.activityUpdate({stage:p.stage||'Importing dataset',progress:progress,message:p.path||'',details:activityDetails(file,{Files:p.files||'',Current:p.current&&p.total?p.current+' / '+p.total:'',Path:p.path||''})});}
 
-  function aiConfiguredSilently(){const s=LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{},p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage&&LF.Storage.getApiKey?LF.Storage.getApiKey():'';return !!(s.endpoint&&s.model&&(!p.keyRequired||key));}
+  function aiConfiguredSilently(){const s=LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{},p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage&&LF.Storage.getApiKey?LF.Storage.getApiKey(s.provider):'';return !!(s.endpoint&&s.model&&(!p.keyRequired||key));}
 
   async function importDataset(file){
     const end=Log.timer('dataset.import',{name:file&&file.name,size:file&&file.size,type:file&&file.type});
@@ -532,7 +532,7 @@
          explicit boundary that clears it; provider/key/theme remain independent. */
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
       if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
-      else{S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey()});}
+      else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
       S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
       bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }

@@ -3,6 +3,7 @@
   const LF=window.LabFlow=window.LabFlow||{};
   const Log=LF.Logger.scope('storage');
   const DB_NAME='labflow.workspace', DB_VERSION=1, EXP_STORE='workspace';
+  const API_KEY_STORE='labflow.ai.keys', LEGACY_API_KEY_STORE='labflow.ai.key';
   function read(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(err){Log.warn('local.read-failed',{key:key,error:err});return fallback;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(err){Log.warn('local.write-failed',{key:key,error:err});return false;}}
   function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
@@ -13,8 +14,12 @@
   function saveAiSettings(v){write('labflow.ai.settings',v);Log.info('ai-settings.saved',{provider:v&&v.provider,model:v&&v.model});}
   function getAssistantSettings(){const d={memoryEnabled:true,memoryTurns:6,memoryChars:6000,messageChars:1800,contextChars:12000,maxOutputTokens:0,temperature:0.4},raw=read('labflow.assistant.settings',{}),o=Object.assign({},d,raw);o.memoryEnabled=o.memoryEnabled!==false;o.memoryTurns=Math.max(0,Math.min(20,Number(o.memoryTurns)||0));o.memoryChars=Math.max(500,Math.min(32000,Number(o.memoryChars)||d.memoryChars));o.messageChars=Math.max(250,Math.min(8000,Number(o.messageChars)||d.messageChars));o.contextChars=Math.max(2000,Math.min(48000,Number(o.contextChars)||d.contextChars));o.maxOutputTokens=Math.max(0,Math.min(1048576,Number(o.maxOutputTokens)||0));o.temperature=Math.max(0,Math.min(2,Number(o.temperature)));if(!Number.isFinite(o.temperature))o.temperature=d.temperature;return o;}
   function saveAssistantSettings(v){const next=Object.assign({},getAssistantSettings(),v||{});write('labflow.assistant.settings',next);return getAssistantSettings();}
-  function getApiKey(){try{return localStorage.getItem('labflow.ai.key')||'';}catch(_){return'';}}
-  function saveApiKey(key){try{if(key)localStorage.setItem('labflow.ai.key',key);else localStorage.removeItem('labflow.ai.key');}catch(err){Log.warn('api-key.save-failed',{error:err});}}
+  function apiKeys(){
+    const keys=read(API_KEY_STORE,{});if(keys&&typeof keys==='object'&&!Array.isArray(keys)&&Object.keys(keys).length)return keys;
+    try{const legacy=localStorage.getItem(LEGACY_API_KEY_STORE)||'';if(!legacy)return{};const saved=read('labflow.ai.settings',{}),provider=String(saved.provider||'zai');const migrated={};migrated[provider]=legacy;write(API_KEY_STORE,migrated);localStorage.removeItem(LEGACY_API_KEY_STORE);Log.info('api-key.migrated',{provider:provider});return migrated;}catch(_){return{};}
+  }
+  function getApiKey(providerId){try{const provider=String(providerId||getAiSettings().provider||'zai');return String(apiKeys()[provider]||'');}catch(_){return'';}}
+  function saveApiKey(key,providerId){try{const provider=String(providerId||getAiSettings().provider||'zai'),keys=apiKeys();if(key)keys[provider]=String(key);else delete keys[provider];write(API_KEY_STORE,keys);}catch(err){Log.warn('api-key.save-failed',{error:err});}}
 
   /* Action overrides are the one browser-local runtime configuration layer.
      Versioned action.json / prompt.md files remain the resettable source defaults. */

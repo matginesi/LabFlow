@@ -7,7 +7,7 @@ function def(id){return LF.ActionRunner&&LF.ActionRunner.effective?LF.ActionRunn
 function label(id){const d=def(id);return(d&&(d.short_title||d.title))||id||'Action';}
 function fmtMs(ms){const n=Number(ms);return Number.isFinite(n)?(n<1000?Math.round(n)+' ms':(n/1000).toFixed(n<10000?1:0)+' s'):'—';}
 function usesAi(d){return!!(d&&(d.steps||[]).some(function(s){return s.type==='AI';}));}
-function configured(){const s=LF.Storage.getAiSettings(),p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage.getApiKey();if(!s.endpoint||!s.model||(p.keyRequired&&!key)){LF.UI.toast('Configure the AI provider in Settings first.','warning');LF.State.state.ui.settingsSection='provider';LF.State.setRoute('settings');return false;}return true;}
+function configured(){const s=LF.Storage.getAiSettings(),p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage.getApiKey(s.provider);if(!s.endpoint||!s.model||(p.keyRequired&&!key)){LF.UI.toast('Configure the AI provider in Settings first.','warning');LF.State.state.ui.settingsSection='provider';LF.State.setRoute('settings');return false;}return true;}
 function busy(){return!!(sequenceRunning||active||(LF.ActionRunner&&LF.ActionRunner.isRunning()));}
 function steps(d){return(d.steps||[]).map(function(s){return{id:s.id,label:(s.label||s.title||s.id).replace(/[-_]/g,' '),status:'pending',note:s.type};});}
 function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0));}

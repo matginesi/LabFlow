@@ -3,6 +3,7 @@ require('../../assets/js/logger.js');
 require('../../assets/js/core.js');
 require('../../assets/js/ai/action-registry.js');
 require('../../assets/js/storage.js');
+require('../../assets/js/ai/providers.js');
 require('../../assets/js/pages/settings-page.js');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
@@ -32,6 +33,26 @@ module.exports=function(t,LF){
     LF.Storage.saveAiSettings(Object.assign({},migrated,{thinkingMode:'off'}));
     assert(LF.Storage.getAiSettings().thinkingMode==='off','validated explicit mode must persist');
     localStorage.removeItem('labflow.ai.settings');
+  };
+
+  t['provider registry includes OpenRouter and NVIDIA NIM presets']=function(){
+    assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
+    assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
+    assert(LF.AIProviders.nvidia.endpoint==='https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA NIM endpoint');
+    assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
+    assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
+  };
+
+  t['API keys are isolated by provider and the legacy key migrates once']=function(){
+    localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');localStorage.removeItem('labflow.ai.settings');
+    LF.Storage.saveAiSettings(Object.assign({},LF.Storage.getAiSettings(),{provider:'zai'}));
+    localStorage.setItem('labflow.ai.key','legacy-zai');
+    assert(LF.Storage.getApiKey('zai')==='legacy-zai','legacy key migrated to active provider');
+    assert(LF.Storage.getApiKey('openrouter')==='','legacy key not leaked to another provider');
+    LF.Storage.saveApiKey('openrouter-key','openrouter');
+    assert(LF.Storage.getApiKey('zai')==='legacy-zai','Z.AI key retained');
+    assert(LF.Storage.getApiKey('openrouter')==='openrouter-key','OpenRouter key stored separately');
+    localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['Action runtime override changes effective definition and prompt and resets cleanly']=function(){
