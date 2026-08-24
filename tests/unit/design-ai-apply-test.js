@@ -76,6 +76,11 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
+  t['Design decision metric caps knowledge-only confidence and rewards sourced evidence']=function(){
+    const metric=LF.DesignDecisionMetric.calculate({solutions:[{confidence:.95,provenance_kind:'knowledge'}],devices:[{confidence:.9,provenance_kind:'evidence',evidence:'RAW metadata',process:{annealing:'100 C'},stack:[{confidence:.88,provenance_kind:'evidence',evidence:'source row'}]}]});
+    assert(metric.value===74,'evidence-weighted score should be deterministic');assert(metric.decisions===3,'solution, process and layer decisions counted');assert(metric.knowledgeOnly===1&&metric.evidenceBacked===2,'provenance counts retained');assert(metric.estimated===true,'score must be explicitly estimated');
+  };
+
   t['Design validation binds provider output to the selected canonical variant']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
     const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2']},infer:proposal},lastResult:proposal};

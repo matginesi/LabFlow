@@ -24,6 +24,7 @@
       "type": "AI",
       "prompt": "prompt.md",
       "output": "text",
+      "thinking": "off",
       "timeout_ms": 240000,
       "foreach": "collect.blocks",
       "weight": 0.84,

@@ -287,9 +287,11 @@ If a new proposed Action merely wraps one of these implementation details, it sh
 
 Every AI step declares a bounded `max_output_tokens` target. It is the amount appropriate for that workflow, not a copy of the model's advertised maximum. The model/provider capability is only an upper ceiling.
 
+Every AI step also declares `thinking: off|auto|on`; the contract validator rejects omissions. Direct drafting (`analysis.enrich`, `report.generate`, `report.improve`) uses `off`, semantic reconstruction (`dataset.resolve-ambiguities`, `design.infer`) uses `on`, and question/interpretation work (`assistant.chat`, `results.interpret`) uses `auto`. The Assistant tool-selection planner is separately fixed to `off`. The transport reconciles this request with the selected model's `none|optional|required|unknown` capability and never sends an incompatible provider field.
+
 At runtime the effective output budget is the minimum of the declared Action/step target, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. If a future AI Action omits a target, the runner defensively falls back to 4096 tokens and the contract validator rejects the definition so the omission cannot ship unnoticed.
 
-The current targets are intentionally task-shaped: compact Experiment Brief/Results work is around 3k, structured Design/repair work around 4k, and individual Report/Paper writing blocks around 6k. Large documents remain split into bounded sequential writing blocks even when a model can emit 64k/128k tokens.
+The current targets are intentionally task-shaped: compact Experiment Brief/Results work is about 1.1k–1.4k target tokens, ambiguity work about 1.8k, structured Design about 2.8k, and individual Report/Paper writing blocks about 6k–6.5k. Their larger maximums remain safety ceilings, especially for complete structured JSON. Large documents remain split into bounded sequential writing blocks even when a model can emit 64k/128k tokens.
 
 AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 90 s absolute deadline and zero automatic retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
 
@@ -306,6 +308,7 @@ Settings → Actions is the single runtime catalog/editor for deterministic, AI-
 - mutation scope;
 - ordered checkpoints;
 - prompt/schema when AI;
+- thinking policy when AI;
 - output budget when AI;
 - last run state.
 
@@ -314,6 +317,6 @@ Runtime edits are browser-local overrides; versioned `action.json` / optional `p
 
 ## Output profile and progress contract
 
-AI steps may declare `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, `deadline_ms`, and `max_retries`. Provider/model maximum output is a ceiling only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
+AI steps declare `thinking`, `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, and may declare `deadline_ms` and `max_retries`. Provider/model maximum output is a ceiling only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
 
 Action UIs must calculate progress from declared checkpoints and work units. Provider SSE/event telemetry may only refine the active AI phase and cannot itself complete an Action.

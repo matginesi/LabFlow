@@ -14,6 +14,7 @@
       "type": "AI",
       "prompt": "prompt.md",
       "output": "text",
+      "thinking": "auto",
       "timeout_ms": 240000,
       "agent": {
         "mode": "read_only_tools",
@@ -32,6 +33,7 @@
           "nomad.get"
         ],
         "max_rounds": 6,
+        "thinking": "off",
         "choice_schema": "assistant_tool_choice"
       },
       "max_output_tokens": 6144,

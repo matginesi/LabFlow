@@ -136,8 +136,8 @@ module.exports = function (t, LF) {
     assert(optional.thinkingMode,'off','disable reasoning when model permits it');assert(optional.maxTokens,128,'small no-thinking probe');
     const required=AI.connectionProbePolicy(provider,{reasoningAllowedOptions:['on']});
     assert(required.thinkingMode,'auto','do not force unsupported off mode');assert(required.maxTokens,2048,'reasoning model gets final-answer budget');assert(required.reasoningRequired,true,'required reasoning marked');
-    const unknownLocal=AI.connectionProbePolicy({id:'lmstudio',connectionTestMaxTokens:128},null);
-    assert(unknownLocal.thinkingMode,'auto','unknown local capability gets portable payload');assert(unknownLocal.maxTokens,2048,'unknown local model can still reach final text');
+    const unknown=AI.connectionProbePolicy({id:'custom',connectionTestMaxTokens:128},null);
+    assert(unknown.thinkingMode,'auto','unknown capability gets a portable payload');assert(unknown.maxTokens,2048,'unknown model can still reach final text');assert(unknown.reasoningUnknown,true,'unknown state is explicit');
   };
 
 
@@ -157,6 +157,21 @@ module.exports = function (t, LF) {
     assert(AI.resolveOutputBudget({},0,0,1000),null,'unknown remains provider default');
   };
 
+  t['thinking policy reconciles Action intent with model capability']=function(){
+    const non=AI.resolveThinkingPolicy({reasoningStatus:'none'},'on','auto');assert(non.transportMode,'auto','do not send thinking to non-reasoning model');assert(non.effective,'off','non-reasoning effective state');
+    const required=AI.resolveThinkingPolicy({reasoningStatus:'required',reasoningDefault:'medium'},'off','auto');assert(required.transportMode,'auto','do not disable a reasoning-required model');assert(required.effective,'required','required fallback visible');
+    const optional=AI.resolveThinkingPolicy({reasoningStatus:'optional'},'off','auto');assert(optional.transportMode,'off','Action can disable optional reasoning');
+    const override=AI.resolveThinkingPolicy({reasoningStatus:'optional'},'off','on');assert(override.transportMode,'on','global override wins explicitly');
+    const unknown=AI.resolveThinkingPolicy({reasoningStatus:'unknown'},'on','auto');assert(unknown.transportMode,'auto','unknown capability receives no speculative field');assert(unknown.effective,'unknown','unknown effective state');
+  };
+
+  t['known model metadata distinguishes reasoning and non-reasoning models']=function(){
+    assert(AI.knownCapability('openai','gpt-4.1-mini').reasoningStatus,'none','GPT-4.1 non-reasoning');
+    assert(AI.knownCapability('openai','gpt-5.2').reasoningStatus,'optional','newer GPT-5 configurable reasoning');
+    assert(AI.knownCapability('openai','gpt-5-pro').reasoningStatus,'required','GPT-5 pro required reasoning');
+    const openRouter=AI.capabilityFromRow({supported_parameters:['max_tokens'],context_length:8192},'OpenRouter model metadata');assert(openRouter.reasoningStatus,'none','OpenRouter absence is explicit for a concrete model');
+  };
+
   t['Gemini capability probe reads outputTokenLimit from the native Models API'] = async function () {
     const oldFetch=global.fetch;let seen='';global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({name:'models/gemini-test',inputTokenLimit:1000000,outputTokenLimit:65536});}};};
     LF.Storage={getAiSettings:function(){return{provider:'gemini',endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',model:'gemini-test'};},getApiKey:function(){return'key';}};LF.AIProviders={gemini:{keyRequired:true}};
@@ -166,9 +181,9 @@ module.exports = function (t, LF) {
 
 
   t['Ollama capability probe reads num_predict and model context'] = async function () {
-    const oldFetch=global.fetch;let seen={};global.fetch=async function(url,opts){seen={url:url,body:JSON.parse(opts.body)};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({parameters:'temperature 0.2\nnum_predict 12288',model_info:{'qwen.context_length':65536}});}};};
+    const oldFetch=global.fetch;let seen={};global.fetch=async function(url,opts){seen={url:url,body:JSON.parse(opts.body)};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({parameters:'temperature 0.2\nnum_predict 12288',model_info:{'qwen.context_length':65536},capabilities:['completion','thinking']});}};};
     LF.Storage={getAiSettings:function(){return{provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen-test'};},getApiKey:function(){return'';}};LF.AIProviders={ollama:{keyRequired:false}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen-test',force:true});assert(seen.url,'http://127.0.0.1:11434/api/show','native show URL');assert(seen.body.model,'qwen-test','show model');assert(cap.maxOutputTokens,12288,'num_predict');assert(cap.contextWindow,65536,'model context');assert(cap.exactOutput,true,'explicit output limit');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen-test',force:true});assert(seen.url,'http://127.0.0.1:11434/api/show','native show URL');assert(seen.body.model,'qwen-test','show model');assert(cap.maxOutputTokens,12288,'num_predict');assert(cap.contextWindow,65536,'model context');assert(cap.exactOutput,true,'explicit output limit');assert(cap.reasoningStatus,'optional','thinking capability');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 

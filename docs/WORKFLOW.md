@@ -539,6 +539,8 @@ Known, RAW-backed or user-confirmed fields are authoritative and must not be reg
 
 A proposal for missing fields only, with evidence/confidence where supported.
 
+The proposal card also shows a compact **Estimated AI accuracy** score from 0–100. This is not measured ground-truth accuracy. It is an evidence-weighted decision-reliability indicator: model confidence is capped by provenance strength (`evidence` > `mixed` > `knowledge` > unspecified), then averaged across proposed solutions, device link, process and stack layers. The UI shows how many proposed decisions are evidence-backed so the researcher can interpret the number rather than treating it as validation.
+
 The researcher remains able to edit the Design manually without running the Action.
 
 ---
@@ -948,7 +950,9 @@ The AI transport resolves model capabilities and caches them by provider/endpoin
 
 For Report/Paper and other word-sized work units, a known provider or researcher ceiling is applied to `target_words`, `min_words` and `max_words` before the Context Pack is built. If a provider still returns `finish_reason: length` (for example because hidden reasoning consumed part of the allowance), the declared bounded retry requests one complete shorter rewrite instead of resending the same impossible target or storing partial prose.
 
-Settings also separates thinking policy from output budget. `Automatic` sends no override. `Off` and `On` apply only request fields declared by the active provider adapter; unsupported modes fall back to the model default rather than guessing fields. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from **Detect** or immediately before an explicit connection test; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
+Each AI checkpoint declares whether it needs thinking (`off`, `auto` or `on`). Settings' `Follow each Action` mode preserves that policy; force Off/On is an explicit global override. The transport reconciles it with model capability (`none`, `optional`, `required`, `unknown`): it does not enable thinking on a non-reasoning model or disable a reasoning-required model, and it only applies fields declared by the active provider adapter. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from **Detect** or immediately before an explicit connection test; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
+
+Token optimization remains conservative and Action-specific. Compact scientific Actions use lower expected targets; complete Design JSON and document blocks retain generous hard ceilings. Context construction removes duplicate evidence aliases before trimming unique facts, and prompts state each constraint once. Speed improvements must not remove evidence, reduce the requested scientific depth, store truncated output or weaken deterministic validation.
 
 ## Assistant streaming
 

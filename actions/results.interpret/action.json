@@ -18,6 +18,7 @@
       "type": "AI",
       "prompt": "prompt.md",
       "output": "text",
+      "thinking": "auto",
       "timeout_ms": 240000,
       "max_output_tokens": 3072,
       "deadline_ms": 150000,

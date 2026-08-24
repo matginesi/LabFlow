@@ -7,6 +7,7 @@ module.exports=function(t){
   const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
   const settingsPage=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
+  const designPage=fs.readFileSync(path.join(root,'assets/js/pages/design-page.js'),'utf8');
   const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const logs=fs.readFileSync(path.join(root,'assets/js/pages/logs-page.js'),'utf8');
@@ -53,10 +54,16 @@ module.exports=function(t){
 
   t['Provider settings expose portable thinking policy and rich connection diagnostics']=function(){
     assert(settingsPage.includes('id="aiThinkingMode"'),true,'thinking policy selector');
-    assert(settingsPage.includes('Automatic (model default)'),true,'provider-neutral default');
+    assert(settingsPage.includes('Follow each Action (recommended)'),true,'Action-owned default');
     assert(settings.includes('## Connection diagnostics'),true,'rich connection diagnostics');
     assert(settings.includes('Successful provider round trip'),true,'round-trip metric');
-    assert(settings.includes('Thinking override'),true,'applied thinking mode is reported');
+    assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
+  };
+
+  t['Design proposal exposes a compact estimated decision-accuracy instrument']=function(){
+    assert(designPage.includes('Estimated AI accuracy'),true,'decision metric label');
+    assert(designPage.includes('Estimated, not validated accuracy'),true,'metric limitation');
+    assert(css.includes('.design-decision-dial'),true,'compact dial styling');
   };
 
   t['Report equations are compact in preview PDF and DOCX']=function(){

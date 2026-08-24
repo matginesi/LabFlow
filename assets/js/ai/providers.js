@@ -2,8 +2,8 @@
   'use strict';
   /* Provider capabilities are declarative transport metadata. Provider-specific
      request fields belong here, never in Actions or scientific prompts. A
-     thinkingModes entry is applied only when the researcher explicitly selects
-     that mode; `auto` deliberately sends no override. */
+     thinkingModes entry is applied only after the Action/global policy has been
+     reconciled with model capability; `auto` deliberately sends no override. */
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
@@ -11,7 +11,7 @@
       note:'Official general Z.AI Chat Completions endpoint. Coding Plan keys use a separate endpoint intended for supported coding tools and are not general API keys. The free glm-4.7-flash model is paced; HTTP 429 / code 1305 uses bounded backoff.'
     },
     openrouter: {
-      id:'openrouter', name:'OpenRouter', endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openai/gpt-5-mini', keyRequired:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, headers:{'X-OpenRouter-Title':'LabFlow'},
+      id:'openrouter', name:'OpenRouter', endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openai/gpt-5-mini', keyRequired:true, supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'},
       note:'OpenRouter OpenAI-compatible endpoint. Use an OpenRouter model slug; Detect reads the current catalogue and model limits.'
     },
     nvidia: {
@@ -19,7 +19,7 @@
       note:'NVIDIA hosted NIM OpenAI-compatible endpoint. Enter the NVIDIA API key, load its current model catalogue, then choose the exact model ID before testing.'
     },
     openai: {
-      id:'openai', name:'OpenAI', endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false,
+      id:'openai', name:'OpenAI', endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
       note:'OpenAI Chat Completions compatible endpoint.'
     },
     gemini: {
@@ -27,7 +27,7 @@
       note:'Gemini OpenAI-compatibility endpoint.'
     },
     ollama: {
-      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingModes:{off:{reasoning_effort:'none'}}, requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
+      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}}, requestTimeoutMs:180000, connectionTestTimeoutMs:60000,
       note:'Local OpenAI-compatible endpoint. LabFlow resolves the base URL to /v1/chat/completions. When opened in a browser, the provider must allow the page origin.'
     },
     lmstudio: {

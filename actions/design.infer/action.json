@@ -26,6 +26,7 @@
       "prompt": "prompt.md",
       "output": "json",
       "schema": "design_reconstruct",
+      "thinking": "on",
       "timeout_ms": 180000,
       "weight": 0.8,
       "max_output_tokens": 6144,

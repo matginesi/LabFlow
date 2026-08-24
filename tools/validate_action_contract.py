@@ -40,6 +40,7 @@ for p in sorted(ACTIONS.glob('*/action.json')):
         if not d.get('policies'):errors.append(f'{aid}: AI Action requires provenance/policy contract')
         for s in ai:
             if s.get('prompt')!='prompt.md':errors.append(f'{aid}/{s.get("id")}: AI step must use action-local prompt.md')
+            if s.get('thinking') not in {'off','auto','on'}:errors.append(f'{aid}/{s.get("id")}: AI step requires thinking = off|auto|on')
             budget=s.get('max_output_tokens',d.get('max_output_tokens'))
             if budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_output_tokens target')
             else:
@@ -59,6 +60,7 @@ for p in sorted(ACTIONS.glob('*/action.json')):
             if s.get('output')=='json':
                 sid=s.get('schema')
                 if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: JSON output requires a registered schema')
+            if s.get('agent') and s['agent'].get('thinking','off') not in {'off','auto','on'}:errors.append(f'{aid}/{s.get("id")}: agent thinking must be off|auto|on')
     else:
         if prompt.exists():errors.append(f'{aid}: deterministic Action must not have prompt.md')
         if d.get('policies'):errors.append(f'{aid}: deterministic Action must not carry AI policies')

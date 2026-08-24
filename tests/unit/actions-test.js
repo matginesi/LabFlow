@@ -50,6 +50,19 @@ module.exports=function(t,LF){
     assert(built.hardTimeoutMs,90000,'absolute deadline forwarded');
   };
 
+  t['Action thinking policy is reconciled with model capability and recorded'] = async function(){
+    const exp={id:'exp_thinking',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.thinking',type:'AI',steps:[{id:'draft',type:'AI',output:'text',thinking:'off',max_output_tokens:512,max_retries:0}]};
+    let built=null;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'openai',model:'gpt-5.2',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'Write directly.'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimateTokens:function(){return 12;},resolveModelCapabilities:async function(){return{maxOutputTokens:4096,reasoningStatus:'optional'};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},resolveThinkingPolicy:function(cap,action,global){assert(action,'off','Action policy input');assert(global,'auto','global follows Action');return{requested:'off',transportMode:'off',capability:cap.reasoningStatus,effective:'off',reason:'Action policy'};},buildRequest:function(opts){built=opts;return Object.assign({body:{messages:opts.messages}},opts);},send:async function(spec){return{content:'done',finishReason:'stop',thinkingMode:spec.thinkingMode,thinkingPolicy:spec.thinkingPolicy};}};
+    const out=await LF.ActionRunner.run('test.thinking');
+    assert(out.status,'done','status');assert(built.thinkingMode,'off','transport mode');assert(built.thinkingPolicy.capability,'optional','capability retained');
+    const stored=exp.derived.actions['test.thinking'].runs[0].requestMeta.draft;assert(stored.thinkingRequested,'off','requested policy recorded');assert(stored.thinkingEffective,'off','effective policy recorded');
+  };
+
   t['word-sized drafting work is reduced before prompting when the provider output ceiling is smaller'] = async function(){
     const exp={id:'exp_draft_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.draft-budget',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:0}]};

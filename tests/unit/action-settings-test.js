@@ -18,7 +18,7 @@ module.exports=function(t,LF){
   };
   t['AI Actions declare bounded output targets and automatic enrichment is fail-fast']=function(){
     const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
-    defs.forEach(function(def){(def.steps||[]).filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output target');});});
+    defs.forEach(function(def){(def.steps||[]).filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output target');assert(['off','auto','on'].includes(step.thinking),def.id+'/'+step.id+' missing thinking policy');});});
     const enrich=LF.ActionRegistry.action('analysis.enrich').steps.find(function(step){return step.id==='enrich';});
     assert(enrich.max_output_tokens===3072,'analysis.enrich target must be 3072');
     assert(enrich.deadline_ms===90000,'analysis.enrich hard deadline must be 90s');
@@ -92,6 +92,10 @@ module.exports=function(t,LF){
     assert(html.indexOf('AI Helpers')<0,'legacy AI Helpers surface remains');
     assert(html.indexOf('Operations Workshop')<0,'legacy Operations Workshop surface remains');
     assert(html.indexOf('No prompt required.')>=0,'deterministic Action prompt state missing');
+  };
+  t['Actions manager exposes each AI step thinking policy']=function(){
+    actionSettingsState('lab','report.generate');const report=LF.SettingsPage.render();assert(report.indexOf('thinking off')>=0,'report drafting thinking policy visible');
+    actionSettingsState('lab','design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking on')>=0,'Design inference thinking policy visible');
   };
 
   t['Report Actions expose a document-kind select that drives data-action-kind']=function(){

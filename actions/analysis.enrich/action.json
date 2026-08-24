@@ -20,13 +20,14 @@
       "prompt": "prompt.md",
       "output": "json",
       "schema": "experiment_brief",
+      "thinking": "off",
       "timeout_ms": 180000,
       "weight": 0.85,
       "max_output_tokens": 3072,
       "deadline_ms": 90000,
       "max_retries": 0,
-      "min_output_tokens": 600,
-      "target_output_tokens": 1300
+      "min_output_tokens": 500,
+      "target_output_tokens": 1100
     },
     {
       "id": "store",

@@ -38,11 +38,13 @@ For NVIDIA the intended sequence is **enter API key → Load models → choose m
 
 ## Thinking and non-thinking models
 
-Settings exposes one stable mode:
+Every AI checkpoint declares `thinking: off|auto|on`. This Action policy is the normal default. Settings exposes an explicit override:
 
-- `auto`: send no thinking override and use the model/provider default;
-- `off`: apply only the provider's declared no-thinking payload;
-- `on`: apply only the provider's declared thinking payload.
+- `auto`: follow the Action policy;
+- `off`: force no thinking where the selected model permits it;
+- `on`: force thinking where the selected model supports it.
+
+Model capability is normalized as `none`, `optional`, `required` or `unknown`. A non-reasoning model ignores an `on` request. A reasoning-required model ignores an incompatible `off` request. An unknown model receives no speculative override until metadata makes the capability explicit. The requested, detected and effective states are retained in Action diagnostics/history.
 
 Current declared mappings are:
 
@@ -50,10 +52,12 @@ Current declared mappings are:
 | --- | --- | --- |
 | Z.AI | `thinking.type = disabled` | `thinking.type = enabled` |
 | LM Studio | `reasoning_effort = none`, `chat_template_kwargs.enable_thinking = false` | `reasoning_effort = medium`, `enable_thinking = true` |
-| Ollama OpenAI-compatible | `reasoning_effort = none` | model default |
-| OpenAI, OpenRouter, NVIDIA NIM, Gemini, custom | model default | model default |
+| Ollama OpenAI-compatible | `reasoning_effort = none` | `reasoning_effort = medium` |
+| OpenAI | `reasoning_effort = none` | `reasoning_effort = medium` |
+| OpenRouter | `reasoning.effort = none` | `reasoning.effort = medium` |
+| NVIDIA NIM, Gemini, custom | model default | model default |
 
-An unsupported explicit mode safely degrades to `auto`; LabFlow never guesses undocumented request fields. The connection probe requests `off` only when the active model permits it. LM Studio's loaded-instance metadata is authoritative: reasoning-only models keep their native mode and receive a larger, still bounded probe budget so they can reach final text.
+Capability comes from provider model metadata when available, including OpenRouter reasoning parameters, Ollama's model `capabilities`, and LM Studio's loaded-instance `reasoning.allowed_options`; known OpenAI/Z.AI families supply a conservative built-in classification. An unsupported explicit mode safely degrades to `auto`; LabFlow never guesses undocumented request fields. The connection probe requests `off` only when the active model permits it; required or unknown models receive a larger, still bounded probe budget so they can reach final text.
 
 Provider reasoning is normalized separately from final content. LabFlow accepts common `reasoning`, `reasoning_content`, text-part arrays and streamed reasoning fields. Reasoning may be displayed as progress, but only final content satisfies the Action response contract. An empty final answer reports its `finish_reason` and whether reasoning consumed the available output budget.
 

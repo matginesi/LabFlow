@@ -30,10 +30,9 @@
   /** Size the tiny probe without forcing an unsupported reasoning mode. */
   function connectionProbePolicy(provider,capability){
     const allowed=Array.isArray(capability&&capability.reasoningAllowedOptions)?capability.reasoningAllowedOptions.map(function(x){return String(x).toLowerCase();}):[];
-    const reasoningRequired=allowed.length>0&&!allowed.includes('off')&&!allowed.includes('none');
-    const unknownLocal=!allowed.length&&!!(provider&&(provider.id==='lmstudio'||provider.id==='ollama'));
+    const status=String(capability&&capability.reasoningStatus||'unknown').toLowerCase(),reasoningRequired=status==='required'||(allowed.length>0&&!allowed.includes('off')&&!allowed.includes('none')),unknown=status==='unknown'&&!allowed.length;
     const configured=Math.max(64,Math.min(512,Number(provider&&provider.connectionTestMaxTokens)||256));
-    return{thinkingMode:reasoningRequired||unknownLocal?'auto':'off',maxTokens:reasoningRequired||unknownLocal?2048:configured,reasoningRequired:reasoningRequired};
+    return{thinkingMode:reasoningRequired||unknown?'auto':'off',maxTokens:reasoningRequired||unknown?2048:configured,reasoningRequired:reasoningRequired,reasoningUnknown:unknown};
   }
 
   function resolveChatUrl(endpoint){
@@ -316,27 +315,55 @@
     for(const place of places){if(!place||typeof place!=='object')continue;for(const name of names){const value=positiveInt(place[name]);if(value)return value;}}
     return null;
   }
+  function reasoningFromRow(row,source){
+    if(!row||typeof row!=='object')return null;
+    const capabilities=row.capabilities&&typeof row.capabilities==='object'?row.capabilities:{},raw=row.reasoning!=null?row.reasoning:capabilities.reasoning;
+    if(raw===false)return{reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off'};
+    if(raw===true)return{reasoningStatus:'optional',reasoningAllowedOptions:[],reasoningDefault:''};
+    if(raw&&typeof raw==='object'){
+      const rawAllowed=raw.supported_efforts||raw.allowed_options||raw.allowedOptions||[],allowed=Array.isArray(rawAllowed)?rawAllowed.map(function(x){return String(x).toLowerCase();}):[],mandatory=raw.mandatory===true,def=String(raw.default_effort||raw.default||'').toLowerCase();
+      let status='optional';if(mandatory||(allowed.length&&!allowed.includes('off')&&!allowed.includes('none')))status='required';else if(allowed.length&&allowed.every(function(x){return x==='off'||x==='none';}))status='none';
+      return{reasoningStatus:status,reasoningAllowedOptions:allowed,reasoningDefault:def};
+    }
+    const supported=Array.isArray(row.supported_parameters)?row.supported_parameters.map(function(x){return String(x).toLowerCase();}):[];
+    if(supported.includes('reasoning')||supported.includes('reasoning_effort'))return{reasoningStatus:'optional',reasoningAllowedOptions:[],reasoningDefault:''};
+    if(supported.length&&/openrouter/i.test(String(source||'')))return{reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off'};
+    return null;
+  }
   function capabilityFromRow(row,source){
     if(!row||typeof row!=='object')return null;
     const output=capabilityValue(row,['max_output_tokens','maxOutputTokens','output_token_limit','outputTokenLimit','max_completion_tokens','maxCompletionTokens','max_tokens_to_sample']);
     const context=capabilityValue(row,['context_length','contextLength','max_context_length','maxContextLength','context_window','contextWindow','input_token_limit','inputTokenLimit']);
-    if(!output&&!context)return null;
-    return{maxOutputTokens:output,contextWindow:context,exactOutput:!!output,source:source||'provider metadata'};
+    const reasoning=reasoningFromRow(row,source);
+    if(!output&&!context&&!reasoning)return null;
+    return Object.assign({maxOutputTokens:output,contextWindow:context,exactOutput:!!output,source:source||'provider metadata'},reasoning||{});
   }
   function knownCapability(providerId,model){
     const id=String(providerId||'').toLowerCase(),m=String(model||'').toLowerCase();
     if(id==='openai'){
-      if(/^gpt-5(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
-      if(/^gpt-4\.1(?:[.-]|$)/.test(m))return{maxOutputTokens:32768,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
-      if(/^gpt-4o(?:[.-]|$)/.test(m))return{maxOutputTokens:16384,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
-      if(/^gpt-4(?:[.-]|$)/.test(m))return{maxOutputTokens:8192,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
-      if(/^(o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,source:'OpenAI model specification'};
+      if(/^gpt-5-pro(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['high'],reasoningDefault:'high',source:'OpenAI model specification'};
+      if(/^gpt-5\.(?:[1-9]|\d{2,})(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['none','low','medium','high'],reasoningDefault:'none',source:'OpenAI model specification'};
+      if(/^gpt-5(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['minimal','low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
+      if(/^gpt-4\.1(?:[.-]|$)/.test(m))return{maxOutputTokens:32768,contextWindow:null,exactOutput:true,reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',source:'OpenAI model specification'};
+      if(/^gpt-4o(?:[.-]|$)/.test(m))return{maxOutputTokens:16384,contextWindow:null,exactOutput:true,reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',source:'OpenAI model specification'};
+      if(/^gpt-4(?:[.-]|$)/.test(m))return{maxOutputTokens:8192,contextWindow:null,exactOutput:true,reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',source:'OpenAI model specification'};
+      if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
     if(id==='zai'){
-      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:null,exactOutput:true,source:'Z.AI model specification'};
-      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:null,exactOutput:true,source:'Z.AI model specification'};
+      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
+      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
     }
     return null;
+  }
+  function resolveThinkingPolicy(capability,actionMode,globalMode){
+    capability=capability||{};actionMode=['off','on','auto'].includes(actionMode)?actionMode:'auto';globalMode=['off','on'].includes(globalMode)?globalMode:'auto';
+    const requested=globalMode==='auto'?actionMode:globalMode,status=['none','optional','required'].includes(capability.reasoningStatus)?capability.reasoningStatus:'unknown';let transportMode=requested,effective=requested,reason='Action policy';
+    if(status==='none'){transportMode='auto';effective='off';reason='Selected model is non-reasoning';}
+    else if(status==='required'&&requested==='off'){transportMode='auto';effective='required';reason='Selected model requires reasoning';}
+    else if(status==='unknown'&&requested!=='auto'){transportMode='auto';effective='unknown';reason='Model reasoning capability is unknown';}
+    else if(requested==='auto'){transportMode='auto';effective=status==='required'?'required':(capability.reasoningDefault||'auto');reason='Model default';}
+    if(globalMode!=='auto')reason='Global override · '+reason;
+    return{actionMode:actionMode,globalMode:globalMode,requested:requested,transportMode:transportMode,effective:effective,capability:status,reason:reason};
   }
   const capabilityCache=new Map();
   function capabilityKey(providerId,endpoint,model){return[String(providerId||''),String(endpoint||''),String(model||'')].join('|');}
@@ -352,7 +379,7 @@
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
   function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
-    const url=providerModelsUrl(provider,endpoint),obj=await fetchJson(url,{method:'GET',headers:authHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,'provider model metadata');
+    const url=providerModelsUrl(provider,endpoint),obj=await fetchJson(url,{method:'GET',headers:authHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,providerId==='openrouter'?'OpenRouter model metadata':'provider model metadata');
   }
   async function geminiCapability(model,key){
     if(!key)return null;const name=String(model||'').replace(/^models\//,'');if(!name)return null;
@@ -364,7 +391,8 @@
     let numPredict=null;if(typeof obj.parameters==='string'){const match=obj.parameters.match(/(?:^|\n)\s*num_predict\s+(-?\d+)/);if(match&&Number(match[1])>0)numPredict=positiveInt(match[1]);}
     if(!numPredict&&obj.parameters&&typeof obj.parameters==='object')numPredict=positiveInt(obj.parameters.num_predict);
     let context=null;Object.keys(obj.model_info||{}).some(function(k){if(/context_length$/i.test(k)){context=positiveInt(obj.model_info[k]);return !!context;}return false;});
-    return numPredict||context?{maxOutputTokens:numPredict,contextWindow:context,exactOutput:!!numPredict,source:numPredict?'Ollama num_predict':'Ollama model context'}:null;
+    const features=Array.isArray(obj.capabilities)?obj.capabilities.map(function(x){return String(x).toLowerCase();}):[],reasoning=features.length?(features.includes('thinking')?{reasoningStatus:'optional',reasoningAllowedOptions:['none','low','medium','high'],reasoningDefault:'medium'}:{reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off'}):{};
+    return numPredict||context||features.length?Object.assign({maxOutputTokens:numPredict,contextWindow:context,exactOutput:!!numPredict,source:numPredict?'Ollama num_predict':'Ollama model metadata'},reasoning):null;
   }
   async function lmStudioCapability(endpoint,model){
     const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=chat.origin+'/api/v1/models',obj=await fetchJson(url,{method:'GET',headers:{Accept:'application/json'}}),rows=modelRows(obj),requestedRow=matchingRow(obj,model),loadedRow=rows.find(function(item){return Array.isArray(item&&item.loaded_instances)&&item.loaded_instances.length;})||null,row=requestedRow||loadedRow||rows[0]||null;
@@ -373,7 +401,8 @@
     if(activeRow){
       const wanted=String(model||''),loaded=activeRow.loaded_instances.find(function(instance){const id=String(instance&&instance.id||'');return id===wanted||(id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id)));})||activeRow.loaded_instances[0],instance=capabilityFromRow(loaded,'LM Studio loaded instance context'),loadedModel=String(loaded&&loaded.id||activeRow.id||activeRow.model||activeRow.key||activeRow.name||'');
       const reasoning=activeRow&&activeRow.capabilities&&activeRow.capabilities.reasoning||{};
-      cap=Object.assign({},cap||{},instance||{},{loadedModel:loadedModel,maxOutputTokens:cap&&cap.maxOutputTokens||instance&&instance.maxOutputTokens||null,modelMaxContextWindow:cap&&cap.contextWindow||null,runtimeContextWindow:instance&&instance.contextWindow||null,reasoningAllowedOptions:Array.isArray(reasoning.allowed_options)?reasoning.allowed_options.slice():[],reasoningDefault:String(reasoning.default||''),source:'LM Studio loaded instance context'});
+      const allowed=Array.isArray(reasoning.allowed_options)?reasoning.allowed_options.map(function(x){return String(x).toLowerCase();}):[],reasoningStatus=!reasoning||!Object.keys(reasoning).length?(cap&&cap.reasoningStatus||'unknown'):(allowed.length&&!allowed.includes('off')&&!allowed.includes('none')?'required':allowed.length&&allowed.every(function(x){return x==='off'||x==='none';})?'none':'optional');
+      cap=Object.assign({},cap||{},instance||{},{loadedModel:loadedModel,maxOutputTokens:cap&&cap.maxOutputTokens||instance&&instance.maxOutputTokens||null,modelMaxContextWindow:cap&&cap.contextWindow||null,runtimeContextWindow:instance&&instance.contextWindow||null,reasoningStatus:reasoningStatus,reasoningAllowedOptions:allowed,reasoningDefault:String(reasoning.default||''),source:'LM Studio loaded instance context'});
     }
     return cap;
   }
@@ -384,8 +413,8 @@
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     let detected=null,error=null;
     try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
-    const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
-    capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{model:cap.loadedModel}));Log.info('capability.resolved',{provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
+    const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
+    capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{model:cap.loadedModel}));Log.info('capability.resolved',{provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,reasoningStatus:cap.reasoningStatus,reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
   }
   function resolveOutputBudget(capability,requestedCap,globalCap,inputTokens){
     capability=capability||{};const candidates=[],detected=positiveInt(capability.maxOutputTokens),context=positiveInt(capability.contextWindow),input=Math.max(0,Number(inputTokens)||0);
@@ -411,7 +440,7 @@
 
   async function testConnection(options){
     options=options||{};const cfg=requestConfig(),hard=Math.max(30000,Math.min(60000,Number(cfg.provider.connectionTestTimeoutMs)||45000));
-    const cached=capabilityCache.get(capabilityKey(cfg.settings.provider,cfg.settings.endpoint,cfg.settings.model))||null,probe=connectionProbePolicy(cfg.provider,cached);
+    const cached=capabilityCache.get(capabilityKey(cfg.settings.provider,cfg.settings.endpoint,cfg.settings.model))||null,capability=cached||await resolveModelCapabilities({provider:cfg.settings.provider,endpoint:cfg.settings.endpoint,model:cfg.settings.model}),probe=connectionProbePolicy(cfg.provider,capability);
     const spec=buildRequest({messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:Math.min(hard,30000),hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode});
     const r=await send(spec,{label:'AI connection test',onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});
     if(!r.content)Log.warn('test.empty-content',{model:r.model||cfg.settings.model,finishReason:r.finishReason});
@@ -442,7 +471,8 @@
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
     const timeoutMs=Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
     const hardTimeoutMs=Math.max(0,Number(opts.hardTimeoutMs)||0);
-    return{url:cfg.url,headers:cfg.headers,body:body,timeoutMs:timeoutMs,hardTimeoutMs:hardTimeoutMs,provider:provider,settings:settings,model:model,thinkingMode:thinking.applied};
+    const policy=Object.assign({},opts.thinkingPolicy||{requested:opts.thinkingMode||settings.thinkingMode||'auto',capability:'unknown',reason:'Direct request'},{applied:thinking.applied});
+    return{url:cfg.url,headers:cfg.headers,body:body,timeoutMs:timeoutMs,hardTimeoutMs:hardTimeoutMs,provider:provider,settings:settings,model:model,thinkingMode:thinking.applied,thinkingPolicy:policy};
   }
 
   async function send(spec,opts){
@@ -474,7 +504,7 @@
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
     const totalElapsed=Math.round(performance.now()-overallStarted),tps=totalElapsed>0?Number((completionTokens/(totalElapsed/1000)).toFixed(2)):null;
-    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',latencyMs:totalElapsed,requestElapsedMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
+    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,requestElapsedMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
   }
 
   LF.AI={
@@ -500,6 +530,7 @@
     knownCapability:knownCapability,
     resolveModelCapabilities:resolveModelCapabilities,
     resolveOutputBudget:resolveOutputBudget,
+    resolveThinkingPolicy:resolveThinkingPolicy,
     applyThinkingMode:applyThinkingMode,
     connectionProbePolicy:connectionProbePolicy,
     testConnection:testConnection
