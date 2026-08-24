@@ -39,8 +39,14 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
     assert(LF.AIProviders.nvidia.endpoint==='https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA NIM endpoint');
+    assert(LF.AIProviders.nvidia.modelsEndpoint==='https://integrate.api.nvidia.com/v1/models','NVIDIA models endpoint');
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
+    assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
+  };
+
+  t['NVIDIA settings expose key-gated model loading and a real select']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="loadProviderModels" disabled>Load models')>=0,'loading gated by key');assert(html.indexOf('Enter the NVIDIA API key to enable model loading.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['API keys are isolated by provider and the legacy key migrates once']=function(){

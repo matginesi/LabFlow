@@ -57,7 +57,7 @@ For every proposed object, provide a short `reason` that explains the evidence b
 - a missing source recipe is a provenance state, not a reason to return an empty result;
 - one selected experiment only;
 - absence of RAW design evidence does not by itself require an empty proposal when a supplied `domain_knowledge` note offers a useful conservative candidate;
-- `devices` must contain exactly one device proposal and echo the supplied sample names;
+- `devices` must contain exactly one device proposal. `sample_names` may echo the supplied names, but LabFlow binds the result to the selected variant deterministically; do not choose a different target;
 - `solutions` contains only solutions needed by that device;
 - `unknowns` lists unresolved fields explicitly;
 - no duplicate solutions or layers;

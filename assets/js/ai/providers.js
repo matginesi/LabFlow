@@ -15,8 +15,8 @@
       note:'OpenRouter OpenAI-compatible endpoint. Use an OpenRouter model slug; Detect reads the current catalogue and model limits.'
     },
     nvidia: {
-      id:'nvidia', name:'NVIDIA NIM', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', model:'meta/llama-3.3-70b-instruct', keyRequired:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
-      note:'NVIDIA hosted NIM OpenAI-compatible endpoint. Detect lists the models currently available to the configured NVIDIA API key.'
+      id:'nvidia', name:'NVIDIA NIM', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', modelsEndpoint:'https://integrate.api.nvidia.com/v1/models', model:'meta/llama-3.3-70b-instruct', keyRequired:true, modelSelect:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
+      note:'NVIDIA hosted NIM OpenAI-compatible endpoint. Enter the NVIDIA API key, load its current model catalogue, then choose the exact model ID before testing.'
     },
     openai: {
       id:'openai', name:'OpenAI', endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false,

@@ -76,7 +76,6 @@
       "items": {
         "type": "object",
         "required": [
-          "sample_names",
           "provenance_kind",
           "confidence",
           "reason"
@@ -86,8 +85,8 @@
             "type": "string"
           },
           "sample_names": {
+            "description": "Optional provider echo. LabFlow deterministically binds the proposal to the selected Design variant after validation.",
             "type": "array",
-            "minItems": 1,
             "items": {
               "type": "string"
             }

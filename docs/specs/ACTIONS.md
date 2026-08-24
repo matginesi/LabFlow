@@ -161,6 +161,8 @@ The model is allowed to return unresolved. It does not apply changes directly.
 
 Purpose: propose missing fields of the currently selected Design experiment/device only. Explicit RAW fabrication evidence is projected deterministically before this Action runs; `scope.unknown_fields` is therefore the exact AI completion target, not a request to regenerate the full experiment.
 
+The selected device ID and canonical sample names are runner-owned scope. Validation attaches them deterministically and never trusts the model to choose the proposal target. Knowledge Base records can improve the context but are optional; an empty library is not a failed prerequisite and unsupported values remain explicit unknowns.
+
 Checkpoints:
 
 ```text
@@ -176,6 +178,8 @@ store proposal
 Structured output schema: `design_reconstruct`.
 
 Known/user-confirmed values remain authoritative.
+
+The multi-variant **Complete all missing with AI** control runs this same Action sequentially. If one variant fails, the visible Action surface retains its variant name, failed checkpoint, normalized error code and provider/validation message, and offers a retry for the still-incomplete variants.
 
 ### `results.interpret`
 

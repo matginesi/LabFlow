@@ -205,6 +205,14 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
+  t['NVIDIA discovery uses its declared authenticated catalogue and deduplicates model IDs'] = async function () {
+    const oldFetch=global.fetch;let seen=null;
+    global.fetch=async function(url,options){seen={url:url,authorization:options.headers.Authorization};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'nvidia/zeta'},{id:'meta/alpha'},{id:'meta/alpha'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://wrong.example/v1',model:'meta/alpha'};},getApiKey:function(){return'nvapi-test';}};LF.AIProviders={nvidia:{keyRequired:true,modelsEndpoint:'https://integrate.api.nvidia.com/v1/models'}};
+    try{const result=await AI.listModels('nvidia','https://wrong.example/v1','nvapi-test');assert(seen.url,'https://integrate.api.nvidia.com/v1/models','declared catalogue URL');assert(seen.authorization,'Bearer nvapi-test','bearer auth');assert(result.models,['nvidia/zeta','meta/alpha'],'unique IDs');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
 
   t['LM Studio SSE context overflow is preserved as MODEL_CONTEXT_LENGTH, not CORS'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'file:',origin:'null'};

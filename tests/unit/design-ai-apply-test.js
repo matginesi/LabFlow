@@ -76,4 +76,13 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
+  t['Design validation binds provider output to the selected canonical variant']=function(){
+    const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2']},infer:proposal},lastResult:proposal};
+    const out=LF.ActionSteps['design.validate-coverage'](ctx);
+    assert(JSON.stringify(ctx.outputs.infer.devices[0].sample_names)===JSON.stringify(['A1','A2']),'model-provided sample identity must be replaced by selected canonical scope');
+    assert(out.binding==='selected-design-variant'&&out.covered===2,'deterministic binding result missing');
+    LF.ExperimentModel=oldModel;
+  };
+
 };

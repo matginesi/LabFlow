@@ -463,6 +463,7 @@
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
+        if(e.target.id==='aiModelSelect'){const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return;}
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
         if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         if(e.target.id==='actionReportDocKind'){S.state.settingsActionDocKind=e.target.value==='paper'?'paper':'lab';if(S.persist)S.persist();render();return;}
@@ -491,6 +492,7 @@
 
     document.addEventListener('input',function(e){
       try {
+        if(e.target.id==='aiKey'){if(LF.AISettings&&LF.AISettings.syncModelControls)LF.AISettings.syncModelControls();return;}
         if(e.target.id==='knowledgeSearch'){S.state.knowledgeQuery=e.target.value;clearTimeout(S.state._knowledgeSearchTimer);S.state._knowledgeSearchTimer=setTimeout(function(){render();const input=document.getElementById('knowledgeSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},140);return;}
         if(e.target.id==='uiKitGlobalSearch'){S.state.uiKitQuery=e.target.value;applyUiKitFilter();return;}
         if(e.target.id==='docsSearch'){S.state.docsQuery=e.target.value;LF.DocsPage.apply(document.getElementById('main'));return;}

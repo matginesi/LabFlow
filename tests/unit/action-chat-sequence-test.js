@@ -10,7 +10,7 @@ module.exports=function(t,LF){
 
   function loadUi(runImpl){
     delete require.cache[require.resolve(uiPath)];
-    let messages=[];
+    let messages=[],errors=[];
     LF.Storage={
       getAiSettings:function(){return{endpoint:'http://127.0.0.1:1234/v1',model:'test-model',provider:'lmstudio'};},
       getApiKey:function(){return'';}
@@ -18,14 +18,14 @@ module.exports=function(t,LF){
     LF.AIProviders={lmstudio:{keyRequired:false}};
     LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;}};
     LF.PageContext={summary:function(){return'Report · Paper';}};
-    LF.UI={activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(){},toast:function(){}};
+    LF.UI={activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(error,options){errors.push({error:error,options:options});},toast:function(){}};
     LF.Assistant={addActionMessage:function(m){messages.push(m);return m;},render:function(){}};
     LF.ActionRunner={
       effective:function(id){if(id==='report.improve')return{id:id,title:'AI writing help',short_title:'Writing help',output:'text',steps:[{id:'edit',type:'AI'}]};return{id:id,title:id,output:'text',steps:[]};},
       isRunning:function(){return false;},cancel:function(){return true;},retry:function(cb){return runImpl('report.improve',cb);},run:function(id,cb){return runImpl(id,cb);}
     };
     require(uiPath);
-    return{messages:messages};
+    return{messages:messages,errors:errors};
   }
 
   t['SSE events refine progress inside the streaming band without reaching completion']=function(){
@@ -97,6 +97,19 @@ module.exports=function(t,LF){
     assert(env.messages[0].content.includes('Prepared AI completion for 2 / 2'),'Design All aggregate summary missing');
     assert(env.messages[0].content.includes('Missing A')&&env.messages[0].content.includes('Missing B'),'Design All variant names missing');
     assert(LF.State.state.selectedDesignDeviceId==='missing-a','Design All should land on the first proposal ready for review');
+  };
+
+  t['Design All exposes the failing variant, checkpoint, code and provider cause']=async function(){
+    const env=loadUi(function(){return Promise.resolve({status:'error',code:'MODEL_OUTPUT_INVALID',message:'The provider response does not match the Action contract. Nothing was stored.',failedStep:'infer',error:new Error('invalid Design JSON'),requestMeta:{}});});
+    LF.State.state.experiment.design={solutions:[],devices:[{id:'missing-a',name:'Missing A',sampleNames:['S1'],solutionIds:[],stack:[],process:{}}]};
+    const out=await LF.ActionUI.runSequence('design-all',{});
+    assert(out&&out.status==='error','Design All should return the underlying failed outcome');
+    assert(env.errors.length===1,'sequence must expose one actionable error surface');
+    const shown=env.errors[0].options;
+    assert(shown.message.includes('Missing A'),'visible error must identify the failed variant');
+    assert(shown.message.includes('does not match the Action contract'),'visible error must preserve the provider/validation cause');
+    assert(shown.response.includes('`infer`')&&shown.response.includes('`MODEL_OUTPUT_INVALID`'),'visible details must include checkpoint and code');
+    assert(typeof shown.onRetry==='function'&&shown.retryLabel==='Retry incomplete variants','failed sequence must offer a useful retry');
   };
   return t;
 };

@@ -307,6 +307,7 @@
     u.search='';u.hash='';
     return u.toString();
   }
+  function providerModelsUrl(provider,endpoint){return provider&&provider.modelsEndpoint?validateHttpUrl(provider.modelsEndpoint):resolveModelsUrl(endpoint);}
 
 
   function positiveInt(value){const n=Math.floor(Number(value));return Number.isFinite(n)&&n>0?n:null;}
@@ -351,7 +352,7 @@
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
   function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
-    const url=resolveModelsUrl(endpoint),obj=await fetchJson(url,{method:'GET',headers:authHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,'provider model metadata');
+    const url=providerModelsUrl(provider,endpoint),obj=await fetchJson(url,{method:'GET',headers:authHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,'provider model metadata');
   }
   async function geminiCapability(model,key){
     if(!key)return null;const name=String(model||'').replace(/^models\//,'');if(!name)return null;
@@ -396,7 +397,7 @@
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),url=resolveModelsUrl(endpoint||settings.endpoint),headers={'Accept':'application/json'};
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),url=providerModelsUrl(provider,endpoint||settings.endpoint),headers={'Accept':'application/json'};
     Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
     if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     const started=performance.now(),response=await metadataFetch(url,{method:'GET',headers:headers});
@@ -404,7 +405,7 @@
     if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers);
     let obj={};try{obj=text?JSON.parse(text):{};}catch(error){const e=new Error('Model list returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}
     const rows=Array.isArray(obj.data)?obj.data:Array.isArray(obj.models)?obj.models:[];
-    const models=rows.map(function(item){return typeof item==='string'?item:String(item&&item.id||item&&item.model||item&&item.name||'');}).filter(Boolean);
+    const models=Array.from(new Set(rows.map(function(item){return typeof item==='string'?item:String(item&&item.id||item&&item.model||item&&item.name||'');}).filter(Boolean)));
     return{models:models,elapsedMs:Math.round(performance.now()-started),url:url};
   }
 

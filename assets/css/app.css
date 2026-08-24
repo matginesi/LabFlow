@@ -1483,6 +1483,7 @@ body.ui-kit-page { overflow: hidden; }
 .settings-page .field>.input,.settings-page .field>.select,.settings-page .field>.textarea,.settings-page .input-action{width:100%;min-width:0}
 .settings-page .input-action{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;gap:6px}
 .settings-page .input-action>.input{min-width:0;width:100%}
+.ai-model-control>[hidden]{display:none!important}.ai-model-control>.select{min-width:0;width:100%}.ai-model-control[data-model-select="true"]{grid-template-columns:minmax(0,1fr) auto}.ai-model-control[data-model-select="true"] .button{border-color:var(--accent);color:var(--accent)}
 .settings-page .settings-workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:start}
 .settings-page .settings-workspace-grid>.row-wrap{grid-column:1/-1}
 .settings-page .operation-workshop{min-width:0;align-items:start}
