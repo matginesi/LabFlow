@@ -77,6 +77,17 @@ module.exports=function(t,LF){
     assert(discussion.min_words<discussion.target_words&&discussion.max_words>discussion.target_words,true,'word target has useful range');
   };
 
+  t['Report draft store accepts block arrays and legacy single-block output']=function(){
+    const lab=exp(),paper=exp();
+    let out=LF.ActionSteps['report.store-draft-blocks']({exp:lab,params:{document_kind:'lab'},outputs:{collect:{kind:'lab'},draft:['# Lab draft','## Results\n\nMeasured result.']}});
+    assert(out.blocks,2,'array block count');
+    assert(LF.Report.activeMarkdown(lab),'# Lab draft\n\n## Results\n\nMeasured result.\n','array blocks stored');
+    out=LF.ActionSteps['report.store-draft-blocks']({exp:paper,params:{document_kind:'paper'},outputs:{collect:{kind:'paper'},draft:'# Paper draft\n\n## Abstract\n\nEvidence-backed abstract.'},lastResult:'# ignored fallback'});
+    assert(out.blocks,1,'single block count');
+    assert(LF.Report.documentInfo(paper).kind,'paper','paper remains active');
+    assert(LF.Report.activeMarkdown(paper),'# Paper draft\n\n## Abstract\n\nEvidence-backed abstract.\n','single block stored');
+  };
+
   t['report Markdown preserves LaTeX in preview and TeX export'] = function(){
     const source='## Scan comparison\n\nInline $J_{SC}$ is retained.\n\n$$\n\\Delta \\mathrm{PCE} = \\frac{PCE_{RV}}{PCE_{FW}}\n$$';
     const html=LF.Core.markdown(source),tex=LF.Report.toLatex(source);
