@@ -61,6 +61,8 @@ For every proposed object, provide a short `reason` that explains the evidence b
 - `solutions` contains only solutions needed by that device;
 - `unknowns` lists unresolved fields explicitly;
 - no duplicate solutions or layers;
-- finite, compact output.
+- finite, compact output;
+- keep `summary` under 300 characters, every object/layer `reason` under 240 characters, and each `unknowns` item under 160 characters;
+- omit optional properties when their value would be empty; never repeat the same evidence wording across layers.
 
 Return exactly one JSON object matching the supplied schema. No Markdown, preamble or reasoning transcript.

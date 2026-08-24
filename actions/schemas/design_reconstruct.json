@@ -11,7 +11,7 @@
   "properties": {
     "summary": {
       "type": "string",
-      "maxLength": 1200
+      "maxLength": 300
     },
     "solutions": {
       "type": "array",
@@ -64,7 +64,7 @@
           },
           "reason": {
             "type": "string",
-            "maxLength": 1200
+            "maxLength": 240
           }
         }
       }
@@ -159,7 +159,7 @@
                 },
                 "reason": {
                   "type": "string",
-                  "maxLength": 800
+                  "maxLength": 240
                 }
               }
             }
@@ -182,16 +182,17 @@
           },
           "reason": {
             "type": "string",
-            "maxLength": 1200
+            "maxLength": 240
           }
         }
       }
     },
     "unknowns": {
       "type": "array",
-      "maxItems": 24,
+      "maxItems": 16,
       "items": {
-        "type": "string"
+        "type": "string",
+        "maxLength": 160
       }
     }
   }

@@ -181,6 +181,8 @@ Known/user-confirmed values remain authoritative.
 
 The multi-variant **Complete all missing with AI** control runs this same Action sequentially. If one variant fails, the visible Action surface retains its variant name, failed checkpoint, normalized error code and provider/validation message, and offers a retry for the still-incomplete variants.
 
+Because a structured proposal is unusable without its closing JSON, LabFlow reserves the full declared `design.infer` output ceiling while retaining the smaller target as progress telemetry. A bounded truncation retry requests the whole proposal again with compact strings and no repeated known/evidence fields; partial JSON is never stored.
+
 ### `results.interpret`
 
 Purpose: explain deterministic Results.

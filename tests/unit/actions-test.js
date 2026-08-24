@@ -31,6 +31,9 @@ module.exports=function(t,LF){
     if(!(p.requestTokens>p.targetTokens&&p.requestTokens<=p.maxTokens))throw new Error('request margin must be above target and below Action maximum');
     const small=LF.ActionRunner.tokenProfile({min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288},{target_words:280});
     assert(small.targetTokens,1800,'short work does not fall below minimum useful budget');
+    const structured=LF.ActionRunner.tokenProfile({output:'json',min_output_tokens:1200,target_output_tokens:2800,max_output_tokens:6144},null);
+    assert(structured.targetTokens,2800,'structured target remains useful telemetry');
+    assert(structured.requestTokens,6144,'structured response reserves enough room to close the JSON');
   };
 
   t['declared Action budget is the request target while provider maximum is only a ceiling'] = async function(){
