@@ -6,6 +6,8 @@ Tabs use a bordered track, not a faint underline-only treatment. The active tab 
 
 AI is explicit. The Action totem shows Action checkpoint and work-unit progress, truthful provider telemetry, an explicit Cancel action button while running, a separate Close button when terminal, bounded automatic retry only when declared by the Action, and Retry checkpoint only after final failure. Esc follows the same lifecycle: cancel while running, close when terminal. Provider output stays collapsed until requested. JSON/Markdown follow the selected LabFlow theme; streaming removes redundant blank lines. Never fabricate model progress or hidden reasoning.
 
+On phones, Totem commands never become a horizontally scrolling strip. The running command spans the available width; terminal commands use two equal columns, while the primary retry command occupies its own full-width row. Very narrow screens stack all commands. Touch targets remain at least 36 px high.
+
 Results emphasize measurements and reliable plots rather than decorative cards. Tables have explicit responsive overflow and readable warning/status columns. Compare uses stable box/whisker/raw-value rendering with a statistics table rather than fragile canvas pan/zoom state. Design emphasizes evidence and provenance. Reports remain readable/editable Markdown. NOMAD separates validation, mapping and package Actions clearly.
 
 
@@ -36,4 +38,4 @@ Changes is an audit surface, not a raw object dump. Start with compact counters,
 
 ## Assistant response surface
 
-Assistant messages use flat, compact scientific-workspace rows with modest radii rather than oversized chat bubbles. Do not expose transport bookkeeping such as chunk/event/byte counters during streaming. Show only meaningful state (waiting, thinking, writing), keep model reasoning in a separate bounded disclosure, and attach useful response telemetry such as provider/model, latency, time-to-first-token, token counts, throughput and finish reason when the provider supplies it. Missing telemetry is omitted rather than invented.
+Assistant messages use flat, compact scientific-workspace rows with modest radii rather than oversized chat bubbles. Do not expose transport bookkeeping such as chunk/event/byte counters during streaming. Show only meaningful state (waiting, thinking, writing), keep model reasoning in a separate bounded disclosure, and attach useful response telemetry such as provider/model, full-turn request count, latency, time-to-first-token, aggregate token counts, throughput and finish reason when the provider supplies it. A compact response-details disclosure exposes read Tools, payload totals, request ID and log correlation without crowding the answer. Missing telemetry is omitted rather than invented.

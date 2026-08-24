@@ -334,6 +334,8 @@
   /** Render command labels and enabled states from the Action lifecycle. */
   function renderActivityCommands() {
     const finished = activity.status !== 'running';
+    const actions = byId('activityHeadActions');
+    if (actions) actions.dataset.status = activity.status;
     const cancel = byId('activityCancel');
     if (cancel) {
       cancel.hidden = finished || !activity.cancellable;

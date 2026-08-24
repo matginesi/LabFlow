@@ -162,7 +162,7 @@ Action output budgets remain in Action contracts. Connection settings must not b
 
 ## 10. Assistant read-tool loop and safety boundary
 
-Chat is tool-aware but read-only with respect to scientific Working Copy state. `assistant.chat` declares its allowed Tools in `action.json`. The runner performs at most the configured bounded number of planning rounds (currently four): each round may request one exact read Tool with JSON arguments or declare that enough evidence has been gathered. Duplicate identical calls stop the loop.
+Chat is tool-aware but read-only with respect to scientific Working Copy state. `assistant.chat` declares its allowed Tools in `action.json`. The runner performs at most the configured bounded number of planning rounds (currently six): each round may request one exact read Tool with JSON arguments or declare that enough evidence has been gathered. Broad or diagnostic questions are instructed to cover the relevant Results, scope, findings and provenance/Design slices before answering. Duplicate identical calls stop the loop.
 
 Only Tools marked both `agent_visible: true` and `access: read` can execute with `agent: true`; the registry rejects write/internal Tools even if the model names them. Tool arguments are validated against each Tool's small input contract and observations are bounded before they are added to the final Assistant context. Planner JSON is an internal control result, not user-visible thinking.
 

@@ -29,6 +29,13 @@ module.exports=function(t){
     assert(css.includes('scrollbar-gutter:stable'),true,'stable scrollbar');
   };
 
+  t['Action Totem commands remain tappable without horizontal overflow on phones']=function(){
+    assert(html.includes('id="activityHeadActions" data-status="running"'),true,'lifecycle state hook');
+    assert(css.includes('.activity-totem .activity-head-actions[data-status="error"] #activityRetry'),true,'error retry occupies primary row');
+    assert(css.includes('min-height:36px!important'),true,'mobile touch target');
+    assert(css.includes('overflow:visible!important'),true,'no command-strip scrolling');
+  };
+
   t['Detect provider metadata uses the Action totem lifecycle']=function(){
     assert(settings.includes("title:'Detect model capabilities'"),true,'detect totem title');
     assert(settings.includes("stepId:'capability'"),true,'capability checkpoint');

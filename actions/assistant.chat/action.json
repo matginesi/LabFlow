@@ -31,14 +31,14 @@
           "provenance.list",
           "nomad.get"
         ],
-        "max_rounds": 4,
+        "max_rounds": 6,
         "choice_schema": "assistant_tool_choice"
       },
-      "max_output_tokens": 4096,
+      "max_output_tokens": 6144,
       "deadline_ms": 180000,
       "max_retries": 1,
-      "min_output_tokens": 600,
-      "target_output_tokens": 1600
+      "min_output_tokens": 800,
+      "target_output_tokens": 2400
     }
   ],
   "category": "assistant",
