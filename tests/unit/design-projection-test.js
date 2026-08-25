@@ -40,16 +40,28 @@ module.exports=function(t,LF,env){
     const selected=exp.design.devices[0],pack=LF.ContextBuilder?LF.ContextBuilder.pack('design',{exp:exp,params:{deviceId:selected.id}}):null;
     if(pack){assert(pack.design_evidence_summary.raw_design_evidence_found===false,'context must label absence of RAW design evidence');assert(Number(pack.design_evidence_summary.knowledge_records_found||0)>=0,'optional Knowledge Base result count is explicit');assert(['science_library','model_inference_only'].includes(pack.design_evidence_summary.knowledge_source),'simple knowledge source mode is explicit');}
   };
-  t['Design page renders recovered source facts and a useful no-recipe state']=async function(){
+  t['Design page renders the simple solution-and-stack workbench for source and manual completion']=async function(){
     const clean=await LF.Importer.parseDataset(fixture('01_PRECISO_PERFETTO_COMPLETO.zip'),'clean.zip'),ui={};LF.ExperimentModel.ensureShape(clean,ui);const additive=clean.design.devices.find(function(d){return d.group==='ADDITIVE';});
     const html=LF.DesignPage.render({experiment:clean,selectedDeviceId:additive.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
-    assert(/id=\"removeSelectedDevice\"/.test(html),'selected Design variant should expose a remove control');
-    assert(/FA0\.85Cs0\.15Pb/.test(html),'recovered precursor should be visible in Design page');assert(/100 C 30 min/.test(html),'recovered annealing should be visible');assert(/SnO2/.test(html)&&/Spiro-OMeTAD/.test(html),'recovered stack should be visible');assert(/Design complete/.test(html),'complete source design should not ask AI to fill fake gaps');
-    assert((html.match(/data-design-card=/g)||[]).length===clean.design.devices.length,'every experimental variant should have a coverage card');assert(/Choose one variant/.test(html),'variant chooser missing');assert(/data-action-sequence="design-all"/.test(html),'batched Fill all experiments control should be available when any variant is incomplete');assert(/Design complete/.test(html),'complete selected variant should report completion instead of offering redundant AI');
+    assert(/id="removeSelectedDevice"/.test(html),'selected Design experiment should expose a remove control');
+    assert(/FA0\.85Cs0\.15Pb/.test(html),'recovered precursor should be visible in solution chemistry');
+    assert(/SnO2/.test(html)&&/Spiro-OMeTAD/.test(html),'recovered stack should be visible');
+    assert(/Solutions · solvents · solutes/.test(html)&&/Layer stack/.test(html),'two simple visual editors should be visible');
+    assert(/design-chem-card/.test(html)&&/design-stack-diagram/.test(html),'solution chemistry and stack should have graphical views');
+    assert((html.match(/data-design-card=/g)||[]).length===clean.design.devices.length,'every experimental variant should have one navigator card');
+    assert(/data-action-sequence="design-all"/.test(html)&&/Suggest all with AI/.test(html),'one global Suggest all control should exist');
+    assert(/Accept all suggestions/.test(html),'global acceptance control should exist');
+    assert(!/Fabrication/.test(html)&&!/Proposal confidence/.test(html)&&!/NEXT STEP/.test(html),'old complex Design workflow should be absent');
+
     const legacy=await LF.Importer.parseDataset(fixture('2026_01_22.zip'),'legacy.zip'),ui2={};LF.ExperimentModel.ensureShape(legacy,ui2);const selected=legacy.design.devices[0],html2=LF.DesignPage.render({experiment:legacy,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
-    assert(/No recipe in source/.test(html2),'measurement-only source should be explained explicitly');assert(/Complete selected with AI/.test(html2),'AI completion should remain available for unresolved fields');assert(!/No experiment available/.test(html2),'measurement-only Design must not look empty/broken');
-    assert(/design-variant-card missing/.test(html2),'incomplete variants should be visually tracked as missing');assert(/NEXT STEP/.test(html2)&&/required gap/.test(html2),'Design should tell the user what to do next');
-    legacy.aiDesignProposals={};legacy.aiDesignProposals[selected.id]={targetDeviceId:selected.id,summary:'One uncertain suggestion',applicationSummary:{review_count:1,auto_applied_count:0,unresolved_count:0},solutions:[{name:'Candidate',applied:false,provenance_kind:'model_inference',confidence:0.6}],devices:[],unknowns:[]};const html3=LF.DesignPage.render({experiment:legacy,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});assert(/Review suggestions below/.test(html3),'pending proposal should direct the user to review instead of encouraging another AI call');assert(/Review the panel directly below/.test(html3),'pending review guidance should be explicit');
+    assert(/No solution chemistry yet/.test(html2)&&/No device stack yet/.test(html2),'missing Design data should stay directly editable without AI');
+    assert(/design-variant-card missing/.test(html2),'incomplete experiments should be visibly marked as needing a suggestion');
+    assert(!/No experiment available/.test(html2),'measurement-only Design must not look empty or broken');
+
+    legacy.aiDesignProposals={};legacy.aiDesignProposals[selected.id]={targetDeviceId:selected.id,summary:'One suggestion',solutions:[{name:'Candidate',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference'}],devices:[{stack:[{role:'ETL',material:'SnO2'}]}],unknowns:[]};
+    const html3=LF.DesignPage.render({experiment:legacy,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
+    assert(/Review before accepting/.test(html3)&&/Accept experiment/.test(html3),'pending AI suggestion should have one explicit per-experiment acceptance path');
+    assert(/Retry AI/.test(html3)&&/Discard/.test(html3),'suggestion can be retried or discarded without changing accepted work');
   };
   t['Design source projection is idempotent and does not overwrite researcher edits on render']=async function(){
     const exp=await LF.Importer.parseDataset(fixture('01_PRECISO_PERFETTO_COMPLETO.zip'),'clean.zip'),ui={};LF.ExperimentModel.ensureShape(exp,ui);

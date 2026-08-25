@@ -485,69 +485,59 @@ Applying a valid proposal is an internal deterministic service:
 
 ---
 
-## 6.4 Infer missing design — `design.infer`
+## 6.4 Suggest Design — `design.infer`
 
 **Kind:** AI assist  
-**Scope:** one currently selected experiment/device  
-**Mutation:** none directly
+**Scope:** one selected experiment  
+**Mutation:** none until researcher acceptance
 
 ### Why it exists
 
-Experiment Design must already be useful before AI. LabFlow first projects explicit fabrication evidence from the imported RAW metadata into the Design model. The researcher can inspect and edit those source-backed values directly. AI is only for remaining missing fields.
+Design Experiment is intentionally small in the POC. For each experiment LabFlow needs two editable scientific descriptions:
 
-A missing recipe is itself meaningful provenance: a measurement-only archive must show the sample/group structure and state that fabrication details are absent from the source rather than rendering an empty Design or fabricating them.
+1. **Solution chemistry** — solution/formulation name and role, solutes, solvents and optional composition/additives.
+2. **Device stack** — ordered material layers from substrate to top contact.
+
+Source evidence is projected into these structures when it is explicit. The researcher can always add, remove or edit solutions and layers manually; AI is optional.
 
 ### Deterministic preparation
 
-Before inference, LabFlow already knows or indexes:
-
-- selected sample(s);
-- current device record;
-- linked measurements;
-- formulations/solutions already known;
-- stack/process values already known;
-- evidence IDs;
-- source-recovered Design notes such as stack, precursor/passivation formulation, coating, antisolvent, annealing and atmosphere when present;
-- grouped experimental variants/replicates derived from that evidence;
-- explicit missing-field inventory.
-
-The separate **Knowledge Base** stores reusable scientific context and LabFlow help in two bundled JSON sources: `knowledge-base/science.json` and `knowledge-base/labflow.json`. The generated browser bundle is ready at startup. There is no folder connection, filesystem permission, external database or retrieval switch. The library remains outside the Working Copy. User-created/imported edits are small browser-local overrides by stable ID; the bundled defaults remain resettable.
-
-Lookup is deterministic and bounded. Query terms are matched against names, tags, summaries, data and source metadata. Brief, Results, Design and Report/Paper Actions request only a small scientific slice and receive `knowledge_context` only when a useful hit exists. The Assistant may also search LabFlow `guide` records. Empty or failed lookup is normal: execution continues from experiment evidence and cautious model inference. Dataset ambiguity repair deliberately receives no external knowledge because external context cannot establish sample identity, units or measured values.
-
-Design does not copy Knowledge Base records directly into the experiment. `design.infer` may use relevant records while proposing missing fields and must preserve used IDs in `knowledge_refs`. Retrieved records remain external scientific support, not RAW evidence. A validated proposal still passes the ordinary fill-only apply gate, so existing RAW-backed or researcher values are never overwritten.
-
-When no useful scientific record is found, `design.infer` continues with model inference. These suggestions carry no fabricated `knowledge_refs`, but their confidence expresses scientific plausibility rather than KB availability. High-confidence qualitative suggestions may be auto-applied; unsupported exact recipe/process quantities are preserved for review. Qualitative chemical/material identifiers that contain digits are not treated as quantities.
-
-The runtime surface is lookup-only (`search` / bounded Context Pack lookup). It exposes no direct Knowledge Base → Design mutation path.
+Before inference LabFlow knows the selected experiment ID, linked sample names when present, current solution/stack values, source evidence and which of the two Design areas are still absent. The scientific Knowledge Base is a bundled local lookup used only when relevant; no setup, filesystem connection or remote retrieval is required.
 
 ### Context
 
 The model receives only:
 
-- current selected Design record;
-- researcher-entered known values;
-- missing fields;
-- selected sample identities;
-- linked Design-relevant evidence;
-- at most 12 relevant researcher-curated Knowledge Base records, treated as reusable knowledge rather than proof about the imported experiment.
+- the selected experiment and any linked source evidence;
+- existing researcher/source solution and stack values;
+- whether solution chemistry and/or stack are missing;
+- a small set of relevant scientific Knowledge Base records, if local lookup finds any.
 
-Known, RAW-backed or user-confirmed fields are authoritative and must not be regenerated. `scope.unknown_fields` is the exact completion target for `design.infer`. The selected device ID and its canonical sample names are attached deterministically during validation rather than inferred from provider output.
+A Knowledge Base miss is normal and never blocks the Action. The model may use cautious general inference, but must not invent sample identity, citations or unsupported exact quantities.
 
 ### Checkpoints
 
-1. **collect** — build the selected Design Context Pack;
-2. **infer** — structured AI proposal;
-3. **validate** — verify selected-sample coverage and contract;
-4. **store** — retain the validated proposal and its provenance.
+1. **collect** — build a compact context for the selected experiment;
+2. **infer** — request solution chemistry and/or stack;
+3. **validate** — bind the output to the selected experiment and sanitize provenance;
+4. **store** — save a reviewable suggestion for that experiment.
 
-### Output
+### Output and acceptance
 
-A proposal for missing fields only. Each proposed field has a source (`experiment`, `knowledge`, or `model_inference`), confidence, and a deterministic auto-apply decision. When invoked from **Complete selected with AI**, LabFlow immediately applies safe fields fill-only to the current Working Copy. Review-only suggestions and explicit unresolved fields are successful outputs; neither causes an apply or validation failure.
+AI output stays separate from the Working Copy until the researcher accepts it. The Design page shows the proposed chemistry and layer stack graphically next to the editable current values.
 
-The proposal card leads with fields filled automatically, suggestions requiring review, and unresolved fields. Design does not use a global confidence dial as the primary decision signal: the useful UX is what was applied, what still needs the researcher, and what remains unknown. Provenance does not cap field confidence. Auto-apply is separate: sufficiently confident qualitative values can be safe from any source, while exact model-inferred quantities require experiment or valid Knowledge Base support.
+- **Accept experiment** accepts one saved suggestion and fills only missing solution/stack values.
+- **Accept all suggestions** accepts every currently saved suggestion independently.
+- **Discard** removes one suggestion without changing the experiment.
+- **Retry** replaces/retries only the affected experiment's suggestion.
 
-For many incomplete variants, **Fill all experiments** uses bounded batches of up to eight variants per provider request. Complete variants and variants already waiting for review are skipped. Each completed batch is saved immediately, safe fields are applied fill-only, and Stop preserves work already completed. **Complete selected with AI** remains available for focused single-variant work.
+Existing source or researcher values are never silently overwritten. Accepted AI values are promoted to researcher-confirmed state and remain editable afterwards.
+
+### Suggest all / resume later
+
+**Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then sends bounded batches of at most six IDs.
+
+Each successful experiment is stored immediately. If the provider omits or fails one experiment, that experiment receives local `Error` state while successful suggestions remain available. If a whole provider request fails, only that unfinished batch becomes retryable. Stop preserves completed work. Running Suggest all again later resumes the experiments that still need suggestions; it never asks the user to restart or discard accepted work.
 
 ---
 
@@ -797,20 +787,17 @@ Optional AI inference for missing fields
 Use the UI Kit **Single-experiment Design** pattern:
 
 - experiment/device coverage rail/card board with explicit completion state;
-- selected experiment canvas;
-- formulations;
-- fabrication/process;
-- stack;
-- evidence/provenance;
-- missing-field status;
-- AI proposal only as progressive disclosure.
-- a compact Knowledge Base transfer panel that lists only records applicable to remaining gaps and links to the management page.
+- compact experiment navigator with `Ready`, `Needs suggestion`, `Suggested`, `Accepted`, and `Error` states;
+- graphical **Solution chemistry** with direct solute/solvent/formulation editing;
+- graphical **Device stack** with direct ordered-layer editing;
+- optional source evidence as progressive disclosure;
+- one reviewable AI suggestion for the selected experiment, when present.
 
 AI must never overwrite user-confirmed values silently.
 
 Knowledge Base management is available without loading a ZIP and has no setup step. Bundled records are searchable immediately; create/update/delete and JSON import create browser-local overrides, while JSON export provides a portable snapshot. Existing legacy browser records are migrated once into the same override format. Management and lookup are read-only with respect to the Working Copy; only acceptance of a validated AI Design proposal can fill scientific fields.
 
-Design has no global AI sequence. The variant board is navigation only: select one variant, inspect `NEXT STEP`, then run `design.infer` for that selected variant if required. Safe fields are applied fill-only immediately and only review-worthy suggestions remain visible.
+Design keeps one convenience command, **Suggest all with AI**, but no complex completion workflow. It prepares independent reviewable suggestions in bounded batches; the researcher accepts one experiment or all saved suggestions explicitly. Errors and Stop are resumable per experiment.
 
 ---
 

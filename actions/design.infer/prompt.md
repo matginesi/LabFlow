@@ -1,42 +1,27 @@
 # Task
 
-Complete only the missing fields listed in `scope.unknown_fields` for the selected Design variant. Do not regenerate or overwrite known Design data.
+For the selected experiment, suggest only the missing parts of:
+
+1. **Solution chemistry** — solution name/role, solutes, solvents and composition/concentration when actually supported.
+2. **Device stack** — ordered layers from substrate to top contact, with role and material; thickness only when supported.
+
+Do not redesign the experiment and do not return fabrication/process fields.
 
 # Evidence order
 
-1. Existing researcher/source values are authoritative.
-2. Use imported experiment evidence when it directly supports a missing field.
-3. Use supplied `knowledge_context` only when relevant; cite the record ID in `knowledge_refs`.
-4. Otherwise use cautious scientific model inference for plausible qualitative gaps.
+1. Existing source/researcher data is authoritative and must never be overwritten.
+2. Use imported experiment evidence when it directly supports the missing solution or stack.
+3. Use supplied scientific Knowledge Base records when relevant; retain their IDs in `knowledge_refs`.
+4. Otherwise use cautious `model_inference` for plausible qualitative values.
 
-A Knowledge Base miss is normal and must not reduce confidence by itself.
+A Knowledge Base miss is normal. Manually-created experiments may have no sample identity; never invent one.
 
-A manually created variant may legitimately have an empty `scope.sample_names`. In that case, complete the selected variant from its current fields and available context; do not invent sample identities.
+# Quantities
 
-# Exact quantities
+Do not invent exact concentrations, ratios or thicknesses. Exact quantities are allowed only when supported by experiment evidence or a supplied Knowledge Base record. Otherwise omit them and list the unresolved item in `unknowns`.
 
-Do not invent exact concentrations, ratios, temperatures, times, thicknesses, speeds or other recipe values. An exact quantitative value is allowed only when directly supported by experiment evidence or by a supplied Knowledge Base record cited in `knowledge_refs`. Otherwise leave it empty and add the missing item to `unknowns`.
+Names such as `N2`, `SnO2`, `C60`, `2PACz` and `FA0.85Cs0.15PbI3` are chemical/material identifiers, not process quantities.
 
-Identifiers such as `N2`, `SnO2`, `C60`, `2PACz` and `FA0.85Cs0.15PbI3` are material/formula names, not process quantities merely because they contain digits.
+# Output
 
-# Provenance and confidence
-
-`provenance_kind` is exactly one of:
-- `experiment`
-- `knowledge`
-- `model_inference`
-
-Confidence means scientific plausibility in this experiment, not citation strength. A strong qualitative model inference may have high confidence. Use `field_confidence` only when fields in the same object differ materially.
-
-# Keep the answer small
-
-- Return one coherent candidate for this selected variant only.
-- Include only missing fields and solutions/layers needed to fill them.
-- Prefer short field values over explanations.
-- Keep `summary` concise and each `reason` to one short sentence.
-- Use `unknowns` instead of guessing.
-- Never invent Knowledge Base IDs.
-
-LabFlow decides locally which suggestions are safe to apply automatically. Unsupported exact quantities remain review-only.
-
-Return exactly one JSON object matching the supplied schema. No Markdown or preamble.
+Keep the result small. Return one coherent suggestion for this experiment only. Short values, short reasons, no prose essay. Return exactly JSON matching the schema, with no Markdown or preamble.

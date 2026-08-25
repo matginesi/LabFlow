@@ -111,7 +111,7 @@ Pages read the current Working Copy/Canonical Store. They do not own parallel sc
 
 - Review — Analysis Dossier, safe corrections, AI proposals/human decisions;
 - Results — deterministic measurements/results; Compare statistics read the Analysis Summary bundle when fresh;
-- Design — deterministic known Design + researcher edits + optional bounded retrieval from the separate local Knowledge Base during missing-field inference; empty retrieval continues with ordinary model inference, while field source, confidence and deterministic auto-apply safety remain separate and safe fields are applied through fill-only gates when the researcher invokes Complete;
+- Design — simple researcher-editable solution chemistry + device stack, with optional bounded scientific Knowledge Base context for per-experiment AI suggestions; empty retrieval continues normally, suggestions remain separate until explicit researcher acceptance, and failures are resumable per experiment;
 - Report — current Markdown editor + explicit dynamic figure selection; summary plots, group overlays and dataset-specific JV curves are discovered from the current Working Copy, while deterministic statistics read the Analysis Summary bundle when fresh; figure rasters are generated lazily and cached per revision;
 - NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
 - Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.

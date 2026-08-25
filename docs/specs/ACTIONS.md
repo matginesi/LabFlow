@@ -159,31 +159,31 @@ The model is allowed to return unresolved. It does not apply changes directly.
 
 ### `design.infer`
 
-Purpose: propose missing fields of the currently selected Design experiment/device only. Explicit RAW fabrication evidence is projected deterministically before this Action runs; `scope.unknown_fields` is therefore the exact AI completion target, not a request to regenerate the full experiment.
+Purpose: suggest the two Design areas used by the POC for one selected experiment: **solution chemistry** and **device stack**. Existing source/researcher values are context and remain authoritative; AI output is stored as a reviewable suggestion and is not applied automatically.
 
-The selected device ID and canonical sample names are runner-owned scope. Validation attaches them deterministically and never trusts the model to choose the proposal target. Knowledge Base records can improve the context but are optional. Empty retrieval does not lower confidence by itself. Validation keeps useful suggestions, removes invented record IDs, downgrades their source to `model_inference`, and separates field confidence from deterministic auto-apply safety.
+The selected experiment ID and canonical sample names, when available, are runner-owned scope. Validation binds provider output to that ID and never trusts the model to choose another target. Relevant scientific Knowledge Base records may improve the context, but lookup is optional and a miss is normal.
 
 Checkpoints:
 
 ```text
-collect selected missing Design context
+collect selected experiment
  ↓
-AI infer
+AI suggest solution chemistry + stack
  ↓
-validate selected-sample coverage
+validate target and provenance
  ↓
-store proposal
+store suggestion for that experiment
 ```
 
 Structured output schema: `design_reconstruct`.
 
-Known/user-confirmed values remain authoritative.
+The Action deliberately does not infer fabrication/process fields. It should return useful qualitative chemistry/material structure and may leave unsupported quantities unknown rather than inventing precision. Invented Knowledge Base IDs are removed; useful content can remain as `model_inference`.
 
-The internal Action ends by storing a reviewable proposal. The explicit **Complete selected with AI** command immediately passes that proposal through the local deterministic fill-only gate and updates the same Working Copy; source and researcher values are never overwritten. High-confidence qualitative inference can apply automatically. Unsupported exact model-inferred quantities remain review suggestions, and an explicit unknown-only result is successful rather than being forced into invented values.
+Acceptance is explicit and local. **Accept experiment** fills only empty solution/stack fields for that experiment and marks the accepted result researcher-confirmed. **Accept all suggestions** repeats the same local acceptance for every saved suggestion. Accepted values remain editable.
 
-Design keeps the single-variant **Complete selected with AI** flow, and also exposes **Fill all experiments** as a bounded batch operation. Fill all skips complete variants and variants already waiting for review, sends up to eight incomplete variants in one structured request, applies only safe fill-only values, preserves completed batches if Stop is pressed, and leaves uncertain suggestions for explicit review. It does not resurrect the old one-request-per-variant serial queue.
+The internal batch helper `design.infer-batch` is only an efficiency path behind **Suggest all with AI**. It handles at most six experiment IDs per request. Successful rows are stored independently. Missing/invalid rows become per-experiment `Error` state instead of failing the whole completed work. A later Suggest all or local Retry resumes only experiments that still need a suggestion. Stop preserves all suggestions already stored.
 
-The structured request is compact and bounded: thinking is off by default, the target is small, input context is fitted before transport, there is a 90-second Action deadline, and Design does not automatically retry a failed generation. Partial JSON is never stored.
+The request is compact and bounded: thinking is off by default, context contains only relevant experiment evidence plus a small scientific-knowledge slice, output is small, and Design does not automatically retry a failed generation.
 
 ### `results.interpret`
 

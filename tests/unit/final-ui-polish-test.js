@@ -60,15 +60,20 @@ module.exports=function(t){
     assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
   };
 
-  t['Design focuses on the selected variant and only the decisions the user still needs to make']=function(){
-    assert(designPage.includes('NEXT STEP'),true,'next-step guidance');
-    assert(designPage.includes('What still needs your decision'),true,'review-only decisions panel');
-    assert(designPage.includes('Complete selected with AI'),true,'single selected-variant AI action');
+  t['Design is a simple visual solution-and-stack workbench with explicit AI acceptance']=function(){
+    assert(designPage.includes('Solutions · solvents · solutes'),true,'solution chemistry editor');
+    assert(designPage.includes('Layer stack'),true,'device stack editor');
+    assert(designPage.includes('design-chem-card'),true,'graphical chemistry representation');
+    assert(designPage.includes('design-stack-diagram'),true,'graphical layer representation');
+    assert(designPage.includes('data-action-sequence="design-all"'),true,'global Suggest all action');
+    assert(designPage.includes('Suggest all with AI'),true,'global AI command is labelled clearly');
+    assert(designPage.includes('Accept all suggestions'),true,'global explicit acceptance');
+    assert(designPage.includes('Accept experiment'),true,'per-experiment explicit acceptance');
+    assert(designPage.includes('Retry'),true,'per-experiment errors are retryable');
     assert(designPage.includes('Proposal confidence'),false,'global confidence dial removed');
-    assert(designPage.includes('data-action-sequence=\"design-all\"'),true,'batched Fill all experiments action available');
-    assert(designPage.includes('Fill all experiments'),true,'batch action is labelled clearly');
-    assert(designPage.includes('small groups'),true,'batch action explains bounded grouping');
-    assert(css.includes('.design-next-step'),true,'simplified next-step styling');
+    assert(designPage.includes('NEXT STEP'),false,'old state-machine guidance removed');
+    assert(css.includes('.design-two-column'),true,'simple two-panel Design layout styling');
+    assert(css.includes('.design-stack-layer'),true,'layer visualization styling');
   };
 
   t['Report editor updates source immediately but debounces expensive preview work']=function(){

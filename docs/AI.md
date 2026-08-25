@@ -72,7 +72,7 @@ Includes only:
 - a `design_evidence_summary` that states whether RAW design/fabrication evidence was actually found;
 - when RAW design evidence is absent, an optional domain-knowledge note explicitly marked as non-experimental suggestion basis.
 
-LabFlow may add relevant records from the bundled scientific Knowledge Base to a Design Context Pack. Those records are **external scientific context**, never evidence that a procedure was performed in the imported experiment. Knowledge-backed candidates retain their record IDs in `knowledge_refs`; model-only inference remains explicitly reviewable. Unsupported quantitative recipe details are never auto-applied.
+LabFlow may add a small set of relevant records from the bundled scientific Knowledge Base to a Design Context Pack. Those records are **external scientific context**, never evidence that a procedure was performed in the imported experiment. Design AI is deliberately limited to solution chemistry and device stack. Its output is stored as a reviewable per-experiment suggestion and is applied only when the researcher chooses Accept experiment or Accept all suggestions. A Knowledge Base miss is normal, and failed experiments remain retryable without discarding successful suggestions.
 
 A measurement-only dataset therefore remains useful even when fabrication metadata is absent: the UI still shows experimental groups/samples, coverage and explicit missing fields. `design.infer` may produce conservative qualitative candidates from relevant scientific context or model inference, but an empty Knowledge Base search is not an error and must never block the Action.
 

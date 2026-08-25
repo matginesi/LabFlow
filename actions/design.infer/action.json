@@ -3,10 +3,10 @@
   "type": "HYBRID",
   "category": "design",
   "role": "researcher",
-  "title": "Complete design with AI",
-  "short_title": "Complete design",
-  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first, relevant scientific Knowledge Base records when found and cautious model inference for remaining gaps.",
-  "strategy": "One fast bounded request for the selected variant only. LabFlow passes compact experiment evidence plus at most a few useful scientific records, applies safe fill-only suggestions immediately, and leaves only genuinely uncertain values for review.",
+  "title": "Suggest experiment design",
+  "short_title": "Suggest design",
+  "purpose": "Suggest missing solution chemistry and device-stack data for the selected experiment from source evidence, relevant scientific Knowledge Base records and cautious model inference.",
+  "strategy": "One bounded request for one experiment. Suggestions are stored for researcher review and are never applied automatically.",
   "output": "json",
   "mutation_scope": "",
   "policies": [
@@ -27,13 +27,13 @@
       "output": "json",
       "schema": "design_reconstruct",
       "thinking": "off",
-      "timeout_ms": 120000,
+      "timeout_ms": 90000,
       "weight": 0.8,
-      "max_output_tokens": 2048,
-      "deadline_ms": 90000,
+      "max_output_tokens": 1400,
+      "deadline_ms": 75000,
       "max_retries": 0,
-      "min_output_tokens": 200,
-      "target_output_tokens": 800
+      "min_output_tokens": 120,
+      "target_output_tokens": 550
     },
     {
       "id": "validate",
@@ -55,15 +55,14 @@
   "input": {
     "context": "design",
     "knowledge": {
-      "limit": 6,
+      "limit": 5,
       "kinds": [
         "material",
         "solution",
-        "process",
         "stack",
         "concept"
       ],
-      "query_hint": "missing formulation process stack layer material"
+      "query_hint": "solution solvent solute precursor stack layer material"
     }
   }
 }

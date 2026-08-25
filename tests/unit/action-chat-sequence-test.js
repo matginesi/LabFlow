@@ -70,8 +70,8 @@ module.exports=function(t,LF){
     assert(env.messages.length===1,'Design Action should publish one chat message');
     const msg=env.messages[0].content;
     assert(msg.includes('Filled only unresolved fabrication gaps.'),'Design proposal summary missing');
-    assert(msg.includes('proposed variants: 1'),'Design variant count missing');
-    assert(msg.includes('proposed formulations: 1'),'Design formulation count missing');
+    assert(msg.includes('stack layers suggested: 0'),'Design stack summary missing');
+    assert(msg.includes('solution suggestions: 1'),'Design solution summary missing');
     assert(msg.includes('still unknown: 1'),'Design unknown count missing');
     assert(msg.includes('Design Experiment'),'Design review destination missing');
   };
@@ -90,37 +90,29 @@ module.exports=function(t,LF){
   };
 
 
-  t['Complete design applies the validated proposal to empty Working Copy fields']=async function(){
-    const oldDesignAnalysis=LF.DesignAnalysis,oldCanonicalStore=LF.CanonicalStore;
+  t['Design inference stores a suggestion without mutating the Working Copy']=async function(){
     const env=loadUi(function(id,cb){
-      const proposal={targetDeviceId:cb.params.deviceId,solutions:[{name:'Model ink'}],devices:[{sample_names:['S1'],solution_names:['Model ink'],process:{coating:'spin coating'},stack:[]}]};
+      const proposal={targetDeviceId:cb.params.deviceId,summary:'Suggested chemistry and stack',solutions:[{name:'Model ink'}],devices:[{sample_names:['S1'],solution_names:['Model ink'],stack:[{role:'ETL',material:'SnO2'}]}],unknowns:[]};
       LF.State.state.experiment.aiDesignProposal=proposal;LF.State.state.experiment.aiDesignProposals={d1:proposal};
       return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true},requestMeta:{}});
     });
-    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]};
-    LF.DesignAnalysis={applyAll:function(target){target.design.solutions.push({id:'sol-ai',name:'Model ink'});target.design.devices[0].solutionIds.push('sol-ai');target.design.devices[0].process.coating='spin coating';return{changed:3,items:2};},build:function(){return{sourceRevision:0,samples:[]};}};
-    LF.CanonicalStore={build:function(){}};
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],stack:[],process:{}}]};
     const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
-    assert(out.status==='done'&&out.designApplied.changed===2&&out.designApplied.mutations===3,'validated Design result must be applied before completion is reported and count real required gaps');
-    assert(exp.design.devices[0].process.coating==='spin coating'&&exp.design.devices[0].solutionIds[0]==='sol-ai','Working Copy fields remained empty');
-    assert(env.finishes[0].message.includes('2 filled automatically'),'totem must report actual required gaps filled');
-    LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
+    assert(out.status==='done','Design inference should complete');
+    assert(!out.designApplied,'AI suggestion must not be auto-applied');
+    assert(exp.design.solutions.length===0&&exp.design.devices[0].stack.length===0,'Working Copy must stay unchanged before acceptance');
+    assert(exp.designAiStatus.d1.state==='suggested','selected experiment should become Suggested');
+    assert(env.finishes[0].message==='Action completed.','totem should report a normal completed suggestion');
   };
 
-  t['Review-only Design proposal completes without pretending to apply unsafe values']=async function(){
-    const oldDesignAnalysis=LF.DesignAnalysis,oldCanonicalStore=LF.CanonicalStore;
-    const env=loadUi(function(id,cb){
-      const proposal={targetDeviceId:cb.params.deviceId,solutions:[],devices:[{sample_names:['S1'],process:{annealing:'100 C'},stack:[]}],unknowns:[]};
-      LF.State.state.experiment.aiDesignProposal=proposal;LF.State.state.experiment.aiDesignProposals={d1:proposal};
-      return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true},requestMeta:{}});
-    });
-    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]};
-    LF.DesignAnalysis={applyAll:function(){return{changed:0,items:0};},build:function(){return{sourceRevision:0,samples:[]};}};LF.CanonicalStore={build:function(){}};
+  t['Design inference failure becomes a retryable per-experiment state']=async function(){
+    const env=loadUi(function(){return Promise.resolve({status:'error',actionId:'design.infer',message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});});
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
     const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
-    assert(out.status==='done'&&out.designApplied.reviewOnly===true&&out.designApplied.changed===0,'review-only proposal should remain a successful Action');
-    assert(exp.design.devices[0].process.annealing==='','unsafe value must remain unapplied');
-    assert(env.finishes[0].message.includes('1 need review'),'totem must explain review-only completion');
-    LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
+    assert(out.status==='error','failed provider request should stay an Action error');
+    assert(exp.designAiStatus.d1.state==='error','failure should be stored only on the selected experiment');
+    assert(/provider failed/.test(exp.designAiStatus.d1.message),'retry state should retain a useful reason');
+    assert(env.errors.length===1,'normal Action retry UI remains available');
   };
 
   return t;

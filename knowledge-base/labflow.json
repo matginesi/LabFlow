@@ -169,19 +169,19 @@
     {
       "id": "kb_labflow_design_inference",
       "kind": "guide",
-      "name": "LabFlow Design editing and AI completion",
-      "summary": "Explains deterministic Design projection, missing fields, evidence, confidence and fill-only AI proposals.",
+      "name": "LabFlow Design Experiment",
+      "summary": "Explains the simple solution-chemistry and device-stack Design workflow, manual editing, AI suggestions, acceptance and retry.",
       "tags": [
         "LabFlow",
         "Design Experiment",
-        "Complete design",
-        "Infer missing design",
-        "missing fields",
-        "confidence",
-        "accuracy",
-        "proposal",
-        "evidence",
-        "fill-only"
+        "solution chemistry",
+        "solutes",
+        "solvents",
+        "device stack",
+        "AI suggestion",
+        "accept",
+        "retry",
+        "Knowledge Base"
       ],
       "sources": [
         {
@@ -199,12 +199,12 @@
       ],
       "data": {
         "topic": "Experiment Design",
-        "content": "Design is useful before AI: explicit fabrication evidence from imported files is projected into editable devices, solutions, processes and stacks, while absent values remain visibly unknown. Researcher-confirmed values are authoritative. Complete design with AI operates on one selected variant and only its missing fields.",
-        "steps": "The proposal uses experiment evidence first, relevant scientific Knowledge Base records when the local search finds them, and cautious model inference only for remaining gaps. Retrieved record IDs are retained as provenance. Unsupported exact model-only quantities stay visible for review instead of being silently applied.",
-        "notes": "Knowledge records are background suggestions, not proof about the experiment. Existing values are never silently regenerated or overwritten. Model-only suggestions are deliberately low-confidence."
+        "content": "Design Experiment is a simple POC workbench with two editable areas per experiment: solution chemistry and device stack. The researcher can enter both manually. AI is optional and creates a separate visual suggestion; it never needs a special Knowledge Base setup and never applies values until the researcher accepts them.",
+        "steps": "Suggest all prepares independent suggestions only for experiments still missing solution chemistry or stack. Relevant scientific Knowledge Base records are used when found; a miss is normal. Accept experiment validates one suggestion, Accept all validates all pending suggestions, and existing source/researcher values remain protected.",
+        "notes": "Errors are local to one experiment and can be retried later. Stop or a provider failure preserves suggestions already completed. Accepted values stay directly editable."
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
-      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-26T00:00:00.000Z",
       "collection": "labflow"
     },
     {

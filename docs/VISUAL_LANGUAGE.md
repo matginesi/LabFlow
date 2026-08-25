@@ -10,7 +10,7 @@ AI is explicit. The Action totem shows Action checkpoint and work-unit progress,
 
 On phones, Totem commands never become a horizontally scrolling strip. The running command spans the available width; terminal commands use two equal columns, while the primary retry command occupies its own full-width row. Very narrow screens stack all commands. Touch targets remain at least 36 px high.
 
-Results emphasize measurements and reliable plots rather than decorative cards. Tables have explicit responsive overflow and readable warning/status columns. Compare uses stable box/whisker/raw-value rendering with a statistics table rather than fragile canvas pan/zoom state. Design emphasizes evidence and provenance. Reports remain readable/editable Markdown. NOMAD separates validation, mapping and package Actions clearly.
+Results emphasize measurements and reliable plots rather than decorative cards. Tables have explicit responsive overflow and readable warning/status columns. Compare uses stable box/whisker/raw-value rendering with a statistics table rather than fragile canvas pan/zoom state. Design emphasizes a simple visual scientific model: solution chemistry as solute/solvent chips and device stack as ordered material layers; provenance stays secondary. Reports remain readable/editable Markdown. NOMAD separates validation, mapping and package Actions clearly.
 
 
 Structured JSON is a scientific data surface, not a terminal surface. It follows the active theme everywhere; in the fully light theme JSON backgrounds, borders and token colors remain light-theme native. Sidebar navigation uses the same 11 px / 10 px small-type rhythm as the rest of the application rather than micro typography.

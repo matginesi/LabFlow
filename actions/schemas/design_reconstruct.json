@@ -1,6 +1,6 @@
 {
   "id": "design_infer",
-  "title": "Missing design field proposals",
+  "title": "Design suggestion",
   "type": "object",
   "required": [
     "summary",
@@ -11,11 +11,11 @@
   "properties": {
     "summary": {
       "type": "string",
-      "maxLength": 300
+      "maxLength": 260
     },
     "solutions": {
       "type": "array",
-      "maxItems": 8,
+      "maxItems": 6,
       "items": {
         "type": "object",
         "required": [
@@ -51,17 +51,15 @@
           },
           "knowledge_refs": {
             "type": "array",
-            "maxItems": 6,
-            "items": {"type": "string"}
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
           },
           "confidence": {
             "type": "number",
             "minimum": 0,
             "maximum": 1
-          },
-          "field_confidence": {
-            "type": "object",
-            "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
           },
           "provenance_kind": {
             "type": "string",
@@ -73,7 +71,7 @@
           },
           "reason": {
             "type": "string",
-            "maxLength": 240
+            "maxLength": 180
           }
         }
       }
@@ -87,21 +85,18 @@
         "required": [
           "provenance_kind",
           "confidence",
-          "reason"
+          "reason",
+          "stack"
         ],
         "properties": {
           "name": {
             "type": "string"
           },
           "sample_names": {
-            "description": "Optional provider echo. LabFlow deterministically binds the proposal to the selected Design variant after validation.",
             "type": "array",
             "items": {
               "type": "string"
             }
-          },
-          "group": {
-            "type": "string"
           },
           "solution_names": {
             "type": "array",
@@ -109,26 +104,9 @@
               "type": "string"
             }
           },
-          "process": {
-            "type": "object",
-            "properties": {
-              "coating": {
-                "type": "string"
-              },
-              "annealing": {
-                "type": "string"
-              },
-              "atmosphere": {
-                "type": "string"
-              },
-              "notes": {
-                "type": "string"
-              }
-            }
-          },
           "stack": {
             "type": "array",
-            "maxItems": 16,
+            "maxItems": 14,
             "items": {
               "type": "object",
               "required": [
@@ -147,25 +125,20 @@
                 "thickness": {
                   "type": "string"
                 },
-                "process": {
-                  "type": "string"
-                },
                 "evidence": {
                   "type": "string"
                 },
                 "knowledge_refs": {
                   "type": "array",
-                  "maxItems": 6,
-                  "items": {"type": "string"}
+                  "maxItems": 5,
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 "confidence": {
                   "type": "number",
                   "minimum": 0,
                   "maximum": 1
-                },
-                "field_confidence": {
-                  "type": "object",
-                  "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
                 },
                 "provenance_kind": {
                   "type": "string",
@@ -177,7 +150,7 @@
                 },
                 "reason": {
                   "type": "string",
-                  "maxLength": 240
+                  "maxLength": 180
                 }
               }
             }
@@ -187,17 +160,15 @@
           },
           "knowledge_refs": {
             "type": "array",
-            "maxItems": 8,
-            "items": {"type": "string"}
+            "maxItems": 6,
+            "items": {
+              "type": "string"
+            }
           },
           "confidence": {
             "type": "number",
             "minimum": 0,
             "maximum": 1
-          },
-          "field_confidence": {
-            "type": "object",
-            "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
           },
           "provenance_kind": {
             "type": "string",
@@ -209,17 +180,17 @@
           },
           "reason": {
             "type": "string",
-            "maxLength": 240
+            "maxLength": 180
           }
         }
       }
     },
     "unknowns": {
       "type": "array",
-      "maxItems": 16,
+      "maxItems": 10,
       "items": {
         "type": "string",
-        "maxLength": 160
+        "maxLength": 140
       }
     }
   }

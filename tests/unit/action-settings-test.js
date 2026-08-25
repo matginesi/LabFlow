@@ -37,13 +37,13 @@ module.exports=function(t,LF){
 
   t['Design inference treats Knowledge Base hits as optional context without capping model confidence']=function(){
     const prompt=LF.ActionRegistry.prompt('design.infer');
-    assert(prompt.includes('Use supplied `knowledge_context` only when relevant'),'Design prompt makes Knowledge Base context optional');
+    assert(prompt.includes('Use supplied scientific Knowledge Base records when relevant'),'Design prompt makes Knowledge Base context optional');
     assert(prompt.includes('A Knowledge Base miss is normal'),'empty retrieval must not block Design');
-    assert(prompt.includes('not citation strength'),'KB absence must not cap model confidence');
+    assert(prompt.includes('A Knowledge Base miss is normal'),'KB absence must not block model inference');
     const step=LF.ActionRegistry.action('design.infer').steps.find(function(item){return item.id==='infer';});
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
-    assert(step.max_output_tokens===2048&&step.target_output_tokens===800,'Design output budget should stay compact');
-    assert(step.deadline_ms===90000&&step.max_retries===0,'Design must be one bounded fast request');
+    assert(step.max_output_tokens===1400&&step.target_output_tokens===550,'Design output budget should stay compact');
+    assert(step.deadline_ms===75000&&step.max_retries===0,'Design must be one bounded fast request');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){

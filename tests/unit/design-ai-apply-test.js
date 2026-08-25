@@ -90,7 +90,7 @@ module.exports=function(t,LF){
     const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[{role:'electron transport layer',material:'SnO2'}],provenance_kind:'knowledge',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2'],unknown_fields:['stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx);
     assert(JSON.stringify(ctx.outputs.infer.devices[0].sample_names)===JSON.stringify(['A1','A2']),'model-provided sample identity must be replaced by selected canonical scope');
-    assert(out.binding==='selected-design-variant'&&out.covered===2&&out.applicableFields[0]==='stack','deterministic binding/applicability result missing');
+    assert(out.targetDeviceId==='deviceA'&&out.actionSuccess===true&&out.applicableFields[0]==='stack','deterministic target binding/applicability result missing');
     LF.ExperimentModel=oldModel;
   };
 
@@ -116,7 +116,7 @@ module.exports=function(t,LF){
     assert(JSON.stringify(clean.devices[0].knowledge_refs)===JSON.stringify(['kb_allowed']),'retrieved device record retained');
     assert(clean.devices[0].process.annealing==='100 C','quantities backed by a retrieved device record retained');
     assert(clean.devices[0].stack[0].knowledge_refs.length===0&&clean.devices[0].stack[0].thickness==='30 nm'&&clean.devices[0].stack[0].process==='evaporate below 4e-6 torr','unsourced layer values remain visible for review');
-    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.reviewOnlyQuantities===4&&out.knowledge.modelOnlyItems===2,'validation reports rejected references and review-only quantities');
+    assert(out.actionSuccess===true&&out.targetDeviceId==='deviceA','validation should stay successful after provenance cleanup');
     LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
   };
 
@@ -160,7 +160,7 @@ module.exports=function(t,LF){
     const exp={sync:{revision:4},designAnalysis:{sourceRevision:4,samples:[]},design:{solutions:[],devices:[{id:'manual1',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},status:'user_confirmed'}]}};
     const out=LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'manual1'}});
     assert(out.manual_variant===true,'new user-created variant should be recognized as manual');
-    assert(JSON.stringify(out.unknown_fields.sort())===JSON.stringify(['annealing','atmosphere','coating','solutions','stack'].sort()),'direct Design gaps should be derived from the selected variant itself');
+    assert(JSON.stringify(out.unknown_fields.sort())===JSON.stringify(['solutions','stack'].sort()),'POC Design gaps should be limited to solution chemistry and stack');
   };
 
   t['Manual Design variant validation does not require canonical sample names']=function(){
@@ -220,4 +220,51 @@ module.exports=function(t,LF){
     assert(out.count===1&&out.device_ids[0]==='todo','only incomplete experiment should be sent to the batch model request');
   };
 
+
+  t['Accept experiment applies only that saved suggestion and clears it from review']=function(){
+    LF.State={state:{selectedDesignDeviceId:'a'}};
+    const exp={design:{status:'reviewing',solutions:[],devices:[
+      {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
+      {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
+    ]},aiDesignProposals:{
+      a:{targetDeviceId:'a',solutions:[{name:'Ink A',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],devices:[{sample_names:[],solution_names:['Ink A'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},
+      b:{targetDeviceId:'b',solutions:[],devices:[{sample_names:[],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]}
+    }};
+    const out=LF.DesignAnalysis.acceptProposal(exp,'a');
+    assert(out.deviceId==='a'&&out.changed>0,'selected suggestion should be accepted');
+    assert(exp.design.devices[0].stack[0].material==='SnO2','selected stack should be copied into editable Design');
+    assert(exp.design.devices[1].stack.length===0,'other experiment must remain untouched');
+    assert(exp.designAiStatus.a.state==='accepted','accepted experiment gets a simple accepted state');
+    assert(!exp.aiDesignProposals.a&&!!exp.aiDesignProposals.b,'only accepted suggestion should leave the review queue');
+  };
+
+  t['Accept all suggestions validates saved experiments independently']=function(){
+    LF.State={state:{selectedDesignDeviceId:'a'}};
+    const exp={design:{status:'reviewing',solutions:[],devices:[
+      {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
+      {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
+    ]},aiDesignProposals:{
+      a:{targetDeviceId:'a',solutions:[],devices:[{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},
+      b:{targetDeviceId:'b',solutions:[],devices:[{sample_names:[],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]}
+    }};
+    const out=LF.DesignAnalysis.acceptAllProposals(exp);
+    assert(out.accepted===2&&out.failed.length===0,'all independent suggestions should be accepted');
+    assert(exp.design.devices[0].stack[0].material==='SnO2'&&exp.design.devices[1].stack[0].material==='PTAA','each experiment keeps its own accepted stack');
+    assert(Object.keys(exp.aiDesignProposals).length===0,'accepted queue should be empty');
+  };
+
+  t['Batch Design validation keeps successful suggestions when another experiment is missing']=function(){
+    const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
+    LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:[]}};}};
+    const exp={design:{solutions:[],devices:[{id:'a',sampleNames:[],solutionIds:[],stack:[]},{id:'b',sampleNames:[],solutionIds:[],stack:[]}]}};
+    const ctx={exp:exp,sourceRevision:1,outputs:{collect:{targets:[{device_id:'a',sample_names:[],unknown_fields:['stack']},{device_id:'b',sample_names:[],unknown_fields:['stack']}]},infer:{summary:'partial',proposals:[{target_device_id:'a',summary:'A',solutions:[],device:{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'},unknowns:[]}]}}};ctx.lastResult=ctx.outputs.infer;
+    const validated=LF.ActionSteps['design.validate-batch'](ctx);
+    assert(validated.validated===1&&validated.errors===1,'partial batch should validate successes and isolate omitted experiments');
+    const stored=LF.ActionSteps['design.store-batch-proposals'](ctx);
+    assert(stored.stored===1&&stored.errors===1,'successful row and retryable error should both be persisted');
+    assert(exp.aiDesignProposals.a&&exp.designAiStatus.a.state==='suggested','successful experiment stays available for acceptance');
+    assert(exp.designAiStatus.b.state==='error','missing experiment becomes local retry state');
+    LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
+  };
 };

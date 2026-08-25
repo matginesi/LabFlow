@@ -27,14 +27,16 @@ Upload & Review is deterministic-first after the mandatory ZIP import: **Analyze
 
 Settings → Actions uses one two-pane catalog/inspector layout on desktop and stacks responsively. It shows deterministic, AI-assisted and hybrid Actions, including the Assistant Action. Each definition has one browser-local override and can be reset to the versioned source.
 
-## Single-experiment Design and live provider output
+## Simple Design Experiment and live provider output
 
-- Experiment Design is researcher-first and source-first: explicit RAW fabrication notes are projected into formulations, process and stack before AI; manual edits remain available without a provider and survive normal re-rendering.
-- The status overview must show source coverage and distinguish `Source design found` from `No recipe in source`; measurement-only archives still show their sample/group structure instead of an empty Design.
-- `Complete selected with AI` sends only the currently selected variant and its exact unresolved fields. It is disabled when that variant is already complete.
-- A compact variant board is the primary Design navigator: select one variant for focused completion, or use **Fill all experiments** to process incomplete variants in bounded batches of up to eight per request. Complete/review-pending variants are skipped, Stop is always available during AI work, safe fill-only suggestions apply immediately, and only uncertain suggestions remain for review.
-- AI proposal review is secondary progressive disclosure above the editable working tables.
-- Provider output in the global totem updates during meaningful streamed text/reasoning chunks; there is no separate Action/provider-note block.
+- Design Experiment is intentionally a POC workbench focused on **solution chemistry** and **device stack** only. Source-backed values are projected when available, but both areas are always directly editable without AI.
+- The experiment board is the primary navigator. Each experiment has one simple state: `Ready`, `Needs suggestion`, `Suggested`, `Accepted`, or `Error`; there are no completion percentages or global confidence gauges.
+- **Suggest all with AI** processes only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion. Successful suggestions are stored per experiment immediately; one failed experiment never discards another experiment's result.
+- A failed experiment remains `Error` with a local **Retry** path. Running Suggest all again resumes only missing/error experiments, so the user can stop and continue later.
+- AI suggestions are reviewable previews, not automatic mutations. **Accept experiment** validates one experiment, while **Accept all suggestions** validates all currently saved suggestions. Existing source/researcher values stay protected and accepted values remain directly editable.
+- Solution chemistry is shown graphically as solutes + solvents with compact composition metadata. Device stack is shown graphically as ordered material layers from substrate to top contact; both visuals have direct form controls below them.
+- Scientific Knowledge Base lookup is optional context for the Action. A lookup miss never blocks Design and is not a separate user workflow.
+- Provider output in the global totem updates during meaningful streamed text/reasoning chunks; there is no separate Action/provider-note block. Stop cancels active AI work without deleting already stored suggestions.
 - Status badges are atomic one-line labels on desktop and truncate instead of wrapping on narrow screens.
 
 
@@ -51,7 +53,7 @@ Review Data exposes corrections at the place they are found: deterministic safe 
 ## 2026-08-13 compact interaction rules
 
 - Results keeps Overview, All data, Best measurements, Anomalies, Top non-REF, Top REF, **JV Analyzer**, Overlay and Compare as explicit views. JV Analyzer is a single-measurement diagnostic workbench (FW/RV summary deltas, RAW point integrity and scan separation); Overlay owns an independent multi-measurement selection and is only for visual comparison.
-- Experiment Design keeps a compact variant coverage board, source-coverage status, optional AI suggestions and three direct editors (Formulation, Fabrication, Device stack) in that order. RAW evidence and missing-source state are explicit; AI suggestions are visible above the editors only when relevant.
+- Experiment Design uses a compact experiment board plus two direct visual editors: **Solution chemistry** and **Device stack**. AI suggestions appear only when present, stay separate until accepted, and per-experiment errors remain retryable.
 - Report and Paper are separate Markdown documents with separate titles. On desktop source and rendered preview are always visible together; Write/Preview switching is a small-screen control only.
 - On small screens Action and result totems remain viewport-contained cards with internal scrolling; the Assistant remains a dedicated full-screen surface.
 
