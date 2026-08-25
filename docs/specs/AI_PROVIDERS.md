@@ -27,12 +27,12 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 ## Model discovery and capability detection
 
 - Standard and custom providers use their OpenAI-compatible `/models` response.
-- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. Settings keeps **Load models** disabled until a key is entered, then presents the returned model IDs in a real select. A catalogue failure restores exact manual model entry rather than blocking connection testing.
+- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. Settings keeps **Load models** disabled until a key is entered, then presents the returned model IDs in a real select. Z.AI also presents its detected catalogue in a real select; its configured/default `glm-4.7-flash` entry is preserved when the catalogue endpoint omits it. A catalogue failure restores exact manual model entry rather than blocking connection testing.
 - Gemini supplements this with the native Models API output and input ceilings.
 - Ollama supplements this with `/api/show`, including `num_predict` and model context metadata.
 - LM Studio supplements this with `/api/v1/models`. `loaded_instances` is authoritative for the active model and runtime context; a listed but unloaded model is not silently treated as active.
 
-Discovery is cached by provider, endpoint and model. Opening Settings and editing provider fields never contacts a provider. Discovery runs only when the researcher presses **Detect** or starts **Save & test connection**; the latter performs the same detection silently before sending its probe. Exact output limits are preferred, and a context window is not mislabeled as an output limit. A catalogue response never replaces the configured model for free-text providers such as Z.AI; only explicit catalogue-select providers such as NVIDIA NIM may select a different available row. Z.AI defaults to `glm-4.7-flash`.
+Discovery is cached by provider, endpoint and model. Opening Settings and editing provider fields never contacts a provider. Discovery runs only when the researcher presses **Detect models** / **Load models** or starts **Save & test connection**; the latter performs the same detection silently before sending its probe. Exact output limits are preferred, and a context window is not mislabeled as an output limit. Catalogue-select providers retain a valid configured model; Z.AI additionally preserves its configured/default `glm-4.7-flash` entry when that model is absent from the returned catalogue instead of resetting to the first GLM 4.5 row.
 
 For NVIDIA the intended sequence is **enter API key → Load models → choose model → Save & test connection**. Loading the catalogue stores the provider-scoped key locally after that explicit request; it does not send experiment data.
 

@@ -43,15 +43,22 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.nvidia.modelsEndpoint==='https://integrate.api.nvidia.com/v1/models','NVIDIA models endpoint');
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
+    assert(LF.AIProviders.zai.modelSelect===true,'Z.AI uses a real model select');
+    assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves a configured model omitted by its catalogue');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
   };
 
   t['Z.AI Detect preserves the configured free Flash model when catalogue ordering differs']=function(){
-    const models=['glm-4.5','glm-4.5-air'];
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'glm-4.7-flash',models,false)==='glm-4.7-flash','free-text provider model must not reset to first catalogue row');
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'',models,false)==='glm-4.7-flash','empty Z.AI model uses provider default');
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.nvidia,'missing',models,true)==='glm-4.5','select provider still chooses a catalogue model');
+    const prepared=LF.AISettings.catalogueChoices(LF.AIProviders.zai,'glm-4.7-flash',['glm-4.5','glm-4.5-air']);
+    assert(prepared.catalogue.length===2&&prepared.choices.length===3,'configured model is added without falsifying provider catalogue count');
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'glm-4.7-flash',prepared.choices,true)==='glm-4.7-flash','Z.AI select must not reset to first catalogue row');
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'',[LF.AIProviders.zai.model].concat(prepared.catalogue),true)==='glm-4.7-flash','empty Z.AI model uses provider default');
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.nvidia,'missing',prepared.catalogue,true)==='glm-4.5','select provider still chooses a catalogue model');
+  };
+
+  t['Z.AI settings render a real key-gated model select']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI select labelled');assert(html.indexOf('id="aiModelSelect" aria-label="Z.AI model"')>=0,'Z.AI select rendered');assert(html.indexOf('id="loadProviderModels" disabled>Detect models')>=0,'Z.AI detection gated by key');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
