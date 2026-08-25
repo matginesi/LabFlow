@@ -49,9 +49,11 @@
   "input": {
     "context": "report",
     "rag": {
+      "required": false,
       "source": "knowledge_base",
       "mode": "ranked",
       "limit": 8,
+      "kinds": ["material", "solution", "process", "stack"],
       "query_hint": "methods interpretation discussion literature context"
     }
   }

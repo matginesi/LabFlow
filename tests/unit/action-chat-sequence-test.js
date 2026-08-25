@@ -16,7 +16,7 @@ module.exports=function(t,LF){
       getApiKey:function(){return'';}
     };
     LF.AIProviders={lmstudio:{keyRequired:false}};
-    LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;}};
+    LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;},touch:function(){}};
     LF.PageContext={summary:function(){return'Report · Paper';}};
     LF.UI={activityStart:function(){},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},toast:function(){}};
     LF.Assistant={addActionMessage:function(m){messages.push(m);return m;},render:function(){}};
@@ -103,9 +103,26 @@ module.exports=function(t,LF){
     assert(JSON.stringify(calls.map(function(x){return x.deviceId;}))===JSON.stringify(['missing-a','missing-b']),'Design All must run incomplete variants one at a time in source order');
     assert(out&&out.status==='done'&&out.result.completed===2,'Design All completion count mismatch');
     assert(env.messages.length===1,'Design All should publish one aggregate chat message');
-    assert(env.messages[0].content.includes('Prepared AI completion for 2 / 2'),'Design All aggregate summary missing');
+    assert(env.messages[0].content.includes('Completed AI filling for 2 / 2'),'Design All aggregate summary missing');
     assert(env.messages[0].content.includes('Missing A')&&env.messages[0].content.includes('Missing B'),'Design All variant names missing');
     assert(LF.State.state.selectedDesignDeviceId==='missing-a','Design All should land on the first proposal ready for review');
+  };
+
+  t['Complete design applies the validated proposal to empty Working Copy fields']=async function(){
+    const oldDesignAnalysis=LF.DesignAnalysis,oldCanonicalStore=LF.CanonicalStore;
+    const env=loadUi(function(id,cb){
+      const proposal={targetDeviceId:cb.params.deviceId,solutions:[{name:'Model ink'}],devices:[{sample_names:['S1'],solution_names:['Model ink'],process:{coating:'spin coating'},stack:[]}]};
+      LF.State.state.experiment.aiDesignProposal=proposal;LF.State.state.experiment.aiDesignProposals={d1:proposal};
+      return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true},requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]};
+    LF.DesignAnalysis={applyAll:function(target){target.design.solutions.push({id:'sol-ai',name:'Model ink'});target.design.devices[0].solutionIds.push('sol-ai');target.design.devices[0].process.coating='spin coating';return{changed:3,items:2};},build:function(){return{sourceRevision:0,samples:[]};}};
+    LF.CanonicalStore={build:function(){}};
+    const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
+    assert(out.status==='done'&&out.designApplied.changed===2&&out.designApplied.mutations===3,'validated Design result must be applied before completion is reported and count real required gaps');
+    assert(exp.design.devices[0].process.coating==='spin coating'&&exp.design.devices[0].solutionIds[0]==='sol-ai','Working Copy fields remained empty');
+    assert(env.finishes[0].message.includes('2 missing fields filled'),'totem must report actual required gaps filled');
+    LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
   };
 
   t['Design All exposes the failing variant, checkpoint, code and provider cause']=async function(){

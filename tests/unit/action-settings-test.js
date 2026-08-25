@@ -26,6 +26,13 @@ module.exports=function(t,LF){
     assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
   };
 
+  t['Design inference explicitly falls back to qualitative model knowledge when RAG is empty']=function(){
+    const prompt=LF.ActionRegistry.prompt('design.infer');
+    assert(prompt.includes('# Empty-RAG fallback'),'Design prompt declares the fallback');
+    assert(prompt.includes('Do not return an empty proposal merely because RAG found nothing.'),'empty retrieval must not produce an empty proposal');
+    assert(prompt.includes('cap confidence at `0.35`'),'unsourced model fallback is confidence-capped');
+  };
+
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local',thinking:true,thinkingMode:'unsupported'}));
     const migrated=LF.Storage.getAiSettings();

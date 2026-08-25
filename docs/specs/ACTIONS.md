@@ -91,11 +91,11 @@ Do not introduce:
 
 ### Declarative input and Tool checkpoints
 
-Every Action declares its context profile in `input.context`. The runner does not infer a profile from the Action ID. Actions that consume the folder-backed Knowledge Base additionally declare `input.rag` with `source`, ranked retrieval `mode`, bounded `limit` and an Action-specific `query_hint`. The Context Builder combines that hint with the current experiment, selected variant or document work unit before retrieving records. Deterministic checkpoints declare `tool`, not a direct function name. The shared `LF.ToolRegistry` resolves that Tool to a typed capability/service. This keeps the workflow JSON readable while leaving scientific algorithms in normal JavaScript.
+Every Action declares its context profile in `input.context`. The runner does not infer a profile from the Action ID. Actions that may consume the internal Knowledge Base declare `input.rag` with `required: false`, source, ranked retrieval mode, bounded limit and an Action-specific `query_hint`. Folder sync is unrelated and never gates retrieval. The Context Builder attempts retrieval only while it is enabled and healthy, adds only a relevant non-empty slice, and otherwise continues without a `local_knowledge_base` field. Deterministic checkpoints declare `tool`, not a direct function name. The shared `LF.ToolRegistry` resolves that Tool to a typed capability/service. This keeps the workflow JSON readable while leaving scientific algorithms in normal JavaScript.
 
 `requires[]` is executable contract, not documentation: before step 1 the runner verifies that every prerequisite has a successful run for the **current Working Copy revision**. `dataset.analyze` may also be satisfied by the current deterministic analysis marker. A stale prerequisite fails closed with `ACTION_PREREQUISITE_REQUIRED`.
 
-An Action may contain an AI step with `agent.mode: read_only_tools`. This is currently reserved for `assistant.chat`; its tool allowlist is validated at build time and again at runtime.
+An Action may contain an AI step with `agent.mode: read_only_tools`. This is currently reserved for `assistant.chat`; its tool allowlist is validated at build time and again at runtime. The structured tool-choice protocol is an optional planning aid, not the Assistant's final output contract: invalid or truncated planner output is logged and skipped, after which the normal textual response still runs with the bounded context and any observations already collected.
 
 ## 5. Detailed contracts
 
@@ -161,7 +161,7 @@ The model is allowed to return unresolved. It does not apply changes directly.
 
 Purpose: propose missing fields of the currently selected Design experiment/device only. Explicit RAW fabrication evidence is projected deterministically before this Action runs; `scope.unknown_fields` is therefore the exact AI completion target, not a request to regenerate the full experiment.
 
-The selected device ID and canonical sample names are runner-owned scope. Validation attaches them deterministically and never trusts the model to choose the proposal target. Knowledge Base records can improve the context but are optional; an empty library is not a failed prerequisite and unsupported values remain explicit unknowns.
+The selected device ID and canonical sample names are runner-owned scope. Validation attaches them deterministically and never trusts the model to choose the proposal target. Knowledge Base records can improve the context but are optional. With empty or irrelevant retrieval, the model must still propose one coherent qualitative fallback for missing qualitative fields; validation removes unsourced numbers, rejects invented record IDs and caps these model-knowledge items at 35% confidence.
 
 Checkpoints:
 
@@ -179,9 +179,11 @@ Structured output schema: `design_reconstruct`.
 
 Known/user-confirmed values remain authoritative.
 
-The multi-variant **Complete all missing with AI** control runs this same Action sequentially. If one variant fails, the visible Action surface retains its variant name, failed checkpoint, normalized error code and provider/validation message, and offers a retry for the still-incomplete variants.
+The internal Action still ends by storing a reviewable proposal. The explicit **Complete missing with AI** UI command then immediately passes that proposal through the local deterministic fill-only gate and updates the same Working Copy; source and researcher values are never overwritten. Validation rejects a structurally valid but non-actionable proposal instead of reporting success while leaving every field empty.
 
-Because a structured proposal is unusable without its closing JSON, LabFlow reserves the full declared `design.infer` output ceiling while retaining the smaller target as progress telemetry. A bounded truncation retry requests the whole proposal again with compact strings and no repeated known/evidence fields; partial JSON is never stored.
+The multi-variant **Complete all missing with AI** control runs this same propose → validate → apply orchestration sequentially for every incomplete variant, including variants with an older saved proposal. If one variant fails, the visible Action surface retains its variant name, failed checkpoint, normalized error code and provider/validation message, and offers a retry for the still-incomplete variants.
+
+Because a structured proposal is unusable without its closing JSON, context preflight first reserves the declared `design.infer` target and may relax only to its minimum valid output after compaction; the final request remains bounded by the full ceiling and fitted input size. A bounded truncation retry requests the whole proposal again with compact strings and no repeated known/evidence fields; partial JSON is never stored.
 
 ### `results.interpret`
 
@@ -289,7 +291,7 @@ Every AI step declares a bounded `max_output_tokens` target. It is the amount ap
 
 Every AI step also declares `thinking: off|auto|on`; the contract validator rejects omissions. Direct drafting (`analysis.enrich`, `report.generate`, `report.improve`) uses `off`, semantic reconstruction (`dataset.resolve-ambiguities`, `design.infer`) uses `on`, and question/interpretation work (`assistant.chat`, `results.interpret`) uses `auto`. The Assistant tool-selection planner is separately fixed to `off`. The transport reconciles this request with the selected model's `none|optional|required|unknown` capability and never sends an incompatible provider field.
 
-Knowledge retrieval is Action-specific. `analysis.enrich`, `results.interpret`, `design.infer`, `report.generate` and `report.improve` receive a small deterministically ranked `local_knowledge_base` slice. `assistant.chat` retrieves on demand through the read-only `knowledge.search` Tool. `dataset.resolve-ambiguities` receives no external knowledge because its corrections must be established from imported evidence. Knowledge records remain external context and must be cited by stable record ID/DOI when used.
+Knowledge retrieval is Action-specific and optional. `analysis.enrich`, `results.interpret`, `design.infer`, `report.generate` and `report.improve` explicitly restrict their small ranked `local_knowledge_base` slice to scientific `material`, `solution`, `process` and `stack` records. `assistant.chat` sees the read-only `knowledge.search` Tool only while retrieval is active and may also retrieve `guide` records for questions about LabFlow. All continue without RAG when it is disabled, unavailable, empty or failed. `dataset.resolve-ambiguities` never receives external knowledge because its corrections must be established from imported evidence. Knowledge records remain external context and must be cited by stable record ID/DOI or canonical documentation path when used.
 
 At runtime the effective output budget is the minimum of the declared Action/step target, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. If a future AI Action omits a target, the runner defensively falls back to 4096 tokens and the contract validator rejects the definition so the omission cannot ship unnoticed.
 

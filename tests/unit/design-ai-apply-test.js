@@ -87,10 +87,18 @@ module.exports=function(t,LF){
 
   t['Design validation binds provider output to the selected canonical variant']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
-    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2']},infer:proposal},lastResult:proposal};
+    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[{role:'electron transport layer',material:'SnO2'}],provenance_kind:'knowledge',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2'],unknown_fields:['stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx);
     assert(JSON.stringify(ctx.outputs.infer.devices[0].sample_names)===JSON.stringify(['A1','A2']),'model-provided sample identity must be replaced by selected canonical scope');
-    assert(out.binding==='selected-design-variant'&&out.covered===2,'deterministic binding result missing');
+    assert(out.binding==='selected-design-variant'&&out.covered===2&&out.applicableFields[0]==='stack','deterministic binding/applicability result missing');
+    LF.ExperimentModel=oldModel;
+  };
+
+  t['Design validation rejects a successful-looking proposal that cannot fill anything']=function(){
+    const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
+    let error=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(err){error=err;}
+    assert(error&&error.code==='MODEL_OUTPUT_INVALID'&&error.isContract===true,'non-actionable proposal must fail the Action contract');
     LF.ExperimentModel=oldModel;
   };
 
@@ -98,15 +106,17 @@ module.exports=function(t,LF){
     const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
     LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
     LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:['kb_allowed']}};}};
-    const proposal={solutions:[{name:'Ink',concentration:'1.2 M',preparation:'stir 12 h',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},knowledge_refs:['kb_fake','kb_allowed'],provenance_kind:'knowledge',stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}]}],unknowns:[]};
-    const ctx={exp:{design:{devices:[],solutions:[]}},outputs:{collect:{device_id:'deviceA',sample_names:['A1']},infer:proposal},lastResult:proposal};
+    const proposal={solutions:[{name:'Ink',role:'absorber precursor',solutes:'perovskite precursor family',concentration:'1.2 M',preparation:'stir 12 h',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},knowledge_refs:['kb_fake','kb_allowed'],provenance_kind:'knowledge',stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}]}],unknowns:[]};
+    const ctx={exp:{design:{devices:[],solutions:[]}},outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['solutions','coating','annealing','atmosphere','stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx),clean=ctx.outputs.infer;
     assert(clean.solutions[0].knowledge_refs.length===0,'invented solution record ID removed');
     assert(clean.solutions[0].concentration===''&&clean.solutions[0].preparation==='','untraceable solution quantities removed');
+    assert(clean.solutions[0].role==='absorber precursor'&&clean.solutions[0].solutes==='perovskite precursor family','qualitative LLM fallback is retained');
+    assert(clean.solutions[0].confidence===.25&&/Model-knowledge fallback/.test(clean.solutions[0].reason),'unsourced LLM fallback is retained but confidence-capped');
     assert(JSON.stringify(clean.devices[0].knowledge_refs)===JSON.stringify(['kb_allowed']),'retrieved device record retained');
     assert(clean.devices[0].process.annealing==='100 C','quantities backed by a retrieved device record retained');
     assert(clean.devices[0].stack[0].knowledge_refs.length===0&&clean.devices[0].stack[0].thickness===''&&clean.devices[0].stack[0].process==='','untraceable layer quantities removed');
-    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.strippedQuantities===4,'validation reports rejected references and stripped values');
+    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.strippedQuantities===4&&out.knowledge.llmFallbackItems===2,'validation reports rejected references, stripped values and LLM fallbacks');
     LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
   };
 

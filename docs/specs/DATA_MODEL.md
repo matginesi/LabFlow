@@ -145,15 +145,16 @@ If the archive contains measurements but no fabrication recipe, LabFlow preserve
 
 ## 8.1 Local Knowledge Base
 
-The Knowledge Base is a separate folder-backed `library.json` with schema version `1`:
+The Knowledge Base is a separate browser-internal library with schema version `1`. At startup the bundled `knowledge-base/library.json` is automatically merged into the IndexedDB copy by stable record ID; bundled records add defaults, while stored same-ID edits and personal records override them:
 
 - `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, primary `sources[]`, timestamps and kind-specific `data`;
-- supported kinds: `material`, `solution`, `process`, `stack`;
+- supported kinds: `material`, `solution`, `process`, `stack`, `guide`;
 - stack layers keep role, material, thickness and process in physical order.
+- `guide` records contain LabFlow topic, guidance, typical steps and constraints, sourced from canonical project documentation; scientific Action Context Packs exclude this kind.
 
-It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase or rewrite it. The management page writes create/update/delete operations directly to the connected file. Import merges records by stable ID into that file; export serializes the complete versioned library as a backup. The directory handle may be remembered in IndexedDB, but the records themselves are not stored in browser `localStorage`.
+It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase or rewrite it. The management page writes create/update/delete operations to a dedicated IndexedDB store. A separate browser preference controls whether retrieval may use these records; disabling it leaves the library intact and cannot block an Action. Import merges records by stable ID into the internal library; export serializes the complete versioned library as a backup. An optional directory handle may be remembered for `library.json` synchronization, but the records themselves are not stored in browser `localStorage`.
 
-Records are retrieved, not synchronized into scientific state. A deterministic lexical ranker selects bounded records by experiment/Design terms, missing-field type, tags and source text. Retrieval returns stable IDs, scores, matched terms, record data and source metadata. The Assistant accesses it through the read-only `knowledge.search` Tool; AI Action Context Packs receive only their small ranked slice.
+Records are retrieved, not synchronized into scientific state. While optional retrieval is enabled and healthy, a deterministic lexical ranker selects bounded records by experiment/Design terms, missing-field type, tags and source text. Retrieval returns stable IDs, scores, matched terms, record data and source metadata. The Assistant may access it through the read-only `knowledge.search` Tool and AI Action Context Packs may receive a small ranked slice. Disabled, empty or failed retrieval is omitted rather than treated as a missing dependency.
 
 For Design, retrieved records are external candidate knowledge and are never copied before inference. `design.infer` may use a record for a missing-field proposal and must preserve its ID in `knowledge_refs`. Exact recipe quantities are allowed only when copied from that identified record and remain `provenance_kind: knowledge` with confidence capped at 0.45. The researcher accepts the resulting AI proposal through the ordinary fill-only gate; ZIP/researcher-confirmed values remain authoritative.
 

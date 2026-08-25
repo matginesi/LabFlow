@@ -103,7 +103,7 @@ Primary modules:
 
 Provider/model discovery, endpoint adaptation, thinking modes and normalized response behavior are specified in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md). The complete source ownership map is in [`docs/specs/JAVASCRIPT_MODULES.md`](specs/JAVASCRIPT_MODULES.md).
 
-Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant may choose only from an Action-declared allowlist of read-only Tools and cannot invoke write Tools or mutating Actions.
+Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant may choose only from an Action-declared allowlist of read-only Tools and cannot invoke write Tools or mutating Actions. Its structured tool planner is best-effort: models that cannot emit a valid tool choice fall through to the ordinary textual answer instead of failing the whole Assistant Action.
 
 ## 7. Page architecture
 
@@ -111,11 +111,11 @@ Pages read the current Working Copy/Canonical Store. They do not own parallel sc
 
 - Review — Analysis Dossier, safe corrections, AI proposals/human decisions;
 - Results — deterministic measurements/results; Compare statistics read the Analysis Summary bundle when fresh;
-- Design — deterministic known Design + researcher edits + automatic bounded retrieval from the separate local Knowledge Base during optional missing-field inference; proposals retain knowledge record IDs, carry an evidence-weighted review estimate and use deterministic fill-only gates;
+- Design — deterministic known Design + researcher edits + optional bounded retrieval from the separate local Knowledge Base during missing-field inference; disabled, failed or empty retrieval falls back to low-confidence qualitative model knowledge, while proposals retain real knowledge record IDs, carry an evidence-weighted review estimate and are immediately applied through deterministic fill-only gates when the researcher invokes Complete;
 - Report — current Markdown editor + explicit figure selection; statistics and the six figures read the Analysis Summary bundle when fresh and figures are rasterized on demand and cached per revision;
 - NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
 - Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.
-- Knowledge Base — folder-backed management and deterministic lexical retrieval over sourced records in versioned `library.json`; the browser remembers only the directory handle/permission. It remains outside the Working Copy and is exposed to the Assistant only through a read Tool and to selected AI Actions through bounded Context Pack retrieval.
+- Knowledge Base — a browser-internal, versioned library of sourced scientific records and LabFlow product guides, persisted separately in IndexedDB. The bundled `knowledge-base/library.json` is merged automatically at startup; local same-ID edits and personal records win. Library management works without folder authorization. Retrieval has an independent persisted enable/disable setting and is strictly optional: when inactive or unhealthy it is omitted from Action Context Packs and its Assistant read Tool is not advertised. Scientific Actions filter out product guides, while the Assistant may retrieve them for LabFlow help. An optional researcher-selected `library.json` folder mirrors/merges the library for synchronization or backup. It remains outside the Working Copy.
 
 ## 8. Report architecture
 
