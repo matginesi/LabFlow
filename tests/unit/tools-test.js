@@ -59,9 +59,9 @@ module.exports=function(t,LF){
     assert(type,true,'argument type');
   };
 
-  t['assistant Knowledge Base tool is read-only RAG with explicit external provenance']=function(){
-    const e=fake(),previous=LF.KnowledgeBase;state(e);LF.KnowledgeBase={status:function(){return{active:true,available:true,connected:false,storage:'browser',records:34};},search:function(query){return[{id:'kb_sno2',kind:'material',name:'SnO2',data:{role:'ETL'},sources:[{doi:'10.1000/source'}],retrieval:{score:12,matched_terms:['sno2']}}];}};
-    try{const out=LF.ToolRegistry.execute('knowledge.search',{query:'SnO2 electron contact',limit:4},{exp:e,agent:true});assert(out.active,true,'active without folder');assert(out.connected,false,'folder is optional');assert(out.total_library_records,34,'library size');assert(out.records[0].id,'kb_sno2','retrieved record');assert(out.records[0].data.role,'ETL','record data retained');const listed=LF.ToolRegistry.describeForAgent(['knowledge.search']);assert(listed[0].id,'knowledge.search','agent-visible tool');LF.KnowledgeBase.status=function(){return{active:false,available:true,records:34};};assert(LF.ToolRegistry.describeForAgent(['knowledge.search']).length,0,'disabled optional tool omitted from Assistant planner');}
+  t['assistant Knowledge Base tool is a simple read-only lookup with explicit external provenance']=function(){
+    const e=fake(),previous=LF.KnowledgeBase;state(e);LF.KnowledgeBase={status:function(){return{active:true,available:true,records:48};},search:function(query){return[{id:'kb_sno2',collection:'science',kind:'material',name:'SnO2',data:{role:'ETL'},sources:[{doi:'10.1000/source'}],retrieval:{score:12,matched_terms:['sno2']}}];}};
+    try{const out=LF.ToolRegistry.execute('knowledge.search',{query:'SnO2 electron contact',limit:4},{exp:e,agent:true});assert(out.available,true,'lookup available without setup');assert(out.total_library_records,48,'library size');assert(out.records[0].id,'kb_sno2','retrieved record');assert(out.records[0].collection,'science','scientific provenance retained');assert(out.records[0].data.role,'ETL','record data retained');const listed=LF.ToolRegistry.describeForAgent(['knowledge.search']);assert(listed[0].id,'knowledge.search','agent-visible tool');}
     finally{LF.KnowledgeBase=previous;}
   };
 

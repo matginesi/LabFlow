@@ -43,10 +43,10 @@ module.exports=function(t){
     assert(settings.includes("activity.activityFinish({message:'Provider metadata detection completed.'"),true,'detect terminal totem');
   };
 
-  t['Provider detection runs only from Detect or connection test']=function(){
+  t['Provider detection runs only from explicit Detect; connection test stays minimal']=function(){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
-    assert(settings.includes('await loadModels({silent:true})'),true,'connection test performs silent detection first');
+    assert(settings.includes('await loadModels({silent:true})'),false,'connection test must not trigger model detection');
     assert(settingsPage.includes('Press Detect to read model capabilities and the catalogue when the provider exposes one.'),true,'shared Detect policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
@@ -60,9 +60,9 @@ module.exports=function(t){
     assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
   };
 
-  t['Design proposal exposes a compact estimated decision-accuracy instrument']=function(){
-    assert(designPage.includes('Estimated AI accuracy'),true,'decision metric label');
-    assert(designPage.includes('Estimated, not validated accuracy'),true,'metric limitation');
+  t['Design proposal exposes a compact secondary confidence instrument']=function(){
+    assert(designPage.includes('Proposal confidence'),true,'decision metric label');
+    assert(designPage.includes('Secondary indicator: mean confidence across proposed fields only'),true,'metric limitation');
     assert(css.includes('.design-decision-dial'),true,'compact dial styling');
   };
 
@@ -92,6 +92,11 @@ module.exports=function(t){
     assert(html.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog module is loaded');
     const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
     assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
+  };
+
+  t['Action lifecycle updates do not rebuild the active page editor']=function(){
+    assert(app.includes("if(reason!=='actionRun')render()"),true,'actionRun state must not trigger a full page render');
+    assert(app.includes("if(reason!=='actionRun')scheduleWorkspaceSave"),true,'transient action lifecycle must not autosave the Working Copy');
   };
 
   t['Working Copy restores from IndexedDB and Reset is the explicit clear boundary']=function(){

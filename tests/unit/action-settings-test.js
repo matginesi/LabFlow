@@ -26,11 +26,11 @@ module.exports=function(t,LF){
     assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
   };
 
-  t['Design inference explicitly falls back to qualitative model knowledge when RAG is empty']=function(){
+  t['Design inference treats Knowledge Base hits as optional context without capping model confidence']=function(){
     const prompt=LF.ActionRegistry.prompt('design.infer');
-    assert(prompt.includes('# Empty-RAG fallback'),'Design prompt declares the fallback');
-    assert(prompt.includes('Do not return an empty proposal merely because RAG found nothing.'),'empty retrieval must not produce an empty proposal');
-    assert(prompt.includes('cap confidence at `0.35`'),'unsourced model fallback is confidence-capped');
+    assert(prompt.includes('relevant `knowledge_context` records, when present'),'Design prompt makes Knowledge Base context optional');
+    assert(prompt.includes('A Knowledge Base miss is normal'),'empty retrieval must not block Design');
+    assert(prompt.includes('do not lower it merely because no Knowledge Base record was found'),'KB absence must not cap model confidence');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){

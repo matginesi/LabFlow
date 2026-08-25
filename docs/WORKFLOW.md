@@ -138,7 +138,7 @@ It does **not** send the full experiment or RAW JV curves by default.
 
 Import is the only experiment entry point.
 
-The app route contract still enters through **Upload & Review**, but an existing browser-local Working Copy is restored automatically when LabFlow is reopened. With no persisted scientific session, Upload & Review is the mandatory ZIP upload gate. The Knowledge Base is a separate browser-internal library available immediately; optional folder sync, provider/model settings, API key and UI preferences remain separate from experiment state. **Reset session** clears the persisted Working Copy/RAW snapshot and returns to the empty upload gate; it does not alter the Knowledge Base or its optional folder mirror. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
+The app route contract still enters through **Upload & Review**, but an existing browser-local Working Copy is restored automatically when LabFlow is reopened. With no persisted scientific session, Upload & Review is the mandatory ZIP upload gate. The bundled Knowledge Base is available immediately and remains separate from provider/model settings, API keys, UI preferences and experiment state. **Reset session** clears the persisted Working Copy/RAW snapshot and returns to the empty upload gate; it does not alter the bundled library or browser-local Knowledge Base overrides. After a new import the same first page shows the immutable source receipt above the Review workbench; there is no separate Review destination.
 
 ```text
 Researcher selects ZIP
@@ -511,15 +511,15 @@ Before inference, LabFlow already knows or indexes:
 - grouped experimental variants/replicates derived from that evidence;
 - explicit missing-field inventory.
 
-The separate browser-internal **Knowledge Base** stores reusable materials, formulations, process descriptions, device stacks and LabFlow product guides in a versioned library persisted in IndexedDB. At every startup LabFlow automatically merges its bundled `knowledge-base/library.json` into that library: newly shipped stable IDs are added, while local same-ID edits and researcher-created records take precedence. Management therefore works before any folder interaction and bundled updates do not require a manual import. Knowledge retrieval has a separate persisted enable/disable preference and is optional: every Action and the Assistant must remain fully executable without it. Scientific records retain compact primary-literature provenance as `sources[]` entries with title, URL, DOI and a note describing the supported fact; product guides point to the canonical repository documentation. It is not part of the Working Copy and cannot become a second editable experiment. A `library.json` folder handle may be remembered separately when the researcher explicitly enables optional synchronization; record data is never stored in `localStorage`.
+The separate **Knowledge Base** stores reusable scientific context and LabFlow help in two bundled JSON sources: `knowledge-base/science.json` and `knowledge-base/labflow.json`. The generated browser bundle is ready at startup. There is no folder connection, filesystem permission, external database or retrieval switch. The library remains outside the Working Copy. User-created/imported edits are small browser-local overrides by stable ID; the bundled defaults remain resettable.
 
-When enabled and healthy, retrieval is deterministic and bounded: query terms from the user question or current experiment/Design are matched against record names, tags, summaries, data and source metadata, with kind/missing-field boosts. Results retain stable record ID, score and matched terms. `knowledge.search` is advertised to the Assistant only in this active state and may return `guide` records for LabFlow questions. Brief, Results, Design and Report/Paper Context Packs explicitly restrict retrieval to scientific `material`, `solution`, `process` and `stack` records, and receive a small Action-specific slice only when relevant records exist. When retrieval is disabled, unavailable, empty or throws, the Context Pack simply omits `local_knowledge_base` and execution continues from experiment evidence/model knowledge. Dataset ambiguity repair deliberately receives none because external knowledge cannot establish sample identity, units or measured values.
+Lookup is deterministic and bounded. Query terms are matched against names, tags, summaries, data and source metadata. Brief, Results, Design and Report/Paper Actions request only a small scientific slice and receive `knowledge_context` only when a useful hit exists. The Assistant may also search LabFlow `guide` records. Empty or failed lookup is normal: execution continues from experiment evidence and cautious model inference. Dataset ambiguity repair deliberately receives no external knowledge because external context cannot establish sample identity, units or measured values.
 
-Design does not ask the researcher to apply library records one by one. The page previews automatically retrieved records and `design.infer` selects only compatible ones needed for the selected variant's missing fields. Used IDs are returned in `knowledge_refs`; an exact literature quantity is allowed only as a labelled paper-specific candidate, never as RAW evidence. The resulting AI proposal still passes local validation and explicit fill-only acceptance, so existing RAW-backed or researcher values are never overwritten.
+Design does not copy Knowledge Base records directly into the experiment. `design.infer` may use relevant records while proposing missing fields and must preserve used IDs in `knowledge_refs`. Retrieved records remain external scientific support, not RAW evidence. A validated proposal still passes the ordinary fill-only apply gate, so existing RAW-backed or researcher values are never overwritten.
 
-The Knowledge Base runtime surface is retrieval-only (`search` / bounded Context Pack retrieval). It exposes no direct Knowledge Base → Design mutation path.
+When no useful scientific record is found, `design.infer` continues with model inference. These suggestions carry no fabricated `knowledge_refs`, but their confidence expresses scientific plausibility rather than KB availability. High-confidence qualitative suggestions may be auto-applied; unsupported exact recipe/process quantities are preserved for review. Qualitative chemical/material identifiers that contain digits are not treated as quantities.
 
-An empty or irrelevant Knowledge Base does not block inference. In that case `design.infer` must produce one conservative qualitative candidate from the model's scientific knowledge for the missing qualitative fields rather than returning an empty proposal. These items carry `provenance_kind: knowledge`, no fabricated `knowledge_refs`, confidence capped at 35% and an explicit model-fallback reason. Unsupported quantitative recipe/process values remain explicit unknowns and local validation strips any unsourced numbers.
+The runtime surface is lookup-only (`search` / bounded Context Pack lookup). It exposes no direct Knowledge Base → Design mutation path.
 
 ### Context
 
@@ -528,8 +528,8 @@ The model receives only:
 - current selected Design record;
 - researcher-entered known values;
 - missing fields;
-- selected sample/measurement summaries;
-- linked evidence.
+- selected sample identities;
+- linked Design-relevant evidence;
 - at most 12 relevant researcher-curated Knowledge Base records, treated as reusable knowledge rather than proof about the imported experiment.
 
 Known, RAW-backed or user-confirmed fields are authoritative and must not be regenerated. `scope.unknown_fields` is the exact completion target for `design.infer`. The selected device ID and its canonical sample names are attached deterministically during validation rather than inferred from provider output.
@@ -543,9 +543,9 @@ Known, RAW-backed or user-confirmed fields are authoritative and must not be reg
 
 ### Output
 
-A proposal for missing fields only, with evidence/confidence where supported. When invoked from the explicit **Complete missing with AI** control, LabFlow immediately applies that stored proposal through the deterministic fill-only gate to the current Working Copy. A proposal that cannot populate any requested field fails validation instead of producing a false success.
+A proposal for missing fields only. Each proposed field has a source (`experiment`, `knowledge`, or `model_inference`), confidence, and a deterministic auto-apply decision. When invoked from **Complete missing with AI**, LabFlow immediately applies safe fields fill-only to the current Working Copy. Review-only suggestions and explicit unresolved fields are successful outputs; neither causes an apply or validation failure.
 
-The proposal card also shows a compact **Estimated AI accuracy** score from 0–100. This is not measured ground-truth accuracy. It is an evidence-weighted decision-reliability indicator: model confidence is capped by provenance strength (`evidence` > `mixed` > `knowledge` > unspecified), then averaged across proposed solutions, device link, process and stack layers. The UI shows how many proposed decisions are evidence-backed so the researcher can interpret the number rather than treating it as validation.
+The proposal card leads with fields filled automatically, suggestions requiring review, and unresolved fields. A secondary **Proposal confidence** indicator is the plain mean of confidence across fields actually proposed; unresolved or unproposed fields are excluded. Provenance does not cap confidence. Auto-apply is separate: sufficiently confident qualitative values can be safe from any source, while exact model-inferred quantities require experiment or valid Knowledge Base support.
 
 The multi-variant control repeats the same bounded propose → validate → fill-only apply flow for every still-incomplete variant. Saved proposals do not cause a missing variant to be skipped. The researcher remains able to edit the Design manually without running the Action.
 
@@ -699,6 +699,10 @@ Scientific mutation invalidates stale mapping/staging.
 
 `assistant.chat` is an AI Action exposed in Actions. Its conversation/output settings remain separate, but its executable prompt/contract is edited through the same Action runtime editor. It is read-only with respect to scientific state.
 
+The chat surface has one durable user message and one durable Assistant message per turn. The Assistant message is created before the request and that same message moves through `requesting → streaming → complete`, `error` or `cancelled`; streaming never creates a second reply. Its small transient spinner is visible only before useful response content exists. The first usable content replaces it in place, and completion, error, cancellation and cleanup all close the transient state. A failed message exposes Retry on that same turn.
+
+The conversation is the panel's only vertical scroll region. Page/selection context appears once in the header, completed provider reasoning and telemetry live in a closed **Details** disclosure, and Action results appear as compact system events rather than Assistant replies. Auto-scroll follows output only while the researcher remains near the bottom; otherwise a **New response** control preserves the current reading position. Only complete user/Assistant turns enter bounded conversation memory; system events, errors and interrupted turns do not.
+
 ## Read-only tool selection
 
 The Assistant starts from a small bounded bootstrap context containing the user question, current page/selection, bounded conversation memory and the explicit read-only tool policy. It does **not** receive the whole experiment or an automatically expanded giant chat Context Pack.
@@ -806,7 +810,7 @@ Use the UI Kit **Single-experiment Design** pattern:
 
 AI must never overwrite user-confirmed values silently.
 
-Knowledge Base management is available without loading a ZIP and without requesting folder permission. Bundled records are searchable immediately; create/update/delete and JSON import persist to the internal IndexedDB library, while JSON export remains an explicit backup. A visible control independently enables or disables use of those records by RAG; disabling it does not hide or delete the library. Existing legacy browser records migrate directly into that internal library. The researcher may optionally enable a read/write folder mirror; connection merges stable IDs and subsequent changes are mirrored to its versioned `library.json`, but denying or losing folder permission never disables library management. This management route and all retrieval are read-only with respect to the Working Copy; only acceptance of a validated AI Design proposal can fill scientific fields.
+Knowledge Base management is available without loading a ZIP and has no setup step. Bundled records are searchable immediately; create/update/delete and JSON import create browser-local overrides, while JSON export provides a portable snapshot. Existing legacy browser records are migrated once into the same override format. Management and lookup are read-only with respect to the Working Copy; only acceptance of a validated AI Design proposal can fill scientific fields.
 
 `Complete all missing with AI` is a finite UI orchestration, not a new autonomous Action: it scans the current Design variants, skips complete variants and variants that already have a proposal, then runs `design.infer` sequentially for each remaining variant. Proposals are retained per variant so the researcher can review them independently from the coverage board. No parallel provider calls are allowed. The sequence stops on the first failed variant and keeps the actual variant, checkpoint, normalized code and provider/validation cause visible with a retry control.
 
@@ -956,13 +960,13 @@ The AI transport resolves model capabilities and caches them by provider/endpoin
 
 For Report/Paper and other word-sized work units, a known provider or researcher ceiling is applied to `target_words`, `min_words` and `max_words` before the Context Pack is built. If a provider still returns `finish_reason: length` (for example because hidden reasoning consumed part of the allowance), the declared bounded retry requests one complete shorter rewrite instead of resending the same impossible target or storing partial prose.
 
-Each AI checkpoint declares whether it needs thinking (`off`, `auto` or `on`). Settings' `Follow each Action` mode preserves that policy; force Off/On is an explicit global override. The transport reconciles it with model capability (`none`, `optional`, `required`, `unknown`): it does not enable thinking on a non-reasoning model or disable a reasoning-required model, and it only applies fields declared by the active provider adapter. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from **Detect** or immediately before an explicit connection test; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
+Each AI checkpoint declares whether it needs thinking (`off`, `auto` or `on`). Settings' `Follow each Action` mode preserves that policy; force Off/On is an explicit global override. The transport reconciles it with model capability (`none`, `optional`, `required`, `unknown`): it does not enable thinking on a non-reasoning model or disable a reasoning-required model, and it only applies fields declared by the active provider adapter. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from explicit **Detect**. Connection testing is a separate minimal request and never changes the selected model; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
 
 Token optimization remains conservative and Action-specific. Compact scientific Actions use lower expected targets; complete Design JSON and document blocks retain generous hard ceilings. Context construction removes duplicate evidence aliases before trimming unique facts, and prompts state each constraint once. Speed improvements must not remove evidence, reduce the requested scientific depth, store truncated output or weaken deterministic validation.
 
 ## Assistant streaming
 
-Chat displays semantic state only: waiting, thinking and writing. Raw SSE chunk/event/byte counters stay in logs. Reasoning is separated from final text and completed replies retain model/provider, latency, TTFT, usage and throughput metadata when available.
+Chat displays one transient semantic state before content: waiting, thinking, provider pacing or read-tool activity. Raw SSE chunk/event/byte counters stay in logs. On the first useful streamed content the transient indicator is removed and the existing Assistant body is updated incrementally. Reasoning never enters the answer body; after completion it is available only in the closed Details disclosure alongside model/provider, latency, TTFT, usage and throughput metadata when available.
 
 
 ## Design and document finishing controls

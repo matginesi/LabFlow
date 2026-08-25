@@ -1,6 +1,7 @@
 'use strict';
 global.window = globalThis; // classic IIFEs attach window.LabFlow
 const path = require('path');
+const fs = require('fs');
 const childProcess = require('child_process');
 const root = path.resolve(__dirname, '..', '..');
 // Minimal in-memory storage so browser modules can load under Node.
@@ -43,7 +44,10 @@ try {
 
 /** Run suites serially so Promise-returning tests cannot finish after success. */
 async function main() {
-  const files = process.argv.slice(2);
+  let files = process.argv.slice(2);
+  if (!files.length) {
+    files = fs.readdirSync(__dirname).filter(function (name) { return /-test\.js$/.test(name); }).sort().map(function (name) { return path.relative(process.cwd(), path.join(__dirname, name)); });
+  }
   /* Every suite mutates the classic-script namespace by design. Run multiple
      requested files in isolated Node processes so one suite cannot leak its
      stubs into the next suite. */

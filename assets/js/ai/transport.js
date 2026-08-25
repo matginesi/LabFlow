@@ -27,12 +27,10 @@
     return{requested:mode,applied:mode};
   }
 
-  /** Size the tiny probe without forcing an unsupported reasoning mode. */
-  function connectionProbePolicy(provider,capability){
-    const allowed=Array.isArray(capability&&capability.reasoningAllowedOptions)?capability.reasoningAllowedOptions.map(function(x){return String(x).toLowerCase();}):[];
-    const status=String(capability&&capability.reasoningStatus||'unknown').toLowerCase(),reasoningRequired=status==='required'||(allowed.length>0&&!allowed.includes('off')&&!allowed.includes('none')),unknown=status==='unknown'&&!allowed.length;
-    const configured=Math.max(64,Math.min(512,Number(provider&&provider.connectionTestMaxTokens)||256));
-    return{thinkingMode:reasoningRequired||unknown?'auto':'off',maxTokens:reasoningRequired||unknown?2048:configured,reasoningRequired:reasoningRequired,reasoningUnknown:unknown};
+  /** Keep connectivity boring: one tiny request, no capability discovery. */
+  function connectionProbePolicy(provider){
+    const configured=Math.max(8,Math.min(16,Number(provider&&provider.connectionTestMaxTokens)||16));
+    return{thinkingMode:provider&&provider.thinkingModes&&provider.thinkingModes.off?'off':'auto',maxTokens:configured};
   }
 
   function resolveChatUrl(endpoint){
@@ -214,6 +212,7 @@
     });
     try{
       const response=await fetch(url,fetchOptions(url,headers,requestBody,controller));
+      const responseHeadersMs=Math.round(performance.now()-started);
       resetInactivity();
       const contentType=String(response.headers.get('content-type')||'').toLowerCase();
       let text='',obj=null,streamMeta=null;
@@ -227,7 +226,7 @@
       if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers);
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
       Log.info('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
-      return{json:obj,elapsedMs:elapsed,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta};
+      return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta};
     }catch(err){
       const elapsed=Math.round(performance.now()-started);
       let failure=err;
@@ -408,9 +407,10 @@
   }
   async function resolveModelCapabilities(options){
     options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId),cacheKey=capabilityKey(providerId,endpoint,model);
-    if(!options.force&&capabilityCache.has(cacheKey)){const cached=capabilityCache.get(cacheKey),ttl=providerId==='lmstudio'?5000:60000;if(!cached.resolvedAt||Date.now()-cached.resolvedAt<ttl)return cached;capabilityCache.delete(cacheKey);}
+    if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
     const known=knownCapability(providerId,model);
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
+    if(!options.force){const fallback={provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'conservative fallback; run Detect for provider metadata',probeError:'',resolvedAt:Date.now()};capabilityCache.set(cacheKey,fallback);return fallback;}
     let detected=null,error=null;
     try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
     const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
@@ -439,12 +439,20 @@
   }
 
   async function testConnection(options){
-    options=options||{};const cfg=requestConfig(),hard=Math.max(30000,Math.min(60000,Number(cfg.provider.connectionTestTimeoutMs)||45000));
-    const cached=capabilityCache.get(capabilityKey(cfg.settings.provider,cfg.settings.endpoint,cfg.settings.model))||null,capability=cached||await resolveModelCapabilities({provider:cfg.settings.provider,endpoint:cfg.settings.endpoint,model:cfg.settings.model}),probe=connectionProbePolicy(cfg.provider,capability);
-    const spec=buildRequest({messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:Math.min(hard,30000),hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode});
-    const r=await send(spec,{label:'AI connection test',onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});
+    options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(30000,Number(cfg.provider.connectionTestTimeoutMs)||15000));
+    const probe=connectionProbePolicy(cfg.provider);
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,connectionTest:true});
+    let r;
+    try{r=await send(spec,{label:'AI connection test',connectionTest:true,onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});}
+    catch(err){
+      if(!isRateLimitError(err))throw err;
+      const elapsed=Math.round(performance.now()-started);
+      Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-rate-limited',prepareMs:spec.prepareMs||0,pacingMs:0,totalMs:elapsed,httpRequests:1,retries:0});
+      return{ok:false,reachable:true,rateLimited:true,elapsedMs:elapsed,requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:0,streamed:false,rateLimitRetries:0,httpRequests:1};
+    }
     if(!r.content)Log.warn('test.empty-content',{model:r.model||cfg.settings.model,finishReason:r.finishReason});
-    return{ok:true,elapsedMs:r.latencyMs,requestElapsedMs:r.requestElapsedMs,model:r.model||cfg.settings.model,provider:r.provider||cfg.settings.provider,thinkingMode:r.thinkingMode||'auto',content:r.content,usage:r.usage||null,finishReason:r.finishReason||'',requestId:r.requestId,tokensPerSecond:r.tokensPerSecond,responseBytes:r.responseBytes,streamed:!!r.streamed,rateLimitRetries:r.rateLimitRetries||0};
+    Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'ok',prepareMs:r.prepareMs||0,pacingMs:r.pacingMs||0,requestMs:r.requestElapsedMs,totalMs:r.latencyMs,httpRequests:r.httpRequests||1,retries:0});
+    return{ok:true,reachable:true,rateLimited:false,elapsedMs:r.latencyMs,prepareMs:r.prepareMs,pacingMs:r.pacingMs,responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finalizeMs:r.finalizeMs,model:r.model||cfg.settings.model,provider:r.provider||cfg.settings.provider,thinkingMode:r.thinkingMode||'auto',content:r.content,usage:r.usage||null,finishReason:r.finishReason||'',requestId:r.requestId,tokensPerSecond:r.tokensPerSecond,responseBytes:r.responseBytes,streamed:!!r.streamed,rateLimitRetries:0,httpRequests:r.httpRequests||1};
   }
 
   /**
@@ -453,8 +461,8 @@
    * and temperature overrides for structured actions are explicit caller opts.
    */
   function buildRequest(opts){
-    opts=opts||{};
-    const cfg=requestConfig();
+    const prepareStarted=performance.now();opts=opts||{};
+    const cfg=opts.config||requestConfig();
     if(opts.maxTokens!=null&&!(Number(opts.maxTokens)>0))throw new Error('AI output token budget must be a positive number when explicitly set.');
     const settings=cfg.settings,provider=cfg.provider;
     const model=opts.model||settings.model;
@@ -469,17 +477,17 @@
     const thinking=applyThinkingMode(body,provider,opts.thinkingMode||settings.thinkingMode||'auto');
     if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
-    const timeoutMs=Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
+    const timeoutMs=opts.connectionTest?Math.max(5000,Number(opts.timeoutMs)||15000):Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
     const hardTimeoutMs=Math.max(0,Number(opts.hardTimeoutMs)||0);
     const policy=Object.assign({},opts.thinkingPolicy||{requested:opts.thinkingMode||settings.thinkingMode||'auto',capability:'unknown',reason:'Direct request'},{applied:thinking.applied});
-    return{url:cfg.url,headers:cfg.headers,body:body,timeoutMs:timeoutMs,hardTimeoutMs:hardTimeoutMs,provider:provider,settings:settings,model:model,thinkingMode:thinking.applied,thinkingPolicy:policy};
+    return{url:cfg.url,headers:cfg.headers,body:body,timeoutMs:timeoutMs,hardTimeoutMs:hardTimeoutMs,provider:provider,settings:settings,model:model,thinkingMode:thinking.applied,thinkingPolicy:policy,prepareMs:Math.round(performance.now()-prepareStarted)};
   }
 
   async function send(spec,opts){
-    opts=opts||{};const policy=ratePolicy(spec),overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null;
+    opts=opts||{};const normalPolicy=ratePolicy(spec),policy=opts.connectionTest?Object.assign({},normalPolicy,{retries:0,minIntervalMs:0}):normalPolicy,overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null,pacingMs=0,httpRequests=0;
     while(true){
-      const state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy),elapsedBefore=performance.now()-overallStarted,remainingHard=hardTimeoutMs?Math.max(1,hardTimeoutMs-elapsedBefore):0;
-      try{r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);break;}
+      const pacingStarted=performance.now(),state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy);pacingMs+=performance.now()-pacingStarted;const elapsedBefore=performance.now()-overallStarted,remainingHard=hardTimeoutMs?Math.max(1,hardTimeoutMs-elapsedBefore):0;
+      try{httpRequests++;r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);break;}
       catch(err){
         if(!isRateLimitError(err)||rateAttempt>=policy.retries)throw err;
         const configured=policy.delaysMs[Math.min(rateAttempt,policy.delaysMs.length-1)]||5000,serverDelay=Math.max(0,Number(err.retryAfterMs)||0),penalty=Math.min(policy.maxDelayMs,Math.max(configured,serverDelay));
@@ -488,7 +496,7 @@
         if(opts.onProgress)opts.onProgress({transportState:'rate_limit_wait',rateLimit:true,retryInMs:penalty,attempt:rateAttempt,maxAttempts:policy.retries,provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0)});
       }
     }
-    const obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
+    const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
     const content=extracted.content,reasoning=extracted.reasoning;
     if(!content){
       Log.warn('response.empty-content',{model:obj.model||spec.settings.model,finishReason:extracted.finishReason,reasoningChars:reasoning.length,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
@@ -503,8 +511,9 @@
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
-    const totalElapsed=Math.round(performance.now()-overallStarted),tps=totalElapsed>0?Number((completionTokens/(totalElapsed/1000)).toFixed(2)):null;
-    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,requestElapsedMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
+    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),roundedPacing=Math.round(pacingMs),tps=totalElapsed>0?Number((completionTokens/(totalElapsed/1000)).toFixed(2)):null;
+    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,firstTokenMs:r.stream&&r.stream.ttftMs||null,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,retries:rateAttempt,httpRequests:httpRequests});
+    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
   }
 
   LF.AI={

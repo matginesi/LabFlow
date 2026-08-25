@@ -1,11 +1,23 @@
 # LabFlow Knowledge Base
 
-This directory is the versioned source for LabFlow's bundled starter Knowledge Base.
+The Knowledge Base is deliberately small and local. It is **context for AI**, not a second experiment database and not a separate retrieval service.
 
-LabFlow bundles `library.json` into the app and initializes a separate browser-internal library automatically. No folder authorization is required. The **Knowledge Base** page manages that internal copy, independently enables/disables its optional use by RAG, and can optionally synchronize it with a researcher-selected folder. Every Action and the Assistant work without retrieval. When enabled and healthy, a deterministic lexical retriever may select a small relevant slice; retrieved records never become evidence about the imported experiment.
+Two source files define it:
 
-The Knowledge Base is retrieval-only at runtime: it has no API that writes records directly into Design. A retrieved record can influence an AI proposal, but only the normal locally validated, fill-only proposal workflow may change the Working Copy.
+- `science.json` — reusable scientific knowledge: materials, formulations, process examples, device stacks and mechanism/concept notes. Scientific records keep primary-literature provenance in `sources[]`.
+- `labflow.json` — short guides that help the Assistant explain LabFlow itself: Working Copy, Actions, providers, Design, reporting and the Knowledge Base model.
 
-`library.json` uses schema version `1` and currently contains 42 records: 34 reusable scientific `material`, `solution`, `process`, and `stack` records plus 8 `guide` records about LabFlow. Scientific records are transcribed from the primary literature cited in each record's `sources` array; guides are derived from the canonical repository documentation. At startup this JSON is merged automatically into the IndexedDB library, adding new bundled IDs while preserving personal records and same-ID local edits. Design filling retrieves only relevant scientific records and attaches every used record ID to the AI proposal before deterministic fill-only application; the Assistant may retrieve guides for LabFlow questions.
+`python tools/build_knowledge_bundle.py` combines both files into `assets/js/knowledge/library-bundle.js`. LabFlow loads that bundle at startup, so there is no folder picker, directory permission, external database, indexing job or retrieval switch.
 
-After changing the curated source, rebuild the browser bundle with `python tools/build_knowledge_bundle.py`.
+Runtime behavior is intentionally simple:
+
+1. an Action or the Assistant has a question;
+2. LabFlow performs a small deterministic local search;
+3. relevant hits, if any, are added as external context;
+4. if there is no useful hit, execution continues normally.
+
+Scientific Actions search only the `science` collection. The Assistant may search both collections and uses `labflow` guides for product/workflow questions. Retrieved scientific records never become evidence about the imported experiment merely because they matched a query.
+
+The Knowledge Base has no direct API that mutates Design. `design.infer` may cite retrieved record IDs in a proposal, but the normal Design validation and fill-only apply path remains the only way AI suggestions can enter the Working Copy. Exact model-only recipe quantities remain review-only.
+
+The Knowledge Base page can create/import/edit records. Those changes are small browser-local overrides stored in `localStorage`; bundled records remain the default and can be reset. JSON export remains available for portability.

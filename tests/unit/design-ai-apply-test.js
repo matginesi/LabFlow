@@ -80,9 +80,9 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
-  t['Design decision metric caps knowledge-only confidence and rewards sourced evidence']=function(){
-    const metric=LF.DesignDecisionMetric.calculate({solutions:[{confidence:.95,provenance_kind:'knowledge'}],devices:[{confidence:.9,provenance_kind:'evidence',evidence:'RAW metadata',process:{annealing:'100 C'},stack:[{confidence:.88,provenance_kind:'evidence',evidence:'source row'}]}]});
-    assert(metric.value===74,'evidence-weighted score should be deterministic');assert(metric.decisions===3,'solution, process and layer decisions counted');assert(metric.knowledgeOnly===1&&metric.evidenceBacked===2,'provenance counts retained');assert(metric.estimated===true,'score must be explicitly estimated');
+  t['Design decision metric averages only proposed fields without provenance caps']=function(){
+    const metric=LF.DesignDecisionMetric.calculate({solutions:[{name:'Ink',confidence:.95,provenance_kind:'model_inference'}],devices:[{confidence:.9,provenance_kind:'experiment',evidence:'RAW metadata',process:{annealing:'100 C'},stack:[{material:'SnO2',confidence:.88,provenance_kind:'experiment',evidence:'source row'}]}]});
+    assert(metric.value===91,'mean field confidence should be deterministic');assert(metric.decisions===3,'only proposed fields should be counted');assert(metric.modelInferred===1&&metric.experimentBacked===2,'simple source counts retained');assert(metric.estimated===true&&metric.method==='proposed_field_confidence_mean_v2','score must be explicit and explainable');
   };
 
   t['Design validation binds provider output to the selected canonical variant']=function(){
@@ -94,30 +94,66 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
-  t['Design validation rejects a successful-looking proposal that cannot fill anything']=function(){
+  t['Design validation accepts explicit unknowns without inventing a value']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
     const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
-    let error=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(err){error=err;}
-    assert(error&&error.code==='MODEL_OUTPUT_INVALID'&&error.isContract===true,'non-actionable proposal must fail the Action contract');
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});
+    assert(out.actionSuccess===true&&out.applicableFields.length===0&&out.unresolvedCount===1,'unknown-only output should complete successfully');
     LF.ExperimentModel=oldModel;
   };
 
-  t['Design validation rejects invented Knowledge Base references and untraceable quantities']=function(){
+  t['Design validation keeps reviewable suggestions but removes invented Knowledge Base references']=function(){
     const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
     LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
     LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:['kb_allowed']}};}};
-    const proposal={solutions:[{name:'Ink',role:'absorber precursor',solutes:'perovskite precursor family',concentration:'1.2 M',preparation:'stir 12 h',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},knowledge_refs:['kb_fake','kb_allowed'],provenance_kind:'knowledge',stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}]}],unknowns:[]};
+    const proposal={solutions:[{name:'Ink',role:'absorber precursor',solutes:'perovskite precursor family',concentration:'1.2 M',preparation:'stir 12 h',knowledge_refs:['kb_fake'],provenance_kind:'knowledge',confidence:.86}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},knowledge_refs:['kb_fake','kb_allowed'],provenance_kind:'knowledge',confidence:.84,stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',knowledge_refs:['kb_fake'],provenance_kind:'knowledge',confidence:.88}]}],unknowns:[]};
     const ctx={exp:{design:{devices:[],solutions:[]}},outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['solutions','coating','annealing','atmosphere','stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx),clean=ctx.outputs.infer;
     assert(clean.solutions[0].knowledge_refs.length===0,'invented solution record ID removed');
-    assert(clean.solutions[0].concentration===''&&clean.solutions[0].preparation==='','untraceable solution quantities removed');
-    assert(clean.solutions[0].role==='absorber precursor'&&clean.solutions[0].solutes==='perovskite precursor family','qualitative LLM fallback is retained');
-    assert(clean.solutions[0].confidence===.25&&/Model-knowledge fallback/.test(clean.solutions[0].reason),'unsourced LLM fallback is retained but confidence-capped');
+    assert(clean.solutions[0].concentration==='1.2 M'&&clean.solutions[0].preparation==='stir 12 h','model-only quantities remain visible for review');
+    assert(clean.solutions[0].role==='absorber precursor'&&clean.solutions[0].solutes==='perovskite precursor family','qualitative model inference is retained');
+    assert(clean.solutions[0].provenance_kind==='model_inference'&&clean.solutions[0].confidence===.76,'invalid KB reference should downgrade source and reduce confidence only slightly');
     assert(JSON.stringify(clean.devices[0].knowledge_refs)===JSON.stringify(['kb_allowed']),'retrieved device record retained');
     assert(clean.devices[0].process.annealing==='100 C','quantities backed by a retrieved device record retained');
-    assert(clean.devices[0].stack[0].knowledge_refs.length===0&&clean.devices[0].stack[0].thickness===''&&clean.devices[0].stack[0].process==='','untraceable layer quantities removed');
-    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.strippedQuantities===4&&out.knowledge.llmFallbackItems===2,'validation reports rejected references, stripped values and LLM fallbacks');
+    assert(clean.devices[0].stack[0].knowledge_refs.length===0&&clean.devices[0].stack[0].thickness==='30 nm'&&clean.devices[0].stack[0].process==='evaporate below 4e-6 torr','unsourced layer values remain visible for review');
+    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.reviewOnlyQuantities===4&&out.knowledge.modelOnlyItems===2,'validation reports rejected references and review-only quantities');
     LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
+  };
+
+  t['Design apply accepts high-confidence qualitative model inference but not unsourced exact quantities']=function(){
+    const proposal={solutions:[{name:'Ink',role:'absorber precursor',concentration:'1.2 M',knowledge_refs:[],provenance_kind:'model_inference',confidence:.86}],devices:[{sample_names:['A1'],solution_names:['Ink'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'N2'},knowledge_refs:[],provenance_kind:'model_inference',confidence:.86,stack:[{role:'electron transport layer',material:'C60',thickness:'30 nm',process:'evaporate 4e-6 torr',knowledge_refs:[],provenance_kind:'model_inference',confidence:.86}]}],unknowns:[]};
+    LF.DesignAnalysis.sanitizeProposal(proposal,[]);
+    const exp={design:{solutions:[],devices:[{id:'deviceA',name:'A',sampleNames:['A1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]},aiDesignProposal:proposal};
+    const out=LF.DesignAnalysis.applyAll(exp);
+    const device=exp.design.devices[0],solution=exp.design.solutions[0],layer=device.stack[0];
+    assert(device.process.atmosphere==='N2','chemical formula with a digit is qualitative and may be applied');
+    assert(device.process.coating===''&&device.process.annealing==='','unsourced exact process quantities remain review-only');
+    assert(solution&&solution.name==='Ink'&&!String(solution.concentration||''),'solution identity may apply but unsourced concentration may not');
+    assert(layer&&layer.material==='C60'&&!String(layer.thickness||'')&&!String(layer.process||''),'material formula may apply but unsourced thickness/process quantities may not');
+    assert(out.changed>0,'safe qualitative fields should still be applied');
+    LF.DesignAnalysis.applyOne(exp,'device',0,'process');
+    assert(device.process.coating==='spin 4000 rpm'&&device.process.annealing==='100 C','an explicit researcher Apply should accept preserved review suggestions');
+  };
+
+  t['Chemical formulas are not treated as quantities merely because they contain digits']=function(){
+    ['SnO2','C60','2PACz','4PACz','N2','FA0.85Cs0.15PbI3'].forEach(function(value){assert(!LF.DesignAnalysis.isQuantitative(value),value+' must remain a qualitative material identifier');});
+    ['4000 rpm','100 C','30 nm','4e-6 torr','25 min','1.2 M'].forEach(function(value){assert(LF.DesignAnalysis.isQuantitative(value),value+' should be recognized as an exact quantity');});
+  };
+
+  t['KB-backed numeric Design values may auto-apply when confidence is sufficient']=function(){
+    const proposal={solutions:[],devices:[{sample_names:['A1'],process:{annealing:'100 C'},knowledge_refs:['kb_anneal'],provenance_kind:'knowledge',confidence:.84,stack:[]}],unknowns:[]};
+    LF.DesignAnalysis.sanitizeProposal(proposal,['kb_anneal']);
+    const exp={design:{solutions:[],devices:[{id:'d1',sampleNames:['A1'],solutionIds:[],stack:[],process:{annealing:''}}]},aiDesignProposal:proposal},out=LF.DesignAnalysis.applyAll(exp);
+    assert(exp.design.devices[0].process.annealing==='100 C','supported numeric value should be applied');
+    assert(out.autoApplied===1&&out.review===0,'supported numeric value should count as one safe field');
+  };
+
+  t['Mixed Design proposal reports six applied, two review and two unresolved fields']=function(){
+    const proposal={solutions:[{name:'Ink',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference',confidence:.86}],devices:[{sample_names:['A1'],solution_names:['Ink'],process:{coating:'4000 rpm',annealing:'100 C',atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86,stack:[]}],unknowns:['thickness','annealing time']};
+    LF.DesignAnalysis.sanitizeProposal(proposal,[]);
+    const exp={design:{solutions:[],devices:[{id:'d1',sampleNames:['A1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]},aiDesignProposal:proposal},out=LF.DesignAnalysis.applyAll(exp);
+    assert(out.autoApplied===6&&out.review===2&&out.unresolved===2,'mixed proposal counts should remain field-level and independent');
+    assert(exp.design.devices[0].process.atmosphere==='N2'&&exp.design.devices[0].process.coating===''&&exp.design.devices[0].process.annealing==='','only the safe qualitative process value should apply');
   };
 
 };

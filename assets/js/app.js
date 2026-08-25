@@ -157,7 +157,7 @@
     const previousRoute=renderedRoute||S.state.route;
     try{captureScrollableState(main,previousRoute);}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-home'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
-    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Folder-backed reusable design library':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
+    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Scientific context and LabFlow help':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderWorkingCopyState();
     renderModelStatus();
@@ -342,7 +342,7 @@
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
         if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The internal Knowledge Base, optional folder sync, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The Knowledge Base, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
@@ -356,15 +356,10 @@
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         const knowledgeSelect=e.target.closest('[data-knowledge-select]');if(knowledgeSelect){S.state.knowledgeSelectedId=knowledgeSelect.dataset.knowledgeSelect;S.state.knowledgeCreating=false;render();return;}
-        if(e.target.closest('#knowledgeToggleRetrieval')){const current=LF.KnowledgeBase.status(),out=LF.KnowledgeBase.setEnabled(!current.enabled);render();LF.UI.toast(out.active?'Optional Knowledge retrieval enabled.':'Knowledge retrieval disabled. Actions and Assistant will continue without RAG.','info');return;}
-        if(e.target.closest('#knowledgeConnect')){const out=await LF.KnowledgeBase.connectDirectory();S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast(out.connected?'Folder sync enabled: '+out.folder+'/'+out.file+'.':'Folder permission was not granted; the internal Knowledge Base remains active.',out.connected?'success':'info');return;}
-        if(e.target.closest('#knowledgeChangeFolder')){const out=await LF.KnowledgeBase.connectDirectory({choose:true});S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast(out.connected?'Knowledge Base folder sync changed to '+out.folder+'.':'Folder sync was not changed; the internal Knowledge Base remains active.',out.connected?'success':'info');return;}
-        if(e.target.closest('#knowledgeRefresh')){const out=await LF.KnowledgeBase.refresh();render();LF.UI.toast('Knowledge Base refreshed · '+out.records+' record'+(out.records===1?'':'s')+'.','success');return;}
-        if(e.target.closest('#knowledgeDisconnect')){await LF.KnowledgeBase.disconnect();S.state.knowledgeCreating=false;render();LF.UI.toast('Folder sync stopped. The internal Knowledge Base and RAG remain active.','info');return;}
         if(e.target.closest('#knowledgeNew')){S.state.knowledgeCreating=true;S.state.knowledgeSelectedId=null;S.state.knowledgeDraftKind='material';render();return;}
         if(e.target.closest('#knowledgeImport')){const input=document.getElementById('knowledgeImportInput');if(input)input.click();return;}
-        if(e.target.closest('#knowledgeExport')){C.downloadBlob(C.textBlob(LF.KnowledgeBase.exportLibrary(),'application/json;charset=utf-8'),'labflow-design-knowledge-base.json');LF.UI.toast('Knowledge Base exported.','success');return;}
-        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id);if(record&&await LF.UI.confirmAction('Delete “'+record.name+'” from the Knowledge Base? Existing Design values previously applied from it are kept with their provenance.',{title:'Delete knowledge record',confirmLabel:'Delete record',danger:true})){await LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record deleted.','success');}return;}
+        if(e.target.closest('#knowledgeExport')){C.downloadBlob(C.textBlob(LF.KnowledgeBase.exportLibrary(),'application/json;charset=utf-8'),'labflow-knowledge-base.json');LF.UI.toast('Knowledge Base exported.','success');return;}
+        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id),origin=LF.KnowledgeBase.origin(id),label=origin.overridden?'Reset local edits for “'+(record&&record.name||'this record')+'”?':'Delete local record “'+(record&&record.name||'')+'”?';if(record&&await LF.UI.confirmAction(label,{title:origin.overridden?'Reset knowledge record':'Delete knowledge record',confirmLabel:origin.overridden?'Reset':'Delete',danger:!origin.overridden})){await LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast(origin.overridden?'Bundled knowledge restored.':'Local knowledge record deleted.','success');}return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
@@ -527,7 +522,7 @@
     document.addEventListener('submit',async function(e){
       if(e.target.id==='knowledgeEntryForm'){
         e.preventDefault();
-        try{const record=await LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved to the internal library.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
+        try{const record=await LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved as a local browser edit.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
         return;
       }
       if(e.target.id==='samplePatchForm'){
@@ -553,14 +548,14 @@
   async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
-      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);if(LF.KnowledgeBase&&LF.KnowledgeBase.initialize)await LF.KnowledgeBase.initialize();
+      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);if(LF.KnowledgeBase&&LF.KnowledgeBase.initialize)try{await LF.KnowledgeBase.initialize();}catch(error){Log.warn('knowledge.initialize-skipped',{error:error});}
       /* The current scientific Working Copy persists in IndexedDB. Reset is the
          explicit boundary that clears it; provider/key/theme remain independent. */
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
       if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
       else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
       S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
+      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

@@ -143,20 +143,20 @@ The projection is fill-only for existing Design records. Once the researcher edi
 
 If the archive contains measurements but no fabrication recipe, LabFlow preserves the experimental/sample structure and explicit unknown fields; absence of source Design evidence must never be represented as an empty or silently inferred experiment.
 
-## 8.1 Local Knowledge Base
+## 8.1 Knowledge Base
 
-The Knowledge Base is a separate browser-internal library with schema version `1`. At startup the bundled `knowledge-base/library.json` is automatically merged into the IndexedDB copy by stable record ID; bundled records add defaults, while stored same-ID edits and personal records override them:
+The Knowledge Base is separate from experiment state and uses schema version `1`. Its shipped source is intentionally split by purpose:
 
-- `records[]` with stable `id`, `kind`, `name`, `summary`, `tags`, primary `sources[]`, timestamps and kind-specific `data`;
-- supported kinds: `material`, `solution`, `process`, `stack`, `guide`;
-- stack layers keep role, material, thickness and process in physical order.
-- `guide` records contain LabFlow topic, guidance, typical steps and constraints, sourced from canonical project documentation; scientific Action Context Packs exclude this kind.
+- `knowledge-base/science.json` — sourced scientific `material`, `solution`, `process`, `stack` and `concept` records;
+- `knowledge-base/labflow.json` — `guide` records that explain LabFlow itself.
 
-It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase or rewrite it. The management page writes create/update/delete operations to a dedicated IndexedDB store. A separate browser preference controls whether retrieval may use these records; disabling it leaves the library intact and cannot block an Action. Import merges records by stable ID into the internal library; export serializes the complete versioned library as a backup. An optional directory handle may be remembered for `library.json` synchronization, but the records themselves are not stored in browser `localStorage`.
+`tools/build_knowledge_bundle.py` combines these files into the browser bundle. The bundled library is ready at startup: no directory permission, external database, indexing step or retrieval toggle exists. Resetting the experiment does not alter it because it is neither part of `LF.State.state.experiment` nor a Canonical Store domain.
 
-Records are retrieved, not synchronized into scientific state. While optional retrieval is enabled and healthy, a deterministic lexical ranker selects bounded records by experiment/Design terms, missing-field type, tags and source text. Retrieval returns stable IDs, scores, matched terms, record data and source metadata. The Assistant may access it through the read-only `knowledge.search` Tool and AI Action Context Packs may receive a small ranked slice. Disabled, empty or failed retrieval is omitted rather than treated as a missing dependency.
+The Knowledge Base page may create, import or edit records. Those changes are stored only as small browser-local overrides keyed by stable record ID. A same-ID override wins over the bundled record and can be reset; a new ID behaves as a custom local record. JSON import merges into those overrides and JSON export serializes the effective versioned library.
 
-For Design, retrieved records are external candidate knowledge and are never copied before inference. `design.infer` may use a record for a missing-field proposal and must preserve its ID in `knowledge_refs`. Exact recipe quantities are allowed only when copied from that identified record and remain `provenance_kind: knowledge` with confidence capped at 0.45. The researcher accepts the resulting AI proposal through the ordinary fill-only gate; ZIP/researcher-confirmed values remain authoritative.
+Lookup is deterministic and bounded. Query terms are matched against record names, tags, summaries, kind-specific data and source metadata. Scientific Action Context Packs search only the `science` collection and receive `knowledge_context` only when useful records exist. The Assistant may search both collections. A lookup miss or lookup failure simply means no additional context; it is never an Action failure.
+
+Retrieved scientific records are external candidate knowledge, not evidence about the imported experiment. `design.infer` may cite a supporting record in `knowledge_refs`. Model-only scientific suggestions have no fabricated record IDs and are confidence-capped. Exact model-only recipe quantities are kept visible for researcher review but are not automatically applied; qualitative identifiers such as `N2`, `SnO2`, `C60` or `2PACz` are not treated as quantitative settings merely because they contain digits. The ordinary fill-only Design apply gate remains the only mutation path.
 
 ## 9. Patches and provenance
 

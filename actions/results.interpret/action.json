@@ -6,7 +6,7 @@
   "title": "Interpret results",
   "short_title": "Interpret results",
   "purpose": "Explain deterministic results scientifically without recalculating or changing them.",
-  "strategy": "AI receives a compact Results Context Pack plus a small ranked Knowledge Base slice for labelled mechanisms and follow-up hypotheses. Literature never changes deterministic results.",
+  "strategy": "AI receives a compact Results Context Pack plus a small relevant Knowledge Base slice for labelled mechanisms and follow-up hypotheses. Literature never changes deterministic results.",
   "output": "text",
   "mutation_scope": "",
   "policies": [
@@ -38,12 +38,15 @@
   "requires": [],
   "input": {
     "context": "results",
-    "rag": {
-      "required": false,
-      "source": "knowledge_base",
-      "mode": "ranked",
+    "knowledge": {
       "limit": 6,
-      "kinds": ["material", "solution", "process", "stack"],
+      "kinds": [
+        "material",
+        "solution",
+        "process",
+        "stack",
+        "concept"
+      ],
       "query_hint": "performance hysteresis stability mechanism follow-up"
     }
   }

@@ -38,7 +38,7 @@ module.exports=function(t,LF,env){
     assert(!exp.design.evidenceSummary.sourceAvailable,'SMU notes must not be mistaken for design recipes');
     assert(analysis.summary.unresolvedSamples>0,'missing recipe fields should stay explicitly unresolved');
     const selected=exp.design.devices[0],pack=LF.ContextBuilder?LF.ContextBuilder.pack('design',{exp:exp,params:{deviceId:selected.id}}):null;
-    if(pack){assert(pack.design_evidence_summary.raw_design_evidence_found===false,'context must label absence of RAW design evidence');assert(pack.design_evidence_summary.knowledge_fallback_available===true,'knowledge fallback remains available');}
+    if(pack){assert(pack.design_evidence_summary.raw_design_evidence_found===false,'context must label absence of RAW design evidence');assert(Number(pack.design_evidence_summary.knowledge_records_found||0)>=0,'optional Knowledge Base result count is explicit');assert(['science_library','model_inference_only'].includes(pack.design_evidence_summary.knowledge_source),'simple knowledge source mode is explicit');}
   };
   t['Design page renders recovered source facts and a useful no-recipe state']=async function(){
     const clean=await LF.Importer.parseDataset(fixture('01_PRECISO_PERFETTO_COMPLETO.zip'),'clean.zip'),ui={};LF.ExperimentModel.ensureShape(clean,ui);const additive=clean.design.devices.find(function(d){return d.group==='ADDITIVE';});

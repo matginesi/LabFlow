@@ -5,7 +5,7 @@
   "role": "automatic",
   "title": "Enrich experiment brief",
   "short_title": "Experiment brief",
-  "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief using experiment facts and a small relevant Knowledge Base retrieval.",
+  "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief using experiment facts and a small relevant Knowledge Base lookup.",
   "strategy": "Facts first. Retrieved literature may support labelled hypotheses and recommended checks, but never becomes evidence about the experiment or changes source data and deterministic results.",
   "output": "json",
   "mutation_scope": "",
@@ -42,12 +42,15 @@
   "requires": [],
   "input": {
     "context": "brief",
-    "rag": {
-      "required": false,
-      "source": "knowledge_base",
-      "mode": "ranked",
+    "knowledge": {
       "limit": 6,
-      "kinds": ["material", "solution", "process", "stack"],
+      "kinds": [
+        "material",
+        "solution",
+        "process",
+        "stack",
+        "concept"
+      ],
       "query_hint": "objective variables comparison mechanism"
     }
   }

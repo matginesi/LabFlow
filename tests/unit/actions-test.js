@@ -259,5 +259,16 @@ module.exports=function(t,LF){
     assert(calls,1,'consumer ran once');
   };
 
+  t['AI retry classification skips permanent provider errors']=function(){
+    const step={type:'AI',max_retries:2};
+    assert(LF.ActionRunner.retryable(step,{status:401},0),false,'authentication is permanent');
+    assert(LF.ActionRunner.retryable(step,{status:400},0),false,'malformed request is permanent');
+    assert(LF.ActionRunner.retryable(step,{status:404},0),false,'unsupported model or endpoint is permanent');
+    assert(LF.ActionRunner.retryable(step,{status:503},0),true,'temporary server failure retries');
+    assert(LF.ActionRunner.retryable(step,{isNetwork:true},0),true,'transient network failure retries');
+    assert(LF.ActionRunner.retryable(step,{isContract:true},0),true,'bounded semantic correction retry remains available');
+    assert(LF.ActionRunner.retryable(step,{status:429},0),false,'transport owns identical-request rate-limit retry');
+  };
+
   return t;
 };

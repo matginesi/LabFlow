@@ -48,7 +48,7 @@ module.exports=function(t,LF){
     assert(env.messages[0].content==='Evidence-backed interpretation.','text Action result not preserved');
     assert(env.messages[0].actionTitle==='Writing help','Action title not attached');
     assert(env.messages[0].usage&&env.messages[0].usage.totalTokens===15,'Action token metadata not attached');
-    assert(assistantSource.includes("Action · '+m.actionTitle"),'Action source not visible in chat telemetry');
+    assert(assistantSource.includes("role:'system'")&&assistantSource.includes('eventTitle'),'Action source not visible as a compact system event');
   };
 
   t['Action totem receives live and final output throughput']=async function(){
@@ -121,7 +121,23 @@ module.exports=function(t,LF){
     const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
     assert(out.status==='done'&&out.designApplied.changed===2&&out.designApplied.mutations===3,'validated Design result must be applied before completion is reported and count real required gaps');
     assert(exp.design.devices[0].process.coating==='spin coating'&&exp.design.devices[0].solutionIds[0]==='sol-ai','Working Copy fields remained empty');
-    assert(env.finishes[0].message.includes('2 missing fields filled'),'totem must report actual required gaps filled');
+    assert(env.finishes[0].message.includes('2 filled automatically'),'totem must report actual required gaps filled');
+    LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
+  };
+
+  t['Review-only Design proposal completes without pretending to apply unsafe values']=async function(){
+    const oldDesignAnalysis=LF.DesignAnalysis,oldCanonicalStore=LF.CanonicalStore;
+    const env=loadUi(function(id,cb){
+      const proposal={targetDeviceId:cb.params.deviceId,solutions:[],devices:[{sample_names:['S1'],process:{annealing:'100 C'},stack:[]}],unknowns:[]};
+      LF.State.state.experiment.aiDesignProposal=proposal;LF.State.state.experiment.aiDesignProposals={d1:proposal};
+      return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true},requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}]};
+    LF.DesignAnalysis={applyAll:function(){return{changed:0,items:0};},build:function(){return{sourceRevision:0,samples:[]};}};LF.CanonicalStore={build:function(){}};
+    const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
+    assert(out.status==='done'&&out.designApplied.reviewOnly===true&&out.designApplied.changed===0,'review-only proposal should remain a successful Action');
+    assert(exp.design.devices[0].process.annealing==='','unsafe value must remain unapplied');
+    assert(env.finishes[0].message.includes('1 need review'),'totem must explain review-only completion');
     LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
   };
 

@@ -1,0 +1,368 @@
+{
+  "version": 1,
+  "collection": "labflow",
+  "records": [
+    {
+      "id": "kb_labflow_workflow_overview",
+      "kind": "guide",
+      "name": "LabFlow workflow and page map",
+      "summary": "Canonical overview of what LabFlow does and the fixed researcher workflow from ZIP upload to NOMAD export.",
+      "tags": [
+        "LabFlow",
+        "workflow",
+        "pages",
+        "upload",
+        "review",
+        "results",
+        "design",
+        "report",
+        "NOMAD",
+        "help"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Canonical product workflow and page responsibilities."
+        },
+        {
+          "title": "LabFlow proof-of-concept specification",
+          "url": "LABFLOW_POC_SPEC.md",
+          "doi": "",
+          "note": "Product scope and researcher-facing behavior."
+        }
+      ],
+      "data": {
+        "topic": "Product overview and navigation",
+        "content": "LabFlow is a local-first research workspace that turns an uploaded experimental ZIP into a reviewed Working Copy, deterministic analysis, editable Design, Report or Paper drafts, a change history, and a validated NOMAD export. The experiment entry point is always Upload & Review → Results → Design → Report → Changes → NOMAD. There is no project loader or hidden pre-import workflow.",
+        "steps": "1. Upload and review the ZIP. 2. Inspect deterministic Results. 3. Complete or edit Design. 4. Draft the Lab Report or Scientific Paper. 5. Review Changes. 6. Prepare and export NOMAD data.",
+        "notes": "The Assistant may explain or inspect current state through read-only tools, but it cannot mutate the Working Copy or run write Actions for the researcher."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_working_copy_save_export",
+      "kind": "guide",
+      "name": "LabFlow source, Working Copy, Save and Export",
+      "summary": "Explains the immutable uploaded ZIP, the single editable Working Copy, autosave, Save checkpoints, Reset session and durable export.",
+      "tags": [
+        "LabFlow",
+        "Working Copy",
+        "source ZIP",
+        "autosave",
+        "IndexedDB",
+        "Save",
+        "Export",
+        "Reset session",
+        "restore",
+        "data model"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow · Source and Working Copy",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Canonical lifecycle and save/export semantics."
+        },
+        {
+          "title": "LabFlow Data Model",
+          "url": "docs/specs/DATA_MODEL.md",
+          "doi": "",
+          "note": "Working Copy and persistence model."
+        }
+      ],
+      "data": {
+        "topic": "Data lifecycle and persistence",
+        "content": "The uploaded ZIP is immutable source evidence. LabFlow clones its bytes and preserves original paths, names and content. There is exactly one editable scientific state: the Working Copy at LF.State.state.experiment. The current Working Copy, drafts, chat and Action history are autosaved locally in IndexedDB. Provider keys and UI preferences persist separately.",
+        "steps": "Save creates an explicit checkpoint marker for the current revision. Export creates the durable Working Copy ZIP. Report, Paper and NOMAD are derived exports and do not overwrite the source ZIP. Reset session deliberately clears the persisted Working Copy and RAW snapshot.",
+        "notes": "Editing Design, applying corrections or changing other scientific fields must never mutate the original uploaded archive bytes."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_actions_assistant_knowledge",
+      "kind": "guide",
+      "name": "LabFlow Actions, Assistant and Knowledge Base",
+      "summary": "Explains bounded researcher Actions, the read-only Assistant, and the simple always-available Knowledge Base lookup.",
+      "tags": [
+        "LabFlow",
+        "Actions",
+        "Assistant",
+        "Knowledge Base",
+        "tool",
+        "retry",
+        "thinking",
+        "progress",
+        "MODEL_OUTPUT_INVALID"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Actions specification",
+          "url": "docs/specs/ACTIONS.md",
+          "doi": "",
+          "note": "Action catalog, runner, tool and Assistant contracts."
+        },
+        {
+          "title": "LabFlow Workflow · Assistant Chat",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Read-only tool selection, Knowledge Base lookup and fallback behavior."
+        }
+      ],
+      "data": {
+        "topic": "AI execution model and knowledge lookup",
+        "content": "An Action is a researcher-understandable goal executed through bounded checkpoints. The Assistant is separate and non-mutating: it can inspect allowlisted read-only tools and answer questions about the current experiment or LabFlow. The Knowledge Base is a small local library bundled with the app; there is no folder connection, external database or retrieval mode switch.",
+        "steps": "When an Action benefits from background knowledge, LabFlow searches the scientific library and passes only relevant records. The Assistant can search both scientific records and LabFlow help. If a search returns nothing useful, execution continues normally using experiment evidence and the model instructions.",
+        "notes": "Knowledge is context, never experiment evidence. Retrieved scientific records cannot overwrite deterministic Results or be presented as procedures actually performed. Provider failures and Knowledge Base misses are independent."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_import_review_results",
+      "kind": "guide",
+      "name": "LabFlow Upload, Review and deterministic Results",
+      "summary": "Explains deterministic import analysis, findings, safe corrections, ambiguity review and the Results page.",
+      "tags": [
+        "LabFlow",
+        "Upload",
+        "Review",
+        "Analyze dataset",
+        "findings",
+        "safe corrections",
+        "ambiguities",
+        "Results",
+        "JV",
+        "ranking",
+        "hysteresis"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow · Import and Review",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Import, Analysis Dossier and review flow."
+        },
+        {
+          "title": "LabFlow Architecture",
+          "url": "docs/ARCHITECTURE.md",
+          "doi": "",
+          "note": "Deterministic-first scientific boundary."
+        }
+      ],
+      "data": {
+        "topic": "Dataset analysis and Results",
+        "content": "Analyze dataset is automatic and deterministic. It builds the Canonical Store, deterministic Results, Analysis Dossier, safe fixes and semantic ambiguity classification. Review separates deterministic findings, mechanically safe corrections, AI ambiguity proposals and unresolved items requiring researcher judgment. Technical parse, encoding or missing-file warnings are not automatically AI ambiguity tasks.",
+        "steps": "Results are computed independently from Design and preserve overview, REF/non-REF rankings, measurements, warnings, individual and overlay JV curves, group comparison and backing tables. AI interpretation is read-only prose layered over those deterministic values.",
+        "notes": "AI must not recalculate metrics, silently change rankings or use review-blocked measurements as authoritative best results."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_design_inference",
+      "kind": "guide",
+      "name": "LabFlow Design editing and AI completion",
+      "summary": "Explains deterministic Design projection, missing fields, evidence, confidence and fill-only AI proposals.",
+      "tags": [
+        "LabFlow",
+        "Design Experiment",
+        "Complete design",
+        "Infer missing design",
+        "missing fields",
+        "confidence",
+        "accuracy",
+        "proposal",
+        "evidence",
+        "fill-only"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow · Design",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Design source projection and inference workflow."
+        },
+        {
+          "title": "LabFlow Actions · design.infer",
+          "url": "docs/specs/ACTIONS.md",
+          "doi": "",
+          "note": "Design proposal and validation contract."
+        }
+      ],
+      "data": {
+        "topic": "Experiment Design",
+        "content": "Design is useful before AI: explicit fabrication evidence from imported files is projected into editable devices, solutions, processes and stacks, while absent values remain visibly unknown. Researcher-confirmed values are authoritative. Complete design with AI operates on one selected variant and only its missing fields.",
+        "steps": "The proposal uses experiment evidence first, relevant scientific Knowledge Base records when the local search finds them, and cautious model inference only for remaining gaps. Retrieved record IDs are retained as provenance. Unsupported exact model-only quantities stay visible for review instead of being silently applied.",
+        "notes": "Knowledge records are background suggestions, not proof about the experiment. Existing values are never silently regenerated or overwritten. Model-only suggestions are deliberately low-confidence."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_report_paper",
+      "kind": "guide",
+      "name": "LabFlow Lab Report and Scientific Paper",
+      "summary": "Explains document drafting, editing, figures and PDF/DOCX export from the single Markdown source of truth.",
+      "tags": [
+        "LabFlow",
+        "Report",
+        "Paper",
+        "Draft document",
+        "AI writing help",
+        "Markdown",
+        "PDF",
+        "DOCX",
+        "figures",
+        "export"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow · Report",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Document lifecycle, drafting and export behavior."
+        },
+        {
+          "title": "LabFlow Actions · report.generate and report.improve",
+          "url": "docs/specs/ACTIONS.md",
+          "doi": "",
+          "note": "Bounded drafting/editing contracts."
+        }
+      ],
+      "data": {
+        "topic": "Scientific documents",
+        "content": "A fresh import starts with empty Lab Report and Scientific Paper documents. Drafting is an explicit researcher action. The current Markdown editor is the single textual source of truth; Generate report and Improve report write into it in bounded sections using the shared Experiment Brief, deterministic Results, Design provenance, findings and optional relevant literature context.",
+        "steps": "Choose Lab Report or Scientific Paper, run Draft document or a focused writing aid, review/edit Markdown, select figures in the document-scoped figure picker, then export the current text to PDF or DOCX.",
+        "notes": "Export never regenerates different narrative text. Report and Paper figure selections are independent. Retrieved literature cannot be presented as a method actually performed in the imported experiment."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_nomad_changes",
+      "kind": "guide",
+      "name": "LabFlow Changes and NOMAD export",
+      "summary": "Explains provenance history, deterministic NOMAD mapping, readiness and staging invalidation.",
+      "tags": [
+        "LabFlow",
+        "Changes",
+        "provenance",
+        "NOMAD",
+        "mapping",
+        "readiness",
+        "staging",
+        "validation",
+        "export"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Workflow · Changes and NOMAD",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "Provenance and NOMAD workflow."
+        },
+        {
+          "title": "LabFlow Data Model · NOMAD",
+          "url": "docs/specs/DATA_MODEL.md",
+          "doi": "",
+          "note": "Mapping plan and invalidation model."
+        }
+      ],
+      "data": {
+        "topic": "Provenance and NOMAD",
+        "content": "Changes exposes traceable Working Copy patches and document edits. NOMAD preparation is deterministic-first: one Canonical-to-NOMAD mapping plan powers the page, validation, generated entry and exported metadata. Required missing mappings block readiness; optional missing values remain visible.",
+        "steps": "Review the mapping plan and missing fields, correct authoritative Working Copy data where appropriate, run Prepare NOMAD export, inspect deterministic validation, then export only when required mappings are satisfied.",
+        "notes": "AI never declares NOMAD readiness. Relevant scientific mutations invalidate stale staging so an old export cannot appear current."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_provider_settings_diagnostics",
+      "kind": "guide",
+      "name": "LabFlow provider settings, model detection and diagnostics",
+      "summary": "Explains provider/API-key configuration, shared Detect, model capability handling, logs and common AI failure categories.",
+      "tags": [
+        "LabFlow",
+        "Settings",
+        "provider",
+        "API key",
+        "Detect",
+        "models",
+        "NVIDIA NIM",
+        "Z.AI",
+        "LM Studio",
+        "Ollama",
+        "context",
+        "output limit",
+        "diagnostics",
+        "logs"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow AI Providers specification",
+          "url": "docs/specs/AI_PROVIDERS.md",
+          "doi": "",
+          "note": "Provider discovery, capability and transport behavior."
+        },
+        {
+          "title": "LabFlow Workflow · Settings and diagnostics",
+          "url": "docs/WORKFLOW.md",
+          "doi": "",
+          "note": "User-facing provider and failure behavior."
+        }
+      ],
+      "data": {
+        "topic": "AI provider configuration and troubleshooting",
+        "content": "Provider settings keep connection testing and capability detection separate. Test connection sends one small request to the configured endpoint. Detect models/capabilities is an explicit diagnostic action and must not silently switch the selected model. Local providers do not inherit cloud API keys.",
+        "steps": "Select a provider, set its endpoint/API key when required, choose a model or run Detect explicitly, save, then run the connection test. For Action failures inspect the totem and Logs for checkpoint, provider/model, finish reason, request ID, context estimate, output limit, rate-limit code and retry status.",
+        "notes": "A successful connection probe only means the configured endpoint can answer a minimal request. Capability metadata is useful optimization data, not a prerequisite for connectivity."
+      },
+      "createdAt": "2026-08-25T00:00:00.000Z",
+      "updatedAt": "2026-08-25T00:00:00.000Z",
+      "collection": "labflow"
+    },
+    {
+      "id": "kb_labflow_knowledge_simple_model",
+      "kind": "guide",
+      "collection": "labflow",
+      "name": "Knowledge Base mental model",
+      "summary": "The two-library model: LabFlow help for the Assistant and scientific knowledge for experiment reasoning.",
+      "tags": [
+        "labflow",
+        "knowledge base",
+        "assistant",
+        "science",
+        "context"
+      ],
+      "sources": [
+        {
+          "title": "LabFlow Knowledge Base",
+          "url": "knowledge-base/README.md",
+          "doi": "",
+          "note": "Canonical description of the bundled science/help library and local override model."
+        }
+      ],
+      "data": {
+        "topic": "Knowledge Base structure",
+        "content": "LabFlow keeps two kinds of reusable knowledge separate. LabFlow help explains the application, pages, workflow and diagnostics. Scientific knowledge contains materials, formulations, processes, stacks and scientific concepts that may help interpret or design experiments. Both are bundled JSON data, searched locally and always available.",
+        "steps": "Assistant questions about LabFlow may retrieve LabFlow help. Scientific Actions search only scientific records. A useful match is added to the Context Pack with its record ID and sources; no match simply means no extra context. User-created or edited records are lightweight browser-local overrides.",
+        "notes": "The Knowledge Base does not store the experiment, does not calculate Results, does not decide NOMAD readiness and does not become evidence merely because it was retrieved."
+      },
+      "createdAt": "2026-08-25T12:00:00.000Z",
+      "updatedAt": "2026-08-25T12:00:00.000Z"
+    }
+  ],
+  "updatedAt": "2026-08-25T12:00:00.000Z"
+}

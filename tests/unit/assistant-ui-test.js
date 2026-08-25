@@ -2,72 +2,36 @@
 const fs=require('fs');
 const path=require('path');
 
-function assert(actual, expected, label) {
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));
-}
+function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
 
 module.exports=function(t){
   const root=path.resolve(__dirname,'../..');
   const js=fs.readFileSync(path.join(root,'assets/js/ai/assistant.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const context=fs.readFileSync(path.join(root,'assets/js/ai/context.js'),'utf8');
 
-  t['Assistant hides raw streaming transport counters and exposes semantic status']=function(){
-    assert(/Waiting for provider|Thinking|Writing response/.test(js),true,'semantic streaming states');
-    assert(/chunks\s*·|events\s*·|bytes\s*·/.test(js),false,'no raw transport counters in chat UI');
-  };
-  t['Assistant completed responses expose reasoning disclosure and useful telemetry']=function(){
-    assert(js.includes('ttftMs'),true,'TTFT tracked');
-    assert(js.includes('tokensPerSecond'),true,'throughput tracked');
-    assert(js.includes('chat-thinking'),true,'thinking disclosure');
-    assert(js.includes('finishReason'),true,'finish reason tracked');
-    assert(js.includes('aggregateRunMeta'),true,'complete turn telemetry aggregated');
-    assert(js.includes('requestCount'),true,'provider call count tracked');
-    assert(js.includes('responseBytes'),true,'response payload tracked');
-    assert(js.includes('requestLogId'),true,'log correlation tracked');
-    assert(js.includes('chat-response-details'),true,'response facts disclosure rendered');
-  };
-  t['Assistant visual contract uses compact flat rows']=function(){
-    assert(css.includes('.assistant-panel .chat-row'),true,'message rows styled');
-    assert(css.includes('.chat-thinking'),true,'thinking styled');
-    assert(css.includes('.chat-metrics'),true,'metrics styled');
-    assert(css.includes('.chat-response-details'),true,'response details styled');
-  };
-
-  t['Assistant spinner uses a defined animation and live elapsed clock']=function(){
-    assert(css.includes('animation:chat-spin .8s linear infinite'),true,'spinner references defined keyframes');
-    assert(css.includes('@keyframes chat-spin'),true,'spinner keyframes exist');
-    assert(js.includes('setInterval(refreshPendingClock,250)'),true,'pending elapsed time refreshes while waiting');
-    assert(js.includes('clearInterval(active.clock)'),true,'pending timer is cleaned up');
-  };
-
-  t['Assistant empty composer stays one line and uses a short placeholder']=function(){
-    assert(js.includes("input.style.height='30px'"),true,'empty composer fixed height');
-    assert(js.includes('Ask LabFlow…'),true,'short placeholder');
-    assert(css.includes(':placeholder-shown'),true,'placeholder cannot grow composer');
-  };
-
-  t['Assistant user messages shrink to content and keep copy control out of normal flow']=function(){
-    assert(css.includes('width:fit-content!important'),true,'user bubble fit content');
-    assert(js.includes('chat-user-tools'),true,'user copy control overlay');
-  };
-
-  t['Assistant prompt hides implementation tokens and answers suggestions directly']=function(){
-    const prompt=fs.readFileSync(path.join(root,'actions/assistant.chat/prompt.md'),'utf8');
-    const actions=fs.readFileSync(path.join(root,'assets/js/ai/actions.js'),'utf8');
-    const definition=JSON.parse(fs.readFileSync(path.join(root,'actions/assistant.chat/action.json'),'utf8'));
-    assert(prompt.includes('Never emit opaque internal placeholder/protection markers'),true,'no protocol marker rule');
-    assert(prompt.includes('paper title'),true,'direct suggestion rule');
-    assert(prompt.includes('same language as the researcher'),true,'language follows researcher');
-    assert(actions.includes('blank or placeholder document field is not sufficient evidence to stop'),true,'planner does not stop at placeholder');
-    assert(prompt.includes('do not omit supporting data'),true,'final answer retains supporting evidence');
-    assert(actions.includes('do not stop after a generic experiment summary'),true,'planner retrieves enough distinct evidence');
-    assert(definition.steps[0].agent.max_rounds,6,'bounded retrieval has enough evidence rounds');
-    assert(definition.steps[0].target_output_tokens,2400,'answer target supports substantive evidence');
-  };
-
-  t['Sidebar AI model status uses a two-row copy layout']=function(){
-    assert(css.includes('.sidebar-status-copy'),true,'status copy styled');
-    assert(css.includes('grid-template-columns:6px minmax(0,1fr)'),true,'status marker and copy grid');
-  };
+  t['01 one request creates exactly one durable Assistant response']=function(){assert((js.match(/role:'assistant',content:'',state:'requesting'/g)||[]).length,1,'single pending message creation');assert(js.includes("push(exp,{role:'user',content:text},false)"),true,'user and Assistant form one turn');};
+  t['02 spinner is present in the initial requesting state']=function(){assert(js.includes('pending?transientHtml(m)'),true,'requesting state renders transient');assert(js.includes('chat-spinner'),true,'spinner markup exists');};
+  t['03 first useful content hides the spinner']=function(){assert(js.includes("if(content){run.message.state='streaming'"),true,'content changes state');assert(js.includes("status.hidden=true;status.innerHTML=''"),true,'content removes transient spinner');};
+  t['04 completion always closes transient state']=function(){assert(js.includes("state:'complete'"),true,'completion state');assert(js.includes("if(message.state==='requesting'||message.state==='streaming')message.state="),true,'finally closes transient state');};
+  t['05 error reuses message and has no spinner']=function(){assert(js.includes("state:'error'"),true,'error state');assert(js.includes('data-retry-message'),true,'same message exposes retry');};
+  t['06 abort becomes a clean cancelled message']=function(){assert(js.includes("out.status==='aborted'"),true,'Action abort handled');assert(js.includes("state:'cancelled'"),true,'cancelled state');assert(js.includes('LF.ActionRunner.cancel'),true,'existing cancellation API used');};
+  t['07 thinking never creates a second bubble']=function(){assert(js.includes('chat-thinking'),false,'legacy thinking bubble removed');assert(js.includes("if(reasoning)run.message.reasoning=reasoning"),true,'reasoning stays on same message');};
+  t['08 reasoning and telemetry use closed Details']=function(){assert(js.includes('<details class="chat-details"><summary>Details</summary>'),true,'details has no open attribute');assert(js.includes('Reasoning details'),true,'reasoning is secondary');};
+  t['09 streamed text updates the current message body']=function(){assert(js.includes('body.innerHTML=answerHtml(run.message)'),true,'targeted body update');assert(js.includes('messageNode(run.message.id)'),true,'message identity retained');};
+  t['10 chunks do not render or append response containers']=function(){const progress=js.slice(js.indexOf('function syncProgress'),js.indexOf('function syncFinal'));assert(progress.includes('render('),false,'no full render per progress event');assert(progress.includes('createElement'),false,'no response node per chunk');};
+  t['11 normal responses have no vertical scroll container']=function(){assert(/\.chat-body\s*\{[^}]*overflow-y/s.test(css),false,'no body vertical overflow');assert(/\.chat-message(?:\.ai)?\s*\{[^}]*max-height/s.test(css),false,'no response max height');};
+  t['12 thinking has no nested scroll container']=function(){assert(css.includes('.chat-thinking'),false,'legacy scrolling thinking component removed');assert(/\.chat-transient\s*\{[^}]*overflow/s.test(css),false,'transient does not scroll');};
+  t['13 conversation is the sole ordinary vertical scroll area']=function(){assert(/\.chat-log\s*\{[^}]*overflow-y:auto/s.test(css),true,'conversation scrolls');assert(/\.chat-details-body\s*\{[^}]*overflow-y/s.test(css),false,'details grows naturally');};
+  t['14 concurrent send cannot leave a second spinner']=function(){assert(js.includes("if(!text||active||runnerBusy()"),true,'active turn blocks another send');assert(js.includes('if(active){cancel();return;}'),true,'Send becomes Stop while active');};
+  t['15 Action results are compact system events']=function(){assert(js.includes("role:'system'"),true,'Action uses system role');assert(js.includes('chat-event'),true,'compact event markup');assert(css.includes('.chat-event {'),true,'event styling exists');};
+  t['16 page context is shown once in the header']=function(){assert(html.includes('assistantContextPayload'),true,'header disclosure retained');assert(js.includes('updateHeader(has)'),true,'context refreshes');assert(js.includes('assistant-context-card'),false,'duplicate conversation context removed');};
+  t['17 Knowledge Base and context contracts stay connected']=function(){assert(context.includes("LF.KnowledgeBase.search"),true,'Knowledge Base lookup preserved');assert(context.includes("profile==='assistant'"),true,'Assistant context pack preserved');assert(context.includes("m.role==='user'||m.role==='assistant'"),true,'events excluded from memory');};
+  t['18 Markdown continues to render both stream and final answer']=function(){assert(js.includes('return clean?C.markdown(clean)'),true,'answer Markdown');assert(js.includes('body.innerHTML=answerHtml(run.message)'),true,'stream Markdown');};
+  t['19 Enter sends while Shift Enter remains multiline']=function(){assert(js.includes("e.key==='Enter'&&!e.shiftKey"),true,'keyboard contract');assert(js.includes('e.preventDefault();go();'),true,'Enter submits');};
+  t['20 spinner cleanup is structural rather than cosmetic']=function(){assert(js.includes('finally{'),true,'finally cleanup');assert(js.includes('clearInterval(run.clock)'),true,'clock cleanup');assert(js.includes('setTimeout'),false,'no cosmetic spinner timeout');};
+  t['Assistant retains useful telemetry behind Details']=function(){['ttftMs','usage','finishReason','requestCount','responseBytes','requestLogId'].forEach(function(key){assert(js.includes(key),true,key+' retained');});};
+  t['Assistant composer remains compact and provider prompt contract stays intact']=function(){const prompt=fs.readFileSync(path.join(root,'actions/assistant.chat/prompt.md'),'utf8');assert(js.includes("input.style.height='30px'"),true,'compact composer');assert(css.includes(':placeholder-shown'),true,'one-line placeholder');assert(prompt.includes('same language as the researcher'),true,'language contract');};
   return t;
 };

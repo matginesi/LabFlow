@@ -72,9 +72,9 @@ Includes only:
 - a `design_evidence_summary` that states whether RAW design/fabrication evidence was actually found;
 - when RAW design evidence is absent, an optional domain-knowledge note explicitly marked as non-experimental suggestion basis.
 
-For the perovskite POC, `prompts/knowledge/perovskite-design.md` is the bounded fallback used by `design.infer`. It is **not** experiment evidence and must never be presented as something imported from the ZIP. Knowledge-only candidates must retain `provenance_kind: "knowledge"`, a low confidence (at most `0.45`), and a reason explaining that they are domain hypotheses rather than RAW facts. Quantitative recipe details that are not supported by RAW evidence remain unknown.
+LabFlow may add relevant records from the bundled scientific Knowledge Base to a Design Context Pack. Those records are **external scientific context**, never evidence that a procedure was performed in the imported experiment. Knowledge-backed candidates retain their record IDs in `knowledge_refs`; model-only inference remains explicitly reviewable. Unsupported quantitative recipe details are never auto-applied.
 
-A measurement-only dataset therefore remains useful even when fabrication metadata is absent: the UI still shows experimental groups/samples, coverage and explicit missing fields. `design.infer` may produce conservative qualitative knowledge-only candidates when supported by the bounded knowledge note, but it must not return an effectively empty proposal merely because the ZIP lacks a recipe, and it must not invent unsupported quantitative details.
+A measurement-only dataset therefore remains useful even when fabrication metadata is absent: the UI still shows experimental groups/samples, coverage and explicit missing fields. `design.infer` may produce conservative qualitative candidates from relevant scientific context or model inference, but an empty Knowledge Base search is not an error and must never block the Action.
 
 ### Results
 

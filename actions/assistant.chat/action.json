@@ -46,7 +46,7 @@
   ],
   "category": "assistant",
   "role": "assistant",
-  "strategy": "Read-only tool-aware assistant. The model inspects the current Canonical Data Model and, only while optional Knowledge retrieval is enabled and healthy, may retrieve relevant internal-library records through an explicitly allowed read tool. It answers normally without that tool when retrieval is disabled or unavailable. It cannot mutate the Working Copy or invoke write Actions.",
+  "strategy": "Read-only tool-aware assistant. It inspects the current Canonical Data Model and may search the always-available local Knowledge Base when the question benefits from LabFlow help or scientific background. A knowledge miss never blocks the answer. The Assistant cannot mutate the Working Copy or invoke write Actions.",
   "mutation_scope": "",
   "visibility": "internal",
   "version": 1,

@@ -27,7 +27,7 @@ At most four concrete follow-up checks or experiments that follow from the obser
 - Never recompute, average or rank values independently from LabFlow.
 - Never use review-blocked measurements as best results.
 - Never invent missing values, fabrication context or literature facts.
-- `local_knowledge_base` is optional. When supplied, use only relevant records for clearly labelled mechanisms, hypotheses or follow-up checks. When absent, empty or unavailable, complete the interpretation from deterministic Results without RAG. Knowledge records cannot change deterministic observations; cite the contributing record ID/DOI when used.
+- `knowledge_context` may contain relevant scientific records. Use them only for clearly labelled mechanisms, hypotheses or follow-up checks. If it is absent, complete the interpretation from deterministic Results normally. Knowledge records cannot change deterministic observations; cite the contributing record ID/DOI when used.
 - Distinguish deterministic observation from scientific interpretation.
 - Mention material uncertainty when group size or evidence is weak.
 - Prefer exact values from the Context Pack over vague adjectives.

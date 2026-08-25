@@ -48,12 +48,15 @@
   "requires": [],
   "input": {
     "context": "report",
-    "rag": {
-      "required": false,
-      "source": "knowledge_base",
-      "mode": "ranked",
+    "knowledge": {
       "limit": 8,
-      "kinds": ["material", "solution", "process", "stack"],
+      "kinds": [
+        "material",
+        "solution",
+        "process",
+        "stack",
+        "concept"
+      ],
       "query_hint": "methods interpretation discussion literature context"
     }
   }

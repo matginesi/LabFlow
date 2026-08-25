@@ -130,14 +130,20 @@ module.exports = function (t, LF) {
     assert(AI.applyThinkingMode(on,{thinkingModes:modes},'on').applied,'on','on applied');assert(on.thinking,{type:'enabled'},'on payload');
   };
 
-  t['connection probe respects models that require reasoning']=function(){
+  t['connection probe is minimal and independent of model capability detection']=function(){
     const provider={connectionTestMaxTokens:128};
-    const optional=AI.connectionProbePolicy(provider,{reasoningAllowedOptions:['off','low','on']});
-    assert(optional.thinkingMode,'off','disable reasoning when model permits it');assert(optional.maxTokens,128,'small no-thinking probe');
-    const required=AI.connectionProbePolicy(provider,{reasoningAllowedOptions:['on']});
-    assert(required.thinkingMode,'auto','do not force unsupported off mode');assert(required.maxTokens,2048,'reasoning model gets final-answer budget');assert(required.reasoningRequired,true,'required reasoning marked');
-    const unknown=AI.connectionProbePolicy({id:'custom',connectionTestMaxTokens:128},null);
-    assert(unknown.thinkingMode,'auto','unknown capability gets a portable payload');assert(unknown.maxTokens,2048,'unknown model can still reach final text');assert(unknown.reasoningUnknown,true,'unknown state is explicit');
+    const optional=AI.connectionProbePolicy({connectionTestMaxTokens:128,thinkingModes:{off:{reasoning_effort:'none'}}});
+    const unknown=AI.connectionProbePolicy({id:'custom',connectionTestMaxTokens:128});
+    assert(optional.thinkingMode,'off','connection probe disables supported thinking');
+    assert(unknown.thinkingMode,'auto','unsupported provider receives no invented control');
+    [optional,unknown].forEach(function(policy){assert(policy.maxTokens,16,'connection probe clamps to tiny budget');});
+  };
+
+  t['normal capability resolution never probes provider metadata implicitly']=async function(){
+    const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('unexpected metadata request');};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://models.example/v1',model:'manual-model'};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'custom',endpoint:'https://models.example/v1',model:'manual-model'});assert(calls,0,'no GET/list-models call');assert(cap.reasoningStatus,'unknown','conservative capability fallback');assert(cap.model,'manual-model','configured model preserved');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
 
@@ -202,9 +208,9 @@ module.exports = function (t, LF) {
   };
 
   t['Custom provider capability probe accepts explicit OpenAI-compatible model metadata'] = async function () {
-    const oldFetch=global.fetch;global.fetch=async function(){return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'custom-model',max_output_tokens:24576,context_window:131072}]});}};};
+    const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'custom-model',max_output_tokens:24576,context_window:131072}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://models.example/v1',model:'custom-model'};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'custom',endpoint:'https://models.example/v1',model:'custom-model',force:true});assert(cap.maxOutputTokens,24576,'custom output metadata');assert(cap.contextWindow,131072,'custom context metadata');assert(cap.exactOutput,true,'custom output exact');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'custom',endpoint:'https://models.example/v1',model:'custom-model',force:true});assert(cap.maxOutputTokens,24576,'custom output metadata');assert(cap.contextWindow,131072,'custom context metadata');assert(cap.exactOutput,true,'custom output exact');const cached=await AI.resolveModelCapabilities({provider:'custom',endpoint:'https://models.example/v1',model:'custom-model'});assert(calls,1,'Detect metadata reused without another request');assert(cached.maxOutputTokens,24576,'detected metadata remains available to Actions');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -215,7 +221,7 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
-    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(!!sent.messages[0].content,true,'connection test content');assert(sent.max_tokens,256,'reasoning-capable probe budget');assert(sent.reasoning_effort,'none','LM Studio reasoning disabled');assert(sent.chat_template_kwargs.enable_thinking,false,'LM Studio thinking template disabled');}
+    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(result.httpRequests,1,'one HTTP request');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(sent.messages[0].content,'Reply OK','connection test content');assert(sent.max_tokens,16,'tiny probe budget');assert(sent.reasoning_effort,'none','connection probe disables reasoning');assert(sent.chat_template_kwargs.enable_thinking,false,'connection probe disables template thinking');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -323,16 +329,15 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
-  t['connection test uses the normal rate-limit-aware transport for Z.AI'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location,oldSetTimeout=global.setTimeout;let calls=0;
+  t['connection test reports Z.AI rate limiting immediately without retry or pacing'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenBody=null,progress=[];
     global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.setTimeout=function(fn,ms){return oldSetTimeout(fn,Math.min(Number(ms)||0,2));};
-    global.fetch=async function(){calls++;if(calls===1)return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'0':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'probe-ok',model:'glm-4.7-flash',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
+    global.fetch=async function(url,opts){calls++;seenBody=JSON.parse(opts.body);return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'15':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};};
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:45000,rateLimit:{retries:1,delaysMs:[1],maxDelayMs:10,minIntervalMs:0,freeFlashMinIntervalMs:0}}};
-    try{const out=await AI.testConnection();assert(out.ok,true,'probe succeeds');assert(calls,2,'probe retries through transport');assert(out.rateLimitRetries,1,'probe exposes retry count');assert(out.elapsedMs>=out.requestElapsedMs,true,'total timing includes successful request');assert(out.finishReason,'stop','probe exposes finish reason');}
-    finally{global.fetch=oldFetch;global.setTimeout=oldSetTimeout;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500}}};
+    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(out.rateLimitRetries,0,'no retries');assert(progress.some(function(p){return p.transportState==='provider_pacing'||p.transportState==='rate_limit_wait';}),false,'no pacing or backoff progress');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['transport retries the identical request once after Z.AI 1305 and then succeeds'] = async function () {

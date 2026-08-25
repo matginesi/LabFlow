@@ -59,12 +59,16 @@
             "minimum": 0,
             "maximum": 1
           },
+          "field_confidence": {
+            "type": "object",
+            "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+          },
           "provenance_kind": {
             "type": "string",
             "enum": [
-              "evidence",
+              "experiment",
               "knowledge",
-              "mixed"
+              "model_inference"
             ]
           },
           "reason": {
@@ -159,12 +163,16 @@
                   "minimum": 0,
                   "maximum": 1
                 },
+                "field_confidence": {
+                  "type": "object",
+                  "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+                },
                 "provenance_kind": {
                   "type": "string",
                   "enum": [
-                    "evidence",
+                    "experiment",
                     "knowledge",
-                    "mixed"
+                    "model_inference"
                   ]
                 },
                 "reason": {
@@ -187,12 +195,16 @@
             "minimum": 0,
             "maximum": 1
           },
+          "field_confidence": {
+            "type": "object",
+            "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+          },
           "provenance_kind": {
             "type": "string",
             "enum": [
-              "evidence",
+              "experiment",
               "knowledge",
-              "mixed"
+              "model_inference"
             ]
           },
           "reason": {

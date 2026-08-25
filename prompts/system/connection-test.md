@@ -6,4 +6,4 @@ group: System
 kind: utility
 output: text
 ---
-Reply only with `OK`. Do not explain or reason. If the model supports the Qwen thinking switch, use `/no_think` for this response.
+Reply only with OK.

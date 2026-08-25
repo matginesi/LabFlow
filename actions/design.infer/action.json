@@ -5,8 +5,8 @@
   "role": "researcher",
   "title": "Complete design with AI",
   "short_title": "Complete design",
-  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first, retrieved Knowledge Base records second and a conservative qualitative LLM fallback when retrieval is empty.",
-  "strategy": "One bounded request for one selected experiment. When optional Knowledge retrieval is enabled and healthy, LabFlow ranks relevant internal-library records automatically. When retrieval is disabled, unavailable or irrelevant, the model proposes low-confidence qualitative candidates without unsupported quantities. Known Working Copy values are preserved and every used knowledge record ID remains attached to the proposal.",
+  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first, relevant scientific Knowledge Base records when found and cautious model inference for remaining gaps.",
+  "strategy": "One bounded request for one selected experiment. LabFlow searches the bundled scientific library automatically and passes only useful matches. If nothing relevant is found, the model may propose low-confidence qualitative candidates without unsupported exact quantities. Known Working Copy values are preserved and every used knowledge record ID remains attached to the proposal.",
   "output": "json",
   "mutation_scope": "",
   "policies": [
@@ -54,12 +54,15 @@
   "requires": [],
   "input": {
     "context": "design",
-    "rag": {
-      "required": false,
-      "source": "knowledge_base",
-      "mode": "ranked",
+    "knowledge": {
       "limit": 12,
-      "kinds": ["material", "solution", "process", "stack"],
+      "kinds": [
+        "material",
+        "solution",
+        "process",
+        "stack",
+        "concept"
+      ],
       "query_hint": "missing formulation process stack layer material"
     }
   }

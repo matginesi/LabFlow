@@ -20,7 +20,7 @@
       </div>
       <div class="nav-label">Workspace</div>
       <button class="nav-link nav-button" type="button" data-route="experiment-home"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Experiment</strong><small>RAW to NOMAD</small></span></button>
-      <button class="nav-link nav-button" type="button" data-route="knowledge-base"><span class="nav-glyph" data-icon="notebook-text" aria-hidden="true"></span><span class="nav-copy"><strong>Knowledge Base</strong><small>Reusable Design records</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="knowledge-base"><span class="nav-glyph" data-icon="notebook-text" aria-hidden="true"></span><span class="nav-copy"><strong>Knowledge Base</strong><small>Science &amp; LabFlow help</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="settings"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Actions</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="logs"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="documentation"><span class="nav-glyph" data-icon="notebook-text" aria-hidden="true"></span><span class="nav-copy"><strong>Documentation</strong><small>Guides &amp; reference</small></span></button>
@@ -40,8 +40,9 @@
     </section>
 
     <aside class="assistant-panel" id="assistantPanel" aria-label="AI Assistant">
-      <header class="assistant-head"><div><strong>Assistant</strong><span id="assistantContext">Current page</span></div><div class="spacer"></div><button class="assistant-close" type="button" id="assistantClose" aria-label="Close assistant" title="Close assistant"><span data-icon="x" aria-hidden="true"></span></button></header>
+      <header class="assistant-head"><div class="assistant-head-copy"><strong>Assistant</strong><span id="assistantContext">Current page</span></div><div class="spacer"></div><details class="assistant-head-context"><summary>Context</summary><pre id="assistantContextPayload"></pre></details><button class="assistant-close" type="button" id="assistantClose" aria-label="Close assistant" title="Close assistant"><span data-icon="x" aria-hidden="true"></span></button></header>
       <div class="chat-log" id="chatLog"></div>
+      <button class="chat-jump-latest" id="chatJumpLatest" type="button" hidden>↓ New response</button>
       <div class="chat-compose" id="chatCompose">
         <div class="chat-commandbar">
           <textarea id="chatInput" rows="1" aria-label="Message" placeholder="Ask LabFlow…"></textarea>

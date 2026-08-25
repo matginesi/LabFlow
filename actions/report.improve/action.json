@@ -6,7 +6,7 @@
   "title": "AI writing help",
   "short_title": "Writing help",
   "purpose": "Improve a selected document section or, for common actions, revise the current document in bounded blocks without changing scientific source data.",
-  "strategy": "LabFlow selects the relevant Markdown section(s), supplies the shared evidence pack and ranked Knowledge Base context, then merges bounded replacement blocks. External literature remains distinct from performed methods.",
+  "strategy": "LabFlow selects the relevant Markdown section(s), supplies the shared evidence pack and relevant Knowledge Base context, then merges bounded replacement blocks. External literature remains distinct from performed methods.",
   "output": "text",
   "mutation_scope": "report",
   "policies": [
@@ -48,12 +48,15 @@
   "requires": [],
   "input": {
     "context": "report",
-    "rag": {
-      "required": false,
-      "source": "knowledge_base",
-      "mode": "ranked",
+    "knowledge": {
       "limit": 8,
-      "kinds": ["material", "solution", "process", "stack"],
+      "kinds": [
+        "material",
+        "solution",
+        "process",
+        "stack",
+        "concept"
+      ],
       "query_hint": "methods interpretation discussion literature context"
     }
   }
