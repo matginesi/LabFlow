@@ -156,4 +156,68 @@ module.exports=function(t,LF){
     assert(exp.design.devices[0].process.atmosphere==='N2'&&exp.design.devices[0].process.coating===''&&exp.design.devices[0].process.annealing==='','only the safe qualitative process value should apply');
   };
 
+  t['Manual Design variant exposes direct gaps without requiring imported sample identity']=function(){
+    const exp={sync:{revision:4},designAnalysis:{sourceRevision:4,samples:[]},design:{solutions:[],devices:[{id:'manual1',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},status:'user_confirmed'}]}};
+    const out=LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'manual1'}});
+    assert(out.manual_variant===true,'new user-created variant should be recognized as manual');
+    assert(JSON.stringify(out.unknown_fields.sort())===JSON.stringify(['annealing','atmosphere','coating','solutions','stack'].sort()),'direct Design gaps should be derived from the selected variant itself');
+  };
+
+  t['Manual Design variant validation does not require canonical sample names']=function(){
+    const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    const proposal={summary:'candidate',solutions:[],devices:[{name:'Suggested design',sample_names:['MODEL-GUESS'],process:{atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:['stack']};
+    const ctx={outputs:{collect:{device_id:'manual1',sample_names:[],manual_variant:true,unknown_fields:['atmosphere','stack']},infer:proposal},lastResult:proposal};
+    const out=LF.ActionSteps['design.validate-coverage'](ctx);
+    assert(out.actionSuccess===true&&out.manualVariant===true,'manual variant should validate successfully');
+    assert(ctx.outputs.infer.devices[0].sample_names.length===0,'provider-guessed sample identity must be removed for a manual variant');
+    LF.ExperimentModel=oldModel;
+  };
+
+  t['AI completion is deterministically applied to the selected manual variant']=function(){
+    const proposal={targetDeviceId:'manual2',solutions:[],devices:[{name:'AI renamed candidate',sample_names:[],process:{atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:[]};
+    LF.DesignAnalysis.sanitizeProposal(proposal,[]);
+    const exp={design:{solutions:[],devices:[{id:'manual1',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{atmosphere:''},status:'user_confirmed'},{id:'manual2',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{atmosphere:''},status:'user_confirmed'}]},aiDesignProposal:proposal};
+    const out=LF.DesignAnalysis.applyAll(exp);
+    assert(out.changed>0,'safe qualitative completion should apply');
+    assert(exp.design.devices[0].process.atmosphere===''&&exp.design.devices[1].process.atmosphere==='N2','only the targetDeviceId variant should receive the completion');
+  };
+
+
+  t['Batch Design fill validates and stores independent proposals by exact experiment ID']=function(){
+    const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
+    LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:[]}};}};
+    const exp={sync:{revision:7},designAnalysis:{sourceRevision:7,samples:[]},design:{solutions:[],devices:[
+      {id:'manualA',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}},
+      {id:'manualB',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}
+    ]}};
+    const collect=LF.ActionSteps['design.collect-batch']({exp:exp,params:{deviceIds:['manualA','manualB']}});
+    assert(collect.count===2,'both incomplete experiments should enter one batch');
+    const raw={summary:'batch',proposals:[
+      {target_device_id:'manualA',summary:'A',solutions:[],device:{sample_names:['WRONG-A'],process:{atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86},unknowns:['stack']},
+      {target_device_id:'manualB',summary:'B',solutions:[],device:{sample_names:['WRONG-B'],process:{atmosphere:'Ar'},provenance_kind:'model_inference',confidence:.86},unknowns:['stack']}
+    ]};
+    const ctx={exp:exp,params:{deviceIds:['manualA','manualB']},outputs:{collect:collect,infer:raw},lastResult:raw,sourceRevision:7};
+    const validated=LF.ActionSteps['design.validate-batch'](ctx);
+    assert(validated.validated===2,'both provider rows should validate');
+    assert(ctx.outputs.infer.proposals[0].proposal.devices[0].sample_names.length===0,'manual experiment A must not inherit guessed sample names');
+    assert(ctx.outputs.infer.proposals[1].proposal.devices[0].sample_names.length===0,'manual experiment B must not inherit guessed sample names');
+    const stored=LF.ActionSteps['design.store-batch-proposals'](ctx);
+    assert(stored.stored===2,'both proposals should be stored');
+    assert(exp.aiDesignProposals.manualA.targetDeviceId==='manualA','A proposal bound to exact experiment ID');
+    assert(exp.aiDesignProposals.manualB.targetDeviceId==='manualB','B proposal bound to exact experiment ID');
+    assert(exp.aiDesignProposals.manualA.devices[0].process.atmosphere==='N2','A keeps its own suggestion');
+    assert(exp.aiDesignProposals.manualB.devices[0].process.atmosphere==='Ar','B keeps its own suggestion');
+    LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
+  };
+
+  t['Batch Design collect skips complete experiments instead of spending an AI slot']=function(){
+    const exp={sync:{revision:2},designAnalysis:{sourceRevision:2,samples:[]},design:{solutions:[{id:'s1',name:'Ink'}],devices:[
+      {id:'done',sampleNames:[],solutionIds:['s1'],stack:[{material:'ITO'}],process:{coating:'spin',annealing:'100 C',atmosphere:'N2'}},
+      {id:'todo',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}
+    ]}};
+    const out=LF.ActionSteps['design.collect-batch']({exp:exp,params:{deviceIds:['done','todo']}});
+    assert(out.count===1&&out.device_ids[0]==='todo','only incomplete experiment should be sent to the batch model request');
+  };
+
 };

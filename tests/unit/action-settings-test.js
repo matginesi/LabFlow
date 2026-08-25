@@ -15,7 +15,8 @@ module.exports=function(t,LF){
     assert(ids.includes('report.generate'),'report Action missing');
     assert(ids.includes('analysis.summarize'),'internal deterministic summary missing from registry');
     assert(ids.includes('analysis.enrich'),'shared experiment brief enrichment missing from registry');
-    assert(ids.length===11,'expected all 11 Actions');
+    assert(ids.includes('design.infer-batch'),'batch Design Action missing from registry');
+    assert(ids.length===12,'expected all 12 Actions');
   };
   t['AI Actions declare bounded output targets and automatic enrichment is fail-fast']=function(){
     const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
@@ -26,11 +27,23 @@ module.exports=function(t,LF){
     assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
   };
 
+  t['Assistant uses a lightweight bounded request by default']=function(){
+    const step=LF.ActionRegistry.action('assistant.chat').steps[0];
+    assert(step.thinking==='off','Assistant thinking must be off by default');
+    assert(step.max_output_tokens===2048,'Assistant output ceiling must stay compact');
+    assert(step.target_output_tokens===700,'Assistant target should suit normal chat');
+    assert(step.deadline_ms===90000,'Assistant cannot remain provider-blocked indefinitely');
+  };
+
   t['Design inference treats Knowledge Base hits as optional context without capping model confidence']=function(){
     const prompt=LF.ActionRegistry.prompt('design.infer');
-    assert(prompt.includes('relevant `knowledge_context` records, when present'),'Design prompt makes Knowledge Base context optional');
+    assert(prompt.includes('Use supplied `knowledge_context` only when relevant'),'Design prompt makes Knowledge Base context optional');
     assert(prompt.includes('A Knowledge Base miss is normal'),'empty retrieval must not block Design');
-    assert(prompt.includes('do not lower it merely because no Knowledge Base record was found'),'KB absence must not cap model confidence');
+    assert(prompt.includes('not citation strength'),'KB absence must not cap model confidence');
+    const step=LF.ActionRegistry.action('design.infer').steps.find(function(item){return item.id==='infer';});
+    assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
+    assert(step.max_output_tokens===2048&&step.target_output_tokens===800,'Design output budget should stay compact');
+    assert(step.deadline_ms===90000&&step.max_retries===0,'Design must be one bounded fast request');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
@@ -51,6 +64,8 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
     assert(LF.AIProviders.zai.modelSelect===false,'Z.AI uses the exact configured model instead of a remote catalogue');
+    assert(LF.AIProviders.ollama.modelSelect===true,'Ollama Detect exposes discovered local models');
+    assert(LF.AIProviders.lmstudio.modelSelect===true,'LM Studio Detect exposes discovered local models');
     assert(LF.AIProviders.zai.skipModelCatalogue===true,'Z.AI catalogue probing is intentionally disabled');
     assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves the configured model');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
@@ -58,6 +73,7 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
     assert(LF.AIProviders.zai.rateLimit.freeFlashMinIntervalMs===0,'healthy Z.AI requests have no fixed pacing tax');
     assert(LF.AIProviders.zai.rateLimit.retries===3,'heavy Z.AI Actions keep bounded transport retries');
+    assert(LF.AIProviders.zai.requestDeadlineMs===180000,'Z.AI has a defensive provider-level request deadline');
     assert(LF.AIProviders.zai.rateLimit.adaptiveStepMs>0&&LF.AIProviders.zai.rateLimit.adaptiveMaxIntervalMs>=LF.AIProviders.zai.rateLimit.adaptiveStepMs,'Z.AI learns temporary spacing only after rate limits');
   };
 
@@ -135,7 +151,7 @@ module.exports=function(t,LF){
   };
   t['Actions manager exposes each AI step thinking policy']=function(){
     actionSettingsState('lab','report.generate');const report=LF.SettingsPage.render();assert(report.indexOf('thinking off')>=0,'report drafting thinking policy visible');
-    actionSettingsState('lab','design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking on')>=0,'Design inference thinking policy visible');
+    actionSettingsState('lab','design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking off')>=0,'Design inference thinking policy visible');
   };
 
   t['Report Actions expose a document-kind select that drives data-action-kind']=function(){

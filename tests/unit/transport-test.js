@@ -45,6 +45,16 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
+  t['SSE DONE terminates immediately even when provider keeps the HTTP stream open'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let streamCancelled=false,producerClosed=false,closeTimer=null;
+    global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.fetch=async function(){const body=new ReadableStream({start:function(controller){controller.enqueue(encoder.encode('data: {\"id\":\"done-test\",\"model\":\"glm-4.7-flash\",\"choices\":[{\"delta\":{\"content\":\"ready\"}}]}\n\ndata: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n'));closeTimer=setTimeout(function(){producerClosed=true;try{controller.close();}catch(_){ }},500);},cancel:function(){streamCancelled=true;if(closeTimer)clearTimeout(closeTimer);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'done'}],stream:true,maxTokens:64,hardTimeoutMs:5000}),result=await AI.send(spec,{label:'done-test'});assert(result.content,'ready','content returned at DONE');assert(streamCancelled,true,'reader cancelled after terminal marker');assert(producerClosed,false,'did not wait for server-side socket close');}
+    finally{if(closeTimer)clearTimeout(closeTimer);global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['local endpoint detection covers loopback and RFC1918 addresses'] = function () {
     assert(AI.isLocalAddress('http://127.0.0.1:1234/v1/chat/completions'), true, 'loopback');
     assert(AI.isLocalAddress('http://localhost:1234/v1/chat/completions'), true, 'localhost');
@@ -93,6 +103,14 @@ module.exports = function (t, LF) {
     assert(cap.maxOutputTokens,32768,'nested output limit');
     assert(cap.contextWindow,131072,'context limit');
     assert(cap.exactOutput,true,'exact output capability');
+  };
+
+  t['provider default deadline prevents unbounded requests when an Action omits one'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:90000,streaming:true};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,requestDeadlineMs:180000}};
+    const spec=AI.buildRequest({messages:[{role:'user',content:'bounded'}],stream:true,maxTokens:64});
+    assert(spec.hardTimeoutMs,180000,'provider safety deadline');
+    delete LF.Storage;delete LF.AIProviders;
   };
 
   t['buildRequest preserves an absolute Action deadline independently of inactivity timeout'] = function () {
@@ -231,6 +249,24 @@ module.exports = function (t, LF) {
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false}};
     try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/v1/models','models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'model ids');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Ollama model discovery uses native tags and returns installed model names'] = async function () {
+    const oldFetch=global.fetch;let seen='';
+    global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{name:'qwen3:8b'},{model:'gemma3:4b'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen3:8b'};},getApiKey:function(){return'';}};
+    LF.AIProviders={ollama:{keyRequired:false}};
+    try{const result=await AI.listModels('ollama','http://127.0.0.1:11434/v1');assert(seen,'http://127.0.0.1:11434/api/tags','native Ollama tags URL');assert(result.models,['qwen3:8b','gemma3:4b'],'installed Ollama models');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['LM Studio model discovery falls back to native catalogue and accepts model keys'] = async function () {
+    const oldFetch=global.fetch;const seen=[];
+    global.fetch=async function(url){seen.push(url);if(url==='http://127.0.0.1:1234/v1/models')return{ok:false,status:404,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({error:{message:'not found'}});}};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'local/qwen3-8b'},{key:'local/gemma-3-4b'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local/qwen3-8b'};},getApiKey:function(){return'';}};
+    LF.AIProviders={lmstudio:{keyRequired:false}};
+    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,['http://127.0.0.1:1234/v1/models','http://127.0.0.1:1234/api/v1/models'],'OpenAI endpoint then native LM Studio fallback');assert(result.models,['local/qwen3-8b','local/gemma-3-4b'],'native LM Studio model keys');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 

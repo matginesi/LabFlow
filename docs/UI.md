@@ -31,8 +31,8 @@ Settings → Actions uses one two-pane catalog/inspector layout on desktop and s
 
 - Experiment Design is researcher-first and source-first: explicit RAW fabrication notes are projected into formulations, process and stack before AI; manual edits remain available without a provider and survive normal re-rendering.
 - The status overview must show source coverage and distinguish `Source design found` from `No recipe in source`; measurement-only archives still show their sample/group structure instead of an empty Design.
-- `Complete missing with AI` sends only the currently selected experiment and its exact unresolved fields. It is disabled when the required source-backed Design is already complete.
-- A compact variant coverage board is the primary Design navigator: green = complete, amber = complete but AI-assisted, AI accent = proposal awaiting review, warning = missing required fields. `Complete all missing with AI` processes only incomplete variants without an existing proposal, strictly one at a time, and retains one reviewable proposal per variant.
+- `Complete selected with AI` sends only the currently selected variant and its exact unresolved fields. It is disabled when that variant is already complete.
+- A compact variant board is the primary Design navigator: select one variant for focused completion, or use **Fill all experiments** to process incomplete variants in bounded batches of up to eight per request. Complete/review-pending variants are skipped, Stop is always available during AI work, safe fill-only suggestions apply immediately, and only uncertain suggestions remain for review.
 - AI proposal review is secondary progressive disclosure above the editable working tables.
 - Provider output in the global totem updates during meaningful streamed text/reasoning chunks; there is no separate Action/provider-note block.
 - Status badges are atomic one-line labels on desktop and truncate instead of wrapping on narrow screens.

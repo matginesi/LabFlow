@@ -190,10 +190,7 @@
     return c.toDataURL('image/png');
   }
 
-  function makeCurveDataUrl(exp) {
-    const bestCompact = (LF.Analysis.analysisOf(exp) || {}).bestBySample[0];
-    if (!bestCompact) return null;
-    const m = LF.Analysis.measurementsOf(exp).find(function (x) { return x.id === bestCompact.id; });
+  function makeMeasurementCurveDataUrl(exp,m,title) {
     if (!m || !m.curve || (!(m.curve.fw || []).length && !(m.curve.rv || []).length)) return null;
     const factor = LF.Analysis.settingsOf(exp);
     const c = document.createElement('canvas'); c.width = 920; c.height = 420; const ctx = c.getContext('2d');
@@ -207,9 +204,30 @@
     ctx.strokeStyle = '#d9e0e7'; for (let i = 0; i <= 5; i++) { const y = pad.t + i * H / 5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(c.width - pad.r, y); ctx.stroke(); }
     function line(arr, color) { ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.beginPath(); arr.forEach(function (p, i) { const x = X(p.x), y = Y(p.y / factor); if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y); }); ctx.stroke(); }
     line(m.curve.fw || [], '#1967d2'); line(m.curve.rv || [], '#df3f3f');
-    ctx.fillStyle = '#16202a'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('Best eligible JV curve — ' + m.sample, pad.l, 26);
+    ctx.fillStyle = '#16202a'; ctx.font = 'bold 16px sans-serif'; ctx.fillText(title || ('JV curve — ' + (m.sample || m.id || 'measurement')), pad.l, 26);
     ctx.fillStyle = '#62707d'; ctx.font = '12px sans-serif'; ctx.fillText('Voltage (V)', c.width / 2 - 28, c.height - 16); ctx.save(); ctx.translate(18, c.height / 2 + 40); ctx.rotate(-Math.PI / 2); ctx.fillText('Current density (mA/cm²)', 0, 0); ctx.restore();
     ctx.fillStyle = '#1967d2'; ctx.fillRect(c.width - 190, 20, 18, 3); ctx.fillStyle = '#16202a'; ctx.fillText('Forward (FW)', c.width - 165, 25); ctx.fillStyle = '#df3f3f'; ctx.fillRect(c.width - 92, 20, 18, 3); ctx.fillStyle = '#16202a'; ctx.fillText('Reverse', c.width - 68, 25);
+    return c.toDataURL('image/png');
+  }
+  function makeCurveDataUrl(exp) {
+    const bestCompact = (LF.Analysis.analysisOf(exp) || {}).bestBySample[0];
+    if (!bestCompact) return null;
+    const m = LF.Analysis.measurementsOf(exp).find(function (x) { return x.id === bestCompact.id; });
+    return makeMeasurementCurveDataUrl(exp,m,m ? ('Best eligible JV curve — '+(m.sample||m.id)) : 'Best eligible JV curve');
+  }
+  function makeOverlayCurveDataUrl(exp,measurements,title) {
+    const rows=(measurements||[]).filter(function(m){return m&&m.curve&&((m.curve.fw||[]).length||(m.curve.rv||[]).length);}).slice(0,24);
+    if(!rows.length)return null;
+    const factor=LF.Analysis.settingsOf(exp),all=[];
+    rows.forEach(function(m){[].concat(m.curve.fw||[],m.curve.rv||[]).forEach(function(p){if(Number.isFinite(Number(p.x))&&Number.isFinite(Number(p.y)))all.push({x:Number(p.x),y:Number(p.y)/factor});});});
+    if(!all.length)return null;
+    const c=document.createElement('canvas');c.width=920;c.height=430;const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);
+    let xmin=Math.min.apply(null,all.map(function(p){return p.x;})),xmax=Math.max.apply(null,all.map(function(p){return p.x;})),ymin=Math.min.apply(null,all.map(function(p){return p.y;})),ymax=Math.max.apply(null,all.map(function(p){return p.y;}));if(xmax===xmin)xmax=xmin+1;if(ymax===ymin)ymax=ymin+1;
+    const pad={l:72,r:32,t:48,b:56},W=c.width-pad.l-pad.r,H=c.height-pad.t-pad.b,X=function(x){return pad.l+(x-xmin)/(xmax-xmin)*W;},Y=function(y){return pad.t+H-(y-ymin)/(ymax-ymin)*H;};
+    ctx.strokeStyle='#d9e0e7';for(let i=0;i<=5;i++){const y=pad.t+i*H/5;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(c.width-pad.r,y);ctx.stroke();}
+    const palette=['#1967d2','#df3f3f','#2a8c6f','#8c63b8','#c58b2a','#4f7f9c','#a35b82','#63763c'];
+    rows.forEach(function(m,i){const arr=(m.curve.rv&&m.curve.rv.length)?m.curve.rv:(m.curve.fw||[]);ctx.strokeStyle=palette[i%palette.length];ctx.globalAlpha=.72;ctx.lineWidth=1.6;ctx.beginPath();arr.forEach(function(p,j){const x=X(Number(p.x)),y=Y(Number(p.y)/factor);if(!j)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();});ctx.globalAlpha=1;
+    ctx.fillStyle='#16202a';ctx.font='bold 16px sans-serif';ctx.fillText(title||'JV overlay',pad.l,26);ctx.fillStyle='#62707d';ctx.font='12px sans-serif';ctx.fillText('Voltage (V)',c.width/2-28,c.height-16);ctx.save();ctx.translate(18,c.height/2+40);ctx.rotate(-Math.PI/2);ctx.fillText('Current density (mA/cm²)',0,0);ctx.restore();ctx.fillText(rows.length+' curves',c.width-90,26);
     return c.toDataURL('image/png');
   }
 
@@ -342,33 +360,43 @@
   }
 
   const figureCache = (window.LF_reportFigureCache = window.LF_reportFigureCache || {});
+  const figureCatalogCache = (window.LF_reportFigureCatalogCache = window.LF_reportFigureCatalogCache || {});
+  const figureRasterCache = (window.LF_reportFigureRasterCache = window.LF_reportFigureRasterCache || {});
   function figureFingerprint(exp, sel, includeCharts) { return String(exp.id) + ':' + Number(exp.sync && exp.sync.revision) + ':' + (sel ? JSON.stringify(sel) : '') + ':' + String(!!includeCharts); }
+  function figureCatalogFingerprint(exp){return String(exp.id)+':'+Number(exp.sync&&exp.sync.revision)+':catalog';}
+  function figureDefaultSelected(fig){return !fig||fig.defaultSelected!==false;}
+  function figureSelected(exp,key,kind,fig){const sel=figureSelection(exp,kind);return Object.prototype.hasOwnProperty.call(sel,key)?sel[key]!==false:figureDefaultSelected(fig);}
+  function materializeFigure(exp,fig){
+    if(!fig)return null;const key=figureCatalogFingerprint(exp)+':'+fig.key;if(figureRasterCache[key])return figureRasterCache[key];
+    let dataUrl='';try{dataUrl=typeof fig.render==='function'?fig.render():fig.dataUrl||'';}catch(err){if(Log)Log.warn('figure.render-failed',{key:fig.key,error:err});}
+    if(!dataUrl)return null;const out=Object.assign({},fig,{dataUrl:dataUrl});delete out.render;figureRasterCache[key]=out;return out;
+  }
+  function allFigureCatalog(exp){
+    const cacheKey=figureCatalogFingerprint(exp);if(figureCatalogCache[cacheKey])return figureCatalogCache[cacheKey];
+    const model=reportModelData(exp),chart=model.chartData||{},figures=[];
+    function add(fig){if(fig)figures.push(fig);}
+    add({key:'pceDistribution',group:'Overview',label:'PCE distribution',caption:'PCE distribution · eligible RV measurements',widthPx:620,heightPx:230,defaultSelected:true,render:function(){return makeHistogramDataUrl(chart.efficiencies,'PCE distribution','Efficiency (%)');}});
+    add({key:'hysteresisDistribution',group:'Overview',label:'Hysteresis distribution',caption:'Absolute hysteresis distribution',widthPx:620,heightPx:230,defaultSelected:true,render:function(){return makeHistogramDataUrl(chart.hysteresis,'Hysteresis distribution','|ΔPCE| (%)');}});
+    add({key:'bestJvmCurve',group:'Overview',label:'Best JV curve',caption:'Best eligible JV curve',widthPx:620,heightPx:285,defaultSelected:true,render:function(){return makeCurveDataUrl(exp);}});
+    add({key:'efficiencyHysteresis',group:'Overview',label:'PCE vs hysteresis',caption:'Efficiency versus hysteresis for eligible measurements',widthPx:620,heightPx:265,defaultSelected:true,render:function(){return makeScatterDataUrl((chart.scatter||[]).map(function(p){return{cell:p.cell,x:p.eff!=null?p.eff:p.x,y:p.hysteresisPct!=null?p.hysteresisPct:p.y};}),'Efficiency vs hysteresis','Best PCE (%)','Hysteresis (%)',chart.thresholds&&chart.thresholds.hysteresisPct);}});
+    add({key:'topEfficiency',group:'Overview',label:'Top efficiency',caption:'Top eligible samples by RV PCE',widthPx:620,heightPx:Math.max(230,90+Math.min(10,model.top10.length)*24),defaultSelected:true,render:function(){return makeBarDataUrl(model.top10.slice(0,10).map(function(x){return{label:x.cell,value:x.effRV,suffix:'%'};}),'Top eligible efficiency','RV PCE (%)');}});
+    add({key:'groupComparison',group:'Overview',label:'Group comparison',caption:'Group median efficiency comparison',widthPx:620,heightPx:Math.max(230,90+Math.min(12,model.groupStatistics.length)*24),defaultSelected:true,render:function(){return makeBarDataUrl(model.groupStatistics.slice(0,12).map(function(g){return{label:g.name||'Ungrouped',value:g.medianEff,suffix:'%'};}),'Group comparison','Median PCE (%)');}});
+    const measurements=LF.Analysis.measurementsOf(exp).filter(function(m){return m&&m.curve&&((m.curve.fw||[]).length||(m.curve.rv||[]).length);});
+    const groups={};measurements.forEach(function(m){const g=String(m.group||'Ungrouped');(groups[g]=groups[g]||[]).push(m);});
+    Object.keys(groups).sort().forEach(function(group){const rows=groups[group];if(rows.length<2)return;add({key:'groupOverlay:'+group,group:'Group overlays',label:group+' overlay',caption:'JV overlay · '+group+' · '+rows.length+' curves',widthPx:620,heightPx:285,defaultSelected:false,search:[group,'overlay','JV'].join(' '),render:function(){return makeOverlayCurveDataUrl(exp,rows,'JV overlay — '+group);}});});
+    measurements.forEach(function(m){const label=String(m.sample||m.id||'Measurement'),meta=[m.group,m.file].filter(Boolean).join(' · '),key='jv:'+String(m.id);add({key:key,group:'Individual JV curves',label:label,caption:'JV curve · '+label+(meta?' · '+meta:''),widthPx:620,heightPx:285,defaultSelected:false,search:[label,m.group,m.file,m.id,'JV'].filter(Boolean).join(' '),render:function(){return makeMeasurementCurveDataUrl(exp,m,'JV curve — '+label);}});});
+    figureCatalogCache[cacheKey]=figures;return figures;
+  }
 
-  /* Memoized on-demand rasterizer. Preview and DOCX/PDF export share the exact
-     same PNG dataUrls (cache keyed by experiment + revision + selection). */
+  /* Preview/export only rasterize selected figures. The picker may request the
+     full catalog to preview every available dataset-specific figure. */
   function reportFigurePreviews(exp) {
-    const r = ensureReport(exp), sel = figureSelection(exp), includeCharts = figuresEnabled(exp);
-    const key = figureFingerprint(exp, sel, includeCharts);
-    if (figureCache[key]) return figureCache[key];
-    const model = reportModelData(exp);
-    const chart = model.chartData || {};
-    const figures = [];
-    if (includeCharts) {
-      if (sel.pceDistribution !== false) { const p1 = makeHistogramDataUrl(chart.efficiencies, 'PCE distribution', 'Efficiency (%)'); if (p1) figures.push({ key: 'pceDistribution', caption: 'PCE distribution · eligible RV measurements', dataUrl: p1, widthPx: 620, heightPx: 230 }); }
-      if (sel.hysteresisDistribution !== false) { const p2 = makeHistogramDataUrl(chart.hysteresis, 'Hysteresis distribution', '|ΔPCE| (%)'); if (p2) figures.push({ key: 'hysteresisDistribution', caption: 'Absolute hysteresis distribution', dataUrl: p2, widthPx: 620, heightPx: 230 }); }
-      if (sel.bestJvmCurve !== false) { const p3 = makeCurveDataUrl(exp); if (p3) figures.push({ key: 'bestJvmCurve', caption: 'Best eligible JV curve', dataUrl: p3, widthPx: 620, heightPx: 285 }); }
-      if (sel.efficiencyHysteresis !== false) { const ps = makeScatterDataUrl((chart.scatter || []).map(function (p) { return { cell: p.cell, x: p.eff != null ? p.eff : p.x, y: p.hysteresisPct != null ? p.hysteresisPct : p.y }; }), 'Efficiency vs hysteresis', 'Best PCE (%)', 'Hysteresis (%)', chart.thresholds && chart.thresholds.hysteresisPct); if (ps) figures.push({ key: 'efficiencyHysteresis', caption: 'Efficiency versus hysteresis for eligible measurements', dataUrl: ps, widthPx: 620, heightPx: 265 }); }
-      if (sel.topEfficiency !== false) { const p4 = makeBarDataUrl(model.top10.slice(0, 10).map(function (x) { return { label: x.cell, value: x.effRV, suffix: '%' }; }), 'Top eligible efficiency', 'RV PCE (%)'); if (p4) figures.push({ key: 'topEfficiency', caption: 'Top eligible samples by RV PCE', dataUrl: p4, widthPx: 620, heightPx: Math.max(230, 90 + Math.min(10, model.top10.length) * 24) }); }
-      if (sel.groupComparison !== false) { const p5 = makeBarDataUrl(model.groupStatistics.slice(0, 10).map(function (g) { return { label: g.name || 'Ungrouped', value: g.medianEff, suffix: '%' }; }), 'Group comparison', 'Median PCE (%)'); if (p5) figures.push({ key: 'groupComparison', caption: 'Group median efficiency comparison', dataUrl: p5, widthPx: 620, heightPx: Math.max(230, 90 + Math.min(10, model.groupStatistics.length) * 24) }); }
-    }
-    figureCache[key] = figures;
-    return figures;
+    const r=ensureReport(exp),sel=figureSelection(exp),includeCharts=figuresEnabled(exp),key=figureFingerprint(exp,sel,includeCharts);if(figureCache[key])return figureCache[key];
+    const figures=includeCharts?allFigureCatalog(exp).filter(function(fig){return figureSelected(exp,fig.key,r.kind,fig);}).map(function(fig){return materializeFigure(exp,fig);}).filter(Boolean):[];figureCache[key]=figures;return figures;
   }
-
-  function reportFigureCatalog(exp,kind){
-    const r=ensureReport(exp),k=kind==='paper'?'paper':kind==='lab'?'lab':r.kind,original=r.figureSelections[k],all={pceDistribution:true,hysteresisDistribution:true,bestJvmCurve:true,efficiencyHysteresis:true,topEfficiency:true,groupComparison:true};
-    r.figureSelections[k]=all;if(k===r.kind)r.figureSelection=all;let figures=[];try{figures=reportFigurePreviews(exp).slice();}finally{r.figureSelections[k]=original;if(k===r.kind)r.figureSelection=original;}return figures;
-  }
+  function reportFigureChoices(exp){ensureReport(exp);return allFigureCatalog(exp).map(function(fig){const out=Object.assign({},fig);delete out.render;delete out.dataUrl;return out;});}
+  function reportFigureByKey(exp,key){ensureReport(exp);const fig=allFigureCatalog(exp).find(function(item){return String(item.key)===String(key);});return fig?materializeFigure(exp,fig):null;}
+  function reportFigureCatalog(exp){ensureReport(exp);return allFigureCatalog(exp).map(function(fig){return materializeFigure(exp,fig)||Object.assign({},fig,{dataUrl:''});});}
 
   function reportContextData(exp) {
     const m=reportModelData(exp);
@@ -402,5 +430,5 @@
     const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.30});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Rendering PDF',progress:.55});const blob=window.ReportExport.buildPdfAsync?await window.ReportExport.buildPdfAsync(model,function(x){progress({stage:x.stage||'Rendering PDF',progress:.55+Number(x.progress||0)*.4});}):window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);progress({stage:'PDF ready',progress:1});end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, designEvidenceMarkdown:designEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportContextData:reportContextData, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, designEvidenceMarkdown:designEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figureSelected:figureSelected, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportContextData:reportContextData, reportFigurePreviews: reportFigurePreviews, reportFigureChoices:reportFigureChoices, reportFigureByKey:reportFigureByKey, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

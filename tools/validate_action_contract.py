@@ -4,8 +4,8 @@ from __future__ import annotations
 import json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; ACTIONS=ROOT/'actions'
-EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','nomad.prepare','report.generate','report.improve','results.interpret'}
-KNOWLEDGE_ACTIONS={'analysis.enrich','design.infer','results.interpret','report.generate','report.improve'}
+EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','design.infer-batch','nomad.prepare','report.generate','report.improve','results.interpret'}
+KNOWLEDGE_ACTIONS={'analysis.enrich','design.infer','design.infer-batch','results.interpret','report.generate','report.improve'}
 ROLES={'automatic','researcher','assistant'}; VIS={'public','internal'}; TYPES={'AI','HYBRID','DETERMINISTIC'}
 errors=[]; defs={}
 for p in sorted(ACTIONS.glob('*/action.json')):

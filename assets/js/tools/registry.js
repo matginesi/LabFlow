@@ -28,7 +28,7 @@ const defs={
 const serviceDefs={
 'analysis.store-brief-enrichment':['analysis','write'],'analysis.collect':['analysis','read'],'analysis.store':['analysis','write'],
 'dataset.analyze':['dataset','write'],'dataset.scan-safe-fixes':['dataset','read'],'dataset.apply-safe-fixes':['dataset','write'],'dataset.commit-and-refresh':['dataset','write'],'dataset.collect-ambiguities':['dataset','read'],'dataset.store-corrections':['dataset','write'],
-'design.collect-selected':['design','read'],'design.validate-coverage':['design','read'],'design.store-proposal':['design','write'],
+'design.collect-selected':['design','read'],'design.validate-coverage':['design','read'],'design.store-proposal':['design','write'],'design.collect-batch':['design','read'],'design.validate-batch':['design','read'],'design.store-batch-proposals':['design','write'],
 'results.store-interpretation':['results','write'],'report.collect-draft-blocks':['documents','read'],'report.store-draft-blocks':['documents','write'],'report.collect-edit-blocks':['documents','read'],'report.store-edit-blocks':['documents','write'],
 'nomad.build-plan':['nomad','read'],'nomad.store-deterministic-plan':['nomad','write'],'nomad.validate':['nomad','read']
 };

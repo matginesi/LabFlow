@@ -376,12 +376,12 @@ After analysis is fresh, an internal deterministic Action stores the **Analysis 
 The bundle is the **single deterministic source** for:
 
 - the Results **Compare** per-scan statistics table (FW/RV median±IQR and min–max);
-- **Report** statistics and the six figure series;
+- **Report** statistics and the dynamic figure catalog (overview plots, group overlays and every available JV curve);
 - the **NOMAD** derived `analysis.json` (analysis + bundle).
 
 Consumers read the bundle only when `LF.AnalysisSummary.fresh(exp)` — bundle `sourceRevision` matching the Working Copy revision — and otherwise fall back to their own deterministic computation so nothing is ever stale.
 
-Report figures are **rasterized on demand**, never on every render: PNG previews and DOCX/PDF exports share one cached set keyed by `(experiment id, revision, figure selection, includeCharts)`. A Working Copy mutation bumps the revision and invalidates the cache automatically.
+Report figures are **rasterized on demand**, never on every render: the picker starts from lightweight metadata and renders previews only for selected figures; PNG previews and DOCX/PDF exports share cached rasters keyed by experiment revision and selection. A Working Copy mutation bumps the revision and invalidates the cache automatically.
 
 ---
 
@@ -543,11 +543,11 @@ Known, RAW-backed or user-confirmed fields are authoritative and must not be reg
 
 ### Output
 
-A proposal for missing fields only. Each proposed field has a source (`experiment`, `knowledge`, or `model_inference`), confidence, and a deterministic auto-apply decision. When invoked from **Complete missing with AI**, LabFlow immediately applies safe fields fill-only to the current Working Copy. Review-only suggestions and explicit unresolved fields are successful outputs; neither causes an apply or validation failure.
+A proposal for missing fields only. Each proposed field has a source (`experiment`, `knowledge`, or `model_inference`), confidence, and a deterministic auto-apply decision. When invoked from **Complete selected with AI**, LabFlow immediately applies safe fields fill-only to the current Working Copy. Review-only suggestions and explicit unresolved fields are successful outputs; neither causes an apply or validation failure.
 
-The proposal card leads with fields filled automatically, suggestions requiring review, and unresolved fields. A secondary **Proposal confidence** indicator is the plain mean of confidence across fields actually proposed; unresolved or unproposed fields are excluded. Provenance does not cap confidence. Auto-apply is separate: sufficiently confident qualitative values can be safe from any source, while exact model-inferred quantities require experiment or valid Knowledge Base support.
+The proposal card leads with fields filled automatically, suggestions requiring review, and unresolved fields. Design does not use a global confidence dial as the primary decision signal: the useful UX is what was applied, what still needs the researcher, and what remains unknown. Provenance does not cap field confidence. Auto-apply is separate: sufficiently confident qualitative values can be safe from any source, while exact model-inferred quantities require experiment or valid Knowledge Base support.
 
-The multi-variant control repeats the same bounded propose → validate → fill-only apply flow for every still-incomplete variant. Saved proposals do not cause a missing variant to be skipped. The researcher remains able to edit the Design manually without running the Action.
+For many incomplete variants, **Fill all experiments** uses bounded batches of up to eight variants per provider request. Complete variants and variants already waiting for review are skipped. Each completed batch is saved immediately, safe fields are applied fill-only, and Stop preserves work already completed. **Complete selected with AI** remains available for focused single-variant work.
 
 ---
 
@@ -810,7 +810,7 @@ AI must never overwrite user-confirmed values silently.
 
 Knowledge Base management is available without loading a ZIP and has no setup step. Bundled records are searchable immediately; create/update/delete and JSON import create browser-local overrides, while JSON export provides a portable snapshot. Existing legacy browser records are migrated once into the same override format. Management and lookup are read-only with respect to the Working Copy; only acceptance of a validated AI Design proposal can fill scientific fields.
 
-`Complete all missing with AI` is a finite UI orchestration, not a new autonomous Action: it scans the current Design variants, skips complete variants and variants that already have a proposal, then runs `design.infer` sequentially for each remaining variant. Proposals are retained per variant so the researcher can review them independently from the coverage board. No parallel provider calls are allowed. The sequence stops on the first failed variant and keeps the actual variant, checkpoint, normalized code and provider/validation cause visible with a retry control.
+Design has no global AI sequence. The variant board is navigation only: select one variant, inspect `NEXT STEP`, then run `design.infer` for that selected variant if required. Safe fields are applied fill-only immediately and only review-worthy suggestions remain visible.
 
 ---
 
@@ -969,6 +969,6 @@ Chat displays one transient semantic state before content: waiting, thinking, pr
 
 ## Design and document finishing controls
 
-Design `Complete all missing with AI` creates missing per-variant proposals sequentially. `Apply all AI inferences` applies every currently available safe proposal but does not mark unresolved variants complete.
+Design uses one selected-variant completion at a time. Safe suggestions are applied immediately; the page shows only review decisions and unresolved fields that still need attention.
 
 Report/Paper writing helpers run section-by-section when `All` is used. Each work unit has a target scientific depth. Figure selection is independent for Report and Paper and is applied through the figure picker before preview/export.

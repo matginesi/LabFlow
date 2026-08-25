@@ -90,24 +90,6 @@ module.exports=function(t,LF){
   };
 
 
-  t['Design All runs only incomplete variants sequentially and publishes one aggregate chat result']=async function(){
-    const calls=[];
-    const env=loadUi(function(id,cb){calls.push({id:id,deviceId:cb.params.deviceId});return Promise.resolve({status:'done',actionId:id,aiOutput:{summary:'Proposal '+cb.params.deviceId,devices:[],solutions:[],unknowns:[]},result:{stored:true},requestMeta:{}});});
-    LF.State.state.experiment.design={solutions:[{id:'s1',name:'Known'}],devices:[
-      {id:'complete',name:'Complete',sampleNames:['S0'],solutionIds:['s1'],stack:[{material:'ITO'}],process:{coating:'spin',annealing:'100 C',atmosphere:'N2'}},
-      {id:'missing-a',name:'Missing A',sampleNames:['S1'],solutionIds:[],stack:[],process:{}},
-      {id:'missing-b',name:'Missing B',sampleNames:['S2'],solutionIds:[],stack:[],process:{coating:'spin'}}
-    ]};
-    LF.State.state.selectedDesignDeviceId='complete';
-    const out=await LF.ActionUI.runSequence('design-all',{});
-    assert(JSON.stringify(calls.map(function(x){return x.deviceId;}))===JSON.stringify(['missing-a','missing-b']),'Design All must run incomplete variants one at a time in source order');
-    assert(out&&out.status==='done'&&out.result.completed===2,'Design All completion count mismatch');
-    assert(env.messages.length===1,'Design All should publish one aggregate chat message');
-    assert(env.messages[0].content.includes('Completed AI filling for 2 / 2'),'Design All aggregate summary missing');
-    assert(env.messages[0].content.includes('Missing A')&&env.messages[0].content.includes('Missing B'),'Design All variant names missing');
-    assert(LF.State.state.selectedDesignDeviceId==='missing-a','Design All should land on the first proposal ready for review');
-  };
-
   t['Complete design applies the validated proposal to empty Working Copy fields']=async function(){
     const oldDesignAnalysis=LF.DesignAnalysis,oldCanonicalStore=LF.CanonicalStore;
     const env=loadUi(function(id,cb){
@@ -141,17 +123,5 @@ module.exports=function(t,LF){
     LF.DesignAnalysis=oldDesignAnalysis;LF.CanonicalStore=oldCanonicalStore;
   };
 
-  t['Design All exposes the failing variant, checkpoint, code and provider cause']=async function(){
-    const env=loadUi(function(){return Promise.resolve({status:'error',code:'MODEL_OUTPUT_INVALID',message:'The provider response does not match the Action contract. Nothing was stored.',failedStep:'infer',error:new Error('invalid Design JSON'),requestMeta:{}});});
-    LF.State.state.experiment.design={solutions:[],devices:[{id:'missing-a',name:'Missing A',sampleNames:['S1'],solutionIds:[],stack:[],process:{}}]};
-    const out=await LF.ActionUI.runSequence('design-all',{});
-    assert(out&&out.status==='error','Design All should return the underlying failed outcome');
-    assert(env.errors.length===1,'sequence must expose one actionable error surface');
-    const shown=env.errors[0].options;
-    assert(shown.message.includes('Missing A'),'visible error must identify the failed variant');
-    assert(shown.message.includes('does not match the Action contract'),'visible error must preserve the provider/validation cause');
-    assert(shown.response.includes('`infer`')&&shown.response.includes('`MODEL_OUTPUT_INVALID`'),'visible details must include checkpoint and code');
-    assert(typeof shown.onRetry==='function'&&shown.retryLabel==='Retry incomplete variants','failed sequence must offer a useful retry');
-  };
   return t;
 };

@@ -7,7 +7,7 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:false, skipModelCatalogue:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:15000, rateLimit:{retries:3,delaysMs:[2500,7000,15000],maxDelayMs:60000,freeFlashMinIntervalMs:0,adaptiveStepMs:1500,adaptiveMaxIntervalMs:8000},
+      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:false, skipModelCatalogue:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:15000, requestDeadlineMs:180000, rateLimit:{retries:3,delaysMs:[2500,7000,15000],maxDelayMs:60000,freeFlashMinIntervalMs:0,adaptiveStepMs:1500,adaptiveMaxIntervalMs:8000},
       note:'Official general Z.AI Chat Completions endpoint. Coding Plan keys use a separate endpoint intended for supported coding tools and are not general API keys. The configured Z.AI model ID is used exactly as entered; Detect intentionally does not import the provider-wide catalogue. HTTP 429 / code 1305 enables adaptive pacing and bounded backoff for normal Actions.'
     },
     openrouter: {
@@ -27,11 +27,11 @@
       note:'Gemini OpenAI-compatibility endpoint.'
     },
     ollama: {
-      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}}, requestTimeoutMs:180000, connectionTestTimeoutMs:15000,
+      id:'ollama', name:'Ollama (local)', endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, modelSelect:true, modelSelectLabel:'Ollama model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}}, requestTimeoutMs:180000, connectionTestTimeoutMs:15000,
       note:'Local OpenAI-compatible endpoint. LabFlow resolves the base URL to /v1/chat/completions. When opened in a browser, the provider must allow the page origin.'
     },
     lmstudio: {
-      id:'lmstudio', name:'LM Studio (local)', endpoint:'http://127.0.0.1:1234/v1', model:'local-model', keyRequired:false, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonSchema:true, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true}}}, requestTimeoutMs:180000, connectionTestTimeoutMs:15000,
+      id:'lmstudio', name:'LM Studio (local)', endpoint:'http://127.0.0.1:1234/v1', model:'local-model', keyRequired:false, modelSelect:true, modelSelectLabel:'LM Studio model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonSchema:true, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true}}}, requestTimeoutMs:180000, connectionTestTimeoutMs:15000,
       note:'Local OpenAI-compatible endpoint. LabFlow resolves the base URL to /v1/chat/completions and never reuses a cloud API key. LM Studio must be started with CORS enabled for direct browser access.'
     },
     custom: {

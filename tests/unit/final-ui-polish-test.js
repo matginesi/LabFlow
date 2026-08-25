@@ -60,10 +60,15 @@ module.exports=function(t){
     assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
   };
 
-  t['Design proposal exposes a compact secondary confidence instrument']=function(){
-    assert(designPage.includes('Proposal confidence'),true,'decision metric label');
-    assert(designPage.includes('Secondary indicator: mean confidence across proposed fields only'),true,'metric limitation');
-    assert(css.includes('.design-decision-dial'),true,'compact dial styling');
+  t['Design focuses on the selected variant and only the decisions the user still needs to make']=function(){
+    assert(designPage.includes('NEXT STEP'),true,'next-step guidance');
+    assert(designPage.includes('What still needs your decision'),true,'review-only decisions panel');
+    assert(designPage.includes('Complete selected with AI'),true,'single selected-variant AI action');
+    assert(designPage.includes('Proposal confidence'),false,'global confidence dial removed');
+    assert(designPage.includes('data-action-sequence=\"design-all\"'),true,'batched Fill all experiments action available');
+    assert(designPage.includes('Fill all experiments'),true,'batch action is labelled clearly');
+    assert(designPage.includes('small groups'),true,'batch action explains bounded grouping');
+    assert(css.includes('.design-next-step'),true,'simplified next-step styling');
   };
 
   t['Report editor updates source immediately but debounces expensive preview work']=function(){
@@ -76,6 +81,8 @@ module.exports=function(t){
   t['Report figure selection is visual and selected figures are visible in preview']=function(){
     const reportPage=fs.readFileSync(path.join(root,'assets/js/pages/report-page.js'),'utf8');
     assert(reportPage.includes('figure-picker-preview'),true,'visual thumbnails in picker');
+    assert(reportPage.includes('reportFigureChoices'),true,'picker starts from the full lightweight dynamic catalog');
+    assert(reportPage.includes('reportFigureByKey'),true,'individual previews are rendered lazily instead of rasterizing every curve at open');
     assert(reportPage.includes('data-figure-picker-all="true"'),true,'select all control');
     assert(reportPage.includes('data-figure-picker-all="false"'),true,'select none control');
     assert(reportPage.includes('report-preview-figures-head'),true,'selected figures are visible in document preview');

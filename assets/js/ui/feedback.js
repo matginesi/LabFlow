@@ -331,16 +331,25 @@
     });
   }
 
+  /** A running Action/AI request is cancellable even when a caller forgot the UI flag. */
+  function hasActiveCancellationTarget() {
+    if (!activity || activity.status !== 'running') return false;
+    if (activity.cancellable) return true;
+    if (LF.ActionRunner && typeof LF.ActionRunner.isRunning === 'function' && LF.ActionRunner.isRunning()) return true;
+    return Boolean(LF.AI && typeof LF.AI.isBusy === 'function' && LF.AI.isBusy());
+  }
+
   /** Render command labels and enabled states from the Action lifecycle. */
   function renderActivityCommands() {
     const finished = activity.status !== 'running';
+    const canStop = !finished && hasActiveCancellationTarget();
     const actions = byId('activityHeadActions');
     if (actions) actions.dataset.status = activity.status;
     const cancel = byId('activityCancel');
     if (cancel) {
-      cancel.hidden = finished || !activity.cancellable;
+      cancel.hidden = !canStop;
       cancel.disabled = !!activity.cancelling;
-      cancel.textContent = activity.cancelling ? 'Cancelling…' : 'Cancel action';
+      cancel.textContent = activity.cancelling ? 'Stopping…' : 'Stop';
       cancel.className = 'button danger compact activity-button';
     }
     const close = byId('activityClose');
@@ -708,11 +717,12 @@
       activityHide();
       return true;
     }
-    if (!activity.cancellable || activity.cancelling) return false;
+    if (!hasActiveCancellationTarget() || activity.cancelling) return false;
 
     let stopped = false;
     try {
       if (activity.onCancel) stopped = activity.onCancel() !== false;
+      else if (LF.ActionRunner && typeof LF.ActionRunner.isRunning === 'function' && LF.ActionRunner.isRunning() && typeof LF.ActionRunner.cancel === 'function') stopped = LF.ActionRunner.cancel();
       else if (LF.AI && typeof LF.AI.cancel === 'function') stopped = LF.AI.cancel();
     } catch (error) {
       Log.warn('activity.cancel-failed', {error:error});
@@ -751,7 +761,7 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape' || !activity) return;
-    if (activity.status === 'running' && !activity.cancellable) return;
+    if (activity.status === 'running' && !hasActiveCancellationTarget()) return;
     event.preventDefault();
     if (activity.status === 'running') activityCancel();
     else activityHide();

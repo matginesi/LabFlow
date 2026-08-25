@@ -46,6 +46,21 @@ module.exports=function(t,LF){
     assert(p1.length>0,true,'figures generated for a dataset with values');
     assert(p1.every(function(f){return f.dataUrl;}),true,'every figure carries a dataUrl');
   };
+  t['report figure catalog exposes dataset-specific JV curves and group overlays']=function(){
+    const e=expWithData();LF.Analysis.analyze(e);const catalog=LF.Report.reportFigureCatalog(e),keys=catalog.map(function(f){return f.key;});
+    assert(keys.includes('jv:m1'),true,'first measurement curve available');assert(keys.includes('jv:m2'),true,'second measurement curve available');assert(keys.includes('groupOverlay:A'),true,'group overlay available');
+    const individual=catalog.find(function(f){return f.key==='jv:m1';});assert(individual.defaultSelected,false,'individual curves are opt-in');
+    const before=LF.Report.reportFigurePreviews(e).map(function(f){return f.key;});assert(before.includes('jv:m1'),false,'individual curve not exported by default');LF.Report.setFigure(e,'jv:m1',true);const after=LF.Report.reportFigurePreviews(e).map(function(f){return f.key;});assert(after.includes('jv:m1'),true,'selected individual curve joins export');
+  };
+  t['large datasets expose every JV measurement in the figure picker without a six-figure cap']=function(){
+    const e=expWithData();e.id='large-exp';e.sync.revision=2;
+    for(let i=3;i<=52;i++)e.measurements.push({id:'m'+i,file:'curve-'+i+'.txt',sample:'DEVICE '+i,group:i%2?'A':'B',isRef:false,fw:{voc:1,jsc:20,ff:.7,eff:18+i/20},rv:{voc:1,jsc:20,ff:.7,eff:18+i/20},bestEff:18+i/20,hysteresis:.02,curve:{fw:[{x:0,y:0},{x:1,y:1+i/100}],rv:[]}});
+    LF.Analysis.analyze(e);const choices=LF.Report.reportFigureChoices(e),jv=choices.filter(function(f){return String(f.key).indexOf('jv:')===0;});
+    assert(jv.length,52,'every JV measurement is available');
+    assert(choices.length>55,true,'catalog is data-driven rather than capped at six');
+    assert(jv.every(function(f){return !f.dataUrl;}),true,'lightweight picker choices do not eagerly rasterize dozens of curves');
+  };
+
   t['fresh bundle statistics equal measurement-computed statistics'] = function(){
     const legacy=expWithData();LF.Analysis.analyze(legacy);
     const fresh=expWithData();LF.Analysis.analyze(fresh);fresh.analysisSummary=LF.AnalysisSummary.collect(fresh);
@@ -88,6 +103,11 @@ module.exports=function(t,LF){
     assert(md.includes('Wrong title'),false,'provider heading text removed');
   };
 
+  t['Report heading normalization preserves generated document titles and flattens accidental extra headings']=function(){
+    const e=exp();const collected={kind:'paper',blocks:[{headings:['# <paper title>','## Abstract']}]};
+    LF.ActionSteps['report.store-draft-blocks']({exp:e,params:{document_kind:'paper'},outputs:{collect:collected,draft:['### Real generated title\n\n## Abstract-ish\n\nText.\n\n### Accidental extra section\n\nMore.']}});
+    const md=LF.Report.activeMarkdown(e);assert(md.includes('# Real generated title'),true,'dynamic generated H1 text preserved');assert(md.includes('## Abstract\n\nText.'),true,'canonical section title enforced');assert(md.includes('**Accidental extra section**'),true,'extra model heading flattened');assert(md.includes('### Accidental extra section'),false,'extra heading cannot corrupt outline');
+  };
   t['Report draft store accepts block arrays and legacy single-block output']=function(){
     const lab=exp(),paper=exp();
     let out=LF.ActionSteps['report.store-draft-blocks']({exp:lab,params:{document_kind:'lab'},outputs:{collect:{kind:'lab'},draft:['# Lab draft','## Results\n\nMeasured result.']}});

@@ -15,6 +15,8 @@ module.exports=function(t){
   };
   t['Escape cancels running Actions and closes terminal or inspector dialogs']=function(){
     assert(feedback.includes("if (activity.status === 'running') activityCancel();"),true,'Escape cancels active Action');
+    assert(feedback.includes("LF.ActionRunner.isRunning()"),true,'running ActionRunner exposes Stop even if caller omitted cancellable flag');
+    assert(feedback.includes("cancel.textContent = activity.cancelling ? 'Stopping…' : 'Stop';"),true,'running Action uses explicit Stop label');
     assert(feedback.includes('else activityHide();'),true,'Escape closes terminal Action');
     assert(feedback.includes("event.key==='Escape'"),true,'confirmation Escape handler');
     assert(app.includes("ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.resultInspectorId"),true,'inspector Escape handler');

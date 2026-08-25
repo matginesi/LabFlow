@@ -1,0 +1,27 @@
+{
+  "id": "design.infer-batch",
+  "type": "HYBRID",
+  "category": "design",
+  "role": "researcher",
+  "title": "Fill experiments with AI",
+  "short_title": "Fill experiments",
+  "purpose": "Complete missing Design fields for a small batch of incomplete experimental variants in one bounded AI request.",
+  "strategy": "Process at most eight variants per request. Experiment evidence remains authoritative; safe fill-only suggestions are applied after validation and uncertain values remain for review.",
+  "output": "json",
+  "mutation_scope": "",
+  "policies": ["policy.scientific-provenance", "policy.structured-output"],
+  "steps": [
+    {"id":"collect","type":"DETERMINISTIC","weight":0.08,"tool":"design.collect-batch"},
+    {"id":"infer","type":"AI","prompt":"prompt.md","output":"json","schema":"design_reconstruct_batch","thinking":"off","timeout_ms":120000,"weight":0.82,"max_output_tokens":4096,"deadline_ms":90000,"max_retries":0,"min_output_tokens":300,"target_output_tokens":1800},
+    {"id":"validate","type":"DETERMINISTIC","weight":0.05,"tool":"design.validate-batch"},
+    {"id":"store","type":"DETERMINISTIC","weight":0.05,"tool":"design.store-batch-proposals"}
+  ],
+  "version": 1,
+  "input_scope": "working-copy.design-batch",
+  "visibility": "internal",
+  "requires": [],
+  "input": {
+    "context": "design-batch",
+    "knowledge": {"limit":6,"kinds":["material","solution","process","stack","concept"],"query_hint":"missing formulation process stack layer material"}
+  }
+}

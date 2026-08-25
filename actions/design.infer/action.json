@@ -6,7 +6,7 @@
   "title": "Complete design with AI",
   "short_title": "Complete design",
   "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first, relevant scientific Knowledge Base records when found and cautious model inference for remaining gaps.",
-  "strategy": "One bounded request for one selected experiment. LabFlow searches the bundled scientific library automatically and passes only useful matches. If nothing relevant is found, the model may propose low-confidence qualitative candidates without unsupported exact quantities. Known Working Copy values are preserved and every used knowledge record ID remains attached to the proposal.",
+  "strategy": "One fast bounded request for the selected variant only. LabFlow passes compact experiment evidence plus at most a few useful scientific records, applies safe fill-only suggestions immediately, and leaves only genuinely uncertain values for review.",
   "output": "json",
   "mutation_scope": "",
   "policies": [
@@ -26,14 +26,14 @@
       "prompt": "prompt.md",
       "output": "json",
       "schema": "design_reconstruct",
-      "thinking": "on",
-      "timeout_ms": 180000,
+      "thinking": "off",
+      "timeout_ms": 120000,
       "weight": 0.8,
-      "max_output_tokens": 6144,
-      "deadline_ms": 150000,
-      "max_retries": 1,
-      "min_output_tokens": 1200,
-      "target_output_tokens": 2800
+      "max_output_tokens": 2048,
+      "deadline_ms": 90000,
+      "max_retries": 0,
+      "min_output_tokens": 200,
+      "target_output_tokens": 800
     },
     {
       "id": "validate",
@@ -55,7 +55,7 @@
   "input": {
     "context": "design",
     "knowledge": {
-      "limit": 12,
+      "limit": 6,
       "kinds": [
         "material",
         "solution",

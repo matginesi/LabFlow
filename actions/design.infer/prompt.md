@@ -1,49 +1,42 @@
-# Role and target
+# Task
 
-Complete only `scope.unknown_fields` for the one selected Design variant. Existing and researcher-entered values are authoritative. This is a reviewable gap proposal, never a regenerated design.
+Complete only the missing fields listed in `scope.unknown_fields` for the selected Design variant. Do not regenerate or overwrite known Design data.
 
-# Context and evidence
+# Evidence order
 
-Use information in this order:
+1. Existing researcher/source values are authoritative.
+2. Use imported experiment evidence when it directly supports a missing field.
+3. Use supplied `knowledge_context` only when relevant; cite the record ID in `knowledge_refs`.
+4. Otherwise use cautious scientific model inference for plausible qualitative gaps.
 
-1. researcher-confirmed values already in Design;
-2. imported experiment evidence and deterministic relations;
-3. relevant `knowledge_context` records, when present; these are scientific background, not proof about this experiment;
-4. general scientific model knowledge for remaining gaps when the inference is reasonably supported by the experimental context.
+A Knowledge Base miss is normal and must not reduce confidence by itself.
 
-A retrieved record that materially contributes to a proposal must be cited by its stable ID in `knowledge_refs`. A Knowledge Base miss is normal: continue with useful model inference and keep `knowledge_refs` empty.
+A manually created variant may legitimately have an empty `scope.sample_names`. In that case, complete the selected variant from its current fields and available context; do not invent sample identities.
 
-# Quantities
+# Exact quantities
 
-Do not invent exact concentrations, ratios, temperatures, times, thicknesses, speeds or other recipe settings. Copy an exact quantitative value only when it is directly supported by imported evidence or by a retrieved Knowledge Base record cited in `knowledge_refs`. Otherwise leave the exact quantity empty and mention the missing information in `unknowns`.
+Do not invent exact concentrations, ratios, temperatures, times, thicknesses, speeds or other recipe values. An exact quantitative value is allowed only when directly supported by experiment evidence or by a supplied Knowledge Base record cited in `knowledge_refs`. Otherwise leave it empty and add the missing item to `unknowns`.
 
-Chemical/material identifiers that contain digits, such as `N2`, `SnO2`, `C60` or `2PACz`, are not automatically quantitative process settings.
+Identifiers such as `N2`, `SnO2`, `C60`, `2PACz` and `FA0.85Cs0.15PbI3` are material/formula names, not process quantities merely because they contain digits.
 
-# Confidence, source and safety
+# Provenance and confidence
 
-Keep these separate:
+`provenance_kind` is exactly one of:
+- `experiment`
+- `knowledge`
+- `model_inference`
 
-- `confidence` is scientific plausibility in this context. Score it directly; do not lower it merely because no Knowledge Base record was found.
-- `provenance_kind` is one of `experiment`, `knowledge`, or `model_inference`.
-- LabFlow decides auto-apply safety locally. High-confidence qualitative model inference can be safe; unsupported exact model-inferred quantities require review.
+Confidence means scientific plausibility in this experiment, not citation strength. A strong qualitative model inference may have high confidence. Use `field_confidence` only when fields in the same object differ materially.
 
-Use `field_confidence` when different proposed fields have meaningfully different confidence. Keys are the field names in the same object, for example `{"atmosphere": 0.86, "annealing": 0.55}`. The object-level confidence remains a reasonable summary for fields without an override.
+# Keep the answer small
 
-# Proposal rules
+- Return one coherent candidate for this selected variant only.
+- Include only missing fields and solutions/layers needed to fill them.
+- Prefer short field values over explanations.
+- Keep `summary` concise and each `reason` to one short sentence.
+- Use `unknowns` instead of guessing.
+- Never invent Knowledge Base IDs.
 
-- Produce one coherent candidate for this selected variant; do not mix incompatible architectures.
-- Include only missing fields and only solutions needed by the selected device.
-- Useful model-only qualitative suggestions are encouraged when plausible: material/layer class, atmosphere identity, coating family, formulation family or generic treatment.
-- Use `experiment` only for direct experiment support, `knowledge` only when at least one supplied Knowledge Base ID supports the item, and `model_inference` otherwise.
-- Return stack layers from substrate to top contact, with role and material when known.
-- Put every Knowledge Base record ID actually used on the affected solution, device or layer. Never invent record IDs.
-- When proposing a solution/formulation, include its exact `name` in device `solution_names` so LabFlow can link it locally.
-- Give every proposed solution, device and layer a short evidence-basis `reason`, not chain-of-thought.
-- `devices` contains exactly one proposal. LabFlow binds target and sample names locally.
-- Existing values are never overwritten silently.
-- No duplicate solutions or layers. Omit empty optional properties.
-- Keep `summary` under 300 characters, `reason` under 240 and each `unknowns` item under 160.
+LabFlow decides locally which suggestions are safe to apply automatically. Unsupported exact quantities remain review-only.
 
-Do not invent a value merely to fill every gap. Put genuinely indeterminate fields in `unknowns`; they do not reduce confidence in the suggestions you do make.
-
-Return exactly one compact JSON object matching the schema, with no Markdown or preamble.
+Return exactly one JSON object matching the supplied schema. No Markdown or preamble.

@@ -179,11 +179,11 @@ Structured output schema: `design_reconstruct`.
 
 Known/user-confirmed values remain authoritative.
 
-The internal Action still ends by storing a reviewable proposal. The explicit **Complete missing with AI** UI command then immediately passes that proposal through the local deterministic fill-only gate and updates the same Working Copy; source and researcher values are never overwritten. High-confidence qualitative inference can apply automatically. Unsupported exact model-inferred quantities remain review suggestions, and an explicit unknown-only result is successful rather than being forced into invented values.
+The internal Action ends by storing a reviewable proposal. The explicit **Complete selected with AI** command immediately passes that proposal through the local deterministic fill-only gate and updates the same Working Copy; source and researcher values are never overwritten. High-confidence qualitative inference can apply automatically. Unsupported exact model-inferred quantities remain review suggestions, and an explicit unknown-only result is successful rather than being forced into invented values.
 
-The multi-variant **Complete all missing with AI** control runs this same propose → validate → apply orchestration sequentially for every incomplete variant, including variants with an older saved proposal. If one variant fails, the visible Action surface retains its variant name, failed checkpoint, normalized error code and provider/validation message, and offers a retry for the still-incomplete variants.
+Design keeps the single-variant **Complete selected with AI** flow, and also exposes **Fill all experiments** as a bounded batch operation. Fill all skips complete variants and variants already waiting for review, sends up to eight incomplete variants in one structured request, applies only safe fill-only values, preserves completed batches if Stop is pressed, and leaves uncertain suggestions for explicit review. It does not resurrect the old one-request-per-variant serial queue.
 
-Because a structured proposal is unusable without its closing JSON, context preflight first reserves the declared `design.infer` target and may relax only to its minimum valid output after compaction; the final request remains bounded by the full ceiling and fitted input size. A bounded truncation retry requests the whole proposal again with compact strings and no repeated known/evidence fields; partial JSON is never stored.
+The structured request is compact and bounded: thinking is off by default, the target is small, input context is fitted before transport, there is a 90-second Action deadline, and Design does not automatically retry a failed generation. Partial JSON is never stored.
 
 ### `results.interpret`
 
