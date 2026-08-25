@@ -5,8 +5,8 @@
   "role": "researcher",
   "title": "Draft document",
   "short_title": "Draft document",
-  "purpose": "Draft the active Lab Report or Scientific Paper from the current Experiment Brief, deterministic results, design provenance and findings.",
-  "strategy": "Deterministically split the requested document into bounded writing blocks. The model writes one block at a time from the same evidence pack; LabFlow then assembles the blocks in order.",
+  "purpose": "Draft the active Lab Report or Scientific Paper from the current Experiment Brief, deterministic results, design provenance, findings and relevant sourced Knowledge Base context.",
+  "strategy": "Deterministically split the document into bounded blocks and retrieve only relevant library records. External literature is cited from stored sources and never rewritten as an experimental method.",
   "output": "text",
   "mutation_scope": "report",
   "policies": [

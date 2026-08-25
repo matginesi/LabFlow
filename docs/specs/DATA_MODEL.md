@@ -143,7 +143,7 @@ The projection is fill-only for existing Design records. Once the researcher edi
 
 If the archive contains measurements but no fabrication recipe, LabFlow preserves the experimental/sample structure and explicit unknown fields; absence of source Design evidence must never be represented as an empty or silently inferred experiment.
 
-## 8.1 Local Design Knowledge Base
+## 8.1 Local Knowledge Base
 
 The Knowledge Base is a separate folder-backed `library.json` with schema version `1`:
 
@@ -153,7 +153,9 @@ The Knowledge Base is a separate folder-backed `library.json` with schema versio
 
 It is neither part of `LF.State.state.experiment` nor a Canonical Store domain. Resetting an experiment session does not erase or rewrite it. The management page writes create/update/delete operations directly to the connected file. Import merges records by stable ID into that file; export serializes the complete versioned library as a backup. The directory handle may be remembered in IndexedDB, but the records themselves are not stored in browser `localStorage`.
 
-Application is an explicit deterministic transfer, not synchronization. Solution records add and link one formulation, process records fill only empty process properties, and stack records apply only when the selected device has no layers. Material records are reference-only. Copied values use `status: knowledge_base`, retain `knowledgeBaseId`/evidence, and create an accepted `design_knowledge_apply` patch. Subsequent edits remain ordinary Working Copy edits and do not mutate the library record.
+Records are retrieved, not synchronized into scientific state. A deterministic lexical ranker selects bounded records by experiment/Design terms, missing-field type, tags and source text. Retrieval returns stable IDs, scores, matched terms, record data and source metadata. The Assistant accesses it through the read-only `knowledge.search` Tool; AI Action Context Packs receive only their small ranked slice.
+
+For Design, retrieved records are external candidate knowledge and are never copied before inference. `design.infer` may use a record for a missing-field proposal and must preserve its ID in `knowledge_refs`. Exact recipe quantities are allowed only when copied from that identified record and remain `provenance_kind: knowledge` with confidence capped at 0.45. The researcher accepts the resulting AI proposal through the ordinary fill-only gate; ZIP/researcher-confirmed values remain authoritative.
 
 ## 9. Patches and provenance
 

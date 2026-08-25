@@ -29,6 +29,10 @@ module.exports=function(t,LF){
     assert(exp.design.devices[0].solutionIds.includes(exp.design.solutions[0].id),'solution should be linked');
     assert(exp.design.devices[0].process.coating==='spin coating','fabrication should be applied');
   };
+  t['Knowledge-backed Design filling preserves retrieved record IDs']=function(){
+    const exp={design:{status:'reviewing',solutions:[],devices:[{id:'d1',name:'D1',sampleNames:['S1'],solutionIds:[],process:{coating:'',annealing:'',atmosphere:''},stack:[],status:'user_confirmed'}]},aiDesignProposal:{solutions:[{name:'Paper ink',role:'absorber',solvents:'DMF:DMSO',knowledge_refs:['kb_solution_paper'],provenance_kind:'knowledge'}],devices:[{sample_names:['S1'],solution_names:['Paper ink'],process:{annealing:'100 °C'},knowledge_refs:['kb_process_paper'],provenance_kind:'knowledge',stack:[]}]}};
+    LF.DesignAnalysis.applyAll(exp);assert(exp.design.solutions[0].knowledge_refs[0]==='kb_solution_paper','solution Knowledge Base ID retained');assert(exp.design.devices[0].knowledge_refs[0]==='kb_process_paper','process Knowledge Base ID retained');
+  };
   function twoDeviceFixture(){return{design:{status:'reviewing',solutions:[{id:'sol1',name:'Ink A',role:'absorber',solutes:'USER-SOLUTE',solvents:'',concentration:'',status:'user_confirmed'}],devices:[{id:'deviceA',name:'Device A',sampleNames:['S1'],solutionIds:[],process:{coating:'A-USER',annealing:'',atmosphere:''},stack:[],status:'user_confirmed'},{id:'deviceB',name:'Device B',sampleNames:['S2'],solutionIds:[],process:{coating:'B-USER',annealing:'',atmosphere:''},stack:[],status:'user_confirmed'}]},aiDesignProposal:{solutions:[{name:'Ink A',role:'absorber',solutes:'AI-SOLUTE',solvents:'DMF',concentration:'1.2 M',confidence:.8}],devices:[{id:'deviceA',name:'Device A',sample_names:['S1'],solution_names:['Ink A'],process:{coating:'A-AI',annealing:'400 C'},stack:[]},{id:'deviceB',name:'Device B',sample_names:['S2'],solution_names:['Ink A'],process:{coating:'B-AI',annealing:'450 C'},stack:[]}]}};}
   t['applySelectedDevice changes only the selected device and linked solution']=function(){
     const exp=twoDeviceFixture(),out=LF.DesignAnalysis.applySelectedDevice(exp,'deviceB');
@@ -88,6 +92,22 @@ module.exports=function(t,LF){
     assert(JSON.stringify(ctx.outputs.infer.devices[0].sample_names)===JSON.stringify(['A1','A2']),'model-provided sample identity must be replaced by selected canonical scope');
     assert(out.binding==='selected-design-variant'&&out.covered===2,'deterministic binding result missing');
     LF.ExperimentModel=oldModel;
+  };
+
+  t['Design validation rejects invented Knowledge Base references and untraceable quantities']=function(){
+    const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
+    LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:['kb_allowed']}};}};
+    const proposal={solutions:[{name:'Ink',concentration:'1.2 M',preparation:'stir 12 h',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},knowledge_refs:['kb_fake','kb_allowed'],provenance_kind:'knowledge',stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',knowledge_refs:['kb_fake'],provenance_kind:'knowledge'}]}],unknowns:[]};
+    const ctx={exp:{design:{devices:[],solutions:[]}},outputs:{collect:{device_id:'deviceA',sample_names:['A1']},infer:proposal},lastResult:proposal};
+    const out=LF.ActionSteps['design.validate-coverage'](ctx),clean=ctx.outputs.infer;
+    assert(clean.solutions[0].knowledge_refs.length===0,'invented solution record ID removed');
+    assert(clean.solutions[0].concentration===''&&clean.solutions[0].preparation==='','untraceable solution quantities removed');
+    assert(JSON.stringify(clean.devices[0].knowledge_refs)===JSON.stringify(['kb_allowed']),'retrieved device record retained');
+    assert(clean.devices[0].process.annealing==='100 C','quantities backed by a retrieved device record retained');
+    assert(clean.devices[0].stack[0].knowledge_refs.length===0&&clean.devices[0].stack[0].thickness===''&&clean.devices[0].stack[0].process==='','untraceable layer quantities removed');
+    assert(out.knowledge.rejectedKnowledgeRefs===3&&out.knowledge.strippedQuantities===4,'validation reports rejected references and stripped values');
+    LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
   };
 
 };

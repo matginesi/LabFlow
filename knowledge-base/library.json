@@ -378,6 +378,136 @@
       "sources": [{"title": "Engineering fluorinated-cation containing inverted perovskite solar cells", "url": "https://www.nature.com/articles/s41467-020-20272-3", "doi": "10.1038/s41467-020-20272-3", "note": "Methods report 7.5 nm BCP between C60 and Cu."}],
       "data": {"role": "Electron-contact interlayer", "formula": "C26H20N2", "supplier": "", "purity": "", "notes": "Layer thickness and adjacent electrode are device-specific."},
       "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_pedot_go",
+      "kind": "material",
+      "name": "PEDOT:PSS / graphene oxide composite",
+      "summary": "Composite hole-transport contact studied for inverted perovskite devices as a less acidic alternative to pristine PEDOT:PSS.",
+      "tags": ["PEDOT:PSS", "graphene-oxide", "HTL", "p-i-n", "inverted"],
+      "sources": [{"title": "Highly efficient and stable inverted perovskite solar cell employing PEDOT:GO composite layer as a hole transport layer", "url": "https://www.nature.com/articles/s41598-018-19612-7", "doi": "10.1038/s41598-018-19612-7", "note": "Primary study of PEDOT:GO as the bottom hole-transport contact."}],
+      "data": {"role": "Hole transport layer", "formula": "PEDOT:PSS + graphene oxide", "supplier": "", "purity": "", "notes": "Composition and pH are process-specific; use the primary Methods before reproducing."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_pcbm",
+      "kind": "material",
+      "name": "PCBM fullerene derivative",
+      "summary": "Solution-processable fullerene electron-transport material commonly placed above the absorber in inverted devices.",
+      "tags": ["PCBM", "ETL", "electron-transport", "p-i-n", "fullerene"],
+      "sources": [{"title": "Highly efficient and stable inverted perovskite solar cell employing PEDOT:GO composite layer as a hole transport layer", "url": "https://www.nature.com/articles/s41598-018-19612-7", "doi": "10.1038/s41598-018-19612-7", "note": "Methods and device architecture use a PCBM electron-transport layer."}],
+      "data": {"role": "Electron transport layer", "formula": "Phenyl-C61/C71-butyric acid methyl ester family", "supplier": "", "purity": "", "notes": "Fullerene isomer, solvent, concentration and coating conditions are recipe-specific."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_zno_nanoparticles",
+      "kind": "material",
+      "name": "ZnO nanoparticles",
+      "summary": "Nanoparticle electron-contact layer used between PCBM and a metal electrode in an inverted architecture.",
+      "tags": ["ZnO", "nanoparticle", "ETL", "electron-contact", "p-i-n"],
+      "sources": [{"title": "Highly efficient and stable inverted perovskite solar cell employing PEDOT:GO composite layer as a hole transport layer", "url": "https://www.nature.com/articles/s41598-018-19612-7", "doi": "10.1038/s41598-018-19612-7", "note": "Device structure contains PCBM/ZnO nanoparticles before Ag."}],
+      "data": {"role": "Electron-contact / buffer layer", "formula": "ZnO", "supplier": "", "purity": "", "notes": "Dispersion, particle size and deposition are laboratory-specific."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_2pacz",
+      "kind": "material",
+      "name": "2PACz self-assembled monolayer",
+      "summary": "Carbazole-phosphonic-acid hole-selective monolayer used on ITO in inverted perovskite devices.",
+      "tags": ["2PACz", "SAM", "HTL", "hole-selective", "p-i-n", "ITO"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods specify 2PACz on ITO and the subsequent inverted device sequence."}],
+      "data": {"role": "Self-assembled monolayer hole-selective contact", "formula": "2-(9H-carbazol-9-yl)ethylphosphonic acid", "supplier": "", "purity": "", "notes": "Surface preparation and wetting compatibility determine applicability."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_mapcl",
+      "kind": "material",
+      "name": "Methylammonium chloride (MACl / MAPCl)",
+      "summary": "Organic chloride salt used in perovskite formulations or surface treatments; its role depends on the cited recipe.",
+      "tags": ["MACl", "MAPCl", "chloride", "additive", "surface-treatment", "2D-3D"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods use MAPCl solution during formation of the treated surface layer."}],
+      "data": {"role": "Perovskite additive or surface-treatment salt", "formula": "CH3NH3Cl", "supplier": "", "purity": "", "notes": "Do not transfer amount or function across recipes without a matching process record."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_material_silver_electrode",
+      "kind": "material",
+      "name": "Silver (Ag) top electrode",
+      "summary": "Vacuum-deposited metal electrode used above fullerene/contact layers in inverted devices.",
+      "tags": ["Ag", "silver", "electrode", "cathode", "p-i-n"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods report thermally deposited Ag after C60 and BCP."}],
+      "data": {"role": "Top metal electrode", "formula": "Ag", "supplier": "", "purity": "", "notes": "Thickness and evaporation conditions are device-specific; see the linked stack record."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_sno2_cpta_sam",
+      "kind": "process",
+      "name": "Aqueous SnO2 with CPTA-SAM surface treatment",
+      "summary": "Published ITO/SnO2 preparation followed by a CPTA self-assembled monolayer intended to deactivate SnO2 surface hydroxyl groups.",
+      "tags": ["SnO2", "CPTA", "SAM", "n-i-p", "hysteresis", "ITO"],
+      "sources": [{"title": "Hysteresis-less and stable perovskite solar cells with a self-assembled monolayer", "url": "https://www.nature.com/articles/s43246-020-0028-z", "doi": "10.1038/s43246-020-0028-z", "note": "Device fabrication gives SnO2 and CPTA-SAM deposition/annealing conditions."}],
+      "data": {"coating": "SnO2 colloid diluted to 2.67% in water: 3000 rpm for 30 s; CPTA 0.5 mg mL-1 in DMF: 4000 rpm for 30 s", "annealing": "SnO2 150 °C for 30 min; CPTA-treated substrate dried at 100 °C for 5 min", "atmosphere": "Laboratory ambient for substrate preparation in the cited method", "notes": "Paper-specific candidate. UV-ozone treatment preceded CPTA; excess CPTA was washed with DMF."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_2pacz_ito_contact",
+      "kind": "process",
+      "name": "2PACz hole-selective contact on ITO",
+      "summary": "Published spin-coated 2PACz contact preparation for an inverted perovskite architecture.",
+      "tags": ["2PACz", "SAM", "ITO", "HTL", "p-i-n", "spin-coating"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods specify substrate cleaning, ozone treatment, 2PACz coating and annealing."}],
+      "data": {"coating": "Spin coat 2PACz solution on cleaned, ozone-treated ITO at 5000 rpm for 30 s", "annealing": "100 °C for 10 min", "atmosphere": "N2-dried substrate; subsequent absorber processing under N2 in the cited work", "notes": "Paper-specific candidate; concentration and solvent must be taken from the full Methods/supporting information before reproduction."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_process_mapcl_peai_2d_surface",
+      "kind": "process",
+      "name": "MAPCl or PEAI 2D surface treatment",
+      "summary": "Published post-deposition surface treatment used to form and reorder a 3D/2D perovskite heterostructure.",
+      "tags": ["MAPCl", "PEAI", "IPA", "surface-treatment", "passivation", "2D-3D"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods describe MAPCl/PEAI coating, annealing and IPA post-washing."}],
+      "data": {"coating": "Drop 70 µL MAPCl or PEAI solution onto the perovskite while spinning at 5000 rpm for 30 s; after cooling, wash with IPA", "annealing": "80 °C for 5 min before IPA washing", "atmosphere": "N2 conditions in the cited work", "notes": "Paper-specific candidate for a 3D/2D surface treatment, not a generic absorber recipe."},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_solution_2pacz_4hba_sam",
+      "kind": "solution",
+      "name": "2PACz / 4-hydroxybenzylamine SAM treatment",
+      "summary": "Published mixed self-assembled-monolayer treatment for an ITO bottom contact in inverted devices.",
+      "tags": ["2PACz", "4-hydroxybenzylamine", "SAM", "HTL", "ITO", "p-i-n"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods compare 2PACz with a 2PACz/4-hydroxybenzylamine mixture."}],
+      "data": {"role": "Hole-selective self-assembled monolayer treatment", "solutes": "2PACz; optional 4-hydroxybenzylamine", "solvents": "See full paper/supporting information", "concentration": "4-hydroxybenzylamine reported as 1 M in ethanol; 2PACz concentration not copied here", "additives": "", "preparation": "Spin-coated on cleaned ITO; paper-specific candidate"},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_solution_mapcl_peai_ipa_treatment",
+      "kind": "solution",
+      "name": "MAPCl or PEAI surface-treatment solution",
+      "summary": "Organic-salt treatment used in the cited work to form a thin 2D surface region on a 3D absorber.",
+      "tags": ["MAPCl", "PEAI", "IPA", "passivation", "surface-treatment", "2D-3D"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods describe MAPCl/PEAI solution coating and subsequent IPA post-treatment."}],
+      "data": {"role": "Perovskite surface treatment", "solutes": "MAPCl or PEAI", "solvents": "See full paper/supporting information", "concentration": "Not transferred; treatment-specific", "additives": "", "preparation": "Use only with the linked surface-treatment process and matching absorber architecture"},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_stack_inverted_pedotgo_pcbm_zno_ag",
+      "kind": "stack",
+      "name": "Inverted p-i-n · PEDOT:GO / perovskite / PCBM / ZnO / Ag",
+      "summary": "Published low-temperature inverted architecture using a composite hole contact and fullerene/ZnO electron contacts.",
+      "tags": ["p-i-n", "inverted", "PEDOT:GO", "PCBM", "ZnO", "Ag"],
+      "sources": [{"title": "Highly efficient and stable inverted perovskite solar cell employing PEDOT:GO composite layer as a hole transport layer", "url": "https://www.nature.com/articles/s41598-018-19612-7", "doi": "10.1038/s41598-018-19612-7", "note": "Primary device architecture shown and described in the study."}],
+      "data": {"layers": [{"role": "Substrate / transparent electrode", "material": "Glass / ITO", "thickness": "", "process": "Cleaned patterned substrate"}, {"role": "Hole transport layer", "material": "PEDOT:PSS / graphene oxide composite", "thickness": "", "process": "Solution processed"}, {"role": "Absorber", "material": "Perovskite", "thickness": "", "process": "Recipe-specific deposition"}, {"role": "Electron transport layer", "material": "PCBM", "thickness": "", "process": "Solution processed"}, {"role": "Electron-contact layer", "material": "ZnO nanoparticles", "thickness": "", "process": "Nanoparticle dispersion"}, {"role": "Top electrode", "material": "Ag", "thickness": "", "process": "Metal deposition"}]},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
+    },
+    {
+      "id": "kb_stack_inverted_2pacz_c60_bcp_ag",
+      "kind": "stack",
+      "name": "Inverted p-i-n · 2PACz / perovskite / C60 / BCP / Ag",
+      "summary": "Published inverted device sequence with a 2PACz bottom contact and thermally deposited fullerene, buffer and silver layers.",
+      "tags": ["p-i-n", "inverted", "2PACz", "C60", "BCP", "Ag"],
+      "sources": [{"title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells", "url": "https://www.nature.com/articles/s41467-025-56409-5", "doi": "10.1038/s41467-025-56409-5", "note": "Methods specify the bottom SAM and top-contact deposition sequence."}],
+      "data": {"layers": [{"role": "Substrate / transparent electrode", "material": "Glass / ITO", "thickness": "", "process": "Clean; ozone plasma"}, {"role": "Hole-selective monolayer", "material": "2PACz", "thickness": "monolayer", "process": "Spin coat; anneal"}, {"role": "Absorber", "material": "Perovskite", "thickness": "", "process": "Composition-specific spin coating"}, {"role": "Optional 2D surface region", "material": "MAPCl- or PEAI-treated perovskite", "thickness": "", "process": "Spin coat; low-temperature anneal; IPA treatment"}, {"role": "Electron transport layer", "material": "C60", "thickness": "30 nm", "process": "Thermal deposition"}, {"role": "Electron-contact interlayer", "material": "BCP", "thickness": "7 nm", "process": "Thermal deposition"}, {"role": "Top electrode", "material": "Ag", "thickness": "100 nm", "process": "Thermal deposition below 4 × 10^-6 torr"}]},
+      "createdAt": "2026-08-25T00:00:00.000Z", "updatedAt": "2026-08-25T00:00:00.000Z"
     }
   ],
   "updatedAt": "2026-08-25T00:00:00.000Z"

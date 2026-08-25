@@ -16,7 +16,7 @@ module.exports = function (t, LF) {
   t['parse repairs comments and trailing commas'] = function(){const r=SO.parse('{//x\n"rows":[1,],}');assert(r.value,{rows:[1]},'repair');assert(r.repaired,true,'repaired flag');};
   t['parse diagnoses truncation'] = function(){const r=SO.parse('{"a":[');assert(r.value,null,'no value');assert(/truncat/i.test(r.diagnosis),true,'diagnosis');};
   t['Design schema accepts provider content without asking AI to choose sample identity'] = function(){
-    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[{provenance_kind:'evidence',confidence:1,reason:'test evidence'}],unknowns:[]},{registry:LF.ActionRegistry});
+    const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[{name:'candidate',provenance_kind:'knowledge',confidence:.4,reason:'retrieved',knowledge_refs:['kb_candidate']}],devices:[{provenance_kind:'evidence',confidence:1,reason:'test evidence'}],unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
   t['schema enforces array minimums']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.ActionRegistry});assert(e.some(function(x){return /at least 1/.test(x);}),true,'min items');};

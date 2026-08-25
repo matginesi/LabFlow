@@ -5,8 +5,8 @@
   "role": "automatic",
   "title": "Enrich experiment brief",
   "short_title": "Experiment brief",
-  "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief so every LabFlow AI feature can reuse the same context.",
-  "strategy": "Facts first. The model may identify likely experimental intent, variables and useful comparisons, but must label inference and uncertainty. It never changes source data or deterministic results.",
+  "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief using experiment facts and a small relevant Knowledge Base retrieval.",
+  "strategy": "Facts first. Retrieved literature may support labelled hypotheses and recommended checks, but never becomes evidence about the experiment or changes source data and deterministic results.",
   "output": "json",
   "mutation_scope": "",
   "policies": [

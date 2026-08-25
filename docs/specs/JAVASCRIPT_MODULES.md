@@ -21,7 +21,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `experiment/data-model.js` — normalized experiment construction.
 - `experiment/model.js` — Working Copy query/mutation helpers.
 - `experiment/canonical-store.js` — canonical-v2 semantic index, stable relations, aliases and evidence.
-- `knowledge/knowledge-base.js` — folder-backed versioned Design library (`library.json`), directory permission/refresh, JSON interchange and deterministic fill-only application with provenance.
+- `knowledge/knowledge-base.js` — folder-backed versioned scientific library (`library.json`), directory permission/refresh, JSON interchange and deterministic ranked retrieval for Assistant/Action Context Packs.
 
 ## AI, Actions and Tools
 

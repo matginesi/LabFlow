@@ -5,8 +5,8 @@
   "role": "researcher",
   "title": "Complete design with AI",
   "short_title": "Complete design",
-  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first and model knowledge only for missing information.",
-  "strategy": "One bounded request for one selected experiment. Known Working Copy values are preserved; evidence-backed and knowledge-only proposals are labelled separately.",
+  "purpose": "Produce one complete, provenance-labelled design proposal for the selected experiment using dataset evidence first and automatically retrieved Knowledge Base records for missing information.",
+  "strategy": "One bounded request for one selected experiment. LabFlow ranks relevant folder records automatically; known Working Copy values are preserved and every used knowledge record ID remains attached to the proposal.",
   "output": "json",
   "mutation_scope": "",
   "policies": [

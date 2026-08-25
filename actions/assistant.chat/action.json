@@ -29,6 +29,7 @@
           "document.get",
           "figures.list",
           "evidence.search",
+          "knowledge.search",
           "provenance.list",
           "nomad.get"
         ],
@@ -45,7 +46,7 @@
   ],
   "category": "assistant",
   "role": "assistant",
-  "strategy": "Read-only tool-aware assistant. The model may inspect the current Canonical Data Model through explicitly allowed read tools, then answer from returned observations. It cannot mutate the Working Copy or invoke write Actions.",
+  "strategy": "Read-only tool-aware assistant. The model may inspect the current Canonical Data Model and retrieve relevant folder-backed Knowledge Base records through explicitly allowed read tools, then answer from returned observations. It cannot mutate the Working Copy or invoke write Actions.",
   "mutation_scope": "",
   "visibility": "internal",
   "version": 1,

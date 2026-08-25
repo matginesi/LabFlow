@@ -49,6 +49,11 @@
           "evidence": {
             "type": "string"
           },
+          "knowledge_refs": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {"type": "string"}
+          },
           "confidence": {
             "type": "number",
             "minimum": 0,
@@ -144,6 +149,11 @@
                 "evidence": {
                   "type": "string"
                 },
+                "knowledge_refs": {
+                  "type": "array",
+                  "maxItems": 6,
+                  "items": {"type": "string"}
+                },
                 "confidence": {
                   "type": "number",
                   "minimum": 0,
@@ -166,6 +176,11 @@
           },
           "evidence": {
             "type": "string"
+          },
+          "knowledge_refs": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {"type": "string"}
           },
           "confidence": {
             "type": "number",
