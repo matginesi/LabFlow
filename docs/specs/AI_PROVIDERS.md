@@ -20,21 +20,21 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 - A base ending in `/v1` resolves to `/v1/chat/completions`; an already complete endpoint is preserved and duplicated suffixes are normalized.
 - Only `http:` and `https:` endpoints are accepted.
 - A bearer key is sent only for providers declaring `keyRequired` or `optionalKey`. Ollama and LM Studio never inherit a key saved for a cloud provider.
-- Cloud API keys are stored separately by provider. The legacy single-key setting is migrated once to the provider that was active when it was saved.
+- Cloud API keys are stored separately by provider. The legacy single-key setting is merged once into the provider that was active when it was saved, even when keys for other providers already exist; existing provider-specific keys are never overwritten.
 - Provider-declared static headers are allowlisted in the registry. Z.AI sends its documented `Accept-Language`; OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
 - Browser-origin access remains a provider responsibility. LabFlow does not prescribe a separate application server: LM Studio or Ollama only needs to accept requests from the browser origin currently running LabFlow.
 
 ## Model discovery and capability detection
 
 - Standard and custom providers use their OpenAI-compatible `/models` response.
-- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. Settings keeps **Load models** disabled until a key is entered, then presents the returned model IDs in a real select. Z.AI also presents its detected catalogue in a real select; its configured/default `glm-4.7-flash` entry is preserved when the catalogue endpoint omits it. A catalogue failure restores exact manual model entry rather than blocking connection testing.
+- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. The single **Detect** control is disabled until a required key is entered, then reads capabilities and presents returned model IDs in a real select when available. Z.AI uses that same control and preserves its configured/default `glm-4.7-flash` entry when the catalogue endpoint omits it. A catalogue failure restores exact manual model entry rather than blocking connection testing.
 - Gemini supplements this with the native Models API output and input ceilings.
 - Ollama supplements this with `/api/show`, including `num_predict` and model context metadata.
 - LM Studio supplements this with `/api/v1/models`. `loaded_instances` is authoritative for the active model and runtime context; a listed but unloaded model is not silently treated as active.
 
-Discovery is cached by provider, endpoint and model. Opening Settings and editing provider fields never contacts a provider. Discovery runs only when the researcher presses **Detect models** / **Load models** or starts **Save & test connection**; the latter performs the same detection silently before sending its probe. Exact output limits are preferred, and a context window is not mislabeled as an output limit. Catalogue-select providers retain a valid configured model; Z.AI additionally preserves its configured/default `glm-4.7-flash` entry when that model is absent from the returned catalogue instead of resetting to the first GLM 4.5 row.
+Discovery is cached by provider, endpoint and model. Opening Settings and editing provider fields never contacts a provider. Every provider uses the same **Detect** control; it reads capability metadata and also the model catalogue when available. Discovery otherwise runs only immediately before an explicit **Save & test connection**, which performs the same detection silently before sending its probe. Exact output limits are preferred, and a context window is not mislabeled as an output limit. Catalogue-select providers retain a valid configured model; Z.AI additionally preserves its configured/default `glm-4.7-flash` entry when that model is absent from the returned catalogue instead of resetting to the first GLM 4.5 row.
 
-For NVIDIA the intended sequence is **enter API key → Load models → choose model → Save & test connection**. Loading the catalogue stores the provider-scoped key locally after that explicit request; it does not send experiment data.
+For a key-gated provider the intended sequence is **enter API key → Detect → choose model when a catalogue is available → Save & test connection**. Detect stores the provider-scoped key locally after that explicit request; it does not send experiment data.
 
 ## Thinking and non-thinking models
 
@@ -69,10 +69,11 @@ Provider reasoning is normalized separately from final content. LabFlow accepts 
 - Z.AI streaming deliberately omits OpenAI's `stream_options` extension because it is not part of Z.AI's documented Chat Completions request. Usage is still parsed when Z.AI returns it and otherwise estimated locally.
 - Streaming and non-streaming responses use the same normalized result contract.
 - Action output targets are clamped by detected model/provider ceilings and researcher caps. Unknown ceilings remain unknown; the transport does not invent a global maximum.
+- Context preflight reserves the Action target output first, not the full theoretical JSON ceiling. If necessary it compacts again down to the declared minimum valid output before reporting a genuine context overflow.
 - Transport rate-limit retries repeat the identical HTTP request with bounded provider-specific backoff. They do not rerun an Action or create a queue.
 
 ## Connection test
 
-**Save & test connection** uses the normal transport and current form values. The provider output includes the model reply plus measured elapsed time, successful round-trip time, local/retry overhead, token usage or a clearly marked estimate, throughput, payload size, finish reason, retries and request ID. It does not send experiment data.
+**Save & test connection** persists the current provider, model and provider-scoped key before silent discovery, verifies browser retention, then uses the normal transport. The provider output includes the model reply plus measured elapsed time, successful round-trip time, local/retry overhead, token usage or a clearly marked estimate, throughput, payload size, finish reason, retries and request ID. It does not send experiment data.
 
 Errors retain the provider response and are classified separately as browser/CORS, authentication, unavailable model, context overflow, output-length contract failure, rate limit or provider server failure. Diagnostic helpers have one public API: `networkMessage`, `statusHint`, `errorSummary` and `contextNote`.

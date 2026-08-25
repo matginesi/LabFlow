@@ -116,6 +116,17 @@ module.exports=function(t,LF){
     if(!sent||!sent.messages||Math.ceil(sent.messages[0].content.length/1.5)>28000)throw new Error('final request must fit comfortably inside the 32k runtime context');
   };
 
+  t['structured Action reserves its target rather than falsely requiring its full output ceiling']=async function(){
+    const exp={id:'exp_context_target',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'design.infer',type:'AI',steps:[{id:'infer',type:'AI',output:'json',max_output_tokens:6144,min_output_tokens:1200,target_output_tokens:2800,max_retries:0}]},previousStructured=LF.StructuredOutput;let sent=null;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'mid-context',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){const content='X'.repeat(4000);return{context:{payload:content},messageList:[{role:'user',content:content}]};}};
+    LF.StructuredOutput={parse:function(){return{value:{},strategy:'JSON'};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return String(messages[0].content||'').length;},resolveModelCapabilities:async function(){return{contextWindow:8192,maxOutputTokens:6144};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,cap.contextWindow-inputTokens-512);},resolveThinkingPolicy:function(){return{transportMode:'auto'};},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'{}',finishReason:'stop'};}};
+    try{const out=await LF.ActionRunner.run('design.infer');assert(out.status,'done','target-sized context fits');if(!sent||sent.maxTokens<2800)throw new Error('valid target output budget must remain available');}
+    finally{LF.StructuredOutput=previousStructured;}
+  };
+
   t['AI checkpoint with max_retries zero falls back after the first failed attempt'] = async function(){
     const exp={id:'exp_no_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.no-retry',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,max_retries:0}]};

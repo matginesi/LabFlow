@@ -45,6 +45,7 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
     assert(LF.AIProviders.zai.modelSelect===true,'Z.AI uses a real model select');
     assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves a configured model omitted by its catalogue');
+    assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
   };
@@ -58,11 +59,11 @@ module.exports=function(t,LF){
   };
 
   t['Z.AI settings render a real key-gated model select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI select labelled');assert(html.indexOf('id="aiModelSelect" aria-label="Z.AI model"')>=0,'Z.AI select rendered');assert(html.indexOf('id="loadProviderModels" disabled>Detect models')>=0,'Z.AI detection gated by key');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI select labelled');assert(html.indexOf('id="aiModelSelect" aria-label="Z.AI model"')>=0,'Z.AI select rendered');assert(html.indexOf('id="loadProviderModels" disabled>Detect</button>')>=0,'Z.AI uses the shared Detect control');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="loadProviderModels" disabled>Load models')>=0,'loading gated by key');assert(html.indexOf('Enter the NVIDIA API key to enable model loading.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="loadProviderModels" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['API keys are isolated by provider and the legacy key migrates once']=function(){
@@ -74,6 +75,18 @@ module.exports=function(t,LF){
     LF.Storage.saveApiKey('openrouter-key','openrouter');
     assert(LF.Storage.getApiKey('zai')==='legacy-zai','Z.AI key retained');
     assert(LF.Storage.getApiKey('openrouter')==='openrouter-key','OpenRouter key stored separately');
+    localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.settings');
+  };
+
+  t['legacy Z.AI key merges with existing provider keys instead of being stranded']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai'}));
+    localStorage.setItem('labflow.ai.keys',JSON.stringify({nvidia:'nvidia-key'}));
+    localStorage.setItem('labflow.ai.key','legacy-zai');
+    assert(LF.Storage.getApiKey('zai')==='legacy-zai','legacy Z.AI key merged');
+    assert(LF.Storage.getApiKey('nvidia')==='nvidia-key','existing provider key retained');
+    assert(localStorage.getItem('labflow.ai.key')===null,'legacy key removed after successful merge');
+    assert(LF.Storage.saveApiKey('new-zai','zai')===true,'provider key save reports success');
+    assert(LF.Storage.getApiKey('zai')==='new-zai','new Z.AI key retained');
     localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.settings');
   };
 

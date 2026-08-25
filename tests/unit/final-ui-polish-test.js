@@ -47,7 +47,7 @@ module.exports=function(t){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
     assert(settings.includes('await loadModels({silent:true})'),true,'connection test performs silent detection first');
-    assert(settingsPage.includes('only when you press Detect or run the connection test'),true,'trigger policy is visible');
+    assert(settingsPage.includes('Press Detect to read model capabilities and the catalogue when the provider exposes one.'),true,'shared Detect policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
   };

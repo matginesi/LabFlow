@@ -7,7 +7,7 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', modelLoadLabel:'Detect models', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:60000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500},
+      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:60000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500},
       note:'Official general Z.AI Chat Completions endpoint. Coding Plan keys use a separate endpoint intended for supported coding tools and are not general API keys. The free glm-4.7-flash model is paced; HTTP 429 / code 1305 uses bounded backoff.'
     },
     openrouter: {
@@ -15,7 +15,7 @@
       note:'OpenRouter OpenAI-compatible endpoint. Use an OpenRouter model slug; Detect reads the current catalogue and model limits.'
     },
     nvidia: {
-      id:'nvidia', name:'NVIDIA NIM', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', modelsEndpoint:'https://integrate.api.nvidia.com/v1/models', model:'meta/llama-3.3-70b-instruct', keyRequired:true, modelSelect:true, modelSelectLabel:'NVIDIA NIM model', modelLoadLabel:'Load models', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
+      id:'nvidia', name:'NVIDIA NIM', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', modelsEndpoint:'https://integrate.api.nvidia.com/v1/models', model:'meta/llama-3.3-70b-instruct', keyRequired:true, modelSelect:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
       note:'NVIDIA hosted NIM OpenAI-compatible endpoint. Enter the NVIDIA API key, load its current model catalogue, then choose the exact model ID before testing.'
     },
     openai: {

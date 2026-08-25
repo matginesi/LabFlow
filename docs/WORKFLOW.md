@@ -952,7 +952,7 @@ Upload is mandatory and Review is not a second route. `experiment-understand` is
 
 ## Provider output limits
 
-The AI transport resolves model capabilities and caches them by provider/endpoint/model. Exact output maxima are preferred; when only a context ceiling is available, the runner subtracts estimated input plus reserve. Unknown limits remain unknown and the token parameter is omitted. Settings can force a lower global cap, and Assistant can force a lower chat-only cap; zero means automatic.
+The AI transport resolves model capabilities and caches them by provider/endpoint/model. Exact output maxima are preferred; when a context ceiling is available, preflight reserves the Action target output rather than its full theoretical ceiling, compacts the Context Pack, and may relax only as far as the declared minimum valid output before reporting a real overflow. The final transport budget is recalculated from the fitted input size. Unknown limits remain unknown and the token parameter is omitted. Settings can force a lower global cap, and Assistant can force a lower chat-only cap; zero means automatic.
 
 For Report/Paper and other word-sized work units, a known provider or researcher ceiling is applied to `target_words`, `min_words` and `max_words` before the Context Pack is built. If a provider still returns `finish_reason: length` (for example because hidden reasoning consumed part of the allowance), the declared bounded retry requests one complete shorter rewrite instead of resending the same impossible target or storing partial prose.
 

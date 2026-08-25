@@ -15,11 +15,11 @@
   function getAssistantSettings(){const d={memoryEnabled:true,memoryTurns:6,memoryChars:6000,messageChars:1800,contextChars:12000,maxOutputTokens:0,temperature:0.4},raw=read('labflow.assistant.settings',{}),o=Object.assign({},d,raw);o.memoryEnabled=o.memoryEnabled!==false;o.memoryTurns=Math.max(0,Math.min(20,Number(o.memoryTurns)||0));o.memoryChars=Math.max(500,Math.min(32000,Number(o.memoryChars)||d.memoryChars));o.messageChars=Math.max(250,Math.min(8000,Number(o.messageChars)||d.messageChars));o.contextChars=Math.max(2000,Math.min(48000,Number(o.contextChars)||d.contextChars));o.maxOutputTokens=Math.max(0,Math.min(1048576,Number(o.maxOutputTokens)||0));o.temperature=Math.max(0,Math.min(2,Number(o.temperature)));if(!Number.isFinite(o.temperature))o.temperature=d.temperature;return o;}
   function saveAssistantSettings(v){const next=Object.assign({},getAssistantSettings(),v||{});write('labflow.assistant.settings',next);return getAssistantSettings();}
   function apiKeys(){
-    const keys=read(API_KEY_STORE,{});if(keys&&typeof keys==='object'&&!Array.isArray(keys)&&Object.keys(keys).length)return keys;
-    try{const legacy=localStorage.getItem(LEGACY_API_KEY_STORE)||'';if(!legacy)return{};const saved=read('labflow.ai.settings',{}),provider=String(saved.provider||'zai');const migrated={};migrated[provider]=legacy;write(API_KEY_STORE,migrated);localStorage.removeItem(LEGACY_API_KEY_STORE);Log.info('api-key.migrated',{provider:provider});return migrated;}catch(_){return{};}
+    let keys=read(API_KEY_STORE,{});if(!keys||typeof keys!=='object'||Array.isArray(keys))keys={};
+    try{const legacy=localStorage.getItem(LEGACY_API_KEY_STORE)||'';if(!legacy)return keys;const saved=read('labflow.ai.settings',{}),provider=String(saved.provider||'zai');if(!keys[provider])keys[provider]=legacy;const stored=write(API_KEY_STORE,keys);if(stored){localStorage.removeItem(LEGACY_API_KEY_STORE);Log.info('api-key.migrated',{provider:provider});}return keys;}catch(_){return keys;}
   }
   function getApiKey(providerId){try{const provider=String(providerId||getAiSettings().provider||'zai');return String(apiKeys()[provider]||'');}catch(_){return'';}}
-  function saveApiKey(key,providerId){try{const provider=String(providerId||getAiSettings().provider||'zai'),keys=apiKeys();if(key)keys[provider]=String(key);else delete keys[provider];write(API_KEY_STORE,keys);}catch(err){Log.warn('api-key.save-failed',{error:err});}}
+  function saveApiKey(key,providerId){try{const provider=String(providerId||getAiSettings().provider||'zai'),keys=apiKeys();if(key)keys[provider]=String(key);else delete keys[provider];const stored=write(API_KEY_STORE,keys);if(!stored)Log.warn('api-key.save-failed',{provider:provider});return stored;}catch(err){Log.warn('api-key.save-failed',{error:err});return false;}}
 
   /* Action overrides are the one browser-local runtime configuration layer.
      Versioned action.json / prompt.md files remain the resettable source defaults. */
