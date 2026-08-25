@@ -162,7 +162,7 @@ Action output budgets remain in Action contracts. Connection settings must not b
 
 ## 10. Assistant read-tool loop and safety boundary
 
-Chat is tool-aware but read-only with respect to scientific Working Copy state. `assistant.chat` declares its allowed Tools in `action.json`. The runner performs at most the configured bounded number of planning rounds (currently six): each round may request one exact read Tool with JSON arguments or declare that enough evidence has been gathered. Broad or diagnostic questions are instructed to cover the relevant Results, scope, findings and provenance/Design slices before answering. Duplicate identical calls stop the loop.
+Chat is read-only with respect to scientific Working Copy state. `assistant.chat` receives one deterministic, bounded context assembled locally from the current page, experiment state, results, findings, provenance/Design data and any useful local Knowledge Base matches. One user turn produces one provider request; there is no model-driven tool-planning loop before the answer.
 
 Only Tools marked both `agent_visible: true` and `access: read` can execute with `agent: true`; the registry rejects write/internal Tools even if the model names them. Tool arguments are validated against each Tool's small input contract and observations are bounded before they are added to the final Assistant context. Planner JSON is an internal control result, not user-visible thinking.
 
@@ -171,7 +171,7 @@ The final answer is generated only after this retrieval phase and may expose whi
 
 ## Provider rate limits
 
-LabFlow treats provider rate limiting separately from model/output failures. For Z.AI `glm-4.7-flash`, consecutive requests are paced to avoid burst traffic. HTTP 429 or provider code `1305` triggers a bounded transport-level cooldown and retry of the exact same request; `Retry-After` is honored when present. This retry does not rebuild prompts, rerun deterministic checkpoints, or count as an Action semantic retry. Quota-exhaustion codes such as 1308/1310 are not retried automatically.
+LabFlow treats provider rate limiting separately from model/output failures. Z.AI `glm-4.7-flash` is not slowed by a fixed inter-request delay while the API is accepting traffic. HTTP 429 or provider code `1305` triggers a bounded transport-level cooldown, learns a temporary per-model pacing interval and retries the exact same request; `Retry-After` is honored when present. The learned interval decays after successful requests. This retry does not rebuild prompts, rerun deterministic checkpoints, or count as an Action semantic retry. Quota-exhaustion codes such as 1308/1310 are not retried automatically.
 
 
 ## Adaptive output budgeting

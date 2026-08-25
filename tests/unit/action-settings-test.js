@@ -50,23 +50,27 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.nvidia.modelsEndpoint==='https://integrate.api.nvidia.com/v1/models','NVIDIA models endpoint');
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
-    assert(LF.AIProviders.zai.modelSelect===true,'Z.AI uses a real model select');
-    assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves a configured model omitted by its catalogue');
+    assert(LF.AIProviders.zai.modelSelect===false,'Z.AI uses the exact configured model instead of a remote catalogue');
+    assert(LF.AIProviders.zai.skipModelCatalogue===true,'Z.AI catalogue probing is intentionally disabled');
+    assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves the configured model');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
+    assert(LF.AIProviders.zai.rateLimit.freeFlashMinIntervalMs===0,'healthy Z.AI requests have no fixed pacing tax');
+    assert(LF.AIProviders.zai.rateLimit.retries===3,'heavy Z.AI Actions keep bounded transport retries');
+    assert(LF.AIProviders.zai.rateLimit.adaptiveStepMs>0&&LF.AIProviders.zai.rateLimit.adaptiveMaxIntervalMs>=LF.AIProviders.zai.rateLimit.adaptiveStepMs,'Z.AI learns temporary spacing only after rate limits');
   };
 
-  t['Z.AI Detect preserves the configured free Flash model when catalogue ordering differs']=function(){
-    const prepared=LF.AISettings.catalogueChoices(LF.AIProviders.zai,'glm-4.7-flash',['glm-4.5','glm-4.5-air']);
-    assert(prepared.catalogue.length===2&&prepared.choices.length===3,'configured model is added without falsifying provider catalogue count');
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'glm-4.7-flash',prepared.choices,true)==='glm-4.7-flash','Z.AI select must not reset to first catalogue row');
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'',[LF.AIProviders.zai.model].concat(prepared.catalogue),true)==='glm-4.7-flash','empty Z.AI model uses provider default');
-    assert(LF.AISettings.catalogueModel(LF.AIProviders.nvidia,'missing',prepared.catalogue,true)==='glm-4.5','select provider still chooses a catalogue model');
+  t['Z.AI uses the exact configured model and never offers catalogue substitutions']=function(){
+    const provider=LF.AIProviders.zai;
+    assert(provider.model==='glm-4.7-flash','default remains free Flash');
+    assert(provider.modelSelect===false,'manual exact model input');
+    assert(provider.skipModelCatalogue===true,'remote catalogue disabled');
+    assert(provider.preserveConfiguredModel===true,'configured model preserved');
   };
 
-  t['Z.AI settings render a real key-gated model select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI select labelled');assert(html.indexOf('id="aiModelSelect" aria-label="Z.AI model"')>=0,'Z.AI select rendered');assert(html.indexOf('id="loadProviderModels" disabled>Detect</button>')>=0,'Z.AI uses the shared Detect control');localStorage.removeItem('labflow.ai.settings');
+  t['Z.AI settings expose manual model input and local Inspect instead of remote Detect']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI manual model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('id="aiModelSelect" aria-label="Z.AI model" hidden')>=0,'remote model select hidden');assert(html.indexOf('id="loadProviderModels" >Inspect</button>')>=0,'Z.AI uses local Inspect control');assert(html.indexOf('never downloads or substitutes another Z.AI model')>=0,'manual-model guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){

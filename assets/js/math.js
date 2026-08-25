@@ -55,13 +55,13 @@
   function imageFromSvg(svg,latex){
     return new Promise(function(resolve,reject){
       try{
-        const vb=(svg.getAttribute('viewBox')||'0 0 1000 200').trim().split(/\s+/).map(Number),vw=Math.max(1,Number(vb[2])||1000),vh=Math.max(1,Number(vb[3])||200),ratio=Math.max(.4,Math.min(18,vw/vh));
-        const cssWidth=Math.max(360,Math.min(1180,280+String(latex||'').length*7)),cssHeight=Math.max(72,Math.min(260,cssWidth/ratio)),scale=2;
+        const vb=(svg.getAttribute('viewBox')||'0 0 1000 200').trim().split(/\s+/).map(Number),vw=Math.max(1,Number(vb[2])||1000),vh=Math.max(1,Number(vb[3])||200),ratio=Math.max(.25,Math.min(24,vw/vh));
+        const sourceLatex=String(latex||''),rows=Math.max(1,(sourceLatex.match(/\\\\|\\begin\{|\n/g)||[]).length+1),targetHeight=Math.min(84,rows>1?52+Math.min(3,rows-1)*8:40);let cssHeight=targetHeight,cssWidth=cssHeight*ratio;if(cssWidth>760){cssWidth=760;cssHeight=cssWidth/ratio;}if(cssWidth<36)cssWidth=36;cssHeight=Math.max(24,Math.min(96,cssHeight));const scale=3;
         const source='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgString(svg)),img=new Image();
         img.onload=function(){
           const canvas=document.createElement('canvas');canvas.width=Math.round(cssWidth*scale);canvas.height=Math.round(cssHeight*scale);const ctx=canvas.getContext('2d');
           ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
-          const pad=18*scale,availW=canvas.width-pad*2,availH=canvas.height-pad*2,drawRatio=vw/vh;let dw=availW,dh=dw/drawRatio;if(dh>availH){dh=availH;dw=dh*drawRatio;}
+          const pad=8*scale,availW=canvas.width-pad*2,availH=canvas.height-pad*2,drawRatio=vw/vh;let dw=availW,dh=dw/drawRatio;if(dh>availH){dh=availH;dw=dh*drawRatio;}
           ctx.drawImage(img,(canvas.width-dw)/2,(canvas.height-dh)/2,dw,dh);
           resolve({dataUrl:canvas.toDataURL('image/jpeg',.96),widthPx:cssWidth,heightPx:cssHeight,pixelWidth:canvas.width,pixelHeight:canvas.height});
         };

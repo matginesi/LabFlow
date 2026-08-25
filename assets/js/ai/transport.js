@@ -105,10 +105,10 @@
   function rateKey(spec){return[String(spec&&spec.settings&&spec.settings.provider||''),String(spec&&spec.model||spec&&spec.settings&&spec.settings.model||'')].join('|');}
   function ratePolicy(spec){
     const provider=spec&&spec.provider||{},settings=spec&&spec.settings||{},cfg=provider.rateLimit||{},providerId=String(settings.provider||provider.id||''),model=String(spec&&spec.model||settings.model||''),freeZaiFlash=providerId==='zai'&&/^glm-4\.7-flash$/i.test(model);
-    const delays=Array.isArray(cfg.delaysMs)&&cfg.delaysMs.length?cfg.delaysMs.map(function(x){return Math.max(0,Number(x)||0);}):[5000,12000];
-    const retryCount=Number(cfg.retries);return{key:rateKey(spec),retries:Number.isFinite(retryCount)?Math.max(0,Math.min(3,retryCount)):1,delaysMs:delays,maxDelayMs:Math.max(1000,Number(cfg.maxDelayMs)||30000),minIntervalMs:freeZaiFlash?Math.max(0,Number(cfg.freeFlashMinIntervalMs)||2500):Math.max(0,Number(cfg.minIntervalMs)||0),providerId:providerId,model:model};
+    const delays=Array.isArray(cfg.delaysMs)&&cfg.delaysMs.length?cfg.delaysMs.map(function(x){return Math.max(0,Number(x)||0);}):[5000,12000],retryCount=Number(cfg.retries);
+    return{key:rateKey(spec),retries:Number.isFinite(retryCount)?Math.max(0,Math.min(4,retryCount)):1,delaysMs:delays,maxDelayMs:Math.max(1000,Number(cfg.maxDelayMs)||30000),minIntervalMs:freeZaiFlash?Math.max(0,Number(cfg.freeFlashMinIntervalMs)||0):Math.max(0,Number(cfg.minIntervalMs)||0),adaptiveStepMs:Math.max(250,Number(cfg.adaptiveStepMs)||1000),adaptiveMaxIntervalMs:Math.max(1000,Number(cfg.adaptiveMaxIntervalMs)||10000),providerId:providerId,model:model};
   }
-  function rateState(key){if(!rateStates.has(key))rateStates.set(key,{lastStartedAt:0,nextAllowedAt:0,rateLimitCount:0});return rateStates.get(key);}
+  function rateState(key){if(!rateStates.has(key))rateStates.set(key,{lastStartedAt:0,nextAllowedAt:0,rateLimitCount:0,dynamicMinIntervalMs:0,successCount:0});return rateStates.get(key);}
   function cancelledWaitError(){const e=new Error('AI request cancelled by the user.');e.cancelled=true;e.code='ACTION_ABORTED';return e;}
   function waitFor(ms){
     ms=Math.max(0,Math.round(Number(ms)||0));if(!ms)return Promise.resolve();
@@ -116,8 +116,8 @@
   }
   function deadlineError(label,hardTimeoutMs){const e=new Error((label||'AI request')+' reached its '+Math.round(Number(hardTimeoutMs||0)/1000)+' second work-unit deadline while waiting for the provider.');e.timedOut=true;e.timeoutReason='deadline';e.timeoutMs=Number(hardTimeoutMs)||0;return e;}
   async function waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy){
-    policy=policy||ratePolicy(spec);const state=rateState(policy.key),now=Date.now(),target=Math.max(state.nextAllowedAt||0,(state.lastStartedAt||0)+policy.minIntervalMs),wait=Math.max(0,target-now);
-    if(wait){const elapsed=performance.now()-overallStarted;if(hardTimeoutMs&&elapsed+wait>=hardTimeoutMs)throw deadlineError(opts&&opts.label,hardTimeoutMs);if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_pacing',waitMs:wait,provider:policy.providerId,model:policy.model});await waitFor(wait);}
+    policy=policy||ratePolicy(spec);const state=rateState(policy.key),now=Date.now(),effectiveInterval=Math.max(policy.minIntervalMs,Number(state.dynamicMinIntervalMs)||0),target=opts&&opts.connectionTest?now:Math.max(state.nextAllowedAt||0,(state.lastStartedAt||0)+effectiveInterval),wait=Math.max(0,target-now);
+    if(wait){const elapsed=performance.now()-overallStarted;if(hardTimeoutMs&&elapsed+wait>=hardTimeoutMs)throw deadlineError(opts&&opts.label,hardTimeoutMs);if(Log)Log.info('rate-limit.pacing',{provider:policy.providerId,model:policy.model,waitMs:wait,dynamicIntervalMs:state.dynamicMinIntervalMs||0});if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_pacing',waitMs:wait,provider:policy.providerId,model:policy.model});await waitFor(wait);}
     state.lastStartedAt=Date.now();return state;
   }
 
@@ -204,12 +204,9 @@
     const requestLogId=C.uid('api');
     const requestBody=JSON.stringify(body);
     let responseMeta=null;
-    Log.info('request.start',{
-      requestLogId:requestLogId,label:label,method:'POST',endpoint:url,timeoutMs:limit,hardTimeoutMs:hardLimit||null,
-      request:{headers:headersObject(headers),body:body,bodyChars:requestBody.length,messageCount:(body.messages||[]).length},
-      browser:{protocol:location.protocol,origin:location.origin||'null',secureContext:!!window.isSecureContext,localTarget:isLocalAddress(url)},
-      provider:{model:body.model,stream:!!body.stream,jsonMode:!!body.response_format,thinking:body.thinking&&body.thinking.type||'n/a',reasoningEffort:body.reasoning_effort||'n/a'}
-    });
+    const msgChars=(body.messages||[]).reduce(function(n,m){return n+String(m&&m.content||'').length;},0),maxTokens=body.max_completion_tokens||body.max_tokens||body.max_output_tokens||null;
+    Log.info('request.start',{requestLogId:requestLogId,label:label,endpoint:url,model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,bodyChars:requestBody.length,maxTokens:maxTokens,thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,localTarget:isLocalAddress(url)});
+    Log.debug('request.payload',{requestLogId:requestLogId,headers:headersObject(headers),body:body});
     try{
       const response=await fetch(url,fetchOptions(url,headers,requestBody,controller));
       const responseHeadersMs=Math.round(performance.now()-started);
@@ -222,10 +219,10 @@
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason}:null};
-      Log.info('request.end',{requestLogId:requestLogId,label:label,method:'POST',endpoint:url,elapsedMs:elapsed,response:responseMeta});
+      Log.info('request.end',{requestLogId:requestLogId,label:label,status:response.status,ok:response.ok,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,bodyChars:text.length,requestId:responseRequestId,stream:responseMeta.stream});Log.debug('response.payload',{requestLogId:requestLogId,status:response.status,body:text.length>12000?text.slice(0,12000)+'…':text});
       if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers);
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
-      Log.info('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
+      Log.debug('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
       return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta};
     }catch(err){
       const elapsed=Math.round(performance.now()-started);
@@ -244,7 +241,7 @@
       if(requestState.partialRaw&&!failure.providerResponse){failure.providerResponse=requestState.partialRaw;failure.rawProviderResponse=requestState.partialRaw;}
       if(!Number.isFinite(Number(failure.elapsedMs)))failure.elapsedMs=elapsed;
       failure.requestLogId=requestLogId;
-      Log.error('request.failed',{requestLogId:requestLogId,label:label,method:'POST',endpoint:url,elapsedMs:elapsed,timeoutMs:limit,hardTimeoutMs:hardLimit||null,status:failure&&failure.status||responseMeta&&responseMeta.status||0,providerCode:failure&&failure.providerCode||'',providerMessage:failure&&failure.providerMessage||'',requestId:failure&&failure.requestId||responseMeta&&responseMeta.requestId||'',request:{headers:headersObject(headers),body:body,bodyChars:requestBody.length},response:responseDetail,error:failure});
+      Log.error('request.failed',{requestLogId:requestLogId,label:label,endpoint:url,model:body.model,elapsedMs:elapsed,timeoutMs:limit,hardTimeoutMs:hardLimit||null,status:failure&&failure.status||responseMeta&&responseMeta.status||0,providerCode:failure&&failure.providerCode||'',providerMessage:failure&&failure.providerMessage||'',requestId:failure&&failure.requestId||responseMeta&&responseMeta.requestId||'',bodyChars:requestBody.length,responseChars:Number(responseDetail&&responseDetail.bodyChars)||0,error:failure});Log.debug('request.failed-details',{requestLogId:requestLogId,request:{headers:headersObject(headers),body:body},response:responseDetail});
       throw failure;
     }finally{
       clearTimeout(timeout);clearTimeout(hardTimeout);if(parentController)parentController.signal.removeEventListener('abort',abortFromTask);if(activeRequest===requestState)activeRequest=null;inFlight=false;
@@ -487,12 +484,13 @@
     opts=opts||{};const normalPolicy=ratePolicy(spec),policy=opts.connectionTest?Object.assign({},normalPolicy,{retries:0,minIntervalMs:0}):normalPolicy,overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null,pacingMs=0,httpRequests=0;
     while(true){
       const pacingStarted=performance.now(),state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy);pacingMs+=performance.now()-pacingStarted;const elapsedBefore=performance.now()-overallStarted,remainingHard=hardTimeoutMs?Math.max(1,hardTimeoutMs-elapsedBefore):0;
-      try{httpRequests++;r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);break;}
+      try{httpRequests++;r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);state.successCount=(state.successCount||0)+1;if(state.successCount>=3&&state.dynamicMinIntervalMs){state.dynamicMinIntervalMs=Math.max(0,Math.round(state.dynamicMinIntervalMs*.65)-100);state.successCount=0;}break;}
       catch(err){
-        if(!isRateLimitError(err)||rateAttempt>=policy.retries)throw err;
+        if(!isRateLimitError(err))throw err;
         const configured=policy.delaysMs[Math.min(rateAttempt,policy.delaysMs.length-1)]||5000,serverDelay=Math.max(0,Number(err.retryAfterMs)||0),penalty=Math.min(policy.maxDelayMs,Math.max(configured,serverDelay));
-        state.rateLimitCount=(state.rateLimitCount||0)+1;state.nextAllowedAt=Math.max(state.nextAllowedAt||0,Date.now()+penalty);rateAttempt++;
-        Log.warn('rate-limit.backoff',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:rateAttempt,maxAttempts:policy.retries,retryInMs:penalty,retryAfterMs:serverDelay||null});
+        state.rateLimitCount=(state.rateLimitCount||0)+1;state.successCount=0;state.dynamicMinIntervalMs=Math.min(policy.adaptiveMaxIntervalMs,Math.max(policy.adaptiveStepMs,(state.dynamicMinIntervalMs||0)*1.6,policy.adaptiveStepMs*Math.min(4,state.rateLimitCount)));state.nextAllowedAt=Math.max(state.nextAllowedAt||0,Date.now()+penalty);
+        if(rateAttempt>=policy.retries){Log.warn('rate-limit.exhausted',{provider:policy.providerId,model:policy.model,retries:rateAttempt,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs),retryAfterMs:serverDelay||null});throw err;}rateAttempt++;
+        Log.warn('rate-limit.backoff',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:rateAttempt,maxAttempts:policy.retries,retryInMs:penalty,retryAfterMs:serverDelay||null,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs)});
         if(opts.onProgress)opts.onProgress({transportState:'rate_limit_wait',rateLimit:true,retryInMs:penalty,attempt:rateAttempt,maxAttempts:policy.retries,provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0)});
       }
     }

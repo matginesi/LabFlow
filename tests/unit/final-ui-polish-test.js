@@ -66,11 +66,28 @@ module.exports=function(t){
     assert(css.includes('.design-decision-dial'),true,'compact dial styling');
   };
 
+  t['Report editor updates source immediately but debounces expensive preview work']=function(){
+    assert(app.includes("LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);markDraft('report');scheduleReportEditorPreview(e.target.value)"),true,'editor source updates on every input');
+    assert(app.includes('window.setTimeout(function(){renderReportEditorPreview(markdown);},220)'),true,'preview and MathJax are debounced');
+    assert(app.includes("syncActiveReportEditor('pdf-export')"),true,'PDF export synchronizes visible editor first');
+    assert(app.includes("syncActiveReportEditor('before-ai-writing-help')"),true,'AI writing help synchronizes visible editor first');
+  };
+
+  t['Report figure selection is visual and selected figures are visible in preview']=function(){
+    const reportPage=fs.readFileSync(path.join(root,'assets/js/pages/report-page.js'),'utf8');
+    assert(reportPage.includes('figure-picker-preview'),true,'visual thumbnails in picker');
+    assert(reportPage.includes('data-figure-picker-all="true"'),true,'select all control');
+    assert(reportPage.includes('data-figure-picker-all="false"'),true,'select none control');
+    assert(reportPage.includes('report-preview-figures-head'),true,'selected figures are visible in document preview');
+    assert(css.includes('.figure-picker-tools'),true,'picker tools styling');
+  };
+
   t['Report equations are compact in preview PDF and DOCX']=function(){
     assert(css.includes('.report-preview .math-display mjx-container[display="true"]{font-size:.86em!important}'),true,'compact preview equation scale');
-    assert(reportExport.includes('maxW=430,maxH=105'),true,'bounded DOCX equation image');
-    assert(reportExport.includes('maxW=Math.min(350'),true,'bounded PDF equation width');
-    assert(reportExport.includes('maxH=82'),true,'bounded PDF equation height');
+    assert(reportExport.includes('scale=Math.min(1,430/w,82/h)'),true,'DOCX equations never upscale beyond their natural raster size');
+    assert(reportExport.includes('maxW=Math.min(390'),true,'bounded PDF equation width');
+    assert(reportExport.includes('maxH=42'),true,'compact PDF equation height');
+    assert(reportExport.includes('Math.max(125'),false,'PDF no longer forces a huge minimum equation width');
   };
 
   t['Long-session navigation avoids unbounded DOM and log payload work']=function(){
@@ -95,7 +112,7 @@ module.exports=function(t){
   };
 
   t['Action lifecycle updates do not rebuild the active page editor']=function(){
-    assert(app.includes("if(reason!=='actionRun')render()"),true,'actionRun state must not trigger a full page render');
+    assert(app.includes("if(reason!=='actionRun'&&reason!=='assistant')render()"),true,'actionRun and Assistant lifecycle must not trigger a full page render');
     assert(app.includes("if(reason!=='actionRun')scheduleWorkspaceSave"),true,'transient action lifecycle must not autosave the Working Copy');
   };
 

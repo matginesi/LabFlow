@@ -16,43 +16,22 @@
       "output": "text",
       "thinking": "auto",
       "timeout_ms": 240000,
-      "agent": {
-        "mode": "read_only_tools",
-        "tools": [
-          "experiment.summary",
-          "samples.list",
-          "sample.get",
-          "measurements.query",
-          "results.get",
-          "findings.list",
-          "design.get",
-          "document.get",
-          "figures.list",
-          "evidence.search",
-          "knowledge.search",
-          "provenance.list",
-          "nomad.get"
-        ],
-        "max_rounds": 6,
-        "thinking": "off",
-        "choice_schema": "assistant_tool_choice"
-      },
-      "max_output_tokens": 6144,
+      "max_output_tokens": 4096,
       "deadline_ms": 180000,
       "max_retries": 1,
-      "min_output_tokens": 800,
-      "target_output_tokens": 2400
+      "min_output_tokens": 500,
+      "target_output_tokens": 1800
     }
   ],
   "category": "assistant",
   "role": "assistant",
-  "strategy": "Read-only tool-aware assistant. It inspects the current Canonical Data Model and may search the always-available local Knowledge Base when the question benefits from LabFlow help or scientific background. A knowledge miss never blocks the answer. The Assistant cannot mutate the Working Copy or invoke write Actions.",
+  "strategy": "Single-request read-only assistant. LabFlow deterministically prepares the current page, relevant experiment evidence, bounded conversation history and optional local Knowledge Base matches before contacting the provider. A knowledge miss never blocks the answer. The Assistant cannot mutate the Working Copy.",
   "mutation_scope": "",
   "visibility": "internal",
   "version": 1,
   "input_scope": "current-page-context",
   "requires": [],
   "input": {
-    "context": "assistant"
+    "context": "chat"
   }
 }

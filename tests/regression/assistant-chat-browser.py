@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Provider-free browser regression for the Assistant message lifecycle."""
 import sys
+import shutil
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -29,7 +30,6 @@ def reset(page):
         LF.Storage.getAiSettings = () => ({provider: 'test', endpoint: 'local', model: 'test-model'});
         LF.Storage.getApiKey = () => '';
         LF.AIProviders = {test: {keyRequired: false}};
-        LF.State.notify = () => {};
         LF.Assistant.render({forceBottom: true});
       }
     """)
@@ -56,7 +56,8 @@ def install_pending(page):
 
 with sync_playwright() as p:
     print("launching Chromium", flush=True)
-    browser = p.chromium.launch(headless=True)
+    system_chromium = shutil.which('chromium') or shutil.which('chromium-browser')
+    browser = p.chromium.launch(headless=True, executable_path=system_chromium) if system_chromium else p.chromium.launch(headless=True)
     print("opening LabFlow", flush=True)
     page = browser.new_page(viewport={"width": 1440, "height": 900})
     page.set_default_timeout(5000)
@@ -84,7 +85,7 @@ with sync_playwright() as p:
     check(page.locator(".chat-spinner").count() == 0, "first useful content removed spinner")
     check(page.locator(".assistant-row strong", has_text="Useful").count() == 1, "streamed Markdown rendered")
 
-    page.evaluate("window.__assistantRun.resolve({status:'done', result:'**Useful** streamed answer', agentTrace:[], requestMeta:{final:{provider:'test',model:'test-model',reasoning:'private reasoning',latencyMs:12,tokensPerSecond:20,usage:{promptTokens:4,completionTokens:3,totalTokens:7}}}})")
+    page.evaluate("window.__assistantRun.resolve({status:'done', result:'**Useful** streamed answer', requestMeta:{final:{provider:'test',model:'test-model',reasoning:'private reasoning',latencyMs:12,tokensPerSecond:20,usage:{promptTokens:4,completionTokens:3,totalTokens:7}}}})")
     page.wait_for_function("!LabFlow.Assistant.isActive()")
     check(page.locator(".assistant-row").count() == 1, "completion did not append another Assistant container")
     check(page.locator(".chat-spinner").count() == 0, "completion left no spinner")
@@ -93,6 +94,21 @@ with sync_playwright() as p:
         print(page.evaluate("() => ({messages:LabFlow.State.state.experiment.derived.chat.conversation, html:document.querySelector('.assistant-row').innerHTML})"), flush=True)
     details.wait_for(state="attached")
     check(details.count() == 1 and not details.evaluate("node => node.open"), "reasoning Details closed by default")
+
+    # A second turn must work after the first final State notification. This is
+    # the regression for the old stuck-spinner / dead-composer race.
+    install_pending(page)
+    page.evaluate("() => { LabFlow.Assistant.sendChat('And what should I do next?'); }")
+    check(page.locator(".assistant-row").count() == 2, "second turn created exactly one new Assistant container")
+    check(page.locator(".chat-spinner").count() == 1, "second turn shows one spinner")
+    page.evaluate("window.__assistantRun.options.onProgress({content: 'Review the remaining evidence and then export the report.', reasoning: ''})")
+    check(page.locator(".chat-spinner").count() == 0, "second turn first content removed spinner")
+    page.evaluate("window.__assistantRun.resolve({status:'done', result:'Review the remaining evidence and then export the report.', requestMeta:{final:{provider:'test',model:'test-model',latencyMs:8}}})")
+    page.wait_for_function("!LabFlow.Assistant.isActive()")
+    check(page.locator(".assistant-row").count() == 2, "second completion did not duplicate Assistant container")
+    check(page.locator(".chat-spinner").count() == 0, "second completion left no spinner")
+    check("Review the remaining evidence" in page.locator(".assistant-row").last.inner_text(), "second answer rendered")
+    check(not page.locator("#chatInput").is_disabled(), "composer re-enabled after second turn")
 
     # Error reuses the pending response and exposes Retry.
     reset(page)
@@ -116,7 +132,7 @@ with sync_playwright() as p:
     reset(page)
     long_markdown = "\n\n".join(f"Paragraph {i}: scientific explanation with evidence and context." for i in range(80))
     page.evaluate("""text => {
-      LabFlow.ActionRunner={isRunning:()=>false,run:()=>Promise.resolve({status:'done',result:text,agentTrace:[],requestMeta:{final:{provider:'test',model:'test-model'}}}),cancel:()=>true};
+      LabFlow.ActionRunner={isRunning:()=>false,run:()=>Promise.resolve({status:'done',result:text,requestMeta:{final:{provider:'test',model:'test-model'}}}),cancel:()=>true};
       LabFlow.Assistant.sendChat('Give a long explanation');
     }""", long_markdown)
     page.wait_for_function("!LabFlow.Assistant.isActive()")

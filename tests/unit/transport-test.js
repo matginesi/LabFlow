@@ -310,7 +310,7 @@ module.exports = function (t, LF) {
   };
 
 
-  t['Z.AI free Flash uses burst pacing and bounded rate-limit retries'] = function () {
+  t['provider rate policy respects explicit pacing and bounded rate-limit retries'] = function () {
     const policy=AI.ratePolicy({settings:{provider:'zai',model:'glm-4.7-flash'},provider:{id:'zai',rateLimit:{retries:2,delaysMs:[6000,15000],freeFlashMinIntervalMs:2500}},model:'glm-4.7-flash'});
     assert(policy.minIntervalMs,2500,'free Flash pacing');
     assert(policy.retries,2,'bounded transport retries');

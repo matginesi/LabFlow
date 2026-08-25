@@ -370,6 +370,18 @@
     r.figureSelections[k]=all;if(k===r.kind)r.figureSelection=all;let figures=[];try{figures=reportFigurePreviews(exp).slice();}finally{r.figureSelections[k]=original;if(k===r.kind)r.figureSelection=original;}return figures;
   }
 
+  function reportContextData(exp) {
+    const m=reportModelData(exp);
+    return {
+      dataState:m.dataState, missingInformation:m.missingInformation, metrics:m.metrics,
+      validationCounts:m.validationCounts, validationIssues:(m.validationIssues||[]).slice(0,40),
+      top10:(m.top10||[]).slice(0,10), topRef:(m.topRef||[]).slice(0,10),
+      statistics:m.statistics, groupStatistics:(m.groupStatistics||[]).slice(0,16),
+      anomalies:(m.anomalies||[]).slice(0,24), experimentalEvidence:m.experimentalEvidence,
+      reconstruction:m.reconstruction
+    };
+  }
+
   function reportModel(exp) {
     const model = reportModelData(exp);
     model.figures = reportFigurePreviews(exp);
@@ -390,5 +402,5 @@
     const progress=typeof onProgress==='function'?onProgress:function(){},info=documentInfo(exp),end=Log.timer('export.pdf',{experimentId:exp.id,document:info.label,sourceChars:info.chars,sourceWords:info.words,updatedAt:info.updatedAt});progress({stage:'Building '+info.shortLabel.toLowerCase()+' model',progress:.10});const model=reportModel(exp);progress({stage:'Rendering LaTeX equations',progress:.30});model.mathImages=LF.Math&&LF.Math.renderDisplayEquations?await LF.Math.renderDisplayEquations(info.markdown):[];progress({stage:'Rendering PDF',progress:.55});const blob=window.ReportExport.buildPdfAsync?await window.ReportExport.buildPdfAsync(model,function(x){progress({stage:x.stage||'Rendering PDF',progress:.55+Number(x.progress||0)*.4});}):window.ReportExport.buildPdf(model),filename=C.safeName(exp.meta.name)+info.suffix+'.pdf';C.downloadBlob(blob,filename);progress({stage:'PDF ready',progress:1});end({filename:filename,bytes:blob.size,figures:model.figures.length,equations:model.mathImages.length,sourceChars:info.chars},'info');return blob;
   }
 
-  LF.Report = { ensureReport: ensureReport, designEvidenceMarkdown:designEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
+  LF.Report = { ensureReport: ensureReport, designEvidenceMarkdown:designEvidenceMarkdown, syncDesignEvidence:syncDesignEvidence, activeMarkdown:activeMarkdown, setActiveMarkdown:setActiveMarkdown, setKind:setKind, figureSelection:figureSelection, setFigure:setFigure, figuresEnabled:figuresEnabled, activeTitle:activeTitle, setActiveTitle:setActiveTitle, documentInfo:documentInfo, toLatex: toLatex, reportModel: reportModel, reportContextData:reportContextData, reportFigurePreviews: reportFigurePreviews, reportFigureCatalog:reportFigureCatalog, exportMarkdown: exportMarkdown, exportLatex: exportLatex, exportDocx: exportDocx, exportPdf: exportPdf };
 }());

@@ -27,14 +27,14 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 ## Model discovery and capability detection
 
 - Standard and custom providers use their OpenAI-compatible `/models` response.
-- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. The single **Detect** control is disabled until a required key is entered, then reads capabilities and presents returned model IDs in a real select when available. Z.AI uses that same control and preserves its configured/default `glm-4.7-flash` entry when the catalogue endpoint omits it. A catalogue failure restores exact manual model entry rather than blocking connection testing.
+- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. **Detect** reads capabilities and presents returned model IDs in a real select when available. Z.AI deliberately does **not** load a provider-wide catalogue: the model field is exact/manual (default `glm-4.7-flash`) and **Inspect** only uses known local capability metadata. This prevents catalogue entries such as an inaccessible GLM variant from replacing the model tied to the researcher's API key.
 - Gemini supplements this with the native Models API output and input ceilings.
 - Ollama supplements this with `/api/show`, including `num_predict` and model context metadata.
 - LM Studio supplements this with `/api/v1/models`. `loaded_instances` is authoritative for the active model and runtime context; a listed but unloaded model is not silently treated as active.
 
-Discovery is cached by provider, endpoint and model. Opening Settings, editing provider fields and running an Action never contacts a provider for metadata. Every provider uses the same explicit **Detect** control; it reads capability metadata and also the model catalogue when available. Without detected or built-in metadata, Actions use their own bounded output contract and a conservative unknown-capability fallback. **Save & test connection** does not run discovery: it sends one small portable probe to the currently configured endpoint/model. Exact output limits are preferred when Detect has established them, and a context window is not mislabeled as an output limit. Catalogue-select providers retain a valid configured model; Detect never silently switches the configured model merely because another model is currently loaded or appears first in a catalogue.
+Discovery is cached by provider, endpoint and model. Opening Settings, editing provider fields and running an Action never contacts a provider for metadata. Providers that expose useful catalogues use explicit **Detect**; Z.AI uses exact manual model configuration and local **Inspect** instead. Without detected or built-in metadata, Actions use their own bounded output contract and a conservative unknown-capability fallback. **Save & test connection** does not run discovery: it sends one small portable probe to the currently configured endpoint/model. Exact output limits are preferred when Detect has established them, and a context window is not mislabeled as an output limit. Catalogue-select providers retain a valid configured model; Detect never silently switches the configured model merely because another model is currently loaded or appears first in a catalogue.
 
-For a key-gated provider the intended sequence is **enter API key → Detect → choose model when a catalogue is available → Save & test connection**. Detect stores the provider-scoped key locally after that explicit request; it does not send experiment data.
+For a catalogue provider the intended sequence is **enter API key → Detect → choose model → Save & test connection**. For Z.AI it is **enter the exact model ID available to the key → Save & test connection**; Inspect is optional and does not query the provider catalogue. Provider-scoped keys stay local to the browser and no detection step sends experiment data.
 
 ## Thinking and non-thinking models
 
@@ -70,7 +70,7 @@ Provider reasoning is normalized separately from final content. LabFlow accepts 
 - Streaming and non-streaming responses use the same normalized result contract.
 - Action output targets are clamped by detected model/provider ceilings and researcher caps. Unknown ceilings remain unknown; the transport does not invent a global maximum.
 - Context preflight reserves the Action target output first, not the full theoretical JSON ceiling. If necessary it compacts again down to the declared minimum valid output before reporting a genuine context overflow.
-- Transport rate-limit retries repeat the identical HTTP request with bounded provider-specific backoff. They do not rerun an Action or create a queue.
+- Transport rate-limit retries repeat the identical HTTP request with bounded provider-specific backoff. They do not rerun an Action or create a queue. Z.AI `glm-4.7-flash` has no fixed delay while requests are succeeding; after a real 429/1305 the transport learns a temporary per-model pacing interval, honors `Retry-After`, and decays that interval after subsequent successes.
 
 ## Connection test
 

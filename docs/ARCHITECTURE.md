@@ -19,9 +19,9 @@ Tool Registry
    ┌────┴──────────────────┐
    ↓                       ↓
 Actions                Assistant
-(explicit workflows)   (read-only tool loop)
+(explicit workflows)   (single read-only request)
    ↓                       ↓
-validated writes        observations
+validated writes       bounded context
    └────────────┬──────────┘
                 ↓
            Working Copy
@@ -96,14 +96,14 @@ Primary modules:
 - `assets/js/tools/registry.js` — shared typed Tool Registry; read Tools expose Canonical data, internal service Tools wrap deterministic implementation functions;
 - `assets/js/ai/context.js` — bounded, declarative Context Pack builder;
 - `assets/js/ai/action-steps.js` — deterministic service implementations behind internal Tools;
-- `assets/js/ai/actions.js` — generic sequential Action runner, prerequisite gate and bounded Assistant read-tool loop;
+- `assets/js/ai/actions.js` — generic sequential Action runner and prerequisite gate;
 - `assets/js/ai/transport.js` — provider request/SSE transport;
 - `assets/js/ai/structured.js` — structured output parse/validation;
 - `assets/js/ai/assistant.js` — Assistant integration.
 
 Provider/model discovery, endpoint adaptation, thinking modes and normalized response behavior are specified in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md). The complete source ownership map is in [`docs/specs/JAVASCRIPT_MODULES.md`](specs/JAVASCRIPT_MODULES.md).
 
-Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant may choose only from an Action-declared allowlist of read-only Tools and cannot invoke write Tools or mutating Actions. Its structured tool planner is best-effort: models that cannot emit a valid tool choice fall through to the ordinary textual answer instead of failing the whole Assistant Action.
+Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant is also read-only, but it no longer runs an LLM planning loop: LabFlow builds a bounded deterministic context locally and sends one model request per turn.
 
 ## 7. Page architecture
 

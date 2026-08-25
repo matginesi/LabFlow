@@ -77,6 +77,17 @@ module.exports=function(t,LF){
     assert(discussion.min_words<discussion.target_words&&discussion.max_words>discussion.target_words,true,'word target has useful range');
   };
 
+  t['Report AI block storage restores expected heading levels and titles']=function(){
+    const e=exp();
+    const collected={kind:'lab',blocks:[{headings:['# Laboratory report']},{headings:['## Results']},{headings:['### Interpretation']}]};
+    LF.ActionSteps['report.store-draft-blocks']({exp:e,params:{document_kind:'lab'},outputs:{collect:collected,draft:['### Wrong title\n\nIntro.','# Another wrong heading\n\nMeasured data.','## Wrong interpretation\n\nMeaning.']}});
+    const md=LF.Report.activeMarkdown(e);
+    assert(md.includes('# Laboratory report\n\nIntro.'),true,'document heading normalized');
+    assert(md.includes('## Results\n\nMeasured data.'),true,'section heading normalized');
+    assert(md.includes('### Interpretation\n\nMeaning.'),true,'subheading normalized');
+    assert(md.includes('Wrong title'),false,'provider heading text removed');
+  };
+
   t['Report draft store accepts block arrays and legacy single-block output']=function(){
     const lab=exp(),paper=exp();
     let out=LF.ActionSteps['report.store-draft-blocks']({exp:lab,params:{document_kind:'lab'},outputs:{collect:{kind:'lab'},draft:['# Lab draft','## Results\n\nMeasured result.']}});

@@ -15,7 +15,7 @@
   const badge = PS.badge;
   let renderedRoute = '';
   const scrollMemory=new Map();
-  let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false;
+  let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false,reportPreviewTimer=0;
   function workspaceUiSnapshot(){return{route:S.state.route||S.state.ui&&S.state.ui.route||'experiment-import',resultsTab:S.state.resultsTab||S.state.ui&&S.state.ui.resultsTab||'overview',selectedMeasurementId:S.state.selectedMeasurementId||S.state.ui&&S.state.ui.selectedMeasurementId||null,selectedDesignDeviceId:S.state.selectedDesignDeviceId||S.state.ui&&S.state.ui.selectedDesignDeviceId||null};}
   async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
   function scheduleWorkspaceSave(reason){if(!hasExperiment())return;window.clearTimeout(workspaceSaveTimer);workspaceSaveTimer=window.setTimeout(function(){persistWorkspace(reason||'state');},700);}
@@ -55,28 +55,41 @@
   }
 
 
+  function renderReportEditorPreview(markdown){
+    window.clearTimeout(reportPreviewTimer);reportPreviewTimer=0;
+    const preview=document.getElementById('reportMarkdownRendered');if(!preview)return;
+    const text=String(markdown||''),has=!!text.trim();preview.classList.toggle('report-preview-empty',!has);preview.classList.toggle('markdown-view',has);preview.innerHTML=has?C.markdown(text):'<strong>No document content yet.</strong><span>The preview stays empty until you write or create a draft.</span>';
+    if(has&&LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,70);
+  }
+  function scheduleReportEditorPreview(markdown){window.clearTimeout(reportPreviewTimer);reportPreviewTimer=window.setTimeout(function(){renderReportEditorPreview(markdown);},220);}
+
   function applyMarkdownTool(tool) {
-    const el=document.getElementById('reportMarkdown');
-    if(!el) return;
-    const start=el.selectionStart||0,end=el.selectionEnd||0,value=el.value||'',selected=value.slice(start,end);
-    let replacement=selected,selectStart=start,selectEnd=end;
+    const el=document.getElementById('reportMarkdown');if(!el)return;
+    const value=el.value||'',start=el.selectionStart||0,end=el.selectionEnd||0,selected=value.slice(start,end);
+    let replacement=selected,replaceStart=start,replaceEnd=end,selectStart=start,selectEnd=end;
     function wrap(a,b,placeholder){const body=selected||placeholder;replacement=a+body+b;selectStart=start+a.length;selectEnd=selectStart+body.length;}
-    if(tool==='h2') { const body=selected||'Section title'; replacement='## '+body+'\n\n'; selectStart=start+3; selectEnd=selectStart+body.length; }
-    else if(tool==='h3') { const body=selected||'Subsection title'; replacement='### '+body+'\n\n'; selectStart=start+4; selectEnd=selectStart+body.length; }
-    else if(tool==='bold') wrap('**','**','important text');
-    else if(tool==='italic') wrap('_','_','emphasized text');
-    else if(tool==='quote') { const body=(selected||'Evidence-based note').split(/\r?\n/).map(function(line){return '> '+line;}).join('\n'); replacement=body+'\n\n'; selectStart=start; selectEnd=start+body.length; }
-    else if(tool==='ul'||tool==='list') { const body=(selected||'First item\nSecond item').split(/\r?\n/).map(function(line){return '- '+line;}).join('\n'); replacement=body+'\n\n'; selectStart=start; selectEnd=start+body.length; }
-    else if(tool==='table') { replacement='| Field | Value | Evidence |\n|---|---|---|\n| Example |  |  |\n\n'; selectStart=start; selectEnd=start+replacement.length-2; }
-    else if(tool==='code') wrap('`','`','value');
+    function block(prefix,placeholder){
+      replaceStart=value.lastIndexOf('\n',Math.max(0,start-1))+1;const next=value.indexOf('\n',end);replaceEnd=next<0?value.length:next;
+      let body=value.slice(replaceStart,replaceEnd);if(!body.trim())body=placeholder;
+      const lines=body.split(/\r?\n/).map(function(line){return line.replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+)/,'');});
+      replacement=lines.map(function(line){return prefix+line;}).join('\n');
+      selectStart=replaceStart+(prefix?prefix.length:0);selectEnd=replaceStart+replacement.length;
+    }
+    if(tool==='paragraph')block('','Paragraph text');
+    else if(tool==='h2')block('## ','Section title');
+    else if(tool==='h3')block('### ','Subsection title');
+    else if(tool==='quote')block('> ','Evidence-based note');
+    else if(tool==='ul'||tool==='list')block('- ','First item\nSecond item');
+    else if(tool==='bold')wrap('**','**','important text');
+    else if(tool==='italic')wrap('_','_','emphasized text');
+    else if(tool==='table'){replacement='| Field | Value | Evidence |\n|---|---|---|\n| Example |  |  |\n\n';selectStart=start;selectEnd=start+replacement.length-2;}
+    else if(tool==='code')wrap('`','`','value');
     else if(tool==='link'){const body=selected||'link text';replacement='['+body+'](https://example.org)';selectStart=start+1;selectEnd=selectStart+body.length;}
     else if(tool==='inline-math'){const body=selected||'\\eta = \\frac{P_{out}}{P_{in}}';replacement='$'+body+'$';selectStart=start+1;selectEnd=selectStart+body.length;}
     else if(tool==='block-math'){const body=selected||'\\mathrm{PCE} = \\frac{V_{OC} J_{SC} FF}{P_{in}}';replacement='$$\n'+body+'\n$$\n\n';selectStart=start+3;selectEnd=selectStart+body.length;}
     else return;
-    el.setRangeText(replacement,start,end,'end');
-    el.focus();
-    el.setSelectionRange(selectStart,selectEnd);
-    const exp=S.state.experiment;LF.Report.setActiveMarkdown(exp,el.value);markDraft('report');const preview=document.getElementById('reportMarkdownRendered');if(preview){preview.innerHTML=C.markdown(el.value);if(LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,40);}
+    el.setRangeText(replacement,replaceStart,replaceEnd,'end');el.focus();el.setSelectionRange(Math.min(selectStart,el.value.length),Math.min(selectEnd,el.value.length));
+    const exp=S.state.experiment;LF.Report.setActiveMarkdown(exp,el.value);markDraft('report');scheduleReportEditorPreview(el.value);
     Log.debug('report.markdown-tool',{tool:tool,selectionChars:selected.length,replacementChars:replacement.length});
   }
 
@@ -367,6 +380,7 @@
         const reportKind=e.target.closest('[data-report-kind]');if(reportKind){syncActiveReportEditor('document-switch');LF.Report.setKind(S.state.experiment,reportKind.dataset.reportKind);render();return;}
         if(e.target.closest('#chooseReportFigures')){const b=e.target.closest('#chooseReportFigures');LF.ReportPage.openFigurePicker(S.state.experiment,b.dataset.figureKind||LF.Report.documentInfo(S.state.experiment).kind);return;}
         if(e.target.closest('#figurePickerClose')||e.target.closest('#figurePickerCancel')){LF.ReportPage.closeFigurePicker();return;}
+        const figureBulk=e.target.closest('[data-figure-picker-all]');if(figureBulk){LF.ReportPage.setFigurePickerAll(figureBulk.dataset.figurePickerAll==='true');return;}
         if(e.target.closest('#figurePickerApply')){const kind=LF.ReportPage.applyFigurePicker();if(kind){markModified('report');render();LF.UI.toast((kind==='paper'?'Paper':'Report')+' figure selection updated.','success');}return;}
         const figureShade=e.target.closest('#figurePickerShade');if(figureShade&&e.target===figureShade){LF.ReportPage.closeFigurePicker();return;}
         const reportOperation=e.target.closest('button[data-action="report.generate"],button[data-action="report.improve"]');if(reportOperation){syncActiveReportEditor('before-ai-writing-help');const k=reportOperation.dataset.actionKind;if(k==='paper'||k==='lab')LF.Report.setKind(S.state.experiment,k);S.state.reportMode='editor';}
@@ -484,6 +498,7 @@
         const deviceSolution=e.target.closest('[data-device-solution-id]');if(deviceSolution){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){const id=deviceSolution.dataset.deviceSolutionId;dev.solutionIds=dev.solutionIds||[];if(deviceSolution.checked&&!dev.solutionIds.includes(id))dev.solutionIds.push(id);if(!deviceSolution.checked)dev.solutionIds=dev.solutionIds.filter(function(x){return x!==id;});dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceSample=e.target.closest('[data-device-sample-name]');if(deviceSample){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;}),name=deviceSample.dataset.deviceSampleName;if(dev){dev.sampleNames=dev.sampleNames||[];if(deviceSample.checked){d.devices.forEach(function(other){if(other.id!==dev.id)other.sampleNames=(other.sampleNames||[]).filter(function(x){return x!==name;});});if(!dev.sampleNames.includes(name))dev.sampleNames.push(name);d.devices=d.devices.filter(function(other){return other.id===dev.id||other.status!=='raw_evidence'||(other.sampleNames||[]).length>0;});}else dev.sampleNames=dev.sampleNames.filter(function(x){return x!==name;});dev.status='user_confirmed';markModified('design');render();}return;}
         if(e.target.id==='confirmSelectedDevice'){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev.status=e.target.checked?'user_confirmed':'raw_evidence';markModified('design');render();}return;}
+        const pickerFigure=e.target.closest('[data-figure-picker-key]');if(pickerFigure){LF.ReportPage.updateFigurePickerCount();return;}
         const reportFigure=e.target.closest('[data-report-figure]');if(reportFigure){LF.Report.setFigure(S.state.experiment,reportFigure.dataset.reportFigure,reportFigure.checked);markModified('report');render();return;}
         const reportOption=e.target.closest('[data-report-option]');if(reportOption){const r=LF.Report.ensureReport(S.state.experiment);r[reportOption.dataset.reportOption]=reportOption.checked;r.updatedAt=new Date().toISOString();markDraft('report');return;}
       } catch(err){Log.error('ui.change-handler-failed',{target:e.target&&e.target.id||'',error:err});}
@@ -499,8 +514,8 @@
         if(e.target.id==='curveSearch'){S.state.curveSearch=e.target.value;clearTimeout(S.state._curveSearchTimer);S.state._curveSearchTimer=setTimeout(function(){render();},140);return;}
         if(e.target.id==='measurementSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#measurementTable tbody tr').forEach(function(tr){tr.hidden=q&&!tr.dataset.search.includes(q);});return;}
         if(e.target.id==='reportMarkdown'){
-          LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);const preview=document.getElementById('reportMarkdownRendered');if(preview){preview.classList.toggle('report-preview-empty',!e.target.value.trim());preview.classList.toggle('markdown-view',!!e.target.value.trim());preview.innerHTML=e.target.value.trim()?C.markdown(e.target.value):'<strong>No document content yet.</strong><span>The preview stays empty until you write or create a draft.</span>';if(LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,180);}const hint=document.querySelector('.report-empty-hint');if(hint)hint.hidden=!!e.target.value.trim();const wc=document.getElementById('reportSaveState');if(wc)wc.textContent=((e.target.value.trim().match(/\S+/g)||[]).length)+' words';markDraft('report');
-          const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';const len=document.getElementById('reportPreviewLength');if(len)len.textContent=info.words+' words';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Saved now · export ready';return;
+          LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);markDraft('report');scheduleReportEditorPreview(e.target.value);const hint=document.querySelector('.report-empty-hint');if(hint)hint.hidden=!!e.target.value.trim();
+          const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';const len=document.getElementById('reportPreviewLength');if(len)len.textContent=info.words+' words';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Editing · '+info.words+' words';return;
         }
         const reportTitle=e.target.closest('[data-report-title]');if(reportTitle){LF.Report.setActiveTitle(S.state.experiment,reportTitle.value);markDraft('report');const cover=document.querySelector('.report-preview-cover strong');if(cover)cover.textContent=reportTitle.value;return;}
         const reportMeta=e.target.closest('[data-report-meta]');if(reportMeta){const r=LF.Report.ensureReport(S.state.experiment);r[reportMeta.dataset.reportMeta]=reportMeta.value;r.updatedAt=new Date().toISOString();markDraft('report');return;}
@@ -517,7 +532,7 @@
       } catch(err){Log.error('ui.input-handler-failed',{target:e.target&&e.target.id||'',error:err});}
     });
 
-    document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='reportMarkdown'){commitDraft('report');return;}if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}});
+    document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='reportMarkdown'){renderReportEditorPreview(e.target.value);commitDraft('report');return;}if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}});
 
     document.addEventListener('submit',async function(e){
       if(e.target.id==='knowledgeEntryForm'){
@@ -555,7 +570,7 @@
       if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
       else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
       S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
+      bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun'&&reason!=='assistant')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

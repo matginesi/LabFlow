@@ -69,7 +69,6 @@ for p in sorted(ACTIONS.glob('*/action.json')):
             if s.get('output')=='json':
                 sid=s.get('schema')
                 if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: JSON output requires a registered schema')
-            if s.get('agent') and s['agent'].get('thinking','off') not in {'off','auto','on'}:errors.append(f'{aid}/{s.get("id")}: agent thinking must be off|auto|on')
     else:
         if prompt.exists():errors.append(f'{aid}: deterministic Action must not have prompt.md')
         if d.get('policies'):errors.append(f'{aid}: deterministic Action must not carry AI policies')
@@ -82,15 +81,8 @@ for aid,d in defs.items():
     for s in d.get('steps',[]):
         tid=s.get('tool')
         if tid and tid not in tool_ids:errors.append(f'{aid}/{s.get("id")}: unknown deterministic tool {tid}')
-        agent=s.get('agent')
-        if agent:
-            if s.get('type')!='AI':errors.append(f'{aid}/{s.get("id")}: agent configuration is valid only on AI steps')
-            if agent.get('mode')!='read_only_tools':errors.append(f'{aid}/{s.get("id")}: unsupported agent mode')
-            if not agent.get('tools'):errors.append(f'{aid}/{s.get("id")}: agent tool allowlist is empty')
-            for tid in agent.get('tools') or []:
-                if tid not in tool_ids:errors.append(f'{aid}/{s.get("id")}: unknown agent tool {tid}')
-            sid=agent.get('choice_schema')
-            if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: agent requires a registered choice_schema')
+        if s.get('agent'):
+            errors.append(f'{aid}/{s.get("id")}: legacy model-driven agent planning is not supported; build deterministic context and use one AI request')
 # Static UI references must resolve to an Action id when literal.
 ui='\n'.join(p.read_text(errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))
 rendered=set(re.findall(r'data-action="([^"]+)"',ui)); unknown={x for x in rendered-set(defs) if '+' not in x and 'escapeHtml' not in x}

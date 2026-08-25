@@ -41,11 +41,11 @@ LabFlow also derives one shared **Experiment Brief**. Its deterministic part sum
 
 AI Actions use deterministic, profile-specific `LF.ContextBuilder` views over the Canonical Store. The context profile is declared by each Action in `input.context` rather than inferred from the Action ID.
 
-The Assistant is different: its bootstrap context is intentionally small (question, current page/selection, bounded history and tool policy). It may then retrieve only the evidence it needs through allowlisted read-only Tools. Tool observations are bounded before final model reuse, so the full experiment is never sent by default.
+The Assistant uses one deterministic chat Context Pack: the question, current page/selection, bounded history, focused samples/measurements/results/findings/evidence, the active Design/Report/NOMAD slice when relevant, and an optional local Knowledge Base lookup. Building this context is local and read-only; one user turn produces one provider request, so the Assistant does not spend extra LLM calls deciding what to read.
 
 Profiles select only what a workflow needs, for example:
 
-- assistant — small bootstrap context plus explicit read-tool observations;
+- chat — bounded question/page context plus focused Canonical data and optional local knowledge;
 - ambiguity — unresolved findings plus directly linked records/evidence;
 - design — one selected experiment, researcher-entered known values, explicit missing fields and linked evidence;
 - results — deterministic summary/rankings/anomalies/relevant findings;
@@ -71,7 +71,7 @@ The public set is intentionally limited to eight goals:
 
 `analysis.enrich` is an **internal automatic AI enrichment**, not a researcher-facing action. It runs only when a provider is configured and never blocks import if unavailable.
 
-`assistant.chat` is visible in Actions like every executable Action. It is **tool-aware but read-only**: a bounded model planning loop may select only allowlisted read Tools, after which the final response is generated from those observations. It cannot invoke write Tools, mutate the Working Copy or autonomously execute mutating Actions.
+`assistant.chat` is visible in Actions like every executable Action. It is **read-only and single-request**: LabFlow deterministically assembles the relevant current context and optional local Knowledge Base matches, then makes one normal model request. It cannot invoke write Tools, mutate the Working Copy or autonomously execute mutating Actions.
 
 Settings contains one editable **Actions** catalog for deterministic, AI-assisted and hybrid Actions. Each Action has one JSON definition and, only when needed, one Markdown prompt. Browser-local overrides never duplicate the source definition.
 

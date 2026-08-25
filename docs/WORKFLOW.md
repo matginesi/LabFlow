@@ -703,13 +703,11 @@ The chat surface has one durable user message and one durable Assistant message 
 
 The conversation is the panel's only vertical scroll region. Page/selection context appears once in the header, completed provider reasoning and telemetry live in a closed **Details** disclosure, and Action results appear as compact system events rather than Assistant replies. Auto-scroll follows output only while the researcher remains near the bottom; otherwise a **New response** control preserves the current reading position. Only complete user/Assistant turns enter bounded conversation memory; system events, errors and interrupted turns do not.
 
-## Read-only tool selection
+## Deterministic Assistant context
 
-The Assistant starts from a small bounded bootstrap context containing the user question, current page/selection, bounded conversation memory and the explicit read-only tool policy. It does **not** receive the whole experiment or an automatically expanded giant chat Context Pack.
+The Assistant builds one bounded read-only context locally from the current page/selection, recent completed conversation turns, focused Canonical samples/measurements/results/findings/evidence and the active Design, Report or NOMAD slice when relevant. A small local Knowledge Base lookup may add LabFlow help or scientific background when it matches the question; a miss is normal and adds no delay beyond the local search.
 
-The model may then request one allowed read Tool per bounded planning round. Current capabilities include experiment/sample summaries, measurement queries, deterministic Results, findings, Design, Report/Paper, selected figures, evidence, provenance and NOMAD state. The Tool Registry validates the tool ID/access and arguments, executes it against the current Canonical Data Model, and returns a bounded observation.
-
-The runner stops when the model declares that the collected observations are sufficient, when the round limit is reached, or when an identical call would repeat. It then makes the normal final response call from the bootstrap context plus those explicit observations. Tool planning is best-effort: if a model cannot produce the small structured tool decision, LabFlow logs and skips that planning phase instead of failing `assistant.chat`, then requests the ordinary textual answer from the available bootstrap context and any observations already collected. Write Tools and mutating Actions are unavailable to this loop.
+There is no LLM tool-planning round before the answer. One user turn therefore maps to one provider request. This keeps latency, rate-limit pressure and lifecycle handling predictable while preserving the current Working Copy as the factual source of truth. The Assistant cannot invoke write Tools or mutating Actions.
 
 Examples:
 
@@ -717,7 +715,7 @@ Examples:
 
 > Why is Treatment B worse than REF?
 
-The Assistant should retrieve `results.get` / `measurements.query` and only the relevant findings/Design/evidence needed for the comparison instead of unrelated files.
+The deterministic chat context should include the relevant Results, measurements, findings, Design and evidence for the comparison instead of unrelated files.
 
 ### Question from Design
 
