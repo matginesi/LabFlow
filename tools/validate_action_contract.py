@@ -5,6 +5,7 @@ import json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; ACTIONS=ROOT/'actions'
 EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','nomad.prepare','report.generate','report.improve','results.interpret'}
+RAG_ACTIONS={'analysis.enrich','design.infer','results.interpret','report.generate','report.improve'}
 ROLES={'automatic','researcher','assistant'}; VIS={'public','internal'}; TYPES={'AI','HYBRID','DETERMINISTIC'}
 errors=[]; defs={}
 for p in sorted(ACTIONS.glob('*/action.json')):
@@ -19,6 +20,15 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     if d.get('role') not in ROLES:errors.append(f'{aid}: invalid role {d.get("role")}')
     if d.get('visibility') not in VIS:errors.append(f'{aid}: invalid visibility')
     if not isinstance(d.get('input'),dict) or not str((d.get('input') or {}).get('context') or '').strip():errors.append(f'{aid}: input.context must declare the Context Pack profile')
+    rag=(d.get('input') or {}).get('rag')
+    if aid in RAG_ACTIONS:
+        if not isinstance(rag,dict):errors.append(f'{aid}: input.rag must declare Knowledge Base retrieval')
+        else:
+            if rag.get('source')!='knowledge_base':errors.append(f'{aid}: input.rag.source must be knowledge_base')
+            if rag.get('mode')!='ranked':errors.append(f'{aid}: input.rag.mode must be ranked')
+            if not isinstance(rag.get('limit'),int) or not 1<=rag.get('limit',0)<=40:errors.append(f'{aid}: input.rag.limit must be 1..40')
+            if not str(rag.get('query_hint') or '').strip():errors.append(f'{aid}: input.rag.query_hint is required')
+    elif rag is not None:errors.append(f'{aid}: unexpected input.rag declaration')
     if d.get('mutation_scope') not in ('','dataset','design','report','metadata','nomad'):errors.append(f'{aid}: invalid mutation_scope')
     if d.get('mutation_scope') and d.get('role')!='researcher':errors.append(f'{aid}: mutating Actions must be researcher-triggered')
     for text_field in ('title','purpose','strategy','output'):

@@ -37,6 +37,12 @@
   "visibility": "public",
   "requires": [],
   "input": {
-    "context": "results"
+    "context": "results",
+    "rag": {
+      "source": "knowledge_base",
+      "mode": "ranked",
+      "limit": 6,
+      "query_hint": "performance hysteresis stability mechanism follow-up"
+    }
   }
 }

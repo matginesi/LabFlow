@@ -47,6 +47,12 @@
   "visibility": "public",
   "requires": [],
   "input": {
-    "context": "report"
+    "context": "report",
+    "rag": {
+      "source": "knowledge_base",
+      "mode": "ranked",
+      "limit": 8,
+      "query_hint": "methods interpretation discussion literature context"
+    }
   }
 }

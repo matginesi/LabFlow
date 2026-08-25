@@ -4,6 +4,7 @@ require('../../assets/js/core.js');
 require('../../assets/js/ai/action-registry.js');
 require('../../assets/js/storage.js');
 require('../../assets/js/ai/providers.js');
+require('../../assets/js/ai/settings.js');
 require('../../assets/js/pages/settings-page.js');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
@@ -43,6 +44,14 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
+    assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
+  };
+
+  t['Z.AI Detect preserves the configured free Flash model when catalogue ordering differs']=function(){
+    const models=['glm-4.5','glm-4.5-air'];
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'glm-4.7-flash',models,false)==='glm-4.7-flash','free-text provider model must not reset to first catalogue row');
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.zai,'',models,false)==='glm-4.7-flash','empty Z.AI model uses provider default');
+    assert(LF.AISettings.catalogueModel(LF.AIProviders.nvidia,'missing',models,true)==='glm-4.5','select provider still chooses a catalogue model');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){

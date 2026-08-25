@@ -91,7 +91,7 @@ Do not introduce:
 
 ### Declarative input and Tool checkpoints
 
-Every Action declares its context profile in `input.context`. The runner does not infer a profile from the Action ID. Deterministic checkpoints declare `tool`, not a direct function name. The shared `LF.ToolRegistry` resolves that Tool to a typed capability/service. This keeps the workflow JSON readable while leaving scientific algorithms in normal JavaScript.
+Every Action declares its context profile in `input.context`. The runner does not infer a profile from the Action ID. Actions that consume the folder-backed Knowledge Base additionally declare `input.rag` with `source`, ranked retrieval `mode`, bounded `limit` and an Action-specific `query_hint`. The Context Builder combines that hint with the current experiment, selected variant or document work unit before retrieving records. Deterministic checkpoints declare `tool`, not a direct function name. The shared `LF.ToolRegistry` resolves that Tool to a typed capability/service. This keeps the workflow JSON readable while leaving scientific algorithms in normal JavaScript.
 
 `requires[]` is executable contract, not documentation: before step 1 the runner verifies that every prerequisite has a successful run for the **current Working Copy revision**. `dataset.analyze` may also be satisfied by the current deterministic analysis marker. A stale prerequisite fails closed with `ACTION_PREREQUISITE_REQUIRED`.
 

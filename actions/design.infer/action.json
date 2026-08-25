@@ -53,6 +53,12 @@
   "visibility": "public",
   "requires": [],
   "input": {
-    "context": "design"
+    "context": "design",
+    "rag": {
+      "source": "knowledge_base",
+      "mode": "ranked",
+      "limit": 12,
+      "query_hint": "missing formulation process stack layer material"
+    }
   }
 }
