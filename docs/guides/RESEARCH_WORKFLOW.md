@@ -13,9 +13,8 @@ The workflow is intentionally linear. Each step reads the same Working Copy and 
 |---|---|---|
 | Upload & Review | Inspect source evidence and corrections | Working Copy + deterministic findings |
 | Results | Evaluate measurements and rankings | Deterministic analysis |
-| Design | Complete formulations, process, and stack | Researcher-confirmed Design |
+| Design | Complete solution chemistry and device stack | Researcher-confirmed Design |
 | Report | Write the current laboratory report or paper | Markdown editor |
-| Changes | Audit differences from the imported baseline | Working Copy history |
 | NOMAD | Validate and package the experiment | Canonical → NOMAD mapping |
 
 ## Source and Working Copy

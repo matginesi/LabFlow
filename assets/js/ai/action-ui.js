@@ -51,24 +51,46 @@ function progressCallbacks(d,context){
 
 async function runDesignAllSequence(el){
   if(busy()){LF.UI.toast('Another action is already running.','warning');return null;}if(!configured())return null;
-  const exp=LF.State.ensureExperiment('action:design.infer-batch'),devices=exp.design&&exp.design.devices||[],map=exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:{},targets=devices.filter(function(dev){return designMissing(exp,dev)>0&&!map[dev.id];});
+  const exp=LF.State.ensureExperiment('action:design.infer-batch'),devices=exp.design&&exp.design.devices||[];exp.aiDesignProposals=exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:{};const map=exp.aiDesignProposals,targets=devices.filter(function(dev){return designMissing(exp,dev)>0&&!map[dev.id];});
   if(!targets.length){LF.UI.toast('Every incomplete experiment already has a suggestion. Accept, edit or discard the existing suggestions first.','info');return null;}
-  const batchSize=6,batches=[];for(let i=0;i<targets.length;i+=batchSize)batches.push(targets.slice(i,i+batchSize));
-  const started=performance.now(),settings=LF.Storage.getAiSettings();let suggested=0,failed=0,processed=0,stopped=false;sequenceRunning=true;
-  LF.UI.activityStart({title:'Suggest all experiment designs',subtitle:targets.length+' experiment'+(targets.length===1?'':'s')+' need stack and/or solution chemistry',kind:'AI',stage:'Preparing suggestions',progress:.01,cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();},showAiTrace:true,response:'Suggestions are saved experiment by experiment. Successful batches remain available if a later batch fails or you press Stop.',details:{Experiments:targets.length,Batches:batches.length,Model:settings.model,Provider:settings.provider},steps:batches.map(function(batch,i){return{id:'batch-'+i,label:'Experiments '+(i*batchSize+1)+'–'+(i*batchSize+batch.length),status:'pending',note:batch.length+' experiments'};})});
+  const batchSize=3,batches=[];for(let i=0;i<targets.length;i+=batchSize)batches.push(targets.slice(i,i+batchSize));
+  const started=performance.now(),settings=LF.Storage.getAiSettings();let suggested=0,failed=0,processed=0,stopped=false;const failures=[];sequenceRunning=true;
+  function codeOf(out){return String(out&&((out.code)||(out.error&&out.error.code))||'');}
+  function rememberFailure(label,message){const text=String(message||'Provider request failed.');if(failures.length<4)failures.push(label+': '+text);}
+  async function infer(ids,batchIndex){return run('design.infer-batch','',{params:{deviceIds:ids},fromSequence:true,suppressChat:true,sequence:{index:batchIndex,total:batches.length,label:'Batch',emit:function(global,update){LF.UI.activityUpdate(Object.assign({},update,{stepId:'batch-'+batchIndex,stepStatus:'active'}));}}});}
+  LF.UI.activityStart({title:'Suggest all experiment designs',subtitle:targets.length+' experiment'+(targets.length===1?'':'s')+' need stack and/or solution chemistry',kind:'AI',stage:'Preparing suggestions',progress:.01,cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();},showAiTrace:true,response:'LabFlow uses small batches. If a model output is truncated, that batch is retried automatically one experiment at a time.',details:{Experiments:targets.length,Batches:batches.length,Model:settings.model,Provider:settings.provider},steps:batches.map(function(batch,i){const first=i*batchSize+1,last=first+batch.length-1;return{id:'batch-'+i,label:'Experiments '+first+'–'+last,status:'pending',note:batch.length+' experiment'+(batch.length===1?'':'s')};})});
   try{
     for(let i=0;i<batches.length;i++){
-      const batch=batches[i],ids=batch.map(function(d){return d.id;});ids.forEach(function(id){setDesignStatus(exp,id,'running','');});LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'active',stage:'Suggesting '+(processed+1)+'–'+(processed+batch.length)+' / '+targets.length,progress:i/batches.length,progressLabel:'Batch '+(i+1)+' / '+batches.length});
-      const out=await run('design.infer-batch','',{params:{deviceIds:ids},fromSequence:true,suppressChat:true,sequence:{index:i,total:batches.length,label:'Batch',emit:function(global,update){LF.UI.activityUpdate(Object.assign({},update,{stepId:'batch-'+i,stepStatus:'active'}));}}});
-      if(!out||out.status==='aborted'){stopped=true;ids.forEach(function(id){if(!map[id])setDesignStatus(exp,id,'idle','');});LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'error'});break;}
-      if(out.status!=='done'){
-        const msg=String(out.message||'Provider request failed.');ids.forEach(function(id){if(!exp.aiDesignProposals[id])setDesignStatus(exp,id,'error',msg);});failed+=ids.length;processed+=ids.length;LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'error'});break;
+      const batch=batches[i],ids=batch.map(function(d){return d.id;}),first=processed+1,last=processed+batch.length;ids.forEach(function(id){setDesignStatus(exp,id,'running','');});LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'active',stage:'Suggesting '+first+'–'+last+' / '+targets.length,progress:i/batches.length,progressLabel:'Batch '+(i+1)+' / '+batches.length});
+      let out=await infer(ids,i);
+      if(!out||out.status==='aborted'){stopped=true;ids.forEach(function(id){if(!map[id])setDesignStatus(exp,id,'idle','');});LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'error',stepNote:'Stopped'});break;}
+      if(out.status!=='done'&&codeOf(out)==='MODEL_OUTPUT_TRUNCATED'&&ids.length>1){
+        LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'active',stepNote:'Output truncated · retrying individually',stage:'Output truncated · retrying smaller requests',response:'Experiments '+first+'–'+last+' exceeded the model output limit. Retrying these experiments one at a time; completed suggestions will be kept.',responseIsJson:false});
+        let localFailed=0;
+        for(let j=0;j<ids.length;j++){
+          const id=ids[j];if(map[id])continue;setDesignStatus(exp,id,'running','');LF.UI.activityUpdate({stage:'Retrying experiment '+(first+j)+' / '+targets.length,progressLabel:'Smaller retry '+(j+1)+' / '+ids.length,stepId:'batch-'+i,stepStatus:'active'});
+          const single=await infer([id],i);
+          if(!single||single.status==='aborted'){stopped=true;if(!map[id])setDesignStatus(exp,id,'idle','');break;}
+          if(single.status==='done'&&map[id]){suggested++;continue;}
+          const message=String(single&&single.message||'No usable suggestion was returned.');setDesignStatus(exp,id,'error',message);failed++;localFailed++;rememberFailure('Experiment '+(first+j),message);
+        }
+        processed+=ids.length;if(stopped){LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'error',stepNote:'Stopped during smaller retry'});break;}
+        LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:localFailed?'error':'done',stepNote:localFailed?(localFailed+' need retry'):'Recovered after output truncation',progress:(i+1)/batches.length,progressLabel:processed+' / '+targets.length+' experiments'});continue;
       }
-      ids.forEach(function(id){if(exp.aiDesignProposals[id])suggested++;else if(exp.designAiStatus&&exp.designAiStatus[id]&&exp.designAiStatus[id].state==='error')failed++;else{failed++;setDesignStatus(exp,id,'error','No usable suggestion was returned.');}});processed+=ids.length;LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'done',progress:(i+1)/batches.length,progressLabel:processed+' / '+targets.length+' experiments'});
+      if(out.status!=='done'){
+        const msg=String(out.message||'Provider request failed.');ids.forEach(function(id,index){if(!map[id]){setDesignStatus(exp,id,'error',msg);failed++;rememberFailure('Experiment '+(first+index),msg);}});processed+=ids.length;LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'error',stepNote:codeOf(out)||'Provider error',response:'Experiments '+first+'–'+last+' need retry. '+msg,responseIsJson:false});continue;
+      }
+      ids.forEach(function(id,index){if(map[id])suggested++;else if(exp.designAiStatus&&exp.designAiStatus[id]&&exp.designAiStatus[id].state==='error'){failed++;rememberFailure('Experiment '+(first+index),exp.designAiStatus[id].message||'No usable suggestion was returned.');}else{failed++;setDesignStatus(exp,id,'error','No usable suggestion was returned.');rememberFailure('Experiment '+(first+index),'No usable suggestion was returned.');}});processed+=ids.length;LF.UI.activityUpdate({stepId:'batch-'+i,stepStatus:'done',progress:(i+1)/batches.length,progressLabel:processed+' / '+targets.length+' experiments'});
     }
     const elapsed=Math.round(performance.now()-started),remaining=targets.length-processed;
     if(stopped){LF.UI.activityFinish({message:'Design suggestions stopped.',response:suggested+' suggestions are saved. You can continue later with Suggest all.',details:{Suggested:suggested,Remaining:remaining,Time:fmtMs(elapsed)},holdMs:0});return{status:'aborted',suggested:suggested,remaining:remaining};}
-    LF.UI.activityFinish({message:failed?'Design suggestions partially completed.':'Design suggestions ready.',response:suggested+' experiment'+(suggested===1?'':'s')+' suggested'+(failed?' · '+failed+' need retry':'')+'. Accept or edit them in Design Experiment. Running Suggest all again retries experiments that still have no suggestion.',details:{Suggested:suggested,'Need retry':failed,Remaining:remaining,Time:fmtMs(elapsed)},holdMs:0});LF.UI.toast(failed?'Suggestions saved; some experiments need retry.':'AI suggestions ready for review.',failed?'warning':'success');return{status:'done',suggested:suggested,failed:failed,remaining:remaining};
+    const response=failed?(suggested+' experiment'+(suggested===1?'':'s')+' suggested · '+failed+' need retry.\n\n'+failures.join('\n')):(suggested+' experiment'+(suggested===1?'':'s')+' suggested. Accept or edit them in Design Experiment.');
+    LF.UI.activityFinish({message:failed?'Design suggestions completed with retry items.':'Design suggestions ready.',response:response,details:{Suggested:suggested,'Need retry':failed,Remaining:remaining,Time:fmtMs(elapsed)},holdMs:0});LF.UI.toast(failed?'Suggestions saved; some experiments need retry.':'AI suggestions ready for review.',failed?'warning':'success');return{status:'done',suggested:suggested,failed:failed,remaining:remaining};
+  }catch(err){
+    const message=String(err&&err.message||'Design suggestion sequence failed.');
+    if(LF.UI&&LF.UI.activityError)LF.UI.activityError(err,{message:'Design suggestions stopped.',response:message,details:{Suggested:suggested,'Need retry':Math.max(failed,1),Processed:processed},holdMs:0});
+    if(LF.UI&&LF.UI.toast)LF.UI.toast('Design suggestions stopped. Existing suggestions were kept; retry the failed experiments.','error');
+    return{status:'error',message:message,error:err,suggested:suggested,failed:Math.max(failed,1),remaining:Math.max(0,targets.length-processed)};
   }finally{sequenceRunning=false;if(LF.State&&LF.State.touch)LF.State.touch('design');if(LF.Assistant&&LF.Assistant.render)LF.Assistant.render();}
 }
 async function runReportSequence(el){

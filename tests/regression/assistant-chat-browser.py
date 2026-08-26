@@ -77,18 +77,18 @@ with sync_playwright() as p:
     print("starting streamed turn", flush=True)
     page.evaluate("() => { LabFlow.Assistant.sendChat('Explain the result'); }")
     check(page.locator(".assistant-row").count() == 1, "one Assistant container at request start")
-    check(page.locator(".chat-spinner").count() == 1, "spinner shown before content")
+    check(page.locator(".chat-thinking-dot").count() == 1, "spinner shown before content")
     message_id = page.locator(".assistant-row .chat-message").get_attribute("data-message-id")
 
     page.evaluate("window.__assistantRun.options.onProgress({content: '**Useful** streamed answer', reasoning: 'private reasoning'})")
     check(page.locator(".assistant-row .chat-message").get_attribute("data-message-id") == message_id, "stream retained message identity")
-    check(page.locator(".chat-spinner").count() == 0, "first useful content removed spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "first useful content removed spinner")
     check(page.locator(".assistant-row strong", has_text="Useful").count() == 1, "streamed Markdown rendered")
 
     page.evaluate("window.__assistantRun.resolve({status:'done', result:'**Useful** streamed answer', requestMeta:{final:{provider:'test',model:'test-model',reasoning:'private reasoning',latencyMs:12,tokensPerSecond:20,usage:{promptTokens:4,completionTokens:3,totalTokens:7}}}})")
     page.wait_for_function("!LabFlow.Assistant.isActive()")
     check(page.locator(".assistant-row").count() == 1, "completion did not append another Assistant container")
-    check(page.locator(".chat-spinner").count() == 0, "completion left no spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "completion left no spinner")
     details = page.locator(".assistant-row details.chat-details")
     if details.count() == 0:
         print(page.evaluate("() => ({messages:LabFlow.State.state.experiment.derived.chat.conversation, html:document.querySelector('.assistant-row').innerHTML})"), flush=True)
@@ -100,13 +100,13 @@ with sync_playwright() as p:
     install_pending(page)
     page.evaluate("() => { LabFlow.Assistant.sendChat('And what should I do next?'); }")
     check(page.locator(".assistant-row").count() == 2, "second turn created exactly one new Assistant container")
-    check(page.locator(".chat-spinner").count() == 1, "second turn shows one spinner")
+    check(page.locator(".chat-thinking-dot").count() == 1, "second turn shows one spinner")
     page.evaluate("window.__assistantRun.options.onProgress({content: 'Review the remaining evidence and then export the report.', reasoning: ''})")
-    check(page.locator(".chat-spinner").count() == 0, "second turn first content removed spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "second turn first content removed spinner")
     page.evaluate("window.__assistantRun.resolve({status:'done', result:'Review the remaining evidence and then export the report.', requestMeta:{final:{provider:'test',model:'test-model',latencyMs:8}}})")
     page.wait_for_function("!LabFlow.Assistant.isActive()")
     check(page.locator(".assistant-row").count() == 2, "second completion did not duplicate Assistant container")
-    check(page.locator(".chat-spinner").count() == 0, "second completion left no spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "second completion left no spinner")
     check("Review the remaining evidence" in page.locator(".assistant-row").last.inner_text(), "second answer rendered")
     check(not page.locator("#chatInput").is_disabled(), "composer re-enabled after second turn")
 
@@ -116,7 +116,7 @@ with sync_playwright() as p:
     page.evaluate("() => { LabFlow.Assistant.sendChat('Fail safely'); }")
     page.wait_for_function("!LabFlow.Assistant.isActive()")
     check(page.locator(".assistant-row").count() == 1, "error created one Assistant container")
-    check(page.locator(".chat-spinner").count() == 0, "error left no spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "error left no spinner")
     check(page.locator("[data-retry-message]").count() == 1, "error exposes Retry")
 
     # Abort clears transient UI through the ActionRunner cancellation contract.
@@ -125,7 +125,7 @@ with sync_playwright() as p:
     page.evaluate("() => { LabFlow.Assistant.sendChat('Stop this'); }")
     page.locator("#chatSend").click()
     page.wait_for_function("!LabFlow.Assistant.isActive()")
-    check(page.locator(".chat-spinner").count() == 0, "abort left no spinner")
+    check(page.locator(".chat-thinking-dot").count() == 0, "abort left no spinner")
     check(page.locator(".chat-cancelled").count() == 1, "abort marked the turn cancelled")
 
     # Long content grows naturally; only the conversation owns vertical scrolling.

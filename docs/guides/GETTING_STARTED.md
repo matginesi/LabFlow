@@ -19,8 +19,7 @@ flowchart LR
   REVIEW --> RESULTS[Results]
   RESULTS --> DESIGN[Design]
   DESIGN --> REPORT[Report]
-  REPORT --> CHANGES[Changes]
-  CHANGES --> NOMAD[NOMAD]
+  REPORT --> NOMAD[NOMAD]
 ```
 
 ## First successful run
@@ -29,7 +28,7 @@ flowchart LR
 2. Review the source receipt and deterministic findings.
 3. Apply only corrections whose evidence you understand.
 4. Inspect Results before completing Design.
-5. Write or generate the Report, then review Changes.
+5. Write or generate the Report.
 6. Resolve required NOMAD fields and download the staging package.
 7. Use **Save** for a browser checkpoint and **Export ZIP** for a durable Working Copy package.
 

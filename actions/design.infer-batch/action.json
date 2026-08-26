@@ -6,7 +6,7 @@
   "title": "Suggest experiment designs",
   "short_title": "Suggest designs",
   "purpose": "Suggest missing solution chemistry and device stacks for a small group of experiments in one bounded request.",
-  "strategy": "At most six experiments per request. Successful suggestions are stored independently; an omitted experiment is marked for retry instead of invalidating the whole batch.",
+  "strategy": "At most three experiments per request. Suggest all uses small batches and retries a truncated batch one experiment at a time. Successful suggestions are stored independently; an omitted or failed experiment is marked for retry without stopping later experiments.",
   "output": "json",
   "mutation_scope": "",
   "policies": [
@@ -29,11 +29,11 @@
       "thinking": "off",
       "timeout_ms": 90000,
       "weight": 0.82,
-      "max_output_tokens": 3000,
+      "max_output_tokens": 4096,
       "deadline_ms": 75000,
       "max_retries": 0,
-      "min_output_tokens": 200,
-      "target_output_tokens": 1200
+      "min_output_tokens": 180,
+      "target_output_tokens": 1800
     },
     {
       "id": "validate",

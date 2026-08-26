@@ -350,7 +350,6 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 @media (prefers-reduced-motion: reduce) {
   .button, .input, .select, .textarea, .activity-progress > span, .activity-disclosure > summary::before { transition: none; }
   .activity-progress.indeterminate > span { animation: none; }
-  .chat-spinner { animation: none; border-color: var(--ai); }
 }
 
 .activity-demo-ai .activity-progress > span { width: 100%; }

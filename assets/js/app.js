@@ -24,7 +24,7 @@
   function scrollNodeKey(el,root,route){
     if(el.classList&&el.classList.contains('experiment-strip'))return'global:experiment-strip';
     if(el.id)return String(route||'')+':id:'+el.id;
-    const attrs=['data-result-tab','data-changes-tab','data-action-editor'];
+    const attrs=['data-result-tab','data-action-editor'];
     for(let i=0;i<attrs.length;i++){const v=el.getAttribute&&el.getAttribute(attrs[i]);if(v)return String(route||'')+':'+attrs[i]+':'+v;}
     const parts=[];let cur=el;while(cur&&cur!==root&&parts.length<7){const parent=cur.parentElement;if(!parent)break;const tag=(cur.tagName||'node').toLowerCase(),siblings=Array.from(parent.children).filter(function(x){return x.tagName===cur.tagName;}),idx=Math.max(0,siblings.indexOf(cur));parts.unshift(tag+':'+idx);cur=parent;}return String(route||'')+':path:'+parts.join('/');
   }
@@ -175,7 +175,7 @@
     renderWorkingCopyState();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.assistantOpen);if(assistant)assistant.hidden=!S.state.assistantOpen;if(toggle){const assistantLabel=S.state.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-changes')html=LF.ChangesPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='knowledge-base')html=LF.KnowledgePage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
+    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='knowledge-base')html=LF.KnowledgePage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
     main.innerHTML=html;
     try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.route,error:err});}
     try{bindReportImproveSelection();}catch(err){Log.warn('render.report-bind-skipped',{route:S.state.route,error:err});}
@@ -251,7 +251,6 @@
       /* Fresh documents are deliberately empty. Drafting is an explicit action in Report Studio. */
       exp.report=exp.report||{};exp.report.kind='lab';exp.report.labMarkdown='';exp.report.paperMarkdown='';exp.report.markdown='';exp.report.labUpdatedAt=null;exp.report.paperUpdatedAt=null;
       exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};
-      if(LF.Changes&&LF.Changes.captureBaseline)LF.Changes.captureBaseline(exp);
       S.setExperiment(exp);
       S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveOverlaySelection=[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';
       let briefMode='deterministic',briefAiStatus='not used';
@@ -365,7 +364,6 @@
         if(e.target.closest('#resultInspectorClose')){LF.ResultsPage.closeResultInspector();return;}
 
         const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;render();return;}
-        const changesTab=e.target.closest('[data-changes-tab]');if(changesTab){S.state.changesTab=changesTab.dataset.changesTab;render();return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         const knowledgeSelect=e.target.closest('[data-knowledge-select]');if(knowledgeSelect){S.state.knowledgeSelectedId=knowledgeSelect.dataset.knowledgeSelect;S.state.knowledgeCreating=false;render();return;}

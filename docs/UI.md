@@ -4,7 +4,7 @@
 
 The **Documentation** route is a local browser over the canonical `docs/**/*.md` sources, excluding archived implementation plans under `docs/superpowers/`. It provides collection/search navigation, a rendered document, an outline, Markdown source disclosure and locally rendered `mermaid` flowcharts. `assets/js/pages/docs-bundle.js` is generated; rebuild it with `python tools/build_docs_bundle.py` after Markdown changes. The page must remain usable under `file://` and must not load documentation or diagram code from a CDN.
 
-The experiment workflow is Upload & Review, Results, Design, Report, Changes, NOMAD. Upload remains mandatory; after import the same first page combines the source receipt with the review workbench. Pages use the shared compact shell, stepper, panels, tables, visible tab tracks and progressive disclosures.
+The experiment workflow is Upload & Review, Results, Design, Report, NOMAD. Upload remains mandatory; after import the same first page combines the source receipt with the review workbench. Pages use the shared compact shell, stepper, panels, tables, visible tab tracks and progressive disclosures.
 
 There is one scientific Working Copy, separate from the byte-for-byte RAW source snapshot. `LF.CanonicalStore` adds aliases/relations/evidence as a deterministic index rather than a second editable data copy. The current Working Copy is autosaved locally and restored when LabFlow is reopened; the top bar distinguishes an autosaved draft from an explicit saved checkpoint. **Reset session** is the visible destructive boundary that clears the persisted experiment/RAW snapshot, while browser-local provider/API-key/UI preferences remain. All edits operate only on the Working Copy and exports never overwrite RAW.
 
@@ -58,9 +58,9 @@ Review Data exposes corrections at the place they are found: deterministic safe 
 - On small screens Action and result totems remain viewport-contained cards with internal scrolling; the Assistant remains a dedicated full-screen surface.
 
 
-## Changes audit
+## Provenance
 
-Changes compares the current Working Copy to a baseline captured immediately after ZIP import. Data, Design, analysis settings and Report/Paper are separate sections with bounded internal scroll areas. Report/Paper text diffs show baseline/current word counts and preserve edit provenance so manual researcher edits and AI writing edits are visibly distinct. The page must never depend on a blur/focusout event to notice editor text.
+Working Copy patches and Report/Paper edit provenance remain internal metadata available to exports and diagnostics; they do not require a separate workflow page.
 
 ## Assistant response surface
 

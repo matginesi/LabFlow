@@ -115,5 +115,52 @@ module.exports=function(t,LF){
     assert(env.errors.length===1,'normal Action retry UI remains available');
   };
 
+  t['Design Suggest all survives a first-batch provider failure with no proposal map']=async function(){
+    const env=loadUi(function(id){
+      if(id==='design.infer-batch')return Promise.resolve({status:'error',actionId:id,message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});
+      return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;
+    exp.design={solutions:[],devices:[
+      {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
+      {id:'d2',name:'D2',sampleNames:[],solutionIds:[],stack:[],process:{}}
+    ]};
+    delete exp.aiDesignProposals;
+    delete exp.designAiStatus;
+    const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
+    assert(out&&out.status==='done','batch provider failure should be converted into retryable Design state, not an unhandled rejection');
+    assert(exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object','proposal map should be initialized even when the first batch fails');
+    assert(exp.designAiStatus.d1&&exp.designAiStatus.d1.state==='error','first experiment should become retryable');
+    assert(exp.designAiStatus.d2&&exp.designAiStatus.d2.state==='error','second experiment should become retryable');
+    assert(/provider failed/.test(exp.designAiStatus.d1.message),'provider error reason should be retained');
+    assert(env.finishes.length===1,'sequence should finish its totem instead of throwing');
+  };
+
+
+  t['Design Suggest all recovers a truncated batch with smaller requests']=async function(){
+    const calls=[];
+    const env=loadUi(function(id,cb){
+      if(id!=='design.infer-batch')return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
+      const ids=(cb.params.deviceIds||[]).slice();calls.push(ids);
+      if(ids.length>1)return Promise.resolve({status:'error',actionId:id,message:'The model reached its output limit before finishing this work unit.',failedStep:'infer',code:'MODEL_OUTPUT_TRUNCATED',requestMeta:{}});
+      const exp=LF.State.state.experiment,id0=ids[0];
+      exp.aiDesignProposals=exp.aiDesignProposals||{};
+      exp.aiDesignProposals[id0]={targetDeviceId:id0,summary:'Recovered',solutions:[{name:'Ink'}],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};
+      return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[
+      {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
+      {id:'d2',name:'D2',sampleNames:[],solutionIds:[],stack:[],process:{}}
+    ]};
+    delete exp.aiDesignProposals;delete exp.designAiStatus;
+    const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
+    assert(out&&out.status==='done'&&out.suggested===2&&out.failed===0,'truncated multi-experiment batch should recover through single-experiment retries');
+    assert(calls.length===3&&calls[0].length===2&&calls[1].length===1&&calls[2].length===1,'truncated batch should be retried one experiment at a time');
+    assert(exp.aiDesignProposals.d1&&exp.aiDesignProposals.d2,'recovered suggestions should remain stored');
+    assert(env.updates.some(function(x){return /retrying smaller requests/i.test(String(x.stage||''));}),'totem should explain the automatic smaller retry');
+    assert(env.finishes.length===1&&/2 experiments suggested/.test(String(env.finishes[0].response||'')),'final totem should report recovered suggestions');
+  };
+
+
   return t;
 };

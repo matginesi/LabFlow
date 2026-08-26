@@ -34,9 +34,9 @@ Upload and Review are one first-step workbench. Before a ZIP exists, the page is
 
 Laboratory Report and Paper are separate document surfaces. Figure inclusion is selected independently for each document and the preview/export must reflect the active document's selection exactly. Keep figure controls compact and adjacent to the editor/preview workflow rather than hiding them in global settings.
 
-## Changes
+## Provenance
 
-Changes is an audit surface, not a raw object dump. Start with compact counters, then separate data/design changes from Report/Paper document changes and provenance. Long tables, diffs and provenance histories use short bounded regions with their own vertical scroll. Manual writing and AI writing remain distinguishable; editing a document must become visible without requiring blur, save or an AI Action.
+Provenance remains internal to the Working Copy and export/audit data; it is not a standalone workflow page. Manual writing and AI writing remain distinguishable, and editing a document becomes visible to the Assistant/context immediately without requiring blur, save or an AI Action.
 
 ## Assistant response surface
 

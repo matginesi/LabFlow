@@ -1,5 +1,6 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/experiment/model.js');
 require('../../assets/js/ai/action-steps.js');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
@@ -80,6 +81,12 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
+  t['Design normalizer accepts natural solution_chemistry and device_stack provider keys']=function(){
+    const p=LF.ExperimentModel.normalizeDesignProposal({summary:'candidate',solution_chemistry:{name:'Perovskite ink',role:'absorber',solute:'FAI + PbI2',solvent:'DMF:DMSO',confidence:.82,provenance_kind:'model_inference',reason:'plausible'},device_stack:[{role:'ETL',material:'SnO2',confidence:.8,provenance_kind:'model_inference',reason:'plausible'},{role:'absorber',material:'perovskite',confidence:.8,provenance_kind:'model_inference',reason:'plausible'}],unknowns:[]});
+    assert(p.solutions.length===1&&p.solutions[0].solutes==='FAI + PbI2'&&p.solutions[0].solvents==='DMF:DMSO','natural chemistry keys normalize');
+    assert(p.devices.length===1&&p.devices[0].stack.length===2&&p.devices[0].stack[0].material==='SnO2','natural stack key normalizes');
+  };
+
   t['Design decision metric averages only proposed fields without provenance caps']=function(){
     const metric=LF.DesignDecisionMetric.calculate({solutions:[{name:'Ink',confidence:.95,provenance_kind:'model_inference'}],devices:[{confidence:.9,provenance_kind:'experiment',evidence:'RAW metadata',process:{annealing:'100 C'},stack:[{material:'SnO2',confidence:.88,provenance_kind:'experiment',evidence:'source row'}]}]});
     assert(metric.value===91,'mean field confidence should be deterministic');assert(metric.decisions===3,'only proposed fields should be counted');assert(metric.modelInferred===1&&metric.experimentBacked===2,'simple source counts retained');assert(metric.estimated===true&&metric.method==='proposed_field_confidence_mean_v2','score must be explicit and explainable');
@@ -94,11 +101,11 @@ module.exports=function(t,LF){
     LF.ExperimentModel=oldModel;
   };
 
-  t['Design validation accepts explicit unknowns without inventing a value']=function(){
+  t['Design validation rejects an empty visual suggestion even when unknowns are listed']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
-    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],provenance_kind:'knowledge',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
-    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});
-    assert(out.actionSuccess===true&&out.applicableFields.length===0&&out.unresolvedCount===1,'unknown-only output should complete successfully');
+    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[],provenance_kind:'knowledge',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
+    let threw=false;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){threw=true;assert(/no usable solution or stack suggestion/i.test(String(e.message)),'empty suggestion gives retryable explanation');}
+    assert(threw,true,'unknown-only output must not masquerade as Suggested');
     LF.ExperimentModel=oldModel;
   };
 
@@ -165,11 +172,12 @@ module.exports=function(t,LF){
 
   t['Manual Design variant validation does not require canonical sample names']=function(){
     const oldModel=LF.ExperimentModel;LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
-    const proposal={summary:'candidate',solutions:[],devices:[{name:'Suggested design',sample_names:['MODEL-GUESS'],process:{atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:['stack']};
-    const ctx={outputs:{collect:{device_id:'manual1',sample_names:[],manual_variant:true,unknown_fields:['atmosphere','stack']},infer:proposal},lastResult:proposal};
+    const proposal={summary:'candidate',solutions:[],devices:[{name:'Suggested design',sample_names:['MODEL-GUESS'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:[]};
+    const ctx={outputs:{collect:{device_id:'manual1',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx);
     assert(out.actionSuccess===true&&out.manualVariant===true,'manual variant should validate successfully');
     assert(ctx.outputs.infer.devices[0].sample_names.length===0,'provider-guessed sample identity must be removed for a manual variant');
+    assert(ctx.outputs.infer.devices[0].stack[0].material==='SnO2','qualitative stack suggestion remains usable');
     LF.ExperimentModel=oldModel;
   };
 
@@ -194,8 +202,8 @@ module.exports=function(t,LF){
     const collect=LF.ActionSteps['design.collect-batch']({exp:exp,params:{deviceIds:['manualA','manualB']}});
     assert(collect.count===2,'both incomplete experiments should enter one batch');
     const raw={summary:'batch',proposals:[
-      {target_device_id:'manualA',summary:'A',solutions:[],device:{sample_names:['WRONG-A'],process:{atmosphere:'N2'},provenance_kind:'model_inference',confidence:.86},unknowns:['stack']},
-      {target_device_id:'manualB',summary:'B',solutions:[],device:{sample_names:['WRONG-B'],process:{atmosphere:'Ar'},provenance_kind:'model_inference',confidence:.86},unknowns:['stack']}
+      {target_device_id:'manualA',summary:'A',solutions:[],device:{sample_names:['WRONG-A'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.86,reason:'candidate'}],provenance_kind:'model_inference',confidence:.86,reason:'candidate'},unknowns:[]},
+      {target_device_id:'manualB',summary:'B',solutions:[],device:{sample_names:['WRONG-B'],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.82,reason:'candidate'}],provenance_kind:'model_inference',confidence:.82,reason:'candidate'},unknowns:[]}
     ]};
     const ctx={exp:exp,params:{deviceIds:['manualA','manualB']},outputs:{collect:collect,infer:raw},lastResult:raw,sourceRevision:7};
     const validated=LF.ActionSteps['design.validate-batch'](ctx);
@@ -206,8 +214,8 @@ module.exports=function(t,LF){
     assert(stored.stored===2,'both proposals should be stored');
     assert(exp.aiDesignProposals.manualA.targetDeviceId==='manualA','A proposal bound to exact experiment ID');
     assert(exp.aiDesignProposals.manualB.targetDeviceId==='manualB','B proposal bound to exact experiment ID');
-    assert(exp.aiDesignProposals.manualA.devices[0].process.atmosphere==='N2','A keeps its own suggestion');
-    assert(exp.aiDesignProposals.manualB.devices[0].process.atmosphere==='Ar','B keeps its own suggestion');
+    assert(exp.aiDesignProposals.manualA.devices[0].stack[0].material==='SnO2','A keeps its own stack suggestion');
+    assert(exp.aiDesignProposals.manualB.devices[0].stack[0].material==='PTAA','B keeps its own stack suggestion');
     LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
   };
 

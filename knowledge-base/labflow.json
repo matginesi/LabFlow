@@ -35,7 +35,7 @@
       ],
       "data": {
         "topic": "Product overview and navigation",
-        "content": "LabFlow is a local-first research workspace that turns an uploaded experimental ZIP into a reviewed Working Copy, deterministic analysis, editable Design, Report or Paper drafts, a change history, and a validated NOMAD export. The experiment entry point is always Upload & Review → Results → Design → Report → Changes → NOMAD. There is no project loader or hidden pre-import workflow.",
+        "content": "LabFlow is a local-first research workspace that turns an uploaded experimental ZIP into a reviewed Working Copy, deterministic analysis, editable Design, Report or Paper drafts, a change history, and a validated NOMAD export. The experiment entry point is always Upload & Review → Results → Design → Report → NOMAD. There is no project loader or hidden pre-import workflow.",
         "steps": "1. Upload and review the ZIP. 2. Inspect deterministic Results. 3. Complete or edit Design. 4. Draft the Lab Report or Scientific Paper. 5. Review Changes. 6. Prepare and export NOMAD data.",
         "notes": "The Assistant may explain or inspect current state through read-only tools, but it cannot mutate the Working Copy or run write Actions for the researcher."
       },
@@ -249,13 +249,12 @@
       "collection": "labflow"
     },
     {
-      "id": "kb_labflow_nomad_changes",
+      "id": "kb_labflow_nomad_provenance",
       "kind": "guide",
-      "name": "LabFlow Changes and NOMAD export",
-      "summary": "Explains provenance history, deterministic NOMAD mapping, readiness and staging invalidation.",
+      "name": "LabFlow NOMAD export and provenance",
+      "summary": "Explains deterministic NOMAD mapping, readiness, staging invalidation and the provenance retained internally by the Working Copy.",
       "tags": [
         "LabFlow",
-        "Changes",
         "provenance",
         "NOMAD",
         "mapping",
@@ -266,7 +265,7 @@
       ],
       "sources": [
         {
-          "title": "LabFlow Workflow · Changes and NOMAD",
+          "title": "LabFlow Workflow · Provenance and NOMAD",
           "url": "docs/WORKFLOW.md",
           "doi": "",
           "note": "Provenance and NOMAD workflow."
@@ -280,7 +279,7 @@
       ],
       "data": {
         "topic": "Provenance and NOMAD",
-        "content": "Changes exposes traceable Working Copy patches and document edits. NOMAD preparation is deterministic-first: one Canonical-to-NOMAD mapping plan powers the page, validation, generated entry and exported metadata. Required missing mappings block readiness; optional missing values remain visible.",
+        "content": "NOMAD preparation is deterministic-first: one Canonical-to-NOMAD mapping plan powers validation, generated entry and exported metadata. Required missing mappings block readiness; optional missing values remain visible. Working Copy patches and document edits retain provenance internally without a separate Changes workflow page.",
         "steps": "Review the mapping plan and missing fields, correct authoritative Working Copy data where appropriate, run Prepare NOMAD export, inspect deterministic validation, then export only when required mappings are satisfied.",
         "notes": "AI never declares NOMAD readiness. Relevant scientific mutations invalidate stale staging so an old export cannot appear current."
       },

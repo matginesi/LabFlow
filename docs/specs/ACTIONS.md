@@ -181,7 +181,7 @@ The Action deliberately does not infer fabrication/process fields. It should ret
 
 Acceptance is explicit and local. **Accept experiment** fills only empty solution/stack fields for that experiment and marks the accepted result researcher-confirmed. **Accept all suggestions** repeats the same local acceptance for every saved suggestion. Accepted values remain editable.
 
-The internal batch helper `design.infer-batch` is only an efficiency path behind **Suggest all with AI**. It handles at most six experiment IDs per request. Successful rows are stored independently. Missing/invalid rows become per-experiment `Error` state instead of failing the whole completed work. A later Suggest all or local Retry resumes only experiments that still need a suggestion. Stop preserves all suggestions already stored.
+The internal batch helper `design.infer-batch` is only an efficiency path behind **Suggest all with AI**. It handles at most three experiment IDs per request. If the provider truncates a multi-experiment JSON response, LabFlow retries that batch one experiment at a time. Successful rows are stored independently. Missing/invalid rows become per-experiment `Error` state instead of failing the whole completed work. A later Suggest all or local Retry resumes only experiments that still need a suggestion. Stop preserves all suggestions already stored.
 
 The request is compact and bounded: thinking is off by default, context contains only relevant experiment evidence plus a small scientific-knowledge slice, output is small, and Design does not automatically retry a failed generation.
 

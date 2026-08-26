@@ -27,7 +27,7 @@ async function main(){
   ok(empty.includes('Upload &amp; Review')||empty.includes('Upload & Review'),'first step is Upload & Review');
   ok(empty.includes('Choose ZIP file'),'upload remains the entry gate');
   ok(!empty.includes('data-route="experiment-understand"'),'no separate Review route in stepper');
-  ok(count(LF.PageShell.experimentStepper(),'class="step ' )===6,'workflow has six steps');
+  ok(count(LF.PageShell.experimentStepper(),'class="step ' )===5,'workflow has five steps');
   const appSource=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),feedbackSource=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
   ok(appSource.includes('await LF.Storage.loadExperiment()'),'startup restores a persisted Working Copy when present');
   ok(appSource.includes("persistWorkspace('pagehide')"),'workspace is persisted when the app is closed/backgrounded');

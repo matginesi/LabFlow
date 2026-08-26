@@ -14,7 +14,11 @@ Do not redesign the experiment and do not return fabrication/process fields.
 3. Use supplied scientific Knowledge Base records when relevant; retain their IDs in `knowledge_refs`.
 4. Otherwise use cautious `model_inference` for plausible qualitative values.
 
+Use sample names, aliases, groups and linked source filenames as qualitative clues when they carry material/stack/formulation information. Source-design metadata and evidence remain stronger than filename inference.
+
 A Knowledge Base miss is normal. Manually-created experiments may have no sample identity; never invent one.
+
+**Best-effort requirement:** when solution chemistry or stack is missing, make a useful qualitative proposal whenever the experiment evidence, retrieved scientific context, or ordinary domain knowledge makes one plausible. Do not return an empty solution list and empty stack merely because exact quantities are unknown. Prefer a clearly labelled `model_inference` with moderate confidence over an empty suggestion. Use `unknowns` only for details that truly cannot be proposed responsibly.
 
 # Quantities
 

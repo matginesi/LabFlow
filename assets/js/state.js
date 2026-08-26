@@ -134,6 +134,7 @@
   function normalizeRoute(route) {
     route = String(route || '');
     if (route === 'experiment-home' || route === 'experiment-understand') return 'experiment-import';
+    if (route === 'experiment-changes') return 'experiment-nomad';
     return route;
   }
 

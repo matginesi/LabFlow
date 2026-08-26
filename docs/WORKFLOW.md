@@ -535,7 +535,7 @@ Existing source or researcher values are never silently overwritten. Accepted AI
 
 ### Suggest all / resume later
 
-**Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then sends bounded batches of at most six IDs.
+**Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then sends bounded batches of at most three IDs. If a provider truncates a batch response, that batch is retried one experiment at a time while completed suggestions remain saved.
 
 Each successful experiment is stored immediately. If the provider omits or fails one experiment, that experiment receives local `Error` state while successful suggestions remain available. If a whole provider request fails, only that unfinished batch becomes retryable. Stop preserves completed work. Running Suggest all again later resumes the experiments that still need suggestions; it never asks the user to restart or discard accepted work.
 
@@ -919,7 +919,7 @@ find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 For architectural changes also test at least one real/synthetic ZIP through:
 
 ```text
-Upload & Review → correction → Results → Design → Report → Changes → NOMAD → Save / Export
+Upload & Review → correction → Results → Design → Report → NOMAD → Save / Export
 ```
 
 The original upload must remain byte-identical throughout.
@@ -935,9 +935,9 @@ Upload is mandatory and Review is not a second route. `experiment-understand` is
 
 `report.figureSelections.lab` and `report.figureSelections.paper` are independent. Legacy `report.figureSelection` is migrated to both once and then kept only as the active-document compatibility alias. Preview, Context Pack and export always read the active document selection.
 
-## Changes baseline and edit provenance
+## Internal edit provenance
 
-`LF.Changes.captureBaseline()` captures the post-import Working Copy, including both document texts and both figure selections. `LF.Report.setActiveMarkdown()` records bounded document edit provenance with `source: user|ai`; AI storage steps pass `ai`, while editor input defaults to `user`. Changes computes text differences directly from current in-memory Markdown, so manual edits do not wait for blur/focusout. Large diffs are bounded and scroll internally.
+Working Copy patches and Report/Paper edit provenance remain bounded internal metadata. There is no separate Changes workflow page; current state is authoritative for the UI and Assistant, while provenance remains available to exports and diagnostics.
 
 ## Provider output limits
 

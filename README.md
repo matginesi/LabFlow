@@ -5,7 +5,7 @@ Local-first browser workbench for perovskite/JV laboratory experiments.
 The researcher workflow is deliberately small:
 
 ```text
-Upload & Review → Results → Design → Report → Changes → NOMAD
+Upload & Review → Results → Design → Report → NOMAD
 ```
 
 The uploaded ZIP is immutable source evidence. LabFlow immediately snapshots its bytes and performs all work on one separate in-memory **Working Copy**.
@@ -70,7 +70,7 @@ Internal compute/index/apply/validation functions are not Actions.
 
 LabFlow separates **Tools** from **Actions**. A Tool is a small typed capability over the Canonical Data Model; an Action is a researcher-understandable workflow that composes deterministic tools and optional AI steps. Deterministic Action checkpoints now reference Tool IDs from the shared registry instead of calling page-specific logic.
 
-The Assistant is the first deliberately constrained agentic consumer of that registry. It may ask the model to choose among an explicit allowlist of **read-only** tools, execute one tool per bounded round, then answer from the returned observations. It cannot invoke write tools, mutate the Working Copy or autonomously run mutating Actions. See [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md).
+The Assistant is deliberately simple and read-only. Each question receives one bounded Context Pack computed from the **current Working Copy and current page state**, plus optional local Knowledge Base matches, then makes one model request. It cannot mutate the Working Copy or autonomously run mutating Actions. See [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md).
 
 ## Save and export
 
@@ -79,8 +79,6 @@ The uploaded source is never rewritten.
 **Save** marks an explicit checkpoint for the current revision. The Working Copy is autosaved locally and restored when LabFlow is reopened; **Reset session** deliberately clears that persisted scientific session. Provider/model settings, API key and UI preferences remain browser-local but separate. **Export** explicitly creates the durable LabFlow ZIP.
 
 LabFlow ZIP, Report PDF/DOCX and NOMAD ZIP are explicit derived exports: they read the current Working Copy but do not implicitly mark later edits saved.
-
-Changes audits the current Working Copy against the immutable post-import baseline, including manual versus AI-attributed Report/Paper edits.
 
 Normal LabFlow export includes `canonical.json`, a compact portable semantic snapshot with identities, aliases, measurements, relations, evidence, findings, patches, Design and provenance. RAW source remains separate.
 

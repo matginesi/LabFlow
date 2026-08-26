@@ -17,7 +17,7 @@ The goal is to keep LabFlow small, deterministic-first and understandable to a r
 The experiment entry point is always:
 
 ```text
-Upload & Review → Results → Design → Report → Changes → NOMAD
+Upload & Review → Results → Design → Report → NOMAD
 ```
 
 Do not add a project loader, hidden pre-import workflow, backend queue or alternate experiment entry point unless explicitly requested.

@@ -49,8 +49,7 @@ LabFlow is a static browser application. Modules attach a bounded namespace to `
 - `pages/design-page.js` — direct Design editing, provenance and bounded missing-field proposals.
 - `pages/knowledge-page.js` — Knowledge Base status, searchable science/help catalog, local record editor and JSON import/export, available independently of an experiment.
 - `pages/report-page.js` — Report/Paper editor, writing controls, preview and figure picker.
-- `pages/changes-page.js` — Working Copy versus immutable-baseline audit.
-- `pages/nomad-page.js` — deterministic mapping, readiness and export controls.
+- - `pages/nomad-page.js` — deterministic mapping, readiness and export controls.
 - `pages/settings-page.js` — provider, Action and preference forms.
 - `pages/logs-page.js` — local structured diagnostic log viewer.
 - `pages/docs-page.js` — searchable Markdown documentation browser and local Mermaid flowchart renderer.
