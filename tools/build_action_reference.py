@@ -17,9 +17,7 @@ def text(value, default="—"):
 
 
 def retry_value(step):
-    semantic = int(step.get("max_retries", 0) or 0)
-    transport = step.get("transport_retries")
-    return f"{semantic} semantic / {text(transport, 'provider policy')} transport"
+    return str(int(step.get("max_retries", 0) or 0))
 
 
 def main():
@@ -71,13 +69,13 @@ def main():
         "- **Max input** is the Action-level prompt/context ceiling after deterministic Context Pack construction and compaction.",
         "- **Target output** is the normal requested completion size for that work unit.",
         "- **Output ceiling** is the Action hard ceiling before model/provider/user clamping.",
-        "- **Semantic retries** belong to Action validation/rewrite logic. **Transport retries** belong to provider throttling/network policy and are a separate concern.",
+        "- **Retries** are Action-declared semantic/checkpoint retries. Provider throttles never trigger a hidden HTTP retry.",
         "- **Inference deadline** starts when the actual HTTP request starts. Provider pacing before the request is intentionally outside that deadline.",
         "",
         "## Important special cases",
         "",
-        "- `analysis.enrich` is automatic, small and non-blocking. It has no Action retry and no transport retry; deterministic import remains valid if enrichment fails.",
-        "- `design.infer` and `design.infer-batch` use zero automatic retries. In a multi-experiment Suggest-all run, the first provider throttle stops the sequence and leaves untouched experiments pending.",
+        "- `analysis.enrich` is automatic, small and non-blocking. It has no automatic retry; deterministic import remains valid if enrichment fails.",
+        "- `design.infer` uses zero automatic retries. Suggest all runs it once per experiment, stores each success immediately, and stops on user cancellation or the first provider throttle.",
         "- Z.AI `glm-4.7-flash` uses provider-specific pacing and a client-side circuit breaker; the model is never replaced automatically.",
         "- Report/Paper Actions split long writing into bounded work units. The table describes one AI work unit, not a promise that the entire document is generated in one provider call.",
         "",

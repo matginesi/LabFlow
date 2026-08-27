@@ -26,9 +26,8 @@ Provider model capacity is applied only as an additional ceiling.
 
 | Action | Input cap | Target output | Output ceiling | Notes |
 |---|---:|---:|---:|---|
-| `analysis.enrich` | 3,200 | 320 | 700 | automatic semantic micro-enrichment; no retries |
-| `design.infer` | 4,500 | 420 | 1,000 | one selected Design proposal |
-| `design.infer-batch` | 6,000 | 1,200 | 2,600 | at most a small batch of proposals |
+| `analysis.enrich` | 2,400 | 240 | 480 | automatic semantic micro-enrichment; no retries |
+| `design.infer` | 3,600 | 320 | 800 | one selected Design proposal |
 | `assistant.chat` | 12,000 | 700 | 2,048 | bounded page/experiment chat |
 | `report.generate` | 12,000 | 3,600 | 5,000 | one bounded Report/Paper writing block; 240 s inference deadline |
 | `report.improve` | 12,000 | 3,200 | 5,000 | one bounded edit block; no hidden semantic retry |
@@ -49,7 +48,7 @@ An HTTP 200 response is not necessarily a valid Action result. If the provider r
 
 For structured JSON this is especially important: storing a cut-off object would corrupt the Action contract. LabFlow rejects it as `MODEL_OUTPUT_TRUNCATED`.
 
-`analysis.enrich` is deliberately non-blocking and does not retry. Its schema and output budget are kept small enough that normal output should fit comfortably. If a weak/local model is unusually verbose, import still finishes with the deterministic Brief.
+`analysis.enrich` is deliberately non-blocking and does not retry. Its compact schema asks for one goal plus short arrays of variables, comparisons, hypotheses and gaps; it does not ask the model to repeat confidence/basis prose for every field. If a weak/local model is unusually verbose, import still finishes with the deterministic Brief.
 
 
 ## Slow local writing Actions
@@ -82,7 +81,7 @@ LabFlow never substitutes another model for `glm-4.7-flash`.
 For this model the client policy is intentionally conservative:
 
 - one HTTP attempt per Action work unit;
-- no hidden automatic transport retry after `1305`/HTTP 429;
+- no hidden automatic HTTP retry after `1305`/HTTP 429;
 - a 10 s quiet interval after accepted traffic;
 - one provider-wide circuit shared by Test connection, import enrichment, Design, Assistant and other AI Actions;
 - the circuit state is persisted locally so reloading the page cannot immediately resume a throttling storm;
@@ -118,15 +117,15 @@ The correct client behavior is therefore:
 
 ## Bulk Design behavior
 
-`Suggest all` never treats a provider throttle as 22 independent experiment failures.
+`Suggest all` runs one experiment per request and never treats a provider throttle as 22 independent experiment failures.
 
-If nine experiments have completed and the next batch receives a provider rate limit, the intended state is:
+If nine experiments have completed and the next request receives a provider rate limit, the intended state is:
 
 ```text
 9 suggested · 22 pending · provider cooldown
 ```
 
-No further batch is sent in that run. The researcher can continue later and LabFlow resumes only work still missing.
+No further request is sent in that run. The researcher can continue later and LabFlow resumes only work still missing.
 
 ## Deadlines do not include pacing
 

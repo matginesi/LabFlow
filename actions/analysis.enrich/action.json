@@ -23,13 +23,12 @@
       "thinking": "off",
       "timeout_ms": 45000,
       "weight": 0.85,
-      "max_output_tokens": 700,
+      "max_output_tokens": 480,
       "deadline_ms": 45000,
       "max_retries": 0,
-      "min_output_tokens": 100,
-      "target_output_tokens": 320,
-      "transport_retries": 0,
-      "max_input_tokens": 3200
+      "min_output_tokens": 80,
+      "target_output_tokens": 240,
+      "max_input_tokens": 2400
     },
     {
       "id": "store",

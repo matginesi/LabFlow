@@ -23,6 +23,22 @@
     catch (_) { return String(endpoint || ''); }
   }
 
+  function renderDetectedFacts(cap,providerId,model,modelCount){
+    const host=field('aiDetectedFacts');if(!host)return;const provider=LF.AIProviders[providerId]||LF.AIProviders.custom,key=field('aiKey'),keyValue=String(key&&key.value||LF.Storage.getApiKey(providerId)||''),endpoint=String(field('aiEndpoint')&&field('aiEndpoint').value||'');
+    const rows=[
+      ['Provider',provider.name||providerId||'—'],
+      ['Endpoint',endpoint||'not configured'],
+      ['API model ID',model||'not configured'],
+      ['Runtime model',cap&&cap.runtimeModel||cap&&cap.loadedModel||'not exposed by server'],
+      ['Context capacity',cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tokens':'not exposed'],
+      ['Slots',cap&&cap.totalSlots?Number(cap.totalSlots).toLocaleString():'not exposed'],
+      ['Reasoning control / capability',cap&&cap.reasoningStatus&&cap.reasoningStatus!=='unknown'?cap.reasoningStatus:(provider.safeThinkingOverrideWhenUnknown?'control available; model capability not exposed':'not exposed')],
+      ['API key',provider.keyRequired?(keyValue?'configured locally':'required · missing'):(provider.optionalKey?(keyValue?'configured locally':'optional · not configured'):'not required')]
+    ];
+    if(Number(modelCount)>0)rows.push(['Detected API models',Number(modelCount).toLocaleString()]);
+    host.replaceChildren();rows.forEach(function(row){const wrap=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=row[0];dd.textContent=row[1];if(row[0]==='API model ID'||row[0]==='Runtime model'||row[0]==='Endpoint')dd.className='mono';wrap.appendChild(dt);wrap.appendChild(dd);host.appendChild(wrap);});
+  }
+
   /** Build a readable, locally measured connection report around the tiny provider reply. */
   function connectionReport(result) {
     const usage=result.usage||{},probeLimited=result.probeLimited===true,lines=['## Provider response',probeLimited?'No final probe text · reasoning-only response within the bounded probe budget':'`'+String(result.content||'—').replace(/`/g,'\\`')+'`','','## Connection diagnostics'];
@@ -99,6 +115,7 @@
 
     const testButton = field('testAiConnection');
     if (testButton) testButton.textContent = 'Save & test connection';
+    renderDetectedFacts(null,providerId,modelValue(providerId)||saved.model,0);
     syncModelControls(null,{preserveHint:true});
   }
 
@@ -160,9 +177,10 @@
       catch(error){listError=error;Log.warn('models.list-failed',{provider:providerId,error:error});if(provider.modelSelect)syncModelControls(null,{manualFallback:true,preserveHint:true});activity.activityUpdate({stepId:'models',stepStatus:'done',stepNote:'list unavailable',stage:'Model list unavailable',progress:.34,message:'The provider did not expose a model list. LabFlow is still checking the configured model capability.'});}
       activity.activityUpdate({stepId:'capability',stepStatus:'active',stage:'Resolving model capability',progress:.52,message:'Reading output/context limits for the configured model.'});
       const selected=modelValue(providerId)||LF.Storage.getAiSettings().model||'',cap=LF.AI.resolveModelCapabilities?await LF.AI.resolveModelCapabilities({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,force:true}):null;
+      renderDetectedFacts(cap,providerId,selected,models.length);
       const capBits=[];if(cap&&cap.contextWindow)capBits.push(Number(cap.contextWindow).toLocaleString()+' context tok');if(cap&&cap.maxOutputTokens)capBits.push(Number(cap.maxOutputTokens).toLocaleString()+' max output tok');if(cap&&cap.totalSlots)capBits.push(Number(cap.totalSlots)+' slot'+(Number(cap.totalSlots)===1?'':'s'));const capText=capBits.length?('model capacity '+capBits.join(' / ')):'model capacity not exposed',reasoningText=cap&&cap.reasoningStatus&&cap.reasoningStatus!=='unknown'?('thinking '+cap.reasoningStatus):(provider.safeThinkingOverrideWhenUnknown?'thinking metadata not exposed · request control available':'thinking capability not exposed'),runtimeProfileText=providerId==='llamacpp'&&cap&&cap.runtimeProfileMessage?cap.runtimeProfileMessage:'';
       if(hint)hint.textContent=(models.length?models.length+' model'+(models.length===1?'':'s')+' available · ':'')+capText+' · '+reasoningText+(runtimeProfileText?' · '+runtimeProfileText:'')+(cap&&cap.source?' · '+cap.source:'')+(listError?' · model list unavailable; manual model entry enabled':'');
-      activity.activityUpdate({stepId:'capability',stepStatus:'done',stepNote:capText+' · '+reasoningText+(runtimeProfileText?' · '+runtimeProfileText:''),stage:'Capability detected',progress:.88,details:{Model:selected,'Loaded model':cap&&cap.loadedModel||'not exposed','Model list':models.length||'not exposed','Max output':cap&&cap.maxOutputTokens?Number(cap.maxOutputTokens).toLocaleString()+' tok':'not exposed','Context window':cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tok':'not exposed','Server slots':cap&&cap.totalSlots?Number(cap.totalSlots):'not exposed','LabFlow llama.cpp profile':providerId==='llamacpp'?(runtimeProfileText||'not exposed'):'n/a','Thinking capability':cap&&cap.reasoningStatus||'unknown','Thinking options':cap&&cap.reasoningAllowedOptions&&cap.reasoningAllowedOptions.length?cap.reasoningAllowedOptions.join(', '):'not exposed',Source:cap&&cap.source||'fallback / unknown'}});
+      activity.activityUpdate({stepId:'capability',stepStatus:'done',stepNote:capText+' · '+reasoningText+(runtimeProfileText?' · '+runtimeProfileText:''),stage:'Capability detected',progress:.88,details:{'API model ID':selected,'Runtime model':cap&&cap.runtimeModel||cap&&cap.loadedModel||'not exposed by server','Model list':models.length||'not exposed','Max output':cap&&cap.maxOutputTokens?Number(cap.maxOutputTokens).toLocaleString()+' tok':'not exposed','Context window':cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tok':'not exposed','Server slots':cap&&cap.totalSlots?Number(cap.totalSlots):'not exposed','LabFlow llama.cpp profile':providerId==='llamacpp'?(runtimeProfileText||'not exposed'):'n/a','Thinking capability':cap&&cap.reasoningStatus||'unknown','Thinking options':cap&&cap.reasoningAllowedOptions&&cap.reasoningAllowedOptions.length?cap.reasoningAllowedOptions.join(', '):'not exposed',Source:cap&&cap.source||'fallback / unknown'}});
       activity.activityUpdate({stepId:'apply',stepStatus:'done',stage:'Provider metadata ready',progress:.97});
       Log.info('models.loaded',{provider:providerId,count:models.length,model:selected,capability:cap});
       activity.activityFinish({message:cap&&cap.runtimeProfileStatus==='mismatch'?'Provider metadata detected · llama.cpp runtime differs from the LabFlow profile.':'Provider metadata detection completed.',response:(models.length?models.length+' models detected. ':'')+capText+'.'+(runtimeProfileText?' '+runtimeProfileText+'.':'')+' LabFlow Action requests remain much smaller and use explicit per-Action input/output caps.'+(cap&&cap.runtimeProfileStatus==='mismatch'?'\n\nRecommended llama.cpp runtime for this LabFlow profile: --parallel 1 --ctx-size 65536. Detect never divides the n_ctx reported by /props a second time.':'')+(listError?'\n\nThe model catalogue itself was unavailable, but the configured model was still probed.':''),holdMs:0});
@@ -237,5 +255,5 @@
     }
   }
 
-  LF.AISettings = {decorate:decorate, saveFromForm:saveFromForm, selectProvider:selectProvider, loadModels:loadModels, testConnection:testConnection, syncModelControls:syncModelControls, modelValue:modelValue, catalogueModel:catalogueModel, catalogueChoices:catalogueChoices};
+  LF.AISettings = {decorate:decorate, saveFromForm:saveFromForm, selectProvider:selectProvider, loadModels:loadModels, testConnection:testConnection, syncModelControls:syncModelControls, modelValue:modelValue, catalogueModel:catalogueModel, catalogueChoices:catalogueChoices, renderDetectedFacts:renderDetectedFacts};
 }());

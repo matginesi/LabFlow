@@ -1,203 +1,33 @@
 {
   "id": "experiment_brief",
-  "title": "Reusable experiment brief enrichment",
+  "title": "Compact experiment brief enrichment",
   "type": "object",
-  "required": [
-    "summary",
-    "experiment_goal",
-    "variables",
-    "comparisons",
-    "interpretations",
-    "knowledge_gaps"
-  ],
+  "required": ["summary", "experiment_goal", "variables", "comparisons", "hypotheses", "knowledge_gaps"],
   "properties": {
-    "summary": {
-      "type": "string",
-      "maxLength": 220
-    },
+    "summary": {"type": "string", "maxLength": 180},
     "experiment_goal": {
       "type": "object",
-      "required": [
-        "statement",
-        "status",
-        "confidence"
-      ],
+      "required": ["statement", "status"],
       "properties": {
-        "statement": {
-          "type": "string",
-          "maxLength": 180
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "observed",
-            "inferred",
-            "unknown"
-          ]
-        },
-        "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "basis": {
-          "type": "array",
-          "maxItems": 1,
-          "items": {
-            "type": "string",
-            "maxLength": 100
-          }
-        }
+        "statement": {"type": "string", "maxLength": 160},
+        "status": {"type": "string", "enum": ["observed", "inferred", "unknown"]}
       }
     },
     "variables": {
       "type": "array",
-      "maxItems": 4,
-      "items": {
-        "type": "object",
-        "required": [
-          "name",
-          "role",
-          "status",
-          "confidence"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "role": {
-            "type": "string",
-            "maxLength": 120
-          },
-          "levels": {
-            "type": "array",
-            "maxItems": 4,
-            "items": {
-              "type": "string",
-              "maxLength": 60
-            }
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "observed",
-              "inferred",
-              "unknown"
-            ]
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "basis": {
-            "type": "array",
-            "maxItems": 1,
-            "items": {
-              "type": "string",
-              "maxLength": 100
-            }
-          }
-        }
-      }
-    },
-    "comparisons": {
-      "type": "array",
       "maxItems": 3,
       "items": {
         "type": "object",
-        "required": [
-          "label",
-          "why_useful",
-          "status",
-          "confidence"
-        ],
+        "required": ["name", "status"],
         "properties": {
-          "label": {
-            "type": "string",
-            "maxLength": 100
-          },
-          "why_useful": {
-            "type": "string",
-            "maxLength": 150
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "observed",
-              "inferred"
-            ]
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "basis": {
-            "type": "array",
-            "maxItems": 1,
-            "items": {
-              "type": "string",
-              "maxLength": 100
-            }
-          }
+          "name": {"type": "string", "maxLength": 70},
+          "levels": {"type": "array", "maxItems": 4, "items": {"type": "string", "maxLength": 50}},
+          "status": {"type": "string", "enum": ["observed", "inferred", "unknown"]}
         }
       }
     },
-    "interpretations": {
-      "type": "array",
-      "maxItems": 3,
-      "items": {
-        "type": "object",
-        "required": [
-          "statement",
-          "kind",
-          "confidence"
-        ],
-        "properties": {
-          "statement": {
-            "type": "string",
-            "maxLength": 180
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "observation",
-              "hypothesis"
-            ]
-          },
-          "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1
-          },
-          "basis": {
-            "type": "array",
-            "maxItems": 1,
-            "items": {
-              "type": "string",
-              "maxLength": 100
-            }
-          }
-        }
-      }
-    },
-    "knowledge_gaps": {
-      "type": "array",
-      "maxItems": 4,
-      "items": {
-        "type": "string",
-        "maxLength": 120
-      }
-    },
-    "recommended_focus": {
-      "type": "array",
-      "maxItems": 3,
-      "items": {
-        "type": "string",
-        "maxLength": 120
-      }
-    }
+    "comparisons": {"type": "array", "maxItems": 2, "items": {"type": "string", "maxLength": 120}},
+    "hypotheses": {"type": "array", "maxItems": 2, "items": {"type": "string", "maxLength": 140}},
+    "knowledge_gaps": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 100}}
   }
 }

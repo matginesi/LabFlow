@@ -100,6 +100,12 @@ Direct local providers must allow the LabFlow page origin. A local server can be
 
 Network/CORS failures do not have an HTTP provider response body and should not be mislabeled as rate limits.
 
+## Stopped by user
+
+A user Stop is recorded as `action.cancelled` / `request.cancelled` with status `aborted` and reason `user`. It is not a provider failure and is never retried. In Design All, suggestions completed before Stop remain saved and untouched experiments remain pending.
+
+Streaming diagnostics retain telemetry plus at most one 4 KiB response tail on failure. LabFlow discards successful raw SSE framing, so a diagnostic should not contain tens of thousands of duplicated envelope characters.
+
 ## What to copy when reporting a bug
 
 The most useful bounded diagnostic fields are:

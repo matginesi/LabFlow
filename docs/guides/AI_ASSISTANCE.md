@@ -27,7 +27,7 @@ An AI provider never receives ownership of the Working Copy. It receives a reque
 
 ### Automatic semantic enrichment
 
-`analysis.enrich` may run after import when a provider is configured. It adds only a compact semantic layer to the Experiment Brief: likely goal, variables, useful comparisons, a few interpretations/hypotheses and important metadata gaps.
+`analysis.enrich` may run after import when a provider is configured. It adds only a compact semantic layer to the Experiment Brief: likely goal, variables, useful comparisons, a few labelled hypotheses and important metadata gaps.
 
 It is intentionally **optional, small and non-blocking**. Import remains valid without it.
 
@@ -71,8 +71,9 @@ Every AI Action declares its own:
 - `target_output_tokens`;
 - `max_output_tokens`;
 - deadline;
-- semantic retry policy;
-- optional transport retry policy.
+- semantic retry policy.
+
+Provider throttles never trigger a hidden HTTP retry. They open the provider cooldown and return control to the researcher.
 
 See [AI tokens, limits and rate limiting](AI_TOKENS_AND_RATE_LIMITS.md) and the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md).
 
@@ -113,7 +114,6 @@ LabFlow's recommended runtime profile is deliberately **one slot with the full 6
 ```bash
 llama-server \
   --model /path/to/model.gguf \
-  --alias local-model \
   --ctx-size 65536 \
   --parallel 1 \
   --n-gpu-layers 99 \
@@ -128,6 +128,8 @@ llama-server \
 ```
 
 Reasoning is intentionally **not disabled globally** in this launcher. LabFlow applies reasoning policy per Action: most structured Actions currently request `thinking: off`, while Actions that intentionally require reasoning can leave it enabled. After startup, **Detect** should report `65,536 context tok / 1 slot` and mark the LabFlow llama.cpp runtime profile as active. If `/props` reports another value, LabFlow uses the effective `n_ctx` exactly as reported and flags the runtime profile mismatch; it never divides that value a second time.
+
+**Detect** reads `/v1/models` and `/props` separately. The served API ID remains the value sent in requests. When `/props` exposes a model path/name, Settings shows its filename as **Runtime model**; otherwise it says **not exposed by server** instead of guessing.
 
 The Settings **Test connection** intentionally separates connectivity from final-answer quality. If llama.cpp returns HTTP 200 with a valid Chat Completions envelope but spends the tiny probe budget entirely in reasoning, LabFlow reports **reachable · final-text probe inconclusive**. That is not treated as a network failure. Normal scientific Actions do **not** get this exception: they must still produce final content that passes their parser/schema contract.
 

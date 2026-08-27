@@ -115,7 +115,7 @@ LabFlow does not impose one hidden global output ceiling. Every AI step declares
 
 The effective request budget is the tightest applicable value among: the Action/step target, detected exact model maximum (or safe context headroom when only that is known), the optional Assistant override for `assistant.chat`, and **Settings → Provider → Force max output**. Provider `0` means “do not add a global cap”; it does not mean “request the provider maximum”. A positive user cap can only lower the request.
 
-Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately a micro-request: `analysis.enrich` is a semantic-only layer (objective, variables, comparisons, labelled hypotheses and gaps), caps estimated input at 3,200 tokens, targets about 320 output tokens with a 700-token ceiling, has a 45 s work-unit deadline, and disables both semantic and provider transport retries. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
+Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately a micro-request: `analysis.enrich` is a semantic-only layer (objective, variables, comparisons, labelled hypotheses and gaps), caps estimated input at 2,400 tokens, targets about 240 output tokens with a 480-token ceiling, has a 45 s work-unit deadline, and disables automatic retry. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
 
 ## 6. Structured AI output
 
@@ -139,11 +139,11 @@ Final Markdown/JSON rendering must follow the active theme.
 
 ## 8. Retry contract
 
-Retry is **Action-declared**, not a global promise that every AI call retries twice. `max_retries` controls semantic/checkpoint retry and `transport_retries` may further constrain provider retry. Many compact/automatic Actions deliberately set both to zero.
+Retry is **Action-declared**, not a global promise that every AI call retries twice. `max_retries` controls semantic/checkpoint retry and defaults to zero when omitted. Every shipped Action currently declares zero automatic retries.
 
-When an Action enables semantic retry, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated structured output is never stored as partial JSON.
+When an Action explicitly enables retry for transient network, timeout or temporary 5xx failures, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated or invalid structured output is never retried or stored as partial JSON.
 
-Provider throttling is a separate transport concern. Z.AI `glm-4.7-flash` has zero hidden transport retries; a 429/1305 opens a shared persisted provider circuit instead. See [`guides/AI_TOKENS_AND_RATE_LIMITS.md`](guides/AI_TOKENS_AND_RATE_LIMITS.md).
+Provider throttling is a separate transport concern. LabFlow never automatically repeats a throttled HTTP request; for Z.AI `glm-4.7-flash`, a 429/1305 opens a shared persisted provider circuit. See [`guides/AI_TOKENS_AND_RATE_LIMITS.md`](guides/AI_TOKENS_AND_RATE_LIMITS.md).
 
 No unbounded retry loop or provider queue.
 

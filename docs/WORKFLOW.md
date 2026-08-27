@@ -313,8 +313,8 @@ On failure:
 
 - AI checkpoint retry occurs only when the Action declares `max_retries > 0`;
 - enabled semantic retries use bounded delays and repeat only the failed work unit;
-- provider transport retry is independently bounded and may be disabled entirely;
-- when a bounded text work unit reaches the provider output limit, an enabled semantic retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
+- provider throttles are not retried automatically; a cooldown is exposed immediately;
+- when a bounded work unit reaches the provider output limit, the cut-off fragment is not stored and the researcher may explicitly retry the checkpoint;
 - after declared retries, **Retry checkpoint** may be available;
 - provider cooldown/rate-limit failure stops multi-request sequences instead of advancing through more work units;
 - retry resumes the failed/pending work, not completed checkpoints.
@@ -537,9 +537,9 @@ Existing source or researcher values are never silently overwritten. Accepted AI
 
 ### Suggest all / resume later
 
-**Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then sends bounded batches of at most three IDs. If a provider truncates a batch response, that batch is retried one experiment at a time while completed suggestions remain saved.
+**Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then runs `design.infer` once per experiment in order. There is no batch schema and no automatic truncation retry.
 
-Each successful experiment is stored immediately. A content/validation failure may mark only the affected experiment as `Error`, while successful suggestions remain available. A provider throttle is different: on the first HTTP 429 / Z.AI `1305`, the whole sequence pauses immediately, the current untouched batch returns to pending state, and **no later batch is requested in that run**. Completed suggestions remain saved. Running **Continue suggestions** later resumes only experiments that still need suggestions; it never asks the user to restart or discard accepted work.
+Each successful experiment is stored immediately. A content/validation failure marks only that experiment as `Error`, while the sequence can continue to the next independent experiment. A provider throttle is different: on the first HTTP 429 / Z.AI `1305`, the whole sequence pauses immediately, the current experiment returns to pending state, and **no later request is sent in that run**. Completed suggestions remain saved. Running **Continue suggestions** later resumes only experiments that still need suggestions; it never asks the user to restart or discard accepted work.
 
 ---
 
@@ -799,7 +799,7 @@ AI must never overwrite user-confirmed values silently.
 
 Knowledge Base management is available without loading a ZIP and has no setup step. Bundled records are searchable immediately; create/update/delete and JSON import create browser-local overrides, while JSON export provides a portable snapshot. Existing legacy browser records are migrated once into the same override format. Management and lookup are read-only with respect to the Working Copy; only acceptance of a validated AI Design proposal can fill scientific fields.
 
-Design keeps one convenience command, **Suggest all with AI**, but no complex completion workflow. It prepares independent reviewable suggestions in bounded batches; the researcher accepts one experiment or all saved suggestions explicitly. Errors and Stop are resumable per experiment.
+Design keeps one convenience command, **Suggest all with AI**, but no complex completion workflow. It prepares independent reviewable suggestions one experiment per request; the researcher accepts one experiment or all saved suggestions explicitly. Errors and Stop are resumable per experiment.
 
 ---
 

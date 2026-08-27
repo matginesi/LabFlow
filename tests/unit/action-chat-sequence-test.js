@@ -115,11 +115,9 @@ module.exports=function(t,LF){
     assert(env.errors.length===1,'normal Action retry UI remains available');
   };
 
-  t['Design Suggest all survives a first-batch provider failure with no proposal map']=async function(){
-    const env=loadUi(function(id){
-      if(id==='design.infer-batch')return Promise.resolve({status:'error',actionId:id,message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});
-      return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
-    });
+  t['Design Suggest all records independent failures without a batch proposal map']=async function(){
+    const calls=[];
+    const env=loadUi(function(id,options){calls.push(options.params.deviceId);return Promise.resolve({status:'error',actionId:id,message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});});
     const exp=LF.State.state.experiment;
     exp.design={solutions:[],devices:[
       {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
@@ -128,8 +126,9 @@ module.exports=function(t,LF){
     delete exp.aiDesignProposals;
     delete exp.designAiStatus;
     const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
-    assert(out&&out.status==='done','batch provider failure should be converted into retryable Design state, not an unhandled rejection');
-    assert(exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object','proposal map should be initialized even when the first batch fails');
+    assert(out&&out.status==='done','provider failures should become retryable Design state, not an unhandled rejection');
+    assert(calls.join(',')==='d1,d2','each experiment should receive exactly one request');
+    assert(exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object','proposal map should be initialized even when the first request fails');
     assert(exp.designAiStatus.d1&&exp.designAiStatus.d1.state==='error','first experiment should become retryable');
     assert(exp.designAiStatus.d2&&exp.designAiStatus.d2.state==='error','second experiment should become retryable');
     assert(/provider failed/.test(exp.designAiStatus.d1.message),'provider error reason should be retained');
@@ -140,38 +139,32 @@ module.exports=function(t,LF){
   t['Design Suggest all stops the run immediately after the first provider rate limit']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){
-      if(id!=='design.infer-batch')return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
-      const ids=(cb.params.deviceIds||[]).slice();calls.push(ids);
-      const exp=LF.State.state.experiment;
+      const deviceId=cb.params.deviceId;calls.push(deviceId);const exp=LF.State.state.experiment;
       if(calls.length===1){
         exp.aiDesignProposals=exp.aiDesignProposals||{};
-        ids.forEach(function(deviceId){exp.aiDesignProposals[deviceId]={targetDeviceId:deviceId,summary:'Saved before throttle',solutions:[{name:'Ink'}],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};});
+        exp.aiDesignProposals[deviceId]={targetDeviceId:deviceId,summary:'Saved before throttle',solutions:[{name:'Ink'}],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};
         return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});
       }
       return Promise.resolve({status:'error',actionId:id,message:'API rate limit reached · 1305 · slow down',failedStep:'infer',code:'MODEL_RATE_LIMIT',error:{rateLimited:true,providerCode:'1305'},requestMeta:{}});
     });
-    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:Array.from({length:7},function(_,i){return{id:'d'+(i+1),name:'D'+(i+1),sampleNames:[],solutionIds:[],stack:[],process:{}};})};
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:Array.from({length:4},function(_,i){return{id:'d'+(i+1),name:'D'+(i+1),sampleNames:[],solutionIds:[],stack:[],process:{}};})};
     delete exp.aiDesignProposals;delete exp.designAiStatus;
     const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
     assert(out&&out.status==='paused'&&out.reason==='provider_rate_limit','rate limit should pause the bulk sequence');
-    assert(calls.length===2,'no request may be sent after the first throttled batch');
-    assert(out.suggested===3&&out.remaining===4,'completed suggestions must be preserved and untouched experiments remain pending');
-    assert(exp.designAiStatus.d4&&exp.designAiStatus.d4.state==='idle','throttled experiment should return to pending/idle state');
-    assert(!exp.designAiStatus.d7,'future batches must never be touched after throttle');
+    assert(calls.join(',')==='d1,d2','no request may be sent after the first throttled experiment');
+    assert(out.suggested===1&&out.remaining===3,'completed suggestions must be preserved and untouched experiments remain pending');
+    assert(exp.designAiStatus.d2&&exp.designAiStatus.d2.state==='idle','throttled experiment should return to pending/idle state');
+    assert(!exp.designAiStatus.d4,'future experiments must never be touched after throttle');
     assert(env.finishes.length===1&&/No further requests were sent/.test(String(env.finishes[0].response||'')),'final totem should explain the circuit breaker');
   };
 
 
-  t['Design Suggest all recovers a truncated batch with smaller requests']=async function(){
+  t['Design Suggest all cancellation preserves completed suggestions and leaves the rest pending']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){
-      if(id!=='design.infer-batch')return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
-      const ids=(cb.params.deviceIds||[]).slice();calls.push(ids);
-      if(ids.length>1)return Promise.resolve({status:'error',actionId:id,message:'The model reached its output limit before finishing this work unit.',failedStep:'infer',code:'MODEL_OUTPUT_TRUNCATED',requestMeta:{}});
-      const exp=LF.State.state.experiment,id0=ids[0];
-      exp.aiDesignProposals=exp.aiDesignProposals||{};
-      exp.aiDesignProposals[id0]={targetDeviceId:id0,summary:'Recovered',solutions:[{name:'Ink'}],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};
-      return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});
+      const deviceId=cb.params.deviceId;calls.push(deviceId);const exp=LF.State.state.experiment;
+      if(calls.length===1){exp.aiDesignProposals=exp.aiDesignProposals||{};exp.aiDesignProposals[deviceId]={targetDeviceId:deviceId,summary:'Saved',solutions:[],devices:[{stack:[{role:'ETL',material:'SnO2'}]}],unknowns:[]};return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});}
+      return Promise.resolve({status:'aborted',actionId:id,message:'Action stopped by the user.',code:'ACTION_ABORTED',requestMeta:{}});
     });
     const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[
       {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
@@ -179,11 +172,11 @@ module.exports=function(t,LF){
     ]};
     delete exp.aiDesignProposals;delete exp.designAiStatus;
     const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
-    assert(out&&out.status==='done'&&out.suggested===2&&out.failed===0,'truncated multi-experiment batch should recover through single-experiment retries');
-    assert(calls.length===3&&calls[0].length===2&&calls[1].length===1&&calls[2].length===1,'truncated batch should be retried one experiment at a time');
-    assert(exp.aiDesignProposals.d1&&exp.aiDesignProposals.d2,'recovered suggestions should remain stored');
-    assert(env.updates.some(function(x){return /retrying smaller requests/i.test(String(x.stage||''));}),'totem should explain the automatic smaller retry');
-    assert(env.finishes.length===1&&/2 experiments suggested/.test(String(env.finishes[0].response||'')),'final totem should report recovered suggestions');
+    assert(out&&out.status==='aborted'&&out.suggested===1&&out.remaining===1,'cancellation should report preserved and pending work');
+    assert(calls.join(',')==='d1,d2','cancellation must not issue another request');
+    assert(exp.aiDesignProposals.d1&&!exp.aiDesignProposals.d2,'completed suggestion remains stored');
+    assert(exp.designAiStatus.d2.state==='idle','cancelled experiment returns to pending');
+    assert(env.finishes.length===1&&/stopped/i.test(String(env.finishes[0].message||'')),'final totem should report a clean stop');
   };
 
 

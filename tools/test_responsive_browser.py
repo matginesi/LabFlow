@@ -37,10 +37,11 @@ AUDIT_JS = r"""() => {
     return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
   };
   const localScroll = node => node.closest([
-    '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
-    '.stack-editor-scroll', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip',
-    '.review-compact-status', '.changes-table-scroll', '.changes-diff-scroll', '.changes-provenance-scroll'
+    '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar', '.operation-catalog .panel-body',
+    '.stack-editor-scroll', '.design-variant-cards', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
+    '.operation-step-flow',
+    '.code-block', '.md-table-wrap', '.docs-mermaid-canvas', '.report-ai-tools', '.report-toolbar', '.experiment-strip',
+    '.review-compact-status', '.changes-table-scroll', '.changes-doc-stats', '.changes-diff-scroll', '.changes-provenance-scroll'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -133,12 +134,13 @@ def main() -> int:
                 elif route == "ui-kit":
                     inner = page.evaluate("""() => {
                       const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
-                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.design-variant-rail-v3 .panel-body,.code-block,.md-table-wrap,.report-ai-tools,.report-toolbar';
+                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.experiment-strip,.operation-catalog .panel-body,.operation-step-flow,.design-variant-cards,.design-variant-rail .panel-body,.design-variant-rail-v3 .panel-body,.code-block,.md-table-wrap,.docs-mermaid-canvas,.changes-doc-stats,.report-ai-tools,.report-toolbar';
                       const offenders=[...root.querySelectorAll('*')].filter(node => {
                         const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
                         return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
                       }).slice(0,12).map(node => ({tag:node.tagName.toLowerCase(),cls:String(node.className).slice(0,100),right:Math.round(node.getBoundingClientRect().right),width:Math.round(node.getBoundingClientRect().width)}));
-                      return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.clientWidth+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
+                      const catalogSections=root.querySelectorAll('[data-ui-kit-group]').length,documentSections=document.querySelectorAll('[data-ui-kit-group]').length;
+                      return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.clientWidth+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders,catalogSections,escapedSections:documentSections-catalogSections};
                     }""")
                     result["uiKitDocument"] = inner
                 if width in (900, 390):
@@ -150,10 +152,11 @@ def main() -> int:
         item["documentOverflow"] or item["mainOverflow"] or item["offenders"] or
         item.get("uiKitDocument", {}).get("documentOverflow") or
         item.get("uiKitDocument", {}).get("mainOverflow") or
+        item.get("uiKitDocument", {}).get("escapedSections", 0) != 0 or
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item.get("stepper") and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
-            len(item["stepper"]["steps"]) != 6 or
+            len(item["stepper"]["steps"]) != 5 or
             not all(step["visible"] for step in item["stepper"]["steps"])
         ))
     )]

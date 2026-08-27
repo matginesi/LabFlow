@@ -90,7 +90,7 @@ AI is not required for the core import/Results/NOMAD pipeline.
 
 Every AI Action is a versioned contract under `actions/` with explicit context profile, input cap, output target/ceiling, deadline and retry policy. Structured Actions also use JSON schemas.
 
-`analysis.enrich` is intentionally a **micro semantic layer**, not a second analysis engine. It receives a compact experiment summary and adds only likely goal, variables, comparisons, labelled interpretations/hypotheses and important metadata gaps. Current defaults are bounded to roughly **3,200 input tokens**, **320 target output tokens** and a **700-token ceiling**; failure never blocks import.
+`analysis.enrich` is intentionally a **micro semantic layer**, not a second analysis engine. It receives a compact experiment summary and adds only likely goal, variables, comparisons, labelled hypotheses and important metadata gaps. Current defaults are bounded to roughly **2,400 input tokens**, **240 target output tokens** and a **480-token ceiling**; failure never blocks import.
 
 For Z.AI `glm-4.7-flash`, LabFlow does **not** change model or fall back automatically. A 429/`1305` opens a provider-wide persisted cooldown; no hidden HTTP retry is sent, and bulk workflows stop while preserving completed work. See [`docs/guides/AI_TOKENS_AND_RATE_LIMITS.md`](docs/guides/AI_TOKENS_AND_RATE_LIMITS.md).
 
@@ -108,7 +108,7 @@ API credentials are redacted from structured logs. The uploaded ZIP is never ove
 
 ## Local providers
 
-LM Studio, Ollama and llama.cpp (`llama-server`) use the same OpenAI-compatible Chat Completions transport as cloud providers. No Python application backend is required. The local server must be running and allow the browser origin (CORS). The llama.cpp preset defaults to `http://127.0.0.1:8080/v1`, discovers served model IDs through `/v1/models`, and reads the effective **per-slot** context plus slot count from `/props`.
+LM Studio, Ollama and llama.cpp (`llama-server`) use the same OpenAI-compatible Chat Completions transport as cloud providers. No Python application backend is required. The local server must be running and allow the browser origin (CORS). The llama.cpp preset defaults to `http://127.0.0.1:8080/v1`, discovers request/API model IDs through `/v1/models`, and reads the runtime model path/name (when exposed), effective **per-slot** context and slot count from `/props`. An API alias such as `local-model` remains the request model; a runtime GGUF filename is display metadata only.
 
 For LabFlow, the recommended llama.cpp runtime is deliberately **single-slot**: `--parallel 1 --ctx-size 65536`. With that profile, `/props.default_generation_settings.n_ctx` should report `65536` and `total_slots` should report `1`; LabFlow uses the full 65K runtime context and does not divide it again. Detect reports a clear runtime-profile mismatch if the server is started with a different slot/context configuration. Reasoning remains a per-Action concern: LabFlow sends explicit reasoning-off controls only for Actions that declare `thinking: off`, while reasoning-capable Actions may use the server/model default. The connection probe distinguishes HTTP/API reachability from final-text quality, so an HTTP 200 reasoning-only bounded probe is reported as reachable/inconclusive rather than as a network failure.
 
@@ -117,7 +117,6 @@ Recommended launcher core:
 ```bash
 llama-server \
   --model /path/to/model.gguf \
-  --alias local-model \
   --ctx-size 65536 \
   --parallel 1 \
   --host 127.0.0.1 \

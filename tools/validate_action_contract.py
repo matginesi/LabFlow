@@ -4,8 +4,8 @@ from __future__ import annotations
 import json,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]; ACTIONS=ROOT/'actions'
-EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','design.infer-batch','nomad.prepare','report.generate','report.improve','results.interpret'}
-KNOWLEDGE_ACTIONS={'analysis.enrich','design.infer','design.infer-batch','results.interpret','report.generate','report.improve'}
+EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','nomad.prepare','report.generate','report.improve','results.interpret'}
+KNOWLEDGE_ACTIONS={'analysis.enrich','design.infer','results.interpret','report.generate','report.improve'}
 ROLES={'automatic','researcher','assistant'}; VIS={'public','internal'}; TYPES={'AI','HYBRID','DETERMINISTIC'}
 errors=[]; defs={}
 for p in sorted(ACTIONS.glob('*/action.json')):
@@ -67,11 +67,7 @@ for p in sorted(ACTIONS.glob('*/action.json')):
                 try: retries=int(retries)
                 except Exception: errors.append(f'{aid}/{s.get("id")}: max_retries must be an integer when present'); retries=-1
                 if not 0<=retries<=2:errors.append(f'{aid}/{s.get("id")}: max_retries must be 0..2')
-            transport_retries=s.get('transport_retries')
-            if transport_retries is not None:
-                try: transport_retries=int(transport_retries)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: transport_retries must be an integer when present'); transport_retries=-1
-                if not 0<=transport_retries<=4:errors.append(f'{aid}/{s.get("id")}: transport_retries must be 0..4')
+            if 'transport_retries' in s:errors.append(f'{aid}/{s.get("id")}: transport_retries is obsolete; provider limits never auto-retry')
             deadline=s.get('deadline_ms')
             if deadline is not None:
                 try: deadline=int(deadline)

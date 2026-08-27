@@ -13,31 +13,30 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 
 | Action / AI step | Role | Type | Max input | Target output | Output ceiling | Retries | Inference deadline |
 |---|---|---|---:|---:|---:|---|---:|
-| analysis.enrich | automatic | HYBRID | 3200 | 320 | 700 | 0 semantic / 0 transport | 45 s |
+| analysis.enrich | automatic | HYBRID | 2400 | 240 | 480 | 0 | 45 s |
 | analysis.summarize | automatic | DETERMINISTIC | — | — | — | — | — |
-| assistant.chat | assistant | AI | 12000 | 700 | 2048 | 1 semantic / provider policy transport | 90 s |
+| assistant.chat | assistant | AI | 12000 | 700 | 2048 | 0 | 90 s |
 | dataset.analyze | automatic | DETERMINISTIC | — | — | — | — | — |
 | dataset.correct-safe | researcher | DETERMINISTIC | — | — | — | — | — |
-| dataset.resolve-ambiguities | researcher | HYBRID | 8000 | 1800 | 4096 | 1 semantic / provider policy transport | 150 s |
-| design.infer | researcher | HYBRID | 4500 | 420 | 1000 | 0 semantic / 0 transport | 90 s |
-| design.infer-batch | researcher | HYBRID | 6000 | 1200 | 2600 | 0 semantic / 0 transport | 90 s |
+| dataset.resolve-ambiguities | researcher | HYBRID | 8000 | 1800 | 4096 | 0 | 150 s |
+| design.infer | researcher | HYBRID | 3600 | 320 | 800 | 0 | 90 s |
 | nomad.prepare | researcher | DETERMINISTIC | — | — | — | — | — |
-| report.generate | researcher | HYBRID | 12000 | 3600 | 5000 | 0 semantic / provider policy transport | 240 s |
-| report.improve | researcher | HYBRID | 12000 | 3200 | 5000 | 0 semantic / provider policy transport | 240 s |
-| results.interpret | researcher | HYBRID | 10000 | 1400 | 3072 | 1 semantic / provider policy transport | 150 s |
+| report.generate | researcher | HYBRID | 12000 | 3600 | 5000 | 0 | 240 s |
+| report.improve | researcher | HYBRID | 12000 | 3200 | 5000 | 0 | 240 s |
+| results.interpret | researcher | HYBRID | 10000 | 1400 | 3072 | 0 | 150 s |
 
 ## How to read the table
 
 - **Max input** is the Action-level prompt/context ceiling after deterministic Context Pack construction and compaction.
 - **Target output** is the normal requested completion size for that work unit.
 - **Output ceiling** is the Action hard ceiling before model/provider/user clamping.
-- **Semantic retries** belong to Action validation/rewrite logic. **Transport retries** belong to provider throttling/network policy and are a separate concern.
+- **Retries** are Action-declared semantic/checkpoint retries. Provider throttles never trigger a hidden HTTP retry.
 - **Inference deadline** starts when the actual HTTP request starts. Provider pacing before the request is intentionally outside that deadline.
 
 ## Important special cases
 
-- `analysis.enrich` is automatic, small and non-blocking. It has no Action retry and no transport retry; deterministic import remains valid if enrichment fails.
-- `design.infer` and `design.infer-batch` use zero automatic retries. In a multi-experiment Suggest-all run, the first provider throttle stops the sequence and leaves untouched experiments pending.
+- `analysis.enrich` is automatic, small and non-blocking. It has no automatic retry; deterministic import remains valid if enrichment fails.
+- `design.infer` uses zero automatic retries. Suggest all runs it once per experiment, stores each success immediately, and stops on user cancellation or the first provider throttle.
 - Z.AI `glm-4.7-flash` uses provider-specific pacing and a client-side circuit breaker; the model is never replaced automatically.
 - Report/Paper Actions split long writing into bounded work units. The table describes one AI work unit, not a promise that the entire document is generated in one provider call.
 

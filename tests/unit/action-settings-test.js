@@ -15,16 +15,16 @@ module.exports=function(t,LF){
     assert(ids.includes('report.generate'),'report Action missing');
     assert(ids.includes('analysis.summarize'),'internal deterministic summary missing from registry');
     assert(ids.includes('analysis.enrich'),'shared experiment brief enrichment missing from registry');
-    assert(ids.includes('design.infer-batch'),'batch Design Action missing from registry');
-    assert(ids.length===12,'expected all 12 Actions');
+    assert(!ids.includes('design.infer-batch'),'obsolete batch Design Action remains in registry');
+    assert(ids.length===11,'expected the simplified 11-Action registry');
   };
   t['AI Actions declare bounded output targets and automatic enrichment is fail-fast']=function(){
     const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
     defs.forEach(function(def){(def.steps||[]).filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output target');assert(['off','auto','on'].includes(step.thinking),def.id+'/'+step.id+' missing thinking policy');});});
     const enrich=LF.ActionRegistry.action('analysis.enrich').steps.find(function(step){return step.id==='enrich';});
-    assert(enrich.max_output_tokens===700,'analysis.enrich output ceiling must stay micro');assert(enrich.target_output_tokens===320,'analysis.enrich semantic target must stay micro');assert(enrich.max_input_tokens===3200,'analysis.enrich input cap must stay micro');
+    assert(enrich.max_output_tokens===480,'analysis.enrich output ceiling must stay micro');assert(enrich.target_output_tokens===240,'analysis.enrich semantic target must stay micro');assert(enrich.max_input_tokens===2400,'analysis.enrich input cap must stay micro');
     assert(enrich.deadline_ms===45000,'analysis.enrich hard deadline must be 45s');
-    assert(enrich.max_retries===0,'analysis.enrich must not retry semantically during import');assert(enrich.transport_retries===0,'analysis.enrich must not wait through provider rate-limit retries during import');
+    assert(enrich.max_retries===0,'analysis.enrich must not retry during import');assert(!Object.prototype.hasOwnProperty.call(enrich,'transport_retries'),'obsolete transport retry setting must be absent');
     const reportDraft=LF.ActionRegistry.action('report.generate').steps.find(function(step){return step.id==='draft';});
     assert(reportDraft.max_input_tokens===12000,'report.generate input cap');assert(reportDraft.target_output_tokens===3600,'report.generate target');assert(reportDraft.max_output_tokens===5000,'report.generate ceiling');assert(reportDraft.deadline_ms===240000,'report.generate inference deadline');assert(reportDraft.max_retries===0,'report.generate must not automatically rerun a failed long draft');
     const reportEdit=LF.ActionRegistry.action('report.improve').steps.find(function(step){return step.id==='edit';});
@@ -46,9 +46,9 @@ module.exports=function(t,LF){
     assert(prompt.includes('A Knowledge Base miss is normal'),'KB absence must not block model inference');
     const step=LF.ActionRegistry.action('design.infer').steps.find(function(item){return item.id==='infer';});
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
-    assert(step.max_input_tokens===4500,'Design input budget should stay compact');
-    assert(step.max_output_tokens===1000&&step.target_output_tokens===420,'Design output budget should stay compact');
-    assert(step.deadline_ms===90000&&step.max_retries===0&&step.transport_retries===0,'Design must be one bounded request with no hidden provider retry');
+    assert(step.max_input_tokens===3600,'Design input budget should stay compact');
+    assert(step.max_output_tokens===800&&step.target_output_tokens===320,'Design output budget should stay compact');
+    assert(step.deadline_ms===90000&&step.max_retries===0&&!Object.prototype.hasOwnProperty.call(step,'transport_retries'),'Design must be one bounded request with no hidden provider retry');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
@@ -85,7 +85,7 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
     assert(LF.AIProviders.zai.rateLimit.freeFlashMinIntervalMs===10000,'Z.AI Flash keeps conservative free-tier spacing');
-    assert(LF.AIProviders.zai.rateLimit.retries===0,'Z.AI Flash never performs a hidden automatic retry');
+    assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.zai.rateLimit,'retries'),'provider registry must not expose obsolete transport retries');
     assert(LF.AIProviders.zai.rateLimit.freeFlashBreakerMs===60000,'Z.AI Flash opens a one-minute circuit after the first exhausted throttle');
     assert(LF.AIProviders.zai.rateLimit.freeFlashBreakerMaxMs===900000,'Z.AI repeated throttles can extend the persisted circuit up to fifteen minutes');
     assert(LF.AIProviders.zai.requestDeadlineMs===180000,'Z.AI has a defensive provider-level request deadline');
@@ -101,7 +101,7 @@ module.exports=function(t,LF){
   };
 
   t['Z.AI settings expose manual model input and local Inspect instead of remote Detect']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI manual model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('id="aiModelSelect" aria-label="Z.AI model" hidden')>=0,'remote model select hidden');assert(html.indexOf('id="loadProviderModels" >Inspect</button>')>=0,'Z.AI uses local Inspect control');assert(html.indexOf('never downloads or substitutes another Z.AI model')>=0,'manual-model guidance');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI manual model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('id="aiModelSelect" aria-label="Z.AI model" hidden')>=0,'remote model select hidden');assert(html.indexOf('id="loadProviderModels" >Inspect</button>')>=0,'Z.AI uses local Inspect control');assert(html.indexOf('never downloads or substitutes another Z.AI model')>=0,'manual-model guidance');assert(html.indexOf('id="aiDetectedFacts"')>=0,'detected metadata summary rendered separately');assert(html.indexOf('API model ID')>=0,'request model has an honest label');assert(html.indexOf('Detect reads metadata only. Test AI connection sends one tiny request')>=0,'Detect and connection test semantics are distinct');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
@@ -150,9 +150,9 @@ module.exports=function(t,LF){
     oldDef.steps=oldDef.steps.map(function(step){const copy=Object.assign({},step);delete copy.max_output_tokens;delete copy.deadline_ms;delete copy.max_retries;delete copy.transport_retries;return copy;});
     LF.Storage.saveActionOverride(id,{definition:oldDef});
     const effective=LF.Storage.getEffectiveAction(id),step=effective.steps.find(function(x){return x.id==='enrich';});
-    assert(step.max_output_tokens===700,'source output ceiling inherited');assert(step.target_output_tokens===320,'source output target inherited');assert(step.max_input_tokens===3200,'source input cap inherited');
+    assert(step.max_output_tokens===480,'source output ceiling inherited');assert(step.target_output_tokens===240,'source output target inherited');assert(step.max_input_tokens===2400,'source input cap inherited');
     assert(step.deadline_ms===45000,'source deadline inherited');
-    assert(step.max_retries===0,'source semantic retry policy inherited');assert(step.transport_retries===0,'source transport retry policy inherited');
+    assert(step.max_retries===0,'source semantic retry policy inherited');assert(!Object.prototype.hasOwnProperty.call(step,'transport_retries'),'obsolete transport retry policy absent');
     LF.Storage.resetActionOverride(id);
   };
 
