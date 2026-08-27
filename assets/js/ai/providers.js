@@ -7,7 +7,7 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:false, skipModelCatalogue:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:15000, requestDeadlineMs:180000,
+      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:false, skipModelCatalogue:true, preserveConfiguredModel:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, headers:{'Accept-Language':'en-US,en'}, connectionTestTimeoutMs:15000, requestDeadlineMs:180000, rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500},
       note:'Official general Z.AI Chat Completions endpoint. Coding Plan keys use a separate endpoint intended for supported coding tools and are not general API keys. The configured Z.AI model ID is used exactly as entered; Detect intentionally does not import the provider-wide catalogue. Provider 429/1305 responses are shown exactly once with Retry-After when available; LabFlow does not retry, pace, persist cooldowns, or switch models automatically.'
     },
     openrouter: {
