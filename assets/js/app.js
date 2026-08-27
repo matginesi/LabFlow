@@ -145,9 +145,9 @@
   }
   function renderModelStatus(){
     const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
-    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider)));
+    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider))),displayModel=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(settings.provider,settings.model):settings.model;
     host.classList.toggle('available',ready);host.classList.toggle('unavailable',!ready);
-    detail.textContent=ready?settings.model:'Not configured';host.title=ready?'AI model available: '+settings.model:'Configure the AI provider in Settings';
+    detail.textContent=ready?displayModel:'Not configured';host.title=ready?'AI model available: '+displayModel:'Configure the AI provider in Settings';
   }
 
   function renderTopbarContext(){

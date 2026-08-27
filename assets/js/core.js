@@ -178,6 +178,13 @@
     return String(s || 'experiment').replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '') || 'experiment';
   }
 
+  /** Keep provider model IDs intact internally, but hide filesystem paths in UI labels. */
+  function modelDisplayName(providerId, model) {
+    const raw=String(model==null?'':model).trim();
+    if(String(providerId||'').toLowerCase()!=='llamacpp'||!raw)return raw;
+    return raw.replace(/\\/g,'/').split('/').filter(Boolean).pop()||raw;
+  }
+
   /** Associate every shared .field label with its first native control. */
   function bindFieldLabels(root) {
     const scope=root||document;
@@ -193,5 +200,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, bindFieldLabels };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, modelDisplayName, bindFieldLabels };
 }());
