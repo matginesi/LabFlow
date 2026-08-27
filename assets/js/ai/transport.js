@@ -475,10 +475,11 @@
   function lmStudioLlmRows(obj){return modelRows(obj).filter(function(item){return !item||!item.type||String(item.type).toLowerCase()==='llm';});}
   function lmStudioLoadedModels(rows){const out=[];(rows||[]).forEach(function(row){(Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[]).forEach(function(instance){const id=String(instance&&instance.id||'');if(id&&!out.includes(id))out.push(id);});});return out;}
 
-  // Unified metadata header construction: single source for connection/detect/test
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers=providerAuthHeaders(provider,key);
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers={'Accept':'application/json'};
+    Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
+    if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
     const started=performance.now(),chat=new URL(validateHttpUrl(resolveChatUrl(base))),origin=chat.origin;
 
     async function read(url){
