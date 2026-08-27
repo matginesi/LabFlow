@@ -301,6 +301,16 @@
     return{settings:settings,provider:provider,url:url,headers:headers};
   }
 
+  /** Build an isolated config for local diagnostics without depending on saved streaming choices. */
+  function diagnosticRequestConfig(providerId,endpoint,model,apiKey){
+    const saved=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
+    const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(providerId);
+    const settings=Object.assign({},saved,{provider:providerId,endpoint:String(endpoint||saved.endpoint||''),model:String(model||saved.model||''),streaming:true,thinkingMode:'off'});
+    if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
+    if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
+    return{settings:settings,provider:provider,url:validateHttpUrl(resolveChatUrl(settings.endpoint)),headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
+  }
+
   function textFrom(value){
     if(value==null)return '';
     if(typeof value==='string')return value.trim();
@@ -520,6 +530,36 @@
     return{models:models,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:'provider model catalogue'};
   }
 
+  /**
+   * Measure short-run generation throughput for a local model. One warm-up is
+   * intentionally excluded from the arithmetic mean. Detect uses this only for
+   * LM Studio, Ollama and llama.cpp so cloud metadata inspection stays request-free.
+   */
+  async function benchmarkTokensPerSecond(options){
+    options=options||{};
+    const providerId=String(options.provider||LF.Storage.getAiSettings().provider||''),locals=['lmstudio','ollama','llamacpp'];
+    if(!locals.includes(providerId))return{supported:false,provider:providerId,reason:'local-providers-only',samples:[],averageTokensPerSecond:null};
+    const cfg=diagnosticRequestConfig(providerId,options.endpoint,options.model,options.apiKey),model=cfg.settings.model;
+    const sampleCount=Math.max(2,Math.min(5,Math.floor(Number(options.samples)||3))),sampleTokens=Math.max(32,Math.min(128,Math.floor(Number(options.maxTokens)||64))),warmupTokens=Math.max(16,Math.min(32,Math.floor(Number(options.warmupTokens)||24)));
+    const timeoutMs=Math.max(15000,Math.min(120000,Math.floor(Number(options.timeoutMs)||60000)));
+    const prompt='Generate a continuous sequence of short lowercase words separated by spaces until the output limit is reached. Output words only. Do not explain, number, format, or stop early.';
+    async function run(maxTokens,label){
+      const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off'});
+      return send(spec,{label:label});
+    }
+    const started=performance.now(),warmup=await run(warmupTokens,'Local model throughput warm-up'),samples=[];
+    for(let i=0;i<sampleCount;i++){
+      const result=await run(sampleTokens,'Local model throughput sample '+(i+1)+'/'+sampleCount),rate=Number(result.tokensPerSecond);
+      if(Number.isFinite(rate)&&rate>0)samples.push({index:i+1,tokensPerSecond:rate,completionTokens:result.usage&&Number(result.usage.completionTokens)||null,generationMs:Number(result.generationMs)||null,ttftMs:Number.isFinite(Number(result.ttftMs))?Number(result.ttftMs):null,estimated:!!(result.usage&&result.usage.estimated)});
+    }
+    if(samples.length<2)throw new Error('Local throughput benchmark did not return enough measurable samples.');
+    const rates=samples.map(function(item){return item.tokensPerSecond;}),average=Number((rates.reduce(function(sum,value){return sum+value;},0)/rates.length).toFixed(2)),minimum=Number(Math.min.apply(Math,rates).toFixed(2)),maximum=Number(Math.max.apply(Math,rates).toFixed(2)),estimated=samples.some(function(item){return item.estimated;});
+    const result={supported:true,provider:providerId,model:model,sampleCount:samples.length,warmupTokens:warmup.usage&&Number(warmup.usage.completionTokens)||null,sampleTokenLimit:sampleTokens,averageTokensPerSecond:average,minTokensPerSecond:minimum,maxTokensPerSecond:maximum,estimated:estimated,samples:samples,elapsedMs:Math.round(performance.now()-started),measuredAt:Date.now()};
+    const key=capabilityKey(providerId,cfg.settings.endpoint,model),cached=capabilityCache.get(key);if(cached){cached.averageTokensPerSecond=average;cached.throughputBenchmark=result;}
+    Log.info('benchmark.completed',{provider:providerId,model:model,averageTokensPerSecond:average,minTokensPerSecond:minimum,maxTokensPerSecond:maximum,samples:samples.map(function(item){return item.tokensPerSecond;}),elapsedMs:result.elapsedMs});
+    return result;
+  }
+
   async function testConnection(options){
     options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(30000,Number(cfg.provider.connectionTestTimeoutMs)||15000));
     const probe=connectionProbePolicy(cfg.provider);
@@ -647,6 +687,7 @@
     resolveThinkingPolicy:resolveThinkingPolicy,
     applyThinkingMode:applyThinkingMode,
     connectionProbePolicy:connectionProbePolicy,
+    benchmarkTokensPerSecond:benchmarkTokensPerSecond,
     testConnection:testConnection
   };
 }());

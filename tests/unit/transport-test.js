@@ -456,6 +456,22 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
+  t['local Detect throughput benchmark averages three measured samples after an excluded warm-up'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,bodies=[];
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
+    global.fetch=async function(url,opts){calls++;const body=JSON.parse(opts.body);bodies.push(body);return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'bench-'+calls,model:'local-model',choices:[{message:{content:'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau'},finish_reason:'length'}],usage:{prompt_tokens:20,completion_tokens:calls===1?24:64,total_tokens:calls===1?44:84}});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',temperature:.7,inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'';}};
+    LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,optionalKey:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}},rateLimit:{retries:0}}};
+    try{const out=await AI.benchmarkTokensPerSecond({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',samples:3,maxTokens:64,warmupTokens:24,stream:false});assert(out.supported,true,'local benchmark supported');assert(calls,4,'one warm-up plus three measured requests');assert(out.samples.length,3,'three measured samples only');assert(Number(out.averageTokensPerSecond)>0,true,'positive average tok/s');assert(Number(out.minTokensPerSecond)>0,true,'positive minimum');assert(Number(out.maxTokensPerSecond)>=Number(out.minTokensPerSecond),true,'valid range');assert(bodies[0].max_tokens,24,'warm-up budget');assert(bodies[1].max_tokens,64,'measured budget');assert(bodies.every(function(body){return body.reasoning_effort==='none'&&body.chat_template_kwargs&&body.chat_template_kwargs.enable_thinking===false;}),true,'benchmark disables reasoning for comparable local generation');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['cloud providers are not benchmarked by Detect throughput helper'] = async function () {
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash'};},getApiKey:function(){return'key';}};LF.AIProviders={zai:{id:'zai',keyRequired:true}};
+    try{const out=await AI.benchmarkTokensPerSecond({provider:'zai'});assert(out.supported,false,'cloud benchmark skipped');assert(out.reason,'local-providers-only','cloud skip reason');assert(out.samples,[],'no generated samples');}
+    finally{delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['transport never retries quota exhaustion 1304'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
     global.location={protocol:'https:',origin:'https://labflow.test'};
