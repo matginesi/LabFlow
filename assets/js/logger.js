@@ -9,7 +9,7 @@
     level: 'info',
     console: true,
     buffer: true,
-    maxEntries: 1200,
+    maxEntries: 2500,
     interactions: false,
     network: true
   };
@@ -32,7 +32,7 @@
       if (!stored.performanceDefaultsV1) {
         out.level = 'info';
         out.interactions = false;
-        out.maxEntries = Math.min(Number(out.maxEntries) || DEFAULTS.maxEntries, 1200);
+        out.maxEntries = Math.min(Number(out.maxEntries) || DEFAULTS.maxEntries, 2500);
         out.performanceDefaultsV1 = true;
       }
       return out;

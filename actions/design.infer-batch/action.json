@@ -31,7 +31,7 @@
       "weight": 0.82,
       "max_output_tokens": 2600,
       "deadline_ms": 90000,
-      "max_retries": 0,
+      "max_retries": 1,
       "min_output_tokens": 160,
       "target_output_tokens": 1200,
       "max_input_tokens": 10000

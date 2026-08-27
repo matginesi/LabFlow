@@ -379,6 +379,7 @@
       if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
     if(id==='zai'){
+      if(/^glm-4\.7-flash(?:x)?(?:[.-]|$)/.test(m))return{maxOutputTokens:null,contextWindow:200000,exactOutput:false,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification · output maximum not assumed'};
       if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
       if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
     }
@@ -473,7 +474,7 @@
   function modelId(item){return typeof item==='string'?item:String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');}
   function uniqueModels(rows){return Array.from(new Set((rows||[]).map(modelId).filter(Boolean)));}
   function lmStudioLlmRows(obj){return modelRows(obj).filter(function(item){return !item||!item.type||String(item.type).toLowerCase()==='llm';});}
-  function lmStudioLoadedModels(rows){const out=[];(rows||[]).forEach(function(row){(Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[]).forEach(function(instance){const id=String(instance&&instance.id||'');if(id&&!out.includes(id))out.push(id);});});return out;}
+  function lmStudioLoadedModels(rows){const out=[];(rows||[]).forEach(function(row){const instances=Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[];if(!instances.length)return;const rowId=modelId(row);const explicit=instances.map(function(instance){return String(instance&&instance.model_key||instance&&instance.model_id||instance&&instance.model||'').trim();}).filter(Boolean);const candidates=explicit.length?explicit:(rowId?[rowId]:[]);candidates.forEach(function(id){if(id&&!out.includes(id))out.push(id);});});return out;}
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};

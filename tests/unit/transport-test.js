@@ -174,7 +174,7 @@ module.exports = function (t, LF) {
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
     assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
-    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'known ZAI limit');
+    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,null,'GLM-4.7-Flash output maximum is not fabricated when current docs do not state one');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},32000,64000,1000),32000,'action/assistant cap');
     assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5680,'context ceiling subtracts input and reserve');
@@ -248,7 +248,7 @@ module.exports = function (t, LF) {
     global.fetch=async function(url){seen=String(url);return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'qwen3-8b',type:'llm',loaded_instances:[{id:'qwen3-8b@loaded',config:{context_length:32768}}]},{key:'embed',type:'embedding',loaded_instances:[]},{key:'gemma-3-4b',type:'llm',loaded_instances:[]}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false}};
-    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'LLM model keys only');assert(result.loadedModels,['qwen3-8b@loaded'],'loaded instance ids');}
+    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'LLM model keys only');assert(result.loadedModels,['qwen3-8b'],'loaded model resolves to the selectable model key rather than an instance id');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
