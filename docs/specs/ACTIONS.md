@@ -72,7 +72,7 @@ The running totem exposes **Stop**. Stop aborts the active run.
 
 ### AI retry
 
-An AI checkpoint retries only when its Action definition permits it. `max_retries` controls semantic/checkpoint retry. The provider transport never retries automatically. Compact automatic Actions such as `analysis.enrich` and Design inference deliberately use zero semantic retries.
+An AI checkpoint uses semantic/checkpoint retry only when its Action definition permits it. `max_retries` controls that semantic recovery. The provider transport never retries rate limits, quota failures or identical failed requests automatically. Independently, one immediate technical recovery is allowed for `MODEL_OUTPUT_TRUNCATED`: it adapts completion headroom and requests a complete replacement, even when `max_retries` is zero.
 
 When semantic retry is enabled, the runner uses bounded delays (up to the current 5 s / 10 s schedule) and repeats only the failed work unit. After the declared attempts, the run stops and may expose **Retry checkpoint**. Completed earlier checkpoints are not repeated unnecessarily. Provider rate limits are never semantically retried and stop multi-request sequences without consuming semantic retries.
 
@@ -294,9 +294,9 @@ At runtime the effective input budget is the tighter of the Action `max_input_to
 
 The current targets are intentionally task-shaped: automatic Experiment Brief enrichment is deliberately micro-sized at about 320 target tokens (700 ceiling); Results interpretation targets about 1.4k; ambiguity work about 1.8k; Design uses about 420 tokens for one experiment or 1.2k for a bounded batch; Report drafting targets about 3.6k and Report improvement about 3.2k, both with a 5k ceiling. These are safety and workload budgets, not invitations to fill the ceiling. Large documents remain split into bounded sequential writing blocks even when a model advertises a much larger output window.
 
-AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 45 s absolute deadline and zero Action retries; the transport itself always uses one HTTP attempt. Failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
+AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 45 s absolute deadline and zero semantic Action retries; each normal provider request uses one HTTP attempt. A provider-declared truncation may trigger one immediate technical re-request with an adapted completion budget. Failure still keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
 
-For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, an enabled semantic retry receives a deterministically reduced range and must rewrite the complete unit; truncated content is retained only in request diagnostics and never becomes the Action output.
+For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, the one technical truncation recovery receives a deterministically reduced range and an increased completion budget derived from observed usage/reasoning; it must rewrite the complete unit. Truncated content is retained only in request diagnostics and never becomes the Action output.
 
 ## 8. Settings → Actions requirements
 
@@ -318,6 +318,6 @@ Runtime edits are browser-local overrides; versioned `action.json` / optional `p
 
 ## Output profile and progress contract
 
-AI steps declare `thinking`, `max_input_tokens`, `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, and may declare `deadline_ms` and `max_retries`. Provider/model context and output maxima are capacity ceilings only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
+AI steps declare `thinking`, `max_input_tokens`, `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, and may declare `deadline_ms` and `max_retries`. The output fields describe the useful final answer. The runner may add bounded reasoning headroom to the provider completion request, while provider/model output maxima and remaining context remain hard capacity ceilings. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`.
 
 Action UIs must calculate progress from declared checkpoints and work units. Provider SSE/event telemetry may only refine the active AI phase and cannot itself complete an Action.

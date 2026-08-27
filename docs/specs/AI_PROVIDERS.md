@@ -41,7 +41,7 @@ For a catalogue provider the intended sequence is **enter API key → Detect →
 
 The dedicated `llamacpp` adapter is local and keyless by default. LabFlow resolves `http://127.0.0.1:8080/v1` to `/v1/chat/completions`, supports streaming, discovers model IDs through `/v1/models`, and reads runtime context/slot metadata through `/props`. It does not reuse a key saved for Z.AI or another cloud provider. LabFlow recommends one server slot and a 65,536-token context (`--parallel 1 --ctx-size 65536`) because Actions themselves are sequential and already have much smaller operational input/output caps. Detect labels this profile as matched when `/props` reports one slot and 65,536 context tokens; other configurations remain usable but are explicitly reported as a different runtime profile.
 
-llama.cpp feature support can vary by build/model/chat template, so LabFlow keeps the **model capability** honest even when metadata is silent. Separately, current llama-server exposes explicit per-request reasoning controls. The `llamacpp` adapter therefore declares an `off` transport mapping (`reasoning_effort: none`, `reasoning_budget: 0`, `chat_template_kwargs.enable_thinking: false`). An Action with `thinking: off` may use that mapping even if `/v1/models` reports no reasoning capability; the UI says that model thinking metadata is not exposed while request control is available.
+llama.cpp feature support can vary by build/model/chat template, so LabFlow keeps the **model capability** honest even when metadata is silent. Separately, current llama-server exposes explicit per-request reasoning controls. The `llamacpp` adapter therefore declares an `off` transport mapping (`reasoning_effort: none`, `chat_template_kwargs.enable_thinking: false`) even when model metadata is silent. Reasoning-off Actions also receive a short final-only system guard. On current streamed llama.cpp requests LabFlow arms realtime reasoning control; if a template such as LFM ignores the static override and emits reasoning anyway, LabFlow sends one `reasoning_end` control request for that active completion and records the event in telemetry.
 
 A tiny **Test connection** probe is a transport test, not an Action-quality test. Some reasoning templates can still spend the probe budget in `reasoning_content` and return HTTP 200 with `finish_reason: length` before final text. For llama.cpp, LabFlow reports that case as **reachable · final-text probe inconclusive** rather than as network failure. Normal Actions remain strict and still require their final response contract.
 
@@ -57,7 +57,7 @@ Every AI checkpoint declares `thinking: off|auto|on`. This Action policy is the 
 - `off`: force no thinking where the selected model permits it;
 - `on`: force thinking where the selected model supports it.
 
-Model capability is normalized as `none`, `optional`, `required` or `unknown`. A non-reasoning model ignores an `on` request. A reasoning-required model ignores an incompatible `off` request. An unknown model receives no speculative override until metadata makes the capability explicit. The requested, detected and effective states are retained in Action diagnostics/history.
+Model capability is normalized as `none`, `optional`, `required` or `unknown`. A non-reasoning model ignores an `on` request. A reasoning-required model ignores an incompatible `off` request. An unknown model normally receives no speculative override; providers explicitly marked safe for a server-level override (currently llama.cpp) may still honor an Action's `off`/`on` policy while keeping model capability reported as unknown. The requested, detected and effective states are retained in Action diagnostics/history.
 
 Current declared mappings are:
 
@@ -68,7 +68,7 @@ Current declared mappings are:
 | Ollama OpenAI-compatible | `reasoning_effort = none` | `reasoning_effort = medium` |
 | OpenAI | `reasoning_effort = none` | `reasoning_effort = medium` |
 | OpenRouter | `reasoning.effort = none` | `reasoning.effort = medium` |
-| llama.cpp | `reasoning_effort = none`, `reasoning_budget = 0`, `chat_template_kwargs.enable_thinking = false` | `reasoning_effort = medium`, `enable_thinking = true` |
+| llama.cpp | `reasoning_effort = none`, `chat_template_kwargs.enable_thinking = false`, final-only prompt guard, streamed runtime `reasoning_end` fallback | `reasoning_effort = medium`, `enable_thinking = true` |
 | NVIDIA NIM, Gemini, custom | model default | model default |
 
 Capability comes from provider model metadata when available, including OpenRouter reasoning parameters, Ollama's model `capabilities`, and LM Studio's loaded-instance `reasoning.allowed_options`; known OpenAI/Z.AI families supply a conservative built-in classification. An unsupported explicit mode safely degrades to `auto`; LabFlow never guesses undocumented request fields. The connection probe always uses its tiny fixed budget and requests `off` whenever the provider declares a supported off payload; otherwise it sends no speculative reasoning field.

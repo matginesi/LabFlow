@@ -311,10 +311,10 @@ While running:
 
 On failure:
 
-- AI checkpoint retry occurs only when the Action declares `max_retries > 0`;
+- semantic/checkpoint retry occurs only when the Action declares `max_retries > 0`; a separate single technical recovery is allowed only for provider-declared output truncation;
 - enabled semantic retries use bounded delays and repeat only the failed work unit;
 - provider transport never retries automatically; HTTP 429 and known provider limit/quota codes are surfaced after the single HTTP attempt, including `Retry-After` when present;
-- when a bounded text work unit reaches the provider output limit, an enabled semantic retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
+- when a bounded work unit reaches the provider completion limit, one technical truncation recovery increases completion headroom and rewrites the whole unit with a smaller coherent range; the cut-off fragment is not stored;
 - after declared retries, **Retry checkpoint** may be available;
 - any provider rate-limit/quota failure stops multi-request sequences instead of advancing through more work units; completed work remains preserved;
 - retry resumes the failed/pending work, not completed checkpoints.

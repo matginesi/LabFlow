@@ -55,7 +55,7 @@ finish_reason: length
 action.failed · MODEL_OUTPUT_TRUNCATED
 ```
 
-Interpretation: the endpoint worked and the model generated output, but it hit the Action output ceiling before finishing.
+Interpretation: the endpoint worked and the model generated output, but the completion budget ended before the final answer was complete. Current LabFlow first performs one adaptive technical recovery with extra completion headroom; if `MODEL_OUTPUT_TRUNCATED` is still surfaced, the provider/model hard ceiling or template behavior prevented a complete result.
 
 For automatic `analysis.enrich`, LabFlow skips the optional semantic layer and completes import. This is safe because deterministic analysis and the deterministic Experiment Brief already exist.
 
@@ -86,7 +86,7 @@ This is a useful isolation test.
 
 If LM Studio/Ollama/llama.cpp returns HTTP 200 for the same Action but Z.AI returns an immediate 429, the browser Action pipeline, context builder and structured-response path are fundamentally operating. Investigate the remote provider state separately from LabFlow's deterministic import.
 
-If the local provider instead returns `MODEL_OUTPUT_TRUNCATED`, the transport works; the remaining issue is the model's ability to satisfy the bounded structured-output contract within the Action ceiling. For llama.cpp, a **Test AI connection** failure saying `reasoning but no final answer` with `finish_reason: length` usually means an older LabFlow build sent the tiny probe while leaving reasoning enabled. Current LabFlow explicitly disables reasoning for the llama.cpp probe and gives it a bounded 64-token final-answer budget.
+If the local provider instead returns `MODEL_OUTPUT_TRUNCATED`, the transport works; the remaining issue is the model's ability to satisfy the bounded structured-output contract within the Action ceiling. For llama.cpp, reasoning-only output despite `thinking: off` usually means the model's chat template ignored the static switch. Current LabFlow sends the supported static off controls and a final-only guard; streamed Actions additionally use llama.cpp realtime `reasoning_end` when reasoning is still observed. The tiny connection probe remains a reachability test and may report final-text quality as inconclusive rather than pretending a network failure.
 
 ## Local stream ends with `terminated`
 

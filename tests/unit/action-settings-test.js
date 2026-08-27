@@ -78,7 +78,7 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.llamacpp.connectionTestMaxTokens===64,'llama.cpp probe has a small but reasoning-safe budget');
     assert(LF.AIProviders.llamacpp.recommendedRuntime.parallelSlots===1,'llama.cpp LabFlow profile uses one server slot');
     assert(LF.AIProviders.llamacpp.recommendedRuntime.contextWindow===65536,'llama.cpp LabFlow profile uses a 65K runtime context');
-    assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_budget===0,'llama.cpp reasoning-off mode forces zero reasoning budget');
+    assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_effort==='none','llama.cpp reasoning-off mode disables reasoning effort');assert(LF.AIProviders.llamacpp.thinkingModes.off.chat_template_kwargs.enable_thinking===false,'llama.cpp reasoning-off mode disables template thinking when supported');assert(LF.AIProviders.llamacpp.supportsReasoningControl===true,'llama.cpp can stop ignored reasoning at runtime');
     assert(LF.AIProviders.zai.remoteModelMetadata===false,'Z.AI Detect uses built-in metadata without remote catalogue probing');
     assert(LF.AIProviders.ollama.local===true&&LF.AIProviders.lmstudio.local===true&&LF.AIProviders.llamacpp.local===true,'local provider behavior is declared in the registry');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');

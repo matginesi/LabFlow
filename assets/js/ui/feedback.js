@@ -219,7 +219,9 @@
 
     const body = request && request.body || {};
     const messages = Array.isArray(body.messages) ? body.messages : [];
-    const config = Object.assign({}, body);
+    const providerId = LF.Storage && LF.Storage.getAiSettings ? String((LF.Storage.getAiSettings() || {}).provider || '') : '';
+    const displayModel = C.modelDisplayName ? C.modelDisplayName(providerId, body.model) : body.model;
+    const config = Object.assign({}, body, body.model != null ? {model:displayModel} : {});
     delete config.messages;
 
     const facts = '<div class="activity-request-facts">' +
@@ -237,8 +239,10 @@
         content.length + ' characters</small></header><pre>' + C.escapeHtml(content) + '</pre></article>';
     }).join('') + '</div>';
 
+    const safeBody = Object.assign({}, body, body.model != null ? {model:displayModel} : {});
     const safeRequest = Object.assign({}, request, {
-      headers:Object.assign({}, request.headers || {}, {Authorization:authorizationStatus(request.headers)})
+      headers:Object.assign({}, request.headers || {}, {Authorization:authorizationStatus(request.headers)}),
+      body:safeBody
     });
     return facts + configHtml + messagesHtml +
       '<details class="structured-raw"><summary>Raw request JSON</summary><div class="markdown">' +

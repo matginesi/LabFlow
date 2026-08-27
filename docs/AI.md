@@ -111,7 +111,7 @@ A narrow user question should produce a narrow context instead of increasing the
 
 ## 5. Output budgeting
 
-LabFlow does not impose one hidden global output ceiling. Every AI step declares its own `max_output_tokens` **target budget** in `action.json`; the detected provider/model capability is only a hard ceiling, never the requested target by itself. This prevents a model that supports 64k/128k output from being asked for that amount when an Action only needs a compact brief or interpretation.
+LabFlow does not impose one hidden global output ceiling. Every AI step declares its own `min_output_tokens`, `target_output_tokens` and `max_output_tokens` for the **useful final answer**. The request planner may add bounded reasoning headroom when the model can reason, because many providers count hidden reasoning against the same completion limit. Detected provider/model output limits and remaining context are hard completion ceilings, never request targets by themselves.
 
 The effective request budget is the tightest applicable value among: the Action/step target, detected exact model maximum (or safe context headroom when only that is known), the optional Assistant override for `assistant.chat`, and **Settings → Provider → Force max output**. Provider `0` means “do not add a global cap”; it does not mean “request the provider maximum”. A positive user cap can only lower the request.
 
@@ -139,7 +139,7 @@ Final Markdown/JSON rendering must follow the active theme.
 
 ## 8. Retry contract
 
-Retry is **Action-declared** and applies only to semantic/checkpoint recovery through `max_retries`. The transport performs exactly one HTTP attempt for each provider request and never adds hidden provider retries. Compact/automatic Actions such as enrichment and Design deliberately use zero semantic retries.
+Retry is **Action-declared** for semantic/checkpoint recovery through `max_retries`. Rate limits, quota failures and ordinary provider errors are never silently retried. `MODEL_OUTPUT_TRUNCATED` is handled separately as an output-fit condition: one immediate technical recovery may increase completion headroom and request a shorter complete replacement even when semantic retries are disabled.
 
 When an Action enables semantic retry, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated structured output is never stored as partial JSON.
 

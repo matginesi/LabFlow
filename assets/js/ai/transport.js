@@ -27,6 +27,15 @@
     return{requested:mode,applied:mode};
   }
 
+  function applyThinkingPromptGuard(messages,provider,mode,enabled){
+    const rows=(messages||[]).map(function(message){return Object.assign({},message);});
+    if(enabled!==true||mode!=='off'||!(provider&&provider.thinkingPromptGuard===true))return rows;
+    const guard='OUTPUT MODE: Do not emit chain-of-thought, hidden reasoning, analysis, or <think> blocks. Produce only the final requested answer. For structured output, begin with the requested JSON immediately.';
+    if(rows.length&&rows[0].role==='system')rows[0].content=String(rows[0].content||'').replace(/\s+$/,'')+'\n\n'+guard;
+    else rows.unshift({role:'system',content:guard});
+    return rows;
+  }
+
   /** Keep connectivity boring: one tiny request, no capability discovery. */
   function connectionProbePolicy(provider){
     const configured=Math.max(8,Math.min(64,Number(provider&&provider.connectionTestMaxTokens)||16));
@@ -156,8 +165,21 @@
   }
   function outputLoopDetected(value){const s=String(value||'').replace(/\s+/g,' ').trim();for(const n of [512,1024,2048]){if(s.length<n*3)continue;const a=s.slice(-n),b=s.slice(-2*n,-n),c=s.slice(-3*n,-2*n);if(a===b&&b===c)return true;}return false;}
 
+  function reasoningControlUrl(chatUrl){return String(chatUrl||'').replace(/\/chat\/completions\/?$/i,'/chat/completions/control');}
+  async function sendReasoningEnd(chatUrl,headers,requestId,model,signal){
+    const url=reasoningControlUrl(chatUrl),body={id:String(requestId||''),action:'reasoning_end'};if(model)body.model=model;
+    if(!body.id)return{ok:false,status:0,message:'request id unavailable'};
+    try{
+      const response=await fetch(url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},headers||{}),body:JSON.stringify(body),signal:signal,cache:'no-store',credentials:'omit'}),text=await response.text();
+      let parsed={};try{parsed=text?JSON.parse(text):{};}catch(_){}
+      const ok=!!(response.ok&&parsed.success!==false);
+      Log[ok?'info':'warn']('thinking.control',{requestId:body.id,model:model||'',action:'reasoning_end',status:response.status,ok:ok,message:String(parsed.message||'')});
+      return{ok:ok,status:response.status,message:String(parsed.message||'')};
+    }catch(error){Log.warn('thinking.control-failed',{requestId:body.id,model:model||'',error:error});return{ok:false,status:0,message:String(error&&error.message||error)};}
+  }
+
   /** Consume one OpenAI-compatible SSE response in the active request. */
-  async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens){
+  async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens,onReasoning){
     const reader=response.body&&response.body.getReader?response.body.getReader():null;
     if(!reader)throw new Error('The provider declared streaming but the browser exposed no readable response body.');
     const decoder=new TextDecoder(),state={content:'',reasoning:'',finishReason:'',usage:null,model:'',requestId:'',events:0,meaningfulEvents:0,bytes:0,ttftMs:null,budgetTokens:budgetTokens||null,done:false},started=startedAt||performance.now();
@@ -169,13 +191,15 @@
       if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'',null);
       const choice=obj.choices&&obj.choices[0]||{},delta=choice.delta||choice.message||{};
       const content=streamPart(delta.content||delta.text||choice.text||obj.output_text||obj.response),reasoning=streamPart(delta.reasoning_content||delta.reasoning||delta.reasoning_details||choice.reasoning_content||obj.reasoning_content||obj.reasoning);
+      state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;
       const meaningful=!!(content||reasoning||choice.finish_reason||obj.usage);
       if((content||reasoning)&&state.ttftMs==null)state.ttftMs=Math.round(performance.now()-started);
       state.content=mergeStreamContent(state.content,content);state.reasoning=mergeStreamContent(state.reasoning,reasoning);state.finishReason=choice.finish_reason||state.finishReason;
+      if(reasoning&&onReasoning)onReasoning({requestId:state.requestId,model:state.model,reasoning:reasoning,totalReasoning:state.reasoning});
       if(meaningful){state.meaningfulEvents++;if(onMeaningful)onMeaningful();}
       if(outputLoopDetected(state.content)||outputLoopDetected(state.reasoning)){const repeated=outputLoopDetected(state.content)?state.content:state.reasoning,loop=new Error('The model entered a repeated-output loop. The checkpoint was stopped before storing duplicated content.');loop.code='MODEL_OUTPUT_LOOP';loop.providerResponse=repeated.slice(-12000);throw loop;}
       const charGuard=budgetTokens?Math.max(24000,Number(budgetTokens)*8):4000000;if(state.content.length+state.reasoning.length>charGuard){const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;}
-      state.usage=obj.usage||state.usage;state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;state.events++;
+      state.usage=obj.usage||state.usage;state.events++;
       if(onProgress){const elapsedMs=Math.round(performance.now()-started),reported=state.usage&&Number.isFinite(Number(state.usage.completion_tokens))?Number(state.usage.completion_tokens):null,tokens=reported==null?estimateTokens(state.content+state.reasoning):reported,generationMs=state.ttftMs==null?0:Math.max(0,elapsedMs-state.ttftMs),rate=generationMs>=100?tokens/(generationMs/1000):null;onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs:elapsedMs,generationMs:generationMs,tokens:tokens,rate:Number.isFinite(rate)?rate:null,estimated:reported==null,budgetTokens:budgetTokens||null});}
       return false;
     }
@@ -223,18 +247,24 @@
       const responseHeadersMs=Math.round(performance.now()-started);
       resetInactivity();
       const contentType=String(response.headers.get('content-type')||'').toLowerCase();
-      let text='',obj=null,streamMeta=null;
+      let text='',obj=null,streamMeta=null,reasoningControlPromise=null,reasoningControlRequests=0,reasoningControlResult=null,reasoningControlTriggered=false;
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:null,bodyChars:0,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||'',stream:null};
-      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens));text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;}
+      function stopReasoning(info){
+        if(body.reasoning_control!==true||reasoningControlTriggered||!info||!info.requestId)return;
+        reasoningControlTriggered=true;reasoningControlRequests=1;
+        Log.warn('thinking.observed-while-off',{requestId:info.requestId,model:info.model||body.model,reasoningChars:String(info.totalReasoning||'').length,control:'reasoning_end'});
+        reasoningControlPromise=sendReasoningEnd(url,headers,info.requestId,info.model||body.model,controller.signal).then(function(result){reasoningControlResult=result;return result;});
+      }
+      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens),stopReasoning);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;if(reasoningControlPromise)await reasoningControlPromise;}
       else{text=await response.text();resetInactivity();}
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
-      responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason}:null};
+      responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason,reasoningControlRequests:reasoningControlRequests,reasoningControlOk:reasoningControlResult&&reasoningControlResult.ok===true}:null};
       Log.info('request.end',{requestLogId:requestLogId,label:label,status:response.status,ok:response.ok,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,bodyChars:text.length,requestId:responseRequestId,stream:responseMeta.stream});Log.debug('response.payload',{requestLogId:requestLogId,status:response.status,body:text.length>12000?text.slice(0,12000)+'…':text});
       if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers);
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
       Log.debug('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
-      return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta};
+      return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta,reasoningControlRequests:reasoningControlRequests,reasoningControlResult:reasoningControlResult};
     }catch(err){
       const elapsed=Math.round(performance.now()-started);
       let failure=err;
@@ -522,8 +552,15 @@
     const timeoutMs=Math.max(15000,Math.min(120000,Math.floor(Number(options.timeoutMs)||60000)));
     const prompt='Generate a continuous sequence of short lowercase words separated by spaces until the output limit is reached. Output words only. Do not explain, number, format, or stop early.';
     async function run(maxTokens,label){
-      const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off'});
-      return send(spec,{label:label});
+      const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off',guardThinking:true});
+      try{return await send(spec,{label:label});}
+      catch(err){
+        /* Throughput measures generated tokens, not answer quality. A model that
+           spends the tiny benchmark budget entirely in parsed reasoning is still
+           measurable and should not make Detect fail. */
+        if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'&&Number(err.tokensPerSecond)>0)return{content:'',reasoning:String(err.reasoning||''),model:err.model||model,provider:providerId,thinkingMode:'off',latencyMs:Number(err.elapsedMs)||0,requestElapsedMs:Number(err.requestElapsedMs)||Number(err.elapsedMs)||0,generationMs:Number(err.generationMs)||0,ttftMs:Number.isFinite(Number(err.ttftMs))?Number(err.ttftMs):null,tokensPerSecond:Number(err.tokensPerSecond),usage:err.usage||null,finishReason:err.finishReason||'length',requestId:err.requestId||'',streamed:options.stream!==false,reasoningOnly:true};
+        throw err;
+      }
     }
     const started=performance.now(),warmup=await run(warmupTokens,'Local model throughput warm-up'),samples=[];
     for(let i=0;i<sampleCount;i++){
@@ -541,7 +578,7 @@
   async function testConnection(options){
     options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(30000,Number(cfg.provider.connectionTestTimeoutMs)||15000));
     const probe=connectionProbePolicy(cfg.provider);
-    const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,connectionTest:true});
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,guardThinking:probe.thinkingMode==='off',connectionTest:true});
     let r;
     try{r=await send(spec,{label:'AI connection test',connectionTest:true,onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});}
     catch(err){
@@ -576,15 +613,17 @@
     if(opts.maxTokens!=null&&!(Number(opts.maxTokens)>0))throw new Error('AI output token budget must be a positive number when explicitly set.');
     const settings=cfg.settings,provider=cfg.provider;
     const model=opts.model||settings.model;
-    const messages=Array.isArray(opts.messages)?opts.messages.filter(function(message){return message&&typeof message==='object'&&typeof message.role==='string'&&message.content!=null;}):[];
-    if(!messages.length)throw new Error('Chat Completions requires at least one message. LabFlow stopped the request before contacting the provider.');
+    const rawMessages=Array.isArray(opts.messages)?opts.messages.filter(function(message){return message&&typeof message==='object'&&typeof message.role==='string'&&message.content!=null;}):[];
+    if(!rawMessages.length)throw new Error('Chat Completions requires at least one message. LabFlow stopped the request before contacting the provider.');
+    const requestedThinking=opts.thinkingMode||settings.thinkingMode||'auto',messages=applyThinkingPromptGuard(rawMessages,provider,requestedThinking,opts.guardThinking===true);
     const wantsStreaming=opts.stream!==false&&settings.streaming!==false&&provider.supportsStreaming!==false;
     const body={model:model,messages:messages,stream:wantsStreaming};
     if(wantsStreaming&&provider.supportsStreamUsage)body.stream_options={include_usage:true};
     const tokenParam=provider.tokenParam||'max_tokens';
     if(opts.maxTokens!=null)body[tokenParam]=Math.max(16,Math.floor(Number(opts.maxTokens)));
     if(provider.supportsTemperature!==false)body.temperature=Number.isFinite(Number(opts.temperature))?Number(opts.temperature):(Number.isFinite(Number(settings.temperature))?Number(settings.temperature):0.7);
-    const thinking=applyThinkingMode(body,provider,opts.thinkingMode||settings.thinkingMode||'auto');
+    const thinking=applyThinkingMode(body,provider,requestedThinking);
+    if(thinking.applied==='off'&&provider.supportsReasoningControl===true&&wantsStreaming)body.reasoning_control=true;
     if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
     const timeoutMs=opts.connectionTest?Math.max(5000,Number(opts.timeoutMs)||15000):Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
@@ -607,24 +646,26 @@
       }
       throw err;
     }
-    const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
-    const content=extracted.content,reasoning=extracted.reasoning;
-    if(!content){
-      Log.warn('response.empty-content',{model:obj.model||spec.settings.model,finishReason:extracted.finishReason,reasoningChars:reasoning.length,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
-      const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
-      const hint=reasoning?' The provider returned reasoning but no final answer; the output budget may have been consumed before the final response.':'';
-      const emptyError=new Error('The model returned no final text.'+suffix+hint);
-      emptyError.isContract=true;emptyError.status=200;emptyError.httpOk=true;emptyError.reasoning=reasoning;emptyError.finishReason=extracted.finishReason;
-      emptyError.providerResponse=extracted.refusal||'';emptyError.rawProviderResponse=r.rawText;
-      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.usage=usage;emptyError.model=obj.model||spec.settings.model;
-      throw emptyError;
-    }
+    const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{},content=extracted.content,reasoning=extracted.reasoning;
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
-    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null;
-    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:1});
-    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:1,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
+    const exactReasoningTokens=usage.completion_tokens_details&&Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?Number(usage.completion_tokens_details.reasoning_tokens):null,estimatedReasoningTokens=reasoning?estimateTokens(reasoning):0,reasoningTokens=exactReasoningTokens==null?estimatedReasoningTokens:exactReasoningTokens,answerTokens=Math.max(0,completionTokens-reasoningTokens);
+    const normalizedUsage={promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,reasoningTokens:reasoningTokens,answerTokens:answerTokens,reasoningEstimated:exactReasoningTokens==null&&!!reasoning,estimated:!obj.usage};
+    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),httpRequests=1+controlRequests;
+    if(spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:obj.model||spec.settings.model,reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
+    if(!content){
+      Log.warn('response.empty-content',{model:obj.model||spec.settings.model,finishReason:extracted.finishReason,reasoningChars:reasoning.length,completionTokens:completionTokens,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
+      const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
+      const hint=reasoning?' The provider returned reasoning but no final answer; the completion budget may have been consumed before the final response.':'';
+      const emptyError=new Error('The model returned no final text.'+suffix+hint);
+      emptyError.code=extracted.finishReason==='length'?'MODEL_OUTPUT_TRUNCATED':'MODEL_OUTPUT_INVALID';emptyError.isContract=true;emptyError.status=200;emptyError.httpOk=true;emptyError.reasoning=reasoning;emptyError.finishReason=extracted.finishReason;
+      emptyError.providerResponse=extracted.refusal||'';emptyError.rawProviderResponse=r.rawText;
+      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.requestElapsedMs=r.elapsedMs;emptyError.generationMs=generationMs;emptyError.ttftMs=ttftMs;emptyError.tokensPerSecond=tps;emptyError.usage=normalizedUsage;emptyError.model=obj.model||spec.settings.model;emptyError.requestedMaxTokens=positiveInt(spec.body.max_completion_tokens||spec.body.max_tokens||spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';emptyError.reasoningObserved=reasoningObserved;emptyError.reasoningControlRequests=controlRequests;emptyError.reasoningControlOk=r.reasoningControlResult&&r.reasoningControlResult.ok===true;
+      throw emptyError;
+    }
+    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
+    return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
   }
 
   LF.AI={
@@ -652,6 +693,8 @@
     resolveOutputBudget:resolveOutputBudget,
     resolveThinkingPolicy:resolveThinkingPolicy,
     applyThinkingMode:applyThinkingMode,
+    applyThinkingPromptGuard:applyThinkingPromptGuard,
+    reasoningControlUrl:reasoningControlUrl,
     connectionProbePolicy:connectionProbePolicy,
     benchmarkTokensPerSecond:benchmarkTokensPerSecond,
     testConnection:testConnection

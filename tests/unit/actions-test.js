@@ -36,7 +36,7 @@ module.exports=function(t,LF){
     assert(structured.requestTokens,6144,'structured response reserves enough room to close the JSON');
   };
 
-  t['declared Action budget is the request target while provider maximum is only a ceiling'] = async function(){
+  t['declared Action budget is the final-answer target while completion budget includes reasoning headroom'] = async function(){
     const exp={id:'exp_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.budget',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
     let built=null;
@@ -46,7 +46,7 @@ module.exports=function(t,LF){
     LF.AI={acceptController:function(){},estimateTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'done',finishReason:'stop'};}};
     const out=await LF.ActionRunner.run('test.budget');
     assert(out.status,'done','status');
-    assert(built.maxTokens,3072,'Action target wins over provider ceiling');
+    assert(built.maxTokens,6144,'completion budget includes final-answer target plus unknown-reasoning headroom');
     assert(built.hardTimeoutMs,90000,'absolute deadline forwarded');
   };
 
@@ -125,6 +125,20 @@ module.exports=function(t,LF){
     LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return String(messages[0].content||'').length;},resolveModelCapabilities:async function(){return{contextWindow:8192,maxOutputTokens:6144};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,cap.contextWindow-inputTokens-512);},resolveThinkingPolicy:function(){return{transportMode:'auto'};},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'{}',finishReason:'stop'};}};
     try{const out=await LF.ActionRunner.run('design.infer');assert(out.status,'done','target-sized context fits');if(!sent||sent.maxTokens<2800)throw new Error('valid target output budget must remain available');}
     finally{LF.StructuredOutput=previousStructured;}
+  };
+
+  t['truncation gets one technical adaptive recovery even when semantic retries are disabled'] = async function(){
+    const exp={id:'exp_truncation_recovery',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.truncation-recovery',type:'AI',steps:[{id:'brief',type:'AI',output:'text',thinking:'off',max_output_tokens:700,target_output_tokens:320,max_retries:0}]};
+    let calls=0;const budgets=[],retries=[];
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'llamacpp',model:'local-model',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(action,step,opts){return{messageList:[{role:'user',content:(opts.retryFeedback||'')+' return a short final answer'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AIProviders={llamacpp:{safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none'}}}};
+    LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},estimatePromptTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:8192,contextWindow:16384,reasoningStatus:'unknown'};},resolveThinkingPolicy:function(){return{requested:'off',transportMode:'off',capability:'unknown',effective:'off',reason:'test'};},buildRequest:function(opts){budgets.push(opts.maxTokens);return opts;},send:async function(){calls++;return calls===1?{content:'partial',reasoning:'reasoning '.repeat(400),reasoningObserved:true,finishReason:'length',usage:{completionTokens:700,reasoningTokens:650}}:{content:'complete final answer',reasoning:'',reasoningObserved:false,finishReason:'stop',usage:{completionTokens:40}};}};
+    const realSetTimeout=global.setTimeout;global.setTimeout=function(fn){return realSetTimeout(fn,0);};
+    try{const out=await LF.ActionRunner.run('test.truncation-recovery',{onAutoRetry:function(info){retries.push(info);}});assert(out.status,'done','status');assert(calls,2,'exactly one technical recovery');assert(retries.length,1,'one recovery event');assert(retries[0].retryKind,'truncation-recovery','recovery kind');if(!(budgets[1]>budgets[0]))throw new Error('technical recovery must increase completion headroom');}
+    finally{global.setTimeout=realSetTimeout;delete LF.AIProviders;}
   };
 
   t['AI checkpoint with max_retries zero falls back after the first failed attempt'] = async function(){

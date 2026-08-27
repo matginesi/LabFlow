@@ -45,7 +45,7 @@ For `analysis.enrich`, the Context Pack is intentionally small: a compact determ
 
 ## Why a local model can return `MODEL_OUTPUT_TRUNCATED`
 
-An HTTP 200 response is not necessarily a valid Action result. If the provider reports `finish_reason: length`, the model reached its output ceiling before producing a complete result.
+An HTTP 200 response is not necessarily a valid Action result. If the provider reports `finish_reason: length`, the completion budget ended before a complete result was produced. LabFlow distinguishes the Action's final-answer budget from provider completion headroom, records reasoning/usage when available, and permits one immediate adaptive truncation recovery before surfacing `MODEL_OUTPUT_TRUNCATED`.
 
 For structured JSON this is especially important: storing a cut-off object would corrupt the Action contract. LabFlow rejects it as `MODEL_OUTPUT_TRUNCATED`.
 

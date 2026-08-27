@@ -106,7 +106,7 @@ AI may infer, explain, propose and draft. It must not:
 
 ## llama.cpp preset
 
-The dedicated **llama.cpp (local)** provider defaults to `http://127.0.0.1:8080/v1`. LabFlow sends normal OpenAI-compatible Chat Completions requests to `/v1/chat/completions`, reads served model IDs from `/v1/models`, and reads runtime context/slot metadata from `/props`. No cloud API key is attached. For Actions that request `thinking: off`, LabFlow sends llama.cpp-compatible per-request controls (`reasoning_effort: none`, `reasoning_budget: 0`, and `chat_template_kwargs.enable_thinking: false`).
+The dedicated **llama.cpp (local)** provider defaults to `http://127.0.0.1:8080/v1`. LabFlow sends normal OpenAI-compatible Chat Completions requests to `/v1/chat/completions`, reads served model IDs from `/v1/models`, and reads runtime context/slot metadata from `/props`. No cloud API key is attached. For Actions that request `thinking: off`, LabFlow sends llama.cpp-compatible controls (`reasoning_effort: none` and `chat_template_kwargs.enable_thinking: false`) plus a final-only prompt guard. With streaming enabled it also arms llama.cpp realtime reasoning control: if the active template still emits reasoning, LabFlow sends one `reasoning_end` control request instead of allowing hidden reasoning to consume the whole answer budget.
 
 LabFlow's recommended runtime profile is deliberately **one slot with the full 65K context**. A LabFlow-oriented launcher looks like:
 

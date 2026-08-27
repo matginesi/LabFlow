@@ -16,6 +16,8 @@ module.exports=function(t){
   const state=fs.readFileSync(path.join(root,'assets/js/state.js'),'utf8');
   const reportExport=fs.readFileSync(path.join(root,'vendor/report-export/report-export.js'),'utf8');
   const uiKitInline=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
+  const actionUi=fs.readFileSync(path.join(root,'assets/js/ai/action-ui.js'),'utf8');
+  const feedback=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
 
   t['Every route uses one canonical page frame width']=function(){
     assert(tokensCss.includes('--page-max-w: 1600px'),true,'one page width token');
@@ -76,6 +78,13 @@ module.exports=function(t){
     assert(settings.includes('## Connection diagnostics'),true,'rich connection diagnostics');
     assert(settings.includes('Successful provider round trip'),true,'round-trip metric');
     assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
+  };
+
+  t['Action totem displays a readable llama.cpp model name without changing the request model id']=function(){
+    assert(actionUi.includes('Model:displayModel(settings)'),true,'Action totem uses the display-model helper');
+    assert(actionUi.includes('Model:settings.model'),false,'Action totem never exposes the raw llama.cpp path');
+    assert(feedback.includes('C.modelDisplayName(providerId, body.model)'),true,'request activity uses the shared display-model helper');
+    assert(feedback.includes('body:safeBody'),true,'request preview uses a display-only request clone');
   };
 
   t['Design is a simple visual solution-and-stack workbench with explicit AI acceptance']=function(){
