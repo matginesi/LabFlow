@@ -12,7 +12,7 @@ module.exports=function(t,LF){
   t['Knowledge Base starts ready from bundled records with no setup']=async function(){
     const info=await reset(),rows=LF.KnowledgeBase.search('inverted 2PACz C60 BCP silver stack',{collections:['science'],limit:5});
     assert(info.available===true&&info.active===true,'bundled library should be ready immediately');
-    assert(info.records===51&&info.scienceRecords===42&&info.labflowRecords===9,'science/help collections counted');
+    assert(info.records===55&&info.scienceRecords===46&&info.labflowRecords===9,'science/help collections counted');
     assert(info.storage==='bundled + browser overrides','simple storage model exposed');
     assert(rows.length>0&&rows[0].id==='kb_stack_inverted_2pacz_c60_bcp_ag','scientific search works without setup');
   };

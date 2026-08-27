@@ -29,11 +29,11 @@
       "thinking": "off",
       "timeout_ms": 90000,
       "weight": 0.8,
-      "max_output_tokens": 1000,
+      "max_output_tokens": 1400,
       "deadline_ms": 90000,
       "max_retries": 0,
       "min_output_tokens": 100,
-      "target_output_tokens": 420,
+      "target_output_tokens": 520,
       "max_input_tokens": 8000
     },
     {
@@ -56,14 +56,15 @@
   "input": {
     "context": "design",
     "knowledge": {
-      "limit": 5,
+      "limit": 8,
       "kinds": [
         "material",
         "solution",
         "stack",
+        "process",
         "concept"
       ],
-      "query_hint": "solution solvent solute precursor stack layer material"
+      "query_hint": "SnO2 TiO2 PTAA 2PACz spiro C60 BCP PEAI perovskite absorber stack solution precursor"
     }
   }
 }

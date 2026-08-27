@@ -26,6 +26,14 @@ Do not invent exact concentrations, ratios or thicknesses. Exact quantities are 
 
 Names such as `N2`, `SnO2`, `C60`, `2PACz` and `FA0.85Cs0.15PbI3` are chemical/material identifiers, not process quantities.
 
+# Stack quality
+
+Return layers strictly ordered substrate → ETL → absorber → HTL → electrode. Each layer needs `role` + `material`; `thickness`/`process` only when supported by evidence or a cited KB record. Keep absorber as `Perovskite` with composition from linked solution when available; do not add extra absorber variants. If the current device already lists `solution_names`, reuse those names instead of inventing new ones.
+
+# Solution linking
+
+When a solution chemistry is provided, link it to the device via `solution_names`. Prefer the solution `name` already present in `known_solutions` or `existing source/researcher data`; do not create duplicate solution entries with different names for the same chemistry.
+
 # Output
 
 Keep the result small. Return one coherent suggestion for this experiment only. Short values, short reasons, no prose essay. Return exactly JSON matching the schema, with no Markdown or preamble.

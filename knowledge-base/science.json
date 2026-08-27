@@ -12,7 +12,8 @@
         "mixed-cation",
         "mixed-halide",
         "n-i-p",
-        "published-recipe"
+        "published-recipe",
+        "design_target"
       ],
       "sources": [
         {
@@ -43,7 +44,8 @@
         "MAPbI3",
         "perovskite",
         "p-i-n",
-        "published-recipe"
+        "published-recipe",
+        "design_target"
       ],
       "sources": [
         {
@@ -74,7 +76,8 @@
         "spiro-OMeTAD",
         "HTL",
         "n-i-p",
-        "published-recipe"
+        "published-recipe",
+        "design_target"
       ],
       "sources": [
         {
@@ -106,7 +109,8 @@
         "antisolvent",
         "chlorobenzene",
         "annealing",
-        "n-i-p"
+        "n-i-p",
+        "process_detail"
       ],
       "sources": [
         {
@@ -136,7 +140,8 @@
         "toluene",
         "antisolvent",
         "MAPbI3",
-        "p-i-n"
+        "p-i-n",
+        "process_detail"
       ],
       "sources": [
         {
@@ -171,7 +176,8 @@
         "passivation",
         "EAI",
         "surface-treatment",
-        "n-i-p"
+        "n-i-p",
+        "process_detail"
       ],
       "sources": [
         {
@@ -201,7 +207,8 @@
         "PFN-P2",
         "HTL",
         "p-i-n",
-        "ITO"
+        "ITO",
+        "process_detail"
       ],
       "sources": [
         {
@@ -231,7 +238,8 @@
         "ETL",
         "sputtering",
         "n-i-p",
-        "flexible"
+        "flexible",
+        "process_detail"
       ],
       "sources": [
         {
@@ -261,7 +269,8 @@
         "mesoscopic",
         "TiO2",
         "spiro-OMeTAD",
-        "Au"
+        "Au",
+        "design_target"
       ],
       "sources": [
         {
@@ -315,6 +324,10 @@
             "thickness": "approximately 80 nm",
             "process": "Thermal evaporation"
           }
+        ],
+        "compatible_solutions": [
+          "kb_solution_mixed_fa_cs_ma_135m",
+          "kb_solution_spiro_85mg_cb"
         ]
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
@@ -332,7 +345,8 @@
         "PTAA",
         "C60",
         "BCP",
-        "Cu"
+        "Cu",
+        "design_target"
       ],
       "sources": [
         {
@@ -386,6 +400,9 @@
             "thickness": "100 nm",
             "process": "Vacuum deposition"
           }
+        ],
+        "compatible_solutions": [
+          "kb_solution_mapbi3_12m_gbl_dmso"
         ]
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
@@ -402,7 +419,8 @@
         "planar",
         "SnO2",
         "MAPbI3",
-        "flexible"
+        "flexible",
+        "design_target"
       ],
       "sources": [
         {
@@ -444,6 +462,10 @@
             "thickness": "",
             "process": "Thermal evaporation"
           }
+        ],
+        "compatible_solutions": [
+          "kb_solution_mapbi3_12m_gbl_dmso",
+          "kb_solution_spiro_85mg_cb"
         ]
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
@@ -459,7 +481,8 @@
         "precursor",
         "A-site",
         "iodide",
-        "mixed-cation"
+        "mixed-cation",
+        "material_atom"
       ],
       "sources": [
         {
@@ -489,7 +512,8 @@
         "precursor",
         "A-site",
         "iodide",
-        "MAPbI3"
+        "MAPbI3",
+        "material_atom"
       ],
       "sources": [
         {
@@ -519,7 +543,8 @@
         "precursor",
         "A-site",
         "cesium",
-        "triple-cation"
+        "triple-cation",
+        "material_atom"
       ],
       "sources": [
         {
@@ -549,7 +574,8 @@
         "precursor",
         "B-site",
         "lead-halide",
-        "iodide"
+        "iodide",
+        "material_atom"
       ],
       "sources": [
         {
@@ -579,7 +605,8 @@
         "precursor",
         "B-site",
         "lead-halide",
-        "bromide"
+        "bromide",
+        "material_atom"
       ],
       "sources": [
         {
@@ -609,7 +636,8 @@
         "ETL",
         "electron-transport",
         "n-i-p",
-        "oxide"
+        "oxide",
+        "material_atom"
       ],
       "sources": [
         {
@@ -639,7 +667,8 @@
         "HTL",
         "hole-transport",
         "n-i-p",
-        "organic-semiconductor"
+        "organic-semiconductor",
+        "material_atom"
       ],
       "sources": [
         {
@@ -669,7 +698,8 @@
         "HTL",
         "hole-transport",
         "p-i-n",
-        "polymer"
+        "polymer",
+        "material_atom"
       ],
       "sources": [
         {
@@ -699,7 +729,8 @@
         "ETL",
         "electron-transport",
         "p-i-n",
-        "fullerene"
+        "fullerene",
+        "material_atom"
       ],
       "sources": [
         {
@@ -729,7 +760,8 @@
         "interlayer",
         "electron-contact",
         "p-i-n",
-        "BCP"
+        "BCP",
+        "material_atom"
       ],
       "sources": [
         {
@@ -760,7 +792,8 @@
         "graphene-oxide",
         "HTL",
         "p-i-n",
-        "inverted"
+        "inverted",
+        "material_atom"
       ],
       "sources": [
         {
@@ -791,7 +824,8 @@
         "ETL",
         "electron-transport",
         "p-i-n",
-        "fullerene"
+        "fullerene",
+        "material_atom"
       ],
       "sources": [
         {
@@ -822,7 +856,8 @@
         "nanoparticle",
         "ETL",
         "electron-contact",
-        "p-i-n"
+        "p-i-n",
+        "material_atom"
       ],
       "sources": [
         {
@@ -854,7 +889,8 @@
         "HTL",
         "hole-selective",
         "p-i-n",
-        "ITO"
+        "ITO",
+        "material_atom"
       ],
       "sources": [
         {
@@ -886,7 +922,8 @@
         "chloride",
         "additive",
         "surface-treatment",
-        "2D-3D"
+        "2D-3D",
+        "material_atom"
       ],
       "sources": [
         {
@@ -917,7 +954,8 @@
         "silver",
         "electrode",
         "cathode",
-        "p-i-n"
+        "p-i-n",
+        "material_atom"
       ],
       "sources": [
         {
@@ -949,7 +987,8 @@
         "SAM",
         "n-i-p",
         "hysteresis",
-        "ITO"
+        "ITO",
+        "process_detail"
       ],
       "sources": [
         {
@@ -980,7 +1019,8 @@
         "ITO",
         "HTL",
         "p-i-n",
-        "spin-coating"
+        "spin-coating",
+        "process_detail"
       ],
       "sources": [
         {
@@ -1011,7 +1051,8 @@
         "IPA",
         "surface-treatment",
         "passivation",
-        "2D-3D"
+        "2D-3D",
+        "process_detail"
       ],
       "sources": [
         {
@@ -1042,7 +1083,8 @@
         "SAM",
         "HTL",
         "ITO",
-        "p-i-n"
+        "p-i-n",
+        "design_target"
       ],
       "sources": [
         {
@@ -1075,7 +1117,8 @@
         "IPA",
         "passivation",
         "surface-treatment",
-        "2D-3D"
+        "2D-3D",
+        "design_target"
       ],
       "sources": [
         {
@@ -1108,7 +1151,8 @@
         "PEDOT:GO",
         "PCBM",
         "ZnO",
-        "Ag"
+        "Ag",
+        "design_target"
       ],
       "sources": [
         {
@@ -1156,6 +1200,9 @@
             "thickness": "",
             "process": "Metal deposition"
           }
+        ],
+        "compatible_solutions": [
+          "kb_solution_mapbi3_12m_gbl_dmso"
         ]
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
@@ -1173,7 +1220,8 @@
         "2PACz",
         "C60",
         "BCP",
-        "Ag"
+        "Ag",
+        "design_target"
       ],
       "sources": [
         {
@@ -1227,6 +1275,9 @@
             "thickness": "100 nm",
             "process": "Thermal deposition below 4 × 10^-6 torr"
           }
+        ],
+        "compatible_solutions": [
+          "kb_solution_2pacz_4hba_sam"
         ]
       },
       "createdAt": "2026-08-25T00:00:00.000Z",
@@ -1494,7 +1545,194 @@
       "createdAt": "2026-08-25T00:00:00.000Z",
       "updatedAt": "2026-08-25T00:00:00.000Z",
       "collection": "science"
+    },
+    {
+      "id": "kb_solution_sno2_colloidal_267",
+      "kind": "solution",
+      "name": "Colloidal SnO2 · 2.67 wt% aqueous",
+      "summary": "Aqueous SnO2 colloid used as planar ETL in n-i-p devices, diluted from 15 wt% stock; pairs with CPTA-SAM treatment.",
+      "tags": [
+        "SnO2",
+        "ETL",
+        "n-i-p",
+        "planar",
+        "aqueous",
+        "colloidal",
+        "published-recipe",
+        "design_target"
+      ],
+      "sources": [
+        {
+          "title": "Hysteresis-less and stable perovskite solar cells with a self-assembled monolayer",
+          "url": "https://www.nature.com/articles/s43246-020-0028-z",
+          "doi": "10.1038/s43246-020-0028-z",
+          "note": "Methods: SnO2 colloid dilution and CPTA-SAM."
+        }
+      ],
+      "data": {
+        "role": "Electron transport layer precursor",
+        "solutes": "SnO2 nanoparticles (15 wt% stock)",
+        "solvents": "Water",
+        "concentration": "2.67 wt% aqueous SnO2",
+        "additives": "None",
+        "preparation": "Dilute 15 wt% stock to 2.67 wt% with deionized water; filter before coating."
+      },
+      "createdAt": "2026-08-27T00:00:00.000Z",
+      "updatedAt": "2026-08-27T00:00:00.000Z",
+      "collection": "science"
+    },
+    {
+      "id": "kb_solution_csfapbi3_14m",
+      "kind": "solution",
+      "name": "Cs0.05FA0.95PbI3 · 1.4 M · DMF:DMSO 4:1",
+      "summary": "High-efficiency Cs/FA mixed-cation precursor widely used in n-i-p planar SnO2 devices; reference for PEAI surface treatment.",
+      "tags": [
+        "perovskite",
+        "CsFA",
+        "FAPbI3",
+        "n-i-p",
+        "planar",
+        "published-recipe",
+        "design_target"
+      ],
+      "sources": [
+        {
+          "title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-025-56409-5",
+          "doi": "10.1038/s41467-025-56409-5",
+          "note": "Methods: CsFAPbI3 composition and solvent ratio, compatible with 2PACz/C60/BCP stack."
+        }
+      ],
+      "data": {
+        "role": "Cs/FA perovskite absorber precursor",
+        "solutes": "CsI, FAI, PbI2",
+        "solvents": "DMF:DMSO = 4:1 v/v",
+        "concentration": "1.4 M Cs0.05FA0.95PbI3",
+        "additives": "None in base recipe; PEAI 2D treatment optional afterwards",
+        "preparation": "Dissolve in DMF:DMSO 4:1, stir, filter; spin-coat with antisolvent quench."
+      },
+      "createdAt": "2026-08-27T00:00:00.000Z",
+      "updatedAt": "2026-08-27T00:00:00.000Z",
+      "collection": "science"
+    },
+    {
+      "id": "kb_stack_nip_sno2_csfapbi3_peai_spiro",
+      "kind": "stack",
+      "name": "Planar n-i-p · SnO2 / CsFAPbI3 / PEAI / spiro / Au",
+      "summary": "Most common planar n-i-p architecture in current lab ZIPs: colloidal SnO2, Cs/FA absorber, PEAI passivation, doped spiro, Au.",
+      "tags": [
+        "n-i-p",
+        "planar",
+        "SnO2",
+        "CsFAPbI3",
+        "PEAI",
+        "spiro-OMeTAD",
+        "Au",
+        "design_target"
+      ],
+      "sources": [
+        {
+          "title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-025-56409-5",
+          "doi": "10.1038/s41467-025-56409-5",
+          "note": "Device sequence for CsFAPbI3 with PEAI 2D treatment and spiro."
+        },
+        {
+          "title": "Hysteresis-less and stable perovskite solar cells with a self-assembled monolayer",
+          "url": "https://www.nature.com/articles/s43246-020-0028-z",
+          "doi": "10.1038/s43246-020-0028-z",
+          "note": "SnO2 colloid processing reference."
+        }
+      ],
+      "data": {
+        "layers": [
+          {
+            "role": "Substrate / transparent electrode",
+            "material": "Glass / ITO",
+            "thickness": "",
+            "process": "Clean; UV-ozone"
+          },
+          {
+            "role": "Electron transport layer",
+            "material": "SnO2",
+            "thickness": "~30 nm",
+            "process": "Colloidal 2.67 wt% aqueous; 3000 rpm; 150 °C 30 min"
+          },
+          {
+            "role": "Absorber",
+            "material": "Cs0.05FA0.95PbI3 perovskite",
+            "thickness": "",
+            "process": "DMF:DMSO 4:1; antisolvent; anneal"
+          },
+          {
+            "role": "Surface passivation",
+            "material": "PEAI",
+            "thickness": "2D layer",
+            "process": "PEAI in IPA; 5000 rpm; 100 °C short anneal"
+          },
+          {
+            "role": "Hole transport layer",
+            "material": "spiro-OMeTAD",
+            "thickness": "",
+            "process": "Doped 85 mg mL-1; spin coat"
+          },
+          {
+            "role": "Top electrode",
+            "material": "Au",
+            "thickness": "~80 nm",
+            "process": "Thermal evaporation"
+          }
+        ],
+        "compatible_solutions": [
+          "kb_solution_sno2_colloidal_267",
+          "kb_solution_csfapbi3_14m",
+          "kb_solution_spiro_85mg_cb",
+          "kb_solution_mapcl_peai_ipa_treatment"
+        ]
+      },
+      "createdAt": "2026-08-27T00:00:00.000Z",
+      "updatedAt": "2026-08-27T00:00:00.000Z",
+      "collection": "science"
+    },
+    {
+      "id": "kb_material_peai",
+      "kind": "material",
+      "name": "Phenethylammonium iodide (PEAI)",
+      "summary": "Organic ammonium iodide used as 2D surface passivation on Cs/FA perovskite absorbers; forms thin 2D capping layer.",
+      "tags": [
+        "PEAI",
+        "ammonium",
+        "passivation",
+        "2D-3D",
+        "surface-treatment",
+        "material_atom",
+        "design_target"
+      ],
+      "sources": [
+        {
+          "title": "Surface passivation of perovskite film for efficient solar cells",
+          "url": "https://www.nature.com/articles/s41566-019-0398-2",
+          "doi": "10.1038/s41566-019-0398-2",
+          "note": "PEAI surface passivation study."
+        },
+        {
+          "title": "Solvent-dripping modulated 3D/2D heterostructures for high-performance perovskite solar cells",
+          "url": "https://www.nature.com/articles/s41467-025-56409-5",
+          "doi": "10.1038/s41467-025-56409-5",
+          "note": "PEAI 2D surface treatment after absorber."
+        }
+      ],
+      "data": {
+        "role": "Surface passivation / 2D cation",
+        "formula": "C8H12IN",
+        "supplier": "",
+        "purity": "",
+        "notes": "Concentration and solvent are process-specific; see PEAI treatment process record."
+      },
+      "createdAt": "2026-08-27T00:00:00.000Z",
+      "updatedAt": "2026-08-27T00:00:00.000Z",
+      "collection": "science"
     }
   ],
-  "updatedAt": "2026-08-25T12:00:00.000Z"
+  "updatedAt": "2026-08-27T12:00:00.000Z"
 }

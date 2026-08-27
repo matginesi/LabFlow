@@ -47,7 +47,7 @@ module.exports=function(t,LF){
     const step=LF.ActionRegistry.action('design.infer').steps.find(function(item){return item.id==='infer';});
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
     assert(step.max_input_tokens===8000,'Design input budget should stay compact but fit the fixed structured prompt');
-    assert(step.max_output_tokens===1000&&step.target_output_tokens===420,'Design output budget should stay compact');
+    assert(step.max_output_tokens===1400&&step.target_output_tokens===520,'Design output budget should stay compact');
     assert(step.deadline_ms===90000&&step.max_retries===0,'Design must be one bounded request with no hidden semantic retry');
   };
 
