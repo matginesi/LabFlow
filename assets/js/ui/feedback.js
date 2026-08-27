@@ -39,14 +39,6 @@
     return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : 0;
   }
 
-  /** Format live transport bytes without implying token precision. */
-  function formatBytes(value) {
-    const bytes = Math.max(0, Number(value) || 0);
-    if (bytes < 1024) return Math.round(bytes) + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(bytes < 10240 ? 1 : 0) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
   /**
    * Show a short, non-blocking notification in the shared live region.
    * @param {string} message Human-readable notification text.

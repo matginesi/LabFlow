@@ -40,7 +40,7 @@ module.exports = function (t, LF) {
   t['SSE progress exposes live output tokens and tok/s after a real generation window'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let progress=null;global.location={protocol:'https:',origin:'https://labflow.test'};
     global.fetch=async function(){const body=new ReadableStream({start:function(controller){setTimeout(function(){controller.enqueue(encoder.encode('data: {"id":"rate-test","model":"test-model","choices":[{"delta":{"content":"abcd"}}]}\n\n'));},20);setTimeout(function(){controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"efgh"}}],"usage":{"completion_tokens":2}}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'));controller.close();},320);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
-    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'test-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'test-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'rate'}],stream:true,maxTokens:64}),result=await AI.send(spec,{onProgress:function(value){progress=value;}});assert(result.content,'abcdefgh','stream content');assert(progress.tokens,2,'reported completion tokens');assert(progress.estimated,false,'provider usage is exact');assert(Number(progress.rate)>0,true,'live tok/s after generation window');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -50,7 +50,7 @@ module.exports = function (t, LF) {
     global.location={protocol:'https:',origin:'https://labflow.test'};
     global.fetch=async function(){const body=new ReadableStream({start:function(controller){controller.enqueue(encoder.encode('data: {\"id\":\"done-test\",\"model\":\"glm-4.7-flash\",\"choices\":[{\"delta\":{\"content\":\"ready\"}}]}\n\ndata: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n'));closeTimer=setTimeout(function(){producerClosed=true;try{controller.close();}catch(_){ }},500);},cancel:function(){streamCancelled=true;if(closeTimer)clearTimeout(closeTimer);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'done'}],stream:true,maxTokens:64,hardTimeoutMs:5000}),result=await AI.send(spec,{label:'done-test'});assert(result.content,'ready','content returned at DONE');assert(streamCancelled,true,'reader cancelled after terminal marker');assert(producerClosed,false,'did not wait for server-side socket close');}
     finally{if(closeTimer)clearTimeout(closeTimer);global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -170,6 +170,21 @@ module.exports = function (t, LF) {
     LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     const spec=AI.buildRequest({messages:[{role:'user',content:'hi'}],stream:false});
     assert(Object.prototype.hasOwnProperty.call(spec.body,'max_tokens'),false,'no invented 8K limit');delete LF.Storage;delete LF.AIProviders;
+  };
+
+  t['configured-model-only providers use shared Detect without remote metadata fetches']=async function(){
+    const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('remote metadata should not be queried');};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash'};},getApiKey:function(){return'';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,remoteModelMetadata:false}};
+    try{
+      const listed=await AI.listModels('zai','https://api.z.ai/api/paas/v4/chat/completions','');
+      const cap=await AI.resolveModelCapabilities({provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',apiKey:'',force:true});
+      assert(calls,0,'Detect must not contact a remote catalogue for configured-model-only providers');
+      assert(listed.skipped,true,'shared model-list step is normalized as skipped');
+      assert(listed.models,[],'no synthetic catalogue substitutions');
+      assert(cap.contextWindow,200000,'built-in capability still resolves through shared capability path');
+      assert(cap.reasoningStatus,'optional','thinking capability preserved');
+    }finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
@@ -346,7 +361,7 @@ module.exports = function (t, LF) {
     const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'file:',origin:'null'};
     const encoder=new TextEncoder(),payload='event: error\ndata: '+JSON.stringify({error:{message:'Engine protocol predict request returned 400: {\"error\":{\"code\":400,\"message\":\"request (37174 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":37174,\"n_ctx\":32768}}'}})+'\n\n';
     global.fetch=async function(){let done=false;return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return name==='content-type'?'text/event-stream':null;},forEach:function(){}},body:{getReader:function(){return{read:async function(){if(done)return{done:true};done=true;return{done:false,value:encoder.encode(payload)};},cancel:async function(){}};}}};};
-    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'large'}],stream:true,maxTokens:512,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'analysis.enrich.enrich.response'});}catch(e){err=e;}assert(!!err,true,'context error raised');assert(err.code,'MODEL_CONTEXT_LENGTH','classified context code');assert(err.isNetwork===true,false,'not rewritten as network/CORS');assert(err.promptTokens,37174,'provider prompt token count');assert(err.contextWindow,32768,'provider context size');assert(/Model context exceeded/.test(err.message),true,'actionable message');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -441,18 +456,18 @@ module.exports = function (t, LF) {
     global.fetch=async function(url,opts){calls++;seenBody=JSON.parse(opts.body);return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'15':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};};
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500}}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000}};
     try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(progress.some(function(p){return p.transportState==='rate_limit';}),true,'rate-limit progress is surfaced once');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['transport retries transient Z.AI 1305 with backoff then surfaces the last error'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
+  t['transport surfaces transient Z.AI 1305 after one HTTP attempt'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,progress=[];
     global.location={protocol:'https:',origin:'https://labflow.test'};
     global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'1':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:2, baseDelayMs:10, maxDelayMs:50}}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test'});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,1000,'Retry-After preserved');assert(calls,3,'transient 1305 retried twice then surfaced');}
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test',onProgress:function(p){progress.push(p);}});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,1000,'Retry-After preserved');assert(calls,1,'transport performs one HTTP attempt');assert(progress.some(function(p){return p.transportState==='rate_limit'&&p.willRetry===false;}),true,'rate limit is surfaced without hidden retry');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -461,7 +476,7 @@ module.exports = function (t, LF) {
     global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
     global.fetch=async function(url,opts){calls++;const body=JSON.parse(opts.body);bodies.push(body);return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'bench-'+calls,model:'local-model',choices:[{message:{content:'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi omicron pi rho sigma tau'},finish_reason:'length'}],usage:{prompt_tokens:20,completion_tokens:calls===1?24:64,total_tokens:calls===1?44:84}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',temperature:.7,inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'';}};
-    LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,optionalKey:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}},rateLimit:{retries:0}}};
+    LF.AIProviders={lmstudio:{id:'lmstudio',local:true,keyRequired:false,optionalKey:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
     try{const out=await AI.benchmarkTokensPerSecond({provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',samples:3,maxTokens:64,warmupTokens:24,stream:false});assert(out.supported,true,'local benchmark supported');assert(calls,4,'one warm-up plus three measured requests');assert(out.samples.length,3,'three measured samples only');assert(Number(out.averageTokensPerSecond)>0,true,'positive average tok/s');assert(Number(out.minTokensPerSecond)>0,true,'positive minimum');assert(Number(out.maxTokensPerSecond)>=Number(out.minTokensPerSecond),true,'valid range');assert(bodies[0].max_tokens,24,'warm-up budget');assert(bodies[1].max_tokens,64,'measured budget');assert(bodies.every(function(body){return body.reasoning_effort==='none'&&body.chat_template_kwargs&&body.chat_template_kwargs.enable_thinking===false;}),true,'benchmark disables reasoning for comparable local generation');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -477,7 +492,7 @@ module.exports = function (t, LF) {
     global.location={protocol:'https:',origin:'https://labflow.test'};
     global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1304,message:'daily quota exhausted'}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:2, baseDelayMs:10, maxDelayMs:50}}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'quota-test'});}catch(e){err=e;}assert(!!err,true,'quota error returned');assert(err.providerCode,'1304','quota code preserved');assert(calls,1,'quota never retried');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };

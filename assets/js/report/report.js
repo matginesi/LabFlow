@@ -299,7 +299,7 @@
     });
     const groupMap = {};
     measurements.filter(function (m) { return m.rankingEligible; }).forEach(function (m) { groupMap[m.group] = groupMap[m.group] || []; groupMap[m.group].push(m); });
-    const legacyGroupStatistics = Object.keys(groupMap).map(function (name) {
+    const fallbackGroupStatistics = Object.keys(groupMap).map(function (name) {
       const g = groupMap[name], eff = g.map(function (m) { return m.rv && Number.isFinite(m.rv.eff) ? m.rv.eff / factor : (m.fw && Number.isFinite(m.fw.eff) ? m.fw.eff / factor : null); }).filter(Number.isFinite).sort(function (a, b) { return a - b; });
       const voc = g.map(function (m) { return (m.rv || m.fw || {}).voc; }).filter(Number.isFinite); const jsc = g.map(function (m) { const v = (m.rv || m.fw || {}).jsc; return Number.isFinite(v) ? v / factor : null; }).filter(Number.isFinite); const ff = g.map(function (m) { return (m.rv || m.fw || {}).ff; }).filter(Number.isFinite);
       function median(a) { if (!a.length) return null; const s = a.slice().sort(function (x, y) { return x - y; }), i = Math.floor(s.length / 2); return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2; }
@@ -330,7 +330,7 @@
         const s = (g.scans && (g.scans.rv || g.scans.fw)) || null;
         return { name: g.name, n: g.n, scans: g.scans || null, medianEff: s ? s.median : null, minEff: s ? s.min : null, maxEff: s ? s.max : null, medianVoc: voc[g.name] != null ? voc[g.name] : null, medianJsc: jsc[g.name] != null ? jsc[g.name] : null, medianFF: ff[g.name] != null ? ff[g.name] : null };
       }).sort(function (a, b) { return Number(b.medianEff || 0) - Number(a.medianEff || 0); });
-    })() : legacyGroupStatistics;
+    })() : fallbackGroupStatistics;
     const warningHysteresis=Number((((LF.PromptRegistry.effectiveRules() || {}).pair_checks || {}).hysteresis_abs_warning) || .30) * 100;
     const figureSelection=figureSelectionForModel(exp);
     const bestCompact=(analysis.bestBySample||[])[0],bestMeasurement=bestCompact&&measurements.find(function(m){return m.id===bestCompact.id;});

@@ -56,7 +56,7 @@ The Assistant receives current page context, relevant experiment evidence, bound
 1. Open **Settings → Provider**.
 2. Select the provider.
 3. Enter the provider endpoint/model and API key when required.
-4. Use **Inspect/Detect** only when applicable to that provider.
+4. Use **Detect** to inspect the configured model and any provider metadata LabFlow can safely read.
 5. Run **Test AI connection**.
 
 The connection test is deliberately tiny and contains no experiment data. Its purpose is to test endpoint/key/model reachability, not scientific capability.
@@ -72,7 +72,7 @@ Every AI Action declares its own:
 - `max_output_tokens`;
 - deadline;
 - semantic retry policy;
-- optional transport retry policy.
+- provider transport contract (always one HTTP attempt).
 
 See [AI tokens, limits and rate limiting](AI_TOKENS_AND_RATE_LIMITS.md) and the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md).
 

@@ -48,7 +48,7 @@ module.exports=function(t,LF){
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
     assert(step.max_input_tokens===8000,'Design input budget should stay compact but fit the fixed structured prompt');
     assert(step.max_output_tokens===1400&&step.target_output_tokens===520,'Design output budget should stay compact');
-    assert(step.deadline_ms===90000&&step.max_retries===0,'Design must be one bounded request with no hidden semantic retry');
+    assert(step.deadline_ms===90000&&step.max_retries===1,'Design may use one declared semantic repair retry for invalid or truncated structured output');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
@@ -79,12 +79,12 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.llamacpp.recommendedRuntime.parallelSlots===1,'llama.cpp LabFlow profile uses one server slot');
     assert(LF.AIProviders.llamacpp.recommendedRuntime.contextWindow===65536,'llama.cpp LabFlow profile uses a 65K runtime context');
     assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_budget===0,'llama.cpp reasoning-off mode forces zero reasoning budget');
-    assert(LF.AIProviders.zai.skipModelCatalogue===true,'Z.AI catalogue probing is intentionally disabled');
-    assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves the configured model');
+    assert(LF.AIProviders.zai.remoteModelMetadata===false,'Z.AI Detect uses built-in metadata without remote catalogue probing');
+    assert(LF.AIProviders.ollama.local===true&&LF.AIProviders.lmstudio.local===true&&LF.AIProviders.llamacpp.local===true,'local provider behavior is declared in the registry');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
-    assert(LF.AIProviders.zai.rateLimit&&LF.AIProviders.zai.rateLimit.retries===0,'Z.AI fails fast on provider throttles without hidden retry traffic');
+    assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.zai,'rateLimit'),'Z.AI has no legacy transport retry policy');
     assert(LF.AIProviders.lmstudio.optionalKey===true,'LM Studio can use its own optional API token');
     assert(LF.AIProviders.llamacpp.optionalKey===true,'llama.cpp can use an optional server API key');
     assert(LF.AIProviders.gemini.model==='gemini-3.7-flash','Gemini preset tracks the current OpenAI-compatible example model');
@@ -95,16 +95,17 @@ module.exports=function(t,LF){
     const provider=LF.AIProviders.zai;
     assert(provider.model==='glm-4.7-flash','default remains free Flash');
     assert(provider.modelSelect===false,'manual exact model input');
-    assert(provider.skipModelCatalogue===true,'remote catalogue disabled');
-    assert(provider.preserveConfiguredModel===true,'configured model preserved');
+    assert(provider.remoteModelMetadata===false,'remote model metadata disabled declaratively');
+    assert(!Object.prototype.hasOwnProperty.call(provider,'skipModelCatalogue'),'legacy skipModelCatalogue flag removed');
+    assert(!Object.prototype.hasOwnProperty.call(provider,'preserveConfiguredModel'),'dead preserveConfiguredModel flag removed');
   };
 
-  t['Z.AI settings expose manual model input and local Inspect instead of remote Detect']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI manual model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('id="aiModelSelect" aria-label="Z.AI model" hidden')>=0,'remote model select hidden');assert(html.indexOf('id="loadProviderModels" >Inspect</button>')>=0,'Z.AI uses local Inspect control');assert(html.indexOf('never downloads or substitutes another Z.AI model')>=0,'manual-model guidance');localStorage.removeItem('labflow.ai.settings');
+  t['Z.AI settings use the same Detect control and result semantics as other providers']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI manual model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('id="aiModelSelect" aria-label="Z.AI model" hidden')>=0,'remote model select hidden');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'configured-model Detect guidance');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="loadProviderModels" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['API keys are isolated by provider and the legacy key migrates once']=function(){

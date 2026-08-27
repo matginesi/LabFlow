@@ -1,6 +1,6 @@
 .env
-.DS_Store
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
-TEST_DATA/
-ORIGINAL_REQUEST/
+.DS_Store

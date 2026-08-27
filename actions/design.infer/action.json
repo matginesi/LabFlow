@@ -6,7 +6,7 @@
   "title": "Suggest experiment design",
   "short_title": "Suggest design",
   "purpose": "Suggest missing solution chemistry and device-stack data for the selected experiment from source evidence, relevant scientific Knowledge Base records and cautious model inference.",
-  "strategy": "One bounded request for one experiment. Suggestions are stored for researcher review and are never applied automatically.",
+  "strategy": "One bounded request for one experiment, with at most one short semantic repair retry when the model returns invalid or truncated structured output. Suggestions are stored for researcher review and are never applied automatically.",
   "output": "json",
   "mutation_scope": "",
   "policies": [

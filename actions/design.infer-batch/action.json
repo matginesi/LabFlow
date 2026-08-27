@@ -6,7 +6,7 @@
   "title": "Suggest experiment designs",
   "short_title": "Suggest designs",
   "purpose": "Suggest missing solution chemistry and device stacks for a small group of experiments in one bounded request.",
-  "strategy": "At most three experiments per request. Suggest all uses compact batches and stops the whole sequence immediately when the provider rate-limits the run; successful suggestions remain saved and untouched experiments stay pending. A truncated batch may be retried one experiment at a time only while the provider is healthy.",
+  "strategy": "At most three experiments per request. Each batch has at most one semantic repair retry for invalid or truncated structured output. Suggest all stops immediately on provider rate limits; successful suggestions remain saved and untouched experiments stay pending. A truncated batch may fall back to one experiment at a time only while the provider is healthy.",
   "output": "json",
   "mutation_scope": "",
   "policies": [

@@ -64,7 +64,7 @@ module.exports=function(t){
   t['Provider detection runs only from explicit Detect; connection test stays minimal']=function(){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
-    assert(settings.includes('await loadModels({silent:true})'),false,'connection test must not trigger model detection');
+    assert(settings.includes('await detectModel({silent:true})'),false,'connection test must not trigger model detection');
     assert(settingsPage.includes('Press Detect to read model capabilities and the catalogue when the provider exposes one.'),true,'shared Detect policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');

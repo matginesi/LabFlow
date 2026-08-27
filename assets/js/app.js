@@ -448,7 +448,7 @@
         if(e.target.closest('#downloadLogs')){LF.Logger.download();return;}
         if(e.target.closest('#clearLogs')){if(await LF.UI.confirmAction('Clear all buffered LabFlow logs? Download them first if you need to keep this diagnostic history.',{title:'Clear runtime logs',confirmLabel:'Clear logs',danger:true})){LF.Logger.clear();render();}return;}
         if(e.target.closest('#saveAiSettings')){LF.AISettings.saveFromForm();return;}
-        if(e.target.closest('#loadProviderModels')){LF.AISettings.loadModels();return;}
+        if(e.target.closest('#detectProviderModel')){LF.AISettings.detectModel();return;}
         if(e.target.closest('#testAiConnection')){await LF.AISettings.testConnection(e.target.closest('#testAiConnection'));return;}
         if(e.target.closest('#saveNomadSettings')){saveNomadSettings();if(hasExperiment()){LF.Nomad.validate(S.state.experiment);markModified('nomad');render();}return;}
         if(e.target.closest('#downloadNomadPackage')){downloadNomadPackage();return;}

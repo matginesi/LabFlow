@@ -313,10 +313,10 @@ On failure:
 
 - AI checkpoint retry occurs only when the Action declares `max_retries > 0`;
 - enabled semantic retries use bounded delays and repeat only the failed work unit;
-- provider transport retry is bounded for transient rate limits (`1302`/`1303`/`1305`/`1312`) with `Retry-After` + backoff per provider `rateLimit` policy (quota `1304`/`1308`/`1310` never retries; connection test never retries);
+- provider transport never retries automatically; HTTP 429 and known provider limit/quota codes are surfaced after the single HTTP attempt, including `Retry-After` when present;
 - when a bounded text work unit reaches the provider output limit, an enabled semantic retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
 - after declared retries, **Retry checkpoint** may be available;
-- unrecoverable provider rate-limit/quota failure stops multi-request sequences instead of advancing through more work units (transient 1305 that recovers within the bounded retries continues);
+- any provider rate-limit/quota failure stops multi-request sequences instead of advancing through more work units; completed work remains preserved;
 - retry resumes the failed/pending work, not completed checkpoints.
 
 There is no manual Continue gate between successful checkpoints.
