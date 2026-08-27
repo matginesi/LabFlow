@@ -14,10 +14,10 @@ module.exports=function(t,LF){
     assert(/directly from the browser/.test(LF.AIDiagnostics.contextNote()),true,'context note');
     assert(Object.prototype.hasOwnProperty.call(LF.AIDiagnostics,'environmentNote'),false,'obsolete alias removed');
   };
-  t['reasoning-only connection probes get a specific output-limit diagnosis']=function(){
+  t['reasoning-only output limits get a non-network diagnosis']=function(){
     const out=LF.AIDiagnostics.errorSummary({isContract:true,finishReason:'length'});
-    assert(out.category,'Probe output limit','category');
-    assert(/reasoning/.test(out.next),true,'reasoning guidance');
+    assert(out.category,'Model output limit','category');
+    assert(/valid response envelope/.test(out.next),true,'HTTP success distinction');
   };
   return t;
 };

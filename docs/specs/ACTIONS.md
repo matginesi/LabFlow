@@ -72,12 +72,9 @@ The running totem exposes **Stop**. Stop aborts the active run.
 
 ### AI retry
 
-A failed AI checkpoint may automatically retry:
+An AI checkpoint retries only when its Action definition permits it. `max_retries` controls semantic/checkpoint retry; `transport_retries` can further reduce transport retry. Compact automatic Actions such as `analysis.enrich`, and Design inference, deliberately use zero automatic retries.
 
-1. after 5 seconds;
-2. after 10 seconds.
-
-After those bounded attempts, the run stops and exposes **Retry checkpoint**. Completed earlier checkpoints are not repeated unnecessarily.
+When semantic retry is enabled, the runner uses bounded delays (up to the current 5 s / 10 s schedule) and repeats only the failed work unit. After the declared attempts, the run stops and may expose **Retry checkpoint**. Completed earlier checkpoints are not repeated unnecessarily. Provider rate-limit circuits are separate and can stop a sequence without consuming semantic retries.
 
 ### No background orchestration
 
@@ -287,17 +284,17 @@ If a new proposed Action merely wraps one of these implementation details, it sh
 
 ## 7. AI output budgets
 
-Every AI step declares a bounded `max_output_tokens` target. It is the amount appropriate for that workflow, not a copy of the model's advertised maximum. The model/provider capability is only an upper ceiling.
+Every AI step declares both a bounded `max_input_tokens` cap and a bounded `max_output_tokens` ceiling. These are operational Action budgets appropriate for the workflow, not copies of the model's advertised context/output maxima. Model/provider capability remains only an upper ceiling.
 
 Every AI step also declares `thinking: off|auto|on`; the contract validator rejects omissions. Direct drafting (`analysis.enrich`, `report.generate`, `report.improve`) uses `off`, semantic reconstruction (`dataset.resolve-ambiguities`, `design.infer`) uses `on`, and question/interpretation work (`assistant.chat`, `results.interpret`) uses `auto`. The transport reconciles this request with the selected model's `none|optional|required|unknown` capability and never sends an incompatible provider field.
 
 Knowledge lookup is Action-specific and optional. `analysis.enrich`, `results.interpret`, `design.infer`, `report.generate` and `report.improve` request only a small `knowledge_context` slice from the scientific `material`, `solution`, `process`, `stack` and `concept` kinds. `assistant.chat` performs one small local lookup across LabFlow help and scientific records while building its deterministic chat context. Empty or failed lookup is a normal condition and never blocks execution. `dataset.resolve-ambiguities` receives no external knowledge because sample identity, units and measured values must be established from imported evidence. Knowledge records remain external context and should preserve stable record/source provenance when used.
 
-At runtime the effective output budget is the minimum of the declared Action/step target, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. If a future AI Action omits a target, the runner defensively falls back to 4096 tokens and the contract validator rejects the definition so the omission cannot ship unnoticed.
+At runtime the effective input budget is the tighter of the Action `max_input_tokens` cap and available model/runtime context headroom after reserving output and safety margin. The effective output budget is the minimum of the declared Action/step target/ceiling, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. The contract validator rejects AI steps that omit either input or output bounds.
 
-The current targets are intentionally task-shaped: compact Experiment Brief/Results work is about 1.1k–1.4k target tokens, ambiguity work about 1.8k, structured Design about 2.8k, and individual Report/Paper writing blocks about 6k–6.5k. Their larger maximums remain safety ceilings, especially for complete structured JSON. Large documents remain split into bounded sequential writing blocks even when a model can emit 64k/128k tokens.
+The current targets are intentionally task-shaped: automatic Experiment Brief enrichment is deliberately micro-sized at about 320 target tokens (700 ceiling); Results interpretation targets about 1.4k; ambiguity work about 1.8k; Design uses about 420 tokens for one experiment or 1.2k for a bounded batch; Report drafting targets about 3.6k and Report improvement about 3.2k, both with a 5k ceiling. These are safety and workload budgets, not invitations to fill the ceiling. Large documents remain split into bounded sequential writing blocks even when a model advertises a much larger output window.
 
-AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 90 s absolute deadline and zero automatic retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
+AI steps may also declare `deadline_ms`, `max_retries`, and an optional `transport_retries` ceiling for provider throttling. The automatic import enrichment uses a 45 s absolute deadline, zero Action retries and zero transport rate-limit retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
 
 For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, an enabled semantic retry receives a deterministically reduced range and must rewrite the complete unit; truncated content is retained only in request diagnostics and never becomes the Action output.
 
@@ -321,6 +318,6 @@ Runtime edits are browser-local overrides; versioned `action.json` / optional `p
 
 ## Output profile and progress contract
 
-AI steps declare `thinking`, `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, and may declare `deadline_ms` and `max_retries`. Provider/model maximum output is a ceiling only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
+AI steps declare `thinking`, `max_input_tokens`, `min_output_tokens`, `target_output_tokens`, `max_output_tokens`, and may declare `deadline_ms`, `max_retries` and `transport_retries`. Provider/model context and output maxima are capacity ceilings only. Foreach work items may additionally expose `target_words`, `min_words`, and `max_words`; the runner derives a bounded request budget from those values.
 
 Action UIs must calculate progress from declared checkpoints and work units. Provider SSE/event telemetry may only refine the active AI phase and cannot itself complete an Action.

@@ -25,8 +25,9 @@
 
   /** Build a readable, locally measured connection report around the tiny provider reply. */
   function connectionReport(result) {
-    const usage=result.usage||{},lines=['## Provider response','`'+String(result.content||'—').replace(/`/g,'\\`')+'`','','## Connection diagnostics'];
-    lines.push('- **Status:** reachable; response parsed successfully');
+    const usage=result.usage||{},probeLimited=result.probeLimited===true,lines=['## Provider response',probeLimited?'No final probe text · reasoning-only response within the bounded probe budget':'`'+String(result.content||'—').replace(/`/g,'\\`')+'`','','## Connection diagnostics'];
+    lines.push(probeLimited?'- **Status:** reachable; Chat Completions response parsed successfully; final-text probe inconclusive':'- **Status:** reachable; response parsed successfully');
+    if(probeLimited)lines.push('- **Meaning:** endpoint, model selection and request parsing work. This is not a network/authentication failure. The tiny connection probe is not used to judge normal Action quality.');
     lines.push('- **Provider / model:** '+String(result.provider||'—')+' / `'+String(result.model||'—').replace(/`/g,'\\`')+'`');
     lines.push('- **Thinking request:** '+String(result.thinkingMode||'auto'));
     lines.push('- **Total elapsed:** '+Number(result.elapsedMs||0).toLocaleString()+' ms');
@@ -85,12 +86,14 @@
     const keyField=field('aiKey');
     const providerUsesKey=!!(provider&&(provider.keyRequired||provider.optionalKey));
     if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored separately for this provider…':'Not used by this provider';if(!providerUsesKey)keyField.value='';}
-    if (providerId === 'lmstudio' || providerId === 'ollama') {
+    if (providerId === 'lmstudio' || providerId === 'ollama' || providerId === 'llamacpp') {
       const local = document.createElement('div');
       local.className = 'meta mt-1';
       local.textContent = providerId === 'lmstudio'
         ? 'LM Studio · OpenAI-compatible base http://127.0.0.1:1234/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Its local API must be running and accept the current browser origin.'
-        : 'Ollama · OpenAI-compatible base http://127.0.0.1:11434/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Its local API must be running and accept the current browser origin.';
+        : providerId === 'llamacpp'
+          ? 'llama.cpp · llama-server OpenAI-compatible base http://127.0.0.1:8080/v1 · LabFlow sends POST /v1/chat/completions and reads /v1/models. Start llama-server with a browser-reachable host/CORS configuration.'
+          : 'Ollama · OpenAI-compatible base http://127.0.0.1:11434/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Its local API must be running and accept the current browser origin.';
       note.appendChild(local);
     }
 
@@ -143,7 +146,7 @@
     if(provider.skipModelCatalogue){
       const selected=modelValue(providerId)||provider.model||'';setModelValue(selected);saveFromForm({toast:false});syncModelControls(null,{preserveHint:true});
       const cap=LF.AI&&LF.AI.knownCapability?LF.AI.knownCapability(providerId,selected):null;
-      if(hint)hint.textContent='Configured model: '+selected+' · provider catalogue intentionally skipped'+(cap&&cap.maxOutputTokens?' · known output ceiling '+Number(cap.maxOutputTokens).toLocaleString()+' tok':'')+'. Use Save & test connection to verify this API key can access exactly this model.';
+      if(hint)hint.textContent='Configured model: '+selected+' · no model substitution'+(cap&&cap.contextWindow?' · model capacity '+Number(cap.contextWindow).toLocaleString()+' context tok':'')+(cap&&cap.maxOutputTokens?' / '+Number(cap.maxOutputTokens).toLocaleString()+' max output tok':'')+' · LabFlow request sizes remain bounded by each Action. Use Save & test connection to verify this API key can access exactly this model.';
       Log.info('models.catalogue-skipped',{provider:providerId,model:selected,reason:'configured-model-only'});
       if(!options.silent)LF.UI.toast('Using exact configured model: '+selected+'.','info');return selected?[selected]:[];
     }
@@ -157,12 +160,13 @@
       catch(error){listError=error;Log.warn('models.list-failed',{provider:providerId,error:error});if(provider.modelSelect)syncModelControls(null,{manualFallback:true,preserveHint:true});activity.activityUpdate({stepId:'models',stepStatus:'done',stepNote:'list unavailable',stage:'Model list unavailable',progress:.34,message:'The provider did not expose a model list. LabFlow is still checking the configured model capability.'});}
       activity.activityUpdate({stepId:'capability',stepStatus:'active',stage:'Resolving model capability',progress:.52,message:'Reading output/context limits for the configured model.'});
       const selected=modelValue(providerId)||LF.Storage.getAiSettings().model||'',cap=LF.AI.resolveModelCapabilities?await LF.AI.resolveModelCapabilities({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,force:true}):null;
-      const capText=cap&&cap.maxOutputTokens?('max output '+Number(cap.maxOutputTokens).toLocaleString()+' tokens'):(cap&&cap.contextWindow?('context ceiling '+Number(cap.contextWindow).toLocaleString()+' tokens'):'output limit not exposed'),reasoningText=cap&&cap.reasoningStatus&&cap.reasoningStatus!=='unknown'?('thinking '+cap.reasoningStatus):'thinking capability not exposed';
-      if(hint)hint.textContent=(models.length?models.length+' model'+(models.length===1?'':'s')+' available · ':'')+capText+' · '+reasoningText+(cap&&cap.source?' · '+cap.source:'')+(listError?' · model list unavailable; manual model entry enabled':'');
-      activity.activityUpdate({stepId:'capability',stepStatus:'done',stepNote:capText+' · '+reasoningText,stage:'Capability detected',progress:.88,details:{Model:selected,'Loaded model':cap&&cap.loadedModel||'not exposed','Model list':models.length||'not exposed','Max output':cap&&cap.maxOutputTokens?Number(cap.maxOutputTokens).toLocaleString()+' tok':'not exposed','Context window':cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tok':'not exposed','Thinking capability':cap&&cap.reasoningStatus||'unknown','Thinking options':cap&&cap.reasoningAllowedOptions&&cap.reasoningAllowedOptions.length?cap.reasoningAllowedOptions.join(', '):'not exposed',Source:cap&&cap.source||'fallback / unknown'}});
+      const capBits=[];if(cap&&cap.contextWindow)capBits.push(Number(cap.contextWindow).toLocaleString()+' context tok');if(cap&&cap.maxOutputTokens)capBits.push(Number(cap.maxOutputTokens).toLocaleString()+' max output tok');if(cap&&cap.totalSlots)capBits.push(Number(cap.totalSlots)+' slot'+(Number(cap.totalSlots)===1?'':'s'));const capText=capBits.length?('model capacity '+capBits.join(' / ')):'model capacity not exposed',reasoningText=cap&&cap.reasoningStatus&&cap.reasoningStatus!=='unknown'?('thinking '+cap.reasoningStatus):(provider.safeThinkingOverrideWhenUnknown?'thinking metadata not exposed · request control available':'thinking capability not exposed'),runtimeProfileText=providerId==='llamacpp'&&cap&&cap.runtimeProfileMessage?cap.runtimeProfileMessage:'';
+      if(hint)hint.textContent=(models.length?models.length+' model'+(models.length===1?'':'s')+' available · ':'')+capText+' · '+reasoningText+(runtimeProfileText?' · '+runtimeProfileText:'')+(cap&&cap.source?' · '+cap.source:'')+(listError?' · model list unavailable; manual model entry enabled':'');
+      activity.activityUpdate({stepId:'capability',stepStatus:'done',stepNote:capText+' · '+reasoningText+(runtimeProfileText?' · '+runtimeProfileText:''),stage:'Capability detected',progress:.88,details:{Model:selected,'Loaded model':cap&&cap.loadedModel||'not exposed','Model list':models.length||'not exposed','Max output':cap&&cap.maxOutputTokens?Number(cap.maxOutputTokens).toLocaleString()+' tok':'not exposed','Context window':cap&&cap.contextWindow?Number(cap.contextWindow).toLocaleString()+' tok':'not exposed','Server slots':cap&&cap.totalSlots?Number(cap.totalSlots):'not exposed','LabFlow llama.cpp profile':providerId==='llamacpp'?(runtimeProfileText||'not exposed'):'n/a','Thinking capability':cap&&cap.reasoningStatus||'unknown','Thinking options':cap&&cap.reasoningAllowedOptions&&cap.reasoningAllowedOptions.length?cap.reasoningAllowedOptions.join(', '):'not exposed',Source:cap&&cap.source||'fallback / unknown'}});
       activity.activityUpdate({stepId:'apply',stepStatus:'done',stage:'Provider metadata ready',progress:.97});
       Log.info('models.loaded',{provider:providerId,count:models.length,model:selected,capability:cap});
-      activity.activityFinish({message:'Provider metadata detection completed.',response:(models.length?models.length+' models detected. ':'')+capText+(listError?'\n\nThe model catalogue itself was unavailable, but the configured model was still probed.':''),holdMs:0});
+      activity.activityFinish({message:cap&&cap.runtimeProfileStatus==='mismatch'?'Provider metadata detected · llama.cpp runtime differs from the LabFlow profile.':'Provider metadata detection completed.',response:(models.length?models.length+' models detected. ':'')+capText+'.'+(runtimeProfileText?' '+runtimeProfileText+'.':'')+' LabFlow Action requests remain much smaller and use explicit per-Action input/output caps.'+(cap&&cap.runtimeProfileStatus==='mismatch'?'\n\nRecommended llama.cpp runtime for this LabFlow profile: --parallel 1 --ctx-size 65536. Detect never divides the n_ctx reported by /props a second time.':'')+(listError?'\n\nThe model catalogue itself was unavailable, but the configured model was still probed.':''),holdMs:0});
+      if(cap&&cap.runtimeProfileStatus==='mismatch'&&!options.silent)LF.UI.toast('llama.cpp runtime differs from LabFlow profile: use --parallel 1 --ctx-size 65536 for the full 65K Action context.','warning');
       if(listError&&!cap&&!options.silent)LF.UI.toast('Could not read provider metadata. You can still type the model name manually.','warning');
       return models;
     }catch(error){
@@ -204,20 +208,21 @@
       LF.UI.activityUpdate({stage:'Waiting for provider', indeterminate:true, message:'The direct browser request is in progress.'});
       const result = await LF.AI.testConnection();
       if(result.rateLimited){
-        LF.UI.activityUpdate({stepId:'request',stepStatus:'done',stepNote:result.elapsedMs+' ms'});
-        LF.UI.activityUpdate({stepId:'response',stepStatus:'done',stepNote:'rate limited'});
-        LF.UI.activityFinish({message:'Provider reachable, but rate limited.',response:'The configured endpoint answered immediately with a rate-limit response. LabFlow did not retry the connection probe.',details:{Provider:provider.name||settings.provider,Model:settings.model,'Total elapsed':result.elapsedMs+' ms','HTTP requests':1,Retries:0},holdMs:0});
-        LF.UI.toast('Provider reachable, but rate limited.','warning');return;
+        const blocked=result.cooldownActive===true,retryS=Math.max(1,Math.ceil(Number(result.retryInMs||0)/1000));
+        LF.UI.activityUpdate({stepId:'request',stepStatus:'done',stepNote:blocked?'not sent':result.elapsedMs+' ms'});
+        LF.UI.activityUpdate({stepId:'response',stepStatus:'done',stepNote:blocked?'cooldown active':'rate limited'});
+        LF.UI.activityFinish({message:blocked?'Provider cooldown active.':'Provider reachable, but rate limited.',response:blocked?'LabFlow did not contact the provider because a previous 429/1305 opened the shared provider cooldown. Retry after about '+retryS+' s.':'The configured endpoint answered immediately with a rate-limit response. LabFlow did not retry it and opened a shared provider cooldown for subsequent Actions.',details:{Provider:provider.name||settings.provider,Model:settings.model,'Total elapsed':result.elapsedMs+' ms','HTTP requests':result.httpRequests||0,Retries:0,'Cooldown remaining':result.retryInMs?retryS+' s':'provider policy'},holdMs:0});
+        LF.UI.toast(blocked?'Provider cooldown active · no request sent.':'Provider reachable, but rate limited. Cooldown opened.','warning');return;
       }
       LF.UI.activityUpdate({stepId:'request', stepStatus:'done', stepNote:result.elapsedMs + ' ms'});
-      LF.UI.activityUpdate({stepId:'response', stepStatus:'done'});
+      LF.UI.activityUpdate({stepId:'response', stepStatus:'done', stepNote:result.probeLimited?'reasoning-only · reachable':'final text received'});
       LF.UI.activityFinish({
-        message: 'Provider responded successfully.',
+        message: result.probeLimited?'Provider reachable · final-text probe inconclusive.':'Provider responded successfully.',
         response: connectionReport(result),
-        details: {Provider:provider.name || settings.provider, Model:result.model, 'Total elapsed':result.elapsedMs + ' ms', 'Provider round trip':Number.isFinite(Number(result.requestElapsedMs))?result.requestElapsedMs+' ms':'not measured', Tokens:result.usage&&Number.isFinite(Number(result.usage.totalTokens))?result.usage.totalTokens+(result.usage.estimated?' estimated':''):'not returned', 'Finish reason':result.finishReason||'not returned', 'HTTP requests':result.httpRequests||1, Retries:0, 'Request ID':result.requestId || 'not returned'},
+        details: {Provider:provider.name || settings.provider, Model:result.model, 'Total elapsed':result.elapsedMs + ' ms', 'Provider round trip':Number.isFinite(Number(result.requestElapsedMs))?result.requestElapsedMs+' ms':'not measured', Tokens:result.usage&&Number.isFinite(Number(result.usage.totalTokens))?result.usage.totalTokens+(result.usage.estimated?' estimated':''):'not returned', 'Finish reason':result.finishReason||'not returned', 'Final text':result.probeLimited?'not verified by tiny probe':'verified', 'Reasoning observed':result.reasoningObserved?'yes':'no', 'HTTP requests':result.httpRequests||1, Retries:0, 'Request ID':result.requestId || 'not returned'},
         holdMs: 0
       });
-      LF.UI.toast('AI connection OK · ' + result.model + ' · ' + result.elapsedMs + ' ms', 'success');
+      LF.UI.toast((result.probeLimited?'AI endpoint reachable · ':'AI connection OK · ') + result.model + ' · ' + result.elapsedMs + ' ms', result.probeLimited?'warning':'success');
     } catch (error) {
       Log.error('connection-test.failed',{provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),error:error});
       const summary = LF.AIDiagnostics ? LF.AIDiagnostics.errorSummary(error) : {category:'Error', next:'Review provider settings.'};

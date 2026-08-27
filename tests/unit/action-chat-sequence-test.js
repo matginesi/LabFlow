@@ -28,12 +28,12 @@ module.exports=function(t,LF){
     return{messages:messages,errors:errors,updates:updates,finishes:finishes};
   }
 
-  t['SSE events refine progress inside the streaming band without reaching completion']=function(){
+  t['SSE progress is token-based and ignores transport event fragmentation']=function(){
     loadUi(function(){return Promise.resolve({status:'done'});});
     const a=LF.ActionUI.streamFraction({content:'x'.repeat(400),targetTokens:1000,events:1});
     const b=LF.ActionUI.streamFraction({content:'x'.repeat(400),targetTokens:1000,events:40});
-    assert(b.fraction>a.fraction,'events should refine streaming progress');
-    assert(b.fraction<=.82,'streaming events must reserve validate/store progress');
+    assert(b.fraction===a.fraction,'transport event count must not inflate progress');
+    assert(b.fraction<=.82,'streaming tokens must reserve validate/store progress');
     const d={steps:[{id:'infer',weight:.8},{id:'store',weight:.2}]};
     const first=LF.ActionUI.actionProgress(d,0,0,3,.5),second=LF.ActionUI.actionProgress(d,0,1,3,.1),third=LF.ActionUI.actionProgress(d,1,0,1,.1);
     assert(second>first,'next work unit must move global progress forward');
@@ -134,6 +134,31 @@ module.exports=function(t,LF){
     assert(exp.designAiStatus.d2&&exp.designAiStatus.d2.state==='error','second experiment should become retryable');
     assert(/provider failed/.test(exp.designAiStatus.d1.message),'provider error reason should be retained');
     assert(env.finishes.length===1,'sequence should finish its totem instead of throwing');
+  };
+
+
+  t['Design Suggest all stops the run immediately after the first provider rate limit']=async function(){
+    const calls=[];
+    const env=loadUi(function(id,cb){
+      if(id!=='design.infer-batch')return Promise.resolve({status:'done',actionId:id,result:{},requestMeta:{}});
+      const ids=(cb.params.deviceIds||[]).slice();calls.push(ids);
+      const exp=LF.State.state.experiment;
+      if(calls.length===1){
+        exp.aiDesignProposals=exp.aiDesignProposals||{};
+        ids.forEach(function(deviceId){exp.aiDesignProposals[deviceId]={targetDeviceId:deviceId,summary:'Saved before throttle',solutions:[{name:'Ink'}],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};});
+        return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});
+      }
+      return Promise.resolve({status:'error',actionId:id,message:'API rate limit reached · 1305 · slow down',failedStep:'infer',code:'MODEL_RATE_LIMIT',error:{rateLimited:true,providerCode:'1305'},requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:Array.from({length:7},function(_,i){return{id:'d'+(i+1),name:'D'+(i+1),sampleNames:[],solutionIds:[],stack:[],process:{}};})};
+    delete exp.aiDesignProposals;delete exp.designAiStatus;
+    const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
+    assert(out&&out.status==='paused'&&out.reason==='provider_rate_limit','rate limit should pause the bulk sequence');
+    assert(calls.length===2,'no request may be sent after the first throttled batch');
+    assert(out.suggested===3&&out.remaining===4,'completed suggestions must be preserved and untouched experiments remain pending');
+    assert(exp.designAiStatus.d4&&exp.designAiStatus.d4.state==='idle','throttled experiment should return to pending/idle state');
+    assert(!exp.designAiStatus.d7,'future batches must never be touched after throttle');
+    assert(env.finishes.length===1&&/No further requests were sent/.test(String(env.finishes[0].response||'')),'final totem should explain the circuit breaker');
   };
 
 

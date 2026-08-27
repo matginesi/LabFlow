@@ -22,9 +22,13 @@ module.exports=function(t,LF){
     const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
     defs.forEach(function(def){(def.steps||[]).filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output target');assert(['off','auto','on'].includes(step.thinking),def.id+'/'+step.id+' missing thinking policy');});});
     const enrich=LF.ActionRegistry.action('analysis.enrich').steps.find(function(step){return step.id==='enrich';});
-    assert(enrich.max_output_tokens===3072,'analysis.enrich target must be 3072');
-    assert(enrich.deadline_ms===90000,'analysis.enrich hard deadline must be 90s');
-    assert(enrich.max_retries===0,'analysis.enrich must not retry automatically during import');
+    assert(enrich.max_output_tokens===700,'analysis.enrich output ceiling must stay micro');assert(enrich.target_output_tokens===320,'analysis.enrich semantic target must stay micro');assert(enrich.max_input_tokens===3200,'analysis.enrich input cap must stay micro');
+    assert(enrich.deadline_ms===45000,'analysis.enrich hard deadline must be 45s');
+    assert(enrich.max_retries===0,'analysis.enrich must not retry semantically during import');assert(enrich.transport_retries===0,'analysis.enrich must not wait through provider rate-limit retries during import');
+    const reportDraft=LF.ActionRegistry.action('report.generate').steps.find(function(step){return step.id==='draft';});
+    assert(reportDraft.max_input_tokens===12000,'report.generate input cap');assert(reportDraft.target_output_tokens===3600,'report.generate target');assert(reportDraft.max_output_tokens===5000,'report.generate ceiling');assert(reportDraft.deadline_ms===240000,'report.generate inference deadline');assert(reportDraft.max_retries===0,'report.generate must not automatically rerun a failed long draft');
+    const reportEdit=LF.ActionRegistry.action('report.improve').steps.find(function(step){return step.id==='edit';});
+    assert(reportEdit.max_input_tokens===12000,'report.improve input cap');assert(reportEdit.target_output_tokens===3200,'report.improve target');assert(reportEdit.max_output_tokens===5000,'report.improve ceiling');assert(reportEdit.deadline_ms===240000,'report.improve inference deadline');assert(reportEdit.max_retries===0,'report.improve must not automatically rerun a failed long edit');
   };
 
   t['Assistant uses a lightweight bounded request by default']=function(){
@@ -42,8 +46,9 @@ module.exports=function(t,LF){
     assert(prompt.includes('A Knowledge Base miss is normal'),'KB absence must not block model inference');
     const step=LF.ActionRegistry.action('design.infer').steps.find(function(item){return item.id==='infer';});
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
-    assert(step.max_output_tokens===1400&&step.target_output_tokens===550,'Design output budget should stay compact');
-    assert(step.deadline_ms===75000&&step.max_retries===0,'Design must be one bounded fast request');
+    assert(step.max_input_tokens===4500,'Design input budget should stay compact');
+    assert(step.max_output_tokens===1000&&step.target_output_tokens===420,'Design output budget should stay compact');
+    assert(step.deadline_ms===90000&&step.max_retries===0&&step.transport_retries===0,'Design must be one bounded request with no hidden provider retry');
   };
 
   t['AI settings migrate obsolete thinking flags to a validated provider-neutral policy']=function(){
@@ -66,13 +71,23 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.zai.modelSelect===false,'Z.AI uses the exact configured model instead of a remote catalogue');
     assert(LF.AIProviders.ollama.modelSelect===true,'Ollama Detect exposes discovered local models');
     assert(LF.AIProviders.lmstudio.modelSelect===true,'LM Studio Detect exposes discovered local models');
+    assert(LF.AIProviders.llamacpp.modelSelect===true,'llama.cpp Detect exposes served local models');
+    assert(LF.AIProviders.llamacpp.endpoint==='http://127.0.0.1:8080/v1','llama.cpp default endpoint');
+    assert(LF.AIProviders.llamacpp.keyRequired===false,'llama.cpp never requires a cloud API key');
+    assert(LF.AIProviders.llamacpp.safeThinkingOverrideWhenUnknown===true,'llama.cpp can apply server-level reasoning controls when model metadata is silent');
+    assert(LF.AIProviders.llamacpp.connectionTestMaxTokens===64,'llama.cpp probe has a small but reasoning-safe budget');
+    assert(LF.AIProviders.llamacpp.recommendedRuntime.parallelSlots===1,'llama.cpp LabFlow profile uses one server slot');
+    assert(LF.AIProviders.llamacpp.recommendedRuntime.contextWindow===65536,'llama.cpp LabFlow profile uses a 65K runtime context');
+    assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_budget===0,'llama.cpp reasoning-off mode forces zero reasoning budget');
     assert(LF.AIProviders.zai.skipModelCatalogue===true,'Z.AI catalogue probing is intentionally disabled');
     assert(LF.AIProviders.zai.preserveConfiguredModel===true,'Z.AI preserves the configured model');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
-    assert(LF.AIProviders.zai.rateLimit.freeFlashMinIntervalMs===0,'healthy Z.AI requests have no fixed pacing tax');
-    assert(LF.AIProviders.zai.rateLimit.retries===3,'heavy Z.AI Actions keep bounded transport retries');
+    assert(LF.AIProviders.zai.rateLimit.freeFlashMinIntervalMs===10000,'Z.AI Flash keeps conservative free-tier spacing');
+    assert(LF.AIProviders.zai.rateLimit.retries===0,'Z.AI Flash never performs a hidden automatic retry');
+    assert(LF.AIProviders.zai.rateLimit.freeFlashBreakerMs===60000,'Z.AI Flash opens a one-minute circuit after the first exhausted throttle');
+    assert(LF.AIProviders.zai.rateLimit.freeFlashBreakerMaxMs===900000,'Z.AI repeated throttles can extend the persisted circuit up to fifteen minutes');
     assert(LF.AIProviders.zai.requestDeadlineMs===180000,'Z.AI has a defensive provider-level request deadline');
     assert(LF.AIProviders.zai.rateLimit.adaptiveStepMs>0&&LF.AIProviders.zai.rateLimit.adaptiveMaxIntervalMs>=LF.AIProviders.zai.rateLimit.adaptiveStepMs,'Z.AI learns temporary spacing only after rate limits');
   };
@@ -132,12 +147,12 @@ module.exports=function(t,LF){
 
   t['older browser Action overrides inherit new source safety fields']=function(){
     const id='analysis.enrich',base=LF.ActionRegistry.action(id),oldDef=JSON.parse(JSON.stringify(base));
-    oldDef.steps=oldDef.steps.map(function(step){const copy=Object.assign({},step);delete copy.max_output_tokens;delete copy.deadline_ms;delete copy.max_retries;return copy;});
+    oldDef.steps=oldDef.steps.map(function(step){const copy=Object.assign({},step);delete copy.max_output_tokens;delete copy.deadline_ms;delete copy.max_retries;delete copy.transport_retries;return copy;});
     LF.Storage.saveActionOverride(id,{definition:oldDef});
     const effective=LF.Storage.getEffectiveAction(id),step=effective.steps.find(function(x){return x.id==='enrich';});
-    assert(step.max_output_tokens===3072,'source output target inherited');
-    assert(step.deadline_ms===90000,'source deadline inherited');
-    assert(step.max_retries===0,'source retry policy inherited');
+    assert(step.max_output_tokens===700,'source output ceiling inherited');assert(step.target_output_tokens===320,'source output target inherited');assert(step.max_input_tokens===3200,'source input cap inherited');
+    assert(step.deadline_ms===45000,'source deadline inherited');
+    assert(step.max_retries===0,'source semantic retry policy inherited');assert(step.transport_retries===0,'source transport retry policy inherited');
     LF.Storage.resetActionOverride(id);
   };
 

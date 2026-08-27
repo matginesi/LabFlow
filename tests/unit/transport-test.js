@@ -37,11 +37,11 @@ module.exports = function (t, LF) {
     assert(AI.outputLoopDetected(block+'y'.repeat(512)+block), false, 'non repeated stream');
   };
 
-  t['SSE progress exposes live output tokens and tok/s'] = async function () {
+  t['SSE progress exposes live output tokens and tok/s after a real generation window'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let progress=null;global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(){const body=new ReadableStream({start:function(controller){setTimeout(function(){controller.enqueue(encoder.encode('data: {"id":"rate-test","model":"test-model","choices":[{"delta":{"content":"abcdefgh"}}],"usage":{"completion_tokens":2}}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'));controller.close();},20);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
+    global.fetch=async function(){const body=new ReadableStream({start:function(controller){setTimeout(function(){controller.enqueue(encoder.encode('data: {"id":"rate-test","model":"test-model","choices":[{"delta":{"content":"abcd"}}]}\n\n'));},20);setTimeout(function(){controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"efgh"}}],"usage":{"completion_tokens":2}}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'));controller.close();},320);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
     LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'test-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'rate'}],stream:true,maxTokens:64}),result=await AI.send(spec,{onProgress:function(value){progress=value;}});assert(result.content,'abcdefgh','stream content');assert(progress.tokens,2,'reported completion tokens');assert(progress.estimated,false,'provider usage is exact');assert(Number(progress.rate)>0,true,'live tok/s');}
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'rate'}],stream:true,maxTokens:64}),result=await AI.send(spec,{onProgress:function(value){progress=value;}});assert(result.content,'abcdefgh','stream content');assert(progress.tokens,2,'reported completion tokens');assert(progress.estimated,false,'provider usage is exact');assert(Number(progress.rate)>0,true,'live tok/s after generation window');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -154,7 +154,7 @@ module.exports = function (t, LF) {
     const unknown=AI.connectionProbePolicy({id:'custom',connectionTestMaxTokens:128});
     assert(optional.thinkingMode,'off','connection probe disables supported thinking');
     assert(unknown.thinkingMode,'auto','unsupported provider receives no invented control');
-    [optional,unknown].forEach(function(policy){assert(policy.maxTokens,16,'connection probe clamps to tiny budget');});
+    assert(optional.maxTokens,64,'provider-specific local probe budget is bounded at 64');assert(unknown.maxTokens,64,'explicit probe budget is bounded at 64');
   };
 
   t['normal capability resolution never probes provider metadata implicitly']=async function(){
@@ -249,6 +249,69 @@ module.exports = function (t, LF) {
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false}};
     try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/v1/models','models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'model ids');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['llama.cpp model discovery reads the OpenAI-compatible models endpoint'] = async function () {
+    const oldFetch=global.fetch;let seen='';
+    global.fetch=async function(url){seen=String(url);return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'qwen-local'},{id:'nemotron-local'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'qwen-local'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,modelSelect:true}};
+    try{const result=await AI.listModels('llamacpp','http://127.0.0.1:8080/v1');assert(seen,'http://127.0.0.1:8080/v1/models','llama.cpp models URL');assert(result.models,['qwen-local','nemotron-local'],'served model ids');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+
+
+  t['llama.cpp connection probe disables reasoning even when model metadata is unknown'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let seen=null;
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
+    global.fetch=async function(url,opts){seen={url:String(url),opts:opts};return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return String(name).toLowerCase()==='x-request-id'?'llama-probe':'';},forEach:function(){}},text:async function(){return JSON.stringify({id:'chatcmpl-test',model:'local-model',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
+    LF.PromptRegistry={promptText:function(){return'Reply OK';}};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:15000,connectionTestMaxTokens:64,safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none',reasoning_budget:0,chat_template_kwargs:{enable_thinking:false}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true}}}}};
+    try{const result=await AI.testConnection();assert(result.ok,true,'llama.cpp probe succeeds');assert(seen.url,'http://127.0.0.1:8080/v1/chat/completions','llama.cpp chat endpoint');const sent=JSON.parse(seen.opts.body);assert(sent.max_tokens,64,'local probe gets enough final-answer budget');assert(sent.reasoning_effort,'none','llama.cpp probe disables reasoning effort');assert(sent.reasoning_budget,0,'llama.cpp probe forces zero reasoning budget');assert(sent.chat_template_kwargs.enable_thinking,false,'llama.cpp template thinking disabled');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+
+  t['llama.cpp reasoning-only bounded probe is reachable, not a connection failure'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
+    global.fetch=async function(){return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return String(name).toLowerCase()==='x-request-id'?'llama-reasoning-probe':'';},forEach:function(){}},text:async function(){return JSON.stringify({id:'chatcmpl-reasoning',model:'local-model',choices:[{message:{content:'',reasoning_content:'Need answer exactly OK but budget ended.'},finish_reason:'length'}],usage:{prompt_tokens:8,completion_tokens:64,total_tokens:72}});}};};
+    LF.PromptRegistry={promptText:function(){return'Reply OK';}};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:15000,connectionTestMaxTokens:64,connectionTestAcceptReasoningOnly:true,safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none',reasoning_budget:0,chat_template_kwargs:{enable_thinking:false}}}}};
+    try{const result=await AI.testConnection();assert(result.ok,true,'reasoning-only probe still proves connection');assert(result.reachable,true,'provider reachable');assert(result.probeLimited,true,'probe marked inconclusive');assert(result.finalTextVerified,false,'final text not falsely verified');assert(result.reasoningObserved,true,'reasoning detected');assert(result.finishReason,'length','finish reason preserved');assert(result.requestId,'llama-reasoning-probe','request id preserved');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['llama.cpp reasoning-off Action can override unknown model reasoning metadata safely'] = function () {
+    const provider={safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none',reasoning_budget:0,chat_template_kwargs:{enable_thinking:false}}}};
+    const policy=AI.resolveThinkingPolicy({reasoningStatus:'unknown'},'off','auto',provider);
+    assert(policy.transportMode,'off','explicit Action off policy reaches llama.cpp transport');
+    assert(policy.effective,'off','effective state is off');
+    assert(policy.capability,'unknown','model capability remains honestly unknown');
+    const body={};AI.applyThinkingMode(body,provider,policy.transportMode);
+    assert(body.reasoning_effort,'none','reasoning effort disabled');assert(body.reasoning_budget,0,'reasoning budget disabled');assert(body.chat_template_kwargs.enable_thinking,false,'template thinking disabled');
+  };
+
+
+  t['llama.cpp Detect accepts the LabFlow single-slot 65K runtime profile'] = async function () {
+    const oldFetch=global.fetch;let seen=[];
+    global.fetch=async function(url){seen.push(String(url));return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({default_generation_settings:{n_ctx:65536,params:{max_tokens:-1}},total_slots:1,chat_template_caps:{supports_reasoning_effort:true}});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,recommendedRuntime:{parallelSlots:1,contextWindow:65536}}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(seen.some(function(url){return url.indexOf('http://127.0.0.1:8080/props')===0;}),true,'llama.cpp props endpoint');assert(cap.contextWindow,65536,'single-slot runtime context is the full 65K');assert(cap.runtimeContextWindow,65536,'runtime context is retained exactly');assert(cap.totalSlots,1,'single server slot');assert(cap.runtimeProfileStatus,'match','LabFlow llama.cpp runtime profile matches');assert(cap.reasoningStatus,'optional','template reasoning effort capability');assert(cap.source,'llama.cpp /props','capability source');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['llama.cpp Detect reports multi-slot runtime mismatch without dividing n_ctx again'] = async function () {
+    const oldFetch=global.fetch;
+    global.fetch=async function(){return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({default_generation_settings:{n_ctx:32768,params:{max_tokens:-1}},total_slots:2});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,recommendedRuntime:{parallelSlots:1,contextWindow:65536}}};
+    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(cap.contextWindow,32768,'LabFlow trusts the effective per-slot n_ctx reported by llama.cpp');assert(cap.totalSlots,2,'detected slot count');assert(cap.runtimeProfileStatus,'mismatch','multi-slot runtime is flagged as different from the LabFlow profile');assert(String(cap.runtimeProfileMessage).includes('--parallel 1'),true,'mismatch explains preferred parallel setting');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -353,7 +416,9 @@ module.exports = function (t, LF) {
     assert(policy.delaysMs,[6000,15000],'bounded backoff');
     assert(AI.isRateLimitError({providerCode:'1305'}),true,'provider code 1305');
     assert(AI.isRateLimitError({status:429}),true,'HTTP 429');
-    assert(AI.isRateLimitError({providerCode:'1310'}),false,'quota exhaustion is distinct');
+    assert(AI.isRateLimitError({providerCode:'1310'}),true,'quota exhaustion is still a provider limit');
+    assert(AI.isRetryableRateLimitError({providerCode:'1310'}),false,'quota exhaustion is not retryable');
+    assert(AI.isRetryableRateLimitError({providerCode:'1312'}),true,'temporary model capacity is retryable');
     assert(AI.ratePolicy({settings:{provider:'custom',model:'x'},provider:{},model:'x'}).retries,1,'default transport retry is finite');
   };
 
@@ -365,6 +430,17 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
+  t['Z.AI 1305 opens a provider-wide cooldown that blocks the next Action request'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;global.location={protocol:'https:',origin:'https://labflow.test'};
+    LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:0,delaysMs:[1],maxDelayMs:10,freeFlashMinIntervalMs:0,freeFlashBreakerMs:60000,freeFlashBreakerMaxMs:900000}}};
+    AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});
+    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};};
+    try{const first=await AI.testConnection();assert(first.rateLimited,true,'probe rate limited');assert(calls,1,'probe made one HTTP request');const status=AI.rateStatus({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});assert(status.circuitOpen,true,'shared circuit open');const spec=AI.buildRequest({messages:[{role:'user',content:'should not be sent'}],stream:false,maxTokens:64});let blocked=null;try{await AI.send(spec,{label:'post-probe-action'});}catch(err){blocked=err;}assert(blocked&&blocked.code,'MODEL_RATE_LIMIT_COOLDOWN','next request blocked locally');assert(calls,1,'no second HTTP request');}
+    finally{AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['connection test reports Z.AI rate limiting immediately without retry or pacing'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenBody=null,progress=[];
     global.location={protocol:'https:',origin:'https://labflow.test'};
@@ -372,8 +448,9 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
     LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500}}};
+    AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});
     try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(out.rateLimitRetries,0,'no retries');assert(progress.some(function(p){return p.transportState==='provider_pacing'||p.transportState==='rate_limit_wait';}),false,'no pacing or backoff progress');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+    finally{AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['transport retries the identical request once after Z.AI 1305 and then succeeds'] = async function () {

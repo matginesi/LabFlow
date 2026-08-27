@@ -311,11 +311,13 @@ While running:
 
 On failure:
 
-- AI checkpoint retries automatically after 5 seconds;
-- retries once more after 10 seconds;
-- when a bounded text work unit reaches the provider output limit, its enabled retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
-- after those bounded retries, **Retry checkpoint** is available;
-- retry resumes the failed checkpoint, not the completed checkpoints.
+- AI checkpoint retry occurs only when the Action declares `max_retries > 0`;
+- enabled semantic retries use bounded delays and repeat only the failed work unit;
+- provider transport retry is independently bounded and may be disabled entirely;
+- when a bounded text work unit reaches the provider output limit, an enabled semantic retry rewrites that whole unit with a smaller coherent word range; the cut-off fragment is not stored;
+- after declared retries, **Retry checkpoint** may be available;
+- provider cooldown/rate-limit failure stops multi-request sequences instead of advancing through more work units;
+- retry resumes the failed/pending work, not completed checkpoints.
 
 There is no manual Continue gate between successful checkpoints.
 
@@ -537,7 +539,7 @@ Existing source or researcher values are never silently overwritten. Accepted AI
 
 **Suggest all with AI** is a convenience operation, not a separate Design workflow. It selects only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion, then sends bounded batches of at most three IDs. If a provider truncates a batch response, that batch is retried one experiment at a time while completed suggestions remain saved.
 
-Each successful experiment is stored immediately. If the provider omits or fails one experiment, that experiment receives local `Error` state while successful suggestions remain available. If a whole provider request fails, only that unfinished batch becomes retryable. Stop preserves completed work. Running Suggest all again later resumes the experiments that still need suggestions; it never asks the user to restart or discard accepted work.
+Each successful experiment is stored immediately. A content/validation failure may mark only the affected experiment as `Error`, while successful suggestions remain available. A provider throttle is different: on the first HTTP 429 / Z.AI `1305`, the whole sequence pauses immediately, the current untouched batch returns to pending state, and **no later batch is requested in that run**. Completed suggestions remain saved. Running **Continue suggestions** later resumes only experiments that still need suggestions; it never asks the user to restart or discard accepted work.
 
 ---
 
@@ -945,7 +947,7 @@ The AI transport resolves model capabilities and caches them by provider/endpoin
 
 For Report/Paper and other word-sized work units, a known provider or researcher ceiling is applied to `target_words`, `min_words` and `max_words` before the Context Pack is built. If a provider still returns `finish_reason: length` (for example because hidden reasoning consumed part of the allowance), the declared bounded retry requests one complete shorter rewrite instead of resending the same impossible target or storing partial prose.
 
-Each AI checkpoint declares whether it needs thinking (`off`, `auto` or `on`). Settings' `Follow each Action` mode preserves that policy; force Off/On is an explicit global override. The transport reconciles it with model capability (`none`, `optional`, `required`, `unknown`): it does not enable thinking on a non-reasoning model or disable a reasoning-required model, and it only applies fields declared by the active provider adapter. Local LM Studio metadata uses the actually loaded instance. Provider discovery runs only from explicit **Detect**. Connection testing is a separate minimal request and never changes the selected model; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
+Each AI checkpoint declares whether it needs thinking (`off`, `auto` or `on`). Settings' `Follow each Action` mode preserves that policy; force Off/On is an explicit global override. The transport reconciles it with model capability (`none`, `optional`, `required`, `unknown`): it does not enable thinking on a non-reasoning model or disable a reasoning-required model, and it only applies fields declared by the active provider adapter. Local LM Studio metadata uses the actually loaded instance; Ollama uses native model metadata when available, while llama.cpp uses its OpenAI-compatible served-model catalogue and conservative Action caps. Provider discovery runs only from explicit **Detect**. Connection testing is a separate minimal request and never changes the selected model; opening Settings and editing fields cause no provider request. The complete compatibility contract is documented in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md).
 
 Token optimization remains conservative and Action-specific. Compact scientific Actions use lower expected targets; complete Design JSON and document blocks retain generous hard ceilings. Context construction removes duplicate evidence aliases before trimming unique facts, and prompts state each constraint once. Speed improvements must not remove evidence, reduce the requested scientific depth, store truncated output or weaken deterministic validation.
 

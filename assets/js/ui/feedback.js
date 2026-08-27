@@ -374,7 +374,7 @@
       outputState.textContent = activity.status === 'error'
         ? 'Full diagnostic detail'
         : activity.status === 'complete' ? 'Complete response'
-          : activity.stream && activity.stream.active ? 'Streaming · ' + (activity.stream.events || 0) + ' events'
+          : activity.stream && activity.stream.active ? 'Streaming · ' + Math.round(Number(activity.stream.tokens)||0) + ' output tok'
             : 'Waiting for response';
     }
   }
@@ -394,11 +394,12 @@
     const percent = Math.round(used * 100);
     const state = stream.status === 'complete' ? 'Stream complete'
       : stream.status === 'interrupted' ? 'Stream interrupted'
-        : stream.events ? 'Receiving provider output' : 'Waiting for first byte';
+        : tokens > 0 ? 'Receiving provider output' : 'Waiting for first token';
     byId('activityStreamState').textContent = state;
     byId('activityStreamRate').textContent = Number(stream.rate) > 0 ? (stream.estimated === false ? '' : '~') + Number(stream.rate).toFixed(1) + ' tok/s' : 'rate pending';
-    byId('activityStreamEvents').textContent = String(Math.max(0, Number(stream.events) || 0));
-    byId('activityStreamBytes').textContent = formatBytes(stream.bytes);
+    const inputEl=byId('activityStreamInput'),ceilingEl=byId('activityStreamCeiling');
+    if(inputEl)inputEl.textContent=Number(stream.inputTokens)>0?'~'+Math.round(Number(stream.inputTokens)).toLocaleString()+' tok':'—';
+    if(ceilingEl)ceilingEl.textContent=budget?Math.round(budget).toLocaleString()+' tok':'—';
     byId('activityStreamTtft').textContent = Number.isFinite(Number(stream.ttftMs)) ? Math.round(Number(stream.ttftMs)) + ' ms' : 'waiting';
     byId('activityStreamTokens').textContent = (stream.estimated === false ? '' : '~') + Math.round(tokens) + (target ? ' / ~' + target + ' target' : budget ? ' / ' + budget : '') + (budget&&target&&budget!==target?' · max '+budget:'') + ' tok';
     const bar = byId('activityStreamBar');

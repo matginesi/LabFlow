@@ -25,7 +25,7 @@
     document.documentElement.dataset.theme = next;
     document.documentElement.style.colorScheme = next === 'light' ? 'light' : 'dark';
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = next === 'light' ? '#f7f9fc' : '#0b141d';
+    if (meta) meta.content = next === 'light' ? '#f8faf9' : '#0b141d';
     if (persist !== false && LF.Storage && LF.Storage.saveUiSettings) {
       LF.Storage.saveUiSettings({theme:next});
     }

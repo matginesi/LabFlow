@@ -1,41 +1,63 @@
 ---
 title: Research workflow
 section: Researcher guide
-summary: Understand what each LabFlow step owns, what it produces, and when researcher review is required.
-order: 2
+summary: Understand what each LabFlow step owns, what it produces, and where researcher review is required.
+order: 3
 ---
 
 # Research workflow
 
-The workflow is intentionally linear. Each step reads the same Working Copy and adds a reviewed result without creating a second scientific state.
+The workflow is intentionally linear and uses one shared experiment state.
 
-| Step | Researcher goal | Authoritative owner |
-|---|---|---|
-| Upload & Review | Inspect source evidence and corrections | Working Copy + deterministic findings |
-| Results | Evaluate measurements and rankings | Deterministic analysis |
-| Design | Complete solution chemistry and device stack | Researcher-confirmed Design |
-| Report | Write the current laboratory report or paper | Markdown editor |
-| NOMAD | Validate and package the experiment | Canonical → NOMAD mapping |
+| Step | Researcher goal | Authoritative owner | AI role |
+|---|---|---|---|
+| Upload & Review | Inspect source evidence and corrections | Working Copy + deterministic findings | optional semantic enrichment / ambiguity proposals |
+| Results | Evaluate measurements and rankings | deterministic analysis | optional interpretation only |
+| Design | Complete solution chemistry and device stack | researcher-confirmed Design | suggestions for missing fields |
+| Report | Write Lab Report / Scientific Paper | current Markdown editor | bounded drafting/editing |
+| NOMAD | Validate and package experiment metadata | deterministic Canonical → NOMAD mapping | explanation only, never readiness |
 
-## Source and Working Copy
+## One state, several projections
 
 ```mermaid
 flowchart TD
-  SOURCE[Immutable ZIP source] --> COPY[One editable Working Copy]
+  SOURCE[Immutable source] --> COPY[Working Copy]
   COPY --> CANONICAL[Canonical Store]
-  CANONICAL --> RESULTS[Deterministic Results]
+  CANONICAL --> REVIEW[Review]
+  CANONICAL --> RESULTS[Results]
   CANONICAL --> DESIGN[Design]
-  CANONICAL --> REPORT[Report & Paper]
-  CANONICAL --> NOMAD[NOMAD mapping]
+  CANONICAL --> REPORT[Report]
+  CANONICAL --> NOMAD[NOMAD]
 ```
 
-The Canonical Store is a semantic index over the Working Copy. It adds stable identities, aliases, relations, and compact evidence references; it is not another editable experiment.
+Pages do not own separate scientific copies. A reviewed change to the Working Copy is therefore visible wherever that field matters.
 
-## Review decisions
+## Upload & Review
 
-LabFlow separates deterministic findings, safe corrections, AI ambiguity proposals, and unresolved questions. AI proposals are never applied silently. Code validates every proposal target before the researcher can apply it.
+The first step establishes provenance and current data quality. Import is deterministic-first and remains usable without AI.
 
-## Save and export
+Review distinguishes safe deterministic corrections from ambiguous interpretations. Apply only changes whose evidence and target you understand.
 
-**Autosave** restores the current browser-local Working Copy. **Save** marks an explicit checkpoint. **Export ZIP** creates a durable package. Report, Paper, and NOMAD exports are derived artifacts and never overwrite the original ZIP.
+## Results
 
+Results reuse deterministic calculations from the current revision. Filters and charts change the view, not the underlying measurements. AI interpretation is read-only prose layered over these values.
+
+## Design
+
+Design is directly editable. AI suggestions are optional proposals and never silently overwrite known fields.
+
+Bulk suggestion is sequential/bounded. A provider throttle stops the sequence immediately and preserves completed proposals instead of converting every remaining experiment into an error.
+
+## Report
+
+Report and Paper are separate documents with independent Markdown and figure selections. The editor is the textual source of truth. Export renders the current text; it does not ask AI to regenerate it.
+
+## NOMAD
+
+The current Canonical Store is mapped deterministically to NOMAD. Required missing mappings block readiness. Changes to relevant scientific data invalidate stale staging.
+
+## Save, autosave and export
+
+**Autosave** provides browser recovery through IndexedDB. **Save** marks an explicit checkpoint revision. **Export ZIP** creates a durable LabFlow package.
+
+Derived PDF/DOCX/NOMAD exports do not overwrite the source ZIP and do not silently mark later Working Copy edits saved.

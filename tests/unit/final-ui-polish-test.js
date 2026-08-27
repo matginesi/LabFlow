@@ -5,6 +5,7 @@ module.exports=function(t){
   const root=path.resolve(__dirname,'../..');
   const results=fs.readFileSync(path.join(root,'assets/js/pages/results-page.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+  const tokensCss=fs.readFileSync(path.join(root,'assets/css/tokens.css'),'utf8');
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
   const settingsPage=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
   const designPage=fs.readFileSync(path.join(root,'assets/js/pages/design-page.js'),'utf8');
@@ -40,7 +41,7 @@ module.exports=function(t){
   t['Detect provider metadata uses the Action totem lifecycle']=function(){
     assert(settings.includes("title:'Detect model capabilities'"),true,'detect totem title');
     assert(settings.includes("stepId:'capability'"),true,'capability checkpoint');
-    assert(settings.includes("activity.activityFinish({message:'Provider metadata detection completed.'"),true,'detect terminal totem');
+    assert(settings.includes('activity.activityFinish({message:')&&settings.includes('Provider metadata detection completed.')&&settings.includes('runtime differs from the LabFlow profile'),true,'detect terminal totem supports normal and llama.cpp profile-mismatch completion');
   };
 
   t['Provider detection runs only from explicit Detect; connection test stays minimal']=function(){
@@ -121,6 +122,19 @@ module.exports=function(t){
     assert(html.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog module is loaded');
     const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
     assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
+  };
+
+
+  t['Light theme keeps small text and semantic colors readable on bright surfaces']=function(){
+    const light=(tokensCss.match(/:root\[data-theme="light"\]\s*\{([\s\S]*?)\n\}/)||[])[1]||'';
+    function token(name){const m=light.match(new RegExp('--'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*:\\s*(#[0-9a-fA-F]{6})'));return m&&m[1];}
+    function luminance(hex){const c=[1,3,5].map(function(i){const v=parseInt(hex.slice(i,i+2),16)/255;return v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+    function contrast(fg,bg){const a=luminance(fg),b=luminance(bg);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);}
+    const pairs=[
+      ['text','surface'],['text-muted','surface'],['text-faint','surface'],['accent','surface'],['success','surface'],['warning','surface'],['danger','surface'],['info','surface'],['ai','surface'],
+      ['sidebar-link','sidebar-bg'],['sidebar-muted','sidebar-bg'],['sidebar-label','sidebar-bg'],['sidebar-foot','sidebar-bg'],['topbar-muted','topbar-bg'],['assistant-muted','assistant-bg'],['code-muted','code-bg'],['json-key','json-bg'],['json-string','json-bg'],['json-number','json-bg'],['json-literal','json-bg'],['json-punct','json-bg']
+    ];
+    pairs.forEach(function(pair){const fg=token(pair[0]),bg=token(pair[1]);assert(!!fg&&!!bg,true,'light tokens '+pair.join('/'));assert(contrast(fg,bg)>=4.5,true,'light contrast '+pair.join('/')+' = '+contrast(fg,bg).toFixed(2));});
   };
 
   t['Action lifecycle updates do not rebuild the active page editor']=function(){

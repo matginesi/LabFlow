@@ -3,10 +3,10 @@
   "type": "HYBRID",
   "category": "analysis",
   "role": "automatic",
-  "title": "Enrich experiment brief",
-  "short_title": "Experiment brief",
-  "purpose": "Add a compact scientific interpretation layer to the deterministic Experiment Brief using experiment facts and a small relevant Knowledge Base lookup.",
-  "strategy": "Facts first. Retrieved literature may support labelled hypotheses and recommended checks, but never becomes evidence about the experiment or changes source data and deterministic results.",
+  "title": "Enrich experiment context",
+  "short_title": "Experiment context",
+  "purpose": "Add only the scientific meaning that deterministic analysis cannot establish directly: likely objective, variables, useful comparisons, labelled hypotheses and missing metadata.",
+  "strategy": "Deterministic facts first. This is an optional semantic context layer, never a second analysis pass: it does not recalculate metrics, change source data, or decide scientific truth. Automatic import enrichment is deliberately small and fail-fast.",
   "output": "json",
   "mutation_scope": "",
   "policies": [
@@ -21,13 +21,15 @@
       "output": "json",
       "schema": "experiment_brief",
       "thinking": "off",
-      "timeout_ms": 180000,
+      "timeout_ms": 45000,
       "weight": 0.85,
-      "max_output_tokens": 3072,
-      "deadline_ms": 90000,
+      "max_output_tokens": 700,
+      "deadline_ms": 45000,
       "max_retries": 0,
-      "min_output_tokens": 500,
-      "target_output_tokens": 1100
+      "min_output_tokens": 100,
+      "target_output_tokens": 320,
+      "transport_retries": 0,
+      "max_input_tokens": 3200
     },
     {
       "id": "store",
@@ -43,7 +45,7 @@
   "input": {
     "context": "brief",
     "knowledge": {
-      "limit": 6,
+      "limit": 2,
       "kinds": [
         "material",
         "solution",

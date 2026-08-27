@@ -1,0 +1,2499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JV Curve Analyzer - Solar Cell Hysteresis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@sgratzl/chartjs-chart-boxplot@4.2.5"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-4 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-white mb-1">JV Curve Analyzer</h1>
+                    <p class="text-blue-100 text-sm">Solar Cell Analysis</p>
+                </div>
+                
+                <!-- Upload and Mismatch Controls (shown after data loaded) -->
+                <div id="headerControls" class="hidden flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <label for="zipFileHeader" class="cursor-pointer bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg flex items-center space-x-2 transition">
+                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <span class="text-sm font-medium text-white">Change ZIP</span>
+                        </label>
+                        <input type="file" id="zipFileHeader" accept=".zip" class="hidden" />
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 border-l border-white/20 pl-4">
+                        <label class="text-white font-medium text-sm">Mismatch:</label>
+                        <input type="number" id="mismatchFactorHeader" value="1.0" step="0.01" min="0.1" max="2.0" 
+                               class="border-0 rounded px-2 py-1 w-16 text-sm">
+                        <button id="applyMismatchHeader" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-blue-50 text-sm font-medium transition">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section (initial) -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-4" id="uploadSection">
+            <h2 class="text-lg font-semibold mb-3 text-gray-800">Upload Data</h2>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition">
+                <input type="file" id="zipFile" accept=".zip" class="hidden" />
+                <label for="zipFile" class="cursor-pointer">
+                    <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-600">
+                        <span class="font-semibold text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">ZIP file containing JV measurement data</p>
+                </label>
+            </div>
+            <div id="progress" class="mt-3 hidden">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-xs text-gray-600 mt-1.5"></p>
+            </div>
+        </div>
+
+        <!-- Results Tabs -->
+        <div class="bg-white rounded-lg shadow-md p-4 mb-4 hidden" id="resultsSection">
+            
+            <!-- Tabs -->
+            <div class="border-b border-gray-200 mb-3">
+                <nav class="-mb-px flex space-x-6">
+                    <button class="tab-button border-b-2 border-blue-600 py-2 px-1 text-blue-600 font-medium text-sm flex items-center space-x-1" data-tab="all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        <span>All</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="best">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                        <span>Best Measures</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="anomalies" style="display: none;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span>Anomalies</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="top10">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        <span>Top 10</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="top10ref">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>Top REF</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="charts">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                        <span>Charts</span>
+                    </button>
+                    <button class="tab-button border-b-2 border-transparent py-2 px-1 text-gray-500 hover:text-gray-700 font-medium text-sm flex items-center space-x-1" data-tab="boxplot">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        <span>Box Plot</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content: All Measurements -->
+            <div id="tab-all" class="tab-content">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" id="searchAll" placeholder="Search..." class="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <p class="text-xs text-gray-600">Total: <span id="totalCount" class="font-semibold">0</span> / <span id="totalCountFiltered" class="font-semibold">0</span></p>
+                    </div>
+                    <button id="exportAllCSV" class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center space-x-1.5 text-sm transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm" id="allTable">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('all', 'name')">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Measurement</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('all', 'effRV')">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Eff RV (%)</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('all', 'effFW')">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Eff FW (%)</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('all', 'hysteresis')">
+                                    <div class="flex items-center space-x-1">
+                                        <span>Hysteresis</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="allTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Best Measures -->
+            <div id="tab-best" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="relative">
+                            <input type="text" id="searchBest" placeholder="Search cells..." class="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-2.5 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <select id="bestGroupFilter" class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="all">Mostra tutte</option>
+                            <option value="bestOfGroup">Best of Group</option>
+                        </select>
+                        <p class="text-xs text-gray-600">Showing <span id="bestFilteredCount" class="font-semibold">0</span> / <span id="bestTotalCount" class="font-semibold">0</span></p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button id="addBestToCharts" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            <span>Add to Charts</span>
+                        </button>
+                        <button id="exportBestCSV" class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    <input type="checkbox" id="selectAllBest" class="rounded" title="Select all">
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cell</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Best Eff (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff RV (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff FW (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hysteresis</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="bestMeasuresTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Anomalies -->
+            <div id="tab-anomalies" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <div>
+                        <p class="text-sm text-gray-600 font-medium">Measurements with potentially misaligned JV curves</p>
+                        <p class="text-xs text-gray-500 mt-1">Criteria: |Hysteresis| > 30%, JSC difference > 20%, or Eff difference > 15%</p>
+                        <p class="text-xs text-gray-600 mt-1">Found: <span id="anomaliesCount" class="font-semibold text-red-600">0</span> anomalies</p>
+                    </div>
+                    <button id="exportAnomaliesCSV" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg hover:bg-orange-700 flex items-center space-x-1.5 text-sm transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span>Export CSV</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cell</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff RV (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff FW (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hysteresis</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">JSC RV</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">JSC FW</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">JSC Diff (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Issue</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="anomaliesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Top 10 Non-REF -->
+            <div id="tab-top10" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-sm text-gray-600 font-medium">Best 10 cells (excluding REF)</p>
+                    <div class="flex space-x-2">
+                        <button id="addTop10ToCharts" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            <span>Add to Charts</span>
+                        </button>
+                        <button id="exportTop10CSV" class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    <input type="checkbox" id="selectAllTop10" class="rounded" title="Select all">
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cell</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff RV (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff FW (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hysteresis</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="top10TableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Top 10 REF -->
+            <div id="tab-top10ref" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-sm text-gray-600 font-medium">Best 10 REF cells</p>
+                    <div class="flex space-x-2">
+                        <button id="addTop10RefToCharts" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            <span>Add to Charts</span>
+                        </button>
+                        <button id="exportTop10RefCSV" class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center space-x-1.5 text-sm transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                    <input type="checkbox" id="selectAllTop10Ref" class="rounded" title="Select all">
+                                </th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cell</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff RV (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Eff FW (%)</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hysteresis</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200" id="top10RefTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Content: Charts -->
+            <div id="tab-charts" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                    <!-- Selection Panel -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-800">Select Cells</h3>
+                                    <p class="text-xs text-gray-600">Selected: <span id="selectedCount" class="font-semibold">0</span></p>
+                                </div>
+                                <div class="flex space-x-1">
+                                    <button id="selectAll" class="text-blue-600 hover:text-blue-700" title="Select all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                    </button>
+                                    <button id="clearSelection" class="text-gray-500 hover:text-gray-700" title="Clear all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Search -->
+                            <div class="relative mb-2">
+                                <input type="text" id="searchCharts" placeholder="Search..." class="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <svg class="w-3 h-3 text-gray-400 absolute left-2 top-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            
+                            <!-- Selection List -->
+                            <div class="max-h-96 overflow-y-auto space-y-1" id="chartSelectionList">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Display Area -->
+                    <div class="lg:col-span-3">
+                        <!-- Empty State -->
+                        <div id="chartsEmptyState" class="flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path>
+                                </svg>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900">No charts selected</h3>
+                                <p class="mt-1 text-xs text-gray-500">Select cells from the list to view JV curves</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Container -->
+                        <div id="chartsContainer" class="hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <p class="text-xs text-gray-600"><span id="chartsDisplayCount" class="font-semibold">0</span> chart(s) displayed</p>
+                                    <select id="viewMode" class="text-xs border border-gray-300 rounded px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500">
+                                        <option value="grid">Grid View</option>
+                                        <option value="overlay">Overlay View</option>
+                                    </select>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button id="exportChartsPNG" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span>Export PNG</span>
+                                    </button>
+                                    <button id="exportAllCharts" class="bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 flex items-center space-x-1.5 text-sm transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        <span>Export All ZIP</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Grid View -->
+                            <div id="gridView">
+                                <div id="chartsGrid" class="grid gap-3">
+                                    <!-- Charts will be added here dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Overlay View -->
+                            <div id="overlayView" class="hidden">
+                                <canvas id="overlayChart" width="900" height="600"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Overlay -->
+            <div id="tab-overlay" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                    <!-- Curve Selection Panel -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div class="mb-2">
+                                <h3 class="text-sm font-semibold text-gray-800">Selected Cells</h3>
+                                <p class="text-xs text-gray-600">Control which curves to display</p>
+                            </div>
+                            
+                            <!-- Selected Cells List with FW/RV controls -->
+                            <div class="max-h-96 overflow-y-auto space-y-2" id="overlaySelectionList">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                            
+                            <div class="mt-3 pt-3 border-t border-gray-300 text-xs text-gray-500">
+                                <p>💡 Tip: Select cells in Charts tab first</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Overlay Chart Display Area -->
+                    <div class="lg:col-span-3">
+                        <!-- Empty State -->
+                        <div id="overlayEmptyState" class="flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900">No cells selected</h3>
+                                <p class="mt-1 text-xs text-gray-500">Go to Charts tab and select cells to compare</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Overlay Chart Container -->
+                        <div id="overlayChartContainer" class="hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <p class="text-xs text-gray-600"><span id="overlayDisplayCount" class="font-semibold">0</span> curve(s) displayed</p>
+                                <button id="exportOverlayPNG" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <span>Export PNG</span>
+                                </button>
+                            </div>
+                            
+                            <div class="bg-white rounded-lg border border-gray-200 p-3">
+                                <canvas id="overlayChart" width="900" height="600"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Box Plot -->
+            <div id="tab-boxplot" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
+                    <!-- Group Selection Panel -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                            <div class="mb-2">
+                                <h3 class="text-sm font-semibold text-gray-800">Select Groups & Cells</h3>
+                                <p class="text-xs text-gray-600">Choose which groups and cells to compare</p>
+                            </div>
+                            
+                            <!-- Search Groups -->
+                            <div class="relative mb-2">
+                                <input type="text" id="searchBoxPlotGroups" placeholder="Search groups..." class="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            </div>
+                            
+                            <!-- Groups List -->
+                            <div class="max-h-96 overflow-y-auto space-y-1.5" id="boxPlotGroupsList">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                            
+                            <div class="mt-3 pt-3 border-t border-gray-300">
+                                <button id="updateBoxPlots" class="w-full bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs font-medium transition">
+                                    Update Charts
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Box Plots Display Area -->
+                    <div class="lg:col-span-3">
+                        <!-- Empty State -->
+                        <div id="boxPlotEmptyState" class="flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 p-12">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                <h3 class="mt-2 text-sm font-medium text-gray-900">No data selected</h3>
+                                <p class="mt-1 text-xs text-gray-500">Select groups and cells on the left to generate box plots</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Box Plot Charts Container -->
+                        <div id="boxPlotChartsContainer" class="hidden">
+                            <div class="flex justify-between items-center mb-3">
+                                <p class="text-xs text-gray-600">Comparing <span id="boxPlotGroupCount" class="font-semibold">0</span> group(s) with <span id="boxPlotCellCount" class="font-semibold">0</span> cell(s)</p>
+                                <div class="flex space-x-2">
+                                    <button id="exportBoxPlotsExcel" class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 flex items-center space-x-1.5 text-sm transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        <span>Export Excel</span>
+                                    </button>
+                                    <button id="exportBoxPlotsPNG" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-1.5 text-sm transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <span>Export PNG</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 4 Box Plot Charts in 2x2 Grid -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                                    <canvas id="boxPlotVoc" width="450" height="300"></canvas>
+                                </div>
+                                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                                    <canvas id="boxPlotJsc" width="450" height="300"></canvas>
+                                </div>
+                                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                                    <canvas id="boxPlotFF" width="450" height="300"></canvas>
+                                </div>
+                                <div class="bg-white rounded-lg border border-gray-200 p-3">
+                                    <canvas id="boxPlotEff" width="450" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allData = [];
+        let bestMeasuresData = [];
+        let anomalousData = [];
+        let top10Data = [];
+        let top10RefData = [];
+        let zipData = null;
+        let currentChart = null;
+        let mismatchFactor = 1.0;
+        let selectedCells = [];
+        let gridCharts = [];
+        let sortState = { column: null, direction: 'asc' };
+        let filteredData = [];
+        let filteredBestData = [];
+        let curveSelection = {}; // Track which curves (FW/RV) are selected for each cell {cellName: {fw: bool, rv: bool}}
+        let overlayChart = null;
+        let boxPlotGroups = {}; // {groupName: {selected: bool, cells: {cellName: bool}}}
+        let boxPlotCharts = {}; // Store chart instances
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tab = button.dataset.tab;
+                
+                // Update button styles
+                document.querySelectorAll('.tab-button').forEach(b => {
+                    b.classList.remove('border-blue-600', 'text-blue-600');
+                    b.classList.add('border-transparent', 'text-gray-500');
+                });
+                button.classList.remove('border-transparent', 'text-gray-500');
+                button.classList.add('border-blue-600', 'text-blue-600');
+                
+                // Show/hide content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            });
+        });
+
+        // File upload handlers
+        const handleFileUpload = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            showProgress('Loading ZIP file...');
+            
+            try {
+                const zip = await JSZip.loadAsync(file);
+                zipData = zip;
+                await processZipData(zip);
+            } catch (error) {
+                alert('Error processing ZIP file: ' + error.message);
+                console.error(error);
+            }
+            
+            hideProgress();
+        };
+        
+        document.getElementById('zipFile').addEventListener('change', handleFileUpload);
+        document.getElementById('zipFileHeader').addEventListener('change', handleFileUpload);
+
+        async function processZipData(zip) {
+            showProgress('Processing data...');
+            
+            // Find and parse JV Summary files
+            let fwSummary = null;
+            let rvSummary = null;
+            
+            for (const [path, file] of Object.entries(zip.files)) {
+                if (path.includes('JV Summary_Parameters FW.txt')) {
+                    fwSummary = await file.async('string');
+                } else if (path.includes('JV Summary_Parameters RV.txt')) {
+                    rvSummary = await file.async('string');
+                }
+            }
+            
+            if (!fwSummary || !rvSummary) {
+                alert('Could not find JV Summary files in ZIP');
+                return;
+            }
+            
+            // Parse summary files
+            const fwData = parseSummary(fwSummary);
+            const rvData = parseSummary(rvSummary);
+            
+            // Calculate hysteresis
+            allData = calculateHysteresis(fwData, rvData);
+            
+            // Calculate top 10
+            calculateTop10();
+            
+            // Show results and header controls
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('headerControls').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+            
+            updateUI();
+        }
+
+        function parseSummary(content) {
+            const lines = content.split('\n');
+            const data = [];
+            let headerFound = false;
+            
+            for (const line of lines) {
+                if (line.startsWith('File\t')) {
+                    headerFound = true;
+                    continue;
+                }
+                
+                if (headerFound && line.trim()) {
+                    const parts = line.split('\t');
+                    if (parts.length >= 10) {
+                        data.push({
+                            file: parts[0].trim(),
+                            voc: parseFloat(parts[1]),
+                            jsc: parseFloat(parts[2]),
+                            vmpp: parseFloat(parts[3]),
+                            jmpp: parseFloat(parts[4]),
+                            pmpp: parseFloat(parts[5]),
+                            rs: parseFloat(parts[6]),
+                            rsh: parseFloat(parts[7]),
+                            ff: parseFloat(parts[8]),
+                            eff: parseFloat(parts[9])
+                        });
+                    }
+                }
+            }
+            
+            return data;
+        }
+
+        function calculateHysteresis(fwData, rvData) {
+            const result = [];
+            
+            for (const rv of rvData) {
+                const fw = fwData.find(f => f.file === rv.file);
+                if (fw && isFinite(rv.eff) && isFinite(fw.eff) && rv.eff > 0) {
+                    const hysteresis = (rv.eff - fw.eff) / rv.eff;
+                    result.push({
+                        name: rv.file,
+                        effRV: rv.eff,
+                        effFW: fw.eff,
+                        hysteresis: hysteresis,
+                        jscRV: rv.jsc,
+                        jscFW: fw.jsc,
+                        vocRV: rv.voc,
+                        vocFW: fw.voc,
+                        ffRV: rv.ff,
+                        ffFW: fw.ff
+                    });
+                }
+            }
+            
+            // Sort by hysteresis
+            result.sort((a, b) => a.hysteresis - b.hysteresis);
+            
+            return result;
+        }
+
+        function detectAnomalies() {
+            const anomalies = [];
+            
+            for (const item of allData) {
+                const issues = [];
+                
+                // Check for high hysteresis (> 30%)
+                if (Math.abs(item.hysteresis) > 0.30) {
+                    issues.push('High Hysteresis');
+                }
+                
+                // Check for JSC difference (> 20%)
+                const jscDiff = Math.abs(item.jscRV - item.jscFW);
+                const jscMax = Math.max(Math.abs(item.jscRV), Math.abs(item.jscFW));
+                const jscDiffPercent = jscMax > 0 ? (jscDiff / jscMax) * 100 : 0;
+                if (jscDiffPercent > 20) {
+                    issues.push('JSC Mismatch');
+                }
+                
+                // Check for efficiency difference (> 15%)
+                const effDiff = Math.abs(item.effRV - item.effFW);
+                const effMax = Math.max(item.effRV, item.effFW);
+                const effDiffPercent = effMax > 0 ? (effDiff / effMax) * 100 : 0;
+                if (effDiffPercent > 15) {
+                    issues.push('Eff Mismatch');
+                }
+                
+                if (issues.length > 0) {
+                    anomalies.push({
+                        ...item,
+                        jscDiffPercent: jscDiffPercent,
+                        issue: issues.join(', ')
+                    });
+                }
+            }
+            
+            // Sort by hysteresis magnitude (most anomalous first)
+            anomalies.sort((a, b) => Math.abs(b.hysteresis) - Math.abs(a.hysteresis));
+            
+            anomalousData = anomalies;
+        }
+
+        function calculateBestMeasures() {
+            // Group all measurements by cell name
+            const cellMap = new Map();
+            
+            for (const item of allData) {
+                const cellName = extractCellName(item.name);
+                
+                if (!cellMap.has(cellName)) {
+                    cellMap.set(cellName, []);
+                }
+                cellMap.get(cellName).push(item);
+            }
+            
+            // For each cell, find the measurement with the highest eff (max between effRV and effFW)
+            const result = [];
+            
+            for (const [cellName, measurements] of cellMap) {
+                let bestMeasurement = null;
+                let bestEff = -Infinity;
+                let bestFrom = '';
+                
+                for (const measurement of measurements) {
+                    // Find max eff between RV and FW for this measurement
+                    const maxEff = Math.max(measurement.effRV, measurement.effFW);
+                    const from = measurement.effRV >= measurement.effFW ? 'RV' : 'FW';
+                    
+                    if (maxEff > bestEff) {
+                        bestEff = maxEff;
+                        bestMeasurement = measurement;
+                        bestFrom = from;
+                    }
+                }
+                
+                if (bestMeasurement) {
+                    result.push({
+                        cellName: cellName,
+                        bestEff: bestEff,
+                        from: bestFrom,
+                        ...bestMeasurement
+                    });
+                }
+            }
+            
+            // Sort by best eff descending
+            result.sort((a, b) => b.bestEff - a.bestEff);
+            
+            bestMeasuresData = result;
+        }
+
+        function calculateTop10() {
+            // Separate REF and non-REF
+            const nonRef = allData.filter(d => !d.name.includes('REF'));
+            const ref = allData.filter(d => d.name.includes('REF'));
+            
+            // Group by cell and get best measurement per cell
+            const groupBest = (data) => {
+                const cellMap = new Map();
+                
+                for (const item of data) {
+                    const cellName = extractCellName(item.name);
+                    if (!cellMap.has(cellName) || item.effRV > cellMap.get(cellName).effRV) {
+                        cellMap.set(cellName, { ...item, cellName });
+                    }
+                }
+                
+                const result = Array.from(cellMap.values());
+                // Sort by effRV desc, then hysteresis abs asc
+                result.sort((a, b) => {
+                    if (b.effRV !== a.effRV) return b.effRV - a.effRV;
+                    return Math.abs(a.hysteresis) - Math.abs(b.hysteresis);
+                });
+                
+                return result.slice(0, 10);
+            };
+            
+            top10Data = groupBest(nonRef);
+            top10RefData = groupBest(ref);
+        }
+
+        function extractCellName(filename) {
+            // Extract cell name after instrument prefix pattern
+            // Pattern: ####_YYYY-MM-DD_HH.MM.SS_[optional]_CELLNAME.txt
+            const match = filename.match(/\d{4}_\d{4}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2}_(?:.+?_)?(.+?)\.txt$/);
+            if (match) {
+                return match[1];
+            }
+            
+            // Fallback: try to extract anything before .txt after last underscore
+            const fallback = filename.match(/_([^_]+?)\.txt$/);
+            return fallback ? fallback[1] : filename.replace('.txt', '');
+        }
+
+        function applyMismatchFactor() {
+            const value = parseFloat(document.getElementById('mismatchFactorHeader').value);
+            if (!isNaN(value) && value > 0) {
+                mismatchFactor = value;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            filteredData = [...allData];
+            detectAnomalies();
+            calculateBestMeasures();
+            filteredBestData = [...bestMeasuresData];
+            updateAllTable();
+            updateAnomaliesTable();
+            updateBestMeasuresTable();
+            updateTop10Table();
+            updateTop10RefTable();
+            updateChartSelectionList();
+            updateGridSelectionList();
+            initializeBoxPlotData();
+        }
+        
+        function sortTable(table, column) {
+            if (sortState.column === column) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.column = column;
+                sortState.direction = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case 'name':
+                        aVal = extractCellName(a.name).toLowerCase();
+                        bVal = extractCellName(b.name).toLowerCase();
+                        break;
+                    case 'effRV':
+                        aVal = a.effRV / mismatchFactor;
+                        bVal = b.effRV / mismatchFactor;
+                        break;
+                    case 'effFW':
+                        aVal = a.effFW / mismatchFactor;
+                        bVal = b.effFW / mismatchFactor;
+                        break;
+                    case 'hysteresis':
+                        aVal = a.hysteresis;
+                        bVal = b.hysteresis;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                if (typeof aVal === 'string') {
+                    return sortState.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                } else {
+                    return sortState.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+            });
+            
+            updateAllTable();
+        }
+        
+        function searchTable() {
+            const searchTerm = document.getElementById('searchAll').value.toLowerCase();
+            
+            if (!searchTerm) {
+                filteredData = [...allData];
+            } else {
+                filteredData = allData.filter(item => {
+                    const cellName = extractCellName(item.name).toLowerCase();
+                    const effRV = (item.effRV / mismatchFactor).toFixed(2);
+                    const effFW = (item.effFW / mismatchFactor).toFixed(2);
+                    const hysteresis = item.hysteresis.toFixed(4);
+                    
+                    return cellName.includes(searchTerm) || 
+                           effRV.includes(searchTerm) || 
+                           effFW.includes(searchTerm) || 
+                           hysteresis.includes(searchTerm);
+                });
+            }
+            
+            updateAllTable();
+        }
+
+        function updateAllTable() {
+            const tbody = document.getElementById('allTableBody');
+            tbody.innerHTML = '';
+            
+            document.getElementById('totalCount').textContent = allData.length;
+            document.getElementById('totalCountFiltered').textContent = filteredData.length;
+            
+            filteredData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 text-sm text-gray-900">${extractCellName(item.name)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${(item.effRV / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effFW / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm ${item.hysteresis >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">${item.hysteresis.toFixed(4)}</td>
+                    <td class="px-4 py-2 text-sm">
+                        <button onclick="showChart('${item.name}')" class="text-blue-600 hover:text-blue-800 font-medium">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateBestMeasuresTable() {
+            const tbody = document.getElementById('bestMeasuresTableBody');
+            tbody.innerHTML = '';
+            
+            // Update counts
+            document.getElementById('bestFilteredCount').textContent = filteredBestData.length;
+            document.getElementById('bestTotalCount').textContent = bestMeasuresData.length;
+            
+            filteredBestData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="best-checkbox rounded" value="${item.name}" ${selectedCells.includes(item.name) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${item.cellName}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-bold text-blue-600">${(item.bestEff / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${item.from === 'RV' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}">
+                            ${item.from}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effRV / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effFW / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm ${item.hysteresis >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">${item.hysteresis.toFixed(4)}</td>
+                    <td class="px-4 py-2 text-sm">
+                        <button onclick="showChart('${item.name}')" class="text-blue-600 hover:text-blue-800 font-medium">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function extractGroupName(cellName) {
+            // Extract group name from cell name
+            // Examples:
+            // "050226_SPUTTER-SNO2-2_4-1A" -> "050226_SPUTTER-SNO2-2"
+            // "050226_SPUTTER-SNO2-6-6-1A" -> "050226_SPUTTER-SNO2-6"
+            
+            // Find the pattern that ends with -\d+A (e.g., -1A, -2A, etc.)
+            // Everything before that (excluding trailing _) is the group
+            const match = cellName.match(/^(.+?)(?:_)?(\d+-\d+A)$/);
+            if (match) {
+                return match[1]; // Group name
+            }
+            
+            // Fallback: if no pattern match, return everything before last underscore
+            const lastUnderscore = cellName.lastIndexOf('_');
+            if (lastUnderscore > 0) {
+                return cellName.substring(0, lastUnderscore);
+            }
+            
+            return cellName;
+        }
+
+        function searchBestMeasures() {
+            const searchTerm = document.getElementById('searchBest').value.toLowerCase();
+            const groupFilter = document.getElementById('bestGroupFilter').value;
+            
+            let filtered = [...bestMeasuresData];
+            
+            // Apply search filter
+            if (searchTerm) {
+                filtered = filtered.filter(item => 
+                    item.cellName.toLowerCase().includes(searchTerm) ||
+                    item.name.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Apply group filter
+            if (groupFilter === 'bestOfGroup') {
+                // Group by group name and keep only the best of each group
+                const groupMap = new Map();
+                
+                for (const item of filtered) {
+                    const groupName = extractGroupName(item.cellName);
+                    
+                    if (!groupMap.has(groupName) || item.bestEff > groupMap.get(groupName).bestEff) {
+                        groupMap.set(groupName, item);
+                    }
+                }
+                
+                filtered = Array.from(groupMap.values());
+                // Sort by best eff descending
+                filtered.sort((a, b) => b.bestEff - a.bestEff);
+            }
+            
+            filteredBestData = filtered;
+            updateBestMeasuresTable();
+        }
+
+        function updateAnomaliesTable() {
+            const tbody = document.getElementById('anomaliesTableBody');
+            tbody.innerHTML = '';
+            
+            // Update count
+            document.getElementById('anomaliesCount').textContent = anomalousData.length;
+            
+            // Update tab badge with count
+            const anomaliesTab = document.querySelector('[data-tab="anomalies"]');
+            const existingBadge = anomaliesTab.querySelector('.anomaly-badge');
+            if (existingBadge) existingBadge.remove();
+            
+            if (anomalousData.length > 0) {
+                const badge = document.createElement('span');
+                badge.className = 'anomaly-badge ml-1 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full';
+                badge.textContent = anomalousData.length;
+                anomaliesTab.appendChild(badge);
+            }
+            
+            anomalousData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-red-50 transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${extractCellName(item.name)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effRV / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effFW / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm font-bold ${Math.abs(item.hysteresis) > 0.3 ? 'text-red-600' : item.hysteresis >= 0 ? 'text-green-600' : 'text-orange-600'}">${item.hysteresis.toFixed(4)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${item.jscRV.toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${item.jscFW.toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm ${item.jscDiffPercent > 20 ? 'text-red-600 font-bold' : 'text-gray-900'}">${item.jscDiffPercent.toFixed(1)}%</td>
+                    <td class="px-4 py-2 text-xs">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                            ${item.issue}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2 text-sm">
+                        <button onclick="showChart('${item.name}')" class="text-blue-600 hover:text-blue-800 font-medium">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateTop10Table() {
+            const tbody = document.getElementById('top10TableBody');
+            tbody.innerHTML = '';
+            
+            top10Data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                const rankBg = index < 3 ? ['bg-yellow-100 text-yellow-800', 'bg-gray-100 text-gray-800', 'bg-orange-100 text-orange-800'][index] : 'bg-blue-50 text-blue-700';
+                tr.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="top10-checkbox rounded" value="${item.name}" ${selectedCells.includes(item.name) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-4 py-2"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${rankBg}">${index + 1}</span></td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${item.cellName}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${(item.effRV / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effFW / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm ${item.hysteresis >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">${item.hysteresis.toFixed(4)}</td>
+                    <td class="px-4 py-2 text-sm">
+                        <button onclick="showChart('${item.name}')" class="text-blue-600 hover:text-blue-800 font-medium">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateTop10RefTable() {
+            const tbody = document.getElementById('top10RefTableBody');
+            tbody.innerHTML = '';
+            
+            top10RefData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition';
+                const rankBg = index < 3 ? ['bg-yellow-100 text-yellow-800', 'bg-gray-100 text-gray-800', 'bg-orange-100 text-orange-800'][index] : 'bg-blue-50 text-blue-700';
+                tr.innerHTML = `
+                    <td class="px-4 py-2">
+                        <input type="checkbox" class="top10ref-checkbox rounded" value="${item.name}" ${selectedCells.includes(item.name) ? 'checked' : ''}>
+                    </td>
+                    <td class="px-4 py-2"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${rankBg}">${index + 1}</span></td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${item.cellName}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900 font-medium">${(item.effRV / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm text-gray-900">${(item.effFW / mismatchFactor).toFixed(2)}</td>
+                    <td class="px-4 py-2 text-sm ${item.hysteresis >= 0 ? 'text-green-600' : 'text-red-600'} font-medium">${item.hysteresis.toFixed(4)}</td>
+                    <td class="px-4 py-2 text-sm">
+                        <button onclick="showChart('${item.name}')" class="text-blue-600 hover:text-blue-800 font-medium">View</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateChartSelectionList() {
+            const container = document.getElementById('chartSelectionList');
+            if (!container) return; // Element not yet available
+            
+            const searchTerm = document.getElementById('searchCharts')?.value.toLowerCase() || '';
+            container.innerHTML = '';
+            
+            let filtered = searchTerm ? allData.filter(item => 
+                extractCellName(item.name).toLowerCase().includes(searchTerm)
+            ) : allData;
+            
+            // Sort: selected cells first, then unselected
+            filtered = filtered.sort((a, b) => {
+                const aSelected = selectedCells.includes(a.name);
+                const bSelected = selectedCells.includes(b.name);
+                if (aSelected && !bSelected) return -1;
+                if (!aSelected && bSelected) return 1;
+                return 0;
+            });
+            
+            filtered.forEach(item => {
+                const cellName = extractCellName(item.name);
+                const isSelected = selectedCells.includes(item.name);
+                
+                // Initialize curve selection if not exists (both FW and RV selected by default)
+                if (!curveSelection[item.name]) {
+                    curveSelection[item.name] = { fw: true, rv: true };
+                }
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'border border-gray-200 rounded p-2 mb-1.5 bg-white';
+                
+                // Main row with checkbox and cell name
+                const mainRow = document.createElement('div');
+                mainRow.className = 'flex items-center space-x-2';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `chart-${item.name}`;
+                checkbox.value = item.name;
+                checkbox.className = 'chart-checkbox';
+                checkbox.checked = isSelected;
+                
+                checkbox.addEventListener('change', async (e) => {
+                    if (e.target.checked) {
+                        selectedCells.push(item.name);
+                    } else {
+                        selectedCells = selectedCells.filter(c => c !== item.name);
+                    }
+                    updateSelectedCount();
+                    updateChartSelectionList(); // Reorder list to show selected items first
+                    await regenerateCharts();
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = `chart-${item.name}`;
+                label.className = 'text-xs cursor-pointer flex-1 truncate font-medium';
+                label.textContent = cellName;
+                label.title = cellName;
+                
+                const effSpan = document.createElement('span');
+                effSpan.className = 'text-xs text-gray-500 font-medium';
+                effSpan.textContent = `${(item.effRV / mismatchFactor).toFixed(1)}%`;
+                
+                mainRow.appendChild(checkbox);
+                mainRow.appendChild(label);
+                mainRow.appendChild(effSpan);
+                wrapper.appendChild(mainRow);
+                
+                // FW/RV controls (only if selected)
+                if (isSelected) {
+                    const controls = document.createElement('div');
+                    controls.className = 'flex space-x-3 ml-6 mt-1.5';
+                    
+                    // FW checkbox
+                    const fwDiv = document.createElement('div');
+                    fwDiv.className = 'flex items-center space-x-1';
+                    
+                    const fwCheckbox = document.createElement('input');
+                    fwCheckbox.type = 'checkbox';
+                    fwCheckbox.id = `fw-${item.name}`;
+                    fwCheckbox.className = 'rounded text-blue-600';
+                    fwCheckbox.checked = curveSelection[item.name].fw;
+                    fwCheckbox.addEventListener('change', async (e) => {
+                        curveSelection[item.name].fw = e.target.checked;
+                        await regenerateCharts();
+                    });
+                    
+                    const fwLabel = document.createElement('label');
+                    fwLabel.htmlFor = `fw-${item.name}`;
+                    fwLabel.className = 'text-xs text-blue-700 cursor-pointer font-medium';
+                    fwLabel.textContent = 'FW';
+                    
+                    fwDiv.appendChild(fwCheckbox);
+                    fwDiv.appendChild(fwLabel);
+                    
+                    // RV checkbox
+                    const rvDiv = document.createElement('div');
+                    rvDiv.className = 'flex items-center space-x-1';
+                    
+                    const rvCheckbox = document.createElement('input');
+                    rvCheckbox.type = 'checkbox';
+                    rvCheckbox.id = `rv-${item.name}`;
+                    rvCheckbox.className = 'rounded text-red-600';
+                    rvCheckbox.checked = curveSelection[item.name].rv;
+                    rvCheckbox.addEventListener('change', async (e) => {
+                        curveSelection[item.name].rv = e.target.checked;
+                        await regenerateCharts();
+                    });
+                    
+                    const rvLabel = document.createElement('label');
+                    rvLabel.htmlFor = `rv-${item.name}`;
+                    rvLabel.className = 'text-xs text-red-700 cursor-pointer font-medium';
+                    rvLabel.textContent = 'RV';
+                    
+                    rvDiv.appendChild(rvCheckbox);
+                    rvDiv.appendChild(rvLabel);
+                    
+                    controls.appendChild(fwDiv);
+                    controls.appendChild(rvDiv);
+                    wrapper.appendChild(controls);
+                }
+                
+                container.appendChild(wrapper);
+            });
+        }
+
+        function updateGridSelectionList() {
+            const container = document.getElementById('gridSelectionList');
+            if (!container) return; // Element not yet available
+            
+            container.innerHTML = '';
+            
+            allData.forEach(item => {
+                const cellName = extractCellName(item.name);
+                const div = document.createElement('div');
+                div.className = 'flex items-center space-x-2 p-2 hover:bg-gray-50 rounded';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `grid-${item.name}`;
+                checkbox.value = item.name;
+                checkbox.className = 'grid-checkbox';
+                checkbox.checked = selectedCells.includes(item.name);
+                
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedCells.push(item.name);
+                    } else {
+                        selectedCells = selectedCells.filter(c => c !== item.name);
+                    }
+                    updateSelectedCount();
+                });
+                
+                const label = document.createElement('label');
+                label.htmlFor = `grid-${item.name}`;
+                label.className = 'text-sm cursor-pointer flex-1';
+                label.textContent = cellName;
+                
+                const effSpan = document.createElement('span');
+                effSpan.className = 'text-xs text-gray-500';
+                effSpan.textContent = `${(item.effRV / mismatchFactor).toFixed(2)}%`;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                div.appendChild(effSpan);
+                container.appendChild(div);
+            });
+        }
+        
+        function updateSelectedCount() {
+            const countElem = document.getElementById('selectedCount');
+            if (countElem) {
+                countElem.textContent = selectedCells.length;
+            }
+        }
+
+        async function showChart(filename) {
+            // Switch to charts tab
+            document.querySelector('[data-tab="charts"]').click();
+            
+            // Select this cell
+            selectedCells = [filename];
+            document.querySelectorAll('.chart-checkbox').forEach(cb => {
+                cb.checked = cb.value === filename;
+            });
+            updateSelectedCount();
+            await regenerateCharts();
+        }
+
+        async function renderChart(filename) {
+            if (!zipData) return;
+            
+            const item = allData.find(d => d.name === filename);
+            if (!item) return;
+            
+            // Find JV data file in ZIP
+            const jvData = await findAndParseJVFile(filename);
+            if (!jvData) {
+                alert('Could not find JV data for this measurement');
+                return;
+            }
+            
+            // Destroy previous chart
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            // Apply mismatch to current data
+            const jfwData = jvData.jfw.map(j => j / mismatchFactor);
+            const jrvData = jvData.jrv.map(j => j / mismatchFactor);
+            
+            // Create chart
+            const ctx = document.getElementById('jvChart').getContext('2d');
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Forward (FW)',
+                        data: jvData.vfw.map((v, i) => ({ x: v, y: jfwData[i] })),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }, {
+                        label: 'Reverse (RV)',
+                        data: jvData.vrv.map((v, i) => ({ x: v, y: jrvData[i] })),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `JV Curve - ${extractCellName(filename)}\nEff RV: ${(item.effRV / mismatchFactor).toFixed(2)}% | Eff FW: ${(item.effFW / mismatchFactor).toFixed(2)}% | Hysteresis: ${item.hysteresis.toFixed(4)}`,
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Voltage (V)',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Current Density (mA/cm²)',
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function findAndParseJVFile(filename) {
+            if (!zipData) return null;
+            
+            // Extract timestamp from filename using instrument prefix pattern
+            const match = filename.match(/\d{4}_\d{4}-\d{2}-\d{2}_(\d{2}\.\d{2}\.\d{2})_/);
+            if (!match) {
+                // Fallback: search for file directly
+                for (const [p, f] of Object.entries(zipData.files)) {
+                    if (p.endsWith(filename)) {
+                        const content = await f.async('string');
+                        return parseJVData(content);
+                    }
+                }
+                return null;
+            }
+            
+            const timestamp = match[1];
+            const cellName = extractCellName(filename);
+            
+            // Try multiple path patterns
+            const possiblePaths = [
+                `${cellName}/${timestamp}/${filename}`,
+                `${cellName}_1A/${timestamp}/${filename}`,
+                cellName.includes('_1A') ? `${cellName}/${timestamp}/${filename}` : `${cellName}_1A/${timestamp}/${filename}`
+            ];
+            
+            // Also check with date prefix if present in ZIP structure
+            const dateMatch = filename.match(/(\d{6})_/);
+            if (dateMatch) {
+                const datePrefix = dateMatch[1];
+                possiblePaths.push(
+                    `${datePrefix}_${cellName}/${timestamp}/${filename}`,
+                    `${datePrefix}_${cellName}_1A/${timestamp}/${filename}`
+                );
+            }
+            
+            for (const path of possiblePaths) {
+                if (zipData.files[path]) {
+                    const content = await zipData.files[path].async('string');
+                    return parseJVData(content);
+                }
+            }
+            
+            // Final fallback: search by filename
+            for (const [p, f] of Object.entries(zipData.files)) {
+                if (p.endsWith(filename)) {
+                    const content = await f.async('string');
+                    return parseJVData(content);
+                }
+            }
+            
+            return null;
+        }
+
+        function parseJVData(content) {
+            const lines = content.split('\n');
+            let dataStart = -1;
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].trim().startsWith('V_FW (V)')) {
+                    dataStart = i + 1;
+                    break;
+                }
+            }
+            
+            if (dataStart === -1) return null;
+            
+            const vfw = [], jfw = [], vrv = [], jrv = [];
+            
+            for (let i = dataStart; i < lines.length; i++) {
+                const parts = lines[i].split('\t');
+                if (parts.length >= 4) {
+                    const v1 = parseFloat(parts[0]);
+                    const j1 = parseFloat(parts[1]);
+                    const v2 = parseFloat(parts[2]);
+                    const j2 = parseFloat(parts[3]);
+                    
+                    if (!isNaN(v1) && !isNaN(j1)) {
+                        vfw.push(v1);
+                        jfw.push(j1);
+                    }
+                    if (!isNaN(v2) && !isNaN(j2)) {
+                        vrv.push(v2);
+                        jrv.push(j2);
+                    }
+                }
+            }
+            
+            return { vfw, jfw, vrv, jrv };
+        }
+
+        // Export functions
+        function exportToCSV(data, filename) {
+            const headers = ['Measurement', 'Eff_RV', 'Eff_FW', 'Hysteresis'];
+            const rows = data.map(item => [
+                extractCellName(item.name),
+                (item.effRV / mismatchFactor).toFixed(2),
+                (item.effFW / mismatchFactor).toFixed(2),
+                item.hysteresis.toFixed(4)
+            ]);
+            
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            saveAs(blob, filename);
+        }
+
+        document.getElementById('exportBestCSV').addEventListener('click', () => {
+            const csv = ['Cell,Best Eff (%),From,Eff RV (%),Eff FW (%),Hysteresis'];
+            bestMeasuresData.forEach(item => {
+                csv.push(`${item.cellName},${(item.bestEff / mismatchFactor).toFixed(2)},${item.from},${(item.effRV / mismatchFactor).toFixed(2)},${(item.effFW / mismatchFactor).toFixed(2)},${item.hysteresis.toFixed(4)}`);
+            });
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            saveAs(blob, 'best_measures.csv');
+        });
+
+        document.getElementById('exportAnomaliesCSV').addEventListener('click', () => {
+            const csv = ['Cell,Eff RV (%),Eff FW (%),Hysteresis,JSC RV,JSC FW,JSC Diff (%),Issue'];
+            anomalousData.forEach(item => {
+                csv.push(`${extractCellName(item.name)},${(item.effRV / mismatchFactor).toFixed(2)},${(item.effFW / mismatchFactor).toFixed(2)},${item.hysteresis.toFixed(4)},${item.jscRV.toFixed(2)},${item.jscFW.toFixed(2)},${item.jscDiffPercent.toFixed(1)},${item.issue}`);
+            });
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            saveAs(blob, 'anomalous_measurements.csv');
+        });
+
+        document.getElementById('exportAllCSV').addEventListener('click', () => {
+            exportToCSV(allData, 'hysteresis_all.csv');
+        });
+
+        document.getElementById('exportTop10CSV').addEventListener('click', () => {
+            exportToCSV(top10Data, 'top10_non_ref.csv');
+        });
+
+        document.getElementById('exportTop10RefCSV').addEventListener('click', () => {
+            exportToCSV(top10RefData, 'top10_ref.csv');
+        });
+
+        document.getElementById('applyMismatchHeader').addEventListener('click', applyMismatchFactor);
+        
+        document.getElementById('searchAll').addEventListener('input', searchTable);
+        
+        document.getElementById('searchBest').addEventListener('input', searchBestMeasures);
+        
+        document.getElementById('bestGroupFilter').addEventListener('change', searchBestMeasures);
+        
+        document.getElementById('selectAllBest').addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.best-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+        
+        document.getElementById('addBestToCharts').addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.best-checkbox:checked');
+            const selectedNames = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedNames.length === 0) {
+                alert('Please select at least one cell');
+                return;
+            }
+            
+            // Add to selectedCells (avoid duplicates)
+            selectedNames.forEach(name => {
+                if (!selectedCells.includes(name)) {
+                    selectedCells.push(name);
+                }
+            });
+            
+            // Switch to charts tab
+            document.querySelector('[data-tab="charts"]').click();
+            
+            updateSelectedCount();
+            updateChartSelectionList(); // Reorder list to show selected items first
+            await regenerateCharts();
+        });
+        
+        document.getElementById('selectAllTop10').addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.top10-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+        
+        document.getElementById('addTop10ToCharts').addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.top10-checkbox:checked');
+            const selectedNames = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedNames.length === 0) {
+                alert('Please select at least one cell');
+                return;
+            }
+            
+            // Add to selectedCells (avoid duplicates)
+            selectedNames.forEach(name => {
+                if (!selectedCells.includes(name)) {
+                    selectedCells.push(name);
+                }
+            });
+            
+            // Switch to charts tab
+            document.querySelector('[data-tab="charts"]').click();
+            
+            updateSelectedCount();
+            updateChartSelectionList(); // Reorder list to show selected items first
+            await regenerateCharts();
+        });
+        
+        document.getElementById('selectAllTop10Ref').addEventListener('change', (e) => {
+            const checkboxes = document.querySelectorAll('.top10ref-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+        
+        document.getElementById('addTop10RefToCharts').addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.top10ref-checkbox:checked');
+            const selectedNames = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedNames.length === 0) {
+                alert('Please select at least one cell');
+                return;
+            }
+            
+            // Add to selectedCells (avoid duplicates)
+            selectedNames.forEach(name => {
+                if (!selectedCells.includes(name)) {
+                    selectedCells.push(name);
+                }
+            });
+            
+            // Switch to charts tab
+            document.querySelector('[data-tab="charts"]').click();
+            
+            updateSelectedCount();
+            updateChartSelectionList(); // Reorder list to show selected items first
+            await regenerateCharts();
+        });
+        
+        document.getElementById('searchCharts').addEventListener('input', updateChartSelectionList);
+        
+        document.getElementById('selectAll').addEventListener('click', async () => {
+            selectedCells = allData.map(item => item.name);
+            updateSelectedCount();
+            updateChartSelectionList(); // Reorder list to show selected items first
+            await regenerateCharts();
+        });
+        
+        document.getElementById('clearSelection').addEventListener('click', async () => {
+            selectedCells = [];
+            updateSelectedCount();
+            updateChartSelectionList(); // Reorder list to show selected items first
+            await regenerateCharts();
+        });
+        
+        document.getElementById('viewMode').addEventListener('change', async () => {
+            await regenerateCharts();
+        });
+        
+        document.getElementById('exportChartsPNG').addEventListener('click', exportChartsPNG);
+
+        document.getElementById('exportAllCharts').addEventListener('click', async () => {
+            if (!zipData || allData.length === 0) {
+                alert('No data available');
+                return;
+            }
+            
+            showProgress('Generating charts...');
+            
+            const zip = new JSZip();
+            const folder = zip.folder('jv_curves');
+            
+            // Create a temporary canvas for generating charts
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 800;
+            tempCanvas.height = 600;
+            
+            for (let i = 0; i < allData.length; i++) {
+                const item = allData[i];
+                updateProgress(`Generating chart ${i + 1}/${allData.length}...`, (i / allData.length) * 100);
+                
+                try {
+                    const jvData = await findAndParseJVFile(item.name);
+                    if (!jvData) continue;
+                    
+                    // Apply mismatch
+                    const jfwData = jvData.jfw.map(j => j / mismatchFactor);
+                    const jrvData = jvData.jrv.map(j => j / mismatchFactor);
+                    
+                    // Create temporary chart
+                    const ctx = tempCanvas.getContext('2d');
+                    const tempChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            datasets: [{
+                                label: 'Forward (FW)',
+                                data: jvData.vfw.map((v, idx) => ({ x: v, y: jfwData[idx] })),
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                pointRadius: 2,
+                                borderWidth: 2
+                            }, {
+                                label: 'Reverse (RV)',
+                                data: jvData.vrv.map((v, idx) => ({ x: v, y: jrvData[idx] })),
+                                borderColor: 'rgb(239, 68, 68)',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                pointRadius: 2,
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            animation: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `${extractCellName(item.name)} - Eff RV: ${(item.effRV / mismatchFactor).toFixed(2)}% | Eff FW: ${(item.effFW / mismatchFactor).toFixed(2)}%`,
+                                    font: { size: 14, weight: 'bold' }
+                                },
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: { display: true, text: 'Voltage (V)', font: { size: 12, weight: 'bold' } }
+                                },
+                                y: {
+                                    title: { display: true, text: 'Current Density (mA/cm²)', font: { size: 12, weight: 'bold' } }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Force complete render and wait for next frame
+                    tempChart.update();
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                    
+                    // Export to PNG using canvas directly for better quality
+                    const dataUrl = tempCanvas.toDataURL('image/png', 1.0);
+                    const base64 = dataUrl.split(',')[1];
+                    const filename = extractCellName(item.name) + '.png';
+                    folder.file(filename, base64, { base64: true });
+                    
+                    // Destroy temp chart
+                    tempChart.destroy();
+                    
+                } catch (error) {
+                    console.error('Error generating chart for', item.name, error);
+                }
+            }
+            
+            updateProgress('Creating ZIP file...', 95);
+            const content = await zip.generateAsync({ type: 'blob' });
+            saveAs(content, 'jv_curves_all.zip');
+            
+            hideProgress();
+        });
+        
+        // Box Plot event listeners
+        document.getElementById('searchBoxPlotGroups').addEventListener('input', updateBoxPlotGroupsList);
+        
+        document.getElementById('updateBoxPlots').addEventListener('click', async () => {
+            await generateBoxPlots();
+        });
+        
+        document.getElementById('exportBoxPlotsPNG').addEventListener('click', exportBoxPlotsPNG);
+        
+        document.getElementById('exportBoxPlotsExcel').addEventListener('click', exportBoxPlotsExcel);
+
+        async function regenerateCharts() {
+            // Clear existing charts
+            gridCharts.forEach(chart => chart.destroy());
+            gridCharts = [];
+            
+            const emptyState = document.getElementById('chartsEmptyState');
+            const chartsContainer = document.getElementById('chartsContainer');
+            const displayCount = document.getElementById('chartsDisplayCount');
+            const viewMode = document.getElementById('viewMode').value;
+            const gridView = document.getElementById('gridView');
+            const overlayView = document.getElementById('overlayView');
+            
+            if (selectedCells.length === 0) {
+                emptyState.classList.remove('hidden');
+                chartsContainer.classList.add('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            chartsContainer.classList.remove('hidden');
+            displayCount.textContent = selectedCells.length;
+            
+            if (viewMode === 'grid') {
+                gridView.classList.remove('hidden');
+                overlayView.classList.add('hidden');
+                await renderGridView();
+            } else {
+                gridView.classList.add('hidden');
+                overlayView.classList.remove('hidden');
+                await renderOverlayView();
+            }
+        }
+        
+        async function renderGridView() {
+            const container = document.getElementById('chartsGrid');
+            
+            // Set grid layout based on number of selected cells
+            if (selectedCells.length === 1) {
+                container.className = 'grid gap-3 grid-cols-1';
+            } else if (selectedCells.length === 2) {
+                container.className = 'grid gap-3 grid-cols-1 md:grid-cols-2';
+            } else {
+                container.className = 'grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+            }
+            
+            container.innerHTML = '';
+            
+            // Create canvases for each selected cell
+            for (let i = 0; i < selectedCells.length; i++) {
+                const filename = selectedCells[i];
+                const item = allData.find(d => d.name === filename);
+                if (!item) continue;
+                
+                const selection = curveSelection[filename] || { fw: true, rv: true };
+                if (!selection.fw && !selection.rv) continue; // Skip if both disabled
+                
+                const jvData = await findAndParseJVFile(filename);
+                if (!jvData) continue;
+                
+                // Create canvas wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'bg-gray-50 rounded-lg p-3';
+                
+                const canvas = document.createElement('canvas');
+                // Larger for single chart, smaller for grid
+                if (selectedCells.length === 1) {
+                    canvas.width = 900;
+                    canvas.height = 600;
+                } else {
+                    canvas.width = 400;
+                    canvas.height = 300;
+                }
+                wrapper.appendChild(canvas);
+                container.appendChild(wrapper);
+                
+                // Apply mismatch
+                const jfwData = jvData.jfw.map(j => j / mismatchFactor);
+                const jrvData = jvData.jrv.map(j => j / mismatchFactor);
+                
+                // Create datasets based on selection
+                const datasets = [];
+                if (selection.fw) {
+                    datasets.push({
+                        label: 'Forward (FW)',
+                        data: jvData.vfw.map((v, i) => ({ x: v, y: jfwData[i] })),
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        pointRadius: selectedCells.length === 1 ? 3 : 1,
+                        borderWidth: 2
+                    });
+                }
+                if (selection.rv) {
+                    datasets.push({
+                        label: 'Reverse (RV)',
+                        data: jvData.vrv.map((v, i) => ({ x: v, y: jrvData[i] })),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        pointRadius: selectedCells.length === 1 ? 3 : 1,
+                        borderWidth: 2
+                    });
+                }
+                
+                // Create chart
+                const ctx = canvas.getContext('2d');
+                const isSingle = selectedCells.length === 1;
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: isSingle ? 
+                                    `JV Curve - ${extractCellName(filename)}\nEff RV: ${(item.effRV / mismatchFactor).toFixed(2)}% | Eff FW: ${(item.effFW / mismatchFactor).toFixed(2)}% | Hysteresis: ${item.hysteresis.toFixed(4)}` :
+                                    `${extractCellName(filename)} | ${(item.effRV / mismatchFactor).toFixed(2)}%`,
+                                font: { size: isSingle ? 16 : 11, weight: 'bold' }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: { font: { size: isSingle ? 12 : 9 } }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                title: { display: true, text: isSingle ? 'Voltage (V)' : 'V', font: { size: isSingle ? 12 : 9, weight: isSingle ? 'bold' : 'normal' } },
+                                ticks: { font: { size: isSingle ? 11 : 8 } }
+                            },
+                            y: {
+                                title: { display: true, text: isSingle ? 'Current Density (mA/cm²)' : 'J (mA/cm²)', font: { size: isSingle ? 12 : 9, weight: isSingle ? 'bold' : 'normal' } },
+                                ticks: { font: { size: isSingle ? 11 : 8 } }
+                            }
+                        }
+                    }
+                });
+                
+                gridCharts.push(chart);
+            }
+        }
+        
+        async function renderOverlayView() {
+            // Destroy existing overlay chart
+            if (overlayChart) {
+                overlayChart.destroy();
+                overlayChart = null;
+            }
+            
+            const datasets = [];
+            const colors = generateDistinctColors(selectedCells.length);
+            
+            for (let i = 0; i < selectedCells.length; i++) {
+                const filename = selectedCells[i];
+                const item = allData.find(d => d.name === filename);
+                if (!item) continue;
+                
+                const selection = curveSelection[filename] || { fw: true, rv: true };
+                const color = colors[i];
+                
+                const jvData = await findAndParseJVFile(filename);
+                if (!jvData) continue;
+                
+                // Apply mismatch
+                const jfwData = jvData.jfw.map(j => j / mismatchFactor);
+                const jrvData = jvData.jrv.map(j => j / mismatchFactor);
+                
+                // Add FW dataset if selected
+                if (selection.fw) {
+                    datasets.push({
+                        label: `${extractCellName(filename)} - FW`,
+                        data: jvData.vfw.map((v, idx) => ({ x: v, y: jfwData[idx] })),
+                        borderColor: color,
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        tension: 0.1
+                    });
+                }
+                
+                // Add RV dataset if selected
+                if (selection.rv) {
+                    // Parse HSL and create darker version for RV
+                    const hslMatch = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+                    let rvColor = color;
+                    if (hslMatch) {
+                        const hue = hslMatch[1];
+                        const saturation = hslMatch[2];
+                        const lightness = Math.max(0, parseInt(hslMatch[3]) - 15);
+                        rvColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+                    }
+                    
+                    datasets.push({
+                        label: `${extractCellName(filename)} - RV`,
+                        data: jvData.vrv.map((v, idx) => ({ x: v, y: jrvData[idx] })),
+                        borderColor: rvColor,
+                        backgroundColor: 'transparent',
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        borderDash: [5, 3], // Dashed line for RV
+                        tension: 0.1
+                    });
+                }
+            }
+            
+            // Create overlay chart
+            const canvas = document.getElementById('overlayChart');
+            const ctx = canvas.getContext('2d');
+            
+            overlayChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `JV Curves Overlay (${selectedCells.length} cells)`,
+                            font: { size: 16, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: { font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { display: true, text: 'Voltage (V)', font: { size: 12, weight: 'bold' } },
+                            ticks: { font: { size: 11 } }
+                        },
+                        y: {
+                            title: { display: true, text: 'Current Density (mA/cm²)', font: { size: 12, weight: 'bold' } },
+                            ticks: { font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function exportChartsPNG() {
+            const viewMode = document.getElementById('viewMode').value;
+            
+            // Export overlay chart
+            if (viewMode === 'overlay') {
+                if (!overlayChart) {
+                    alert('No chart to export');
+                    return;
+                }
+                const dataUrl = overlayChart.toBase64Image();
+                const link = document.createElement('a');
+                link.download = 'jv_curves_overlay.png';
+                link.href = dataUrl;
+                link.click();
+                return;
+            }
+            
+            // Export grid view
+            if (gridCharts.length === 0) {
+                alert('No charts to export');
+                return;
+            }
+            
+            // For single chart, export directly
+            if (gridCharts.length === 1) {
+                const dataUrl = gridCharts[0].toBase64Image();
+                const link = document.createElement('a');
+                link.download = `${extractCellName(selectedCells[0])}_jv_curve.png`;
+                link.href = dataUrl;
+                link.click();
+                return;
+            }
+            
+            // Create a temporary canvas for combined image
+            const cols = Math.min(3, Math.ceil(Math.sqrt(selectedCells.length)));
+            const rows = Math.ceil(selectedCells.length / cols);
+            
+            const chartWidth = 400;
+            const chartHeight = 300;
+            const padding = 20;
+            
+            const totalWidth = cols * chartWidth + (cols + 1) * padding;
+            const totalHeight = rows * chartHeight + (rows + 1) * padding;
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = totalWidth;
+            tempCanvas.height = totalHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // White background
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, totalWidth, totalHeight);
+            
+            // Draw each chart
+            for (let i = 0; i < gridCharts.length; i++) {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * chartWidth + (col + 1) * padding;
+                const y = row * chartHeight + (row + 1) * padding;
+                
+                const chartImage = gridCharts[i].toBase64Image();
+                const img = new Image();
+                await new Promise((resolve) => {
+                    img.onload = () => {
+                        tempCtx.drawImage(img, x, y, chartWidth, chartHeight);
+                        resolve();
+                    };
+                    img.src = chartImage;
+                });
+            }
+            
+            // Download
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `jv_curves_${selectedCells.length}_cells.png`;
+            link.href = dataUrl;
+            link.click();
+        }
+
+        // Generate distinct colors for overlay curves
+        function generateDistinctColors(count) {
+            const colors = [];
+            const hueStep = 360 / count;
+            
+            for (let i = 0; i < count; i++) {
+                const hue = i * hueStep;
+                const saturation = 70 + (i % 3) * 10;
+                const lightness = 45 + (i % 2) * 10;
+                colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+            }
+            
+            return colors;
+        }
+
+        // ==================== BOX PLOT FUNCTIONS ====================
+        
+        function initializeBoxPlotData() {
+            // Group best measures by group name
+            boxPlotGroups = {};
+            
+            for (const item of bestMeasuresData) {
+                const groupName = extractGroupName(item.cellName);
+                
+                if (!boxPlotGroups[groupName]) {
+                    boxPlotGroups[groupName] = {
+                        selected: false,
+                        cells: {}
+                    };
+                }
+                
+                boxPlotGroups[groupName].cells[item.cellName] = {
+                    selected: false,
+                    data: item
+                };
+            }
+            
+            updateBoxPlotGroupsList();
+        }
+        
+        function updateBoxPlotGroupsList() {
+            const container = document.getElementById('boxPlotGroupsList');
+            if (!container) return;
+            
+            const searchTerm = document.getElementById('searchBoxPlotGroups')?.value.toLowerCase() || '';
+            container.innerHTML = '';
+            
+            const sortedGroups = Object.keys(boxPlotGroups).sort();
+            
+            for (const groupName of sortedGroups) {
+                if (searchTerm && !groupName.toLowerCase().includes(searchTerm)) continue;
+                
+                const groupData = boxPlotGroups[groupName];
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'border border-gray-200 rounded bg-white';
+                
+                // Group header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'flex items-center space-x-2 p-2 bg-gray-50 border-b border-gray-200';
+                
+                const groupCheckbox = document.createElement('input');
+                groupCheckbox.type = 'checkbox';
+                groupCheckbox.id = `boxplot-group-${groupName}`;
+                groupCheckbox.className = 'rounded';
+                groupCheckbox.checked = groupData.selected;
+                groupCheckbox.addEventListener('change', (e) => {
+                    boxPlotGroups[groupName].selected = e.target.checked;
+                    // Also toggle all cells in this group
+                    for (const cellName in groupData.cells) {
+                        boxPlotGroups[groupName].cells[cellName].selected = e.target.checked;
+                    }
+                    updateBoxPlotGroupsList();
+                });
+                
+                const groupLabel = document.createElement('label');
+                groupLabel.htmlFor = `boxplot-group-${groupName}`;
+                groupLabel.className = 'text-xs font-semibold text-gray-800 flex-1 cursor-pointer truncate';
+                groupLabel.textContent = groupName;
+                groupLabel.title = groupName;
+                
+                const cellCount = document.createElement('span');
+                cellCount.className = 'text-xs text-gray-500';
+                cellCount.textContent = `(${Object.keys(groupData.cells).length})`;
+                
+                groupHeader.appendChild(groupCheckbox);
+                groupHeader.appendChild(groupLabel);
+                groupHeader.appendChild(cellCount);
+                groupDiv.appendChild(groupHeader);
+                
+                // Cells list (only if group is selected)
+                if (groupData.selected) {
+                    const cellsDiv = document.createElement('div');
+                    cellsDiv.className = 'p-2 space-y-1';
+                    
+                    const sortedCells = Object.keys(groupData.cells).sort();
+                    for (const cellName of sortedCells) {
+                        const cellData = groupData.cells[cellName];
+                        const cellDiv = document.createElement('div');
+                        cellDiv.className = 'flex items-center space-x-2 pl-4';
+                        
+                        const cellCheckbox = document.createElement('input');
+                        cellCheckbox.type = 'checkbox';
+                        cellCheckbox.id = `boxplot-cell-${cellName}`;
+                        cellCheckbox.className = 'rounded text-xs';
+                        cellCheckbox.checked = cellData.selected;
+                        cellCheckbox.addEventListener('change', (e) => {
+                            boxPlotGroups[groupName].cells[cellName].selected = e.target.checked;
+                        });
+                        
+                        const cellLabel = document.createElement('label');
+                        cellLabel.htmlFor = `boxplot-cell-${cellName}`;
+                        cellLabel.className = 'text-xs text-gray-700 cursor-pointer flex-1 truncate';
+                        cellLabel.textContent = cellName;
+                        cellLabel.title = cellName;
+                        
+                        const effSpan = document.createElement('span');
+                        effSpan.className = 'text-xs text-blue-600 font-medium';
+                        effSpan.textContent = `${(cellData.data.bestEff / mismatchFactor).toFixed(1)}%`;
+                        
+                        cellDiv.appendChild(cellCheckbox);
+                        cellDiv.appendChild(cellLabel);
+                        cellDiv.appendChild(effSpan);
+                        cellsDiv.appendChild(cellDiv);
+                    }
+                    
+                    groupDiv.appendChild(cellsDiv);
+                }
+                
+                container.appendChild(groupDiv);
+            }
+        }
+        
+        async function generateBoxPlots() {
+            // Collect selected cells grouped by group
+            const selectedGroups = {};
+            let totalCells = 0;
+            
+            for (const groupName in boxPlotGroups) {
+                const groupData = boxPlotGroups[groupName];
+                if (!groupData.selected) continue;
+                
+                selectedGroups[groupName] = {
+                    fw: { voc: [], jsc: [], ff: [], eff: [] },
+                    rv: { voc: [], jsc: [], ff: [], eff: [] }
+                };
+                
+                for (const cellName in groupData.cells) {
+                    const cellData = groupData.cells[cellName];
+                    if (!cellData.selected) continue;
+                    
+                    totalCells++;
+                    const data = cellData.data;
+                    
+                    // Add data for FW and RV
+                    selectedGroups[groupName].fw.voc.push(data.vocFW);
+                    selectedGroups[groupName].fw.jsc.push(data.jscFW);
+                    selectedGroups[groupName].fw.ff.push(data.ffFW);
+                    selectedGroups[groupName].fw.eff.push(data.effFW / mismatchFactor);
+                    
+                    selectedGroups[groupName].rv.voc.push(data.vocRV);
+                    selectedGroups[groupName].rv.jsc.push(data.jscRV);
+                    selectedGroups[groupName].rv.ff.push(data.ffRV);
+                    selectedGroups[groupName].rv.eff.push(data.effRV / mismatchFactor);
+                }
+            }
+            
+            const groupCount = Object.keys(selectedGroups).length;
+            
+            if (groupCount === 0 || totalCells === 0) {
+                document.getElementById('boxPlotEmptyState').classList.remove('hidden');
+                document.getElementById('boxPlotChartsContainer').classList.add('hidden');
+                return;
+            }
+            
+            document.getElementById('boxPlotEmptyState').classList.add('hidden');
+            document.getElementById('boxPlotChartsContainer').classList.remove('hidden');
+            document.getElementById('boxPlotGroupCount').textContent = groupCount;
+            document.getElementById('boxPlotCellCount').textContent = totalCells;
+            
+            // Destroy existing charts
+            for (const key in boxPlotCharts) {
+                if (boxPlotCharts[key]) {
+                    boxPlotCharts[key].destroy();
+                }
+            }
+            boxPlotCharts = {};
+            
+            // Create 4 box plot charts
+            await createBoxPlotChart('Voc', 'voc', 'Voc (V)', selectedGroups);
+            await createBoxPlotChart('Jsc', 'jsc', 'Jsc (mA/cm²)', selectedGroups);
+            await createBoxPlotChart('FF', 'ff', 'FF (%)', selectedGroups);
+            await createBoxPlotChart('Eff', 'eff', 'Efficiency (%)', selectedGroups);
+        }
+        
+        async function createBoxPlotChart(chartId, metric, yLabel, selectedGroups) {
+            const canvas = document.getElementById(`boxPlot${chartId}`);
+            const ctx = canvas.getContext('2d');
+            
+            const labels = [];
+            const dataSets = [];
+            
+            // Prepare data for FW and RV
+            const fwData = [];
+            const rvData = [];
+            
+            for (const groupName in selectedGroups) {
+                labels.push(groupName);
+                fwData.push(selectedGroups[groupName].fw[metric]);
+                rvData.push(selectedGroups[groupName].rv[metric]);
+            }
+            
+            // Calculate Y axis limits from actual data range
+            const allValues = [...fwData, ...rvData].flat();
+            const minValue = Math.min(...allValues);
+            const maxValue = Math.max(...allValues);
+            const range = maxValue - minValue;
+            const margin = range * 0.10; // 10% margin
+            const yMin = Math.max(0, minValue - margin); // Don't go below 0
+            const yMax = maxValue + margin;
+            
+            // Create datasets
+            dataSets.push({
+                label: 'FW',
+                data: fwData,
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 2,
+                outlierColor: 'rgb(220, 38, 38)',
+                padding: 10,
+                itemRadius: 0
+            });
+            
+            dataSets.push({
+                label: 'RV',
+                data: rvData,
+                backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                borderColor: 'rgb(239, 68, 68)',
+                borderWidth: 2,
+                outlierColor: 'rgb(220, 38, 38)',
+                padding: 10,
+                itemRadius: 0
+            });
+            
+            boxPlotCharts[chartId] = new Chart(ctx, {
+                type: 'boxplot',
+                data: {
+                    labels: labels,
+                    datasets: dataSets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: yLabel,
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { font: { size: 10 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Group', font: { size: 11, weight: 'bold' } },
+                            ticks: { font: { size: 9 } }
+                        },
+                        y: {
+                            title: { display: true, text: yLabel, font: { size: 11, weight: 'bold' } },
+                            ticks: { font: { size: 10 } },
+                            min: yMin,
+                            max: yMax
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function exportBoxPlotsPNG() {
+            if (Object.keys(boxPlotCharts).length === 0) {
+                alert('No charts to export');
+                return;
+            }
+            
+            // Create a large canvas to combine all 4 charts
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 1800;
+            tempCanvas.height = 1200;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // White background
+            tempCtx.fillStyle = '#FFFFFF';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Export each chart
+            const chartIds = ['Voc', 'Jsc', 'FF', 'Eff'];
+            const positions = [
+                { x: 0, y: 0 },      // Voc (top-left)
+                { x: 900, y: 0 },    // Jsc (top-right)
+                { x: 0, y: 600 },    // FF (bottom-left)
+                { x: 900, y: 600 }   // Eff (bottom-right)
+            ];
+            
+            for (let i = 0; i < chartIds.length; i++) {
+                const chartId = chartIds[i];
+                const chart = boxPlotCharts[chartId];
+                if (!chart) continue;
+                
+                const chartCanvas = chart.canvas;
+                const { x, y } = positions[i];
+                
+                // Draw chart image onto temp canvas
+                tempCtx.drawImage(chartCanvas, x, y, 900, 600);
+            }
+            
+            // Download
+            const dataUrl = tempCanvas.toDataURL('image/png', 1.0);
+            const link = document.createElement('a');
+            link.download = 'box_plots_comparison.png';
+            link.href = dataUrl;
+            link.click();
+        }
+        
+        async function exportBoxPlotsExcel() {
+            // Collect selected cells grouped by group
+            const selectedGroups = {};
+            
+            for (const groupName in boxPlotGroups) {
+                const groupData = boxPlotGroups[groupName];
+                if (!groupData.selected) continue;
+                
+                selectedGroups[groupName] = {
+                    fw: { voc: [], jsc: [], ff: [], eff: [] },
+                    rv: { voc: [], jsc: [], ff: [], eff: [] },
+                    cells: []
+                };
+                
+                for (const cellName in groupData.cells) {
+                    const cellData = groupData.cells[cellName];
+                    if (!cellData.selected) continue;
+                    
+                    const data = cellData.data;
+                    selectedGroups[groupName].cells.push(cellName);
+                    
+                    // Add data for FW and RV
+                    selectedGroups[groupName].fw.voc.push(data.vocFW);
+                    selectedGroups[groupName].fw.jsc.push(data.jscFW);
+                    selectedGroups[groupName].fw.ff.push(data.ffFW);
+                    selectedGroups[groupName].fw.eff.push(data.effFW / mismatchFactor);
+                    
+                    selectedGroups[groupName].rv.voc.push(data.vocRV);
+                    selectedGroups[groupName].rv.jsc.push(data.jscRV);
+                    selectedGroups[groupName].rv.ff.push(data.ffRV);
+                    selectedGroups[groupName].rv.eff.push(data.effRV / mismatchFactor);
+                }
+            }
+            
+            if (Object.keys(selectedGroups).length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            // Create CSV content
+            const metrics = [
+                { key: 'voc', label: 'Voc (V)' },
+                { key: 'jsc', label: 'Jsc (mA/cm²)' },
+                { key: 'ff', label: 'FF (%)' },
+                { key: 'eff', label: 'Efficiency (%)' }
+            ];
+            
+            let csvContent = '';
+            
+            for (const metric of metrics) {
+                csvContent += `\n${metric.label}\n`;
+                
+                // Create header row
+                const headers = [];
+                for (const groupName in selectedGroups) {
+                    headers.push(`${groupName}_FW`);
+                    headers.push(`${groupName}_RV`);
+                }
+                csvContent += headers.join(',') + '\n';
+                
+                // Find max number of rows needed
+                let maxRows = 0;
+                for (const groupName in selectedGroups) {
+                    maxRows = Math.max(maxRows, selectedGroups[groupName].fw[metric.key].length);
+                }
+                
+                // Create data rows
+                for (let i = 0; i < maxRows; i++) {
+                    const row = [];
+                    for (const groupName in selectedGroups) {
+                        const fwValue = selectedGroups[groupName].fw[metric.key][i];
+                        const rvValue = selectedGroups[groupName].rv[metric.key][i];
+                        row.push(fwValue !== undefined ? fwValue.toFixed(4) : '');
+                        row.push(rvValue !== undefined ? rvValue.toFixed(4) : '');
+                    }
+                    csvContent += row.join(',') + '\n';
+                }
+            }
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            saveAs(blob, 'box_plots_data.csv');
+        }
+
+        function showProgress(text) {
+            document.getElementById('progress').classList.remove('hidden');
+            updateProgress(text, 0);
+        }
+
+        function updateProgress(text, percent) {
+            document.getElementById('progressText').textContent = text;
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        function hideProgress() {
+            document.getElementById('progress').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

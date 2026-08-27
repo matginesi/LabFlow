@@ -2,106 +2,146 @@
 
 Local-first browser workbench for perovskite/JV laboratory experiments.
 
-The researcher workflow is deliberately small:
-
 ```text
 Upload & Review → Results → Design → Report → NOMAD
 ```
 
-The uploaded ZIP is immutable source evidence. LabFlow immediately snapshots its bytes and performs all work on one separate in-memory **Working Copy**.
+LabFlow treats the uploaded laboratory ZIP as **immutable source evidence**. It creates one separate editable **Working Copy**, builds a deterministic semantic/analysis layer over it, and uses optional AI only for bounded interpretation, suggestions and scientific writing.
 
-## Start here
+## What LabFlow does
 
-For architecture, data lifecycle, Action behavior, Review/Design/Results/Report/NOMAD flow and AI boundaries, read:
+From one experiment ZIP, LabFlow can:
 
-**[`docs/WORKFLOW.md`](docs/WORKFLOW.md)**
+- inventory and parse known laboratory files;
+- recover deterministically available JV information from redundant source representations;
+- resolve canonical sample identities while retaining filenames/aliases as provenance;
+- calculate deterministic JV Results, rankings, comparisons and quality findings;
+- review safe corrections and genuine ambiguities;
+- maintain solution chemistry and device-stack Design;
+- optionally use AI to enrich context, suggest missing Design, interpret Results and draft/edit documents;
+- keep Lab Report and Scientific Paper as editable Markdown sources of truth;
+- validate and prepare deterministic Canonical → NOMAD exports;
+- autosave the Working Copy locally and create explicit durable exports.
 
-Supporting specifications:
+## Core logic
 
+```text
+Original ZIP (immutable)
+        ↓
+Deterministic import / recovery
+        ↓
+Working Copy  ←──── accepted researcher changes
+        ↓
+Canonical Store + evidence / relations
+        ↓
+Deterministic analysis
+   ┌────┼───────────────┬─────────────┐
+   ↓    ↓               ↓             ↓
+Review Results         Design        NOMAD
+        │               │
+        └──────┬────────┘
+               ↓
+       bounded AI Context Packs
+               ↓
+        optional AI provider
+               ↓
+ interpretation / proposal / draft
+               ↓
+ local validation + researcher review
+```
+
+The Canonical Store is a deterministic semantic index over the Working Copy, not a second editable experiment.
+
+## Documentation
+
+Start with **[`docs/README.md`](docs/README.md)**. It contains reading paths for researchers, scientific/data work, AI/provider integration and engineering.
+
+Recommended first pages:
+
+- [`docs/guides/GETTING_STARTED.md`](docs/guides/GETTING_STARTED.md) — first import and normal workflow;
+- [`docs/guides/HOW_LABFLOW_WORKS.md`](docs/guides/HOW_LABFLOW_WORKS.md) — the logic behind LabFlow end to end;
+- [`docs/guides/DATA_LIFECYCLE.md`](docs/guides/DATA_LIFECYCLE.md) — RAW → Working Copy → Canonical Store → derived outputs;
+- [`docs/guides/AI_ASSISTANCE.md`](docs/guides/AI_ASSISTANCE.md) — where AI is allowed and where it is not;
+- [`docs/guides/AI_TOKENS_AND_RATE_LIMITS.md`](docs/guides/AI_TOKENS_AND_RATE_LIMITS.md) — request budgets, streaming, local truncation and provider cooldowns;
+- [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) — how to read common LabFlow logs.
+
+Canonical technical references include:
+
+- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - [`docs/specs/DATA_MODEL.md`](docs/specs/DATA_MODEL.md)
 - [`docs/specs/ACTIONS.md`](docs/specs/ACTIONS.md)
 - [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md)
 - [`docs/AI.md`](docs/AI.md)
+- [`docs/specs/AI_PROVIDERS.md`](docs/specs/AI_PROVIDERS.md)
 - [`docs/specs/IMPORT_EXPORT.md`](docs/specs/IMPORT_EXPORT.md)
 - [`docs/NOMAD.md`](docs/NOMAD.md)
+- [`docs/UI.md`](docs/UI.md)
+- [`docs/VISUAL_LANGUAGE.md`](docs/VISUAL_LANGUAGE.md)
+- [`docs/LOGGING.md`](docs/LOGGING.md)
+- [`docs/VALIDATION.md`](docs/VALIDATION.md)
 - [`LABFLOW_POC_SPEC.md`](LABFLOW_POC_SPEC.md)
 
-## Core model
+The in-app **Documentation** page is generated from the versioned Markdown under `docs/` and works without a documentation backend.
 
-```text
-Original ZIP (immutable)
-        ↓
-Working Copy
-        ↓
-Canonical Data Model / Store
-        ↓
-Tool Registry
-   ┌────┴──────────────┐
-   ↓                   ↓
-Actions          Assistant (read-only)
-   ↓                   ↓
-validated writes   selected observations
-   └──────────┬────────┘
-              ↓
-          Working Copy
+## AI design
+
+AI is not required for the core import/Results/NOMAD pipeline.
+
+Every AI Action is a versioned contract under `actions/` with explicit context profile, input cap, output target/ceiling, deadline and retry policy. Structured Actions also use JSON schemas.
+
+`analysis.enrich` is intentionally a **micro semantic layer**, not a second analysis engine. It receives a compact experiment summary and adds only likely goal, variables, comparisons, labelled interpretations/hypotheses and important metadata gaps. Current defaults are bounded to roughly **3,200 input tokens**, **320 target output tokens** and a **700-token ceiling**; failure never blocks import.
+
+For Z.AI `glm-4.7-flash`, LabFlow does **not** change model or fall back automatically. A 429/`1305` opens a provider-wide persisted cooldown; no hidden HTTP retry is sent, and bulk workflows stop while preserving completed work. See [`docs/guides/AI_TOKENS_AND_RATE_LIMITS.md`](docs/guides/AI_TOKENS_AND_RATE_LIMITS.md).
+
+## Storage and privacy
+
+The POC is static and local-first:
+
+- source snapshot + Working Copy are autosaved in IndexedDB;
+- provider/model/UI preferences and provider-scoped API keys are stored browser-locally;
+- short-lived provider cooldown metadata is stored locally to prevent immediate retry storms after reload;
+- scientific parsing/calculation/validation/export runs in the browser;
+- only configured AI Actions send bounded request context to the selected external provider.
+
+API credentials are redacted from structured logs. The uploaded ZIP is never overwritten.
+
+## Local providers
+
+LM Studio, Ollama and llama.cpp (`llama-server`) use the same OpenAI-compatible Chat Completions transport as cloud providers. No Python application backend is required. The local server must be running and allow the browser origin (CORS). The llama.cpp preset defaults to `http://127.0.0.1:8080/v1`, discovers served model IDs through `/v1/models`, and reads the effective **per-slot** context plus slot count from `/props`.
+
+For LabFlow, the recommended llama.cpp runtime is deliberately **single-slot**: `--parallel 1 --ctx-size 65536`. With that profile, `/props.default_generation_settings.n_ctx` should report `65536` and `total_slots` should report `1`; LabFlow uses the full 65K runtime context and does not divide it again. Detect reports a clear runtime-profile mismatch if the server is started with a different slot/context configuration. Reasoning remains a per-Action concern: LabFlow sends explicit reasoning-off controls only for Actions that declare `thinking: off`, while reasoning-capable Actions may use the server/model default. The connection probe distinguishes HTTP/API reachability from final-text quality, so an HTTP 200 reasoning-only bounded probe is reported as reachable/inconclusive rather than as a network failure.
+
+Recommended launcher core:
+
+```bash
+llama-server \
+  --model /path/to/model.gguf \
+  --alias local-model \
+  --ctx-size 65536 \
+  --parallel 1 \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --jinja
 ```
 
-Original filenames remain provenance and aliases; they are not blindly treated as scientific identity.
-
-## Researcher Actions
-
-Settings → Actions exposes every executable Action in the webapp:
-
-- Analyze dataset — deterministic automatic;
-- Apply safe corrections — deterministic action;
-- Resolve ambiguities — AI assist;
-- Infer missing design — AI assist;
-- Interpret results — AI assist;
-- Generate report — AI assist;
-- Improve report — AI assist;
-- Prepare NOMAD export — deterministic action.
-
-`assistant.chat` is also visible in Actions so its prompt/runtime definition can be inspected and edited. Internal helper functions remain implementation details rather than Actions.
-
-Internal compute/index/apply/validation functions are not Actions.
-
-## Tools and bounded agentic Assistant
-
-LabFlow separates **Tools** from **Actions**. A Tool is a small typed capability over the Canonical Data Model; an Action is a researcher-understandable workflow that composes deterministic tools and optional AI steps. Deterministic Action checkpoints now reference Tool IDs from the shared registry instead of calling page-specific logic.
-
-The Assistant is deliberately simple and read-only. Each question receives one bounded Context Pack computed from the **current Working Copy and current page state**, plus optional local Knowledge Base matches, then makes one model request. It cannot mutate the Working Copy or autonomously run mutating Actions. See [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md).
-
-## Save and export
-
-The uploaded source is never rewritten.
-
-**Save** marks an explicit checkpoint for the current revision. The Working Copy is autosaved locally and restored when LabFlow is reopened; **Reset session** deliberately clears that persisted scientific session. Provider/model settings, API key and UI preferences remain browser-local but separate. **Export** explicitly creates the durable LabFlow ZIP.
-
-LabFlow ZIP, Report PDF/DOCX and NOMAD ZIP are explicit derived exports: they read the current Working Copy but do not implicitly mark later edits saved.
-
-Normal LabFlow export includes `canonical.json`, a compact portable semantic snapshot with identities, aliases, measurements, relations, evidence, findings, patches, Design and provenance. RAW source remains separate.
-
-## Report
-
-Report and Paper keep separate Markdown text, titles and figure selections. The active editor is the textual source of truth and supports standard inline `$...$` and display `$$...$$` LaTeX. Preview typesets equations locally; `.tex` preserves LaTeX and DOCX/PDF embed display equations together with only the explicitly selected deterministic figures.
-
-## NOMAD
-
-NOMAD is deterministic-first. One Canonical → NOMAD mapping plan powers the UI, local validation and generated package. AI never decides readiness.
-
-## Run
-
-No Node.js application server or backend is required. The POC is static. AI providers are called directly from the browser and connection settings are stored locally in the browser.
-
-For **local LLM providers**, LabFlow calls LM Studio or Ollama directly through the OpenAI-compatible `/v1/chat/completions` contract; no Python application server is required. The provider only needs to be running and accept the current browser origin. Active-model detection runs only when **Detect** or the connection test is explicitly started; thinking/no-thinking fields are applied only when the provider adapter declares them. See [`docs/specs/AI_PROVIDERS.md`](docs/specs/AI_PROVIDERS.md).
+A local provider returning HTTP 200 while a remote provider returns immediate 429 is a useful diagnostic distinction: it isolates provider availability from LabFlow's deterministic import/Action pipeline.
 
 ## Build and verify
+
+After changing prompts, Actions, schemas or documentation, rebuild generated assets before testing:
 
 ```bash
 python tools/build_prompt_bundle.py
 python tools/build_action_registry.py
+python tools/build_action_reference.py
+python tools/build_docs_bundle.py
 python tools/build_ui_kit_inline.py
+```
+
+Then run:
+
+```bash
 python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
@@ -110,13 +150,4 @@ node tests/unit/run.js $(find tests/unit -maxdepth 1 -name '*-test.js' -printf '
 find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
 ```
 
-`ui-kit.html` is the visual ground truth. The in-app UI Kit route renders a generated inline mirror (`assets/js/pages/ui-kit-inline.js`) so the POC remains safe when opened directly with `file://`; rebuild it with `python tools/build_ui_kit_inline.py` after changing the UI Kit.
-
-
-### Action progress and adaptive output budgets
-
-Long Actions expose monotonic semantic progress: checkpoint, work unit, provider phase and bounded SSE/token telemetry. Streaming events refine only the response-generation segment, so a model can no longer leave the UI at 99% while it is still producing output. Sequential helpers such as Design completion and Report/Paper **All** project child progress into one global bar.
-
-AI output uses per-step `min_output_tokens`, `target_output_tokens` and `max_output_tokens`. The selected model/provider maximum is a ceiling, never an automatic generation target. Report/Paper work units also carry word targets so writing requests can be substantially longer than compact analysis/enrichment Actions without requesting unnecessarily huge outputs.
-
-Design supports **Apply all AI inferences** across per-variant proposals. Applying a proposal does not imply that a variant is complete; unresolved source gaps remain visible. Report and Paper have independent figure selections through a dedicated figure picker.
+`ui-kit.html` is the visual component/theme ground truth. The application uses the same token/primitive system and the in-app UI Kit is a generated file-safe mirror.

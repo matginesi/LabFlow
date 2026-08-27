@@ -103,9 +103,9 @@ Fresh Report/Paper documents are empty. `report.generate` drafts only after an e
 
 ## 4. Context budgeting
 
-Context is bounded before sending the request. Context Packs have a hard serialized-size budget; if necessary, lower-priority arrays and long evidence strings are deterministically reduced.
+Context is bounded before sending the request. Every AI step declares an operational `max_input_tokens` cap in addition to the Context Pack serialized-size budget; if necessary, lower-priority arrays and long evidence strings are deterministically reduced. This Action cap applies even when the selected model advertises a very large context window.
 
-When a provider exposes a runtime context window, LabFlow also performs an Action preflight so estimated input + reserved output + safety margin fit the loaded context. For LM Studio, the loaded instance `context_length` takes priority over the model's theoretical maximum context. If compaction is required, the pack includes a notice and the runtime logs `context.compacted`.
+When a provider exposes a runtime context window, LabFlow also performs an Action preflight so estimated input + reserved output + safety margin fit the loaded context. The effective input ceiling is the tighter of the Action `max_input_tokens` cap and the model/runtime context headroom. For LM Studio, the loaded instance `context_length` takes priority over the model's theoretical maximum context. For llama.cpp, explicit **Detect** reads `/props.default_generation_settings.n_ctx` as the effective context **already assigned to one server slot**, and separately records `total_slots`. LabFlow's recommended profile is `--parallel 1 --ctx-size 65536`; therefore a matching runtime exposes the full 65,536-token context to the single Action slot and LabFlow does not divide that value again. If a different runtime profile is detected, Settings reports it explicitly. If compaction is required, the pack includes a notice and the runtime logs `context.compacted`.
 
 A narrow user question should produce a narrow context instead of increasing the global budget.
 
@@ -115,7 +115,7 @@ LabFlow does not impose one hidden global output ceiling. Every AI step declares
 
 The effective request budget is the tightest applicable value among: the Action/step target, detected exact model maximum (or safe context headroom when only that is known), the optional Assistant override for `assistant.chat`, and **Settings → Provider → Force max output**. Provider `0` means “do not add a global cap”; it does not mean “request the provider maximum”. A positive user cap can only lower the request.
 
-Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately fail-fast: `analysis.enrich` targets 3072 output tokens, has a 90 s absolute deadline and does not auto-retry. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
+Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately a micro-request: `analysis.enrich` is a semantic-only layer (objective, variables, comparisons, labelled hypotheses and gaps), caps estimated input at 3,200 tokens, targets about 320 output tokens with a 700-token ceiling, has a 45 s work-unit deadline, and disables both semantic and provider transport retries. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
 
 ## 6. Structured AI output
 
@@ -139,18 +139,11 @@ Final Markdown/JSON rendering must follow the active theme.
 
 ## 8. Retry contract
 
-AI checkpoint retry schedule:
+Retry is **Action-declared**, not a global promise that every AI call retries twice. `max_retries` controls semantic/checkpoint retry and `transport_retries` may further constrain provider retry. Many compact/automatic Actions deliberately set both to zero.
 
-```text
-first failure
-  ↓ 5 s
-retry 1
-  ↓ failure
-10 s
-retry 2
-  ↓ failure
-manual Retry checkpoint
-```
+When an Action enables semantic retry, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated structured output is never stored as partial JSON.
+
+Provider throttling is a separate transport concern. Z.AI `glm-4.7-flash` has zero hidden transport retries; a 429/1305 opens a shared persisted provider circuit instead. See [`guides/AI_TOKENS_AND_RATE_LIMITS.md`](guides/AI_TOKENS_AND_RATE_LIMITS.md).
 
 No unbounded retry loop or provider queue.
 
@@ -171,11 +164,11 @@ The final answer is generated only after this retrieval phase and may expose whi
 
 ## Provider rate limits
 
-LabFlow treats provider rate limiting separately from model/output failures. Z.AI `glm-4.7-flash` is not slowed by a fixed inter-request delay while the API is accepting traffic. HTTP 429 or provider code `1305` triggers a bounded transport-level cooldown, learns a temporary per-model pacing interval and retries the exact same request; `Retry-After` is honored when present. The learned interval decays after successful requests. This retry does not rebuild prompts, rerun deterministic checkpoints, or count as an Action semantic retry. Quota-exhaustion codes such as 1308/1310 are not retried automatically.
+LabFlow treats provider rate limiting separately from model/output failures. The configured model is never substituted automatically. For Z.AI `glm-4.7-flash`, LabFlow applies a 10 s client-side quiet interval after accepted traffic and maintains one provider-wide cooldown shared by every AI entry point. A `1305`/HTTP 429 is not automatically retried: the first exhausted throttle opens a 60 s circuit, repeated throttles after expiry extend it exponentially up to 15 minutes, and a successful request clears the failure history. The circuit metadata is persisted locally so reload cannot immediately restart traffic. While open, requests fail locally before `fetch()`, including Test connection. Multi-request operations such as **Suggest all** stop at the first throttle, preserve completed suggestions and leave untouched experiments pending. Quota-exhaustion codes such as `1304`, `1308` and `1310` also fail immediately. These client timings are protective LabFlow policy, not claims about unpublished provider RPM/TPM quotas.
 
 
 ## Adaptive output budgeting
 
 LabFlow separates desired output size from provider capability. Each AI step may declare a minimum, target and maximum output budget. `ActionRunner` adapts the request to the work unit (including Report/Paper target words) and then clamps it to the detected model/provider ceiling and optional user cap. The provider maximum must never become the default requested output size.
 
-Long model calls emit semantic phases (`prepare`, `request`, streaming, `validate`, `store/complete`). SSE events and estimated generated tokens refine streaming progress only; they do not imply that validation or storage has completed. Connection tests use the regular provider transport with a small bounded payload and Z.AI rate-limit handling.
+Long model calls emit semantic phases (`prepare`, `request`, streaming, `validate`, `store/complete`). The live UI reports estimated/exact input/output tokens, Action target/ceiling, first-token latency and generation rate. Raw SSE event counts and wire bytes are diagnostics only because many tiny provider chunks can make those numbers look enormous without representing token use. Provider pacing/cooldown time is separate from the Action inference deadline; the deadline starts when the HTTP request actually starts. Connection tests use one small bounded payload and never retry.

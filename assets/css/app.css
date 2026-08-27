@@ -37,7 +37,7 @@ body { overflow: hidden; }
   appearance: none;
   flex: 0 0 auto;
   width: 100%;
-  min-height: 31px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -58,7 +58,20 @@ body { overflow: hidden; }
 .nav-copy small { overflow: hidden; color: var(--sidebar-muted); font-size: var(--sidebar-meta-size); line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .nav-link.active .nav-glyph { border-color: var(--sidebar-active-edge); color: white; }
 .nav-link.active .nav-copy small { color: var(--sidebar-text); }
-.sidebar-foot { margin-top: auto; padding: 9px 8px 3px; border-top: 1px solid var(--sidebar-separator); color: var(--sidebar-foot); font-size: var(--sidebar-meta-size); line-height: 1.3; }
+.sidebar-foot { margin-top: 0; padding: 8px 8px 3px; border-top: 1px solid var(--sidebar-separator); color: var(--sidebar-foot); font-size: var(--sidebar-meta-size); line-height: 1.3; }
+
+.sidebar-bottom {
+  position: sticky;
+  bottom: -9px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+  padding: 8px 0 9px;
+  background: var(--sidebar-bg);
+  border-top: 1px solid var(--sidebar-separator);
+}
+.sidebar-bottom .sidebar-foot { border-top: 0; }
 .status-dot { width: 6px; height: 6px; display: inline-block; margin-right: 5px; border-radius: 50%; background: var(--success); }
 
 .workspace-shell {
@@ -108,7 +121,7 @@ body { overflow: hidden; }
   scrollbar-gutter: stable;
   background: var(--bg);
 }
-.page { min-width: 0; display: grid; gap: 8px; padding: 10px 12px 44px; }
+.page { min-width: 0; display: grid; gap: 10px; padding: 12px 14px 46px; }
 .page > * { min-width: 0; }
 .page-head { min-width: 0; display: flex; gap: 10px; align-items: center; }
 .page-head > div:first-child { min-width: 0; }
@@ -124,16 +137,16 @@ body { overflow: hidden; }
 /* ---------- experiment steps ---------- */
 .experiment-strip.stepper {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0,1fr));
+  grid-template-columns: repeat(5, minmax(0,1fr));
   overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
-.experiment-strip .step { min-width: 0; min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; border-right: 1px solid var(--border); }
+.experiment-strip .step { min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 7px 9px; border-right: 1px solid var(--border); }
 .experiment-strip .step:last-child { border-right: 0; }
-.experiment-strip .step-index { width: 19px; height: 19px; display: grid; place-items: center; flex: 0 0 19px; border: 1px solid var(--border-strong); border-radius: 50%; font-size: 9px; }
-.experiment-strip .step strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+.experiment-strip .step-index { width: 23px; height: 23px; display: grid; place-items: center; flex: 0 0 23px; border: 1px solid var(--border-strong); border-radius: 50%; font-size: 10px; font-weight: 750; }
+.experiment-strip .step strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 1.15; }
 .experiment-strip .step.active { color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 -2px 0 var(--accent); }
 .experiment-strip .step.done .step-index { color: var(--success); border-color: var(--success-border); background: var(--success-soft); }
 
@@ -339,10 +352,8 @@ body.ui-kit-page { overflow: hidden; }
   .main-area { overflow-y: scroll; }
   .page { padding: 8px 8px 48px; }
   .page-head { align-items: flex-start; flex-wrap: wrap; }.page-head .toolbar { width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 3px; }.page-head .toolbar > * { flex: 0 0 auto; }
-  /* Seven short workflow labels use the compact strip at tablet widths. Keep the complete
-     sequence visible instead of turning it into a needlessly long scroller. */
-  .experiment-strip.stepper { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); overflow: hidden; }
-  .experiment-strip .step { min-width: 0; }
+  /* Five workflow destinations stay visible at tablet widths. */
+  .experiment-strip.stepper { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); overflow:hidden; }
   .metric-grid, .results-kpis, .compact-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .results-chart-grid, .results-layout, .three-col { grid-template-columns: 1fr; }.results-chart-grid > :last-child { grid-column: auto; }
   .form-grid, .report-meta-grid { grid-template-columns: 1fr; }
@@ -775,7 +786,7 @@ body.ui-kit-page { overflow: hidden; }
 .box-group-9 .box-whisker,.box-group-9 .box-cap,.box-group-9 .box-median,.box-group-9 .box-rect { stroke:var(--chart-10); }.box-group-9 .box-point{fill:var(--chart-10)}
 .min-w-0 { min-width:0; }
 .working-copy-state { flex:0 0 auto; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 7px; border:1px solid var(--topbar-border); border-radius:var(--radius-sm); color:var(--topbar-muted); font-size:var(--font-micro); }
-.working-copy-state.dirty { color:#ffe3a0; border-color:#755c27; }
+.working-copy-state.dirty { color:var(--dirty-text); border-color:var(--dirty-border); background:var(--dirty-bg); }
 
 @media (max-width:1050px) {
   .results-overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -1010,9 +1021,9 @@ body.ui-kit-page { overflow: hidden; }
 .brand-logo { width:34px; height:34px; display:grid; place-items:center; flex:0 0 34px; border:1px solid rgba(255,255,255,.12); border-radius:10px; background:rgba(255,255,255,.96); box-shadow:0 5px 16px rgba(0,0,0,.16); overflow:hidden; }
 .brand-logo img { width:29px; height:29px; display:block; }
 .brand-copy strong { font-size:14px; letter-spacing:-.025em; }
-.brand-copy strong span { color:#54D2CF; }
+.brand-copy strong span { color:var(--brand-accent); }
 .brand-copy small { max-width:118px; line-height:1.25; }
-.topbar-page-context { min-width:0; max-width:min(34vw,420px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 8px; border:1px solid var(--topbar-border); border-radius:999px; color:var(--topbar-muted); font-size:var(--font-xs); background:color-mix(in srgb,var(--topbar-bg) 86%,#127A8B 14%); }
+.topbar-page-context { min-width:0; max-width:min(34vw,420px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding:4px 8px; border:1px solid var(--topbar-border); border-radius:999px; color:var(--topbar-muted); font-size:var(--font-xs); background:color-mix(in srgb,var(--topbar-bg) 86%,var(--accent) 14%); }
 .working-copy-state { white-space:nowrap; }
 
 /* Actions manager: compact, readable, runtime-editable. */
@@ -1131,7 +1142,6 @@ body.ui-kit-page { overflow: hidden; }
   body{overflow:hidden}.topbar{overflow:hidden!important;gap:5px!important;padding:5px 7px!important}.topbar-title{min-width:0!important;flex:1 1 auto}.topbar-title span,.topbar-page-context,.working-copy-state,#resetAll,[data-theme-toggle]{display:none!important}.topbar .spacer{display:none!important}.topbar #saveWorkingCopy{max-width:106px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.topbar #assistantToggle{width:31px;min-width:31px;height:29px;padding:0!important;display:grid;place-items:center}.topbar #assistantToggle span:not(:first-child){display:none}.topbar-context{position:absolute;left:7px;right:7px;top:calc(var(--topbar-h) + 5px);z-index:8;min-width:0!important;max-width:none;padding:5px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-float)}.topbar-context[hidden]{display:none!important}
   .page{padding:8px 7px 48px!important;gap:7px}.page-head{display:flex!important;flex-direction:column;align-items:stretch!important;gap:7px}.page-head>.spacer{display:none}.page-head .toolbar,.design-head-actions{width:100%;max-width:100%;display:flex;justify-content:flex-start!important;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap!important;padding-bottom:2px}.page-head .toolbar>*,.design-head-actions>*{flex:0 0 auto}.page-head h1{font-size:18px}.panel-head{gap:7px}
   .tabs{max-width:100%;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap!important;scrollbar-width:thin}.tabs .tab{flex:0 0 auto;white-space:nowrap}
-  .experiment-strip.stepper{grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}.experiment-strip .step{min-width:0!important;min-height:47px!important;padding:3px 1px!important}.experiment-strip .step strong{font-size:8px!important}.experiment-strip .step-index{width:17px!important;height:17px!important;flex-basis:17px!important}
   .two-col,.three-col,.form-grid,.settings-workspace-grid{grid-template-columns:1fr!important}
 
   .review-overview{grid-template-columns:1fr!important;gap:7px}.review-kpis{width:100%;overflow-x:auto}.review-step-head{align-items:stretch!important;flex-direction:column}.review-step-heading{align-items:flex-start}.review-step-heading .review-step-index{width:26px;height:26px;flex-basis:26px}.review-step-heading .h2{font-size:14px}.review-step-heading .meta{font-size:10px;line-height:1.45}.review-step-action{width:100%}.review-step .table-wrap{overflow:visible!important}.review-step table{min-width:0!important;width:100%!important}.review-step table thead{display:none!important}.review-step table tbody,.review-step table tr{display:block!important}.review-step table tr{margin:0 0 6px;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}.review-step table td{display:grid!important;grid-template-columns:96px minmax(0,1fr)!important;gap:7px;width:100%!important;padding:5px 3px!important;border:0!important;white-space:normal!important;overflow-wrap:anywhere}.review-step table td::before{content:attr(data-label);color:var(--text-muted);font-size:9px;font-weight:700}.review-decision-actions{flex-wrap:wrap}.review-decision-actions .button{flex:1 1 auto}.review-ai-results .section-title{display:flex;align-items:stretch;flex-direction:column;gap:5px}.review-ai-results .section-title .button{width:100%}.review-manual-form{grid-template-columns:1fr!important}.review-manual-form .button{width:100%}
@@ -1227,11 +1237,9 @@ body.ui-kit-page { overflow: hidden; }
 }
 
 @media (max-width:700px){
-  /* Small-screen density: preserve usable content width instead of desktop chrome. */
-  .page{padding:6px 5px 38px!important;gap:5px!important}.panel{border-radius:7px}.panel-head{padding:6px 7px!important}.panel-body{padding:6px!important}.page-head{gap:5px!important}.page-head h1{font-size:15px!important}.page-head p{font-size:9px!important}.eyebrow{font-size:8px!important}.h2{font-size:12px!important}
+  /* Small-screen density: compact, but never micro-sized. */
+  .page{padding:9px 8px 42px!important;gap:8px!important}.panel{border-radius:7px}.panel-head{padding:8px 9px!important}.panel-body{padding:8px!important}.page-head{gap:7px!important}.page-head h1{font-size:17px!important}.page-head p{font-size:11px!important}.eyebrow{font-size:9px!important}.h2{font-size:13px!important}
   .topbar{padding-inline:5px!important}.topbar-title strong{font-size:10px}.topbar #saveWorkingCopy,.topbar #exportWorkingCopy{min-width:0!important;padding-inline:7px!important;font-size:9px!important}.topbar #saveWorkingCopy{max-width:none!important}.mobile-nav-toggle,.topbar #assistantToggle{width:29px!important;min-width:29px!important}
-  /* Seven workflow steps scroll as compact chips rather than being crushed. */
-  .experiment-strip.stepper{display:flex!important;gap:3px!important;overflow-x:auto!important;overflow-y:hidden!important;padding-bottom:2px}.experiment-strip .step{flex:0 0 58px!important;min-width:58px!important;min-height:39px!important;padding:3px!important}.experiment-strip .step strong{font-size:7px!important}.experiment-strip .step-index{width:15px!important;height:15px!important;flex-basis:15px!important;font-size:7px!important}
   .review-compact-status{display:flex;gap:3px;overflow-x:auto;border:0;background:transparent}.review-compact-status>div{flex:0 0 104px;border:1px solid var(--border);border-radius:5px;padding:5px 6px}.review-compact-status>.button{flex:0 0 auto;margin:0}.review-compact-panel>.panel-head{align-items:flex-start;flex-wrap:wrap}.review-compact-panel>.panel-head>.spacer{display:none}.review-compact-panel>.panel-head>div:first-child{min-width:0;flex:1 1 180px}.review-ai-actions{width:100%;justify-content:flex-start}.review-ai-actions .button{width:auto!important;flex:0 0 auto}.review-compact-panel>.panel-body{padding:4px!important}
   .review-dense-table thead{display:none}.review-dense-table,.review-dense-table tbody{display:block;width:100%}.review-dense-table tr{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:4px;border:1px solid var(--border);border-radius:5px;overflow:hidden;background:var(--surface)}.review-dense-table td{display:block!important;min-width:0;padding:5px!important;border:0!important;border-bottom:1px solid var(--border)!important}.review-dense-table td:nth-child(odd){border-right:1px solid var(--border)!important}.review-dense-table td::before{display:block;margin-bottom:2px;color:var(--text-muted);font-size:7px;font-weight:800;text-transform:uppercase}.review-safe-table td:nth-child(1)::before{content:'Correction'}.review-safe-table td:nth-child(2)::before{content:'Target'}.review-safe-table td:nth-child(3)::before{content:'Evidence'}.review-safe-table td:nth-child(4)::before{content:'Action'}.review-ai-table td:nth-child(1)::before{content:'Current'}.review-ai-table td:nth-child(2)::before{content:'AI proposal'}.review-ai-table td:nth-child(3)::before{content:'Basis'}.review-ai-table td:nth-child(4)::before{content:'Action'}.review-ambiguity-table td:nth-child(1)::before{content:'Ambiguity'}.review-ambiguity-table td:nth-child(2)::before{content:'Target'}.review-ambiguity-table td:nth-child(3)::before{content:'Evidence'}.review-ambiguity-table tr{grid-template-columns:1fr}.review-ambiguity-table td:nth-child(odd){border-right:0!important}.review-action-cell .button{min-height:25px!important;padding:3px 6px!important}
   .design-experiment-select{grid-template-columns:minmax(0,1fr) auto;align-items:end;padding:5px}.design-experiment-select label{grid-column:1/-1}.design-experiment-select .design-completion{min-width:70px}.design-experiment-select>.button{min-width:0}.design-ai-table-panel>.panel-head{align-items:flex-start;flex-wrap:wrap}.design-ai-table-panel>.panel-head>.spacer{display:none}.design-ai-head-actions{width:100%}.design-ai-head-actions .button{flex:1}.design-ai-table thead{display:none}.design-ai-table,.design-ai-table tbody{display:block}.design-ai-table tr{display:grid;grid-template-columns:74px minmax(0,1fr);gap:0;margin-bottom:4px;border:1px solid var(--border);border-radius:5px;overflow:hidden}.design-ai-table td{display:block!important;padding:5px!important;border:0!important;border-bottom:1px solid var(--border)!important}.design-ai-table td:nth-child(1){grid-row:1/3}.design-ai-table td:nth-child(4){grid-column:1/-1}.design-ai-table td:nth-child(4) .button{width:100%}.design-fabrication-table{grid-template-columns:1fr}.design-edit-table thead{display:none}.design-edit-table,.design-edit-table tbody{display:block}.design-edit-table tr{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:5px;padding:5px;border:1px solid var(--border);border-radius:5px;background:var(--surface-2)}.design-edit-table td{display:grid!important;grid-template-columns:64px minmax(0,1fr);gap:4px;align-items:center;padding:0!important;border:0!important}.design-edit-table td::before{color:var(--text-muted);font-size:7px;font-weight:800;text-transform:uppercase}.design-edit-table td:nth-child(1)::before{content:'Solution'}.design-edit-table td:nth-child(2)::before{content:'Role'}.design-edit-table td:nth-child(3)::before{content:'Solutes'}.design-edit-table td:nth-child(4)::before{content:'Solvents'}.design-edit-table td:nth-child(5)::before{content:'Composition'}.design-edit-table td:nth-child(6)::before{content:'Additives'}.design-edit-table td:nth-child(7)::before{content:'Source'}.design-edit-table td:nth-child(8){display:flex!important;justify-content:flex-end}.design-stack-edit-table td:nth-child(1)::before{content:'#'} .design-stack-edit-table td:nth-child(2)::before{content:'Role'}.design-stack-edit-table td:nth-child(3)::before{content:'Material'}.design-stack-edit-table td:nth-child(4)::before{content:'Thickness'}.design-stack-edit-table td:nth-child(5)::before{content:'Process'}.design-stack-edit-table td:nth-child(6)::before{content:'Source'}.design-stack-edit-table td:nth-child(7){display:flex!important;justify-content:flex-end}.design-stack-edit-table td:nth-child(7)::before{content:''}.design-edit-table .input{width:100%;min-width:0!important}.design-stack-visual{min-height:48px;padding:4px}.design-stack-visual>div{flex-basis:82px;min-width:82px;padding:5px}
@@ -1253,60 +1261,6 @@ body.ui-kit-page { overflow: hidden; }
 }
 
 
-/* ---------- compact workflow strip ---------- */
-.experiment-strip.stepper {
-  grid-template-columns: repeat(7,minmax(0,1fr));
-}
-.experiment-strip .step {
-  min-height: 30px;
-  gap: 4px;
-  padding: 3px 5px;
-}
-.experiment-strip .step-index {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  font-size: 7px;
-}
-.experiment-strip .step strong {
-  font-size: 9px;
-  line-height: 1;
-}
-
-@media (max-width:700px) {
-  .experiment-strip.stepper {
-    display:flex!important;
-    gap:2px!important;
-    overflow-x:auto!important;
-    overflow-y:hidden!important;
-    padding:2px!important;
-    scrollbar-width:thin;
-  }
-  .experiment-strip .step {
-    flex:0 0 auto!important;
-    min-width:66px!important;
-    min-height:28px!important;
-    flex-direction:row!important;
-    justify-content:center!important;
-    gap:3px!important;
-    padding:2px 5px!important;
-    text-align:left!important;
-  }
-  .experiment-strip .step-index {
-    width:14px!important;
-    height:14px!important;
-    flex-basis:14px!important;
-    font-size:7px!important;
-  }
-  .experiment-strip .step strong {
-    font-size:8px!important;
-    line-height:1!important;
-  }
-}
-@media (max-width:430px) {
-  .experiment-strip .step { min-width:61px!important; padding-inline:4px!important; }
-  .experiment-strip .step strong { font-size:7.5px!important; }
-}
 
 /* Review / deterministic canonical naming */
 .review-name-normalizations{margin:0;border:1px solid var(--border);border-radius:6px;background:color-mix(in srgb,var(--surface) 94%,var(--accent) 6%);overflow:hidden}
@@ -1886,14 +1840,14 @@ body.ui-kit-page { overflow: hidden; }
 }
 .sidebar-status-copy>strong{
   color:var(--sidebar-muted);
-  font-size:7px;
-  line-height:1.25;
+  font-size:9px;
+  line-height:1.3;
   text-transform:uppercase;
   letter-spacing:.045em;
 }
 .sidebar-status-copy>small{
   color:var(--sidebar-foot);
-  font:7.5px/1.32 var(--font-mono);
+  font:9px/1.35 var(--font-mono);
   overflow-wrap:anywhere;
   word-break:break-word;
 }
@@ -2025,8 +1979,6 @@ body.ui-kit-page { overflow: hidden; }
   .h2,.activity-head h2,.result-inspector-head h2{font-size:14px!important}
   .topbar-title strong{font-size:12px}
   .topbar #saveWorkingCopy,.topbar #exportWorkingCopy,.topbar #resetAll{font-size:10px!important}
-  .experiment-strip .step-index{width:17px;height:17px;flex-basis:17px;font-size:10px!important}
-  .experiment-strip .step strong{font-size:9.5px!important}
   .review-dense-table th,.results-table th,.design-edit-table th,
   .results-table .quality-badge,.results-table .badge{font-size:10px!important}
   .review-action-cell .button{min-height:28px!important;padding-block:4px}
@@ -2039,7 +1991,7 @@ body.ui-kit-page { overflow: hidden; }
 }
 
 /* The workflow strip overflows on narrow phones: a right-edge fade says so
-   without stacking or crushing the six destinations (UI Kit contract). */
+   without stacking or crushing the five destinations (UI Kit contract). */
 @media (max-width:480px){
   .experiment-strip.stepper{
     -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),rgba(0,0,0,.22));
@@ -2156,3 +2108,37 @@ body.ui-kit-page { overflow: hidden; }
 .chat-thinking-dot{width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:var(--ai);box-shadow:0 0 0 3px color-mix(in srgb,var(--ai) 14%,transparent);animation:chat-status-pulse 1s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){.chat-thinking-dot{animation:none}}
 .design-ai-confidence{display:grid;gap:1px;min-width:112px;padding:5px 7px;border:1px solid color-mix(in srgb,var(--ai) 48%,var(--border));border-radius:var(--radius-sm);background:color-mix(in srgb,var(--ai) 7%,var(--surface));text-align:right}.design-ai-confidence span{font-size:7px;font-weight:800;color:var(--text-muted);text-transform:uppercase}.design-ai-confidence strong{font:850 15px/1 var(--font-mono);color:var(--ai)}.design-ai-confidence small{max-width:180px;font-size:6.5px;color:var(--text-muted)}
+
+
+/* 2026-08-27 · canonical five-step workflow strip.
+   This is intentionally the final workflow rule: no page-specific micro sizing. */
+.experiment-strip.stepper{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  overflow:hidden;
+}
+@media (max-width:700px){
+  .experiment-strip.stepper{
+    display:flex!important;
+    gap:4px!important;
+    padding:4px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x proximity;
+    scrollbar-width:thin;
+  }
+  .experiment-strip .step{
+    flex:0 0 min(43vw,150px)!important;
+    min-width:112px!important;
+    min-height:44px!important;
+    justify-content:flex-start!important;
+    gap:7px!important;
+    padding:7px 9px!important;
+    scroll-snap-align:start;
+    text-align:left!important;
+  }
+  .experiment-strip .step-index{width:22px!important;height:22px!important;flex-basis:22px!important;font-size:10px!important}
+  .experiment-strip .step strong{font-size:11px!important;line-height:1.15!important}
+}
+@media (max-width:430px){
+  .experiment-strip .step{flex-basis:118px!important;min-width:108px!important}
+}

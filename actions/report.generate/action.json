@@ -25,14 +25,15 @@
       "prompt": "prompt.md",
       "output": "text",
       "thinking": "off",
-      "timeout_ms": 240000,
+      "timeout_ms": 300000,
       "foreach": "collect.blocks",
       "weight": 0.84,
-      "max_output_tokens": 12288,
-      "deadline_ms": 180000,
-      "max_retries": 1,
-      "min_output_tokens": 1800,
-      "target_output_tokens": 6500
+      "max_output_tokens": 5000,
+      "deadline_ms": 240000,
+      "max_retries": 0,
+      "min_output_tokens": 700,
+      "target_output_tokens": 3600,
+      "max_input_tokens": 12000
     },
     {
       "id": "store",
@@ -49,7 +50,7 @@
   "input": {
     "context": "report",
     "knowledge": {
-      "limit": 8,
+      "limit": 6,
       "kinds": [
         "material",
         "solution",

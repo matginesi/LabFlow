@@ -24,7 +24,8 @@
       "deadline_ms": 150000,
       "max_retries": 1,
       "min_output_tokens": 600,
-      "target_output_tokens": 1400
+      "target_output_tokens": 1400,
+      "max_input_tokens": 10000
     },
     {
       "id": "store",

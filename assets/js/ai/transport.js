@@ -8,6 +8,9 @@
   let injectedController=null;
   const rateStates=new Map();
   const METADATA_TIMEOUT_MS=5000;
+  const STREAM_DIAGNOSTIC_CHARS=131072;
+  const RATE_STATE_STORE='labflow.ai.rate-state.v1';
+  const RATE_STATE_MAX_AGE_MS=24*60*60*1000;
 
   /** The ActionRunner hands over the single shared AbortController for a run. */
   function acceptController(c){injectedController=c||null;}
@@ -29,7 +32,7 @@
 
   /** Keep connectivity boring: one tiny request, no capability discovery. */
   function connectionProbePolicy(provider){
-    const configured=Math.max(8,Math.min(16,Number(provider&&provider.connectionTestMaxTokens)||16));
+    const configured=Math.max(8,Math.min(64,Number(provider&&provider.connectionTestMaxTokens)||16));
     return{thinkingMode:provider&&provider.thinkingModes&&provider.thinkingModes.off?'off':'auto',maxTokens:configured};
   }
 
@@ -87,28 +90,58 @@
     const prompt=raw.match(/(?:n_prompt_tokens[\"']?\s*[:=]\s*|request \()([0-9]{2,})\s*(?:tokens)?/i),ctx=raw.match(/(?:n_ctx[\"']?\s*[:=]\s*|context size \()([0-9]{2,})/i),http=raw.match(/returned\s+(4\d\d)\s*:/i);
     return{promptTokens:prompt?Number(prompt[1]):null,contextWindow:ctx?Number(ctx[1]):null,httpStatus:http?Number(http[1]):null};
   }
+  function limitInfo(status,code,message){
+    const c=String(code||''),m=String(message||'').toLowerCase(),http=Number(status)||0;
+    const known={
+      '1302':{limited:true,retryable:true,kind:'concurrency',label:'Provider concurrency limit reached'},
+      '1303':{limited:true,retryable:true,kind:'frequency',label:'Provider request frequency limit reached'},
+      '1304':{limited:true,retryable:false,kind:'daily_quota',label:'Provider daily quota exhausted'},
+      '1305':{limited:true,retryable:true,kind:'rate_limit',label:'API rate limit reached'},
+      '1308':{limited:true,retryable:false,kind:'usage_window',label:'Provider usage window exhausted'},
+      '1310':{limited:true,retryable:false,kind:'plan_quota',label:'Provider plan quota exhausted'},
+      '1312':{limited:true,retryable:true,kind:'model_capacity',label:'Provider model is temporarily busy'}
+    };
+    if(known[c])return known[c];
+    if(http===429){
+      if(/(?:quota|balance|credit|billing|daily|weekly|monthly|usage limit|plan limit|exhausted)/i.test(m))return{limited:true,retryable:false,kind:'quota',label:'Provider quota exhausted'};
+      return{limited:true,retryable:true,kind:'rate_limit',label:'API rate limit reached'};
+    }
+    return{limited:false,retryable:false,kind:'',label:''};
+  }
   function parseProviderError(text,status,requestId,headers){
     let code='',message='',providerType='';
     try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
     catch(_){message=String(text||'').replace(/\s+/g,' ').slice(0,420);}
     const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
     if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
-    const rateLimited=effectiveStatus===429||code==='1305';
-    const label=overflow?'Model context exceeded':rateLimited?'API rate limit reached':effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
-    const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code):'';
+    const limit=overflow?{limited:false,retryable:false,kind:'',label:''}:limitInfo(effectiveStatus,code,message);
+    const label=overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
+    const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code,message):'';
     const err=new Error(label+(overflow&&overflow.promptTokens&&overflow.contextWindow?' · '+overflow.promptTokens+' input tokens > '+overflow.contextWindow+' context tokens':'')+(!overflow&&code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;
+    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
     if(overflow){err.promptTokens=overflow.promptTokens;err.contextWindow=overflow.contextWindow;err.isContextOverflow=true;}
     return err;
   }
-  function isRateLimitError(err){return!!(err&&(Number(err.status)===429||String(err.providerCode||'')==='1305'));}
+  function isRateLimitError(err){if(!err)return false;if(err.rateLimited===true)return true;return limitInfo(err.status,err.providerCode,err.providerMessage||err.message).limited;}
+  function isRetryableRateLimitError(err){if(!err)return false;if(err.rateLimitRetryable!=null)return err.rateLimitRetryable===true;return limitInfo(err.status,err.providerCode,err.providerMessage||err.message).retryable;}
   function rateKey(spec){return[String(spec&&spec.settings&&spec.settings.provider||''),String(spec&&spec.model||spec&&spec.settings&&spec.settings.model||'')].join('|');}
   function ratePolicy(spec){
     const provider=spec&&spec.provider||{},settings=spec&&spec.settings||{},cfg=provider.rateLimit||{},providerId=String(settings.provider||provider.id||''),model=String(spec&&spec.model||settings.model||''),freeZaiFlash=providerId==='zai'&&/^glm-4\.7-flash$/i.test(model);
-    const delays=Array.isArray(cfg.delaysMs)&&cfg.delaysMs.length?cfg.delaysMs.map(function(x){return Math.max(0,Number(x)||0);}):[5000,12000],retryCount=Number(cfg.retries);
-    return{key:rateKey(spec),retries:Number.isFinite(retryCount)?Math.max(0,Math.min(4,retryCount)):1,delaysMs:delays,maxDelayMs:Math.max(1000,Number(cfg.maxDelayMs)||30000),minIntervalMs:freeZaiFlash?Math.max(0,Number(cfg.freeFlashMinIntervalMs)||0):Math.max(0,Number(cfg.minIntervalMs)||0),adaptiveStepMs:Math.max(250,Number(cfg.adaptiveStepMs)||1000),adaptiveMaxIntervalMs:Math.max(1000,Number(cfg.adaptiveMaxIntervalMs)||10000),providerId:providerId,model:model};
+    const delays=Array.isArray(cfg.delaysMs)&&cfg.delaysMs.length?cfg.delaysMs.map(function(x){return Math.max(0,Number(x)||0);}):[5000,12000],retryCount=Number(cfg.retries),baseBreaker=freeZaiFlash?Math.max(15000,Number(cfg.freeFlashBreakerMs)||60000):Math.max(5000,Number(cfg.breakerMs)||30000);
+    return{key:freeZaiFlash?'zai|free-flash-provider':rateKey(spec),retries:Number.isFinite(retryCount)?Math.max(0,Math.min(4,retryCount)):1,delaysMs:delays,maxDelayMs:Math.max(1000,Number(cfg.maxDelayMs)||30000),minIntervalMs:freeZaiFlash?Math.max(0,Number(cfg.freeFlashMinIntervalMs)||0):Math.max(0,Number(cfg.minIntervalMs)||0),breakerMs:baseBreaker,breakerMaxMs:freeZaiFlash?Math.max(baseBreaker,Number(cfg.freeFlashBreakerMaxMs)||900000):Math.max(baseBreaker,Number(cfg.breakerMaxMs)||300000),adaptiveStepMs:Math.max(250,Number(cfg.adaptiveStepMs)||1000),adaptiveMaxIntervalMs:Math.max(1000,Number(cfg.adaptiveMaxIntervalMs)||30000),providerId:providerId,model:model,freeTier:freeZaiFlash};
   }
-  function rateState(key){if(!rateStates.has(key))rateStates.set(key,{lastStartedAt:0,nextAllowedAt:0,rateLimitCount:0,dynamicMinIntervalMs:0,successCount:0});return rateStates.get(key);}
+  function storedRateStates(){
+    try{const raw=localStorage.getItem(RATE_STATE_STORE);if(!raw)return{};const parsed=JSON.parse(raw)||{},now=Date.now(),out={};Object.keys(parsed).forEach(function(key){const row=parsed[key]||{},updated=Number(row.updatedAt)||0;if(updated&&now-updated<=RATE_STATE_MAX_AGE_MS)out[key]=row;});return out;}catch(_){return{};}
+  }
+  function persistRateState(key,state){
+    try{const all=storedRateStates(),now=Date.now();all[key]={lastFinishedAt:Number(state.lastFinishedAt)||0,nextAllowedAt:Number(state.nextAllowedAt)||0,circuitOpenUntil:Number(state.circuitOpenUntil)||0,rateLimitCount:Number(state.rateLimitCount)||0,dynamicMinIntervalMs:Number(state.dynamicMinIntervalMs)||0,successCount:Number(state.successCount)||0,updatedAt:now};localStorage.setItem(RATE_STATE_STORE,JSON.stringify(all));}catch(_){}
+  }
+  function clearPersistedRateState(key){try{const all=storedRateStates();delete all[key];localStorage.setItem(RATE_STATE_STORE,JSON.stringify(all));}catch(_){}}
+  function rateState(key){if(!rateStates.has(key)){const saved=storedRateStates()[key]||{};rateStates.set(key,{lastStartedAt:0,lastFinishedAt:Number(saved.lastFinishedAt)||0,nextAllowedAt:Number(saved.nextAllowedAt)||0,circuitOpenUntil:Number(saved.circuitOpenUntil)||0,rateLimitCount:Number(saved.rateLimitCount)||0,dynamicMinIntervalMs:Number(saved.dynamicMinIntervalMs)||0,successCount:Number(saved.successCount)||0});}return rateStates.get(key);}
+  function rateStatus(input){
+    const settings=input&&input.settings?input.settings:(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{}),provider=input&&input.provider?input.provider:((LF.AIProviders&&LF.AIProviders[settings.provider])||{}),model=String(input&&input.model||settings.model||''),policy=ratePolicy({settings:settings,provider:provider,model:model}),state=rateState(policy.key),now=Date.now(),until=Math.max(Number(state.circuitOpenUntil)||0,Number(state.nextAllowedAt)||0),retryInMs=Math.max(0,until-now);
+    return{provider:policy.providerId,model:policy.model,limited:retryInMs>0,circuitOpen:(Number(state.circuitOpenUntil)||0)>now,retryInMs:retryInMs,nextAllowedAt:until||0,dynamicMinIntervalMs:Number(state.dynamicMinIntervalMs)||0,lastFinishedAt:Number(state.lastFinishedAt)||0};
+  }
   function cancelledWaitError(){const e=new Error('AI request cancelled by the user.');e.cancelled=true;e.code='ACTION_ABORTED';return e;}
   function waitFor(ms){
     ms=Math.max(0,Math.round(Number(ms)||0));if(!ms)return Promise.resolve();
@@ -116,9 +149,15 @@
   }
   function deadlineError(label,hardTimeoutMs){const e=new Error((label||'AI request')+' reached its '+Math.round(Number(hardTimeoutMs||0)/1000)+' second work-unit deadline while waiting for the provider.');e.timedOut=true;e.timeoutReason='deadline';e.timeoutMs=Number(hardTimeoutMs)||0;return e;}
   async function waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy){
-    policy=policy||ratePolicy(spec);const state=rateState(policy.key),now=Date.now(),effectiveInterval=Math.max(policy.minIntervalMs,Number(state.dynamicMinIntervalMs)||0),target=opts&&opts.connectionTest?now:Math.max(state.nextAllowedAt||0,(state.lastStartedAt||0)+effectiveInterval),wait=Math.max(0,target-now);
-    if(wait){const elapsed=performance.now()-overallStarted;if(hardTimeoutMs&&elapsed+wait>=hardTimeoutMs)throw deadlineError(opts&&opts.label,hardTimeoutMs);if(Log)Log.info('rate-limit.pacing',{provider:policy.providerId,model:policy.model,waitMs:wait,dynamicIntervalMs:state.dynamicMinIntervalMs||0});if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_pacing',waitMs:wait,provider:policy.providerId,model:policy.model});await waitFor(wait);}
-    state.lastStartedAt=Date.now();return state;
+    policy=policy||ratePolicy(spec);const state=rateState(policy.key),now=Date.now(),effectiveInterval=Math.max(policy.minIntervalMs,Number(state.dynamicMinIntervalMs)||0),quietAfter=Math.max(0,(state.lastFinishedAt||0)+effectiveInterval),circuit=Math.max(0,Number(state.circuitOpenUntil)||0);
+    /* An exhausted provider limit opens a circuit. New user/Action requests fail
+       fast while it is open rather than sitting invisibly in a long sleep. */
+    if(circuit>now){const wait=circuit-now,e=new Error('Provider cooldown active · retry in about '+Math.max(1,Math.ceil(wait/1000))+' s. No request was sent.');e.code='MODEL_RATE_LIMIT_COOLDOWN';e.rateLimited=true;e.rateLimitRetryable=true;e.retryInMs=wait;e.circuitOpenUntil=circuit;e.noRequestSent=true;if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_cooldown',waitMs:wait,provider:policy.providerId,model:policy.model});throw e;}
+    const target=Math.max(state.nextAllowedAt||0,quietAfter),wait=Math.max(0,target-now);
+    /* Normal pacing is outside the work-unit inference deadline. The deadline
+       starts only when the actual HTTP request starts. */
+    if(wait){if(Log)Log.info('rate-limit.pacing',{provider:policy.providerId,model:policy.model,waitMs:wait,circuitOpen:false,dynamicIntervalMs:state.dynamicMinIntervalMs||0});if(opts&&opts.onProgress)opts.onProgress({transportState:'provider_pacing',waitMs:wait,provider:policy.providerId,model:policy.model});await waitFor(wait);}
+    state.lastStartedAt=Date.now();persistRateState(policy.key,state);return state;
   }
 
   function headersObject(headers){
@@ -170,7 +209,7 @@
       if(outputLoopDetected(state.content)||outputLoopDetected(state.reasoning)){const repeated=outputLoopDetected(state.content)?state.content:state.reasoning,loop=new Error('The model entered a repeated-output loop. The checkpoint was stopped before storing duplicated content.');loop.code='MODEL_OUTPUT_LOOP';loop.providerResponse=repeated.slice(-12000);throw loop;}
       const charGuard=budgetTokens?Math.max(24000,Number(budgetTokens)*8):4000000;if(state.content.length+state.reasoning.length>charGuard){const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;}
       state.usage=obj.usage||state.usage;state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;state.events++;
-      if(onProgress){const elapsedMs=Math.round(performance.now()-started),reported=state.usage&&Number.isFinite(Number(state.usage.completion_tokens))?Number(state.usage.completion_tokens):null,tokens=reported==null?estimateTokens(state.content+state.reasoning):reported,rate=elapsedMs>0?tokens/(elapsedMs/1000):null;onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs:elapsedMs,tokens:tokens,rate:Number.isFinite(rate)?rate:null,estimated:reported==null,budgetTokens:budgetTokens||null});}
+      if(onProgress){const elapsedMs=Math.round(performance.now()-started),reported=state.usage&&Number.isFinite(Number(state.usage.completion_tokens))?Number(state.usage.completion_tokens):null,tokens=reported==null?estimateTokens(state.content+state.reasoning):reported,generationMs=state.ttftMs==null?0:Math.max(0,elapsedMs-state.ttftMs),rate=generationMs>=250?tokens/(generationMs/1000):null;onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs:elapsedMs,generationMs:generationMs,tokens:tokens,rate:Number.isFinite(rate)?rate:null,estimated:reported==null,budgetTokens:budgetTokens||null});}
       return false;
     }
     function consume(final){
@@ -184,10 +223,10 @@
         const part=await reader.read();
         if(part.done)break;
         state.bytes+=part.value.byteLength;
-        const text=decoder.decode(part.value,{stream:true});onBytes(text);raw+=text;buffer+=text;
+        const text=decoder.decode(part.value,{stream:true});onBytes(text);raw=(raw+text).slice(-STREAM_DIAGNOSTIC_CHARS);buffer+=text;
         if(consume(false)){try{Promise.resolve(reader.cancel()).catch(function(){});}catch(_){}break;}
       }
-      const tail=decoder.decode();if(tail){raw+=tail;buffer+=tail;}if(!state.done)consume(true);
+      const tail=decoder.decode();if(tail){raw=(raw+tail).slice(-STREAM_DIAGNOSTIC_CHARS);buffer+=tail;}if(!state.done)consume(true);
       return{rawText:raw,json:{id:state.requestId,request_id:state.requestId,model:state.model,choices:[{message:{role:'assistant',content:state.content,reasoning_content:state.reasoning},finish_reason:state.finishReason}],usage:state.usage||null},stream:state};
     }catch(err){try{await reader.cancel();}catch(_){}throw err;}
   }
@@ -219,7 +258,7 @@
       const contentType=String(response.headers.get('content-type')||'').toLowerCase();
       let text='',obj=null,streamMeta=null;
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:null,bodyChars:0,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||'',stream:null};
-      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw+=chunk;},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens));text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;}
+      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens));text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;}
       else{text=await response.text();resetInactivity();}
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
@@ -351,17 +390,18 @@
       if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
     if(id==='zai'){
-      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
-      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
+      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
+      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
     }
     return null;
   }
-  function resolveThinkingPolicy(capability,actionMode,globalMode){
-    capability=capability||{};actionMode=['off','on','auto'].includes(actionMode)?actionMode:'auto';globalMode=['off','on'].includes(globalMode)?globalMode:'auto';
-    const requested=globalMode==='auto'?actionMode:globalMode,status=['none','optional','required'].includes(capability.reasoningStatus)?capability.reasoningStatus:'unknown';let transportMode=requested,effective=requested,reason='Action policy';
+  function resolveThinkingPolicy(capability,actionMode,globalMode,provider){
+    capability=capability||{};provider=provider||{};actionMode=['off','on','auto'].includes(actionMode)?actionMode:'auto';globalMode=['off','on'].includes(globalMode)?globalMode:'auto';
+    const requested=globalMode==='auto'?actionMode:globalMode,status=['none','optional','required'].includes(capability.reasoningStatus)?capability.reasoningStatus:'unknown',safeUnknown=provider.safeThinkingOverrideWhenUnknown===true&&provider.thinkingModes&&provider.thinkingModes[requested];let transportMode=requested,effective=requested,reason='Action policy';
     if(status==='none'){transportMode='auto';effective='off';reason='Selected model is non-reasoning';}
     else if(status==='required'&&requested==='off'){transportMode='auto';effective='required';reason='Selected model requires reasoning';}
-    else if(status==='unknown'&&requested!=='auto'){transportMode='auto';effective='unknown';reason='Model reasoning capability is unknown';}
+    else if(status==='unknown'&&requested!=='auto'&&!safeUnknown){transportMode='auto';effective='unknown';reason='Model reasoning capability is unknown';}
+    else if(status==='unknown'&&requested!=='auto'&&safeUnknown){transportMode=requested;effective=requested;reason='Provider supports an explicit reasoning override even though model metadata does not expose reasoning capability';}
     else if(requested==='auto'){transportMode='auto';effective=status==='required'?'required':(capability.reasoningDefault||'auto');reason='Model default';}
     if(globalMode!=='auto')reason='Global override · '+reason;
     return{actionMode:actionMode,globalMode:globalMode,requested:requested,transportMode:transportMode,effective:effective,capability:status,reason:reason};
@@ -395,6 +435,18 @@
     const features=Array.isArray(obj.capabilities)?obj.capabilities.map(function(x){return String(x).toLowerCase();}):[],reasoning=features.length?(features.includes('thinking')?{reasoningStatus:'optional',reasoningAllowedOptions:['none','low','medium','high'],reasoningDefault:'medium'}:{reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off'}):{};
     return numPredict||context||features.length?Object.assign({maxOutputTokens:numPredict,contextWindow:context,exactOutput:!!numPredict,source:numPredict?'Ollama num_predict':'Ollama model metadata'},reasoning):null;
   }
+  async function llamaCppCapability(endpoint,model,provider){
+    const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=new URL(chat.origin+'/props');if(model)url.searchParams.set('model',model);
+    const obj=await fetchJson(url.toString(),{method:'GET',headers:{Accept:'application/json'}}),defaults=obj&&obj.default_generation_settings||{},params=defaults&&defaults.params||{},context=positiveInt(defaults.n_ctx),maxOutput=positiveInt(params.max_tokens),slots=positiveInt(obj.total_slots),caps=obj&&obj.chat_template_caps&&typeof obj.chat_template_caps==='object'?obj.chat_template_caps:{},recommended=provider&&provider.recommendedRuntime&&typeof provider.recommendedRuntime==='object'?provider.recommendedRuntime:{},recommendedSlots=positiveInt(recommended.parallelSlots)||1,recommendedContext=positiveInt(recommended.contextWindow)||65536;
+    const supportsEffort=caps.supports_reasoning_effort===true||caps.reasoning_effort===true,reasoning=supportsEffort?{reasoningStatus:'optional',reasoningAllowedOptions:['off','low','medium','high'],reasoningDefault:'auto'}:{};
+    let runtimeProfileStatus='unknown',runtimeProfileMessage='llama.cpp runtime profile not fully exposed';
+    if(slots&&context){
+      if(slots===recommendedSlots&&context===recommendedContext){runtimeProfileStatus='match';runtimeProfileMessage='LabFlow llama.cpp profile active · '+slots+' slot · '+context.toLocaleString()+' context tok';}
+      else{runtimeProfileStatus='mismatch';const issues=[];if(slots!==recommendedSlots)issues.push('expected --parallel '+recommendedSlots+', detected '+slots+' slot'+(slots===1?'':'s'));if(context!==recommendedContext)issues.push('expected -c '+recommendedContext+', detected '+context.toLocaleString()+' context tok per slot');runtimeProfileMessage='Different llama.cpp runtime profile · '+issues.join(' · ');}
+    }
+    return Object.assign({maxOutputTokens:maxOutput,contextWindow:context,exactOutput:!!maxOutput,runtimeContextWindow:context,totalSlots:slots,recommendedSlots:recommendedSlots,recommendedContextWindow:recommendedContext,runtimeProfileStatus:runtimeProfileStatus,runtimeProfileMessage:runtimeProfileMessage,source:'llama.cpp /props'},reasoning);
+  }
+
   async function lmStudioCapability(endpoint,model){
     const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),urls=[chat.origin+'/api/v1/models',chat.origin+'/v1/models'];let obj=null,lastError=null;
     for(const url of urls){try{obj=await fetchJson(url,{method:'GET',headers:{Accept:'application/json'}});break;}catch(error){lastError=error;Log.debug('lmstudio.capability-candidate-failed',{url:url,error:error});}}
@@ -417,7 +469,7 @@
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     if(!options.force){const fallback={provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'conservative fallback; run Detect for provider metadata',probeError:'',resolvedAt:Date.now()};capabilityCache.set(cacheKey,fallback);return fallback;}
     let detected=null,error=null;
-    try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
+    try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else if(providerId==='llamacpp')detected=await llamaCppCapability(endpoint,model,provider);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
     const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
     capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{model:cap.loadedModel}));Log.info('capability.resolved',{provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,reasoningStatus:cap.reasoningStatus,reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
   }
@@ -457,10 +509,20 @@
     let r;
     try{r=await send(spec,{label:'AI connection test',connectionTest:true,onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});}
     catch(err){
+      /* A reasoning model may legitimately consume the deliberately tiny probe
+         budget before emitting final text. For providers that opt in to this
+         policy, HTTP 200 + a valid Chat Completions envelope still proves that
+         endpoint, model selection and request parsing are working. Keep normal
+         Actions strict: only the Settings connection probe gets this soft-pass. */
+      if(err&&err.isContract&&Number(err.status)===200&&cfg.provider.connectionTestAcceptReasoningOnly===true){
+        const elapsed=Math.round(performance.now()-started),raw=String(err.rawProviderResponse||''),reasoning=String(err.reasoning||'');
+        Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-reasoning-only',prepareMs:spec.prepareMs||0,pacingMs:0,requestMs:Number(err.elapsedMs)||elapsed,totalMs:elapsed,httpRequests:1,retries:0,finishReason:err.finishReason||'',reasoningChars:reasoning.length});
+        return{ok:true,reachable:true,rateLimited:false,probeLimited:true,finalTextVerified:false,reasoningObserved:!!reasoning,elapsedMs:elapsed,prepareMs:spec.prepareMs||0,pacingMs:0,requestElapsedMs:Number(err.elapsedMs)||elapsed,model:err.model||cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',reasoning:reasoning,usage:err.usage||null,finishReason:err.finishReason||'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:raw?new TextEncoder().encode(raw).byteLength:0,streamed:false,rateLimitRetries:0,httpRequests:1};
+      }
       if(!isRateLimitError(err))throw err;
-      const elapsed=Math.round(performance.now()-started);
-      Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-rate-limited',prepareMs:spec.prepareMs||0,pacingMs:0,totalMs:elapsed,httpRequests:1,retries:0});
-      return{ok:false,reachable:true,rateLimited:true,elapsedMs:elapsed,requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:0,streamed:false,rateLimitRetries:0,httpRequests:1};
+      const elapsed=Math.round(performance.now()-started),blocked=err.code==='MODEL_RATE_LIMIT_COOLDOWN'||err.noRequestSent===true,httpRequests=blocked?0:1;
+      Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:blocked?'cooldown-active':'reachable-rate-limited',prepareMs:spec.prepareMs||0,pacingMs:0,totalMs:elapsed,httpRequests:httpRequests,retries:0,retryInMs:Number(err.retryInMs)||0});
+      return{ok:false,reachable:true,rateLimited:true,cooldownActive:blocked,retryInMs:Number(err.retryInMs)||0,elapsedMs:elapsed,requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:0,streamed:false,rateLimitRetries:0,httpRequests:httpRequests};
     }
     if(!r.content)Log.warn('test.empty-content',{model:r.model||cfg.settings.model,finishReason:r.finishReason});
     Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'ok',prepareMs:r.prepareMs||0,pacingMs:r.pacingMs||0,requestMs:r.requestElapsedMs,totalMs:r.latencyMs,httpRequests:r.httpRequests||1,retries:0});
@@ -496,17 +558,23 @@
   }
 
   async function send(spec,opts){
-    opts=opts||{};const normalPolicy=ratePolicy(spec),policy=opts.connectionTest?Object.assign({},normalPolicy,{retries:0,minIntervalMs:0}):normalPolicy,overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null,pacingMs=0,httpRequests=0;
+    opts=opts||{};const normalPolicy=ratePolicy(spec),retryOverride=Number(opts.rateLimitRetries),basePolicy=Number.isFinite(retryOverride)?Object.assign({},normalPolicy,{retries:Math.max(0,Math.min(4,retryOverride))}):normalPolicy,policy=opts.connectionTest?Object.assign({},basePolicy,{retries:0}):basePolicy,overallStarted=performance.now(),hardTimeoutMs=Math.max(0,Number(spec.hardTimeoutMs)||0);let rateAttempt=0,r=null,pacingMs=0,httpRequests=0,lastState=null;
     while(true){
-      const pacingStarted=performance.now(),state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy);pacingMs+=performance.now()-pacingStarted;const elapsedBefore=performance.now()-overallStarted,remainingHard=hardTimeoutMs?Math.max(1,hardTimeoutMs-elapsedBefore):0;
-      try{httpRequests++;r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,remainingHard);state.rateLimitCount=Math.max(0,(state.rateLimitCount||0)-1);state.nextAllowedAt=Math.max(0,state.nextAllowedAt||0);state.successCount=(state.successCount||0)+1;if(state.successCount>=3&&state.dynamicMinIntervalMs){state.dynamicMinIntervalMs=Math.max(0,Math.round(state.dynamicMinIntervalMs*.65)-100);state.successCount=0;}break;}
-      catch(err){
+      const pacingStarted=performance.now(),state=await waitForRateSlot(spec,opts,overallStarted,hardTimeoutMs,policy);lastState=state;pacingMs+=performance.now()-pacingStarted;
+      try{
+        httpRequests++;r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,hardTimeoutMs);state.lastFinishedAt=Date.now();state.rateLimitCount=0;state.nextAllowedAt=0;state.circuitOpenUntil=0;state.successCount=(state.successCount||0)+1;
+        /* A completed request proves the provider accepted traffic again. Keep the
+           base free-tier quiet interval, but discard exponential breaker history. */
+        if(state.dynamicMinIntervalMs)state.dynamicMinIntervalMs=Math.max(policy.minIntervalMs,Math.round(state.dynamicMinIntervalMs*.65));persistRateState(policy.key,state);break;
+      }catch(err){
+        state.lastFinishedAt=Date.now();
         if(!isRateLimitError(err))throw err;
+        if(!isRetryableRateLimitError(err)){state.rateLimitCount=(state.rateLimitCount||0)+1;state.successCount=0;state.circuitOpenUntil=Math.max(state.circuitOpenUntil||0,Date.now()+Math.max(0,policy.breakerMs||0));persistRateState(policy.key,state);Log.warn('rate-limit.non-retryable',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'quota',circuitMs:Math.max(0,policy.breakerMs||0)});throw err;}
         const configured=policy.delaysMs[Math.min(rateAttempt,policy.delaysMs.length-1)]||5000,serverDelay=Math.max(0,Number(err.retryAfterMs)||0),penalty=Math.min(policy.maxDelayMs,Math.max(configured,serverDelay));
-        state.rateLimitCount=(state.rateLimitCount||0)+1;state.successCount=0;state.dynamicMinIntervalMs=Math.min(policy.adaptiveMaxIntervalMs,Math.max(policy.adaptiveStepMs,(state.dynamicMinIntervalMs||0)*1.6,policy.adaptiveStepMs*Math.min(4,state.rateLimitCount)));state.nextAllowedAt=Math.max(state.nextAllowedAt||0,Date.now()+penalty);
-        if(rateAttempt>=policy.retries){Log.warn('rate-limit.exhausted',{provider:policy.providerId,model:policy.model,retries:rateAttempt,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs),retryAfterMs:serverDelay||null});throw err;}rateAttempt++;
-        Log.warn('rate-limit.backoff',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:rateAttempt,maxAttempts:policy.retries,retryInMs:penalty,retryAfterMs:serverDelay||null,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs)});
-        if(opts.onProgress)opts.onProgress({transportState:'rate_limit_wait',rateLimit:true,retryInMs:penalty,attempt:rateAttempt,maxAttempts:policy.retries,provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0)});
+        state.rateLimitCount=(state.rateLimitCount||0)+1;state.successCount=0;state.dynamicMinIntervalMs=Math.min(policy.adaptiveMaxIntervalMs,Math.max(policy.minIntervalMs,policy.adaptiveStepMs,(state.dynamicMinIntervalMs||0)*1.7,policy.adaptiveStepMs*Math.min(6,state.rateLimitCount)));state.nextAllowedAt=Math.max(state.nextAllowedAt||0,Date.now()+penalty);
+        if(rateAttempt>=policy.retries){const expMultiplier=policy.freeTier?Math.pow(2,Math.min(4,Math.max(0,state.rateLimitCount-1))):1,adaptiveBreaker=Math.min(policy.breakerMaxMs,Math.max(policy.breakerMs,Math.round(policy.breakerMs*expMultiplier))),breaker=Math.max(penalty,serverDelay,adaptiveBreaker);state.circuitOpenUntil=Math.max(state.circuitOpenUntil||0,Date.now()+breaker);persistRateState(policy.key,state);err.circuitOpenUntil=state.circuitOpenUntil;err.retryInMs=breaker;Log.warn('rate-limit.exhausted',{provider:policy.providerId,model:policy.model,retries:rateAttempt,kind:err.rateLimitKind||'rate_limit',rateLimitCount:state.rateLimitCount,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs),retryAfterMs:serverDelay||null,circuitMs:breaker,persisted:true});throw err;}persistRateState(policy.key,state);rateAttempt++;
+        Log.warn('rate-limit.backoff',{provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'rate_limit',attempt:rateAttempt,maxAttempts:policy.retries,retryInMs:penalty,retryAfterMs:serverDelay||null,dynamicIntervalMs:Math.round(state.dynamicMinIntervalMs)});
+        if(opts.onProgress)opts.onProgress({transportState:'rate_limit_wait',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:penalty,attempt:rateAttempt,maxAttempts:policy.retries,provider:policy.providerId,model:policy.model,providerCode:String(err.providerCode||''),status:Number(err.status||0)});
       }
     }
     const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
@@ -516,17 +584,21 @@
       const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
       const hint=reasoning?' The provider returned reasoning but no final answer; the output budget may have been consumed before the final response.':'';
       const emptyError=new Error('The model returned no final text.'+suffix+hint);
-      emptyError.isContract=true;emptyError.reasoning=reasoning;emptyError.finishReason=extracted.finishReason;
+      /* The HTTP request itself succeeded and produced a valid Chat Completions
+         envelope. Preserve that distinction so a connection probe can report
+         reachability without pretending that an empty final answer satisfies a
+         normal Action response contract. */
+      emptyError.isContract=true;emptyError.status=200;emptyError.httpOk=true;emptyError.reasoning=reasoning;emptyError.finishReason=extracted.finishReason;
       emptyError.providerResponse=extracted.refusal||'';emptyError.rawProviderResponse=r.rawText;
-      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.usage=usage;
+      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.usage=usage;emptyError.model=obj.model||spec.settings.model;
       throw emptyError;
     }
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
-    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),roundedPacing=Math.round(pacingMs),tps=totalElapsed>0?Number((completionTokens/(totalElapsed/1000)).toFixed(2)):null;
-    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,firstTokenMs:r.stream&&r.stream.ttftMs||null,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,retries:rateAttempt,httpRequests:httpRequests});
-    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,ttftMs:r.stream&&r.stream.ttftMs||null,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
+    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),roundedPacing=Math.round(pacingMs),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null;
+    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,retries:rateAttempt,httpRequests:httpRequests});
+    return{content:content,reasoning:reasoning,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,pacingMs:roundedPacing,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:{promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,estimated:!obj.usage},finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength,rateLimitRetries:rateAttempt};
   }
 
   LF.AI={
@@ -545,7 +617,11 @@
     outputLoopDetected:outputLoopDetected,
     retryAfterMs:retryAfterMs,
     isRateLimitError:isRateLimitError,
+    isRetryableRateLimitError:isRetryableRateLimitError,
+    limitInfo:limitInfo,
     ratePolicy:ratePolicy,
+    rateStatus:rateStatus,
+    clearRateState:function(input){const settings=input&&input.settings?input.settings:(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{}),provider=input&&input.provider?input.provider:((LF.AIProviders&&LF.AIProviders[settings.provider])||{}),model=String(input&&input.model||settings.model||''),policy=ratePolicy({settings:settings,provider:provider,model:model});rateStates.delete(policy.key);clearPersistedRateState(policy.key);return true;},
     resolveModelsUrl:resolveModelsUrl,
     listModels:listModels,
     capabilityFromRow:capabilityFromRow,

@@ -115,7 +115,7 @@ AI may:
 - generate/revise scientific prose;
 - answer bounded read-only Chat questions.
 
-A configured provider may also run the internal `analysis.enrich` step immediately after deterministic import analysis. Its output is a shared, provenance-marked Experiment Brief used by downstream AI contexts. It must not recalculate deterministic metrics or become a second scientific state. This automatic enrichment is fail-fast: target 3072 output tokens, 90 s absolute deadline, zero automatic retries, and deterministic-Brief fallback so ZIP import always completes. Invalidate the AI brief on scientific-input changes, not on Report/Paper text edits.
+A configured provider may also run the internal `analysis.enrich` step immediately after deterministic import analysis. Its output is a shared, provenance-marked Experiment Brief used by downstream AI contexts. It must not recalculate deterministic metrics or become a second scientific state. This automatic enrichment is fail-fast and deliberately small: target about 320 output tokens, 700-token hard output ceiling, 45 s absolute deadline, zero Action retries and zero provider rate-limit retries, with deterministic-Brief fallback so ZIP import always completes. Invalidate the AI brief on scientific-input changes, not on Report/Paper text edits.
 
 AI must never silently mutate scientific state or become the authoritative calculator/readiness gate.
 
@@ -274,7 +274,7 @@ Context should be selected from:
 
 When context is too large, narrow selection first. Do not solve every context issue by increasing a global budget.
 
-Every AI step declares an Action-specific output target; provider/model maxima are ceilings, never automatic request sizes. Output budgets belong to individual Action contracts. Assistant output/context settings are separate. Automatic import enrichment must remain fail-fast and non-blocking.
+Every AI step declares an Action-specific output target; provider/model maxima are ceilings, never automatic request sizes. Output budgets belong to individual Action contracts. Assistant output/context settings are separate. Automatic import enrichment must remain fail-fast, semantic-only and bounded; provider throttling must never turn it into a long import wait.
 
 ---
 

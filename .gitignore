@@ -1,4 +1,4 @@
 .env
-*.zip
-ORIGINAL_REQUEST/
-TEST_DATA/
+.DS_Store
+__pycache__/
+*.py[cod]

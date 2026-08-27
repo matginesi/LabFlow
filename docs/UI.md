@@ -15,6 +15,14 @@ Review Data exposes deterministic findings/fixes immediately and AI corrections 
 Assistant chat is inline. Selection, chart interaction, filters, edits, navigation and local validation never invoke AI.
 
 
+## Theme, UI Kit and density source of truth
+
+The visual contract has one direction: `assets/css/tokens.css` defines theme values and shared density, `assets/css/ui.css` defines reusable primitives, `assets/css/app.css` composes page/layout patterns, and `ui-kit.html` demonstrates those exact live classes. The project skill `.agent/skills/labflow-ui/SKILL.md` describes how to use the same contract; it must not invent a parallel theme or component vocabulary.
+
+The default `instrument` theme and optional `light` theme differ through tokens, not duplicated page CSS. Shared controls use a slightly roomier workbench rhythm (33 px controls, 29 px compact controls) while preserving information density. Page-specific rules must not drop normal workflow labels into micro typography.
+
+The experiment stepper always has exactly five destinations. Desktop uses five equal, clearly legible cells. Narrow screens keep readable labels and use local horizontal scrolling with snap rather than shrinking the destinations. Settings lives in the sidebar bottom region together with provider status so primary workspace navigation remains stable above it.
+
 ## Sidebar typography
 
 Primary sidebar labels use the shared small UI scale (11 px) and secondary descriptions/section labels use the shared extra-small scale (10 px). The sidebar stays compact, but must not use micro-text for normal navigation. Mobile navigation keeps at least the extra-small scale.
@@ -31,12 +39,12 @@ Settings → Actions uses one two-pane catalog/inspector layout on desktop and s
 
 - Design Experiment is intentionally a POC workbench focused on **solution chemistry** and **device stack** only. Source-backed values are projected when available, but both areas are always directly editable without AI.
 - The experiment board is the primary navigator. Each experiment has one simple state: `Ready`, `Needs suggestion`, `Suggested`, `Accepted`, or `Error`; there are no completion percentages or global confidence gauges.
-- **Suggest all with AI** processes only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion. Successful suggestions are stored per experiment immediately; one failed experiment never discards another experiment's result.
-- A failed experiment remains `Error` with a local **Retry** path. Running Suggest all again resumes only missing/error experiments, so the user can stop and continue later.
+- **Suggest all with AI** processes only experiments that still need solution chemistry and/or stack and do not already have a saved suggestion. Successful suggestions are stored per experiment immediately. The first provider rate-limit pauses the whole run; no subsequent experiment request is sent, and untouched experiments remain pending.
+- A genuine per-experiment content/validation failure remains `Error` with a local **Retry** path. Provider throttling does not turn untouched experiments into errors. After a partial run, the board exposes **Continue suggestions** and resumes only missing/error experiments.
 - AI suggestions are reviewable previews, not automatic mutations. **Accept experiment** validates one experiment, while **Accept all suggestions** validates all currently saved suggestions. Existing source/researcher values stay protected and accepted values remain directly editable.
 - Solution chemistry is shown graphically as solutes + solvents with compact composition metadata. Device stack is shown graphically as ordered material layers from substrate to top contact; both visuals have direct form controls below them.
 - Scientific Knowledge Base lookup is optional context for the Action. A lookup miss never blocks Design and is not a separate user workflow.
-- Provider output in the global totem updates during meaningful streamed text/reasoning chunks; there is no separate Action/provider-note block. Stop cancels active AI work without deleting already stored suggestions.
+- Provider output in the global totem updates during meaningful streamed text/reasoning chunks. Live telemetry prioritizes input/output tokens, target/ceiling, TTFT and generation rate; raw SSE event/byte counts stay in diagnostics because they are transport framing, not scientific progress or token usage. Stop cancels active AI work without deleting already stored suggestions.
 - Status badges are atomic one-line labels on desktop and truncate instead of wrapping on narrow screens.
 
 

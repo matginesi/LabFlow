@@ -50,6 +50,12 @@ for p in sorted(ACTIONS.glob('*/action.json')):
         for s in ai:
             if s.get('prompt')!='prompt.md':errors.append(f'{aid}/{s.get("id")}: AI step must use action-local prompt.md')
             if s.get('thinking') not in {'off','auto','on'}:errors.append(f'{aid}/{s.get("id")}: AI step requires thinking = off|auto|on')
+            input_budget=s.get('max_input_tokens',d.get('max_input_tokens'))
+            if input_budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_input_tokens cap')
+            else:
+                try: input_budget=int(input_budget)
+                except Exception: errors.append(f'{aid}/{s.get("id")}: max_input_tokens must be an integer'); input_budget=0
+                if input_budget and not 256<=input_budget<=262144: errors.append(f'{aid}/{s.get("id")}: max_input_tokens must be 256..262144')
             budget=s.get('max_output_tokens',d.get('max_output_tokens'))
             if budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_output_tokens target')
             else:
@@ -61,6 +67,11 @@ for p in sorted(ACTIONS.glob('*/action.json')):
                 try: retries=int(retries)
                 except Exception: errors.append(f'{aid}/{s.get("id")}: max_retries must be an integer when present'); retries=-1
                 if not 0<=retries<=2:errors.append(f'{aid}/{s.get("id")}: max_retries must be 0..2')
+            transport_retries=s.get('transport_retries')
+            if transport_retries is not None:
+                try: transport_retries=int(transport_retries)
+                except Exception: errors.append(f'{aid}/{s.get("id")}: transport_retries must be an integer when present'); transport_retries=-1
+                if not 0<=transport_retries<=4:errors.append(f'{aid}/{s.get("id")}: transport_retries must be 0..4')
             deadline=s.get('deadline_ms')
             if deadline is not None:
                 try: deadline=int(deadline)

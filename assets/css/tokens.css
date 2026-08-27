@@ -113,14 +113,19 @@
   --font-xl: 19px;
   --font-micro: 9px;
 
-  --control-h: 31px;
-  --control-h-compact: 27px;
-  --sidebar-w: 206px;
+  --control-h: 33px;
+  --control-h-compact: 29px;
+  --sidebar-w: 214px;
   --sidebar-title-size: var(--font-sm);
   --sidebar-meta-size: var(--font-xs);
   --sidebar-label-size: var(--font-xs);
   --assistant-w: 360px;
-  --topbar-h: 48px;
+  --topbar-h: 50px;
+
+  --brand-accent: #54D2CF;
+  --dirty-text: #ffe3a0;
+  --dirty-border: #755c27;
+  --dirty-bg: transparent;
 
   /* Legacy aliases referenced by a few rules; derived from real tokens so
      both themes adapt automatically. */
@@ -145,55 +150,95 @@
  */
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #f3f6f9;
+
+  /* Quiet neutral scientific canvas with one restrained teal product accent. */
+  --bg: #f2f4f3;
   --surface: #ffffff;
-  --surface-2: #f7f9fc;
-  --surface-3: #eaf0f5;
-  --text: #17212b;
-  --text-muted: #5d6c79;
-  --text-faint: #7d8b97;
-  --border: #d6dee6;
-  --border-strong: #b7c4d0;
+  --surface-2: #f7f9f8;
+  --surface-3: #edf1ef;
+  --text: #17211f;
+  --text-muted: #5c6b67;
+  --text-faint: #687571;
+  --border: #d7dfdc;
+  --border-strong: #b9c5c1;
 
-  --sidebar-bg: #f7f9fc;
-  --sidebar-text: #17212b;
-  --sidebar-border: #ccd6df;
-  --sidebar-separator: #dbe2e9;
-  --sidebar-muted: #657686;
-  --sidebar-label: #758594;
-  --sidebar-link: #344554;
-  --sidebar-hover: #e8eef5;
-  --sidebar-active: #127A8B;
-  --sidebar-active-edge: #127A8B;
-  --sidebar-foot: #687988;
+  --accent: #0f7080;
+  --accent-hover: #0c606d;
+  --accent-soft: #e4f2f2;
+  --success: #16784e;
+  --success-soft: #e8f5ee;
+  --success-border: #bbdcca;
+  --warning: #966100;
+  --warning-soft: #fff3d7;
+  --warning-border: #e5cf99;
+  --danger: #b43d45;
+  --danger-soft: #fff0f1;
+  --danger-border: #e8c2c5;
+  --danger-border-strong: #d99da2;
+  --info: #356f97;
+  --info-soft: #edf5fa;
+  --info-border: #c6d9e7;
+  --ai: #5964a7;
+  --ai-soft: #f0f1fa;
+  --ai-border: #d2d6ee;
+  --table-hover: #f3f7f5;
+  --report-border: #cbd6d2;
 
-  --topbar-bg: #ffffff;
-  --topbar-text: #17212b;
-  --topbar-muted: #657686;
-  --topbar-border: #d6dee6;
+  --sidebar-bg: #f8faf9;
+  --sidebar-text: #1b2723;
+  --sidebar-border: #d3dcd9;
+  --sidebar-separator: #e0e6e3;
+  --sidebar-muted: #65736f;
+  --sidebar-label: #66756f;
+  --sidebar-link: #34443e;
+  --sidebar-hover: #eaf0ee;
+  --sidebar-active: #0f7080;
+  --sidebar-active-edge: #0c606d;
+  --sidebar-foot: #62716b;
 
-  --assistant-bg: #f7f9fc;
+  --topbar-bg: #fcfdfc;
+  --topbar-text: #17211f;
+  --topbar-muted: #64736e;
+  --topbar-border: #d7dfdc;
+
+  --assistant-bg: #f5f8f7;
   --assistant-surface: #ffffff;
-  --assistant-surface-2: #eef3f7;
-  --assistant-border: #ccd6df;
-  --assistant-text: #17212b;
-  --assistant-muted: #617382;
-  --chat-user-border: #b8c5d1;
+  --assistant-surface-2: #edf3f1;
+  --assistant-border: #d1dcd8;
+  --assistant-text: #17211f;
+  --assistant-muted: #64736e;
+  --chat-user-border: #b9c8c3;
 
-  --json-bg: #f8fafc;
-  --json-border: #d3dde6;
-  --json-text: #17212b;
-  --json-key: #155fbe;
-  --json-string: #18733d;
-  --json-number: #955a00;
-  --json-literal: #5a46ae;
-  --json-punct: #667684;
+  --code-bg: #f2f5f4;
+  --code-border: #d1dad7;
+  --code-text: #1d2925;
+  --code-muted: #63726c;
+  --code-button: #26342f;
+  --code-key: #0d6380;
+  --code-number: #895900;
 
-  --scroll-dark-track: #e6ecf2;
-  --scroll-dark-thumb: #98a8b6;
-  --scroll-dark-thumb-hover: #728696;
-  --shadow-float: 0 12px 32px rgba(32, 53, 70, 0.16);
-  --overlay-shade: rgba(49, 65, 80, 0.34);
+  --json-bg: #f7f9f8;
+  --json-border: #d5ddda;
+  --json-text: #17211f;
+  --json-key: #175f83;
+  --json-string: #277047;
+  --json-number: #895900;
+  --json-literal: #6257a5;
+  --json-punct: #63726c;
+
+  --brand-accent: #0f7080;
+  --dirty-text: #7d5100;
+  --dirty-border: #d9bd73;
+  --dirty-bg: #fff7e3;
+
+  --scroll-track: #e4e9e7;
+  --scroll-thumb: #a4b1ad;
+  --scroll-thumb-hover: #7c8d87;
+  --scroll-dark-track: #e7ecea;
+  --scroll-dark-thumb: #a0ada8;
+  --scroll-dark-thumb-hover: #798a84;
+  --shadow-float: 0 12px 32px rgba(30, 48, 42, 0.13);
+  --overlay-shade: rgba(35, 51, 46, 0.28);
 }
 
 /* Phones keep the dense workbench rhythm, but one measured step larger than

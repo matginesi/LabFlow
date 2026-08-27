@@ -41,3 +41,9 @@ Provenance remains internal to the Working Copy and export/audit data; it is not
 ## Assistant response surface
 
 Assistant messages use flat, compact scientific-workspace rows with modest radii rather than oversized chat bubbles. Do not expose transport bookkeeping such as chunk/event/byte counters during streaming. Show only meaningful state (waiting, thinking, writing), keep model reasoning in a separate bounded disclosure, and attach useful response telemetry such as provider/model, full-turn request count, latency, time-to-first-token, aggregate token counts, throughput and finish reason when the provider supplies it. A compact response-details disclosure exposes read Tools, payload totals, request ID and log correlation without crowding the answer. Missing telemetry is omitted rather than invented.
+
+## Theme hierarchy and density
+
+There is no separate UI Kit theme and no skill-only theme. Tokens are authoritative, primitives consume tokens, app layouts consume primitives, and `ui-kit.html` is the executable catalog of those same classes. Keep `instrument` and `light` structurally identical; theme changes should primarily alter tokens.
+
+Use a compact scientific rhythm without micro-sizing: normal controls are 33 px, compact controls 29 px, and workflow/navigation labels must remain readable. The five-step experiment strip is a prominent orientation control, not secondary metadata. On phones it scrolls horizontally with readable step widths instead of compressing labels. Sidebar Settings belongs at the bottom with provider status.
