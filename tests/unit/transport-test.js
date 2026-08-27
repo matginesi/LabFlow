@@ -446,13 +446,23 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['transport returns the first Z.AI 1305 without a hidden retry'] = async function () {
+  t['transport retries transient Z.AI 1305 with backoff then surfaces the last error'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
     global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'2':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};};
+    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'1':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test'});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,2000,'Retry-After preserved');assert(calls,1,'single HTTP attempt');}
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:2, baseDelayMs:10, maxDelayMs:50}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test'});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,1000,'Retry-After preserved');assert(calls,3,'transient 1305 retried twice then surfaced');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['transport never retries quota exhaustion 1304'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
+    global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1304,message:'daily quota exhausted'}});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:2, baseDelayMs:10, maxDelayMs:50}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'quota-test'});}catch(e){err=e;}assert(!!err,true,'quota error returned');assert(err.providerCode,'1304','quota code preserved');assert(calls,1,'quota never retried');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 

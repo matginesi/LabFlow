@@ -128,6 +128,32 @@
     return out;
   }
 
+  function sleepMs(ms,signal){
+    ms=Math.max(0,Math.floor(Number(ms)||0));if(ms<=0)return Promise.resolve();
+    return new Promise(function(resolve,reject){
+      const timer=setTimeout(function(){cleanup();resolve();},ms);
+      function cleanup(){clearTimeout(timer);if(signal)signal.removeEventListener('abort',onAbort);}
+      function onAbort(){cleanup();const e=new Error('AI request cancelled by the user.');e.cancelled=true;reject(e);}
+      if(signal){if(signal.aborted){cleanup();onAbort();return;}signal.addEventListener('abort',onAbort,{once:true});}
+    });
+  }
+  function rateLimitPolicy(provider){
+    const p=provider&&provider.rateLimit&&typeof provider.rateLimit==='object'?provider.rateLimit:null;
+    if(!p)return{retries:0,baseDelayMs:2000,maxDelayMs:15000};
+    return{retries:Math.max(0,Math.min(3,Math.floor(Number(p.retries)||0))),baseDelayMs:Math.max(500,Math.floor(Number(p.baseDelayMs)||2000)),maxDelayMs:Math.max(2000,Math.floor(Number(p.maxDelayMs)||15000))};
+  }
+  function isRetryableRateLimit(err){
+    if(!err||err.cancelled||err.timedOut)return false;
+    const info=limitInfo(err.status,err.providerCode,err.providerMessage||err.message);
+    return info.limited===true&&info.retryable===true;
+  }
+  function providerAuthHeaders(provider,key){
+    const h={'Accept':'application/json'};
+    Object.keys(provider.headers||{}).forEach(function(name){h[name]=String(provider.headers[name]);});
+    if(key&&(provider.keyRequired||provider.optionalKey))h.Authorization='Bearer '+key;
+    return h;
+  }
+
   function streamPart(value){
     if(value==null)return'';
     if(typeof value==='string')return value;
@@ -261,6 +287,7 @@
     return true;
   }
 
+  // Unified helper: same header/auth construction for chat, models and capability probes
   function requestConfig(){
     const settings=LF.Storage.getAiSettings();
     const key=LF.Storage.getApiKey(settings.provider);
@@ -268,9 +295,9 @@
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||settings.provider)+' requires an API key. Open Settings.');
     const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
-    const headers={'Content-Type':'application/json','Accept':'application/json'};
-    Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
-    if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
+    const baseHeaders=providerAuthHeaders(provider,key);
+    const headers=Object.assign({'Content-Type':'application/json'},baseHeaders);
+    // Avoid duplicating auth header construction; providerAuthHeaders is the single source
     return{settings:settings,provider:provider,url:url,headers:headers};
   }
 
@@ -370,7 +397,7 @@
   }
   const capabilityCache=new Map();
   function capabilityKey(providerId,endpoint,model){return[String(providerId||''),String(endpoint||''),String(model||'')].join('|');}
-  function authHeaders(provider,key){const h={'Accept':'application/json'};if(key&&(provider.keyRequired||provider.optionalKey))h.Authorization='Bearer '+key;return h;}
+  function authHeaders(provider,key){return providerAuthHeaders(provider,key);}
   /** Metadata probes must never prevent the real connection request from starting. */
   async function metadataFetch(url,options){
     const controller=new AbortController(),timer=setTimeout(function(){controller.abort();},METADATA_TIMEOUT_MS);
@@ -448,11 +475,10 @@
   function lmStudioLlmRows(obj){return modelRows(obj).filter(function(item){return !item||!item.type||String(item.type).toLowerCase()==='llm';});}
   function lmStudioLoadedModels(rows){const out=[];(rows||[]).forEach(function(row){(Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[]).forEach(function(instance){const id=String(instance&&instance.id||'');if(id&&!out.includes(id))out.push(id);});});return out;}
 
+  // Unified metadata header construction: single source for connection/detect/test
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers={'Accept':'application/json'};
-    Object.keys(provider.headers||{}).forEach(function(name){headers[name]=String(provider.headers[name]);});
-    if(key&&(provider.keyRequired||provider.optionalKey))headers.Authorization='Bearer '+key;
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers=providerAuthHeaders(provider,key);
     const started=performance.now(),chat=new URL(validateHttpUrl(resolveChatUrl(base))),origin=chat.origin;
 
     async function read(url){
@@ -548,17 +574,31 @@
   }
 
   async function send(spec,opts){
-    opts=opts||{};const overallStarted=performance.now();let r=null;
-    try{
-      r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
-    }catch(err){
-      if(isRateLimitError(err)){
+    opts=opts||{};const overallStarted=performance.now();
+    const isConnectionProbe=opts.connectionTest===true;
+    const policy=isConnectionProbe?{retries:0,baseDelayMs:2000,maxDelayMs:15000}:rateLimitPolicy(spec.provider||spec.settings&&LF.AIProviders&&LF.AIProviders[spec.settings.provider]);
+    let r=null,lastErr=null;
+    for(let attempt=0;attempt<=policy.retries;attempt++){
+      try{
+        r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
+        lastErr=null;break;
+      }catch(err){
+        lastErr=err;
+        const retryable=isRetryableRateLimit(err);
+        const canRetry=retryable&&!isConnectionProbe&&attempt<policy.retries;
         const retryMs=Math.max(0,Number(err.retryAfterMs)||0);err.retryInMs=retryMs;
-        Log.warn('rate-limit.provider-response',{provider:spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'',model:spec.model||spec.settings&&spec.settings.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'rate_limit',retryAfterMs:retryMs||null,retried:false,persisted:false});
-        if(opts.onProgress)opts.onProgress({transportState:'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0)});
+        if(isRateLimitError(err)){
+          Log.warn('rate-limit.provider-response',{provider:spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'',model:spec.model||spec.settings&&spec.settings.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'rate_limit',retryAfterMs:retryMs||null,retried:canRetry,persisted:false,attempt:attempt,retries:policy.retries});
+          if(opts.onProgress)opts.onProgress({transportState:canRetry?'rate_limit_retry_scheduled':'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:attempt,retries:policy.retries,willRetry:canRetry});
+        }
+        if(!canRetry)throw err;
+        const backoff=Math.min(policy.maxDelayMs,Math.max(retryMs,policy.baseDelayMs*Math.pow(2,attempt)) + Math.floor(Math.random()*350));
+        const signal=injectedController?injectedController.signal:null;
+        Log.info('request.retry-scheduled',{label:opts.label||'AI request',provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',attempt:attempt+1,retries:policy.retries,delayMs:backoff,providerCode:String(err.providerCode||''),retryAfterMs:retryMs||null});
+        await sleepMs(backoff,signal);
       }
-      throw err;
     }
+    if(lastErr)throw lastErr;
     const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{};
     const content=extracted.content,reasoning=extracted.reasoning;
     if(!content){

@@ -84,7 +84,7 @@ module.exports=function(t,LF){
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
     assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
-    assert(!LF.AIProviders.zai.rateLimit,'Z.AI has no local pacing/cooldown policy');
+    assert(LF.AIProviders.zai.rateLimit&&LF.AIProviders.zai.rateLimit.retries===2,'Z.AI has bounded transient retry policy');
     assert(LF.AIProviders.lmstudio.optionalKey===true,'LM Studio can use its own optional API token');
     assert(LF.AIProviders.llamacpp.optionalKey===true,'llama.cpp can use an optional server API key');
     assert(LF.AIProviders.gemini.model==='gemini-3.7-flash','Gemini preset tracks the current OpenAI-compatible example model');
