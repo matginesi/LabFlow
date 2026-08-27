@@ -80,7 +80,7 @@ module.exports=function(t,LF){
     assert(built.maxTokens,2048,'provider/user ceiling still controls the request');
   };
 
-  t['a truncated drafting block fails clearly without automatic rewrite'] = async function(){
+  t['a truncated drafting block uses its one bounded retry for a complete shorter rewrite'] = async function(){
     const exp={id:'exp_draft_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.draft-retry',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:1}]};
     const targets=[];let calls=0;
@@ -88,11 +88,13 @@ module.exports=function(t,LF){
     LF.ActionContext={build:function(action,step,opts){targets.push(opts.workItem.target_words);return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
     LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
-    LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},buildRequest:function(opts){return opts;},send:async function(){calls++;return{content:Array(901).join('partial '),finishReason:'length'};}};
+    LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},buildRequest:function(opts){return opts;},send:async function(){calls++;return calls===1?{content:Array(901).join('partial '),finishReason:'length'}:{content:'# Discussion\n\nComplete shorter rewrite.',finishReason:'stop'};}};
     const realSetTimeout=global.setTimeout;global.setTimeout=function(fn){return realSetTimeout(fn,0);};
     try{
       const out=await LF.ActionRunner.run('test.draft-retry');
-      assert(out.status,'error','status');assert(out.code,'MODEL_OUTPUT_TRUNCATED','classification');assert(calls,1,'no automatic rewrite request');assert(targets.length,1,'one bounded work item prepared');if(String(out.error&&out.error.providerResponse||'').length>4096)throw new Error('truncation diagnostic must stay bounded');
+      assert(out.status,'done','status');assert(calls,2,'one bounded retry');
+      if(!(targets.length===2&&targets[1]<targets[0]))throw new Error('retry must advertise a smaller coherent work item');
+      assert(out.aiOutput,['# Discussion\n\nComplete shorter rewrite.'],'only the complete rewrite is stored');
     }finally{global.setTimeout=realSetTimeout;}
   };
 
@@ -152,12 +154,12 @@ module.exports=function(t,LF){
 
   t['AI checkpoint auto-retries twice and then continues'] = async function(){
     const exp={id:'exp_ai',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
-    const def={id:'test.ai',type:'AI',max_output_tokens:100,steps:[{id:'review',type:'AI',output:'text',max_retries:2}]};
+    const def={id:'test.ai',type:'AI',max_output_tokens:100,steps:[{id:'review',type:'AI',output:'text'}]};
     let calls=0;const retries=[];
     LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxTokens:100};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
-    LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;if(calls<3){const e=new Error('temporary');e.status=503;throw e;}return{content:'ok'};}};
+    LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;if(calls<3){const e=new Error('temporary');e.code='MODEL_OUTPUT_INVALID';throw e;}return{content:'ok'};}};
     const realSetTimeout=global.setTimeout;
     global.setTimeout=function(fn){return realSetTimeout(fn,0);};
     try{
@@ -264,10 +266,8 @@ module.exports=function(t,LF){
     assert(LF.ActionRunner.retryable(step,{status:404},0),false,'unsupported model or endpoint is permanent');
     assert(LF.ActionRunner.retryable(step,{status:503},0),true,'temporary server failure retries');
     assert(LF.ActionRunner.retryable(step,{isNetwork:true},0),true,'transient network failure retries');
-    assert(LF.ActionRunner.retryable(step,{isContract:true},0),false,'invalid structured output is not retried automatically');
-    assert(LF.ActionRunner.retryable(step,{code:'MODEL_OUTPUT_TRUNCATED'},0),false,'truncated output is not retried automatically');
-    assert(LF.ActionRunner.retryable(step,{status:429},0),false,'provider limits never trigger an identical-request retry');
-    assert(LF.ActionRunner.retryable({type:'AI'},{status:503},0),false,'omitted retry declaration defaults to zero');
+    assert(LF.ActionRunner.retryable(step,{isContract:true},0),true,'bounded semantic correction retry remains available');
+    assert(LF.ActionRunner.retryable(step,{status:429},0),false,'transport owns identical-request rate-limit retry');
   };
 
   return t;

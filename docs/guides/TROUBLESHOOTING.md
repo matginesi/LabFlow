@@ -31,7 +31,7 @@ Example:
 ```text
 POST .../chat/completions 429
 ai.request.end status: 429
-ai.rate-limit.exhausted providerCode: 1305
+ai.request.rate-limited providerCode: 1305
 actions.action.failed code: MODEL_RATE_LIMIT
 ```
 
@@ -40,10 +40,10 @@ Interpretation: the remote provider rejected the request as a provider-limit/cap
 Expected LabFlow behavior after the fix:
 
 - one HTTP request only;
-- shared provider circuit opens;
+- the provider response is surfaced immediately;
 - later Actions fail locally with `MODEL_RATE_LIMIT_COOLDOWN` and send no HTTP;
 - bulk Design stops immediately and preserves completed proposals;
-- cooldown grows if the provider keeps returning 1305 after previous cooldowns expire.
+- LabFlow does not retry or create a local cooldown; a later explicit request is independent;
 
 ## `MODEL_OUTPUT_TRUNCATED`
 
@@ -76,9 +76,9 @@ LabFlow should normally catch its own operational cap before contacting the prov
 
 ## Work-unit deadline
 
-A deadline error means the actual HTTP inference work unit remained incomplete too long. Normal provider pacing occurs outside this timer.
+A deadline error means the actual HTTP inference work unit remained incomplete too long. There is no provider pacing or local cooldown before the request.
 
-Therefore a message such as `reached its 90 second work-unit deadline` should describe actual request/generation time, not time spent waiting for a rate-limit slot.
+Therefore a message such as `reached its 90 second work-unit deadline` describes actual request/generation time, not a client-side rate-limit wait.
 
 ## Local provider works, cloud provider fails
 
@@ -100,12 +100,6 @@ Direct local providers must allow the LabFlow page origin. A local server can be
 
 Network/CORS failures do not have an HTTP provider response body and should not be mislabeled as rate limits.
 
-## Stopped by user
-
-A user Stop is recorded as `action.cancelled` / `request.cancelled` with status `aborted` and reason `user`. It is not a provider failure and is never retried. In Design All, suggestions completed before Stop remain saved and untouched experiments remain pending.
-
-Streaming diagnostics retain telemetry plus at most one 4 KiB response tail on failure. LabFlow discards successful raw SSE framing, so a diagnostic should not contain tens of thousands of duplicated envelope characters.
-
 ## What to copy when reporting a bug
 
 The most useful bounded diagnostic fields are:
@@ -117,7 +111,7 @@ The most useful bounded diagnostic fields are:
 - estimated input tokens and output ceiling;
 - TTFT, request time and finish reason;
 - whether HTTP requests were `0`, `1` or more;
-- `rate-limit.exhausted` / `provider_cooldown` state;
+- `request.rate-limited` with HTTP/provider code and optional `Retry-After`;
 - the nearest deterministic import/analysis events.
 
 Do not paste API keys. The logger redacts common credential fields, but credentials should still never be intentionally copied into bug reports.

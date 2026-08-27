@@ -14,7 +14,7 @@ Do not redesign the experiment and do not return fabrication/process fields.
 3. Use supplied scientific Knowledge Base records when relevant; retain their IDs in `knowledge_refs`.
 4. Otherwise use cautious `model_inference` for plausible qualitative values.
 
-Use sample names, aliases, groups and linked source filenames as qualitative clues only when they carry material/stack/formulation information. Source-design metadata and evidence remain stronger than filename inference. Do not reproduce sample names or known input data in the output; LabFlow attaches the target deterministically.
+Use sample names, aliases, groups and linked source filenames as qualitative clues when they carry material/stack/formulation information. Source-design metadata and evidence remain stronger than filename inference.
 
 A Knowledge Base miss is normal. Manually-created experiments may have no sample identity; never invent one.
 
@@ -28,4 +28,4 @@ Names such as `N2`, `SnO2`, `C60`, `2PACz` and `FA0.85Cs0.15PbI3` are chemical/m
 
 # Output
 
-Keep the result small. Return one coherent suggestion for this experiment only. Omit optional empty fields, use one short reason per proposed object, and do not repeat evidence prose. Return exactly JSON matching the schema, with no Markdown or preamble.
+Keep the result small. Return one coherent suggestion for this experiment only. Short values, short reasons, no prose essay. Return exactly JSON matching the schema, with no Markdown or preamble.

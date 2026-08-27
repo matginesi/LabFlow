@@ -19,7 +19,20 @@ module.exports = function (t, LF) {
     const errors=SO.validate('design_reconstruct',{summary:'x',solutions:[{name:'candidate',provenance_kind:'knowledge',confidence:.4,reason:'retrieved',knowledge_refs:['kb_candidate'],field_confidence:{name:.82}}],devices:[{provenance_kind:'experiment',confidence:1,reason:'test evidence',stack:[]}],unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
-  t['schema enforces array minimums']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.ActionRegistry});assert(e.some(function(x){return /at least 1/.test(x);}),true,'min items');};
+  t['Design schema permits chemistry-only or stack-only suggestions']=function(){const e=SO.validate('design_reconstruct',{summary:'x',solutions:[],devices:[],unknowns:[]},{registry:LF.ActionRegistry});assert(e,[],'missing areas are validated by the deterministic target scope, not a fake device minimum');};
+  t['Design normalization accepts common provider variants before schema validation'] = function(){
+    const v=SO.normalizeForSchema('design_reconstruct',{assessment:'candidate',solution:{name:'absorber',solutes:['FAI','PbI2'],solvents:['DMF','DMSO']},device_stack:[{function:'substrate',material:'ITO'},{role:'absorber',material:'perovskite'}]});
+    assert(v.solutions[0].solutes,'FAI, PbI2','array solutes normalized');
+    assert(v.solutions[0].solvents,'DMF, DMSO','array solvents normalized');
+    assert(v.solutions[0].provenance_kind,'model_inference','missing provenance becomes conservative model inference');
+    assert(v.devices[0].stack.length,2,'root device_stack normalized');
+    assert(SO.validate('design_reconstruct',v,{registry:LF.ActionRegistry}),[],'normalized provider output satisfies schema');
+  };
+  t['Design normalization accepts chemistry-only output without fabricating a device'] = function(){
+    const v=SO.normalizeForSchema('design_reconstruct',{summary:'chemistry only',solutions:[{name:'precursor',solutes:'FAI + PbI2',solvents:'DMF:DMSO'}],unknowns:['exact ratio']});
+    assert(v.devices,[],'no fake device required');
+    assert(SO.validate('design_reconstruct',v,{registry:LF.ActionRegistry}),[],'chemistry-only output satisfies schema');
+  };
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

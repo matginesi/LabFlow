@@ -77,6 +77,10 @@
       if (value[key] != null && value[key] !== '') out[key] = sanitize(value[key], depth + 1, seen);
     });
     if (value.providerResponse) out.providerResponse = sanitizeString(value.providerResponse);
+    if (value.rawProviderResponse) {
+      const raw=String(value.rawProviderResponse),provider=String(value.providerResponse||'');
+      out.rawProviderResponse = raw===provider?'[same as providerResponse]':sanitizeString(raw);
+    }
     if (value.cause) out.cause = sanitize(value.cause, depth + 1, seen);
     return out;
   }

@@ -1,0 +1,12 @@
+{
+  "id": "assistant_tool_choice",
+  "title": "Assistant read-tool selection",
+  "type": "object",
+  "required": ["decision", "tool", "arguments"],
+  "properties": {
+    "decision": {"type": "string", "enum": ["call_tool", "answer"]},
+    "tool": {"type": "string"},
+    "arguments": {"type": "object"},
+    "reason": {"type": "string", "maxLength": 500}
+  }
+}

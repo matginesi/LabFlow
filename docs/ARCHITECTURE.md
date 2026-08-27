@@ -105,16 +105,6 @@ Provider/model discovery, endpoint adaptation, thinking modes and normalized res
 
 Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant is also read-only, but it no longer runs an LLM planning loop: LabFlow builds a bounded deterministic context locally and sends one model request per turn.
 
-The normal AI path is deliberately linear:
-
-```text
-Settings → provider definition → Action → bounded Context Pack
-         → common Chat Completions transport → parse/validate
-         → deterministic store or researcher review
-```
-
-Provider-specific request fields and metadata probes live in `providers.js` and `transport.js`. Action code owns the scientific contract, not provider quirks. Design All repeats `design.infer` sequentially for one experiment at a time and stores every success immediately; it has no batch Action or recovery layer.
-
 ## 7. Page architecture
 
 Pages read the current Working Copy/Canonical Store. They do not own parallel scientific projections.

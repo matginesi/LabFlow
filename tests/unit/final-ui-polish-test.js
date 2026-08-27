@@ -17,6 +17,17 @@ module.exports=function(t){
   const reportExport=fs.readFileSync(path.join(root,'vendor/report-export/report-export.js'),'utf8');
   const uiKitInline=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
 
+  t['Every route uses one canonical page frame width']=function(){
+    assert(tokensCss.includes('--page-max-w: 1600px'),true,'one page width token');
+    assert(css.includes('.main-area > .page'),true,'canonical page frame selector');
+    assert(css.includes('max-width:var(--page-max-w)!important'),true,'canonical frame max width');
+    assert(css.includes('.review-page-compact{max-width:'),false,'Review has no private page width');
+    assert(css.includes('.design-table-page{max-width:'),false,'Design has no private page width');
+    assert(css.includes('.settings-page{width:100%;max-width:'),false,'Settings has no private page width');
+    assert(css.includes('.report-page{max-width:'),false,'Report has no private page width');
+    assert(css.includes('.upload-review-page{max-width:'),false,'Upload/Review has no private page width');
+  };
+
   t['PCE distribution has a compact diagnostic layout with bounded zoom']=function(){
     assert(results.includes('data-pce-zoom="in"'),true,'zoom in control');
     assert(results.includes('histogramStats'),true,'distribution statistics');

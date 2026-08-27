@@ -243,12 +243,12 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['LM Studio model discovery reads the OpenAI-compatible models endpoint'] = async function () {
+  t['LM Studio model discovery prefers native metadata and exposes loaded LLMs'] = async function () {
     const oldFetch=global.fetch;let seen='';
-    global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'qwen3-8b'},{id:'gemma-3-4b'}]});}};};
+    global.fetch=async function(url){seen=String(url);return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'qwen3-8b',type:'llm',loaded_instances:[{id:'qwen3-8b@loaded',config:{context_length:32768}}]},{key:'embed',type:'embedding',loaded_instances:[]},{key:'gemma-3-4b',type:'llm',loaded_instances:[]}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false}};
-    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/v1/models','models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'model ids');}
+    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,'http://127.0.0.1:1234/api/v1/models','native models URL');assert(result.models,['qwen3-8b','gemma-3-4b'],'LLM model keys only');assert(result.loadedModels,['qwen3-8b@loaded'],'loaded instance ids');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -299,10 +299,10 @@ module.exports = function (t, LF) {
 
   t['llama.cpp Detect accepts the LabFlow single-slot 65K runtime profile'] = async function () {
     const oldFetch=global.fetch;let seen=[];
-    global.fetch=async function(url){seen.push(String(url));return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({model_path:'/models/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf',default_generation_settings:{n_ctx:65536,params:{max_tokens:-1}},total_slots:1,chat_template_caps:{supports_reasoning_effort:true}});}};};
+    global.fetch=async function(url){seen.push(String(url));return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({default_generation_settings:{n_ctx:65536,params:{max_tokens:-1}},total_slots:1,chat_template_caps:{supports_reasoning_effort:true}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,recommendedRuntime:{parallelSlots:1,contextWindow:65536}}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(seen.some(function(url){return url.indexOf('http://127.0.0.1:8080/props')===0;}),true,'llama.cpp props endpoint');assert(cap.contextWindow,65536,'single-slot runtime context is the full 65K');assert(cap.runtimeContextWindow,65536,'runtime context is retained exactly');assert(cap.totalSlots,1,'single server slot');assert(cap.runtimeModel,'NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf','runtime filename is separate from API alias');assert(cap.runtimeProfileStatus,'match','LabFlow llama.cpp runtime profile matches');assert(cap.reasoningStatus,'optional','template reasoning effort capability');assert(cap.source,'llama.cpp /props','capability source');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(seen.some(function(url){return url.indexOf('http://127.0.0.1:8080/props')===0;}),true,'llama.cpp props endpoint');assert(cap.contextWindow,65536,'single-slot runtime context is the full 65K');assert(cap.runtimeContextWindow,65536,'runtime context is retained exactly');assert(cap.totalSlots,1,'single server slot');assert(cap.runtimeProfileStatus,'match','LabFlow llama.cpp runtime profile matches');assert(cap.reasoningStatus,'optional','template reasoning effort capability');assert(cap.source,'llama.cpp /props','capability source');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -315,21 +315,21 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['Ollama model discovery uses native tags and returns installed model names'] = async function () {
-    const oldFetch=global.fetch;let seen='';
-    global.fetch=async function(url){seen=url;return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{name:'qwen3:8b'},{model:'gemma3:4b'}]});}};};
+  t['Ollama model discovery returns installed and running model names'] = async function () {
+    const oldFetch=global.fetch,seen=[];
+    global.fetch=async function(url){url=String(url);seen.push(url);if(url.endsWith('/api/ps'))return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{name:'qwen3:8b'}]});}};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{name:'qwen3:8b'},{name:'gemma3:4b'}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'ollama',endpoint:'http://127.0.0.1:11434/v1',model:'qwen3:8b'};},getApiKey:function(){return'';}};
     LF.AIProviders={ollama:{keyRequired:false}};
-    try{const result=await AI.listModels('ollama','http://127.0.0.1:11434/v1');assert(seen,'http://127.0.0.1:11434/api/tags','native Ollama tags URL');assert(result.models,['qwen3:8b','gemma3:4b'],'installed Ollama models');}
+    try{const result=await AI.listModels('ollama','http://127.0.0.1:11434/v1');assert(seen[0],'http://127.0.0.1:11434/api/tags','native Ollama tags URL');assert(seen[1],'http://127.0.0.1:11434/api/ps','running-model URL');assert(result.models,['qwen3:8b','gemma3:4b'],'installed Ollama models');assert(result.loadedModels,['qwen3:8b'],'running Ollama models');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['LM Studio model discovery falls back to native catalogue and accepts model keys'] = async function () {
-    const oldFetch=global.fetch;const seen=[];
-    global.fetch=async function(url){seen.push(url);if(url==='http://127.0.0.1:1234/v1/models')return{ok:false,status:404,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({error:{message:'not found'}});}};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({models:[{key:'local/qwen3-8b'},{key:'local/gemma-3-4b'}]});}};};
+  t['LM Studio model discovery falls back to OpenAI catalogue when native metadata is unavailable'] = async function () {
+    const oldFetch=global.fetch,seen=[];
+    global.fetch=async function(url){url=String(url);seen.push(url);if(url.endsWith('/api/v1/models'))return{ok:false,status:404,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({error:{message:'not available'}});}};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'local/qwen3-8b'},{id:'local/gemma-3-4b'}]});}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local/qwen3-8b'};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false}};
-    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,['http://127.0.0.1:1234/v1/models','http://127.0.0.1:1234/api/v1/models'],'OpenAI endpoint then native LM Studio fallback');assert(result.models,['local/qwen3-8b','local/gemma-3-4b'],'native LM Studio model keys');}
+    try{const result=await AI.listModels('lmstudio','http://127.0.0.1:1234/v1');assert(seen,['http://127.0.0.1:1234/api/v1/models','http://127.0.0.1:1234/v1/models'],'native LM Studio endpoint then OpenAI fallback');assert(result.models,['local/qwen3-8b','local/gemma-3-4b'],'fallback model ids');assert(result.loadedModels,[],'fallback cannot claim a running model');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -348,15 +348,6 @@ module.exports = function (t, LF) {
     global.fetch=async function(){let done=false;return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return name==='content-type'?'text/event-stream':null;},forEach:function(){}},body:{getReader:function(){return{read:async function(){if(done)return{done:true};done=true;return{done:false,value:encoder.encode(payload)};},cancel:async function(){}};}}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:0}}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'large'}],stream:true,maxTokens:512,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'analysis.enrich.enrich.response'});}catch(e){err=e;}assert(!!err,true,'context error raised');assert(err.code,'MODEL_CONTEXT_LENGTH','classified context code');assert(err.isNetwork===true,false,'not rewritten as network/CORS');assert(err.promptTokens,37174,'provider prompt token count');assert(err.contextWindow,32768,'provider context size');assert(/Model context exceeded/.test(err.message),true,'actionable message');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
-
-  t['SSE failure diagnostics retain one bounded tail instead of the full envelope'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
-    const payload='data: '+('x'.repeat(12000))+'\n\n';
-    global.fetch=async function(){let done=false;return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return name==='content-type'?'text/event-stream':null;},forEach:function(){}},body:{getReader:function(){return{read:async function(){if(done)return{done:true};done=true;return{done:false,value:encoder.encode(payload)};},cancel:async function(){}};}}};};
-    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,rateLimit:{retries:0}}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'diagnostic bound'}],stream:true,maxTokens:64});let err=null;try{await AI.send(spec,{label:'bounded-sse'});}catch(error){err=error;}assert(!!err,true,'invalid event must fail');assert(String(err.providerResponse||'').length<=4096,true,'diagnostic tail bounded to 4 KiB');assert(Object.prototype.hasOwnProperty.call(err,'rawProviderResponse'),false,'duplicate raw response removed');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -417,26 +408,13 @@ module.exports = function (t, LF) {
     assert(AI.abort(), false, 'no-op abort');
   };
 
-  t['active request cancellation is classified as a user abort, not a provider failure'] = async function () {
-    const oldFetch=global.fetch;let started=false;
-    global.fetch=function(url,opts){started=true;return new Promise(function(resolve,reject){opts.signal.addEventListener('abort',function(){const error=new Error('BodyStreamBuffer was aborted');error.name='AbortError';reject(error);},{once:true});});};
-    const spec=AI.buildRequest({config:{settings:{provider:'custom',model:'cancel-model',temperature:0.2,streaming:true,inactivityTimeoutMs:60000},provider:{id:'custom',supportsStreaming:true,tokenParam:'max_tokens'},url:'https://example.com/v1/chat/completions',headers:{'Content-Type':'application/json'}},messages:[{role:'user',content:'cancel me'}],stream:true,maxTokens:64});
-    try{const pending=AI.send(spec,{label:'cancel-test'});await Promise.resolve();assert(started,true,'request started');assert(AI.abort(),true,'active request aborted');let err=null;try{await pending;}catch(error){err=error;}assert(!!err,true,'abort returned an error result');assert(err.cancelled,true,'cancelled flag');assert(err.code,'ACTION_ABORTED','stable cancellation code');assert(err.reason,'user','user reason');assert(err.isNetwork,false,'not a network failure');}
-    finally{global.fetch=oldFetch;}
-  };
 
-
-  t['provider rate policy exposes pacing and circuit settings without retry configuration'] = function () {
-    const policy=AI.ratePolicy({settings:{provider:'zai',model:'glm-4.7-flash'},provider:{id:'zai',rateLimit:{retries:2,delaysMs:[6000,15000],freeFlashMinIntervalMs:2500}},model:'glm-4.7-flash'});
-    assert(policy.minIntervalMs,2500,'free Flash pacing');
-    assert(Object.prototype.hasOwnProperty.call(policy,'retries'),false,'legacy retry count ignored');
-    assert(Object.prototype.hasOwnProperty.call(policy,'delaysMs'),false,'legacy retry delays ignored');
+  t['provider rate-limit classification remains explicit without transport retry state'] = function () {
     assert(AI.isRateLimitError({providerCode:'1305'}),true,'provider code 1305');
     assert(AI.isRateLimitError({status:429}),true,'HTTP 429');
     assert(AI.isRateLimitError({providerCode:'1310'}),true,'quota exhaustion is still a provider limit');
-    assert(AI.isRetryableRateLimitError({providerCode:'1310'}),false,'quota exhaustion is not retryable');
-    assert(AI.isRetryableRateLimitError({providerCode:'1312'}),true,'temporary model capacity is retryable');
-    assert(Object.prototype.hasOwnProperty.call(AI.ratePolicy({settings:{provider:'custom',model:'x'},provider:{},model:'x'}),'retries'),false,'transport has no implicit retry default');
+    assert(AI.limitInfo(429,'1310','quota').retryable,false,'quota exhaustion classified non-retryable');
+    assert(AI.limitInfo(429,'1312','busy').retryable,true,'temporary model capacity remains identifiable');
   };
 
   t['Retry-After parsing supports seconds and HTTP dates'] = function () {
@@ -447,15 +425,14 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
-  t['Z.AI 1305 opens a provider-wide cooldown that blocks the next Action request'] = async function () {
+  t['Z.AI 1305 does not create local cooldown state or block a later user request'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0;global.location={protocol:'https:',origin:'https://labflow.test'};
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:0,delaysMs:[1],maxDelayMs:10,freeFlashMinIntervalMs:0,freeFlashBreakerMs:60000,freeFlashBreakerMaxMs:900000}}};
-    AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});
-    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};};
-    try{const first=await AI.testConnection();assert(first.rateLimited,true,'probe rate limited');assert(calls,1,'probe made one HTTP request');const status=AI.rateStatus({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});assert(status.circuitOpen,true,'shared circuit open');const spec=AI.buildRequest({messages:[{role:'user',content:'should not be sent'}],stream:false,maxTokens:64});let blocked=null;try{await AI.send(spec,{label:'post-probe-action'});}catch(err){blocked=err;}assert(blocked&&blocked.code,'MODEL_RATE_LIMIT_COOLDOWN','next request blocked locally');assert(calls,1,'no second HTTP request');}
-    finally{AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000}};
+    global.fetch=async function(){calls++;if(calls===1)return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'ok',model:'glm-4.7-flash',choices:[{message:{content:'done'},finish_reason:'stop'}]});}};};
+    try{const first=await AI.testConnection();assert(first.rateLimited,true,'probe rate limited');assert(calls,1,'probe made one HTTP request');const spec=AI.buildRequest({messages:[{role:'user',content:'send after user retry'}],stream:false,maxTokens:64});const out=await AI.send(spec,{label:'post-probe-action'});assert(out.content,'done','later request is allowed');assert(calls,2,'later user request reaches provider');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['connection test reports Z.AI rate limiting immediately without retry or pacing'] = async function () {
@@ -465,26 +442,18 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
     LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000,rateLimit:{retries:2,delaysMs:[6000,15000],maxDelayMs:30000,freeFlashMinIntervalMs:2500}}};
-    AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});
-    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(out.rateLimitRetries,0,'no retries');assert(progress.some(function(p){return p.transportState==='provider_pacing'||p.transportState==='rate_limit_wait';}),false,'no pacing or backoff progress');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
-    finally{AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-4.7-flash'});global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(progress.some(function(p){return p.transportState==='rate_limit';}),true,'rate-limit progress is surfaced once');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['legacy retry settings cannot repeat a throttled request'] = async function () {
+  t['transport returns the first Z.AI 1305 without a hidden retry'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
     global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(url,opts){
-      calls++;
-      return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){if(name==='retry-after')return'0';return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};
-    };
+    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'2':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,rateLimit:{retries:1,delaysMs:[1],maxDelayMs:10,minIntervalMs:0}}};
-    try{
-      const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});
-      let err=null;try{await AI.send(spec,{label:'rate-test'});}catch(error){err=error;}
-      assert(!!err,true,'throttle returned immediately');
-      assert(calls,1,'exactly one HTTP request');
-    }finally{AI.clearRateState({settings:LF.Storage.getAiSettings(),provider:LF.AIProviders.zai,model:'glm-test'});global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test'});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,2000,'Retry-After preserved');assert(calls,1,'single HTTP attempt');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
   return t;

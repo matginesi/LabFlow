@@ -21,9 +21,9 @@
     if(c==='1308')return' The provider usage window is exhausted until its reset time; LabFlow will not loop on retries.';
     if(c==='1310')return' The provider weekly/monthly plan quota is exhausted; LabFlow will not retry automatically.';
     if(c==='1312')return' The selected model is temporarily under high traffic. LabFlow stops the bounded request and lets you retry later.';
-    if(c==='1302')return' Provider concurrency is saturated. LabFlow stops the request and applies provider pacing before a later user retry.';
-    if(c==='1303')return' Provider request frequency is too high. LabFlow applies adaptive pacing before a later user retry.';
-    if(status===429||c==='1305')return' The provider rate limit was reached. LabFlow opens a cooldown and does not send hidden automatic retries; bulk Design stops immediately and preserves completed suggestions.';
+    if(c==='1302')return' Provider concurrency is saturated. LabFlow stops this request without retrying it.';
+    if(c==='1303')return' Provider request frequency is too high. LabFlow stops this request without retrying it.';
+    if(status===429||c==='1305')return' The provider rate limit was reached. LabFlow does not retry automatically and does not create a local cooldown; bulk Design stops immediately and preserves completed suggestions.';
     if(status>=500)return' The provider reported a server-side error.';
     if(c==='1261'||c==='MODEL_CONTEXT_LENGTH')return' The loaded model context window was exceeded. LabFlow will compact bounded Action context before the next request.';
     return'';
@@ -48,7 +48,7 @@
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
     else if(['1304','1308','1310'].includes(code)||(e.rateLimited&&e.rateLimitRetryable===false)){category='Provider quota';next=code==='1304'?'The daily quota is exhausted. Check the provider quota/reset status or use another provider.':code==='1310'?'The current plan period is exhausted. Check the provider reset/plan status or use another provider.':'The provider usage window is exhausted. Check its reset time or use another provider.';}
-    else if(status===429||['1302','1303','1305','1312'].includes(code)||e.rateLimited){category=code==='1312'?'Model capacity':'Rate limit';next=code==='1312'?'The model is temporarily under high traffic. Retry later after the provider has recovered.':'LabFlow stopped at the provider throttle. Wait for the cooldown, then retry or continue the pending work.';}
+    else if(status===429||['1302','1303','1305','1312'].includes(code)||e.rateLimited){category=code==='1312'?'Model capacity':'Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=code==='1312'?'The model is temporarily under high traffic. Retry later after the provider has recovered.':retryMs?'LabFlow stopped at the provider throttle without retrying. The provider returned Retry-After; retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'LabFlow stopped at the provider throttle without retrying. Retry later or use another provider.';}
     else if(status>=500){category='Provider server';next='Check the provider logs and retry.';}
     return{category:category,next:next,status:status||'',providerCode:code};
   }

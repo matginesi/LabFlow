@@ -72,9 +72,9 @@ The running totem exposes **Stop**. Stop aborts the active run.
 
 ### AI retry
 
-An AI checkpoint retries only when its Action definition explicitly permits it through `max_retries`; omission means zero. Provider throttles never trigger a hidden HTTP retry. Compact automatic Actions such as `analysis.enrich`, and Design inference, deliberately use zero automatic retries.
+An AI checkpoint retries only when its Action definition permits it. `max_retries` controls semantic/checkpoint retry. The provider transport never retries automatically. Compact automatic Actions such as `analysis.enrich` and Design inference deliberately use zero semantic retries.
 
-When retry is explicitly enabled for transient network, timeout or temporary 5xx failures, the runner uses bounded delays (up to the current 5 s / 10 s schedule) and repeats only the failed work unit. Invalid/truncated output, cancellation and provider limits are never automatically retried. After the declared attempts, the run stops and may expose **Retry checkpoint**. Completed earlier checkpoints are not repeated unnecessarily.
+When semantic retry is enabled, the runner uses bounded delays (up to the current 5 s / 10 s schedule) and repeats only the failed work unit. After the declared attempts, the run stops and may expose **Retry checkpoint**. Completed earlier checkpoints are not repeated unnecessarily. Provider rate limits are never semantically retried and stop multi-request sequences without consuming semantic retries.
 
 ### No background orchestration
 
@@ -98,7 +98,7 @@ AI Actions receive their declared deterministic Context Pack directly. `assistan
 
 ### `analysis.enrich` (internal automatic)
 
-Purpose: add a provenance-marked scientific interpretation layer to the deterministic Experiment Brief when a provider is configured. Its compact schema contains one likely goal plus short lists of variables, meaningful comparisons, labelled hypotheses and knowledge gaps; it must not recalculate Results or write scientific source values. Failure is non-blocking and leaves the deterministic brief usable. The enriched brief is shared by downstream Assistant, Results, Design and Report/Paper Context Packs.
+Purpose: add a provenance-marked scientific interpretation layer to the deterministic Experiment Brief when a provider is configured. It may describe likely goal, variables, meaningful comparisons, interpretations, knowledge gaps and recommended focus; it must not recalculate Results or write scientific source values. Failure is non-blocking and leaves the deterministic brief usable. The enriched brief is shared by downstream Assistant, Results, Design and Report/Paper Context Packs.
 
 ### `dataset.analyze`
 
@@ -178,7 +178,7 @@ The Action deliberately does not infer fabrication/process fields. It should ret
 
 Acceptance is explicit and local. **Accept experiment** fills only empty solution/stack fields for that experiment and marks the accepted result researcher-confirmed. **Accept all suggestions** repeats the same local acceptance for every saved suggestion. Accepted values remain editable.
 
-**Suggest all with AI** is a plain sequential loop over the same `design.infer` Action. Each request contains one experiment, and each successful proposal is stored before the next request. Invalid/truncated output gets no hidden retry and becomes a per-experiment `Error`; Stop or provider cooldown leaves untouched experiments pending. A later Suggest all resumes only experiments that still need a suggestion.
+The internal batch helper `design.infer-batch` is only an efficiency path behind **Suggest all with AI**. It handles at most three experiment IDs per request. If the provider truncates a multi-experiment JSON response, LabFlow retries that batch one experiment at a time. Successful rows are stored independently. Missing/invalid rows become per-experiment `Error` state instead of failing the whole completed work. A later Suggest all or local Retry resumes only experiments that still need a suggestion. Stop preserves all suggestions already stored.
 
 The request is compact and bounded: thinking is off by default, context contains only relevant experiment evidence plus a small scientific-knowledge slice, output is small, and Design does not automatically retry a failed generation.
 
@@ -286,17 +286,17 @@ If a new proposed Action merely wraps one of these implementation details, it sh
 
 Every AI step declares both a bounded `max_input_tokens` cap and a bounded `max_output_tokens` ceiling. These are operational Action budgets appropriate for the workflow, not copies of the model's advertised context/output maxima. Model/provider capability remains only an upper ceiling.
 
-Every AI step also declares `thinking: off|auto|on`; the contract validator rejects omissions. Compact structured work (`analysis.enrich`, `design.infer`) and direct drafting (`report.generate`, `report.improve`) use `off`; ambiguity resolution uses `on`; other question/interpretation work follows its Action contract. The transport reconciles this request with the selected model's `none|optional|required|unknown` capability and never sends an incompatible provider field.
+Every AI step also declares `thinking: off|auto|on`; the contract validator rejects omissions. Direct drafting (`analysis.enrich`, `report.generate`, `report.improve`) uses `off`, semantic reconstruction (`dataset.resolve-ambiguities`, `design.infer`) uses `on`, and question/interpretation work (`assistant.chat`, `results.interpret`) uses `auto`. The transport reconciles this request with the selected model's `none|optional|required|unknown` capability and never sends an incompatible provider field.
 
 Knowledge lookup is Action-specific and optional. `analysis.enrich`, `results.interpret`, `design.infer`, `report.generate` and `report.improve` request only a small `knowledge_context` slice from the scientific `material`, `solution`, `process`, `stack` and `concept` kinds. `assistant.chat` performs one small local lookup across LabFlow help and scientific records while building its deterministic chat context. Empty or failed lookup is a normal condition and never blocks execution. `dataset.resolve-ambiguities` receives no external knowledge because sample identity, units and measured values must be established from imported evidence. Knowledge records remain external context and should preserve stable record/source provenance when used.
 
 At runtime the effective input budget is the tighter of the Action `max_input_tokens` cap and available model/runtime context headroom after reserving output and safety margin. The effective output budget is the minimum of the declared Action/step target/ceiling, any known exact model output limit or safe context-window headroom, the optional Assistant override, and the provider-level forced cap from Settings. The contract validator rejects AI steps that omit either input or output bounds.
 
-The current targets are intentionally task-shaped: automatic Experiment Brief enrichment targets about 240 tokens (480 ceiling); Results interpretation targets about 1.4k; ambiguity work about 1.8k; Design targets about 320 tokens for one experiment (800 ceiling); Report drafting targets about 3.6k and Report improvement about 3.2k, both with a 5k ceiling. These are safety and workload budgets, not invitations to fill the ceiling. Large documents remain split into bounded sequential writing blocks even when a model advertises a much larger output window.
+The current targets are intentionally task-shaped: automatic Experiment Brief enrichment is deliberately micro-sized at about 320 target tokens (700 ceiling); Results interpretation targets about 1.4k; ambiguity work about 1.8k; Design uses about 420 tokens for one experiment or 1.2k for a bounded batch; Report drafting targets about 3.6k and Report improvement about 3.2k, both with a 5k ceiling. These are safety and workload budgets, not invitations to fill the ceiling. Large documents remain split into bounded sequential writing blocks even when a model advertises a much larger output window.
 
-AI steps may also declare `deadline_ms` and `max_retries`. Provider throttles are never retried automatically. The automatic import enrichment uses a 45 s absolute deadline and zero Action retries; failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
+AI steps may also declare `deadline_ms` and `max_retries`. The automatic import enrichment uses a 45 s absolute deadline and zero Action retries; the transport itself always uses one HTTP attempt. Failure keeps the deterministic Experiment Brief and must not prevent ZIP import completion.
 
-For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, the Action fails clearly; truncated content is retained only in bounded request diagnostics and never becomes the Action output.
+For foreach text work with `target_words`, known output ceilings reduce the advertised word range before prompt construction. If the provider nevertheless truncates the response, an enabled semantic retry receives a deterministically reduced range and must rewrite the complete unit; truncated content is retained only in request diagnostics and never becomes the Action output.
 
 ## 8. Settings → Actions requirements
 

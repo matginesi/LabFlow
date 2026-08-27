@@ -15,10 +15,10 @@ LabFlow is **not memory-only**:
 - the immutable source snapshot and current scientific Working Copy are autosaved in IndexedDB so the session can be restored;
 - provider/model/UI preferences are stored in browser localStorage;
 - API keys are stored in browser localStorage separately by provider;
-- bounded provider rate-limit state (for example a temporary cooldown timestamp/count) is stored locally so reloads do not immediately restart throttled requests;
+- provider rate-limit/cooldown state is not persisted; a 429 and optional `Retry-After` exist only in the current request result;
 - **Reset session** clears the persisted scientific session/RAW snapshot but keeps provider credentials/preferences unless separately changed.
 
-The provider-rate metadata contains timing/counter information, not experiment contents or API-key values.
+Request diagnostics may contain HTTP status, provider code/message, timing and `Retry-After`; they do not contain API-key values.
 
 ## External AI requests
 

@@ -1,7 +1,7 @@
 ---
 title: AI tokens, limits and rate limiting
 section: Researcher guide
-summary: Understand LabFlow request budgets, streaming telemetry, local-model truncation and the Z.AI GLM-4.7-Flash circuit breaker.
+summary: Understand LabFlow request budgets, streaming telemetry, local-model truncation and provider rate-limit handling.
 order: 5
 ---
 
@@ -26,8 +26,9 @@ Provider model capacity is applied only as an additional ceiling.
 
 | Action | Input cap | Target output | Output ceiling | Notes |
 |---|---:|---:|---:|---|
-| `analysis.enrich` | 2,400 | 240 | 480 | automatic semantic micro-enrichment; no retries |
-| `design.infer` | 3,600 | 320 | 800 | one selected Design proposal |
+| `analysis.enrich` | 3,200 | 320 | 700 | automatic semantic micro-enrichment; no retries |
+| `design.infer` | 4,500 | 420 | 1,000 | one selected Design proposal |
+| `design.infer-batch` | 6,000 | 1,200 | 2,600 | at most a small batch of proposals |
 | `assistant.chat` | 12,000 | 700 | 2,048 | bounded page/experiment chat |
 | `report.generate` | 12,000 | 3,600 | 5,000 | one bounded Report/Paper writing block; 240 s inference deadline |
 | `report.improve` | 12,000 | 3,200 | 5,000 | one bounded edit block; no hidden semantic retry |
@@ -48,7 +49,7 @@ An HTTP 200 response is not necessarily a valid Action result. If the provider r
 
 For structured JSON this is especially important: storing a cut-off object would corrupt the Action contract. LabFlow rejects it as `MODEL_OUTPUT_TRUNCATED`.
 
-`analysis.enrich` is deliberately non-blocking and does not retry. Its compact schema asks for one goal plus short arrays of variables, comparisons, hypotheses and gaps; it does not ask the model to repeat confidence/basis prose for every field. If a weak/local model is unusually verbose, import still finishes with the deterministic Brief.
+`analysis.enrich` is deliberately non-blocking and does not retry. Its schema and output budget are kept small enough that normal output should fit comfortably. If a weak/local model is unusually verbose, import still finishes with the deterministic Brief.
 
 
 ## Slow local writing Actions
@@ -74,59 +75,31 @@ The useful live metrics are:
 
 Raw SSE capture is bounded for diagnostics so a long stream cannot grow browser memory indefinitely.
 
-## Z.AI `glm-4.7-flash`: no fallback and no hidden retry
+## Provider rate-limit handling
 
-LabFlow never substitutes another model for `glm-4.7-flash`.
+The transport uses a deliberately small contract for every provider:
 
-For this model the client policy is intentionally conservative:
+- one HTTP attempt per provider request;
+- no hidden transport retry;
+- no client-side pacing;
+- no local or persisted cooldown/circuit breaker;
+- no automatic model substitution;
+- preserve the provider HTTP status, provider code/message and `Retry-After` when present.
 
-- one HTTP attempt per Action work unit;
-- no hidden automatic HTTP retry after `1305`/HTTP 429;
-- a 10 s quiet interval after accepted traffic;
-- one provider-wide circuit shared by Test connection, import enrichment, Design, Assistant and other AI Actions;
-- the circuit state is persisted locally so reloading the page cannot immediately resume a throttling storm;
-- a provider throttle pauses/stops multi-request sequences while preserving completed work.
+HTTP 429 and known provider limit/quota conditions are therefore visible provider results, not a second LabFlow scheduling state. A later explicit researcher request may try again. LabFlow does not invent unpublished RPM/TPM values.
 
-These are **LabFlow protective policies**, not claims about an official Z.AI RPM/TPM allowance.
+### Z.AI `1305`
 
-## Exponential provider cooldown
+A Z.AI HTTP 429 with provider code `1305` is reported once. If Z.AI sends `Retry-After`, LabFlow displays it. The connection test is isolated: it makes one minimal request and does not poison later AI Actions with a shared cooldown.
 
-The first exhausted `1305` opens a 60 s circuit. If the circuit expires and the provider returns another `1305` before any successful request, the cooldown grows approximately:
+### Bulk Design and other multi-request sequences
 
-```text
-60 s → 120 s → 240 s → 480 s → max 900 s
-```
+A sequence stops on the first provider throttle so it does not intentionally continue generating traffic. Suggestions already completed remain stored; untouched experiments remain pending and can be resumed later. This stop policy is orchestration, not an automatic retry mechanism.
 
-A provider `Retry-After` value is respected when it requires a longer wait.
+### Deadlines
 
-A successful request clears the exponential failure history and returns to normal quiet spacing.
+A work-unit deadline measures the actual request/generation operation. There is no pre-request pacing or cooldown interval to account for.
 
-While the circuit is open, LabFlow fails fast **before `fetch()`**. Even Test connection sends zero HTTP requests and reports the remaining cooldown.
+### Diagnostics
 
-## Why this matters for the observed Z.AI failure
-
-If a minimal connection probe receives HTTP 429/`1305` in a few hundred milliseconds, the rejection happened before LabFlow could perform meaningful generation. In that case making `analysis.enrich` smaller may improve normal operation later, but it cannot itself cure the immediate provider throttle.
-
-The correct client behavior is therefore:
-
-1. record the throttle;
-2. stop new provider traffic;
-3. preserve deterministic/local work;
-4. expose the cooldown clearly;
-5. retry only after the provider window has had time to recover.
-
-## Bulk Design behavior
-
-`Suggest all` runs one experiment per request and never treats a provider throttle as 22 independent experiment failures.
-
-If nine experiments have completed and the next request receives a provider rate limit, the intended state is:
-
-```text
-9 suggested · 22 pending · provider cooldown
-```
-
-No further request is sent in that run. The researcher can continue later and LabFlow resumes only work still missing.
-
-## Deadlines do not include pacing
-
-Provider pacing/cooldown time is traffic management, not model inference time. The work-unit deadline starts when the actual HTTP request starts. This prevents a long cooldown from consuming a generation deadline before a request has even left the browser.
+Useful evidence is the provider response itself: HTTP status, provider code/message, request ID, elapsed time and `Retry-After` if present. An immediate 429 on a tiny connection probe points to provider/account/service throttling rather than prompt size or local generation time.

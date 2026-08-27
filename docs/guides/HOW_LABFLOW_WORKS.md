@@ -80,7 +80,7 @@ Design represents the experimental structure required by the POC, especially sol
 
 Existing source or researcher-confirmed values are authoritative. AI may suggest missing fields from experiment evidence, relevant Knowledge Base context and cautious model inference. Suggestions are visually separate and are not written into the Working Copy until accepted.
 
-Bulk **Suggest all** is only a sequential convenience layer over the same principle. It runs one bounded request per experiment and stores each completed proposal before moving on.
+Bulk **Suggest all** is only an efficiency layer over the same principle. Work is divided into bounded batches and completed proposals are stored independently.
 
 ## 7. AI enrich is not a second analysis pass
 

@@ -191,6 +191,43 @@ module.exports=function(t,LF){
   };
 
 
+  t['Batch Design fill validates and stores independent proposals by exact experiment ID']=function(){
+    const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
+    LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:[]}};}};
+    const exp={sync:{revision:7},designAnalysis:{sourceRevision:7,samples:[]},design:{solutions:[],devices:[
+      {id:'manualA',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}},
+      {id:'manualB',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}
+    ]}};
+    const collect=LF.ActionSteps['design.collect-batch']({exp:exp,params:{deviceIds:['manualA','manualB']}});
+    assert(collect.count===2,'both incomplete experiments should enter one batch');
+    const raw={summary:'batch',proposals:[
+      {target_device_id:'manualA',summary:'A',solutions:[],device:{sample_names:['WRONG-A'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.86,reason:'candidate'}],provenance_kind:'model_inference',confidence:.86,reason:'candidate'},unknowns:[]},
+      {target_device_id:'manualB',summary:'B',solutions:[],device:{sample_names:['WRONG-B'],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.82,reason:'candidate'}],provenance_kind:'model_inference',confidence:.82,reason:'candidate'},unknowns:[]}
+    ]};
+    const ctx={exp:exp,params:{deviceIds:['manualA','manualB']},outputs:{collect:collect,infer:raw},lastResult:raw,sourceRevision:7};
+    const validated=LF.ActionSteps['design.validate-batch'](ctx);
+    assert(validated.validated===2,'both provider rows should validate');
+    assert(ctx.outputs.infer.proposals[0].proposal.devices[0].sample_names.length===0,'manual experiment A must not inherit guessed sample names');
+    assert(ctx.outputs.infer.proposals[1].proposal.devices[0].sample_names.length===0,'manual experiment B must not inherit guessed sample names');
+    const stored=LF.ActionSteps['design.store-batch-proposals'](ctx);
+    assert(stored.stored===2,'both proposals should be stored');
+    assert(exp.aiDesignProposals.manualA.targetDeviceId==='manualA','A proposal bound to exact experiment ID');
+    assert(exp.aiDesignProposals.manualB.targetDeviceId==='manualB','B proposal bound to exact experiment ID');
+    assert(exp.aiDesignProposals.manualA.devices[0].stack[0].material==='SnO2','A keeps its own stack suggestion');
+    assert(exp.aiDesignProposals.manualB.devices[0].stack[0].material==='PTAA','B keeps its own stack suggestion');
+    LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
+  };
+
+  t['Batch Design collect skips complete experiments instead of spending an AI slot']=function(){
+    const exp={sync:{revision:2},designAnalysis:{sourceRevision:2,samples:[]},design:{solutions:[{id:'s1',name:'Ink'}],devices:[
+      {id:'done',sampleNames:[],solutionIds:['s1'],stack:[{material:'ITO'}],process:{coating:'spin',annealing:'100 C',atmosphere:'N2'}},
+      {id:'todo',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''}}
+    ]}};
+    const out=LF.ActionSteps['design.collect-batch']({exp:exp,params:{deviceIds:['done','todo']}});
+    assert(out.count===1&&out.device_ids[0]==='todo','only incomplete experiment should be sent to the batch model request');
+  };
+
 
   t['Accept experiment applies only that saved suggestion and clears it from review']=function(){
     LF.State={state:{selectedDesignDeviceId:'a'}};
@@ -224,4 +261,18 @@ module.exports=function(t,LF){
     assert(Object.keys(exp.aiDesignProposals).length===0,'accepted queue should be empty');
   };
 
+  t['Batch Design validation keeps successful suggestions when another experiment is missing']=function(){
+    const oldModel=LF.ExperimentModel,oldContext=LF.ContextBuilder;
+    LF.ExperimentModel={normalizeDesignProposal:function(v){return v;}};
+    LF.ContextBuilder={pack:function(){return{design_evidence_summary:{retrieved_knowledge_ids:[]}};}};
+    const exp={design:{solutions:[],devices:[{id:'a',sampleNames:[],solutionIds:[],stack:[]},{id:'b',sampleNames:[],solutionIds:[],stack:[]}]}};
+    const ctx={exp:exp,sourceRevision:1,outputs:{collect:{targets:[{device_id:'a',sample_names:[],unknown_fields:['stack']},{device_id:'b',sample_names:[],unknown_fields:['stack']}]},infer:{summary:'partial',proposals:[{target_device_id:'a',summary:'A',solutions:[],device:{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'},unknowns:[]}]}}};ctx.lastResult=ctx.outputs.infer;
+    const validated=LF.ActionSteps['design.validate-batch'](ctx);
+    assert(validated.validated===1&&validated.errors===1,'partial batch should validate successes and isolate omitted experiments');
+    const stored=LF.ActionSteps['design.store-batch-proposals'](ctx);
+    assert(stored.stored===1&&stored.errors===1,'successful row and retryable error should both be persisted');
+    assert(exp.aiDesignProposals.a&&exp.designAiStatus.a.state==='suggested','successful experiment stays available for acceptance');
+    assert(exp.designAiStatus.b.state==='error','missing experiment becomes local retry state');
+    LF.ExperimentModel=oldModel;LF.ContextBuilder=oldContext;
+  };
 };

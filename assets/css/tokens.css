@@ -121,6 +121,7 @@
   --sidebar-label-size: var(--font-xs);
   --assistant-w: 360px;
   --topbar-h: 50px;
+  --page-max-w: 1600px;
 
   --brand-accent: #54D2CF;
   --dirty-text: #ffe3a0;

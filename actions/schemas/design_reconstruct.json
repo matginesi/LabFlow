@@ -1,61 +1,196 @@
 {
   "id": "design_infer",
-  "title": "Compact Design suggestion",
+  "title": "Design suggestion",
   "type": "object",
-  "required": ["summary", "solutions", "devices", "unknowns"],
+  "required": [
+    "summary",
+    "solutions",
+    "devices",
+    "unknowns"
+  ],
   "properties": {
-    "summary": {"type": "string", "maxLength": 180},
+    "summary": {
+      "type": "string",
+      "maxLength": 260
+    },
     "solutions": {
       "type": "array",
-      "maxItems": 4,
+      "maxItems": 6,
       "items": {
         "type": "object",
-        "required": ["name", "provenance_kind", "confidence", "reason"],
+        "required": [
+          "name",
+          "provenance_kind",
+          "confidence",
+          "reason"
+        ],
         "properties": {
-          "name": {"type": "string", "maxLength": 80},
-          "role": {"type": "string", "maxLength": 60},
-          "solutes": {"type": "string", "maxLength": 120},
-          "solvents": {"type": "string", "maxLength": 100},
-          "concentration": {"type": "string", "maxLength": 60},
-          "knowledge_refs": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 80}},
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "provenance_kind": {"type": "string", "enum": ["experiment", "knowledge", "model_inference"]},
-          "reason": {"type": "string", "maxLength": 120}
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "solutes": {
+            "type": "string"
+          },
+          "solvents": {
+            "type": "string"
+          },
+          "concentration": {
+            "type": "string"
+          },
+          "additives": {
+            "type": "string"
+          },
+          "preparation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "knowledge_refs": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "provenance_kind": {
+            "type": "string",
+            "enum": [
+              "experiment",
+              "knowledge",
+              "model_inference"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 180
+          }
         }
       }
     },
     "devices": {
       "type": "array",
-      "minItems": 1,
       "maxItems": 1,
       "items": {
         "type": "object",
-        "required": ["provenance_kind", "confidence", "reason", "stack"],
+        "required": [
+          "provenance_kind",
+          "confidence",
+          "reason",
+          "stack"
+        ],
         "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sample_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "solution_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "stack": {
             "type": "array",
-            "maxItems": 10,
+            "maxItems": 14,
             "items": {
               "type": "object",
-              "required": ["role", "provenance_kind", "confidence", "reason"],
+              "required": [
+                "role",
+                "provenance_kind",
+                "confidence",
+                "reason"
+              ],
               "properties": {
-                "role": {"type": "string", "maxLength": 60},
-                "material": {"type": "string", "maxLength": 80},
-                "thickness": {"type": "string", "maxLength": 50},
-                "knowledge_refs": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 80}},
-                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                "provenance_kind": {"type": "string", "enum": ["experiment", "knowledge", "model_inference"]},
-                "reason": {"type": "string", "maxLength": 100}
+                "role": {
+                  "type": "string"
+                },
+                "material": {
+                  "type": "string"
+                },
+                "thickness": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                },
+                "knowledge_refs": {
+                  "type": "array",
+                  "maxItems": 5,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "provenance_kind": {
+                  "type": "string",
+                  "enum": [
+                    "experiment",
+                    "knowledge",
+                    "model_inference"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "maxLength": 180
+                }
               }
             }
           },
-          "knowledge_refs": {"type": "array", "maxItems": 3, "items": {"type": "string", "maxLength": 80}},
-          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-          "provenance_kind": {"type": "string", "enum": ["experiment", "knowledge", "model_inference"]},
-          "reason": {"type": "string", "maxLength": 120}
+          "evidence": {
+            "type": "string"
+          },
+          "knowledge_refs": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "string"
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "provenance_kind": {
+            "type": "string",
+            "enum": [
+              "experiment",
+              "knowledge",
+              "model_inference"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 180
+          }
         }
       }
     },
-    "unknowns": {"type": "array", "maxItems": 6, "items": {"type": "string", "maxLength": 100}}
+    "unknowns": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "maxLength": 140
+      }
+    }
   }
 }

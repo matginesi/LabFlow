@@ -80,7 +80,7 @@ LabFlow is local-first, not memory-only.
 - the current Working Copy/source snapshot is autosaved in **IndexedDB**;
 - explicit **Save** marks a checkpoint revision;
 - provider/model preferences and provider-scoped API keys live in browser-local storage;
-- short-lived provider rate-limit/cooldown metadata is also stored locally so a page reload cannot immediately restart a throttling storm;
+- provider rate-limit/cooldown state is not stored in the scientific session or persisted across reloads;
 - reset clears the persisted scientific session while preserving provider/UI preferences unless explicitly changed.
 
 ## Exports

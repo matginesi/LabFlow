@@ -115,7 +115,7 @@ LabFlow does not impose one hidden global output ceiling. Every AI step declares
 
 The effective request budget is the tightest applicable value among: the Action/step target, detected exact model maximum (or safe context headroom when only that is known), the optional Assistant override for `assistant.chat`, and **Settings → Provider → Force max output**. Provider `0` means “do not add a global cap”; it does not mean “request the provider maximum”. A positive user cap can only lower the request.
 
-Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately a micro-request: `analysis.enrich` is a semantic-only layer (objective, variables, comparisons, labelled hypotheses and gaps), caps estimated input at 2,400 tokens, targets about 240 output tokens with a 480-token ceiling, has a 45 s work-unit deadline, and disables automatic retry. If it cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
+Large writing Actions remain split into bounded work units. Automatic import enrichment is deliberately a micro-request: `analysis.enrich` is a semantic-only layer (objective, variables, comparisons, labelled hypotheses and gaps), caps estimated input at 3,200 tokens, targets about 320 output tokens with a 700-token ceiling, has a 45 s work-unit deadline, and disables semantic retry. The transport itself never retries provider requests. If enrichment cannot complete, LabFlow keeps the deterministic Experiment Brief and finishes the ZIP import.
 
 ## 6. Structured AI output
 
@@ -139,11 +139,11 @@ Final Markdown/JSON rendering must follow the active theme.
 
 ## 8. Retry contract
 
-Retry is **Action-declared**, not a global promise that every AI call retries twice. `max_retries` controls semantic/checkpoint retry and defaults to zero when omitted. Every shipped Action currently declares zero automatic retries.
+Retry is **Action-declared** and applies only to semantic/checkpoint recovery through `max_retries`. The transport performs exactly one HTTP attempt for each provider request and never adds hidden provider retries. Compact/automatic Actions such as enrichment and Design deliberately use zero semantic retries.
 
-When an Action explicitly enables retry for transient network, timeout or temporary 5xx failures, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated or invalid structured output is never retried or stored as partial JSON.
+When an Action enables semantic retry, the runner uses bounded delays (currently 5 s then 10 s at most) and retries only the failed work unit. Truncated structured output is never stored as partial JSON.
 
-Provider throttling is a separate transport concern. LabFlow never automatically repeats a throttled HTTP request; for Z.AI `glm-4.7-flash`, a 429/1305 opens a shared persisted provider circuit. See [`guides/AI_TOKENS_AND_RATE_LIMITS.md`](guides/AI_TOKENS_AND_RATE_LIMITS.md).
+Provider throttling is a separate transport result. HTTP 429 and known provider rate-limit codes are surfaced once, together with `Retry-After` when available. LabFlow creates no client pacing, circuit breaker or persisted cooldown. See [`guides/AI_TOKENS_AND_RATE_LIMITS.md`](guides/AI_TOKENS_AND_RATE_LIMITS.md).
 
 No unbounded retry loop or provider queue.
 
@@ -164,11 +164,11 @@ The final answer is generated only after this retrieval phase and may expose whi
 
 ## Provider rate limits
 
-LabFlow treats provider rate limiting separately from model/output failures. The configured model is never substituted automatically. For Z.AI `glm-4.7-flash`, LabFlow applies a 10 s client-side quiet interval after accepted traffic and maintains one provider-wide cooldown shared by every AI entry point. A `1305`/HTTP 429 is not automatically retried: the first exhausted throttle opens a 60 s circuit, repeated throttles after expiry extend it exponentially up to 15 minutes, and a successful request clears the failure history. The circuit metadata is persisted locally so reload cannot immediately restart traffic. While open, requests fail locally before `fetch()`, including Test connection. Multi-request operations such as **Suggest all** stop at the first throttle, preserve completed suggestions and leave untouched experiments pending. Quota-exhaustion codes such as `1304`, `1308` and `1310` also fail immediately. These client timings are protective LabFlow policy, not claims about unpublished provider RPM/TPM quotas.
+LabFlow treats provider rate limiting separately from model/output failures. The configured model is never substituted automatically. A `1305`/HTTP 429 or another recognized provider limit is returned to the caller after the single HTTP attempt; `Retry-After` is parsed and displayed when the provider supplies it. LabFlow does not add client pacing, automatic transport retry, a local circuit breaker or persisted cooldown. A later researcher-requested call is therefore allowed to try again. Multi-request operations such as **Suggest all** stop at the first throttle, preserve completed suggestions and leave untouched experiments pending so the researcher can resume later. Quota/usage-window errors also fail immediately rather than triggering model fallback.
 
 
 ## Adaptive output budgeting
 
 LabFlow separates desired output size from provider capability. Each AI step may declare a minimum, target and maximum output budget. `ActionRunner` adapts the request to the work unit (including Report/Paper target words) and then clamps it to the detected model/provider ceiling and optional user cap. The provider maximum must never become the default requested output size.
 
-Long model calls emit semantic phases (`prepare`, `request`, streaming, `validate`, `store/complete`). The live UI reports estimated/exact input/output tokens, Action target/ceiling, first-token latency and generation rate. Raw SSE event counts and wire bytes are diagnostics only because many tiny provider chunks can make those numbers look enormous without representing token use. Provider pacing/cooldown time is separate from the Action inference deadline; the deadline starts when the HTTP request actually starts. Connection tests use one small bounded payload and never retry.
+Long model calls emit semantic phases (`prepare`, `request`, streaming, `validate`, `store/complete`). The live UI reports estimated/exact input/output tokens, Action target/ceiling, first-token latency and generation rate. Raw SSE event counts and wire bytes are diagnostics only because many tiny provider chunks can make those numbers look enormous without representing token use. The Action inference deadline starts when the HTTP request starts. Connection tests use one small bounded payload, make one HTTP attempt and never mutate provider/model selection.

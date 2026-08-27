@@ -18,7 +18,7 @@
       "timeout_ms": 60000,
       "max_output_tokens": 2048,
       "deadline_ms": 90000,
-      "max_retries": 0,
+      "max_retries": 1,
       "min_output_tokens": 160,
       "target_output_tokens": 700,
       "max_input_tokens": 12000

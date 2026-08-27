@@ -410,7 +410,7 @@ Import → Review → correction → Results → Design → Report → NOMAD →
 
 
 ### Provider rate-limit handling
-Treat model/provider ceilings, Action output budgets, semantic retries, and transport rate-limit retries as separate concerns. Z.AI 1305/HTTP 429 may use bounded pacing/backoff of the identical request; quota exhaustion must fail clearly and must not create unbounded retry loops.
+Treat model/provider ceilings, Action output budgets and semantic retries as separate concerns. Provider rate limits (including Z.AI 1305/HTTP 429) are surfaced after the single HTTP attempt; LabFlow performs no hidden transport retry, pacing, persisted cooldown or circuit breaker. Quota exhaustion must fail clearly.
 
 
 ## Long Action progress and AI output contract

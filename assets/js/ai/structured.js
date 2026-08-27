@@ -142,7 +142,131 @@
     return errors;
   }
 
+  function normalizeDesignSource(value, inherited) {
+    const raw=String(value==null?'':value).trim().toLowerCase();
+    if(raw==='experiment'||raw==='evidence'||raw==='source'||raw==='raw')return'experiment';
+    if(raw==='knowledge'||raw==='kb'||raw==='rag'||raw==='literature')return'knowledge';
+    if(raw==='model_inference'||raw==='model'||raw==='inference'||raw==='ai')return'model_inference';
+    return inherited||'model_inference';
+  }
+  function designText(value) {
+    if(value==null)return'';
+    if(Array.isArray(value))return value.map(designText).filter(Boolean).join(', ');
+    if(typeof value==='object'){
+      if(value.value!=null)return designText(value.value);
+      if(value.name!=null)return designText(value.name);
+      if(value.text!=null)return designText(value.text);
+      return'';
+    }
+    return String(value).trim();
+  }
+  function designList(value) {
+    if(Array.isArray(value))return value;
+    return value==null||value===''?[]:[value];
+  }
+  function designStringList(value, limit) {
+    return designList(value).map(designText).filter(Boolean).slice(0,limit||99);
+  }
+  function designConfidence(value, fallback) {
+    let n=Number(value);
+    if(!Number.isFinite(n)&&typeof value==='string'&&/%/.test(value))n=parseFloat(value)/100;
+    if(Number.isFinite(n)&&n>1&&n<=100)n/=100;
+    return Number.isFinite(n)?Math.max(0,Math.min(1,n)):(fallback==null?0.5:fallback);
+  }
+  function clip(value, max) { const text=designText(value);return max&&text.length>max?text.slice(0,max):text; }
+  function unwrapDesign(value) {
+    if(Array.isArray(value))return value.length===1&&value[0]&&typeof value[0]==='object'?value[0]:{devices:value};
+    let v=value&&typeof value==='object'?value:{};
+    ['result','proposal','design','suggestion','output'].some(function(key){if(v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){v=v[key];return true;}return false;});
+    return v;
+  }
+  function normalizeDesignLayer(item, inheritedSource, inheritedConfidence) {
+    item=item&&typeof item==='object'?item:{material:item};
+    const source=normalizeDesignSource(item.provenance_kind||item.provenanceKind||item.source_kind,inheritedSource),confidence=designConfidence(item.confidence,inheritedConfidence==null?0.5:inheritedConfidence);
+    return{
+      role:designText(item.role||item.layer||item.function||item.type)||'unspecified layer',
+      material:designText(item.material||item.material_name||item.name||item.composition),
+      thickness:designText(item.thickness||item.thickness_nm),
+      evidence:clip(item.evidence||item.source,500),
+      knowledge_refs:designStringList(item.knowledge_refs||item.knowledgeRefs,5),
+      confidence:confidence,
+      provenance_kind:source,
+      reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
+    };
+  }
+  function normalizeDesignSolution(item,index) {
+    item=item&&typeof item==='object'?item:{name:item};
+    const refs=designStringList(item.knowledge_refs||item.knowledgeRefs,5),source=normalizeDesignSource(item.provenance_kind||item.provenanceKind||item.source_kind,refs.length?'knowledge':'model_inference');
+    return{
+      name:designText(item.name||item.title||item.solution_name||item.solutionName)||('Solution '+(index+1)),
+      role:designText(item.role||item.type||item.function),
+      solutes:designText(item.solutes||item.solute||item.materials||item.precursors),
+      solvents:designText(item.solvents||item.solvent||item.solvent_system),
+      concentration:designText(item.concentration||item.composition||item.ratio||item.composition_or_concentration),
+      additives:designText(item.additives||item.additive),
+      preparation:designText(item.preparation||item.process||item.notes),
+      evidence:clip(item.evidence||item.source,500),
+      knowledge_refs:refs,
+      confidence:designConfidence(item.confidence,0.5),
+      provenance_kind:source,
+      reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
+    };
+  }
+  function normalizeDesignDevice(item,index) {
+    item=item&&typeof item==='object'?item:{};
+    const refs=designStringList(item.knowledge_refs||item.knowledgeRefs,6),source=normalizeDesignSource(item.provenance_kind||item.provenanceKind||item.source_kind,refs.length?'knowledge':'model_inference'),confidence=designConfidence(item.confidence,0.5),layers=designList(item.stack||item.layers||item.device_stack||item.deviceStack).slice(0,14).map(function(layer){return normalizeDesignLayer(layer,source,confidence);});
+    return{
+      name:designText(item.name||item.title||item.group),
+      sample_names:designStringList(item.sample_names||item.sampleNames||item.samples,32),
+      solution_names:designStringList(item.solution_names||item.solutionNames||item.solutions,12),
+      stack:layers,
+      evidence:clip(item.evidence||item.source,500),
+      knowledge_refs:refs,
+      confidence:confidence,
+      provenance_kind:source,
+      reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
+    };
+  }
+  function normalizeDesignProposal(value) {
+    const v=unwrapDesign(value),summary=clip(v.summary||v.assessment||v.description||'Design suggestion ready for review.',260);
+    let solutionSource=v.solutions||v.formulations||v.recipes||v.solution_chemistry||v.solutionChemistry||v.chemistry||v.solution||[];
+    if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)&&Array.isArray(solutionSource.solutions))solutionSource=solutionSource.solutions;
+    let deviceSource=v.devices||v.variants||v.device_variants||v.device||[];
+    if(!designList(deviceSource).length&&(v.device_stack||v.deviceStack||v.stack||v.layers))deviceSource=[{stack:v.device_stack||v.deviceStack||v.stack||v.layers,confidence:v.confidence,provenance_kind:v.provenance_kind||v.provenanceKind,reason:v.reason||v.rationale}];
+    return{
+      summary:summary,
+      solutions:designList(solutionSource).slice(0,6).map(normalizeDesignSolution),
+      devices:designList(deviceSource).slice(0,1).map(normalizeDesignDevice),
+      unknowns:designStringList(v.unknowns||v.unresolved||v.missing,10).map(function(x){return clip(x,140);})
+    };
+  }
+  function normalizeDesignBatch(value) {
+    let v=value;
+    if(Array.isArray(v))v={proposals:v};
+    v=v&&typeof v==='object'?v:{};
+    if(v.result&&typeof v.result==='object')v=v.result;
+    const source=v.proposals||v.items||v.designs||v.suggestions||[];
+    return{
+      summary:clip(v.summary||v.assessment||'Design suggestions ready for review.',350),
+      proposals:designList(source).slice(0,3).map(function(item,index){
+        item=item&&typeof item==='object'?item:{};
+        const normalized=normalizeDesignProposal(item.proposal||item.design||item);
+        const device=normalized.devices[0]||null;
+        const out={
+          target_device_id:designText(item.target_device_id||item.device_id||item.target_id||item.id),
+          summary:clip(item.summary||normalized.summary||('Design suggestion '+(index+1)),240),
+          solutions:normalized.solutions,
+          unknowns:normalized.unknowns
+        };
+        if(device)out.device=device;
+        return out;
+      }).filter(function(item){return item.target_device_id;})
+    };
+  }
+
   function normalizeForSchema(schemaId, value) {
+    if (schemaId === 'design_reconstruct') return normalizeDesignProposal(value);
+    if (schemaId === 'design_reconstruct_batch') return normalizeDesignBatch(value);
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = Object.assign({}, value);
     if (schemaId === 'dataset_corrections') {

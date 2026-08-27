@@ -27,7 +27,7 @@ An AI provider never receives ownership of the Working Copy. It receives a reque
 
 ### Automatic semantic enrichment
 
-`analysis.enrich` may run after import when a provider is configured. It adds only a compact semantic layer to the Experiment Brief: likely goal, variables, useful comparisons, a few labelled hypotheses and important metadata gaps.
+`analysis.enrich` may run after import when a provider is configured. It adds only a compact semantic layer to the Experiment Brief: likely goal, variables, useful comparisons, a few interpretations/hypotheses and important metadata gaps.
 
 It is intentionally **optional, small and non-blocking**. Import remains valid without it.
 
@@ -71,9 +71,8 @@ Every AI Action declares its own:
 - `target_output_tokens`;
 - `max_output_tokens`;
 - deadline;
-- semantic retry policy.
-
-Provider throttles never trigger a hidden HTTP retry. They open the provider cooldown and return control to the researcher.
+- semantic retry policy;
+- optional transport retry policy.
 
 See [AI tokens, limits and rate limiting](AI_TOKENS_AND_RATE_LIMITS.md) and the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md).
 
@@ -81,9 +80,9 @@ See [AI tokens, limits and rate limiting](AI_TOKENS_AND_RATE_LIMITS.md) and the 
 
 LabFlow does not fall back to another model.
 
-For `glm-4.7-flash`, a 429/`1305` opens a shared provider cooldown. LabFlow sends no hidden retry, stops multi-request sequences, preserves completed work and blocks new provider calls until the circuit expires. Repeated throttles extend the cooldown, while a later successful request clears the exponential failure history.
+For `glm-4.7-flash`, a 429/`1305` is surfaced immediately after the single HTTP attempt. LabFlow sends no hidden retry, adds no local cooldown, stops multi-request sequences and preserves completed work. `Retry-After`, when supplied by the provider, is shown as guidance rather than enforced as persistent client state.
 
-The client-side spacing/circuit values are defensive LabFlow policy; they are not presented as official provider rate limits.
+LabFlow does not invent provider RPM/TPM limits or client-side spacing. The provider HTTP response remains authoritative.
 
 ## Local providers
 
@@ -114,6 +113,7 @@ LabFlow's recommended runtime profile is deliberately **one slot with the full 6
 ```bash
 llama-server \
   --model /path/to/model.gguf \
+  --alias local-model \
   --ctx-size 65536 \
   --parallel 1 \
   --n-gpu-layers 99 \
@@ -128,8 +128,6 @@ llama-server \
 ```
 
 Reasoning is intentionally **not disabled globally** in this launcher. LabFlow applies reasoning policy per Action: most structured Actions currently request `thinking: off`, while Actions that intentionally require reasoning can leave it enabled. After startup, **Detect** should report `65,536 context tok / 1 slot` and mark the LabFlow llama.cpp runtime profile as active. If `/props` reports another value, LabFlow uses the effective `n_ctx` exactly as reported and flags the runtime profile mismatch; it never divides that value a second time.
-
-**Detect** reads `/v1/models` and `/props` separately. The served API ID remains the value sent in requests. When `/props` exposes a model path/name, Settings shows its filename as **Runtime model**; otherwise it says **not exposed by server** instead of guessing.
 
 The Settings **Test connection** intentionally separates connectivity from final-answer quality. If llama.cpp returns HTTP 200 with a valid Chat Completions envelope but spends the tiny probe budget entirely in reasoning, LabFlow reports **reachable · final-text probe inconclusive**. That is not treated as a network failure. Normal scientific Actions do **not** get this exception: they must still produce final content that passes their parser/schema contract.
 
