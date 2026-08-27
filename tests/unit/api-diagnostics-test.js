@@ -19,5 +19,12 @@ module.exports=function(t,LF){
     assert(out.category,'Model output limit','category');
     assert(/valid response envelope/.test(out.next),true,'HTTP success distinction');
   };
+  t['local network failures prioritize server reachability before CORS']=function(){
+    LF.Storage={getAiSettings:function(){return{provider:'lmstudio'};}};
+    const out=LF.AIDiagnostics.errorSummary({isNetwork:true,providerId:'lmstudio',message:'Test connection could not read an HTTP response.'});
+    assert(out.category,'Local endpoint unreachable','category');
+    assert(/Local Server is started/.test(out.next),true,'server start guidance');
+    assert(/If the endpoint answers outside LabFlow/.test(out.next),true,'CORS remains secondary guidance');
+  };
   return t;
 };

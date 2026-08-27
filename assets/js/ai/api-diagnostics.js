@@ -36,10 +36,10 @@
     else if(e.timedOut){category='Timeout';next='Retry the request or increase the provider timeout for a slow local model.';}
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
-      category=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Browser / CORS':'Network';
-      if(providerId==='lmstudio')next='Confirm that the LM Studio local API is running at the configured endpoint and accepts the current browser origin, then retry.';
-      else if(providerId==='ollama')next='Confirm that Ollama is running at the configured endpoint and accepts the current browser origin, then retry.';
-      else if(providerId==='llamacpp')next='Confirm that llama-server is running at the configured endpoint, serves /v1/chat/completions, and accepts the current browser origin, then retry.';
+      category=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Local endpoint unreachable':'Network';
+      if(providerId==='lmstudio')next='Confirm that the LM Studio Local Server is started and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check LM Studio CORS/browser-origin settings.';
+      else if(providerId==='ollama')next='Confirm that Ollama is running and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check browser-origin settings.';
+      else if(providerId==='llamacpp')next='Confirm that llama-server is running and listening at the configured host/port and serves /v1/chat/completions. If the endpoint answers outside LabFlow but the browser still fails, then check CORS/browser-origin settings.';
       else next='Check that the provider process is running and the endpoint is reachable from this browser.';
     }
     else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. LabFlow uses the runtime context capability and compacts the Action Context Pack; if this persists, increase the loaded context or narrow the Action.';}

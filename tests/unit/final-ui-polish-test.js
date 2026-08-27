@@ -55,6 +55,12 @@ module.exports=function(t){
     assert(settings.includes('activity.activityFinish({message:')&&settings.includes('Provider metadata detection completed.')&&settings.includes('runtime differs from the LabFlow profile'),true,'detect terminal totem supports normal and llama.cpp profile-mismatch completion');
   };
 
+  t['Console logs expose a readable summary before structured details']=function(){
+    assert(logger.includes('function consoleSummary(data)'),true,'console summary helper');
+    assert(logger.includes("prefix + ' · ' + summary"),true,'summary is printed inline');
+    assert(logger.includes("parts.push('error=' + message)"),true,'error message is visible without expanding Object');
+  };
+
   t['Provider detection runs only from explicit Detect; connection test stays minimal']=function(){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');

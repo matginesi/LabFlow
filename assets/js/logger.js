@@ -68,6 +68,44 @@
     return cleaned.slice(0,head)+'\n… [LabFlow log payload bounded · '+cleaned.length+' chars total] …\n'+cleaned.slice(-tail);
   }
 
+  function consoleScalar(value) {
+    if (value == null || value === '') return '';
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'string') return sanitizeString(value, 900).replace(/\s+/g, ' ').trim();
+    return '';
+  }
+
+  function consoleSummary(data) {
+    if (data == null) return '';
+    if (typeof data !== 'object') return consoleScalar(data);
+    const preferred = ['action','provider','model','endpoint','status','providerCode','code','elapsedMs','durationMs','requestId','step','route','experimentId','entries','policies','message'];
+    const parts = [];
+    const used = new Set();
+    preferred.forEach(function (key) {
+      if (!Object.prototype.hasOwnProperty.call(data, key)) return;
+      const value = consoleScalar(data[key]);
+      if (!value) return;
+      used.add(key);
+      parts.push(key + '=' + value);
+    });
+    if (data.error && typeof data.error === 'object') {
+      const message = consoleScalar(data.error.message);
+      if (message) parts.push('error=' + message);
+      const nestedCode = consoleScalar(data.error.providerCode || data.error.code);
+      if (nestedCode && !used.has('providerCode') && !used.has('code')) parts.push('code=' + nestedCode);
+    }
+    if (parts.length < 6) {
+      Object.keys(data).forEach(function (key) {
+        if (parts.length >= 6 || used.has(key) || key === 'error') return;
+        const value = consoleScalar(data[key]);
+        if (!value) return;
+        used.add(key);
+        parts.push(key + '=' + value);
+      });
+    }
+    return parts.join(' · ');
+  }
+
   function normalizeError(value, depth, seen) {
     const out = {
       name:value.name || 'Error', message:sanitizeString(value.message || String(value)),
@@ -138,7 +176,10 @@
       const prefix = '[LabFlow][' + entry.level + '][' + entry.scope + '] ' + entry.event;
       try {
         if (entry.data === undefined) console[method](prefix);
-        else console[method](prefix, entry.data);
+        else {
+          const summary = consoleSummary(entry.data);
+          console[method](summary ? prefix + ' · ' + summary : prefix, entry.data);
+        }
       } catch (_) {}
     }
   }

@@ -8,7 +8,7 @@ LabFlow POC keeps structured browser diagnostics enabled while the data model, r
 - Level: `INFO`.
 - Console output: enabled.
 - In-memory ring buffer: enabled.
-- Buffer limit: 1200 entries.
+- Buffer limit: 2500 entries.
 - UI interaction tracing: disabled by default.
 - network request tracing: enabled.
 
@@ -16,11 +16,13 @@ Change these under **Settings → Logging configuration**. Inspect events on the
 
 ## Format
 
-Console messages use:
+Console messages use a readable one-line summary followed by the expandable structured object:
 
 ```text
-[LabFlow][LEVEL][scope] event
+[LabFlow][LEVEL][scope] event · provider=... · model=... · endpoint=... · elapsedMs=... · error=...
 ```
+
+Only scalar diagnostic fields are promoted into the summary; the sanitized structured payload remains available as the second console argument and in the Logs page.
 
 Each buffered entry contains:
 
