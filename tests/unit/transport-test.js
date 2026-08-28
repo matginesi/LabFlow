@@ -31,6 +31,16 @@ module.exports = function (t, LF) {
     assert(AI.mergeStreamContent('prefix repeated payload that is long enough', 'repeated payload that is long enough'), 'prefix repeated payload that is long enough', 'duplicate large suffix ignored');
   };
 
+  t['llama.cpp reasoning envelope keeps only the final result and extracts leaked think blocks'] = function () {
+    const raw='</think>\n<result>draft</result>\n</think>\n<result>{\"ok\":true}</result>';
+    const out=AI.normalizeAssistantEnvelope(raw,'server reasoning','llamacpp');
+    assert(out.content,'{\"ok\":true}','last result becomes final content');
+    assert(out.changed,true,'envelope normalization reported');
+    assert(out.resultBlocks,2,'duplicate result envelopes detected');
+    const untouched=AI.normalizeAssistantEnvelope('<result>literal</result>','','openai');
+    assert(untouched.content,'<result>literal</result>','non llama.cpp providers are untouched');
+  };
+
   t['repeated model output loop is detected before unbounded growth'] = function () {
     const block='x'.repeat(512);
     assert(AI.outputLoopDetected(block+block+block), true, 'triple repeated block');
@@ -82,6 +92,17 @@ module.exports = function (t, LF) {
     assert(spec.body.stream, true, 'stream');
     assert(spec.body.max_tokens, 512, 'max tokens');
     delete LF.Storage; delete LF.AIProviders;
+  };
+
+  t['llama.cpp LFM requests force deepseek reasoning parsing instead of raw think tags'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'/models/LFM2.5-8B-A1B-Q4_K_M.gguf',streaming:true,thinkingMode:'on'};},getApiKey:function(){return'';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{on:{chat_template_kwargs:{enable_thinking:true}}}}};
+    try{
+      const spec=AI.buildRequest({messages:[{role:'user',content:'answer'}],stream:true,maxTokens:128,thinkingMode:'on'});
+      assert(spec.body.reasoning_format,'deepseek','LFM fallback parser');
+      const detected=AI.buildRequest({messages:[{role:'user',content:'answer'}],stream:true,maxTokens:128,thinkingMode:'auto',modelCapability:{reasoningParserFormat:'deepseek'}});
+      assert(detected.body.reasoning_format,'deepseek','detected template parser');
+    }finally{delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['provider-declared headers are applied and Z.AI omits unsupported stream options'] = function () {
@@ -330,10 +351,10 @@ module.exports = function (t, LF) {
 
   t['llama.cpp Detect accepts the LabFlow single-slot 65K runtime profile'] = async function () {
     const oldFetch=global.fetch;let seen=[];
-    global.fetch=async function(url){seen.push(String(url));return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({default_generation_settings:{n_ctx:65536,params:{max_tokens:-1}},total_slots:1,chat_template_caps:{supports_reasoning_effort:true}});}};};
+    global.fetch=async function(url){seen.push(String(url));return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({default_generation_settings:{n_ctx:65536,params:{max_tokens:-1}},total_slots:1,chat_template:'{{ messages }}<think>{{ reasoning }}</think>',chat_template_caps:{supports_reasoning_effort:true}});}};};
     LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model'};},getApiKey:function(){return'';}};
     LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,recommendedRuntime:{parallelSlots:1,contextWindow:65536}}};
-    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(seen.some(function(url){return url.indexOf('http://127.0.0.1:8080/props')===0;}),true,'llama.cpp props endpoint');assert(cap.contextWindow,65536,'single-slot runtime context is the full 65K');assert(cap.runtimeContextWindow,65536,'runtime context is retained exactly');assert(cap.totalSlots,1,'single server slot');assert(cap.runtimeProfileStatus,'match','LabFlow llama.cpp runtime profile matches');assert(cap.reasoningStatus,'optional','template reasoning effort capability');assert(cap.source,'llama.cpp /props','capability source');}
+    try{const cap=await AI.resolveModelCapabilities({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',force:true});assert(seen.some(function(url){return url.indexOf('http://127.0.0.1:8080/props')===0;}),true,'llama.cpp props endpoint');assert(cap.contextWindow,65536,'single-slot runtime context is the full 65K');assert(cap.runtimeContextWindow,65536,'runtime context is retained exactly');assert(cap.totalSlots,1,'single server slot');assert(cap.runtimeProfileStatus,'match','LabFlow llama.cpp runtime profile matches');assert(cap.reasoningStatus,'optional','template reasoning effort capability');assert(cap.chatTemplateUsesThinkTags,true,'think-tag template detected');assert(cap.reasoningParserFormat,'deepseek','deepseek parser selected for think tags');assert(cap.source,'llama.cpp /props','capability source');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 

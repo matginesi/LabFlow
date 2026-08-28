@@ -336,6 +336,40 @@
     return '';
   }
 
+  /* llama.cpp can expose reasoning in reasoning_content, raw <think> blocks,
+     or both when a template/parser combination is imperfect. Normalize the
+     envelope before Action validation so structured outputs never see transport
+     markers or duplicate <result> wrappers. This is intentionally scoped to
+     llama.cpp: other providers keep their response contract untouched. */
+  function normalizeAssistantEnvelope(content,reasoning,providerId){
+    let finalText=String(content||'').trim(),reasoningText=String(reasoning||'').trim(),changed=false;
+    if(String(providerId||'').toLowerCase()!=='llamacpp')return{content:finalText,reasoning:reasoningText,changed:false,resultBlocks:0};
+
+    const leakedThoughts=[];
+    finalText=finalText.replace(/<think\b[^>]*>([\s\S]*?)<\/think>/gi,function(_,inner){const value=String(inner||'').trim();if(value)leakedThoughts.push(value);changed=true;return '\n';});
+
+    /* Some templates/prefills leak an unmatched closing marker even when the
+       server parser extracted the actual reasoning separately. */
+    const withoutClosers=finalText.replace(/(?:^|\n)\s*<\/think>\s*(?=\n|$)/gi,'\n');
+    if(withoutClosers!==finalText){finalText=withoutClosers;changed=true;}
+
+    if(leakedThoughts.length){reasoningText=[reasoningText].concat(leakedThoughts).filter(Boolean).join('\n\n').trim();}
+
+    /* LFM-family templates may wrap the final channel in <result>. If a broken
+       parser leaves more than one result envelope, the last complete result is
+       the final answer; earlier ones belong to reasoning/prefill history. */
+    const results=[];
+    finalText.replace(/<result\b[^>]*>([\s\S]*?)<\/result>/gi,function(_,inner){results.push(String(inner||'').trim());return _;});
+    if(results.length){finalText=results[results.length-1];changed=true;}
+    else{
+      const open=finalText.toLowerCase().lastIndexOf('<result>');
+      if(open>=0){finalText=finalText.slice(open+8).replace(/<\/result>\s*$/i,'').trim();changed=true;}
+    }
+
+    finalText=finalText.replace(/^\s*<\/think>\s*/i,'').replace(/\s*<\/result>\s*$/i,'').trim();
+    return{content:finalText,reasoning:reasoningText,changed:changed,resultBlocks:results.length};
+  }
+
   function extractAssistant(obj){
     const choice=obj&&obj.choices&&obj.choices[0]||{};
     const msg=choice.message||{};
@@ -446,14 +480,14 @@
   }
   async function llamaCppCapability(endpoint,model,provider){
     const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=new URL(chat.origin+'/props');if(model)url.searchParams.set('model',model);
-    const obj=await fetchJson(url.toString(),{method:'GET',headers:{Accept:'application/json'}}),defaults=obj&&obj.default_generation_settings||{},params=defaults&&defaults.params||{},context=positiveInt(defaults.n_ctx),maxOutput=positiveInt(params.max_tokens),slots=positiveInt(obj.total_slots),caps=obj&&obj.chat_template_caps&&typeof obj.chat_template_caps==='object'?obj.chat_template_caps:{},recommended=provider&&provider.recommendedRuntime&&typeof provider.recommendedRuntime==='object'?provider.recommendedRuntime:{},recommendedSlots=positiveInt(recommended.parallelSlots)||1,recommendedContext=positiveInt(recommended.contextWindow)||65536;
+    const obj=await fetchJson(url.toString(),{method:'GET',headers:{Accept:'application/json'}}),defaults=obj&&obj.default_generation_settings||{},params=defaults&&defaults.params||{},context=positiveInt(defaults.n_ctx),maxOutput=positiveInt(params.max_tokens),slots=positiveInt(obj.total_slots),caps=obj&&obj.chat_template_caps&&typeof obj.chat_template_caps==='object'?obj.chat_template_caps:{},chatTemplate=String(obj&&obj.chat_template||''),usesThinkTags=/<think\b/i.test(chatTemplate)&&/<\/think>/i.test(chatTemplate),reasoningParserFormat=usesThinkTags?'deepseek':'',recommended=provider&&provider.recommendedRuntime&&typeof provider.recommendedRuntime==='object'?provider.recommendedRuntime:{},recommendedSlots=positiveInt(recommended.parallelSlots)||1,recommendedContext=positiveInt(recommended.contextWindow)||65536;
     const supportsEffort=caps.supports_reasoning_effort===true||caps.reasoning_effort===true,reasoning=supportsEffort?{reasoningStatus:'optional',reasoningAllowedOptions:['off','low','medium','high'],reasoningDefault:'auto'}:{};
     let runtimeProfileStatus='unknown',runtimeProfileMessage='llama.cpp runtime profile not fully exposed';
     if(slots&&context){
       if(slots===recommendedSlots&&context===recommendedContext){runtimeProfileStatus='match';runtimeProfileMessage='LabFlow llama.cpp profile active · '+slots+' slot · '+context.toLocaleString()+' context tok';}
       else{runtimeProfileStatus='mismatch';const issues=[];if(slots!==recommendedSlots)issues.push('expected --parallel '+recommendedSlots+', detected '+slots+' slot'+(slots===1?'':'s'));if(context!==recommendedContext)issues.push('expected -c '+recommendedContext+', detected '+context.toLocaleString()+' context tok per slot');runtimeProfileMessage='Different llama.cpp runtime profile · '+issues.join(' · ');}
     }
-    return Object.assign({maxOutputTokens:maxOutput,contextWindow:context,exactOutput:!!maxOutput,runtimeContextWindow:context,totalSlots:slots,recommendedSlots:recommendedSlots,recommendedContextWindow:recommendedContext,runtimeProfileStatus:runtimeProfileStatus,runtimeProfileMessage:runtimeProfileMessage,source:'llama.cpp /props'},reasoning);
+    return Object.assign({maxOutputTokens:maxOutput,contextWindow:context,exactOutput:!!maxOutput,runtimeContextWindow:context,totalSlots:slots,recommendedSlots:recommendedSlots,recommendedContextWindow:recommendedContext,runtimeProfileStatus:runtimeProfileStatus,runtimeProfileMessage:runtimeProfileMessage,chatTemplateUsesThinkTags:usesThinkTags,reasoningParserFormat:reasoningParserFormat,source:'llama.cpp /props'},reasoning);
   }
 
   async function lmStudioCapability(endpoint,model){
@@ -624,6 +658,10 @@
     if(provider.supportsTemperature!==false)body.temperature=Number.isFinite(Number(opts.temperature))?Number(opts.temperature):(Number.isFinite(Number(settings.temperature))?Number(settings.temperature):0.7);
     const thinking=applyThinkingMode(body,provider,requestedThinking);
     if(thinking.applied==='off'&&provider.supportsReasoningControl===true&&wantsStreaming)body.reasoning_control=true;
+    if(String(provider.id||settings.provider||'').toLowerCase()==='llamacpp'){
+      const capability=opts.modelCapability&&typeof opts.modelCapability==='object'?opts.modelCapability:{},explicitFormat=String(opts.reasoningFormat||''),detectedFormat=String(capability.reasoningParserFormat||''),lfmFallback=/lfm2(?:\.5)?/i.test(String(model||''))?'deepseek':'',format=explicitFormat||detectedFormat||lfmFallback;
+      if(format)body.reasoning_format=format;
+    }
     if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
     const timeoutMs=opts.connectionTest?Math.max(5000,Number(opts.timeoutMs)||15000):Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
@@ -646,7 +684,8 @@
       }
       throw err;
     }
-    const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),usage=obj.usage||{},content=extracted.content,reasoning=extracted.reasoning;
+    const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),normalized=normalizeAssistantEnvelope(extracted.content,extracted.reasoning,spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),usage=obj.usage||{},content=normalized.content,reasoning=normalized.reasoning;
+    if(normalized.changed)Log.warn('response.reasoning-envelope-normalized',{provider:spec.settings&&spec.settings.provider||'',model:obj.model||spec.settings&&spec.settings.model||'',resultBlocks:normalized.resultBlocks,rawContentChars:String(extracted.content||'').length,finalContentChars:content.length,reasoningChars:reasoning.length});
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
@@ -681,6 +720,7 @@
     estimatePromptTokens:estimatePromptTokens,
     isLocalAddress:isLocalAddress,
     mergeStreamContent:mergeStreamContent,
+    normalizeAssistantEnvelope:normalizeAssistantEnvelope,
     outputLoopDetected:outputLoopDetected,
     retryAfterMs:retryAfterMs,
     isRateLimitError:isRateLimitError,
