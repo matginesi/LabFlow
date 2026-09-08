@@ -28,7 +28,10 @@
       "items": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "role",
+          "solutes",
+          "solvents"
         ],
         "properties": {
           "name": {

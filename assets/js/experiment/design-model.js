@@ -251,7 +251,7 @@
 
   function missingDomains(exp,device) {
     const design=exp&&exp.design||{},ids=new Set(device&&device.solutionIds||[]),solutions=(design.solutions||[]).filter(function(solution){return ids.has(solution.id);}),process=device&&device.process||{},missing=[];
-    if(!solutions.some(function(solution){return clean(solution.name)||clean(solution.solutes)||clean(solution.solvents);}))missing.push('solutions');
+    if(!solutions.some(function(solution){return clean(solution.solutes)||clean(solution.solvents);}))missing.push('solutions');
     if(!stackAssessment(device&&device.stack).complete)missing.push('stack');
     if(![process.coating,process.annealing,process.atmosphere,process.notes].some(function(value){return clean(value);}))missing.push('process');
     return missing;

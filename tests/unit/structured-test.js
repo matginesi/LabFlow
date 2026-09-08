@@ -15,8 +15,8 @@ module.exports = function (t, LF) {
   t['parse extracts fenced JSON'] = function(){assert(SO.parse('```json\n{"a":1}\n```').value,{a:1},'fenced JSON');};
   t['parse repairs comments and trailing commas'] = function(){const r=SO.parse('{//x\n"rows":[1,],}');assert(r.value,{rows:[1]},'repair');assert(r.repaired,true,'repaired flag');};
   t['parse diagnoses truncation'] = function(){const r=SO.parse('{"a":[');assert(r.value,null,'no value');assert(/truncat/i.test(r.diagnosis),true,'diagnosis');};
-  t['Design schema accepts the minimal single-experiment suggestion contract'] = function(){
-    const errors=SO.validate('design_suggestion',{status:'suggested',summary:'x',solutions:[{name:'candidate',provenance_kind:'model_inference',confidence:.4,reason:'inferred'}],stack:[],process:{},unknowns:[]},{registry:LF.ActionRegistry});
+  t['Design schema requires explicit qualitative chemistry keys for solution suggestions'] = function(){
+    const errors=SO.validate('design_suggestion',{status:'suggested',summary:'x',solutions:[{name:'candidate',role:'absorber precursor',solutes:'perovskite precursor family',solvents:'polar aprotic solvent family',provenance_kind:'model_inference',confidence:.4,reason:'inferred'}],stack:[],process:{},unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
   t['Design schema permits a valid insufficient-evidence result']=function(){

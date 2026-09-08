@@ -131,4 +131,14 @@ module.exports=function(t,LF){
     localStorage.removeItem('labflow.ai.settings');
   };
 
+
+  t['Legacy Action overrides without a source signature are ignored after source updates']=function(){
+    const id='results.interpret',base=LF.ActionRegistry.action(id),sourcePrompt=LF.ActionRegistry.prompt(id);
+    localStorage.setItem('labflow.action.overrides',JSON.stringify({[id]:{definition:Object.assign({},base,{title:'STALE TITLE'}),prompt:'STALE PROMPT',updatedAt:'2026-01-01T00:00:00Z'}}));
+    assert(LF.Storage.getActionOverride(id)===null,'unsigned legacy override should not shadow current source Action');
+    assert(LF.Storage.getEffectiveAction(id).title===base.title,'current source definition must win over stale override');
+    assert(LF.Storage.getEffectivePrompt(id)===sourcePrompt,'current source prompt must win over stale override');
+    localStorage.removeItem('labflow.action.overrides');
+  };
+
 };

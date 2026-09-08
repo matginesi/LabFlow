@@ -17,7 +17,7 @@ function completeness(dev,solutions,exp){const keys=LF.DesignModel&&LF.DesignMod
 function measurementCount(exp,dev){const ids=new Set(dev&&dev.sampleIds||[]),names=new Set(dev&&dev.sampleNames||[]);return(exp.measurements||[]).filter(function(m){return ids.has(m.sampleId)||names.has(m.sample);}).length;}
 function proposalFor(exp,id){return LF.ActionData?LF.ActionData.proposal(exp,'design.infer',id):null;}
 function assistState(exp,id){return LF.ActionData?LF.ActionData.status(exp,'design.infer',id)||{}:{};}
-function meaningfulSolution(s){return!!(s&&[s.solutes,s.solvents,s.name,s.role].some(present));}
+function meaningfulSolution(s){return!!(s&&[s.solutes,s.solvents].some(present));}
 function meaningfulLayer(l){return!!(l&&[l.role,l.material].some(present));}
 function proposalHasContent(p){const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};return!!(p&&((p.solutions||[]).some(meaningfulSolution)||(d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc)));}
 function proposalConfidence(p){const values=[];function add(v){const n=Number(v);if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));}(p&&p.solutions||[]).forEach(function(x){if(meaningfulSolution(x))add(x.confidence);});const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};if((d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc))add(d.confidence);(d.stack||[]).forEach(function(x){if(meaningfulLayer(x))add(x.confidence);});if(meaningfulProcess(proc))add(proc.confidence);if(!values.length)return null;return Math.round(values.reduce(function(a,b){return a+b;},0)/values.length*100);}

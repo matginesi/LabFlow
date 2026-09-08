@@ -207,7 +207,7 @@ module.exports=function(t,LF){
   };
 
   t['Single Design collect refuses complete experiments and exposes only missing fields']=function(){
-    const exp={sync:{revision:2},designAnalysis:{sourceRevision:2,samples:[]},design:{solutions:[{id:'s1',name:'Ink'}],devices:[
+    const exp={sync:{revision:2},designAnalysis:{sourceRevision:2,samples:[]},design:{solutions:[{id:'s1',name:'Ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF'}],devices:[
       {id:'done',sampleNames:[],solutionIds:['s1'],stack:[{role:'Transparent electrode',material:'ITO'},{role:'Electron transport',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'}},
       {id:'todo',sampleNames:[],solutionIds:[],stack:[],process:{}}
     ]}};
@@ -218,7 +218,7 @@ module.exports=function(t,LF){
   };
 
   t['A lone perovskite layer remains an incomplete architecture']=function(){
-    const exp={sync:{revision:3},designAnalysis:{sourceRevision:3,samples:[]},design:{solutions:[{id:'s1',name:'Ink'}],devices:[{id:'partial',sampleNames:[],solutionIds:['s1'],stack:[{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'}}]}};
+    const exp={sync:{revision:3},designAnalysis:{sourceRevision:3,samples:[]},design:{solutions:[{id:'s1',name:'Ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF'}],devices:[{id:'partial',sampleNames:[],solutionIds:['s1'],stack:[{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'}}]}};
     const out=LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'partial'}});
     assert(out.unknown_fields.length===1&&out.unknown_fields[0]==='stack','partial absorber evidence should request the missing device architecture');
   };
@@ -263,4 +263,43 @@ module.exports=function(t,LF){
     assert(map(exp).b&&status(exp,'b').state==='insufficient_evidence','scientific uncertainty is stored separately without a technical error');
     LF.DesignModel=oldModel;LF.ContextBuilder=oldContext;
   };
+
+  t['Name-only or role-only solution does not satisfy Design chemistry']=function(){
+    const exp={design:{solutions:[{id:'s1',name:'Ink',role:'absorber precursor'}],devices:[{id:'d1',solutionIds:['s1'],stack:[{role:'Substrate',material:'glass/ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'}}]}};
+    const missing=LF.DesignModel.missingDomains(exp,exp.design.devices[0]);
+    assert(missing.includes('solutions'),'chemistry must remain missing until a solute or solvent is present');
+  };
+
+  t['Canonical Design Action output preserves chemistry and applies it to the selected experiment']=function(){
+    const exp={design:{status:'reviewing',solutions:[],devices:[{id:'chem',name:'Chemistry target',sampleNames:[],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},status:'user_confirmed'}]}};
+    const canonical={
+      status:'suggested',summary:'Qualitative candidate',
+      solutions:[{name:'Perovskite precursor',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF + DMSO',confidence:.82,provenance_kind:'model_inference',reason:'plausible qualitative chemistry'}],
+      stack:[{role:'Substrate / transparent contact',material:'glass/ITO',confidence:.8,provenance_kind:'model_inference'},{role:'Electron transport layer',material:'SnO2',confidence:.8,provenance_kind:'model_inference'},{role:'Absorber',material:'Perovskite',confidence:.8,provenance_kind:'model_inference'},{role:'Hole transport layer',material:'PTAA',confidence:.8,provenance_kind:'model_inference'},{role:'Top contact',material:'Au',confidence:.8,provenance_kind:'model_inference'}],
+      process:{coating:'spin coating',annealing:'thermal annealing',atmosphere:'inert atmosphere',confidence:.8,provenance_kind:'model_inference'},unknowns:[]
+    };
+    const ctx={exp:exp,params:{deviceId:'chem'},outputs:{collect:{device_id:'chem',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:canonical},lastResult:canonical,sourceRevision:1};
+    const validated=LF.ActionSteps['design.validate-coverage'](ctx);
+    assert(validated.status==='suggested','canonical public output should be useful');
+    assert(validated.devices.length===1,'LabFlow must synthesize one internal target wrapper');
+    assert(validated.devices[0].solution_names.includes('Perovskite precursor'),'solution must be linked deterministically');
+    assert(validated.devices[0].stack.length===5,'top-level stack must survive internal normalization');
+    assert(validated.devices[0].process.coating==='spin coating','top-level process must survive internal normalization');
+    ctx.outputs.infer=validated;LF.ActionSteps['design.store-proposal'](ctx);
+    const accepted=LF.DesignAnalysis.acceptProposal(exp,'chem');
+    assert(accepted.changed>0,'accepted proposal should change Design');
+    const solution=exp.design.solutions[0],device=exp.design.devices[0];
+    assert(solution.solutes==='FAI + PbI2'&&solution.solvents==='DMF + DMSO','solute and solvent chemistry must be preserved');
+    assert(device.solutionIds.includes(solution.id),'accepted solution must be linked to selected experiment');
+    assert(device.process.coating==='spin coating'&&device.process.annealing==='thermal annealing'&&device.process.atmosphere==='inert atmosphere','Accept must apply process fields too');
+    assert(device.stack.length===5,'accepted stack must be applied');
+  };
+
+  t['Name-only Design Action chemistry is insufficient evidence for a missing solution']=function(){
+    const proposal={status:'suggested',summary:'placeholder',solutions:[{name:'Perovskite ink'}],stack:[],process:{},unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions']},infer:proposal},lastResult:proposal});
+    assert(out.status==='insufficient_evidence','name-only chemistry must not pass semantic validation');
+    assert(out.validation.applicableFields.length===0,'name-only chemistry must not count as applicable');
+  };
+
 };

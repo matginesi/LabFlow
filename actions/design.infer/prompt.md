@@ -36,7 +36,9 @@ If you genuinely cannot make a responsible qualitative suggestion, return `statu
 
 ## Solution chemistry
 
-A solution item needs only `name`. Add `role`, `solutes`, `solvents`, `concentration`, `additives`, `evidence`, `confidence`, `provenance_kind`, and `reason` when useful. Do not invent exact recipes.
+A solution suggestion must be chemically useful, not a name-only placeholder. When `solutions` is missing and a responsible qualitative suggestion is possible, include `name`, `role`, and the known or plausibly inferred `solutes` and/or `solvents`. Preserve the full qualitative chemistry of a compatible Cabinet formulation, especially its solutes and solvents. Add `concentration`, `additives`, `evidence`, `confidence`, `provenance_kind`, and `reason` only when supported or useful.
+
+Do not invent exact recipes or unsupported quantities. If neither a solute nor a solvent system can be responsibly identified, do not return a name-only solution just to fill the field; leave it unresolved and explain the missing chemistry in `unknowns`.
 
 ## Device stack
 
