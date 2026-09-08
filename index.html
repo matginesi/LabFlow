@@ -20,14 +20,20 @@
         <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
         <button class="sidebar-dismiss" id="sidebarDismiss" type="button" aria-label="Close navigation"><span data-icon="x" aria-hidden="true"></span></button>
       </div>
+      <div class="nav-label">Workflow</div>
+      <button class="nav-link nav-button" type="button" data-route="experiment-import"><span class="nav-glyph" data-icon="upload" aria-hidden="true"></span><span class="nav-copy"><strong>Upload &amp; Review</strong><small>Source, checks, corrections</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="experiment-results"><span class="nav-glyph" data-icon="chart-no-axes-combined" aria-hidden="true"></span><span class="nav-copy"><strong>Results</strong><small>Measurements &amp; charts</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="experiment-design"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Design</strong><small>Chemistry, stack, process</small></span></button>
+      <button class="nav-link nav-button" type="button" data-route="experiment-export"><span class="nav-glyph" data-icon="package-check" aria-hidden="true"></span><span class="nav-copy"><strong>Export</strong><small>LabFlow &amp; NOMAD</small></span></button>
       <div class="nav-label">Workspace</div>
-      <button class="nav-link nav-button" type="button" data-route="experiment-import"><span class="nav-glyph" data-icon="flask-conical" aria-hidden="true"></span><span class="nav-copy"><strong>Experiment</strong><small>RAW to NOMAD</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="cabinet"><span class="nav-glyph" data-icon="file-text" aria-hidden="true"></span><span class="nav-copy"><strong>Lab Cabinet</strong><small>Reusable lab resources</small></span></button>
-      <button class="nav-link nav-button" type="button" data-route="logs"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="documentation"><span class="nav-glyph" data-icon="notebook-text" aria-hidden="true"></span><span class="nav-copy"><strong>Documentation</strong><small>Guides &amp; reference</small></span></button>
+      <div class="nav-label">Advanced</div>
+      <button class="nav-link nav-button" type="button" data-route="logs"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></button>
       <button class="nav-link nav-button" type="button" data-route="ui-kit"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></button>
       <div class="sidebar-bottom">
         <button class="nav-link nav-button" type="button" data-route="settings"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Actions</small></span></button>
+        <button class="nav-link nav-button reset-session-button" type="button" id="resetAll" title="Clear the persisted LabFlow working session"><span class="nav-glyph" data-icon="trash-2" aria-hidden="true"></span><span class="nav-copy"><strong>Reset session</strong><small>Clear current workspace</small></span></button>
         <div class="sidebar-foot" id="modelStatus" title="AI model connection status"><span class="status-dot" aria-hidden="true"></span><span class="sidebar-status-copy"><strong>AI model</strong><small id="modelStatusDetail">Not configured</small></span></div>
       </div>
     </aside>
@@ -38,7 +44,7 @@
         <button class="button ghost compact mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="Open navigation" aria-controls="primarySidebar" aria-expanded="false"><span data-icon="menu" aria-hidden="true"></span></button>
         <div class="topbar-title"><strong id="topbarTitle">Upload</strong><span id="topbarSubtitle">No experiment loaded</span></div>
         <div class="topbar-page-context" id="topbarPageContext" hidden></div><div class="topbar-context" id="topbarContext" hidden></div>
-        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save</button><button class="button primary compact" type="button" id="exportWorkingCopy" hidden>Export</button><button class="button danger compact reset-session-button" type="button" id="resetAll" title="Clear the persisted LabFlow working session">Reset session</button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
+        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save</button><button class="button primary compact" type="button" id="exportWorkingCopy" hidden>Export</button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
       </header>
       <main class="main-area" id="main"></main>
     </section>

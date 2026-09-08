@@ -61,7 +61,7 @@
     if(!device||!out.scope)return out;
     const missing=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[];
     out.scope.unknown_fields=Array.from(new Set((out.scope.unknown_fields||[]).concat(missing)));
-    out.scope.instruction='Complete every missing Design domain. A lone absorber or “perovskite” layer is a partial stack, not a device architecture: propose the full plausible qualitative layer sequence while preserving known layers. Include useful chemistry roles and fabrication-method families; leave unsupported quantities unknown. Experiment evidence is authoritative. Cabinet resources are optional reusable context, not evidence. Never invent sample identities, citations or exact quantities.';
+    out.scope.instruction='Complete EVERY domain in unknown_fields. If solutions is missing, a suggested response MUST include at least one chemically useful formulation with non-empty solutes and/or solvents; stack/process alone is not sufficient. A cautious qualitative model_inference formulation is allowed when exact recipe evidence is absent. A lone absorber or “perovskite” layer is a partial stack, not a device architecture: propose the full plausible qualitative layer sequence while preserving known layers. Include useful fabrication-method families; leave unsupported quantities unknown. Experiment evidence is authoritative. Cabinet resources are optional reusable context, not evidence. Never invent sample identities, citations or exact quantities.';
     return out;
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,results_compare:packResultsCompare};

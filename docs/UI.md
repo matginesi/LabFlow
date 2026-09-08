@@ -6,7 +6,7 @@
 
 The primary workflow is **Upload & Review → Results → Design → Export**. Cabinet, Documentation and Settings are utility destinations, not extra workflow steps.
 
-- The left navigation is an off-canvas drawer at every viewport. Menu, close, backdrop, route selection and `Escape` close it.
+- The left navigation is fixed/persistent on desktop widths above 1100 px and becomes an off-canvas drawer at tablet/mobile widths. Menu, close, backdrop, route selection and `Escape` operate the drawer only where appropriate.
 - The Assistant is closed by default and opens only after explicit user action.
 - Page content must not create document-level horizontal scrolling. Tables, tabs, diagrams and wide charts may scroll inside a clearly bounded local region.
 - Normal workflow content uses readable shared type/control tokens. Micro type is reserved for secondary technical metadata; primary labels/actions must not fall into 7–9 px text.
@@ -31,7 +31,7 @@ Lab Cabinet is a reusable browser-local scientific shelf, not inventory or LIMS.
 
 ## Export
 
-Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD options are separated from artifact choice; readiness/mapping is a separate status surface with blocking issues visible and the mapping table progressively disclosed. Export never implies network upload.
+Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD readiness is an actionable repair surface: every blocker exposes a route, safe package-option change, or an existing semantic Action where appropriate. Mapping details remain progressively disclosed. Export never implies network upload or an AI-owned packaging step.
 
 ## Actions and Assistant
 

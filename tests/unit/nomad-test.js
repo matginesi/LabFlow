@@ -1,7 +1,8 @@
 'use strict';
 require('../../assets/js/logger.js');
 const LF=global.LabFlow;
-LF.Storage={getExportSettings:function(){return{instance:'NOMAD',endpoint:'https://example.invalid',includeRaw:false,includeDerived:true};}};
+let exportSettings={instance:'NOMAD',endpoint:'https://example.invalid',includeRaw:false,includeDerived:true};
+LF.Storage={getExportSettings:function(){return Object.assign({},exportSettings);}};
 LF.Analysis={
   analysisOf:function(e){return e.analysis||{summary:{}};},
   measurementsOf:function(e){return e.measurements||[];},
@@ -29,5 +30,26 @@ module.exports=function(t,LF){
   t['stale NOMAD mapping is rebuilt automatically']=function(){
     const e=exp(),first=LF.NomadExport.ensureMapping(e);e.sync.revision=4;const second=LF.NomadExport.ensureMapping(e);assert(first===second,false,'new plan');assert(second.sourceRevision,4,'new revision');
   };
+  t['NOMAD schema uses the documented named external-section reference']=function(){
+    const e=exp(),plan=LF.NomadExport.ensureMapping(e),schema=LF.NomadExport.schemaYaml(),yaml=LF.NomadExport.dataYaml(e,null,plan);
+    truthy(schema.indexOf('base_sections:')>=0&&schema.indexOf('nomad.datamodel.data.EntryData')>=0,'top-level custom section inherits EntryData');
+    truthy(yaml.indexOf("../upload/raw/labflow_schema.archive.yaml#LabFlowExperiment")>=0,'entry references the named section in the packaged schema');
+    assert((schema.match(/experiment_name:\n\s+type: str/g)||[]).length,1,'experiment_name type emitted once');
+  };
+  t['NOMAD mapping rebuilds when package options change']=function(){
+    const e=exp();exportSettings.includeRaw=false;const first=LF.NomadExport.ensureMapping(e);exportSettings.includeRaw=true;const second=LF.NomadExport.ensureMapping(e);
+    assert(first===second,false,'option change must invalidate cached mapping');
+    assert(first.mappings.find(function(x){return x.nomad_path==='data.raw_source_file';}).status,'disabled','RAW mapping starts disabled');
+    assert(second.mappings.find(function(x){return x.nomad_path==='data.raw_source_file';}).status,'mapped','RAW mapping reflects the enabled package option');
+    assert(first.optionsSignature===second.optionsSignature,false,'option signature changes with package settings');
+    exportSettings.includeRaw=false;
+  };
+  t['NOMAD validation exposes actionable remediation']=function(){
+    const e=exp();exportSettings.includeRaw=true;const validation=LF.NomadExport.validate(e,null),rawProblem=(validation.problems||[]).find(function(x){return x.code==='raw_source_unavailable';});
+    truthy(rawProblem&&rawProblem.fix&&rawProblem.fix.kind==='option','missing optional RAW has a safe fix');
+    assert(rawProblem.fix.option,'includeRaw','fix targets the RAW option');
+    exportSettings.includeRaw=false;
+  };
+
   return t;
 };

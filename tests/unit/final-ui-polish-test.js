@@ -148,7 +148,7 @@ module.exports=function(t){
     assert(app.includes("scheduleWorkspaceSave('draft:"),true,'draft autosave');
     assert(app.includes("persistWorkspace('pagehide')"),true,'pagehide persistence');
     assert(app.includes('LF.Storage.clearSavedExperiment'),true,'reset clears persistent workspace');
-    assert(html.includes('class="button danger compact reset-session-button"'),true,'visible reset control');
+    assert(html.includes('id="resetAll"'),true,'visible reset control');
   };
   return t;
 };

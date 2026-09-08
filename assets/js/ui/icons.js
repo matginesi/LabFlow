@@ -17,6 +17,8 @@
     'menu':'<path d="M4 6h16M4 12h16M4 18h16"/>',
     'message-square':'<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"/>',
     'upload':'<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>',
+    'chart-no-axes-combined':'<path d="M3 3v18h18"/><path d="m7 16 4-4 4 4 5-6"/>',
+    'package-check':'<path d="m16 16 2 2 4-4"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
     'x':'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
     'download':'<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
     'search':'<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',

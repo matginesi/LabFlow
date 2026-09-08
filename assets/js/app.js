@@ -104,7 +104,7 @@
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
     const previousRoute=renderedRoute||S.state.route;
     try{captureScrollableState(main,previousRoute);}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
-    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-import'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
+    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.route;a.classList.toggle('active',active);});
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderModelStatus();
@@ -206,7 +206,7 @@
   }
 
   /* ---------- mobile navigation ---------- */
-  function setMobileNav(open){const next=!!open;document.body.classList.toggle('mobile-nav-open',next);const toggle=document.getElementById('mobileNavToggle');if(toggle){toggle.setAttribute('aria-expanded',next?'true':'false');toggle.setAttribute('aria-label',next?'Close navigation':'Open navigation');}const sidebar=document.getElementById('primarySidebar');if(sidebar)sidebar.setAttribute('aria-hidden',(!next&&window.matchMedia&&window.matchMedia('(max-width:1100px)').matches)?'true':'false');}
+  function setMobileNav(open){const next=!!open;const mobile=!!(window.matchMedia&&window.matchMedia('(max-width:1100px)').matches);document.body.classList.toggle('mobile-nav-open',mobile&&next);const toggle=document.getElementById('mobileNavToggle');if(toggle){toggle.setAttribute('aria-expanded',mobile&&next?'true':'false');toggle.setAttribute('aria-label',mobile&&next?'Close navigation':'Open navigation');}const sidebar=document.getElementById('primarySidebar');if(sidebar){if(mobile)sidebar.setAttribute('aria-hidden',next?'false':'true');else sidebar.removeAttribute('aria-hidden');}}
   function closeMobileNav(){setMobileNav(false);}
 
   function chartTooltipNode(){let tip=document.getElementById('resultsChartTooltip');if(tip)return tip;tip=document.createElement('div');tip.id='resultsChartTooltip';tip.className='chart-tooltip';tip.setAttribute('role','status');tip.hidden=true;document.body.appendChild(tip);return tip;}
@@ -234,6 +234,9 @@
         if(e.target.closest('#exportNomadEntry')){exportNomadEntry();return;}
         if(e.target.closest('#exportNomadZip')){await exportNomadZip();return;}
         if(e.target.closest('#saveExportOptions')){saveExportOptions();render();return;}
+        const exportOption=e.target.closest('[data-export-option]');if(exportOption){const settings=Object.assign({},LF.Storage.getExportSettings()),key=exportOption.dataset.exportOption,value=exportOption.dataset.exportOptionValue==='true';settings[key]=value;LF.Storage.saveExportSettings(settings);if(S.state.experiment&&S.state.experiment.nomad)S.state.experiment.nomad.mappingPlan=null;render();LF.UI.toast('NOMAD package option updated.','success');return;}
+        const exportRepair=e.target.closest('[data-export-repair]');if(exportRepair){const exp=S.state.experiment,id=exportRepair.dataset.exportRepair;if(id==='restore-source-name'&&exp&&exp.raw&&exp.raw.sourceName){exp.meta=exp.meta||{};exp.meta.sourceName=exp.raw.sourceName;markModified('metadata');render();LF.UI.toast('Source archive metadata restored from the preserved RAW provenance.','success');return;}LF.UI.toast('This export issue needs researcher review.','warning');return;}
+        if(e.target.closest('[data-export-refresh]')){const exp=S.state.experiment;if(exp&&exp.nomad){exp.nomad.mappingPlan=null;exp.nomad.validation=null;}render();LF.UI.toast('NOMAD readiness rebuilt from the current LabFlow Data.','success');return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
         if(e.target.closest('#mobileNavShade')||e.target.closest('#sidebarDismiss')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}

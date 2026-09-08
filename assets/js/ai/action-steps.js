@@ -181,13 +181,22 @@
       const topProcess=proposal.process||{};targetProposal.process=targetProposal.process||{};['coating','annealing','atmosphere','notes','evidence','reason','provenance_kind'].forEach(function(k){if(!String(targetProposal.process[k]==null?'':targetProposal.process[k]).trim()&&String(topProcess[k]==null?'':topProcess[k]).trim())targetProposal.process[k]=topProcess[k];});if(targetProposal.process.confidence==null&&topProcess.confidence!=null)targetProposal.process.confidence=topProcess.confidence;
       if((proposal.solutions||[]).length&&!(targetProposal.solution_names||[]).length)targetProposal.solution_names=(proposal.solutions||[]).map(function(sol){return sol.name;}).filter(Boolean);
       sanitizeDesignProposal(proposal);
-      const applicable=applicableDesignFields(proposal,scope.unknown_fields||[]);
-      if(applicable.length){
+      const required=(scope.unknown_fields||[]).map(function(x){return String(x).toLowerCase();}),applicable=applicableDesignFields(proposal,required),missingRequired=required.filter(function(field){return !applicable.includes(field);});
+      /* A partial Design answer used to pass as soon as any one domain was useful.
+         That made chemistry disappear whenever the model returned stack/process first.
+         For a suggested result, require every currently-missing domain. The thrown
+         contract error feeds the exact gaps back into the bounded AI retry. */
+      if(missingRequired.length&&applicable.length){
+        const labels=missingRequired.map(function(field){return field==='solutions'?'solutions: return at least one formulation with non-empty solutes and/or solvents':field==='stack'?'stack: return a coherent qualitative device stack':'process: return at least one qualitative coating/annealing/atmosphere/notes field';});
+        const err=new Error('Design suggestion is partial. Missing required domain(s): '+missingRequired.join(', ')+'.');
+        err.code='MODEL_OUTPUT_INVALID';err.isContract=true;err.validationErrors=labels;throw err;
+      }
+      if(!missingRequired.length&&applicable.length){
         proposal.status='suggested';
       }else{
         proposal.status='insufficient_evidence';
         proposal.unknowns=proposal.unknowns||[];
-        (scope.unknown_fields||[]).forEach(function(field){
+        required.forEach(function(field){
           const key=String(field);const label=key==='solutions'?'Exact solution chemistry is not established by the available experiment evidence.':key==='process'?'Exact fabrication-process information is not established by the available experiment evidence.':'Exact device-stack materials are not established by the available experiment evidence.';
           if(!proposal.unknowns.includes(label))proposal.unknowns.push(label);
         });

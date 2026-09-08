@@ -14,7 +14,7 @@ The workflow is intentionally linear and uses one shared experiment state.
 | Upload & Review | Inspect source evidence and corrections | LabFlow Data + deterministic findings | optional semantic enrichment / ambiguity proposals |
 | Results | Evaluate measurements and rankings | deterministic analysis | optional interpretation only |
 | Design | Complete solution chemistry, device architecture and fabrication process | researcher-confirmed Design | suggestions for missing fields |
-| NOMAD | Validate and package experiment metadata | deterministic Canonical → NOMAD mapping | explanation only, never readiness |
+| Export | Save LabFlow and prepare NOMAD artifacts | deterministic LabFlow/NOMAD export services | optional explanation or semantic-resolution Actions only |
 
 ## One state, several projections
 
@@ -46,9 +46,9 @@ Design is directly editable. AI suggestions are optional proposals and never sil
 
 Bulk suggestion is sequential/bounded. A provider throttle stops the sequence immediately and preserves completed proposals instead of converting every remaining experiment into an error.
 
-## NOMAD
+## Export / NOMAD
 
-The current Canonical Store is mapped deterministically to NOMAD. Required missing mappings block readiness. Changes to relevant scientific data invalidate stale staging.
+Export keeps the LabFlow ZIP as the primary portable save. The current Canonical Store is mapped deterministically to NOMAD for secondary entry/staging artifacts. Required missing mappings block readiness, and every blocker must expose a concrete remediation path. Changes to relevant scientific data or package options invalidate stale staging.
 
 ## Save, autosave and export
 

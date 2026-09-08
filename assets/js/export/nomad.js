@@ -8,7 +8,7 @@
   const Log = LF.Logger.scope('export-nomad');
   const SCHEMA_FILE='labflow_schema.archive.yaml';
   const ENTRY_FILE='experiment.archive.yaml';
-  const SCHEMA_REFERENCE='../upload/raw/'+SCHEMA_FILE+'#/definitions/section_definitions/0';
+  const SCHEMA_REFERENCE='../upload/raw/'+SCHEMA_FILE+'#LabFlowExperiment';
 
   function yamlString(value) { return '"'+String(value==null?'':value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n')+'"'; }
   function yamlStrings(values){return '['+(values||[]).map(yamlString).join(', ')+']';}
@@ -21,6 +21,8 @@
     return exp && exp.nomad && exp.nomad.mappingPlan && typeof exp.nomad.mappingPlan === 'object' ? exp.nomad.mappingPlan : null;
   }
 
+
+  function exportOptionsSignature(settings){return JSON.stringify({includeRaw:!!(settings&&settings.includeRaw),includeDerived:!!(settings&&settings.includeDerived)});}
 
   function buildMapping(exp){
     const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=A.measurementsOf(exp)||[],samples=A.samplesOf(exp)||[];
@@ -62,6 +64,7 @@
       format:'labflow-nomad-mapping',
       summary:'LabFlow data mapped deterministically to one NOMAD custom-schema entry.',
       sourceRevision:Number(exp.sync&&exp.sync.revision||0),
+      optionsSignature:exportOptionsSignature(settings),
       generatedAt:new Date().toISOString(),
       schemaFile:SCHEMA_FILE,
       entryFile:ENTRY_FILE,
@@ -73,8 +76,8 @@
   }
 
   function ensureMapping(exp){
-    const currentRevision=Number(exp&&exp.sync&&exp.sync.revision||0),existing=nomadPlan(exp);
-    if(existing&&Number(existing.sourceRevision)===currentRevision&&existing.format==='labflow-nomad-mapping')return existing;
+    const currentRevision=Number(exp&&exp.sync&&exp.sync.revision||0),existing=nomadPlan(exp),settings=LF.Storage.getExportSettings(),signature=exportOptionsSignature(settings);
+    if(existing&&Number(existing.sourceRevision)===currentRevision&&existing.format==='labflow-nomad-mapping'&&existing.optionsSignature===signature)return existing;
     const plan=buildMapping(exp);
     exp.nomad=exp.nomad||{};exp.nomad.mappingPlan=plan;
     return plan;
@@ -95,7 +98,6 @@
       '        - nomad.datamodel.data.EntryData',
       '      quantities:',
       '        experiment_name:',
-      '          type: str',
       '          type: str',
       '        source_file:',
       '          type: str',
@@ -182,35 +184,36 @@
   }
 
   function validate(exp,rawArchive){
-    const issues=[],warnings=[];
-    if(!exp||!exp.id)return {status:'blocked',issues:['No experiment is loaded.'],warnings:[],checks:{schemaReference:SCHEMA_REFERENCE},checkedAt:new Date().toISOString()};
+    const issues=[],warnings=[],problems=[];
+    function problem(code,message,fix){issues.push(message);problems.push({code:code,severity:'blocking',message:message,fix:fix||null});}
+    function warning(code,message,fix){warnings.push(message);problems.push({code:code,severity:'warning',message:message,fix:fix||null});}
+    if(!exp||!exp.id)return {status:'blocked',issues:['No experiment is loaded.'],warnings:[],problems:[{code:'no_experiment',severity:'blocking',message:'No experiment is loaded.',fix:{kind:'route',route:'experiment-import',label:'Upload experiment'}}],checks:{schemaReference:SCHEMA_REFERENCE},checkedAt:new Date().toISOString()};
     const plan=ensureMapping(exp);
     const settings=LF.Storage.getExportSettings(),audit=correctionAudit(exp);
     const measurements=A.measurementsOf(exp), analysis=A.analysisOf(exp);
-    const nomad=nomadState(exp);
-    if(!exp.meta||!exp.meta.sourceName)issues.push('Source archive metadata is missing.');
-    if(!(measurements||[]).length)issues.push('No parsed measurements are available.');
-    if(settings.includeRaw&&!rawArchive)issues.push('RAW source is requested for export but the source archive is unavailable.');
-    if(settings.includeDerived&&!(analysis&&analysis.summary))issues.push('Derived export is requested but deterministic analysis is unavailable.');
-    if(audit.unresolvedDanger.length)issues.push(audit.unresolvedDanger.length+' unresolved danger finding(s) block a clean NOMAD staging state.');
-    if(audit.acceptedUnapplied.length)issues.push(audit.acceptedUnapplied.length+' accepted correction(s) have not been applied to the LabFlow data representation.');
-    if(audit.pending.length)warnings.push(audit.pending.length+' correction proposal(s) remain pending review.');
-    if(audit.incompletePatches.length)warnings.push(audit.incompletePatches.length+' applied patch record(s) have incomplete reason/evidence provenance.');
+    if(!exp.meta||!exp.meta.sourceName)problem('source_metadata_missing','Source archive metadata is missing.',exp.raw&&exp.raw.sourceName?{kind:'repair',id:'restore-source-name',label:'Restore source name'}:{kind:'route',route:'experiment-import',label:'Review source'});
+    if(!(measurements||[]).length)problem('measurements_missing','No parsed measurements are available.',{kind:'route',route:'experiment-import',label:'Return to Upload & Review'});
+    if(settings.includeRaw&&!rawArchive)problem('raw_source_unavailable','RAW source is requested for export but the source archive is unavailable.',{kind:'option',option:'includeRaw',value:false,label:'Export without RAW'});
+    if(settings.includeDerived&&!(analysis&&analysis.summary))problem('derived_unavailable','Derived export is requested but deterministic analysis is unavailable.',{kind:'option',option:'includeDerived',value:false,label:'Export without derived tables'});
+    if(audit.unresolvedDanger.length)problem('danger_findings',audit.unresolvedDanger.length+' unresolved danger finding(s) block a clean NOMAD staging state.',{kind:'review_or_action',route:'experiment-import',action:'dataset.resolve-ambiguities',label:'Resolve review issues'});
+    if(audit.acceptedUnapplied.length)problem('accepted_unapplied',audit.acceptedUnapplied.length+' accepted correction(s) have not been applied to the LabFlow data representation.',{kind:'route',route:'experiment-import',label:'Apply accepted corrections'});
+    if(audit.pending.length)warning('pending_corrections',audit.pending.length+' correction proposal(s) remain pending review.',{kind:'route',route:'experiment-import',label:'Review proposals'});
+    if(audit.incompletePatches.length)warning('patch_provenance',audit.incompletePatches.length+' applied patch record(s) have incomplete reason/evidence provenance.',{kind:'route',route:'experiment-import',label:'Inspect provenance'});
     const requiredMissing=(plan.mappings||[]).filter(function(x){return x.required&&x.status!=='mapped';});
-    if(requiredMissing.length)issues.push(requiredMissing.length+' required NOMAD mapping field(s) are missing.');
+    if(requiredMissing.length)problem('required_mapping_missing',requiredMissing.length+' required NOMAD mapping field(s) are missing.',{kind:'route',route:'experiment-import',label:'Review missing data',fields:requiredMissing.map(function(x){return x.labflow_path;})});
     const finiteRows=(measurements||[]).filter(function(m){return Number.isFinite(Number(m.bestEff));});
     const ids=new Set(),duplicates=[];finiteRows.forEach(function(m){if(ids.has(String(m.id)))duplicates.push(m.id);ids.add(String(m.id));});
-    if(duplicates.length)issues.push(duplicates.length+' duplicate canonical measurement ID(s) would make the NOMAD entry ambiguous.');
-    if(finiteRows.some(function(m){return !String(m.sample||'').trim();}))issues.push('One or more exportable measurements have no canonical sample identity.');
+    if(duplicates.length)problem('duplicate_measurement_ids',duplicates.length+' duplicate canonical measurement ID(s) would make the NOMAD entry ambiguous.',{kind:'route',route:'experiment-import',label:'Review measurement identity'});
+    if(finiteRows.some(function(m){return !String(m.sample||'').trim();}))problem('measurement_sample_missing','One or more exportable measurements have no canonical sample identity.',{kind:'review_or_action',route:'experiment-import',action:'dataset.resolve-ambiguities',label:'Resolve sample identity'});
     const designItems=[].concat((A.designOf(exp).solutions)||[],(A.designOf(exp).stack)||[]);
     const inferred=designItems.filter(function(x){return x.status==='ai_inferred';}).length;
     const unknown=designItems.filter(function(x){return !x.status||x.status==='unknown';}).length;
-    if(inferred)warnings.push(inferred+' experimental-design item(s) are AI-inferred and must remain labelled as such.');
-    if(unknown)warnings.push(unknown+' experimental-design item(s) remain unconfirmed.');
-    const schemaContractOk=/LabFlowExperiment:/.test(schemaYaml())&&dataYaml(exp,settings,plan).indexOf('m_def: '+yamlString(SCHEMA_REFERENCE))>=0;
-    if(!schemaContractOk)issues.push('The NOMAD schema-to-entry reference does not match the packaged schema definition.');
-    const result={status:issues.length?'blocked':warnings.length?'review':'ready',issues:issues,warnings:warnings,checks:{schemaReference:SCHEMA_REFERENCE,schemaContractOk:schemaContractOk,unresolvedDanger:audit.unresolvedDanger.length,acceptedUnapplied:audit.acceptedUnapplied.length,pendingCorrections:audit.pending.length,incompletePatchProvenance:audit.incompletePatches.length,mappedFields:(plan.mappings||[]).filter(function(x){return x.status==='mapped';}).length,missingFields:(plan.mappings||[]).filter(function(x){return x.status==='missing';}).length},checkedAt:new Date().toISOString()};
-    const targetExp=exp;targetExp.nomad=targetExp.nomad||{};targetExp.nomad.validation=result;return result;
+    if(inferred)warning('design_ai_inferred',inferred+' experimental-design item(s) are AI-inferred and must remain labelled as such.',{kind:'route',route:'experiment-design',label:'Review Design'});
+    if(unknown)warning('design_unconfirmed',unknown+' experimental-design item(s) remain unconfirmed.',{kind:'route',route:'experiment-design',label:'Review Design'});
+    const schemaText=schemaYaml(),entryText=dataYaml(exp,settings,plan),schemaContractOk=/LabFlowExperiment:/.test(schemaText)&&schemaText.indexOf('base_sections:')>=0&&schemaText.indexOf('nomad.datamodel.data.EntryData')>=0&&entryText.indexOf('m_def: '+yamlString(SCHEMA_REFERENCE))>=0;
+    if(!schemaContractOk)problem('schema_contract_invalid','The generated NOMAD schema and entry reference are inconsistent.',{kind:'refresh',label:'Rebuild mapping'});
+    const result={status:issues.length?'blocked':warnings.length?'review':'ready',issues:issues,warnings:warnings,problems:problems,checks:{schemaReference:SCHEMA_REFERENCE,schemaContractOk:schemaContractOk,unresolvedDanger:audit.unresolvedDanger.length,acceptedUnapplied:audit.acceptedUnapplied.length,pendingCorrections:audit.pending.length,incompletePatchProvenance:audit.incompletePatches.length,mappedFields:(plan.mappings||[]).filter(function(x){return x.status==='mapped';}).length,missingFields:(plan.mappings||[]).filter(function(x){return x.status==='missing';}).length},checkedAt:new Date().toISOString()};
+    exp.nomad=exp.nomad||{};exp.nomad.validation=result;return result;
   }
 
   function provenanceSnapshot(exp){return {format:'labflow-provenance',experimentId:exp.id,dataBasis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',source:{name:exp.meta&&exp.meta.sourceName||'',size:exp.raw&&exp.raw.sourceSize||0,immutable:true},revision:exp.sync&&exp.sync.revision||0,statusVocabulary:['RAW','parsed','derived','recovered','AI inferred','user confirmed','missing','excluded'],patchCount:(exp.patches||[]).length,generatedAt:new Date().toISOString()};
@@ -222,6 +225,7 @@
   async function buildPackage(exp, rawArchive, onProgress) {
     const progress=typeof onProgress==='function'?onProgress:function(){};
     const settings=LF.Storage.getExportSettings(),plan=ensureMapping(exp),validation=validate(exp,rawArchive);
+    if(validation.status==='blocked')throw new Error('NOMAD export is blocked: '+String((validation.issues||[])[0]||'resolve the readiness issues first.'));
     progress({stage:'Preparing staging files',progress:.12});
     const zip=new JSZip();
     zip.file('README.md',readme(exp));

@@ -302,4 +302,11 @@ module.exports=function(t,LF){
     assert(out.validation.applicableFields.length===0,'name-only chemistry must not count as applicable');
   };
 
+  t['Partial Design suggestion retries when solution chemistry is still missing']=function(){
+    const proposal={status:'suggested',summary:'stack and process only',solutions:[],stack:[{role:'Substrate',material:'glass/ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'},unknowns:[]};
+    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
+    assert(err&&err.isContract===true,'partial proposal must trigger a semantic contract retry');
+    assert((err.validationErrors||[]).some(function(x){return /solutes.*solvents/i.test(String(x));}),'retry feedback must explicitly request useful solution chemistry');
+  };
+
 };

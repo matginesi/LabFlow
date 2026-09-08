@@ -17,6 +17,16 @@ Return exactly these six top-level fields:
 
 This Action is intentionally small. Do not return `devices`, `variants`, `coverage`, `sample_names`, `solution_names`, wrapper objects, Markdown, or commentary.
 
+## Mandatory coverage
+
+Read `scope.unknown_fields` in the research context. A `suggested` response must cover **every** missing domain listed there, not just one of them.
+
+- If `solutions` is listed, return at least one solution whose `solutes` and/or `solvents` is non-empty. Returning only stack/process is invalid. A cautious qualitative `model_inference` formulation is preferable to silently omitting chemistry.
+- If `stack` is listed, return a coherent qualitative stack rather than one isolated absorber layer.
+- If `process` is listed, return at least one useful qualitative process field.
+
+Use `insufficient_evidence` only when you cannot responsibly propose the missing domains even at the qualitative family/role level. Do not use it merely because exact numeric recipes are unavailable.
+
 ## Evidence and inference
 
 1. Existing source/researcher data is authoritative and must never be overwritten.

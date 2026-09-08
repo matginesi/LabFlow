@@ -4,7 +4,7 @@ Use this skill for every LabFlow visual, layout, responsive, chart, export-surfa
 
 ## Read first
 
-Before editing UI, read `docs/WORKFLOW.md`, `LABFLOW_POC_SPEC.md`, `docs/UI.md`, `docs/VISUAL_LANGUAGE.md`, `ui-kit.html`, and the relevant feature spec. Inspect the production page and its late CSS overrides before adding selectors: LabFlow has one visual system and later overrides must not silently reintroduce obsolete dimensions.
+Before editing UI, read `docs/guides/RESEARCH_WORKFLOW.md`, `LABFLOW_POC_SPEC.md`, `docs/UI.md`, `ui-kit.html`, and the relevant feature spec. Do not cite or depend on documentation files that are not present in the repository. Inspect the production page and its late CSS overrides before adding selectors: LabFlow has one visual system and later overrides must not silently reintroduce obsolete dimensions.
 
 ## One visual source of truth
 
@@ -60,7 +60,10 @@ Export is artifact-first, not a settings form.
 3. Keep NOMAD entry/staging artifacts visually secondary and disable them when deterministic readiness blocks them.
 4. Put package options in a separate compact panel.
 5. Keep mapping/readiness in its own panel with blocking issues visible and the detailed field mapping progressively disclosed.
-6. Never imply remote upload: export is local unless a future explicit connector says otherwise.
+6. Every blocking NOMAD readiness issue must expose a concrete next step in the UI. Never leave the researcher with only an error string.
+7. Use existing domain Actions only when the blocker is genuinely semantic (for example unresolved dataset ambiguity). Package/mapping generation remains deterministic; do not create an AI “NOMAD preparation” Action.
+8. Package-option blockers should offer a safe local resolution such as disabling optional RAW/derived payloads. Mapping/data blockers should route to the owning workflow page.
+9. Never imply remote upload: export is local unless a future explicit connector says otherwise.
 
 ## Results and chart contract
 
@@ -96,9 +99,13 @@ Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomp
 
 ## Sidebar and themes
 
-Keep primary workspace destinations together. Settings/provider utilities stay in the utility region. The drawer and bottom utility region must remain usable on narrow screens.
+The primary workflow destinations are visible directly in navigation: **Upload & Review → Results → Design → Export**. Cabinet and Documentation are workspace utilities; Logs and UI Kit are advanced utilities; Settings stays in the bottom utility region.
 
-`instrument` and `light` use identical markup and component structure. Theme differences belong in tokens. JSON, Markdown, charts, Assistant, export surfaces and totems inherit active theme variables; do not hard-code light/dark surfaces.
+- At desktop widths (`>1100px`) the sidebar is persistent and occupies its own shell column. Do not turn desktop navigation into a drawer.
+- At tablet/mobile widths (`<=1100px`) the same sidebar becomes an off-canvas drawer with menu button, backdrop, close control and `Escape` support.
+- Do not duplicate the desktop workflow with a second large stepper; the compact workflow strip is primarily a narrow-screen orientation aid.
+
+Theme variants use identical markup and component structure. Theme differences belong in tokens. JSON, Markdown, charts, Assistant, export surfaces and totems inherit active theme variables; do not hard-code light/dark surfaces.
 
 ## Verification
 
