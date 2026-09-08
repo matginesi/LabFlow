@@ -30,7 +30,7 @@
 
   function dataState(exp) {
     const sync = exp.sync || {};
-    return { basis: (exp.patches || []).length ? 'Modified Working Copy' : 'Original import interpretation', revision: Number(sync.revision) || 0, savedRevision: Number(sync.savedRevision) || 0, dirty: !!sync.dirty, appliedChanges: (exp.patches || []).length };
+    return { basis: (exp.patches || []).length ? 'LabFlow data with tracked changes' : 'Imported data interpretation', revision: Number(sync.revision) || 0, appliedChanges: (exp.patches || []).length };
   }
 
   function chartDataOf(exp) {
@@ -44,8 +44,7 @@
       hysteresis: ms.map(function (m) { const h = num(m.hysteresis); return h === null ? null : Math.abs(h) * 100; }).filter(function (n) { return n !== null; }),
       scatter: eligible.filter(function (m) { return num(m.bestEff) !== null && num(m.hysteresis) !== null; }).map(function (m) { return { cell: m.sample, eff: num(m.bestEff), hysteresisPct: (num(m.hysteresis) || 0) * 100 }; }),
       bestCurve: bestM ? { sample: bestM.sample, fw: (bestM.curve && bestM.curve.fw || []).map(factorY), rv: (bestM.curve && bestM.curve.rv || []).map(factorY) } : null,
-      thresholds: { hysteresisPct: warningHysteresis },
-      figureSelection: (LF.Report&&LF.Report.figureSelection?LF.Report.figureSelection(exp):(exp.report && exp.report.figureSelection)) || {}
+      thresholds: { hysteresisPct: warningHysteresis }
     };
   }
 
@@ -85,14 +84,14 @@
   function collect(exp) {
     const ms = A.measurementsOf(exp), factor = A.settingsOf(exp);
     return {
-      version: 1, generatedAt: new Date().toISOString(),
+      generatedAt: new Date().toISOString(),
       sourceRevision: Number(exp.sync && exp.sync.revision) || 0,
       dataState: dataState(exp),
       metrics: { eff: metricField(ms, 'eff', factor), voc: metricField(ms, 'voc', factor), jsc: metricField(ms, 'jsc', factor), ff: metricField(ms, 'ff', factor) },
       hysteresisAbsPct: hysteresisPct(ms),
       groupStatistics: groupStatisticsOf(exp),
       chartData: chartDataOf(exp),
-      topNonRef: topOf(exp, 'topNonRef'), topRef: topOf(exp, 'topRef'), bestBySample: topOf(exp, 'bestBySample'),
+      topNonRef: topOf(exp, 'topNonRef'), topRef: topOf(exp, 'topRef'), bestBySample: topOf(exp, 'bestBySample'), bestByExperiment: topOf(exp, 'bestByExperiment'),
       anomalies: anomaliesOf(exp),
       findings: findingsOf(exp)
     };
@@ -116,8 +115,10 @@
   function scientificSignature(exp){
     const payload={
       files:(exp.files||[]).map(function(f){return[f.id||'',f.family||f.type||'',f.canonicalPath||f.path||'',f.canonicalName||f.name||''];}),
-      measurements:(exp.measurements||[]).map(function(m){return[m.id||'',m.sample||'',m.group||'',!!m.isRef,!!m.excluded,m.qualityStatus||'',m.bestEff,m.hysteresis,m.fw||null,m.rv||null];}),
-      samples:(exp.samples||[]).map(function(s){return[s.id||'',s.name||'',s.group||'',!!s.isRef,(s.measurementIds||[]).slice()];}),
+      experiments:(exp.experiments||[]).map(function(x){return[x.id||'',x.name||'',!!x.isRef,(x.sampleIds||[]).slice(),(x.runIds||[]).slice(),(x.measurementIds||[]).slice()];}),
+      samples:(exp.samples||[]).map(function(s){return[s.id||'',s.name||'',s.experiment||s.group||'',s.position||'',s.cell||'',!!s.isRef,(s.runIds||[]).slice(),(s.measurementIds||[]).slice()];}),
+      runs:(exp.runs||[]).map(function(r){return[r.id||'',r.path||'',r.sampleId||'',r.experimentId||'',(r.measurementIds||[]).slice()];}),
+      measurements:(exp.measurements||[]).map(function(m){return[m.id||'',m.experimentId||'',m.sampleId||'',m.runId||'',m.sequence,m.sample||'',m.experiment||m.group||'',!!m.isRef,!!m.excluded,m.qualityStatus||'',m.bestEff,m.hysteresis,m.fw||null,m.rv||null];}),
       design:{devices:(exp.design&&exp.design.devices||[]),solutions:(exp.design&&exp.design.solutions||[])},
       findings:(exp.findings||[]).map(function(f){return[f.id||'',f.type||'',f.status||'',f.severity||'',f.target||'',f.measurementId||'',f.title||'',f.detail||''];}),
       analysisSettings:exp.analysisSettings||{}
@@ -128,8 +129,8 @@
     const bundle=ensure(exp),summary=(A.analysisOf(exp)||{}).summary||{},groups=bundle.groupStatistics||[],topRef=bundle.topRef||[],topNonRef=bundle.topNonRef||[],open=(exp.findings||[]).filter(function(f){return f.status!=='resolved';});
     return {
       source_revision:Number(exp.sync&&exp.sync.revision)||0,
-      scope:{samples:Number(summary.sampleCount||0),measurements:Number(summary.measurementCount||0),eligible:Number(summary.eligibleCount||0),files:(exp.files||[]).length,file_families:fileProfile(exp)},
-      performance:{best_sample:summary.bestSample||'',best_efficiency:summary.bestEfficiency,mean_efficiency:summary.meanEfficiency,median_efficiency:summary.medianEfficiency,top_reference:topRef.slice(0,5),top_non_reference:topNonRef.slice(0,5)},
+      scope:{experiments:Number(summary.experimentCount||(exp.experiments||[]).length||0),samples:Number(summary.sampleCount||0),runs:Number(summary.runCount||(exp.runs||[]).length||0),measurements:Number(summary.measurementCount||0),eligible:Number(summary.eligibleCount||0),files:(exp.files||[]).length,file_families:fileProfile(exp)},
+      performance:{best_experiment:summary.bestExperiment||'',best_sample:summary.bestSample||'',best_efficiency:summary.bestEfficiency,mean_efficiency:summary.meanEfficiency,median_efficiency:summary.medianEfficiency,best_by_experiment:((bundle.bestByExperiment||[]).slice(0,12)),top_reference:topRef.slice(0,5),top_non_reference:topNonRef.slice(0,5)},
       comparisons:groups.slice(0,16),
       quality:{valid:Number(summary.validCount||0),review:Number(summary.reviewCount||0),blocked:Number(summary.blockedCount||0),open_findings:open.length,anomalies:(bundle.anomalies||[]).slice(0,12)},
       design:designCoverage(exp),
@@ -138,9 +139,8 @@
   }
   function briefFresh(exp){return !!(exp.experimentBrief&&String(exp.experimentBrief.inputSignature||'')===scientificSignature(exp));}
   function brief(exp){
-    const rev=Number(exp.sync&&exp.sync.revision)||0,signature=scientificSignature(exp),prev=exp.experimentBrief||{},det=deterministicBrief(exp),ai=prev.ai&&String(prev.ai.inputSignature||prev.inputSignature||'')===signature?prev.ai:null;
-    exp.experimentBrief={version:2,generatedAt:new Date().toISOString(),sourceRevision:rev,inputSignature:signature,deterministic:det,ai:ai};
-    if(ai){ai.sourceRevision=rev;ai.inputSignature=signature;}
+    const rev=Number(exp.sync&&exp.sync.revision)||0,signature=scientificSignature(exp),det=deterministicBrief(exp);
+    exp.experimentBrief={generatedAt:new Date().toISOString(),sourceRevision:rev,inputSignature:signature,deterministic:det};
     return exp.experimentBrief;
   }
   function ensureBrief(exp){return briefFresh(exp)?exp.experimentBrief:brief(exp);}

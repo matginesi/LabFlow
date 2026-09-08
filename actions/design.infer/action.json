@@ -1,70 +1,76 @@
 {
   "id": "design.infer",
-  "type": "HYBRID",
+  "title": "Suggest missing experiment design",
+  "short_title": "Suggest design",
   "category": "design",
   "role": "researcher",
-  "title": "Suggest experiment design",
-  "short_title": "Suggest design",
-  "purpose": "Suggest missing solution chemistry and device-stack data for the selected experiment from source evidence, relevant scientific Knowledge Base records and cautious model inference.",
-  "strategy": "One bounded request for one experiment, with at most one short semantic repair retry when the model returns invalid or truncated structured output. Suggestions are stored for researcher review and are never applied automatically.",
-  "output": "json",
-  "mutation_scope": "",
+  "visibility": "public",
+  "purpose": "Suggest missing qualitative solution chemistry, device-stack and/or fabrication-process fields for one selected experiment; insufficient evidence is a valid non-error outcome.",
+  "strategy": "One selected experiment per run. The model suggests only missing chemistry/stack/process content; LabFlow owns target identity, validates applicability, stores a proposal, and never overwrites source or researcher values automatically.",
   "policies": [
     "policy.scientific-provenance",
     "policy.structured-output"
   ],
-  "steps": [
-    {
-      "id": "collect",
-      "type": "DETERMINISTIC",
-      "weight": 0.1,
-      "tool": "design.collect-selected"
+  "contract": {
+    "target": {
+      "kind": "design_experiment",
+      "cardinality": "one",
+      "selection_param": "deviceId"
     },
-    {
-      "id": "infer",
-      "type": "AI",
-      "prompt": "prompt.md",
-      "output": "json",
-      "schema": "design_reconstruct",
-      "thinking": "off",
-      "timeout_ms": 90000,
-      "weight": 0.8,
-      "max_output_tokens": 1400,
-      "deadline_ms": 90000,
-      "max_retries": 1,
-      "min_output_tokens": 100,
-      "target_output_tokens": 520,
-      "max_input_tokens": 8000
+    "context": {
+      "profile": "design",
+      "scope": "selected_design_experiment"
     },
-    {
-      "id": "validate",
-      "type": "DETERMINISTIC",
-      "weight": 0.05,
-      "tool": "design.validate-coverage"
+    "result": {
+      "format": "json",
+      "schema": "design_suggestion",
+      "kind": "proposal"
     },
-    {
-      "id": "store",
-      "type": "DETERMINISTIC",
-      "weight": 0.05,
-      "tool": "design.store-proposal"
-    }
-  ],
-  "version": 1,
-  "input_scope": "working-copy.design-selection",
-  "visibility": "public",
-  "requires": [],
-  "input": {
-    "context": "design",
-    "knowledge": {
-      "limit": 8,
-      "kinds": [
-        "material",
-        "solution",
-        "stack",
-        "process",
-        "concept"
-      ],
-      "query_hint": "SnO2 TiO2 PTAA 2PACz spiro C60 BCP PEAI perovskite absorber stack solution precursor"
-    }
+    "effect": {
+      "mode": "store_proposal",
+      "writes": [
+        "experiment.actionData.proposals.design.infer",
+        "experiment.actionData.status.design.infer"
+      ]
+    },
+    "guards": [
+      "dataset.loaded",
+      "design.incomplete_target"
+    ]
+  },
+  "execution": {
+    "mode": "hybrid",
+    "result_step": "infer",
+    "steps": [
+      {
+        "id": "collect",
+        "type": "DETERMINISTIC",
+        "weight": 0.1,
+        "tool": "design.collect-selected"
+      },
+      {
+        "id": "infer",
+        "type": "AI",
+        "prompt": "prompt.md",
+        "output": "json",
+        "schema": "design_suggestion",
+        "thinking": "off",
+        "timeout_ms": 90000,
+        "weight": 0.8,
+        "max_output_tokens": 1200,
+        "deadline_ms": 90000,
+        "max_retries": 1,
+        "min_output_tokens": 80,
+        "target_output_tokens": 520,
+        "max_input_tokens": 6500,
+        "validate_with": "design.validate-coverage"
+      },
+      {
+        "id": "store",
+        "type": "DETERMINISTIC",
+        "weight": 0.1,
+        "tool": "design.store-proposal"
+      }
+    ]
   }
 }

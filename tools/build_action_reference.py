@@ -26,15 +26,16 @@ def main():
     details = []
     for path in sorted(ACTIONS.glob("*/action.json")):
         action = json.loads(path.read_text(encoding="utf-8"))
-        ai_steps = [step for step in action.get("steps", []) if step.get("type") == "AI"]
+        execution = action.get("execution") or {}
+        ai_steps = [step for step in execution.get("steps", []) if step.get("type") == "AI"]
         if not ai_steps:
-            rows.append((action["id"], action.get("role", ""), action.get("type", ""), "—", "—", "—", "—", "—"))
+            rows.append((action["id"], action.get("role", ""), execution.get("mode", ""), "—", "—", "—", "—", "—"))
             continue
         for step in ai_steps:
             rows.append((
                 action["id"] + (f" / {step.get('id')}" if len(ai_steps) > 1 else ""),
                 action.get("role", ""),
-                action.get("type", ""),
+                execution.get("mode", ""),
                 text(step.get("max_input_tokens")),
                 text(step.get("target_output_tokens")),
                 text(step.get("max_output_tokens")),
@@ -75,10 +76,10 @@ def main():
         "",
         "## Important special cases",
         "",
-        "- `analysis.enrich` is automatic, small and non-blocking. It has no Action retry; deterministic import remains valid if enrichment fails.",
-        "- `design.infer` and `design.infer-batch` use zero automatic retries. In a multi-experiment Suggest-all run, the first provider throttle stops the sequence and leaves untouched experiments pending.",
+        "- `dataset.resolve-ambiguities` is the only dataset AI Action. It runs only when deterministic naming/linking cannot establish one semantic interpretation and stores proposals for review.",
+        "- `design.infer` is always one experiment per Action run. **Suggest all** sequences the same Action across incomplete experiments; a provider throttle stops further requests while preserving completed suggestions.",
+        "- `results.compare` uses only the selected groups and deterministic statistics already visible in Results; it never recalculates measurements.",
         "- Z.AI `glm-4.7-flash` is never replaced automatically. A provider 429/`1305` is surfaced once with `Retry-After` when available and creates no local cooldown.",
-        "- Report/Paper Actions split long writing into bounded work units. The table describes one AI work unit, not a promise that the entire document is generated in one provider call.",
         "",
         "See [AI runtime and limits](../guides/AI_TOKENS_AND_RATE_LIMITS.md), [AI provider specification](../specs/AI_PROVIDERS.md), and [Action specification](../specs/ACTIONS.md).",
         "",

@@ -1,0 +1,104 @@
+{
+  "id": "results_interpretation",
+  "title": "Structured results interpretation",
+  "type": "object",
+  "required": [
+    "status",
+    "summary",
+    "observations",
+    "hypotheses",
+    "limitations",
+    "next_checks"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "interpreted",
+        "limited"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 700
+    },
+    "observations": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "statement",
+          "evidence",
+          "confidence"
+        ],
+        "properties": {
+          "statement": {
+            "type": "string",
+            "maxLength": 260
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "statement",
+          "basis",
+          "confidence"
+        ],
+        "properties": {
+          "statement": {
+            "type": "string",
+            "maxLength": 260
+          },
+          "basis": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "maxLength": 140
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 220
+      }
+    },
+    "next_checks": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 220
+      }
+    }
+  }
+}

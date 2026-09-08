@@ -1,43 +1,48 @@
 # Validation
 
-Run before packaging:
+Run before packaging or merging architectural changes:
 
 ```bash
 python tools/build_prompt_bundle.py
 python tools/build_action_registry.py
+python tools/build_action_reference.py
+python tools/build_docs_bundle.py
+python tools/build_ui_kit_inline.py
+
+python tools/validate_architecture_contract.py
 python tools/validate_action_contract.py
-python tools/validate_privacy_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
-node tests/unit/run.js $(find tests/unit -maxdepth 1 -name '*-test.js' -printf '%p ' | sort)
+python tools/validate_privacy_contract.py
+
+node tests/unit/run.js
+node tests/regression/import-page-check.js
 find assets vendor -name '*.js' -print0 | xargs -0 -n1 node --check
 ```
 
-The validators enforce the current execution contract:
+## What the validators protect
 
-- only `Action` definitions are active; no ACTION registry/runner/workbench;
-- Action types are `DETERMINISTIC`, `AI` or `HYBRID`, matching their declared steps;
-- deterministic Actions contain no provider prompts;
-- checkpoints advance automatically after success;
-- one Action and at most one provider request run at a time;
-- the user can stop a running Action and retry exactly the failed checkpoint;
-- no automatic provider retry loop or background queue exists;
-- provider output is closed by default;
-- Markdown and JSON provider results use the common formatted renderer;
-- AI request contexts are bounded and report collection coverage when truncated;
-- initial route is Upload and RAW archive bytes remain immutable.
+- `validate_architecture_contract.py`: one `ExperimentData` aggregate, schema-owned roots, no parallel `entities[]` model, declared pipeline metadata, the single `actionData` boundary, and repository exclusions for ZIP/fixture folders.
+- `validate_action_contract.py`: only current researcher-facing Actions, explicit target/context/result/effect/guards/execution contracts, bounded AI steps and valid semantic result steps.
+- `validate_state_contract.py`: state ownership and persistence boundaries.
+- `validate_ui_contract.py`: routes and UI references agree with the current runtime.
+- `validate_privacy_contract.py`: local-first assets/provider transport and no tracker APIs.
+
+The unit suite includes architecture regressions for `DomainSchema`, persistence snapshots, `DerivedState`, `ActionData`, CanonicalStore purity and DataPipeline plan/trace separation. The real JV fixture also verifies the stable hierarchy `5 experiments → 31 samples → 42 runs → 72 measurements` through repeated deterministic refreshes.
 
 ## Dataset fixtures
 
-Use `TEST_DATA/01_PRECISO_PERFETTO_COMPLETO.zip` and `02_ROVINATO_SPORCO_TASKS.zip` for primary coverage. `03_MULTI_DEVICE_DUPLICATE_NAMES.zip` and `04_LARGE_DATASET.zip` cover path identity and bounded large-dataset behavior.
+`TEST_DATA/` is local test material and is intentionally ignored by Git. The main real fixture is `TEST_DATA/2026_01_22.zip`; synthetic fixtures cover clean, damaged, duplicate-name and large-dataset behavior.
 
 ## Browser smoke test
 
-Serve the repository with:
+Serve locally with:
 
 ```bash
-python tools/serve_static.py --port 8765
+python tools/serve_static.py --host 0.0.0.0 --port 8000
 ```
+
+Use this bundled server, not `python -m http.server`, when testing Z.AI: it provides the narrow same-origin relay required by the browser adapter.
 
 Then run:
 
@@ -45,4 +50,4 @@ Then run:
 python tools/test_responsive_browser.py
 ```
 
-Live AI requests are intentionally not part of the default validation suite because they require a user-supplied provider key and consume external quota.
+Live AI calls are intentionally excluded from the default validation suite because they require user credentials/provider availability and consume external quota.

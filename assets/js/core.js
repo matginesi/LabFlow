@@ -181,7 +181,8 @@
   /** Keep provider model IDs intact internally, but hide filesystem paths in UI labels. */
   function modelDisplayName(providerId, model) {
     const raw=String(model==null?'':model).trim();
-    if(String(providerId||'').toLowerCase()!=='llamacpp'||!raw)return raw;
+    const localProviders=new Set(['ollama','lmstudio','llamacpp']);
+    if(!localProviders.has(String(providerId||'').toLowerCase())||!raw)return raw;
     return raw.replace(/\\/g,'/').split('/').filter(Boolean).pop()||raw;
   }
 

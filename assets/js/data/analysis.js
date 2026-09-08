@@ -11,12 +11,14 @@
   function listOf(exp, key) {
     return Array.isArray(exp && exp[key]) ? exp[key] : [];
   }
-  function measurementsOf(exp) { return listOf(exp, 'measurements'); }
-  function samplesOf(exp) { return listOf(exp, 'samples'); }
+  function measurementsOf(exp) { return exp && typeof exp.selectMeasurements === 'function' ? exp.selectMeasurements() : listOf(exp, 'measurements'); }
+  function experimentsOf(exp) { return exp && typeof exp.selectExperiments === 'function' ? exp.selectExperiments() : listOf(exp, 'experiments'); }
+  function samplesOf(exp) { return exp && typeof exp.selectSamples === 'function' ? exp.selectSamples() : listOf(exp, 'samples'); }
+  function runsOf(exp) { return exp && typeof exp.selectRuns === 'function' ? exp.selectRuns() : listOf(exp, 'runs'); }
   function findingsOf(exp) { return listOf(exp, 'findings'); }
   function manifestOf(exp) { return listOf(exp, 'manifest'); }
   function analysisOf(exp) {
-    return (exp && exp.analysis) || { summary: {}, bestBySample: [], topNonRef: [], topRef: [] };
+    return (exp && exp.analysis) || { summary: {}, bestBySample: [], bestByExperiment: [], topNonRef: [], topRef: [] };
   }
   function settingsOf(exp) {
     const s = (exp && exp.analysisSettings) || {};
@@ -112,7 +114,7 @@
 
   function summarizeAnalysis(exp, end) {
     syncMetricFindings(exp);
-    const measurements=measurementsOf(exp), samples=samplesOf(exp), findings=findingsOf(exp);
+    const measurements=measurementsOf(exp), experiments=experimentsOf(exp), samples=samplesOf(exp), runs=runsOf(exp), findings=findingsOf(exp);
     const eligible = measurements.filter(function (m) { return m.rankingEligible; });
     const bySample = new Map();
     eligible.forEach(function (m) {
@@ -120,8 +122,25 @@
       if (!current || m.bestEff > current.bestEff) bySample.set(m.sample, m);
     });
     const bestBySample = Array.from(bySample.values()).sort(function (a,b) { return b.bestEff - a.bestEff; });
-    const topRef = bestBySample.filter(function (m) { return m.isRef; }).slice(0,10);
-    const topNonRef = bestBySample.filter(function (m) { return !m.isRef; }).slice(0,10);
+    /* Experiment ranking is intentionally built from one representative per
+       sample first. Repeated JV acquisitions therefore do not give a sample
+       multiple chances to dominate its experiment. */
+    const byExperiment = new Map();
+    bestBySample.forEach(function (m) {
+      const key = m.experiment || m.group || m.sample;
+      const current = byExperiment.get(key);
+      if (!current || m.bestEff > current.bestEff) byExperiment.set(key, m);
+    });
+    const bestByExperiment = Array.from(byExperiment.values()).sort(function (a,b) { return b.bestEff - a.bestEff; });
+    const rvBySample=new Map();
+    eligible.forEach(function(m){
+      const rv=Number(m.rv&&m.rv.eff);if(!Number.isFinite(rv))return;
+      const current=rvBySample.get(m.sample),currentRv=current?Number(current.rv&&current.rv.eff):-Infinity;
+      if(!current||rv>currentRv||(rv===currentRv&&Math.abs(Number(m.hysteresis)||Infinity)<Math.abs(Number(current.hysteresis)||Infinity)))rvBySample.set(m.sample,m);
+    });
+    const rvRanked=Array.from(rvBySample.values()).sort(function(a,b){const d=Number(b.rv&&b.rv.eff)-Number(a.rv&&a.rv.eff);return d||Math.abs(Number(a.hysteresis)||Infinity)-Math.abs(Number(b.hysteresis)||Infinity);});
+    const topRef = rvRanked.filter(function (m) { return m.isRef; }).slice(0,10);
+    const topNonRef = rvRanked.filter(function (m) { return !m.isRef; }).slice(0,10);
     const effs = eligible.map(function (m) { return m.bestEff; }).filter(Number.isFinite).sort(function(a,b){return a-b;});
     const mean = effs.length ? effs.reduce(function(a,b){return a+b;},0)/effs.length : null;
     const median = effs.length ? (effs.length % 2 ? effs[(effs.length-1)/2] : (effs[effs.length/2-1]+effs[effs.length/2])/2) : null;
@@ -131,12 +150,13 @@
     const reviewCount=measurements.filter(function(m){return m.qualityStatus==='review';}).length;
     const blockedCount=measurements.filter(function(m){return m.qualityStatus==='blocked';}).length;
     const openFindings=findings.filter(function(f){return f.status !== 'resolved';});
-    const previousAI = exp.analysis && exp.analysis.aiInterpretation;
     exp.analysis = {
       summary: {
         measurementCount: measurements.length,
         eligibleCount: eligible.length,
+        experimentCount: experiments.length,
         sampleCount: samples.length,
+        runCount: runs.length,
         completePairs: completePairs,
         curveCount: withCurves,
         validCount:validCount,
@@ -149,13 +169,13 @@
         completeness: measurements.length ? completePairs/measurements.length*100 : 0,
         bestEfficiency: bestBySample[0] ? bestBySample[0].bestEff : null,
         bestSample: bestBySample[0] ? bestBySample[0].sample : '',
+        bestExperiment: bestByExperiment[0] ? (bestByExperiment[0].experiment || bestByExperiment[0].group || '') : '',
         meanEfficiency: mean,
         medianEfficiency: median
       },
-      bestBySample: bestBySample.map(compact), topNonRef: topNonRef.map(compact), topRef: topRef.map(compact)
+      bestBySample: bestBySample.map(compact), bestByExperiment: bestByExperiment.map(compact), topNonRef: topNonRef.map(compact), topRef: topRef.map(compact)
     };
-    if (previousAI) exp.analysis.aiInterpretation = previousAI;
-    if(end)end({summary:exp.analysis.summary,topRef:exp.analysis.topRef.length,topNonRef:exp.analysis.topNonRef.length,findingsAfter:findings.length},'info');
+    if(end)end({summary:exp.analysis.summary,bestByExperiment:exp.analysis.bestByExperiment.length,topRef:exp.analysis.topRef.length,topNonRef:exp.analysis.topNonRef.length,findingsAfter:findings.length},'info');
     return exp.analysis;
   }
 
@@ -176,19 +196,19 @@
 
 
   function compact(m) {
-    return { id:m.id, file:m.file, sample:m.sample, group:m.group, isRef:m.isRef, bestEff:m.bestEff, hysteresis:m.hysteresis, qualityStatus:m.qualityStatus, flags:(m.flags||[]).map(function(f){return f.label;}) };
+    return { id:m.id, file:m.file, sample:m.sample, sampleId:m.sampleId||'', experiment:m.experiment||m.group||'', experimentId:m.experimentId||'', group:m.group, position:m.position||'', cell:m.cell||'', runId:m.runId||null, sequence:m.sequence==null?null:m.sequence, isRef:m.isRef, bestEff:m.bestEff, hysteresis:m.hysteresis, qualityStatus:m.qualityStatus, flags:(m.flags||[]).map(function(f){return f.label;}) };
   }
 
   function toCSV(exp) {
     const measurements=measurementsOf(exp);
     Log.debug('csv.export.prepare',{experimentId:exp&&exp.id,measurements:measurements.length});
     const factor = settingsOf(exp);
-    const h = ['file','sample','group','reference','quality','ranking_eligible','voc_fw','jsc_fw','ff_fw','eff_fw','voc_rv','jsc_rv','ff_rv','eff_rv','hysteresis','mismatch_factor','flags'];
+    const h = ['file','experiment','sample','position','cell','run_id','sequence','group','reference','quality','ranking_eligible','voc_fw','jsc_fw','vmpp_fw','jmpp_fw','pmpp_fw','rs_fw','rsh_fw','ff_fw','eff_fw','voc_rv','jsc_rv','vmpp_rv','jmpp_rv','pmpp_rv','rs_rv','rsh_rv','ff_rv','eff_rv','hysteresis','mismatch_factor','flags'];
     const rows = measurements.map(function (m) {
-      return [m.file,m.sample,m.group,m.isRef,m.qualityStatus,m.rankingEligible,(m.fw||{}).voc,Number.isFinite((m.fw||{}).jsc)?(m.fw||{}).jsc/factor:'',(m.fw||{}).ff,Number.isFinite((m.fw||{}).eff)?(m.fw||{}).eff/factor:'',(m.rv||{}).voc,Number.isFinite((m.rv||{}).jsc)?(m.rv||{}).jsc/factor:'',(m.rv||{}).ff,Number.isFinite((m.rv||{}).eff)?(m.rv||{}).eff/factor:'',m.hysteresis,factor,(m.flags||[]).map(function(f){return f.label;}).join('; ')].map(C.csvEscape).join(',');
+      return [m.file,m.experiment||m.group||'',m.sample,m.position||'',m.cell||'',m.runId||'',m.sequence==null?'':m.sequence,m.group,m.isRef,m.qualityStatus,m.rankingEligible,(m.fw||{}).voc,(m.fw||{}).jsc,(m.fw||{}).vmpp,(m.fw||{}).jmpp,(m.fw||{}).pmpp,(m.fw||{}).rs,(m.fw||{}).rsh,(m.fw||{}).ff,Number.isFinite((m.fw||{}).eff)?(m.fw||{}).eff/factor:'',(m.rv||{}).voc,(m.rv||{}).jsc,(m.rv||{}).vmpp,(m.rv||{}).jmpp,(m.rv||{}).pmpp,(m.rv||{}).rs,(m.rv||{}).rsh,(m.rv||{}).ff,Number.isFinite((m.rv||{}).eff)?(m.rv||{}).eff/factor:'',m.hysteresis,factor,(m.flags||[]).map(function(f){return f.label;}).join('; ')].map(C.csvEscape).join(',');
     });
     return h.join(',') + '\n' + rows.join('\n');
   }
 
-  LF.Analysis = { analyze, deriveMeasurement, hysteresis, toCSV, rules, measurementsOf, samplesOf, findingsOf, manifestOf, analysisOf, settingsOf, designOf };
+  LF.Analysis = { analyze, deriveMeasurement, hysteresis, toCSV, rules, measurementsOf, experimentsOf, samplesOf, runsOf, findingsOf, manifestOf, analysisOf, settingsOf, designOf };
 }());

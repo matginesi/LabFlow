@@ -17,13 +17,13 @@ module.exports = function (t, LF) {
 
   function experiment() {
     return {
-      id: 'exp', sync: { revision: 4, savedRevision: 4, dirty: false }, patches: [], findings: [], analysisSettings: { mismatchFactor: 2 }, samples: [
+      id: 'exp', sync: { revision: 4 }, patches: [], findings: [], analysisSettings: { mismatchFactor: 2 }, samples: [
         { id: 's1', name: 'DEVICE A' }, { id: 's2', name: 'REF CONTROL' }
       ], measurements: [
         { id: 'm1', file: 'a.txt', sample: 'DEVICE A', group: 'A', isRef: false, fw: { voc: 1.0, jsc: 40, ff: 0.8, eff: 36 }, rv: { voc: 1.0, jsc: 40, ff: 0.8, eff: 40 } },
         { id: 'm2', file: 'b.txt', sample: 'DEVICE A', group: 'A', isRef: false, fw: { voc: 1.0, jsc: 40, ff: 0.8, eff: 38 }, rv: { voc: 1.0, jsc: 40, ff: 0.8, eff: 44 } },
         { id: 'm3', file: 'ref.txt', sample: 'REF CONTROL', group: 'REF', isRef: true, fw: { voc: 1.0, jsc: 40, ff: 0.8, eff: 34 }, rv: null }
-      ], analysis: { summary: {}, bestBySample: [], topNonRef: [], topRef: [] }, report: { figureSelection: { pceDistribution: false } }
+      ], analysis: { summary: {}, bestBySample: [], topNonRef: [], topRef: [] }
     };
   }
 
@@ -81,19 +81,13 @@ module.exports = function (t, LF) {
     assert(LF.AnalysisSummary.fresh(e), false, 'stale after revision bump');
   };
 
-  t['Experiment Brief AI survives non-scientific revision bumps but invalidates on scientific changes'] = function () {
-    const e = experiment();
-    LF.Analysis.analyze(e);
+  t['Experiment Brief stays deterministic and invalidates only when scientific inputs change'] = function () {
+    const e = experiment(); LF.Analysis.analyze(e);
     let brief = LF.ExperimentBrief.ensure(e), signature = LF.ExperimentBrief.signature(e);
-    brief.ai = { summary: 'Shared scientific context', inputSignature: signature, sourceRevision: e.sync.revision };
-    e.sync.revision += 1; // e.g. report/editor metadata changed; scientific inputs are identical
-    assert(LF.ExperimentBrief.fresh(e), true, 'non-scientific revision does not stale brief');
-    brief = LF.ExperimentBrief.ensure(e);
-    assert(brief.ai.summary, 'Shared scientific context', 'AI enrichment preserved');
-    e.measurements[0].fw.eff = 99;
-    assert(LF.ExperimentBrief.fresh(e), false, 'scientific edit invalidates brief');
-    brief = LF.ExperimentBrief.ensure(e);
-    assert(brief.ai, null, 'stale AI enrichment dropped');
+    assert(brief.inputSignature, signature, 'signature'); assert(Object.prototype.hasOwnProperty.call(brief,'ai'), false, 'no AI enrichment field');
+    e.sync.revision += 1; assert(LF.ExperimentBrief.fresh(e), true, 'non-scientific revision does not stale brief');
+    e.measurements[0].fw.eff = 99; assert(LF.ExperimentBrief.fresh(e), false, 'scientific edit invalidates brief');
+    brief = LF.ExperimentBrief.ensure(e); assert(Object.prototype.hasOwnProperty.call(brief,'ai'), false, 'brief remains deterministic');
   };
 
   t['findings rollup only counts open findings by severity'] = function () {

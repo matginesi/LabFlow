@@ -1,9 +1,21 @@
+# Local source/test archives
+*.zip
+*.ZIP
+ORIGINAL_REQUEST/
+TEST_DATA/
+**/ORIGINAL_REQUEST/
+**/TEST_DATA/
+
+# Secrets
 .env
 .env.*
 !.env.example
+
+# Python cache
 __pycache__/
 *.py[cod]
-.DS_Store
 
-./ORIGINAL_REQUEST
-./TEST_DATA
+# Local editor / OS noise
+.DS_Store
+.vscode/
+.idea/

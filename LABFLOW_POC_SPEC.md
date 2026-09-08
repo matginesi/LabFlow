@@ -1,119 +1,184 @@
 # LabFlow POC specification
 
-> **Primary detailed guide:** [`docs/WORKFLOW.md`](docs/WORKFLOW.md). This specification defines the compact product contract; the workflow document explains the full lifecycle, Action behavior, data layers and developer rules.
+## 1. Product objective
 
-## 1. Product model
+LabFlow turns a researcher-supplied archive into one inspectable LabFlow Data with deterministic Results, minimal review burden, explicit Design reconstruction, optional AI assistance and deterministic export preparation.
 
-LabFlow is a static, local-first laboratory workbench with a deliberately small mental model:
+A successful import must not depend on AI availability.
 
-**Upload & Review → Results → Design → Report → NOMAD**
+## 2. Source of truth
 
-The ZIP is the only experiment entry point. Upload and Review are one first step: before a ZIP exists the page is an upload gate; after import the same page shows the immutable source receipt and the deterministic-first review workbench. No project loader, backend, queue or hidden background workflow precedes it.
+`ExperimentData` is the only scientific aggregate used by importer, pipeline, Results, Review, Design, Actions, Assistant and NOMAD services.
 
-## 2. Source, Canonical Store and Working Copy
+Hierarchy:
 
-The uploaded ZIP is immutable source evidence. Original paths/names are always preserved for provenance and round-trip export; they do not define the application's semantic model.
+```text
+Experiment → Sample/Cell → Run → Measurement → FW/RV scans
+```
 
-After import, `LF.State.state.experiment` is the one scientific Working Copy. `LF.CanonicalStore` indexes that object instead of creating a second editable projection. Its internal `labflow-canonical-v2` view is the common application representation used by Tools and Actions. It groups stable domains (`experiment`, `source`, `entities`, `scientific`, `documents`, `evidence`, `relations`, `provenance`) while keeping compatibility aliases for existing modules. It provides:
+RAW files are immutable. LabFlow Data changes are patch/provenance tracked.
 
-- stable file/sample/measurement identity;
-- sample aliases derived from original naming;
-- explicit relations between samples, measurements, files, Design and evidence;
-- current Results/findings/Design and Report/Paper document views;
-- evidence and provenance references with source/locator provenance;
-- deterministic lookup indexes.
+## 2a. Architecture kernel
 
-Scientific collections remain on the Working Copy; Canonical Store indexes/reference them rather than copying RAW curves into another mega-object. RAW bytes remain at `raw.sourceArchive` and are never rewritten.
+The codebase must keep these responsibilities separate:
 
-Every manual edit, safe correction and accepted AI proposal changes only the same Working Copy. The RAW upload is snapshotted byte-for-byte at import and never shares mutable scientific state. LabFlow autosaves the current Working Copy, RAW snapshot, drafts, chat and Action history locally and restores them on the next app load. **Save** marks an explicit revision checkpoint; **Reset session** explicitly clears the persisted scientific session. The reusable Knowledge Base is bundled with LabFlow; small local edits persist in the browser. Provider/model/API-key/UI preferences also remain browser-local. **Export** and NOMAD export create durable new files and never overwrite the uploaded source.
+- `DomainSchema`: canonical record/root definitions and persistence metadata;
+- `ExperimentData`: one aggregate/query/mutation API;
+- `DataContracts`: fail-closed graph/invariant validation;
+- `DerivedState`: declarative invalidation of recomputable projections;
+- `DataPipeline`: deterministic lifecycle;
+- `ActionData`: the only persisted store for Action proposals/annotations/status.
 
-Normal package export includes `canonical.json` (`labflow-canonical-v1`) containing portable canonical identities, aliases, compact measurements, relations, evidence, findings, patches, Design and provenance. RAW content remains separate and pristine.
+No feature may introduce a parallel editable scientific model or ad-hoc Action-output root fields.
 
-## 3. Analysis Dossier and Experiment Brief
+## 3. Import and deterministic pipeline
 
-`dataset.analyze` is automatic and fully deterministic. It refreshes canonical identity/evidence, calculates deterministic Results and produces a compact Analysis Dossier for the current scientific state.
+The import pipeline is:
 
-The dossier is a **view**, not another dataset copy. It contains counts, compact sample/measurement references, findings, safe fixes, true semantic ambiguities and coverage/evidence summaries. Large RAW arrays, full curves and duplicate auxiliary evidence do not belong in the dossier.
+```text
+normalize
+→ link
+→ validate-structure
+→ analyze
+→ index
+→ review
+→ auto-cleanup
+→ project-design
+→ summarize
+→ validate-final
+```
 
-LabFlow also derives one shared **Experiment Brief**. Its deterministic part summarizes scope, performance, group comparisons, quality, Design coverage and unresolved questions. When an AI provider is configured at import, the internal `analysis.enrich` Action may add a bounded scientific interpretation layer (goal, variables, meaningful comparisons, interpretations, knowledge gaps and recommended focus). This enrichment is explicitly derived/provenanced, never replaces deterministic facts, and is reused by every later AI Context Pack. It is deliberately small: the current contract caps estimated input at 3,200 tokens, targets about 320 final-answer tokens with a 700-token final-answer ceiling, has a 45 s work-unit deadline, does not use semantic/provider retries during import, and falls back to the deterministic Brief if unavailable. A single immediate technical recovery is allowed only when the provider explicitly truncates the completion; it raises completion headroom without changing scientific scope. It is invalidated only when scientific inputs change, not when the researcher merely edits Report/Paper prose.
+Requirements:
 
-## 4. Research Context Packs
+- canonical naming is automatic;
+- hierarchy/backlinks are rebuilt deterministically;
+- JV metrics/results are deterministic;
+- mechanically provable corrections are automatically applied only to the LabFlow Data;
+- every automatic correction has provenance;
+- semantic ambiguity is never guessed deterministically;
+- pipeline validation fails closed on an inconsistent domain graph;
+- the pipeline never performs an AI request.
 
-AI Actions use deterministic, profile-specific `LF.ContextBuilder` views over the Canonical Store. The context profile is declared by each Action in `input.context` rather than inferred from the Action ID.
+## 4. Review UX
 
-The Assistant uses one deterministic chat Context Pack: the question, current page/selection, bounded history, focused samples/measurements/results/findings/evidence, the active Design/Report/NOMAD slice when relevant, and an optional local Knowledge Base lookup. Building this context is local and read-only; one user turn produces one provider request, so the Assistant does not spend extra LLM calls deciding what to read.
+Review should demand researcher attention only when necessary:
 
-Profiles select only what a workflow needs, for example:
+- show how many names/corrections were handled automatically;
+- show semantic ambiguities separately;
+- offer one `Resolve with AI` action when ambiguities exist;
+- store AI suggestions without auto-applying them;
+- allow `Apply all suggestions` plus individual review/override;
+- keep diagnostics/provenance available but secondary.
 
-- chat — bounded question/page context plus focused Canonical data and optional local knowledge;
-- ambiguity — unresolved findings plus directly linked records/evidence;
-- design — one selected experiment, researcher-entered known values, explicit missing fields and linked evidence;
-- results — deterministic summary/rankings/anomalies/relevant findings;
-- report — shared Experiment Brief, current document/work block plus compact scientific evidence;
-- nomad — canonical staging facts only when required.
+If no semantic ambiguity exists, the researcher should be able to proceed directly to Results.
 
-RAW JV point arrays are excluded by default. AI works with stable LabFlow IDs/references and may cite them; it must not invent evidence that is not present in the Context Pack.
+## 5. Results contract
 
-## 5. Researcher Actions
+Results are calculated from the LabFlow Data and retain JV semantics from the reference analyzer:
 
-An Action represents a researcher-understandable goal. Internal functions such as parsing, result computation, Design evidence indexing, applying accepted proposals and validation gates are **steps/services**, not separate Actions.
+- paired FW/RV scans;
+- Voc, Jsc, Vmpp, Jmpp, Pmpp, Rs, Rsh, FF, Eff;
+- hysteresis `(EffRV - EffFW) / EffRV` where defined;
+- best measurement per sample/cell;
+- group/experiment summaries and rankings;
+- deterministic quality/eligibility state;
+- raw FW/RV curve arrays when available.
 
-The public set is intentionally limited to eight goals:
+AI may interpret these results but may not recalculate or replace them.
 
-1. `dataset.analyze` — **Automatic / DETERMINISTIC**. Build/refresh Canonical Store, Results and Analysis Dossier. No provider.
-2. `dataset.correct-safe` — **Action / DETERMINISTIC**. Apply only mechanically provable fixes, then re-analyze.
-3. `dataset.resolve-ambiguities` — **AI assist**. Propose resolutions for semantic ambiguities only; AI may return unresolved and never writes directly.
-4. `design.infer` — **AI assist**. Suggest only missing fields for the currently selected experiment; known/user-confirmed fields are not regenerated.
-5. `results.interpret` — **AI assist**. Explain deterministic Results; it never calculates or mutates them.
-6. `report.generate` — **AI assist**. Generate report/paper prose from deterministic evidence.
-7. `report.improve` — **AI assist**. Revise the current scientific document in one explicit mode.
-8. `nomad.prepare` — **Action / DETERMINISTIC**. Build known mappings and run authoritative local staging validation. Missing semantics remain visible for researcher review.
+## 6. Action catalog
 
-`analysis.enrich` is an **internal automatic AI enrichment**, not a researcher-facing action. It runs only when a provider is configured and never blocks import if unavailable.
+| Action | Target | Result | Effect |
+|---|---|---|---|
+| `dataset.resolve-ambiguities` | active semantic ambiguities | structured correction proposal | store proposal |
+| `design.infer` | one incomplete design experiment | structured qualitative design suggestion | store proposal |
+| `results.interpret` | current deterministic Results | structured interpretation | store derived annotation |
+| `results.compare` | 2+ selected result groups | structured comparison | store derived annotation |
+| `assistant.chat` | current page/experiment context | text answer | read-only |
 
-`assistant.chat` is visible in Actions like every executable Action. It is **read-only and single-request**: LabFlow deterministically assembles the relevant current context and optional local Knowledge Base matches, then makes one normal model request. It cannot invoke write Tools, mutate the Working Copy or autonomously execute mutating Actions.
+Anything that merely normalizes, analyzes, indexes, validates or exports belongs to deterministic pipeline/services rather than the Action catalog.
 
-Settings contains one editable **Actions** catalog for deterministic, AI-assisted and hybrid Actions. Each Action has one JSON definition and, only when needed, one Markdown prompt. Browser-local overrides never duplicate the source definition.
+## 7. Action manifest contract
 
-## 6. Action runtime
+Every Action must declare:
 
-AI and deterministic checkpoints execute sequentially in `LF.ActionRunner` with one AbortController. Deterministic checkpoints resolve `tool` IDs through `LF.ToolRegistry`. `requires[]` is an actual current-revision prerequisite gate: stale/missing prerequisites block execution before step 1. Success auto-advances. Cancel aborts the run. Each AI step declares its final-answer target and `thinking: off|auto|on`, and may declare `deadline_ms` plus `max_retries` (0..2); those retries are semantic/checkpoint retries and use bounded 5 s / 10 s delays. Separately, one immediate technical recovery may be used after `finish_reason: length`: LabFlow increases completion headroom from observed usage/reasoning and asks for a complete compact replacement. The Action policy is reconciled with detected model capability. Provider/model output limits and remaining context are hard completion ceilings, while Action `max_output_tokens` bounds the useful final answer rather than hidden reasoning overhead. No background queue, concurrency, parallel model fan-out, manual Continue gate or unbounded retry loop is allowed.
+```text
+contract.target
+  kind
+  cardinality
 
-Provider output is closed by default but streams live content/reasoning when available. Markdown/JSON rendering follows the active theme.
+contract.context
+  profile
+  scope
 
-## 7. Results
+contract.result
+  format
+  schema?
+  kind
 
-Results read canonical measurements/samples directly and never require Design. Deterministic code owns FW/RV pairing, hysteresis, ranking, quality gates, Top REF/non-REF, anomalies, curve data and group comparison. JV Analyzer inspects one measurement with FW/RV parameter deltas, RAW point integrity and descriptive scan separation; Overlay is a separate multi-curve comparison view.
+contract.effect
+  mode
+  writes[]
 
-AI Results interpretation is optional prose layered on these deterministic values.
+contract.guards[]
 
-## 8. Design
+execution
+  mode
+  result_step
+  steps[]
+```
 
-The Design page is researcher-first and useful without AI. Deterministic analysis prepares the experiment rail, identity links, available formulations/process/stack data, evidence and missing-field inventory immediately after import. The researcher edits the selected experiment directly.
+The manifest is the source of truth for execution and UI introspection. Old alternate manifest forms are not supported.
 
-A separate **Knowledge Base** provides optional AI context from two bundled JSON sources: `knowledge-base/science.json` for sourced scientific records and `knowledge-base/labflow.json` for product/workflow help. It is ready at startup with no folder, permission, external database or enable/disable switch. Selected scientific Actions perform small local searches and receive `knowledge_context` only when useful records are found; the Assistant may also retrieve LabFlow guides. A miss or lookup failure never blocks an Action. Design never copies records directly into scientific state: used scientific IDs remain on the reviewable proposal and the normal deterministic fill-only gate protects source/researcher values. The Knowledge Base page supports search, browser-local overrides and JSON import/export. **Reset session** does not modify the bundled library or those overrides.
+## 8. Guard contract
 
-`design.infer` is optional and intentionally narrow. For the selected experiment it suggests only **solution chemistry** and **device stack**, using source evidence first, a small automatically ranked set of scientific Knowledge Base records when useful, and conservative model inference otherwise. A Knowledge Base miss is normal. Suggestions are stored separately per experiment and are never auto-applied: **Accept experiment** validates one, **Accept all suggestions** validates all pending suggestions, and accepted values remain editable. **Suggest all with AI** is only a bounded convenience path (max three experiment IDs per request; a truncated batch is retried one experiment at a time); successful suggestions are saved independently, failures become local retryable experiment states, and Stop/provider errors never discard work already completed.
+Current guard families include:
 
-The active Report/Paper Markdown editor is the single textual source for MD/LaTeX/DOCX/PDF and supports standard inline/display LaTeX formulas. A fresh import starts with both documents empty. Prose is created only by researcher typing or an explicit Draft action. Drafting and AI editing use the shared Experiment Brief and bounded scientific Context Packs; long documents are generated/revised as ordered sections rather than one monolithic prompt. PDF/DOCX append only figures explicitly selected in Report Studio.
+- `dataset.loaded`
+- `review.ambiguities_available`
+- `design.incomplete_target`
+- `results.available`
+- `results.compare_groups`
+- `assistant.question`
 
-## 9. NOMAD
+Guard failure means the Action is unavailable for the current state, not that the provider failed.
 
-NOMAD staging and readiness are deterministic. One revision-scoped Canonical → NOMAD mapping is shared by the UI, validation and generated `experiment.archive.yaml`. Required missing mappings block staging; AI is never authoritative for technical readiness.
+## 9. AI boundary
 
-## 10. UI, privacy and validation
+AI is explicit and optional. It may:
 
-`ui-kit.html` is the visual ground truth. Keep layouts compact/responsive, tables readable, tabs explicit and Action progress truthful. Modal/totem surfaces expose explicit Cancel/Close controls according to lifecycle and support Esc.
+- resolve semantic ambiguity by proposal;
+- suggest missing qualitative Design content;
+- interpret deterministic Results;
+- compare selected Results groups;
+- answer read-only questions.
 
-No runtime `.env`, analytics, trackers, cookies, WebSocket or remote runtime assets. API keys are local browser settings and redacted from logs.
+It must not silently mutate RAW data, recalculate deterministic metrics, or fabricate missing quantitative evidence. Insufficient scientific evidence is a valid non-error outcome where the Action schema allows it.
 
-Before packaging, pass Action/state/UI/privacy validators, unit tests and JavaScript syntax checks.
+## 10. Extensibility
 
+A new Action is added under `actions/<action-id>/` with `action.json` and optional `prompt.md` / `schema.json`. Registry discovery, context profiles, guards and Action-step tools are extensible without a central Action whitelist.
 
-## Bounded long-running Actions
+A new deterministic transformation should normally be a `DataPipeline.register(...)` stage or internal service, not an Action.
 
-Long-running Actions report hierarchical progress instead of estimating completion from raw stream size alone. The visible hierarchy is Action → checkpoint → work unit → phase; SSE events and estimated output tokens refine progress only within the model-response phase. Multi-experiment/multi-section sequences retain one monotonic parent progress indicator.
+## 11. NOMAD
 
-AI steps use adaptive output profiles (`min_output_tokens`, `target_output_tokens`, `max_output_tokens`). Model/provider capability is an absolute ceiling. Report/Paper work units additionally carry word-count targets so scientific drafting receives enough output budget while compact enrich/analysis Actions remain short.
+NOMAD export is deterministic and built from the current validated LabFlow Data. It is not an AI Action.
 
-Design can complete missing variants sequentially with immediate deterministic fill-only application and can also apply older saved AI proposals in one operation. Remaining unsupported gaps stay explicitly incomplete. Report and Paper use independent figure selections and export layouts must wrap long prose, identifiers, formulas and table content in PDF/DOCX.
+## 12. Console API
+
+The running data model and contracts are inspectable through:
+
+```js
+LabFlow.Data.current()
+LabFlow.Data.summary()
+LabFlow.Data.tree()
+LabFlow.Data.validate()
+LabFlow.Data.pipeline()
+LabFlow.Data.actions()
+LabFlow.Data.contracts()
+```
+
+## 13. Validation
+
+A release must pass unit tests, Action/State/UI/Privacy validators, JavaScript syntax checks and the real JV fixture hierarchy regression.

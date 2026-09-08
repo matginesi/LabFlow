@@ -13,18 +13,11 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 
 | Action / AI step | Role | Type | Max input | Target output | Output ceiling | Retries | Inference deadline |
 |---|---|---|---:|---:|---:|---|---:|
-| analysis.enrich | automatic | HYBRID | 6000 | 320 | 700 | 0 semantic | 45 s |
-| analysis.summarize | automatic | DETERMINISTIC | — | — | — | — | — |
-| assistant.chat | assistant | AI | 12000 | 700 | 2048 | 1 semantic | 90 s |
-| dataset.analyze | automatic | DETERMINISTIC | — | — | — | — | — |
-| dataset.correct-safe | researcher | DETERMINISTIC | — | — | — | — | — |
-| dataset.resolve-ambiguities | researcher | HYBRID | 8000 | 1800 | 4096 | 1 semantic | 150 s |
-| design.infer | researcher | HYBRID | 8000 | 420 | 1000 | 0 semantic | 90 s |
-| design.infer-batch | researcher | HYBRID | 10000 | 1200 | 2600 | 0 semantic | 90 s |
-| nomad.prepare | researcher | DETERMINISTIC | — | — | — | — | — |
-| report.generate | researcher | HYBRID | 12000 | 3600 | 5000 | 0 semantic | 240 s |
-| report.improve | researcher | HYBRID | 12000 | 3200 | 5000 | 0 semantic | 240 s |
-| results.interpret | researcher | HYBRID | 10000 | 1400 | 3072 | 1 semantic | 150 s |
+| assistant.chat | assistant | ai | 12000 | 650 | 2048 | 1 semantic | 90 s |
+| dataset.resolve-ambiguities | researcher | hybrid | 7000 | 800 | 1800 | 1 semantic | 120 s |
+| design.infer | researcher | hybrid | 6500 | 520 | 1200 | 1 semantic | 90 s |
+| results.compare | researcher | hybrid | 7000 | 520 | 1200 | 1 semantic | 120 s |
+| results.interpret | researcher | hybrid | 9000 | 600 | 1400 | 1 semantic | 120 s |
 
 ## How to read the table
 
@@ -36,9 +29,9 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 
 ## Important special cases
 
-- `analysis.enrich` is automatic, small and non-blocking. It has no Action retry; deterministic import remains valid if enrichment fails.
-- `design.infer` and `design.infer-batch` use zero automatic retries. In a multi-experiment Suggest-all run, the first provider throttle stops the sequence and leaves untouched experiments pending.
+- `dataset.resolve-ambiguities` is the only dataset AI Action. It runs only when deterministic naming/linking cannot establish one semantic interpretation and stores proposals for review.
+- `design.infer` is always one experiment per Action run. **Suggest all** sequences the same Action across incomplete experiments; a provider throttle stops further requests while preserving completed suggestions.
+- `results.compare` uses only the selected groups and deterministic statistics already visible in Results; it never recalculates measurements.
 - Z.AI `glm-4.7-flash` is never replaced automatically. A provider 429/`1305` is surfaced once with `Retry-After` when available and creates no local cooldown.
-- Report/Paper Actions split long writing into bounded work units. The table describes one AI work unit, not a promise that the entire document is generated in one provider call.
 
 See [AI runtime and limits](../guides/AI_TOKENS_AND_RATE_LIMITS.md), [AI provider specification](../specs/AI_PROVIDERS.md), and [Action specification](../specs/ACTIONS.md).

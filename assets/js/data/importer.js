@@ -7,7 +7,7 @@
    * The importer owns the mechanics of reading a RAW ZIP (via JSZip), applying
    * the Markdown-driven Data Contract (LF.Parser.rules), and producing the
    * canonical ExperimentData: files (identity by archive `path`, never
-   * basename), entities, and blocks (table / series / key_value) carrying the
+   * basename), domain records, and parsed blocks (table / series / key_value) carrying the
    * parsed scientific data. RAW bytes are immutable and retained verbatim.
    *
    * Deterministic semantics (naming, recovery, guardrails) live in the Markdown
@@ -22,8 +22,119 @@
   const Log = LF.Logger.scope('importer');
   const P = LF.Parser;
   const DM = LF.DataModel;
+  const DS = LF.DomainSchema;
 
   function basenamePath(path) { return String(path || '').split('/').filter(Boolean).pop() || ''; }
+
+
+  function parentPath(path) {
+    const parts = String(path || '').replace(/\\/g, '/').split('/').filter(Boolean);
+    if (parts.length < 2) return '';
+    parts.pop();
+    return parts.join('/');
+  }
+
+  function runLabel(path) { return basenamePath(parentPath(path)); }
+
+  function measurementSequence(fileName) {
+    const match = basenamePath(fileName).match(/^(\d+)_/);
+    return match ? Number(match[1]) : null;
+  }
+
+  function hierarchyForSample(sampleName) {
+    if (P.sampleHierarchy) return P.sampleHierarchy(sampleName);
+    const sample = P.canonicalSample(sampleName);
+    const experiment = P.groupFromSample(sample);
+    return { sample: sample, experiment: experiment, position: '', cell: '', matched: false };
+  }
+
+  /*
+   * Materialize the acquisition hierarchy that is already encoded by the RAW
+   * archive instead of flattening every JV result into an "experiment":
+   * dataset -> experiment/condition -> sample/cell -> run -> measurement -> scan.
+   */
+  function buildAcquisitionHierarchy(samples, measurements, auxiliaryEvidence) {
+    const experimentMap = new Map(), runMap = new Map(), sampleByName = new Map();
+
+    function ensureExperiment(name, isRef) {
+      const key = String(name || '').trim() || 'Unknown experiment';
+      if (!experimentMap.has(key)) {
+        experimentMap.set(key, DS.create('experiment', { name: key, isRef: !!isRef, sampleIds: [], sampleNames: [], runIds: [], measurementIds: [] }));
+      }
+      const experiment = experimentMap.get(key);
+      experiment.isRef = experiment.isRef || !!isRef;
+      return experiment;
+    }
+
+    samples.forEach(function (sample) {
+      const h = hierarchyForSample(sample.name);
+      sample.name = h.sample;
+      sample.group = h.experiment;
+      sample.experiment = h.experiment;
+      sample.position = h.position || '';
+      sample.cell = h.cell || '';
+      sample.runIds = Array.isArray(sample.runIds) ? sample.runIds : [];
+      sample.measurementIds = Array.isArray(sample.measurementIds) ? sample.measurementIds : [];
+      const experiment = ensureExperiment(h.experiment, sample.isRef);
+      sample.experimentId = experiment.id;
+      if (!experiment.sampleIds.includes(sample.id)) experiment.sampleIds.push(sample.id);
+      if (!experiment.sampleNames.includes(sample.name)) experiment.sampleNames.push(sample.name);
+      sampleByName.set(sample.name, sample);
+    });
+
+    function ensureRun(path, sampleName) {
+      const dir = parentPath(path);
+      const sample = sampleByName.get(P.canonicalSample(sampleName));
+      if (!dir || !sample) return null;
+      const key = sample.id + '|' + dir;
+      if (!runMap.has(key)) {
+        const run = DS.create('run', { path: dir, label: runLabel(path), sampleId: sample.id, sample: sample.name, experimentId: sample.experimentId, experiment: sample.experiment, measurementIds: [], evidencePaths: [] });
+        runMap.set(key, run);
+        if (!sample.runIds.includes(run.id)) sample.runIds.push(run.id);
+        const experiment = experimentMap.get(sample.experiment);
+        if (experiment && !experiment.runIds.includes(run.id)) experiment.runIds.push(run.id);
+      }
+      return runMap.get(key);
+    }
+
+    measurements.forEach(function (measurement) {
+      const sample = sampleByName.get(P.canonicalSample(measurement.sample));
+      if (!sample) return;
+      measurement.sampleId = sample.id;
+      measurement.group = sample.experiment;
+      measurement.experiment = sample.experiment;
+      measurement.experimentId = sample.experimentId;
+      measurement.position = sample.position;
+      measurement.cell = sample.cell;
+      measurement.sequence = measurementSequence(measurement.rawFile || measurement.file || measurement.path);
+      const run = ensureRun(measurement.path, sample.name);
+      measurement.runId = run ? run.id : null;
+      if (run && !run.measurementIds.includes(measurement.id)) run.measurementIds.push(measurement.id);
+      const experiment = experimentMap.get(sample.experiment);
+      if (experiment && !experiment.measurementIds.includes(measurement.id)) experiment.measurementIds.push(measurement.id);
+    });
+
+    (auxiliaryEvidence || []).forEach(function (aux) {
+      const h = hierarchyForSample(aux.sample);
+      aux.sample = h.sample;
+      aux.group = h.experiment;
+      aux.experiment = h.experiment;
+      aux.position = h.position || '';
+      aux.cell = h.cell || '';
+      const sample = sampleByName.get(h.sample);
+      if (!sample) return;
+      aux.sampleId = sample.id;
+      aux.experimentId = sample.experimentId;
+      const run = ensureRun(aux.path, sample.name);
+      aux.runId = run ? run.id : null;
+      if (run && aux.path && !run.evidencePaths.includes(aux.path)) run.evidencePaths.push(aux.path);
+    });
+
+    return {
+      experiments: Array.from(experimentMap.values()).sort(function (a, b) { return a.name.localeCompare(b.name); }),
+      runs: Array.from(runMap.values()).sort(function (a, b) { return a.path.localeCompare(b.path); })
+    };
+  }
 
   async function sha256Hex(bytes) {
     if (!bytes || !globalThis.crypto || !crypto.subtle || !crypto.subtle.digest) return '';
@@ -45,7 +156,7 @@
   }
 
   function finding(severity, type, title, detail, target, evidence) {
-    return { id: C.uid('finding'), severity: severity, type: type, title: title, detail: detail, target: target || '', evidence: evidence || [], status: 'open', source: 'deterministic' };
+    return DS.create('finding', { severity: severity, type: type, title: title, detail: detail, target: target || '', evidence: evidence || [], status: 'open', source: 'deterministic' });
   }
 
   const METRIC_COLUMNS = [{ name: 'voc', unit: 'V' }, { name: 'jsc', unit: 'mA/cm²' }, { name: 'vmpp', unit: 'V' }, { name: 'jmpp', unit: 'mA/cm²' }, { name: 'pmpp', unit: 'mW/cm²' }, { name: 'rs', unit: 'Ohm' }, { name: 'rsh', unit: 'Ohm' }, { name: 'ff', unit: '%' }, { name: 'eff', unit: '%' }];
@@ -61,6 +172,23 @@
     return row;
   }
 
+
+  async function restoreLabFlowSave(zip, sourceName, onProgress) {
+    const marker=zip.file('labflow.json'), dataFile=zip.file('experiment.json');
+    if(!marker||!dataFile)return null;
+    let info=null;try{info=JSON.parse(await marker.async('string'));}catch(_err){return null;}
+    if(!info||info.format!=='labflow-save')return null;
+    if(onProgress)onProgress({stage:'Restoring LabFlow ZIP',progress:0.2});
+    const data=JSON.parse(await dataFile.async('string'));
+    const exp=DM.hydrate(data);
+    const rawFile=zip.file('raw/source.zip');
+    exp.raw=exp.raw||{};
+    exp.raw.sourceArchive=rawFile?await rawFile.async('arraybuffer'):null;
+    exp.meta=exp.meta||{};exp.meta.importMethod='labflow-save';
+    if(onProgress)onProgress({stage:'LabFlow ZIP restored',progress:1});
+    Log.info('dataset.labflow-save-restored',{sourceName:sourceName,experimentId:exp.id,revision:exp.sync&&exp.sync.revision||0,measurements:(exp.measurements||[]).length,rawIncluded:!!rawFile});
+    return exp;
+  }
   async function parseDataset(arrayBuffer, sourceName, onProgress) {
     const end = Log.timer('dataset.parse', { sourceName: sourceName, bytes: arrayBuffer && arrayBuffer.byteLength || 0 });
     if (!window.JSZip) { const err = new Error('JSZip is not available.'); end({ error: err }, 'error'); throw err; }
@@ -77,9 +205,11 @@
 
     if (onProgress) onProgress({ stage: 'Opening ZIP', progress: 0.03 });
     const zip = await JSZip.loadAsync(arrayBuffer);
+    const restored=await restoreLabFlowSave(zip,sourceName,onProgress);
+    if(restored){end({datasetId:restored.id,name:restored.meta&&restored.meta.name,restored:true,measurements:(restored.measurements||[]).length},'info');return restored;}
     const entries = Object.values(zip.files);
     const manifest = entries.map(function (f) {
-      return { path: f.name, name: basenamePath(f.name), directory: !!f.dir, type: f.dir ? 'directory' : P.classify(f.name) };
+      return DS.create('manifest_entry', { path: f.name, name: basenamePath(f.name), directory: !!f.dir, type: f.dir ? 'directory' : P.classify(f.name) });
     });
     const fileEntries = manifest.filter(function (x) { return !x.directory; });
     const typeCounts = manifest.reduce(function (acc, x) { acc[x.type] = (acc[x.type] || 0) + 1; return acc; }, {});
@@ -93,7 +223,6 @@
        a decoded string used for format evidence and parsing. */
     const fileRecords = [];
     const textByPath = new Map();
-    const bytesByPath = new Map();
     for (let i = 0; i < fileEntries.length; i++) {
       const entry = fileEntries[i];
       let bytes = null;
@@ -104,7 +233,6 @@
       }
       let record = null;
       if (bytes) {
-        bytesByPath.set(entry.path, bytes);
         const canonicalName = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
         const file = DM.addFile(exp, {
           path: entry.path, rawPath: entry.path, name: canonicalName, rawName: entry.name, canonicalName: canonicalName,
@@ -132,7 +260,7 @@
     for (let i = 0; i < textFiles.length; i++) {
       const entry = textFiles[i];
       const text = textByPath.get(entry.path);
-      if (text != null) rawFormatEvidence.push(P.formatEvidence(entry, text));
+      if (text != null) rawFormatEvidence.push(DS.create('format_evidence', P.formatEvidence(entry, text)));
     }
     Log.info('dataset.format-evidence', { files: rawFormatEvidence.length });
 
@@ -197,24 +325,22 @@
     const rvMap = new Map(rvSummary.map(function (m) { return [m.file, m]; }));
     const measurementMap = new Map();
     const sampleMap = new Map();
-    const sampleEntityById = new Map();
 
-    function sampleEntity(sampleName, rawSample, group, isRef) {
-      if (!sampleMap.has(sampleName)) {
-        const ent = DM.addEntity(exp, { kind: 'sample', name: sampleName, rawName: rawSample || sampleName, isRef: !!isRef, group: group || '', meta: {} });
-        sampleEntityById.set(ent.id, true);
-        sampleMap.set(sampleName, { id: C.uid('sample'), name: sampleName, rawName: rawSample || sampleName, group: group, isRef: isRef, measurementIds: [] });
+    function sampleRecord(sampleName, rawSample, group, isRef) {
+      const h = hierarchyForSample(sampleName), key = h.sample, experiment = h.experiment || group || key;
+      if (!sampleMap.has(key)) {
+        sampleMap.set(key, DS.create('sample', { name: key, rawName: rawSample || sampleName, isRef: !!isRef, group: experiment, experiment: experiment, position: h.position || '', cell: h.cell || '', meta: {} }));
       }
-      return sampleMap.get(sampleName);
+      return sampleMap.get(key);
     }
 
     function measureFromSummary(fileKey, path, fw, rv) {
       const sample = P.canonicalSample(P.sampleFromFilename ? P.sampleFromFilename(fileKey, path) : fileKey);
       const group = P.groupFromSample(sample);
       const isRef = P.isReference(sample);
-      const s = sampleEntity(sample, fileKey, group, isRef);
+      const s = sampleRecord(sample, fileKey, group, isRef);
       const canonicalFile = P.canonicalFileName ? P.canonicalFileName(fileKey) : fileKey;
-      const m = { id: C.uid('m'), file: canonicalFile, rawFile: fileKey, path: path || '', rawSample: fileKey, sample: sample, sampleAliases: Array.from(new Set([fileKey, canonicalFile].filter(Boolean))), identitySource: 'filename', group: group, isRef: isRef, fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {}, source: 'summary', excluded: false, recoveries: [] };
+      const m = DS.create('measurement', { file: canonicalFile, rawFile: fileKey, path: path || '', rawSample: fileKey, sample: sample, sampleAliases: Array.from(new Set([fileKey, canonicalFile].filter(Boolean))), identitySource: 'filename', group: group, isRef: isRef, fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {}, source: 'summary', excluded: false, recoveries: [] });
       s.measurementIds.push(m.id);
       return m;
     }
@@ -253,9 +379,9 @@
         const sample = P.canonicalSample(parsed.sample != null && parsed.sample !== unknownLabel ? parsed.sample : P.sampleFromFilename ? P.sampleFromFilename(entry.name, entry.path) : entry.name);
         const group = P.groupFromSample(sample);
         const isRef = P.isReference(sample);
-        const s = sampleEntity(sample, parsed.sample, group, isRef);
+        const s = sampleRecord(sample, parsed.sample, group, isRef);
         const canonicalFile = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
-        m = { id: C.uid('m'), file: canonicalFile, rawFile: entry.name, path: entry.path, rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile, parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename', group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file', excluded: false, recoveries: [] };
+        m = DS.create('measurement', { file: canonicalFile, rawFile: entry.name, path: entry.path, rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile, parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename', group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file', excluded: false, recoveries: [] });
         s.measurementIds.push(m.id);
         measurementMap.set(entry.path, m);
       }
@@ -265,7 +391,7 @@
          `General info.Device` value. Original names remain provenance/aliases. */
       const parsedSample=P.canonicalSample(parsed.sample);
       if(parsed.sample!==unknownLabel&&parsedSample&&parsedSample!==m.sample){
-        const previousSample=m.sample,group=P.groupFromSample(parsedSample),isRef=P.isReference(parsedSample),target=sampleEntity(parsedSample,parsed.sample,group,isRef);
+        const previousSample=m.sample,group=P.groupFromSample(parsedSample),isRef=P.isReference(parsedSample),target=sampleRecord(parsedSample,parsed.sample,group,isRef);
         const previous=sampleMap.get(previousSample);if(previous)previous.measurementIds=previous.measurementIds.filter(function(id){return id!==m.id;});
         if(!target.measurementIds.includes(m.id))target.measurementIds.push(m.id);
         m.sample=parsedSample;m.group=group;m.isRef=isRef;m.rawSample=parsed.sample;
@@ -300,19 +426,20 @@
       let aux;
       try { aux = P.parseAuxiliaryFile(text, entry.name, entry.path, entry.type); }
       catch (err) { Log.warn('dataset.aux-parse-failed', { path: entry.path, error: err }); findings.push(finding('warning', 'parse', 'Could not read ' + entry.type + ' evidence', String(err.message || err), entry.path, [entry.path])); continue; }
-      auxiliaryEvidence.push(aux);
+      auxiliaryEvidence.push(DS.create('auxiliary_evidence', aux));
     }
 
     if (onProgress) onProgress({ stage: 'Building canonical measurements', progress: 0.96 });
     const measurements = Array.from(measurementMap.values());
+    const samples = Array.from(sampleMap.values()).filter(function (sample) { return (sample.measurementIds || []).length > 0; });
+    const hierarchy = buildAcquisitionHierarchy(samples, measurements, auxiliaryEvidence);
     if (!measurements.length) findings.push(finding('danger', 'no-measurements', 'No JV measurements parsed', 'Neither configured summaries nor individual JV fallback produced usable measurements.', 'root', []));
 
     /* ---- canonical blocks ---- */
-    const directionCounters = { fw: {}, rv: {} };
     function jvName(sample, direction, kind) { return sample + ' ' + direction + ' ' + kind; }
-    function entityKey(name) {
-      const ent = exp.entities.find(function (e) { return e.kind === 'sample' && e.name === name; });
-      return ent ? ent.id : null;
+    function sampleKey(name) {
+      const sample = samples.find(function (s) { return s.name === name; });
+      return sample ? sample.id : null;
     }
     function fileIdOf(path) {
       const f = exp.files.find(function (x) { return x.path === path; });
@@ -323,7 +450,7 @@
       const id = DM.addBlock(exp, {
         type: 'table', family: 'jv', name: jvName(sample, direction.toUpperCase(), 'metrics'), direction: direction,
         file: { id: fileIdOf(filePath), path: filePath, locator: locator || null },
-        entities: [entityKey(sample)].filter(Boolean),
+        refs: [sampleKey(sample) ? {kind:'sample',id:sampleKey(sample)} : null].filter(Boolean),
         schema: { columns: METRIC_COLUMNS.map(function (c) { return { name: c.name, unit: c.unit }; }) },
         data: { header: METRIC_KEYS.slice(), rows: [row] }, metadata: {}
       });
@@ -333,7 +460,7 @@
       return DM.addBlock(exp, {
         type: 'series', family: 'jv', name: jvName(sample, direction.toUpperCase(), 'curve'), direction: direction,
         file: { id: fileIdOf(filePath), path: filePath, locator: null },
-        entities: [entityKey(sample)].filter(Boolean),
+        refs: [sampleKey(sample) ? {kind:'sample',id:sampleKey(sample)} : null].filter(Boolean),
         schema: { columns: [{ name: 'v', unit: 'V' }, { name: 'j', unit: 'mA/cm²' }] },
         data: { header: ['v', 'j'], rows: (points || []).map(function (pt) { return { v: pt.x, j: pt.y }; }) }, metadata: {}
       });
@@ -345,7 +472,7 @@
       DM.addBlock(exp, {
         type: 'table', family: 'summary', name: 'JV Summary FW', direction: 'fw',
         file: { id: file ? file.id : '', path: file ? file.path : '', locator: { header: 'File' } },
-        entities: [], schema: { columns: SUMMARY_COLUMNS.map(function (c) { return { name: c.name, unit: c.unit || null }; }) },
+        refs: [], schema: { columns: SUMMARY_COLUMNS.map(function (c) { return { name: c.name, unit: c.unit || null }; }) },
         data: { header: SUMMARY_KEYS.slice(), rows: fwSummary.map(function (row) { const out = { file: row.file }; METRIC_KEYS.forEach(function (k) { out[k] = row[k]; }); return out; }) }, metadata: {}
       });
     }
@@ -354,7 +481,7 @@
       DM.addBlock(exp, {
         type: 'table', family: 'summary', name: 'JV Summary RV', direction: 'rv',
         file: { id: file ? file.id : '', path: file ? file.path : '', locator: { header: 'File' } },
-        entities: [], schema: { columns: SUMMARY_COLUMNS.map(function (c) { return { name: c.name, unit: c.unit || null }; }) },
+        refs: [], schema: { columns: SUMMARY_COLUMNS.map(function (c) { return { name: c.name, unit: c.unit || null }; }) },
         data: { header: SUMMARY_KEYS.slice(), rows: rvSummary.map(function (row) { const out = { file: row.file }; METRIC_KEYS.forEach(function (k) { out[k] = row[k]; }); return out; }) }, metadata: {}
       });
     }
@@ -371,12 +498,12 @@
     auxiliaryEvidence.forEach(function (aux) {
       const family = aux.type === 'tracking' ? 'tracking' : 'parameters';
       const fileId = fileIdOf(aux.path);
-      const sampleId = entityKey(aux.sample);
+      const sampleId = sampleKey(aux.sample);
       const metaPairs = Object.keys(aux.meta || {}).map(function (key) { return { key: key, value: String(aux.meta[key] == null ? '' : aux.meta[key]) }; });
       if (metaPairs.length) {
         DM.addBlock(exp, {
           type: 'key_value', family: family, name: basenamePath(aux.path) + ' metadata',
-          file: { id: fileId, path: aux.path, locator: null }, entities: (sampleId ? [sampleId] : []),
+          file: { id: fileId, path: aux.path, locator: null }, refs: (sampleId ? [{kind:'sample',id:sampleId}] : []),
           schema: { columns: [{ name: 'key' }, { name: 'value' }] },
           data: { header: ['key', 'value'], rows: metaPairs }, metadata: {}
         });
@@ -384,7 +511,7 @@
       if (aux.dataColumns && aux.dataColumns.length && aux.rowCount > 0) {
         DM.addBlock(exp, {
           type: 'table', family: family, name: basenamePath(aux.path) + ' series',
-          file: { id: fileId, path: aux.path, locator: null }, entities: (sampleId ? [sampleId] : []),
+          file: { id: fileId, path: aux.path, locator: null }, refs: (sampleId ? [{kind:'sample',id:sampleId}] : []),
           schema: { columns: aux.dataColumns.map(function (c) { return { name: c, unit: null }; }) },
           data: { header: aux.dataColumns.slice(), rows: [] }, metadata: { rowCount: aux.rowCount }
         });
@@ -398,15 +525,18 @@
 
     exp.manifest = manifest;
     exp.rawFormatEvidence = rawFormatEvidence;
-    exp.samples = Array.from(sampleMap.values());
+    exp.experiments = hierarchy.experiments;
+    exp.samples = samples;
+    exp.runs = hierarchy.runs;
     exp.measurements = measurements;
     exp.auxiliaryEvidence = auxiliaryEvidence;
     exp.findings = findings;
     exp.patches = exp.patches || [];
+    DM.normalize(exp);
     if (onProgress) onProgress({ stage: 'Import complete', progress: 1 });
     end({
-      experimentId: exp.id, name: exp.meta.name, files: fileEntries.length,
-      samples: exp.samples.length, measurements: exp.measurements.length,
+      datasetId: exp.id, name: exp.meta.name, files: fileEntries.length,
+      experiments: exp.experiments.length, samples: exp.samples.length, runs: exp.runs.length, measurements: exp.measurements.length,
       blocks: exp.blocks.length, findings: exp.findings.length,
       summaryFW: fwSummary.length, summaryRV: rvSummary.length, jvFiles: jvFiles.length
     }, 'info');

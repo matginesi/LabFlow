@@ -1,54 +1,65 @@
 {
   "id": "results.interpret",
-  "type": "HYBRID",
+  "title": "Interpret experiment results",
+  "short_title": "Interpret results",
   "category": "results",
   "role": "researcher",
-  "title": "Interpret results",
-  "short_title": "Interpret results",
-  "purpose": "Explain deterministic results scientifically without recalculating or changing them.",
-  "strategy": "AI receives a compact Results Context Pack plus a small relevant Knowledge Base slice for labelled mechanisms and follow-up hypotheses. Literature never changes deterministic results.",
-  "output": "text",
-  "mutation_scope": "",
-  "policies": [
-    "policy.scientific-provenance"
-  ],
-  "steps": [
-    {
-      "id": "interpret",
-      "type": "AI",
-      "prompt": "prompt.md",
-      "output": "text",
-      "thinking": "off",
-      "timeout_ms": 240000,
-      "max_output_tokens": 3072,
-      "deadline_ms": 150000,
-      "max_retries": 1,
-      "min_output_tokens": 600,
-      "target_output_tokens": 1400,
-      "max_input_tokens": 10000
-    },
-    {
-      "id": "store",
-      "type": "DETERMINISTIC",
-      "tool": "results.store-interpretation"
-    }
-  ],
-  "version": 1,
-  "input_scope": "working-copy.results",
   "visibility": "public",
-  "requires": [],
-  "input": {
-    "context": "results",
-    "knowledge": {
-      "limit": 6,
-      "kinds": [
-        "material",
-        "solution",
-        "process",
-        "stack",
-        "concept"
-      ],
-      "query_hint": "performance hysteresis stability mechanism follow-up"
-    }
+  "purpose": "Produce a structured scientific interpretation of deterministic Results without recalculating or modifying measurements.",
+  "strategy": "The model receives deterministic summary statistics, rankings, anomalies and open findings. It must separate observations from hypotheses, cite evidence identifiers where available, and expose limitations and next checks.",
+  "policies": [
+    "policy.scientific-provenance",
+    "policy.structured-output"
+  ],
+  "contract": {
+    "target": {
+      "kind": "results_bundle",
+      "cardinality": "one"
+    },
+    "context": {
+      "profile": "results",
+      "scope": "current_results"
+    },
+    "result": {
+      "format": "json",
+      "schema": "results_interpretation",
+      "kind": "derived_annotation"
+    },
+    "effect": {
+      "mode": "store_derived",
+      "writes": [
+        "experiment.actionData.annotations.results.interpret"
+      ]
+    },
+    "guards": [
+      "dataset.loaded",
+      "results.available"
+    ]
+  },
+  "execution": {
+    "mode": "hybrid",
+    "result_step": "interpret",
+    "steps": [
+      {
+        "id": "interpret",
+        "type": "AI",
+        "prompt": "prompt.md",
+        "output": "json",
+        "schema": "results_interpretation",
+        "thinking": "off",
+        "timeout_ms": 120000,
+        "max_output_tokens": 1400,
+        "deadline_ms": 120000,
+        "max_retries": 1,
+        "min_output_tokens": 100,
+        "target_output_tokens": 600,
+        "max_input_tokens": 9000
+      },
+      {
+        "id": "store",
+        "type": "DETERMINISTIC",
+        "tool": "results.store-interpretation"
+      }
+    ]
   }
 }

@@ -3,6 +3,7 @@
   const LF=window.LabFlow=window.LabFlow||{};
   const C=LF.Core;
   const Log=LF.Logger.scope('ai');
+  function logModel(providerId,model){return C&&C.modelDisplayName?C.modelDisplayName(providerId,model):String(model==null?'':model);}
   let inFlight=false;
   let activeRequest=null;
   let injectedController=null;
@@ -57,6 +58,13 @@
     try{parsed=new URL(String(url||''));}catch(_){throw new Error('AI endpoint is not a valid URL.');}
     if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')throw new Error('AI endpoint must use http:// or https://.');
     return parsed.toString();
+  }
+  function providerRequestUrl(provider,url){
+    const relay=provider&&String(provider.browserRelayPath||'').trim();
+    if(!relay||typeof location==='undefined'||!location)return url;
+    if(String(location.protocol||'')==='file:')return 'http://127.0.0.1:8000'+relay;
+    if(!/^https?:$/.test(String(location.protocol||'')))return url;
+    try{return new URL(relay,location.origin).toString();}catch(_){return relay;}
   }
   function isLocalAddress(url){
     let host='';
@@ -116,14 +124,17 @@
   function parseProviderError(text,status,requestId,headers){
     let code='',message='',providerType='';
     try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
-    catch(_){message=String(text||'').replace(/\s+/g,' ').slice(0,420);}
+    catch(_){message=String(text||'').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,420);}
+    const providerId=LF.Storage&&LF.Storage.getAiSettings?(LF.Storage.getAiSettings()||{}).provider:'';
+    const relayUnsupported=providerId==='zai'&&Number(status)===501&&/unsupported method|server does not support/i.test(message);
+    if(relayUnsupported){code='LABFLOW_RELAY_UNAVAILABLE';message='This web server cannot forward Z.AI requests. Start LabFlow with its bundled server, then retry.';}
     const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
     if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
     const limit=overflow?{limited:false,retryable:false,kind:'',label:''}:limitInfo(effectiveStatus,code,message);
-    const label=overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
+    const label=relayUnsupported?'Z.AI relay unavailable':overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
     const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code,message):'';
     const err=new Error(label+(overflow&&overflow.promptTokens&&overflow.contextWindow?' · '+overflow.promptTokens+' input tokens > '+overflow.contextWindow+' context tokens':'')+(!overflow&&code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
+    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':relayUnsupported?'LABFLOW_RELAY_UNAVAILABLE':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=relayUnsupported?'':String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
     if(overflow){err.promptTokens=overflow.promptTokens;err.contextWindow=overflow.contextWindow;err.isContextOverflow=true;}
     return err;
   }
@@ -304,11 +315,12 @@
     const provider=(LF.AIProviders&&LF.AIProviders[settings.provider])||{};
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||settings.provider)+' requires an API key. Open Settings.');
-    const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    const officialUrl=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    const url=providerRequestUrl(provider,officialUrl);
     const baseHeaders=providerAuthHeaders(provider,key);
     const headers=Object.assign({'Content-Type':'application/json'},baseHeaders);
     // Avoid duplicating auth header construction; providerAuthHeaders is the single source
-    return{settings:settings,provider:provider,url:url,headers:headers};
+    return{settings:settings,provider:provider,url:url,officialUrl:officialUrl,headers:headers};
   }
 
   /** Build an isolated config for local diagnostics without depending on saved streaming choices. */
@@ -318,7 +330,8 @@
     const settings=Object.assign({},saved,{provider:providerId,endpoint:String(endpoint||saved.endpoint||''),model:String(model||saved.model||''),streaming:true,thinkingMode:'off'});
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
-    return{settings:settings,provider:provider,url:validateHttpUrl(resolveChatUrl(settings.endpoint)),headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
+    const officialUrl=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    return{settings:settings,provider:provider,url:providerRequestUrl(provider,officialUrl),officialUrl:officialUrl,headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
   }
 
   function textFrom(value){
@@ -433,7 +446,9 @@
       if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
     if(id==='zai'){
-      if(/^glm-4\.7-flash(?:x)?(?:[.-]|$)/.test(m))return{maxOutputTokens:null,contextWindow:200000,exactOutput:false,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification · output maximum not assumed'};
+      if(/^glm-5\.3(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','high','max'],reasoningDefault:'max',source:'Z.AI model specification'};
+      if(/^glm-5\.2(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
+      if(/^glm-4\.7-flash(?:x)?(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
       if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
       if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
     }
@@ -533,6 +548,11 @@
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
     const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers=providerAuthHeaders(provider,key);
     const started=performance.now();
+    if(provider.remoteModelMetadata===false&&provider.staticModelCatalogue===true&&Array.isArray(provider.knownModels)){
+      const models=Array.from(new Set(provider.knownModels.map(String).filter(Boolean)));
+      Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:0,skipped:false,reason:'documented-static-catalogue'});
+      return{models:models,loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'documented provider catalogue snapshot',static:true,skipped:false};
+    }
     if(provider.remoteModelMetadata===false){
       Log.info('models.list',{provider:activeProviderId,count:0,loaded:0,skipped:true,reason:'configured-model-only'});
       return{models:[],loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'configured model · built-in capability metadata',skipped:true};
@@ -676,6 +696,13 @@
     try{
       r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
     }catch(err){
+      const providerId=String(spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),localOrigin=typeof location!=='undefined'&&location&&isLocalAddress(String(location.origin||'')),relayPath=String(spec.provider&&spec.provider.browserRelayPath||''),fallbackUrl='http://127.0.0.1:8000'+relayPath;
+      if(err&&err.code==='LABFLOW_RELAY_UNAVAILABLE'&&providerId==='zai'&&localOrigin&&relayPath&&String(spec.url)!==fallbackUrl){
+        Log.warn('relay.same-origin-unavailable',{from:spec.url,to:fallbackUrl,retry:'local-relay-only'});
+        r=await request(fallbackUrl,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
+      }
+      if(r){/* The rejected request was handled by a static server, never by Z.AI. */}
+      else {
       if(isRateLimitError(err)){
         const retryMs=Math.max(0,Number(err.retryAfterMs)||0);
         err.retryInMs=retryMs;
@@ -683,6 +710,7 @@
         if(opts.onProgress)opts.onProgress({transportState:'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:0,retries:0,willRetry:false});
       }
       throw err;
+      }
     }
     const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),normalized=normalizeAssistantEnvelope(extracted.content,extracted.reasoning,spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),usage=obj.usage||{},content=normalized.content,reasoning=normalized.reasoning;
     if(normalized.changed)Log.warn('response.reasoning-envelope-normalized',{provider:spec.settings&&spec.settings.provider||'',model:obj.model||spec.settings&&spec.settings.model||'',resultBlocks:normalized.resultBlocks,rawContentChars:String(extracted.content||'').length,finalContentChars:content.length,reasoningChars:reasoning.length});
@@ -692,9 +720,9 @@
     const exactReasoningTokens=usage.completion_tokens_details&&Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?Number(usage.completion_tokens_details.reasoning_tokens):null,estimatedReasoningTokens=reasoning?estimateTokens(reasoning):0,reasoningTokens=exactReasoningTokens==null?estimatedReasoningTokens:exactReasoningTokens,answerTokens=Math.max(0,completionTokens-reasoningTokens);
     const normalizedUsage={promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,reasoningTokens:reasoningTokens,answerTokens:answerTokens,reasoningEstimated:exactReasoningTokens==null&&!!reasoning,estimated:!obj.usage};
     const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),httpRequests=1+controlRequests;
-    if(spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:obj.model||spec.settings.model,reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
+    if(spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
     if(!content){
-      Log.warn('response.empty-content',{model:obj.model||spec.settings.model,finishReason:extracted.finishReason,reasoningChars:reasoning.length,completionTokens:completionTokens,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
+      Log.warn('response.empty-content',{model:logModel(spec.settings.provider,obj.model||spec.settings.model),finishReason:extracted.finishReason,reasoningChars:reasoning.length,completionTokens:completionTokens,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
       const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
       const hint=reasoning?' The provider returned reasoning but no final answer; the completion budget may have been consumed before the final response.':'';
       const emptyError=new Error('The model returned no final text.'+suffix+hint);
@@ -703,7 +731,7 @@
       emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.requestElapsedMs=r.elapsedMs;emptyError.generationMs=generationMs;emptyError.ttftMs=ttftMs;emptyError.tokensPerSecond=tps;emptyError.usage=normalizedUsage;emptyError.model=obj.model||spec.settings.model;emptyError.requestedMaxTokens=positiveInt(spec.body.max_completion_tokens||spec.body.max_tokens||spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';emptyError.reasoningObserved=reasoningObserved;emptyError.reasoningControlRequests=controlRequests;emptyError.reasoningControlOk=r.reasoningControlResult&&r.reasoningControlResult.ok===true;
       throw emptyError;
     }
-    Log.info('request.timing',{provider:spec.settings.provider,model:obj.model||spec.settings.model,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
+    Log.info('request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
     return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
   }
 
@@ -716,6 +744,7 @@
     isBusy:function(){return inFlight;},
     resolveChatUrl:resolveChatUrl,
     validateHttpUrl:validateHttpUrl,
+    providerRequestUrl:providerRequestUrl,
     estimateTokens:estimateTokens,
     estimatePromptTokens:estimatePromptTokens,
     isLocalAddress:isLocalAddress,

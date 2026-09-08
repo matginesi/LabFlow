@@ -378,7 +378,7 @@ def dirty_files() -> dict[str, str]:
     }
     summary_records = records[:-1] + [orphan]
     files: dict[str, str] = {
-        f"{archive_root}/JV Summary.txt": "Legacy export; mixed delimiters and incomplete rows\nFile;Scan;Voc;Jsc;PCE\nunknown;FW;1,1;22,0;18,2\n",
+        f"{archive_root}/JV Summary.txt": "Unsupported export; mixed delimiters and incomplete rows\nFile;Scan;Voc;Jsc;PCE\nunknown;FW;1,1;22,0;18,2\n",
         f"{archive_root}/JV Summary_Parameters FW.txt": summary_text(summary_records, "FW", damaged_header=True),
         f"{archive_root}/JV Summary Parameters RV.txt": "Filename;Voc;Jsc;FF;PCE\nmalformed;1,10;22,0;78;18,9\n",
         f"{archive_root}/notes/unverified_export.csv": "sample,pce,comment\nTREAT_X-1A,99.9,unverified manual export\n",

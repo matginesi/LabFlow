@@ -15,7 +15,7 @@
   const badge = PS.badge;
   let renderedRoute = '';
   const scrollMemory=new Map();
-  let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false,reportPreviewTimer=0;
+  let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false;
   function workspaceUiSnapshot(){return{route:S.state.route||S.state.ui&&S.state.ui.route||'experiment-import',resultsTab:S.state.resultsTab||S.state.ui&&S.state.ui.resultsTab||'overview',selectedMeasurementId:S.state.selectedMeasurementId||S.state.ui&&S.state.ui.selectedMeasurementId||null,selectedDesignDeviceId:S.state.selectedDesignDeviceId||S.state.ui&&S.state.ui.selectedDesignDeviceId||null};}
   async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
   function scheduleWorkspaceSave(reason){if(!hasExperiment())return;window.clearTimeout(workspaceSaveTimer);workspaceSaveTimer=window.setTimeout(function(){persistWorkspace(reason||'state');},700);}
@@ -28,7 +28,7 @@
     for(let i=0;i<attrs.length;i++){const v=el.getAttribute&&el.getAttribute(attrs[i]);if(v)return String(route||'')+':'+attrs[i]+':'+v;}
     const parts=[];let cur=el;while(cur&&cur!==root&&parts.length<7){const parent=cur.parentElement;if(!parent)break;const tag=(cur.tagName||'node').toLowerCase(),siblings=Array.from(parent.children).filter(function(x){return x.tagName===cur.tagName;}),idx=Math.max(0,siblings.indexOf(cur));parts.unshift(tag+':'+idx);cur=parent;}return String(route||'')+':path:'+parts.join('/');
   }
-  const SCROLL_MEMORY_SELECTOR=['.table-wrap','.scroll-region','.scroll-x-region','.logs-table-wrap','.logs-focus-list','.design-variant-cards','.activity-checklist','.changes-scroll','.report-preview','.report-editor-shell','.docs-document','[data-scroll-memory]'].join(',');
+  const SCROLL_MEMORY_SELECTOR=['.table-wrap','.scroll-region','.scroll-x-region','.logs-table-wrap','.logs-focus-list','.design-variant-cards','.activity-checklist','.changes-scroll','.docs-document','[data-scroll-memory]'].join(',');
   function scrollMemoryNodes(root){if(!root)return[];const nodes=[root];if(root.querySelectorAll)Array.from(root.querySelectorAll(SCROLL_MEMORY_SELECTOR)).slice(0,80).forEach(function(el){if(!nodes.includes(el))nodes.push(el);});return nodes;}
   function captureScrollableState(root,route){
     scrollMemoryNodes(root).forEach(function(el){if(!el.scrollTop&&!el.scrollLeft)return;scrollMemory.set(scrollNodeKey(el,root,route),{top:el.scrollTop,left:el.scrollLeft});});
@@ -37,9 +37,9 @@
     if(!root)return;const apply=function(){scrollMemoryNodes(root).forEach(function(el){const state=scrollMemory.get(scrollNodeKey(el,root,route));if(!state)return;if(el.scrollTop!==undefined)el.scrollTop=Math.min(state.top,Math.max(0,el.scrollHeight-el.clientHeight));if(el.scrollLeft!==undefined)el.scrollLeft=Math.min(state.left,Math.max(0,el.scrollWidth-el.clientWidth));});};apply();if(window.requestAnimationFrame)window.requestAnimationFrame(apply);
   }
 
-  function activateDesignProposal(deviceId){
-    const exp=S.state.experiment;if(!exp)return null;const map=exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:null,p=map&&map[deviceId]||null;if(p)exp.aiDesignProposal=p;else if(exp.aiDesignProposal&&exp.aiDesignProposal.targetDeviceId&&String(exp.aiDesignProposal.targetDeviceId)!==String(deviceId))delete exp.aiDesignProposal;return p;
-  }
+  function activateDesignProposal(deviceId){const exp=S.state.experiment;if(!exp||!LF.ActionData)return null;return LF.ActionData.proposal(exp,'design.infer',String(deviceId||''));}
+  function selectedDesignProposal(){return activateDesignProposal(S.state.selectedDesignDeviceId);}
+  function ambiguityPlan(){return hasExperiment()&&LF.ActionData?LF.ActionData.proposal(S.state.experiment,'dataset.resolve-ambiguities'):null;}
 
   function renderDesign() {
     if (!hasExperiment()) return needExperiment();
@@ -55,57 +55,13 @@
   }
 
 
-  function renderReportEditorPreview(markdown){
-    window.clearTimeout(reportPreviewTimer);reportPreviewTimer=0;
-    const preview=document.getElementById('reportMarkdownRendered');if(!preview)return;
-    const text=String(markdown||''),has=!!text.trim();preview.classList.toggle('report-preview-empty',!has);preview.classList.toggle('markdown-view',has);preview.innerHTML=has?C.markdown(text):'<strong>No document content yet.</strong><span>The preview stays empty until you write or create a draft.</span>';
-    if(has&&LF.Math&&LF.Math.queueTypeset)LF.Math.queueTypeset(preview,70);
-  }
-  function scheduleReportEditorPreview(markdown){window.clearTimeout(reportPreviewTimer);reportPreviewTimer=window.setTimeout(function(){renderReportEditorPreview(markdown);},220);}
 
-  function applyMarkdownTool(tool) {
-    const el=document.getElementById('reportMarkdown');if(!el)return;
-    const value=el.value||'',start=el.selectionStart||0,end=el.selectionEnd||0,selected=value.slice(start,end);
-    let replacement=selected,replaceStart=start,replaceEnd=end,selectStart=start,selectEnd=end;
-    function wrap(a,b,placeholder){const body=selected||placeholder;replacement=a+body+b;selectStart=start+a.length;selectEnd=selectStart+body.length;}
-    function block(prefix,placeholder){
-      replaceStart=value.lastIndexOf('\n',Math.max(0,start-1))+1;const next=value.indexOf('\n',end);replaceEnd=next<0?value.length:next;
-      let body=value.slice(replaceStart,replaceEnd);if(!body.trim())body=placeholder;
-      const lines=body.split(/\r?\n/).map(function(line){return line.replace(/^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+)/,'');});
-      replacement=lines.map(function(line){return prefix+line;}).join('\n');
-      selectStart=replaceStart+(prefix?prefix.length:0);selectEnd=replaceStart+replacement.length;
-    }
-    if(tool==='paragraph')block('','Paragraph text');
-    else if(tool==='h2')block('## ','Section title');
-    else if(tool==='h3')block('### ','Subsection title');
-    else if(tool==='quote')block('> ','Evidence-based note');
-    else if(tool==='ul'||tool==='list')block('- ','First item\nSecond item');
-    else if(tool==='bold')wrap('**','**','important text');
-    else if(tool==='italic')wrap('_','_','emphasized text');
-    else if(tool==='table'){replacement='| Field | Value | Evidence |\n|---|---|---|\n| Example |  |  |\n\n';selectStart=start;selectEnd=start+replacement.length-2;}
-    else if(tool==='code')wrap('`','`','value');
-    else if(tool==='link'){const body=selected||'link text';replacement='['+body+'](https://example.org)';selectStart=start+1;selectEnd=selectStart+body.length;}
-    else if(tool==='inline-math'){const body=selected||'\\eta = \\frac{P_{out}}{P_{in}}';replacement='$'+body+'$';selectStart=start+1;selectEnd=selectStart+body.length;}
-    else if(tool==='block-math'){const body=selected||'\\mathrm{PCE} = \\frac{V_{OC} J_{SC} FF}{P_{in}}';replacement='$$\n'+body+'\n$$\n\n';selectStart=start+3;selectEnd=selectStart+body.length;}
-    else return;
-    el.setRangeText(replacement,replaceStart,replaceEnd,'end');el.focus();el.setSelectionRange(Math.min(selectStart,el.value.length),Math.min(selectEnd,el.value.length));
-    const exp=S.state.experiment;LF.Report.setActiveMarkdown(exp,el.value);markDraft('report');scheduleReportEditorPreview(el.value);
-    Log.debug('report.markdown-tool',{tool:tool,selectionChars:selected.length,replacementChars:replacement.length});
-  }
 
   /**
    * Commit the visible editor before switching document or exporting.
    * This makes the DOM-to-export boundary explicit even when a browser has not
    * yet delivered the final input event (IME, autofill and accessibility tools).
    */
-  function syncActiveReportEditor(reason) {
-    if(!hasExperiment())return null;
-    const el=document.getElementById('reportMarkdown'),before=LF.Report.activeMarkdown(S.state.experiment);
-    if(el&&el.value!==before){LF.Report.setActiveMarkdown(S.state.experiment,el.value);markDraft('report');}commitDraft('report');
-    const info=LF.Report.documentInfo(S.state.experiment);
-    Log.info('report.editor-synchronized',{reason:reason||'manual',document:info.label,words:info.words,chars:info.chars,changed:!!(el&&el.value!==before),updatedAt:info.updatedAt});
-    return info;
-  }
 
 
   /* Render is intentionally synchronous: state changes produce one complete DOM view. */
@@ -119,30 +75,9 @@
     return LF.UIKitInline.render();
   }
 
-  /** The global topbar owns route-specific tools; pages never add a second chrome row. */
-  function renderWorkingCopyState(){
-    const status=document.getElementById('workingCopyState'),save=document.getElementById('saveWorkingCopy'),exportButton=document.getElementById('exportWorkingCopy');
-    if(!status||!save)return;
-    if(!hasExperiment()||S.state.route==='knowledge-base'){status.hidden=true;save.hidden=true;if(exportButton)exportButton.hidden=true;return;}
-    const exp=S.state.experiment,sync=exp.sync||{},dirty=S.isDirty?S.isDirty():!!sync.dirty;
-    status.hidden=false;save.hidden=false;if(exportButton)exportButton.hidden=false;save.disabled=false;
-    status.className='working-copy-state '+(dirty?'dirty':'saved');
-    status.textContent=dirty?'Working copy · autosaved draft':'Working copy · saved checkpoint';
-    save.textContent='Save';
-    if(exportButton)exportButton.textContent='Export ZIP';
-  }
 
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
-  function bindReportImproveSelection(){
-    const el=document.getElementById('reportMarkdown'),btn=document.getElementById('reportImproveSelection');
-    if(!el||!btn)return;
-    function sync(){btn.disabled=!(el.selectionStart!==el.selectionEnd);}
-    sync();
-    el.addEventListener('mouseup',sync);
-    el.addEventListener('keyup',sync);
-    el.addEventListener('input',sync);
-  }
   function renderModelStatus(){
     const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
     const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider))),displayModel=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(settings.provider,settings.model):settings.model;
@@ -169,16 +104,14 @@
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
     const previousRoute=renderedRoute||S.state.route;
     try{captureScrollableState(main,previousRoute);}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
-    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-home'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
-    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=S.state.route==='knowledge-base'?'Scientific context and LabFlow help':hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
+    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute==='experiment-import'?/^experiment-/.test(S.state.route):navRoute===S.state.route;a.classList.toggle('active',active);});
+    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
-    renderWorkingCopyState();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.assistantOpen);if(assistant)assistant.hidden=!S.state.assistantOpen;if(toggle){const assistantLabel=S.state.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-understand')html=LF.UnderstandPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='experiment-report')html=LF.ReportPage.render(S.state);else if(S.state.route==='experiment-nomad')html=LF.NomadPage.render(S.state);else if(S.state.route==='knowledge-base')html=LF.KnowledgePage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
+    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html='<section class="page"><div class="notice danger"><strong>This page could not be rendered.</strong><span>'+C.escapeHtml(err&&err.message||String(err))+'</span></div><div class="toolbar"><button type="button" class="button" data-route="experiment-import">Back to Experiment</button><button type="button" class="button" data-route="logs">Open Logs</button></div></section>';}
     main.innerHTML=html;
     try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.route,error:err});}
-    try{bindReportImproveSelection();}catch(err){Log.warn('render.report-bind-skipped',{route:S.state.route,error:err});}
     try{C.bindFieldLabels(main);}catch(err){Log.warn('render.labels-skipped',{route:S.state.route,error:err});}
     if(S.state.route==='ui-kit')try{applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
     if(S.state.route==='documentation'&&LF.DocsPage)try{LF.DocsPage.apply(main);}catch(err){Log.warn('render.documentation-filter-skipped',{error:err});}
@@ -196,17 +129,18 @@
     if(LF.Math&&LF.Math.queueTypeset&&main.querySelector&&main.querySelector('.math-display,.math-inline'))LF.Math.queueTypeset(main,70);end({htmlChars:html.length});
   }
 
+  function refreshPipeline(exp,reason){if(!LF.DataPipeline||!LF.DataPipeline.refresh)throw new Error('LabFlow.DataPipeline is unavailable.');return LF.DataPipeline.refresh(exp,{reason:reason||'app'});}
+
   function markModified(scope){
     if(!hasExperiment())return;
     const mutationScope=scope||'metadata',exp=S.state.experiment;
-    /* Chat/proposal review is transient assistant state, not a scientific Working Copy revision. */
     if(mutationScope==='ai'){if(S.notify)S.notify('ai');return;}
     S.touch(mutationScope);
-    if((mutationScope==='dataset'||mutationScope==='analysis')&&LF.DatasetCorrections&&LF.DatasetCorrections.refresh){LF.DatasetCorrections.refresh(exp);}
-    else if(mutationScope==='design'){if(LF.CanonicalStore)LF.CanonicalStore.build(exp);if(LF.DesignAnalysis)exp.designAnalysis=LF.DesignAnalysis.build(exp,exp.sync&&exp.sync.revision||0);}
+    if(mutationScope==='dataset'||mutationScope==='analysis'||mutationScope==='design')refreshPipeline(exp,'mutation:'+mutationScope);
   }
-  function markDraft(scope){if(!hasExperiment())return; if(S.markDraft)S.markDraft(scope||'metadata'); scheduleWorkspaceSave('draft:'+(scope||'metadata')); renderWorkingCopyState();}
-  function commitDraft(scope){if(!hasExperiment())return; if(S.commitDraft)S.commitDraft(scope); if(scope==='dataset'&&LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment); if(scope==='design'){if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);if(LF.DesignAnalysis)S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);} renderWorkingCopyState();}
+
+  function markDraft(scope){if(!hasExperiment())return;if(S.markDraft)S.markDraft(scope||'metadata');scheduleWorkspaceSave('draft:'+(scope||'metadata'));}
+  function commitDraft(scope){if(!hasExperiment())return;if(S.commitDraft)S.commitDraft(scope);if(scope==='dataset'||scope==='design')refreshPipeline(S.state.experiment,'draft:'+scope);}
   function flushDrafts(){if(S.commitAllDrafts)S.commitAllDrafts();}
 
   function refreshDesignProjection(){
@@ -214,11 +148,10 @@
   }
 
   /* ---------- reviewed state mutations and local file operations ---------- */
-  function rebuildSamples(exp){const end=Log.timer('samples.rebuild',{experimentId:exp&&exp.id,measurements:exp&&exp.measurements?exp.measurements.length:0});const map=new Map();exp.measurements.forEach(function(m){if(!map.has(m.sample))map.set(m.sample,{id:C.uid('sample'),name:m.sample,rawName:m.rawSample||m.sample,group:m.group,isRef:m.isRef,measurementIds:[]});map.get(m.sample).measurementIds.push(m.id);});exp.samples=Array.from(map.values());end({samples:exp.samples.length});return exp.samples;}
 
   /** Update one proposal decision without replacing the page DOM or losing scroll/focus. */
   function updateProposalDecision(index, decision) {
-    const exp=S.state.experiment,plan=exp.aiCorrectionPlan,proposal=plan&&plan.proposals&&plan.proposals[index];
+    const exp=S.state.experiment,plan=ambiguityPlan(),proposal=plan&&plan.proposals&&plan.proposals[index];
     if(!proposal)return;
     proposal.decision=decision;
     const card=document.querySelector('[data-proposal-index="'+index+'"]');
@@ -229,12 +162,10 @@
   }
 
 
-  function discardRepairPlan(){if(!hasExperiment())return;delete S.state.experiment.aiCorrectionPlan;markModified('ai');render();LF.UI.toast('AI correction proposals discarded. Deterministic findings, AI analysis and RAW data are unchanged.','info');}
+  function discardRepairPlan(){if(!hasExperiment())return;if(LF.ActionData)LF.ActionData.removeProposal(S.state.experiment,'dataset.resolve-ambiguities');markModified('ai');render();LF.UI.toast('AI correction proposals discarded. Deterministic findings, AI analysis and RAW data are unchanged.','info');}
 
   function activityDetails(file,extra){return Object.assign({File:file&&file.name||'',Size:file&&file.size?C.bytes(file.size):''},extra||{});}
   function importProgress(file,info){const p=info||{},raw=Number(p.progress),progress=Number.isFinite(raw)?Math.max(0,Math.min(.44,raw*.44)):0;LF.UI.activityUpdate({stage:p.stage||'Importing dataset',progress:progress,message:p.path||'',details:activityDetails(file,{Files:p.files||'',Current:p.current&&p.total?p.current+' / '+p.total:'',Path:p.path||''})});}
-
-  function aiConfiguredSilently(){const s=LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{},p=(LF.AIProviders&&LF.AIProviders[s.provider])||{},key=LF.Storage&&LF.Storage.getApiKey?LF.Storage.getApiKey(s.provider):'';return !!(s.endpoint&&s.model&&(!p.keyRequired||key));}
 
   async function importDataset(file){
     const end=Log.timer('dataset.import',{name:file&&file.name,size:file&&file.size,type:file&&file.type});
@@ -245,90 +176,28 @@
       const exp=await LF.Importer.parseDataset(buffer,file.name,function(info){importProgress(file,info);});
       exp.meta.sourceModifiedAt=file.lastModified?new Date(file.lastModified).toISOString():null;exp.meta.sourceType=file.type||'application/zip';exp.meta.importMethod='Local browser import · JSZip';
       LF.UI.activityUpdate({stage:'Analyzing measurements',progress:.48,message:'Deterministic facts first',details:{Measurements:exp.measurements.length,Samples:exp.samples.length}});
-      LF.ExperimentModel.ensureShape(exp,S.state);
-      if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(exp);
-      if(LF.ExperimentBrief&&LF.ExperimentBrief.ensure)LF.ExperimentBrief.ensure(exp);
-      /* Fresh documents are deliberately empty. Drafting is an explicit action in Report Studio. */
-      exp.report=exp.report||{};exp.report.kind='lab';exp.report.labMarkdown='';exp.report.paperMarkdown='';exp.report.markdown='';exp.report.labUpdatedAt=null;exp.report.paperUpdatedAt=null;
       exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};
       S.setExperiment(exp);
+      refreshPipeline(exp,'import');
       S.state.resultsTab='overview';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveOverlaySelection=[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';
-      let briefMode='deterministic',briefAiStatus='not used';
-      if(aiConfiguredSilently()&&LF.ActionRunner){
-        const action=LF.ActionRunner.effective?LF.ActionRunner.effective('analysis.enrich'):null,settings=LF.Storage.getAiSettings();
-        LF.UI.activityUpdate({stage:'Optional AI context layer',progress:.56,progressLabel:'AI semantics · preparing',message:'Deterministic analysis is complete. AI only adds likely objective, variables, useful comparisons, labelled hypotheses and metadata gaps; metrics are never recalculated.',showAiTrace:true,response:'Provider output will appear here.',responseIsJson:false,details:{Measurements:exp.measurements.length,Samples:exp.samples.length,Action:'analysis.enrich',Engine:'AI-assisted',Provider:settings.provider,Model:settings.model},steps:(action&&action.steps||[]).map(function(st){return{id:st.id,label:(st.label||st.id).replace(/[-_]/g,' '),status:'pending',note:st.type};})});
-        const enriched=await LF.ActionRunner.run('analysis.enrich',{
-          onStep:function(st){const progress=st.id==='enrich'?(st.status==='done'?.90:.57):(st.status==='done'?.985:.93);LF.UI.activityUpdate({stage:'Experiment brief · '+(st.status==='active'?'running ':'completed ')+st.id,progress:progress,progressLabel:'Checkpoint '+(st.index+1)+' / '+st.total,stepId:st.id,stepStatus:st.status,stepNote:st.note||''});},
-          onPhase:function(info){const map={prepare:.58,request:.62,validate:.89,complete:.91,work:.95};LF.UI.activityUpdate({stage:'Experiment brief · '+(info.label||info.phase),progress:map[info.phase]||.58,progressLabel:info.phase==='request'?'Waiting for model':info.phase});},
-          onRequest:function(info){LF.UI.activityUpdate({progress:.63,progressLabel:'Waiting for model · target '+(info.targetTokens||'—')+' tok',request:JSON.stringify(info.request,null,2),requestIsJson:true,showAiTrace:true,details:{'AI role':'semantic context only','AI checkpoint':info.stepId,'Estimated input':info.inputTokens?Math.round(info.inputTokens)+' tok':'—','Action input cap':info.inputCapTokens?Math.round(info.inputCapTokens)+' tok':'—','Output target':info.targetTokens?info.targetTokens+' tok':'—','Request ceiling':info.maxTokens?info.maxTokens+' tok':'—'}});},
-          onProgress:function(p){const stream=p.content||p.reasoning||'',fine=LF.ActionUI&&LF.ActionUI.streamFraction?LF.ActionUI.streamFraction(p):{fraction:.3,tokens:Math.ceil(String(stream).length/4),target:Number(p.targetTokens)||Number(p.budgetTokens)||1},shownTokens=Number.isFinite(Number(p.tokens))?Number(p.tokens):fine.tokens;const progress=.56+Math.min(.32,Math.max(.06,(fine.fraction-.14)*.47));LF.UI.activityUpdate({stage:fine.tokens?'Experiment brief · receiving model response':'Experiment brief · waiting for first token',progress:progress,progressLabel:'Streaming · '+shownTokens+' / ~'+fine.target+' tok',response:stream||'Waiting for model output…',responseIsJson:false,stream:{active:true,status:'streaming',ttftMs:p.ttftMs,tokens:shownTokens,rate:p.rate,estimated:p.estimated!==false,inputTokens:p.inputTokens||null,budgetTokens:p.maxTokens||p.budgetTokens||null,targetTokens:p.targetTokens||null}});}
-        });
-        if(enriched&&enriched.status==='done'){briefMode='deterministic + AI';briefAiStatus='completed';LF.UI.activityUpdate({response:(enriched.aiOutput!=null&&typeof enriched.aiOutput==='object')?JSON.stringify(enriched.aiOutput,null,2):String(enriched.aiOutput!=null?enriched.aiOutput:(enriched.result||'Completed.')),responseIsJson:!!(enriched.aiOutput!=null&&typeof enriched.aiOutput==='object'),stream:{active:false,status:'complete'}});}
-        else{briefAiStatus='failed · deterministic brief kept';LF.UI.activityUpdate({response:'## Experiment Brief enrichment unavailable\n\n'+((enriched&&enriched.message)||'The AI enrichment did not complete. The deterministic Experiment Brief remains valid.'),responseIsJson:false,stream:{active:false,status:'error'}});Log.warn('dataset.import-brief-enrichment-skipped',{status:enriched&&enriched.status,code:enriched&&enriched.code,message:enriched&&enriched.message});}
-      }
+      const briefMode='deterministic';
+      LF.UI.activityUpdate({stage:'Validating LabFlow Data',progress:.82,message:'Deterministic pipeline complete · no AI request during import',details:{Experiments:(exp.experiments||[]).length,Samples:exp.samples.length,Runs:(exp.runs||[]).length,Measurements:exp.measurements.length,Pipeline:exp.pipeline&&exp.pipeline.status||'ready'}});
       S.setRoute('experiment-import');
       end({experimentId:exp.id,samples:exp.samples.length,measurements:exp.measurements.length,findings:exp.findings.length,brief:briefMode,nextRoute:'experiment-import'},'info');
-      LF.UI.activityFinish({message:'ZIP parsed. Review is ready.',details:{Measurements:exp.measurements.length,Samples:exp.samples.length,Findings:exp.findings.length,'Experiment brief':briefMode,'AI role':'semantic context only · no metric recalculation','AI enrichment':briefAiStatus}});
+      LF.UI.activityFinish({message:'ZIP parsed and deterministic pipeline validated. Review is ready.',details:{Experiments:(exp.experiments||[]).length,Samples:exp.samples.length,Runs:(exp.runs||[]).length,Measurements:exp.measurements.length,Findings:exp.findings.length,'Experiment brief':briefMode,Pipeline:exp.pipeline&&exp.pipeline.status||'ready'}});
       LF.UI.toast('Dataset imported. Review is ready.','success');
     }catch(err){Log.error('dataset.import-failed',{name:file&&file.name,error:err});end({error:err},'error');LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
   }
 
-  async function saveWorkingCopy(){
-    if(!hasExperiment())return;
-    flushDrafts();const exp=S.state.experiment;
-    LF.UI.activityStart({title:'Save LabFlow state',kind:'LOCAL',stage:'Persisting internal representation',progress:.22,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});
-    const previousSync=Object.assign({},exp.sync||{});
-    try{
-      if(S.markSaved)S.markSaved('internal-workspace');
-      const saved=await LF.Storage.saveExperiment(exp,workspaceUiSnapshot());
-      LF.UI.activityFinish({message:'Internal LabFlow representation saved in this browser.',details:{Revision:exp.sync&&exp.sync.revision||0,Saved:saved.savedAt},holdMs:0});
-      LF.UI.toast('LabFlow state saved internally.','success');
-    }catch(err){exp.sync=Object.assign(exp.sync||{},previousSync);Log.error('working-copy.save-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
-  async function exportWorkingCopy(){
-    if(!hasExperiment())return;
-    flushDrafts();const exp=S.state.experiment;
-    LF.UI.activityStart({title:'Export working copy',kind:'ZIP',stage:'Building export ZIP',progress:.15,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});
-    try{const blob=await LF.Export.modified(exp);C.downloadBlob(blob,LF.Export.fileName(exp,'working-copy'));LF.UI.activityFinish({message:'Export ZIP created from the current LabFlow representation.',details:{Revision:exp.sync&&exp.sync.revision||0,Bytes:blob.size},holdMs:0});LF.UI.toast('Working Copy exported as ZIP.','success');}
-    catch(err){Log.error('working-copy.export-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
+  async function exportLabFlowZip(){if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;LF.UI.activityStart({title:'Export LabFlow ZIP',kind:'ZIP',stage:'Building portable save',progress:.15,cancellable:false,details:{Experiment:exp.meta.name,Revision:exp.sync&&exp.sync.revision||0}});try{const blob=await LF.Export.save(exp);C.downloadBlob(blob,LF.Export.fileName(exp));LF.UI.activityFinish({message:'Portable LabFlow ZIP created. The source archive inside it is unchanged.',details:{Bytes:blob.size,Revision:exp.sync&&exp.sync.revision||0},holdMs:0});LF.UI.toast('LabFlow ZIP exported.','success');}catch(err){Log.error('export.labflow-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}}
+  function saveExportOptions(){LF.Storage.saveExportSettings(Object.assign({},LF.Storage.getExportSettings(),{includeRaw:document.getElementById('nomadRaw').checked,includeDerived:document.getElementById('nomadDerived').checked}));LF.UI.toast('Export options saved.','success');}
+  async function exportNomadEntry(){if(!hasExperiment())return;flushDrafts();try{LF.NomadExport.exportEntry(S.state.experiment);LF.UI.toast('NOMAD entry exported.','success');}catch(err){Log.error('export.nomad-entry-failed',{error:err});LF.UI.toast(err.message||String(err),'error');}}
+  async function exportNomadZip(){if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;LF.UI.activityStart({title:'Export NOMAD ZIP',kind:'ZIP',stage:'Preparing NOMAD package',progress:.04,details:{Experiment:exp.meta.name}});try{await LF.NomadExport.exportZip(exp,exp.raw&&exp.raw.sourceArchive,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,details:{Experiment:exp.meta.name}});});LF.UI.activityFinish({message:'NOMAD staging ZIP created from current LabFlow Data.',holdMs:0});}catch(err){Log.error('export.nomad-zip-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}}
 
-  async function downloadNomadPackage(){
-    if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;LF.UI.activityStart({title:'Export NOMAD ZIP',subtitle:'Deterministic local package generation',kind:'ZIP',stage:'Preparing files',progress:.02,details:{Experiment:exp.meta.name,Measurements:exp.measurements.length}});
-    try{await LF.Nomad.exportZip(exp,exp.raw&&exp.raw.sourceArchive,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,message:'',details:{Experiment:exp.meta.name}});});LF.UI.activityFinish({message:'NOMAD ZIP created from the current working copy. LabFlow changes remain unsaved until Save working copy is used.'});}
-    catch(err){Log.error('nomad.export-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
-
-  async function simulateNomadUpload(){
-    if(!hasExperiment())return;const exp=S.state.experiment;saveNomadSettings();
-    LF.UI.activityStart({title:'NOMAD upload simulation',subtitle:'Staging → upload → processing → entries',kind:'NOMAD',stage:'Validating staging package',progress:.04,details:{Experiment:exp.meta.name,Instance:LF.Storage.getNomadSettings().instance}});
-    try{const upload=await LF.Nomad.simulateUpload(exp,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,message:info.message||'',details:{Experiment:exp.meta.name,Instance:LF.Storage.getNomadSettings().instance}});});markModified('nomad');render();LF.UI.activityFinish({message:'Demo upload processed. The exact simulated ZIP is available for manual download.',details:{Upload:upload.uploadId,Entries:upload.entries,Bytes:upload.bytes,Published:'No'}});LF.UI.toast('NOMAD demo upload completed. Nothing was sent remotely.','success');}
-    catch(err){Log.error('nomad.upload-simulation-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
-
-  function downloadMockNomadPackage(){
-    try{LF.Nomad.downloadMockPackage(S.state.experiment);LF.UI.toast('Exact simulated upload ZIP downloaded.','success');}
-    catch(err){Log.error('nomad.mock-package-download-failed',{error:err});LF.UI.toast(err.message||String(err),'error');}
-  }
-
-  async function downloadReportDocx(){
-    const exp=S.state.experiment,doc=syncActiveReportEditor('docx-export');LF.UI.activityStart({title:'Export '+doc.shortLabel+' DOCX',subtitle:doc.label+' from the current editor',kind:'REPORT',stage:'Preparing '+doc.shortLabel.toLowerCase(),progress:.02,details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words,Characters:doc.chars}});
-    try{await LF.Report.exportDocx(exp,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,message:'',details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words}});});LF.UI.activityFinish({message:doc.label+' DOCX created from '+doc.words+' words.'});}
-    catch(err){Log.error('report.docx-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
-
-  async function downloadReportPdf(){
-    const exp=S.state.experiment,doc=syncActiveReportEditor('pdf-export');LF.UI.activityStart({title:'Export '+doc.shortLabel+' PDF',subtitle:doc.label+' from the current editor',kind:'REPORT',stage:'Preparing '+doc.shortLabel.toLowerCase(),progress:.02,details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words,Characters:doc.chars}});
-    try{await LF.Report.exportPdf(exp,function(info){LF.UI.activityUpdate({stage:info.stage,progress:info.progress,message:'',details:{Experiment:exp.meta.name,Document:doc.label,Words:doc.words}});});LF.UI.activityFinish({message:doc.label+' PDF created from '+doc.words+' words.'});}
-    catch(err){Log.error('report.pdf-failed',{error:err});LF.UI.activityError(err);LF.UI.toast(err.message||String(err),'error');}
-  }
-
-
-  function saveNomadSettings(){Log.debug('settings.nomad.save-request');LF.Storage.saveNomadSettings({instance:document.getElementById('nomadInstance').value.trim(),endpoint:document.getElementById('nomadEndpoint').value.trim(),includeRaw:document.getElementById('nomadRaw').checked,includeDerived:document.getElementById('nomadDerived').checked,includeReport:document.getElementById('nomadReport').checked});LF.UI.toast('NOMAD settings saved.','success');}
 
 
   /** Update one Design proposal decision while preserving the current scroll. */
-  function updateDesignProposalDecision(kind,index,decision){const proposal=S.state.experiment&&S.state.experiment.aiDesignProposal,list=proposal&&(kind==='solution'?proposal.solutions:proposal.devices),item=list&&list[index];if(!item||item.applied)return;item.decision=decision;proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');const main=document.getElementById('main'),top=main?main.scrollTop:0;render();requestAnimationFrame(function(){if(main)main.scrollTop=top;});}
+  function updateDesignProposalDecision(kind,index,decision){const proposal=selectedDesignProposal(),list=proposal&&(kind==='solution'?proposal.solutions:proposal.devices),item=list&&list[index];if(!item||item.applied)return;item.decision=decision;proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');const main=document.getElementById('main'),top=main?main.scrollTop:0;render();requestAnimationFrame(function(){if(main)main.scrollTop=top;});}
 
   function setFindingFilter(filter,button) {
     document.querySelectorAll('[data-finding-row]').forEach(function(row){row.hidden=filter!=='all'&&row.dataset.findingSeverity!==filter;});
@@ -347,16 +216,18 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-report')syncActiveReportEditor('route-change');else if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
+        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.docsSlug=docLink.dataset.docSlug;render();return;}
         const copyDoc=e.target.closest('[data-copy-doc]');if(copyDoc){const ok=C.copyText(LF.DocsPage.markdownFor(copyDoc.dataset.copyDoc));LF.UI.toast(ok?'Markdown copied.':'Could not copy Markdown.',ok?'success':'warning');return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
-        if(e.target.closest('#saveWorkingCopy')){await saveWorkingCopy();renderWorkingCopyState();return;}
-        if(e.target.closest('#exportWorkingCopy')){await exportWorkingCopy();return;}
-        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted Working Copy, action history, chat, report/design state and RAW snapshot will be cleared. The Knowledge Base, provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted LabFlow session, action history, chat, Design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
+        if(e.target.closest('#exportLabFlowZip')){await exportLabFlowZip();return;}
+        if(e.target.closest('#exportNomadEntry')){exportNomadEntry();return;}
+        if(e.target.closest('#exportNomadZip')){await exportNomadZip();return;}
+        if(e.target.closest('#saveExportOptions')){saveExportOptions();render();return;}
         if(e.target.closest('#mobileNavToggle')){setMobileNav(!document.body.classList.contains('mobile-nav-open'));return;}
-        if(e.target.closest('#mobileNavShade')){closeMobileNav();return;}
+        if(e.target.closest('#mobileNavShade')||e.target.closest('#sidebarDismiss')){closeMobileNav();return;}
         if(e.target.closest('#assistantClose')){S.state.assistantOpen=false;LF.Storage.saveUiSettings({assistantOpen:false});render();return;}
         if(e.target.closest('#assistantToggle')){S.state.assistantOpen=!S.state.assistantOpen;LF.Storage.saveUiSettings({assistantOpen:S.state.assistantOpen});render();return;}
         if(e.target.closest('[data-theme-toggle]')){LF.Theme.toggle();return;}
@@ -366,55 +237,65 @@
         const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;render();return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
-        const knowledgeSelect=e.target.closest('[data-knowledge-select]');if(knowledgeSelect){S.state.knowledgeSelectedId=knowledgeSelect.dataset.knowledgeSelect;S.state.knowledgeCreating=false;render();return;}
-        if(e.target.closest('#knowledgeNew')){S.state.knowledgeCreating=true;S.state.knowledgeSelectedId=null;S.state.knowledgeDraftKind='material';render();return;}
-        if(e.target.closest('#knowledgeImport')){const input=document.getElementById('knowledgeImportInput');if(input)input.click();return;}
-        if(e.target.closest('#knowledgeExport')){C.downloadBlob(C.textBlob(LF.KnowledgeBase.exportLibrary(),'application/json;charset=utf-8'),'labflow-knowledge-base.json');LF.UI.toast('Knowledge Base exported.','success');return;}
-        if(e.target.closest('#knowledgeDelete')){const id=S.state.knowledgeSelectedId,record=LF.KnowledgeBase.get(id),origin=LF.KnowledgeBase.origin(id),label=origin.overridden?'Reset local edits for “'+(record&&record.name||'this record')+'”?':'Delete local record “'+(record&&record.name||'')+'”?';if(record&&await LF.UI.confirmAction(label,{title:origin.overridden?'Reset knowledge record':'Delete knowledge record',confirmLabel:origin.overridden?'Reset':'Delete',danger:!origin.overridden})){await LF.KnowledgeBase.remove(id);S.state.knowledgeSelectedId=null;S.state.knowledgeCreating=false;render();LF.UI.toast(origin.overridden?'Bundled knowledge restored.':'Local knowledge record deleted.','success');}return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
-        const reportMode=e.target.closest('[data-report-mode]');if(reportMode){S.state.reportMode=reportMode.dataset.reportMode;render();return;}
-        const reportKind=e.target.closest('[data-report-kind]');if(reportKind){syncActiveReportEditor('document-switch');LF.Report.setKind(S.state.experiment,reportKind.dataset.reportKind);render();return;}
-        if(e.target.closest('#chooseReportFigures')){const b=e.target.closest('#chooseReportFigures');LF.ReportPage.openFigurePicker(S.state.experiment,b.dataset.figureKind||LF.Report.documentInfo(S.state.experiment).kind);return;}
-        if(e.target.closest('#figurePickerClose')||e.target.closest('#figurePickerCancel')){LF.ReportPage.closeFigurePicker();return;}
-        const figureBulk=e.target.closest('[data-figure-picker-all]');if(figureBulk){LF.ReportPage.setFigurePickerAll(figureBulk.dataset.figurePickerAll==='true');return;}
-        if(e.target.closest('#figurePickerApply')){const kind=LF.ReportPage.applyFigurePicker();if(kind){markModified('report');render();LF.UI.toast((kind==='paper'?'Paper':'Report')+' figure selection updated.','success');}return;}
-        const figureShade=e.target.closest('#figurePickerShade');if(figureShade&&e.target===figureShade){LF.ReportPage.closeFigurePicker();return;}
-        const reportOperation=e.target.closest('button[data-action="report.generate"],button[data-action="report.improve"]');if(reportOperation){syncActiveReportEditor('before-ai-writing-help');const k=reportOperation.dataset.actionKind;if(k==='paper'||k==='lab')LF.Report.setKind(S.state.experiment,k);S.state.reportMode='editor';}
-        const markdownTool=e.target.closest('[data-markdown-tool]');if(markdownTool){applyMarkdownTool(markdownTool.dataset.markdownTool);return;}
         const applyReview=e.target.closest('[data-apply-review-proposal]');if(applyReview){
-          const idx=Number(applyReview.dataset.applyReviewProposal),plan=S.state.experiment.aiCorrectionPlan,p=plan&&plan.proposals&&plan.proposals[idx];
-          if(p){try{const changed=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast('AI correction applied to the working copy ('+changed+' target'+(changed===1?'':'s')+').','success');}catch(err){p.applyError=err.message||String(err);Log.warn('review.proposal-apply-failed',{index:idx,error:err});render();LF.UI.toast(p.applyError,'error');}}return;
+          const idx=Number(applyReview.dataset.applyReviewProposal),plan=ambiguityPlan(),p=plan&&plan.proposals&&plan.proposals[idx];
+          if(p){try{const changed=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast('AI correction applied to the LabFlow Data ('+changed+' target'+(changed===1?'':'s')+').','success');}catch(err){p.applyError=err.message||String(err);Log.warn('review.proposal-apply-failed',{index:idx,error:err});render();LF.UI.toast(p.applyError,'error');}}return;
         }
-        const safeFixButton=e.target.closest('[data-apply-safe-fix]');if(safeFixButton){
-          const analysis=S.state.experiment.datasetAnalysis,fix=analysis&&analysis.safeFixes&&analysis.safeFixes[Number(safeFixButton.dataset.applySafeFix)];
-          if(fix){try{const changed=LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'deterministic');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast('Safe correction applied ('+changed+' target'+(changed===1?'':'s')+').','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
-        }
-        const ignoreSafeFix=e.target.closest('[data-ignore-safe-fix]');if(ignoreSafeFix){const fix=S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.safeFixes&&S.state.experiment.datasetAnalysis.safeFixes[Number(ignoreSafeFix.dataset.ignoreSafeFix)];if(fix){fix.decision='rejected';render();LF.UI.toast('Safe correction left unapplied.','info');}return;}
         if(e.target.closest('#applyAllAiCorrections')){
-          const plan=S.state.experiment.aiCorrectionPlan,items=plan&&plan.proposals||[];let applied=0,targets=0,errors=0;
+          const plan=ambiguityPlan(),items=plan&&plan.proposals||[];let applied=0,targets=0,errors=0;
           items.forEach(function(p){if(p.applied||p.decision==='rejected')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
-          if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);}
+          if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');}
           render();LF.UI.toast(applied+' AI proposal'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' could not be mapped':''),errors?'warning':'success');return;
         }
         const reviewProposal=e.target.closest('[data-review-proposal]');if(reviewProposal){updateProposalDecision(Number(reviewProposal.dataset.reviewProposal),reviewProposal.dataset.decision||'pending');render();return;}
-        if(e.target.closest('#runReportAiAction')){const select=document.getElementById('reportAiAction'),value=select&&select.value||'';if(!value)return;syncActiveReportEditor('before-ai-edit');const parts=value.split(':');if(parts[0]==='generate')await LF.ActionUI.run('report.generate','',{params:{document_kind:parts[1]||'lab'}});else await LF.ActionUI.run('report.improve','',{params:{mode:parts[1]||'scientific_review'}});S.state.reportMode='editor';render();LF.UI.toast('AI changes applied to the active document text.','success');return;}
+        const reviewFix=e.target.closest('[data-apply-review-fix]');if(reviewFix){
+          const items=S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.reviewFixes||[],fix=items[Number(reviewFix.dataset.applyReviewFix)];
+          if(fix){try{LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'user');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-exclusion');render();LF.UI.toast('Measurement excluded after review.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
+        }
+        if(e.target.closest('#applyAllReviewFixes')){
+          const items=(S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.reviewFixes||[]).slice();if(!items.length)return;
+          if(!await LF.UI.confirmAction('Exclude '+items.length+' blocked measurement'+(items.length===1?'':'s')+' from scientific analysis and rankings? The source data remains unchanged and every exclusion is recorded.',{title:'Apply suggested exclusions',confirmLabel:'Apply exclusions',cancelLabel:'Cancel'}))return;
+          let applied=0,errors=0;items.forEach(function(fix){try{LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'user');applied++;}catch(_){errors++;}});if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-exclusions');}render();LF.UI.toast(applied+' exclusion'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' failed':''),errors?'warning':'success');return;
+        }
         const localFix=e.target.closest('[data-local-fix]');if(localFix){
-          const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude';m.excluded=exclude;S.state.experiment.patches=S.state.experiment.patches||[];S.state.experiment.patches.push({id:C.uid('patch'),type:exclude?'exclude_measurement':'restore_measurement',target:m.id,from:!exclude,to:exclude,source:'user',reason:'Review data local correction',createdAt:new Date().toISOString()});markModified('dataset');if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast(exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.','success');}return;
+          const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude';m.excluded=exclude;LF.DataModel.addPatch(S.state.experiment,{patchType:exclude?'exclude_measurement':'restore_measurement',target:{kind:'measurement',id:m.id},operation:'set',field:'excluded',from:!exclude,to:exclude,source:'user',reason:'Review data local correction',status:'applied',reviewStatus:'accepted',appliedAt:new Date().toISOString()},{touch:false});markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast(exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.','success');}return;
         }
 
         if(e.target.closest('#discardRepairPlan')){discardRepairPlan();return;}
-        if(e.target.closest('#revalidateDataset')){LF.DatasetCorrections.refresh(S.state.experiment);delete S.state.experiment.aiCorrectionPlan;render();LF.UI.toast('Canonical analysis rebuilt from the current Working Copy.','success');return;}
+        if(e.target.closest('#revalidateDataset')){refreshPipeline(S.state.experiment,'manual-refresh');if(LF.ActionData)LF.ActionData.removeProposal(S.state.experiment,'dataset.resolve-ambiguities');render();LF.UI.toast('Canonical analysis rebuilt from the current LabFlow Data.','success');return;}
         
-        if(e.target.closest('#refreshDesignEvidence')){if(LF.ExperimentModel&&LF.ExperimentModel.projectRawDesign)LF.ExperimentModel.projectRawDesign(S.state.experiment,true);if(LF.CanonicalStore)LF.CanonicalStore.build(S.state.experiment);S.state.experiment.designAnalysis=LF.DesignAnalysis.build(S.state.experiment,S.state.experiment.sync&&S.state.experiment.sync.revision||0);render();LF.UI.toast('Design evidence re-read from the original source metadata.','success');return;}
-        if(e.target.closest('#applyAllDesignSuggestions')){try{const out=LF.DesignAnalysis.applyAll(S.state.experiment);if(out.changed){markModified('design');render();LF.UI.toast('Applied '+out.changed+' AI-proposed missing field'+(out.changed===1?'':'s')+' to Design.','success');}else{render();LF.UI.toast('No missing field could be filled without overwriting existing values.','info');}}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
-        if(e.target.closest('#acceptAllDesignInferences')){const exp=S.state.experiment,count=Object.keys(exp.aiDesignProposals&&typeof exp.aiDesignProposals==='object'?exp.aiDesignProposals:{}).length;if(!count){LF.UI.toast('No AI Design suggestions are waiting for acceptance.','info');return;}const ok=await LF.UI.confirmAction('Accept all '+count+' current AI Design suggestion'+(count===1?'':'s')+'? LabFlow fills only empty solution/stack fields; existing researcher or source values stay unchanged. You can edit accepted values immediately afterwards.',{title:'Accept all Design suggestions',confirmLabel:'Accept all',cancelLabel:'Cancel'});if(!ok)return;try{const out=LF.DesignAnalysis.acceptAllProposals(exp);markModified('design');render();LF.UI.toast('Accepted '+out.accepted+' experiment suggestion'+(out.accepted===1?'':'s')+(out.failed.length?' · '+out.failed.length+' failed':'')+'.',out.failed.length?'warning':'success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
-        if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment);markModified('design');render();LF.UI.toast('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
-        const applyDesignProposal=e.target.closest('[data-apply-design-proposal]');if(applyDesignProposal){try{const out=LF.DesignAnalysis.applyOne(S.state.experiment,applyDesignProposal.dataset.applyDesignProposal,Number(applyDesignProposal.dataset.proposalIndex),applyDesignProposal.dataset.proposalPart||'all');markModified('design');render();LF.UI.toast('AI suggestion applied to '+out.changed+' missing field'+(out.changed===1?'':'s')+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
-        const applyDesignDevice=e.target.closest('[data-apply-design-device]');if(applyDesignDevice){try{const out=LF.DesignAnalysis.applySelectedDevice(S.state.experiment,applyDesignDevice.dataset.applyDesignDevice);markModified('design');render();LF.UI.toast('Applied AI-suggested missing values to '+out.changed+' Design field(s) for the selected experiment.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        if(e.target.closest('#refreshDesignEvidence')){if(LF.DesignModel&&LF.DesignModel.projectSource)LF.DesignModel.projectSource(S.state.experiment,true);refreshPipeline(S.state.experiment,'design-source-refresh');render();LF.UI.toast('Design evidence re-read from the original source metadata.','success');return;}
+        if(e.target.closest('#applyAllDesignSuggestions')){try{const out=LF.DesignAnalysis.applyAll(S.state.experiment,S.state.selectedDesignDeviceId);if(out.changed){markModified('design');render();LF.UI.toast('Applied '+out.changed+' AI-proposed missing field'+(out.changed===1?'':'s')+' to Design.','success');}else{render();LF.UI.toast('No missing field could be filled without overwriting existing values.','info');}}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        if(e.target.closest('#acceptAllDesignInferences')){const exp=S.state.experiment,count=Object.keys(LF.ActionData?LF.ActionData.proposals(exp,'design.infer'):{}).length;if(!count){LF.UI.toast('No AI Design suggestions are waiting for acceptance.','info');return;}const ok=await LF.UI.confirmAction('Accept all '+count+' current AI Design suggestion'+(count===1?'':'s')+'? LabFlow fills only empty chemistry, architecture and process fields; existing researcher or source values stay unchanged. You can edit accepted values immediately afterwards.',{title:'Accept all Design suggestions',confirmLabel:'Accept all',cancelLabel:'Cancel'});if(!ok)return;try{const out=LF.DesignAnalysis.acceptAllProposals(exp);markModified('design');render();LF.UI.toast('Accepted '+out.accepted+' experiment suggestion'+(out.accepted===1?'':'s')+(out.failed.length?' · '+out.failed.length+' failed':'')+'.',out.failed.length?'warning':'success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment,S.state.selectedDesignDeviceId);markModified('design');render();LF.UI.toast('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        const applyDesignProposal=e.target.closest('[data-apply-design-proposal]');if(applyDesignProposal){try{const out=LF.DesignAnalysis.applyOne(S.state.experiment,applyDesignProposal.dataset.applyDesignProposal,Number(applyDesignProposal.dataset.proposalIndex),applyDesignProposal.dataset.proposalPart||'all',S.state.selectedDesignDeviceId);markModified('design');render();LF.UI.toast('AI suggestion applied to '+out.changed+' missing field'+(out.changed===1?'':'s')+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
+        const applyDesignDevice=e.target.closest('[data-apply-design-device]');if(applyDesignDevice){try{const out=LF.DesignAnalysis.applySelectedDevice(S.state.experiment,applyDesignDevice.dataset.applyDesignDevice,S.state.selectedDesignDeviceId);markModified('design');render();LF.UI.toast('Applied AI-suggested missing values to '+out.changed+' Design field(s) for the selected experiment.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
         const acceptDesignExperiment=e.target.closest('[data-accept-design-experiment]');if(acceptDesignExperiment){try{const out=LF.DesignAnalysis.acceptProposal(S.state.experiment,acceptDesignExperiment.dataset.acceptDesignExperiment);markModified('design');render();LF.UI.toast('AI suggestion accepted. You can edit or validate the values directly below.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}return;}
-        const discardDesignExperiment=e.target.closest('[data-discard-design-experiment]');if(discardDesignExperiment){const exp=S.state.experiment,id=String(discardDesignExperiment.dataset.discardDesignExperiment||'');if(exp.aiDesignProposals)delete exp.aiDesignProposals[id];if(exp.designAiStatus)exp.designAiStatus[id]={state:'idle',updatedAt:new Date().toISOString(),message:''};if(exp.aiDesignProposal&&String(exp.aiDesignProposal.targetDeviceId||'')===id)delete exp.aiDesignProposal;markModified('ai');render();LF.UI.toast('AI suggestion discarded.','info');return;}
+        const discardDesignExperiment=e.target.closest('[data-discard-design-experiment]');if(discardDesignExperiment){const exp=S.state.experiment,id=String(discardDesignExperiment.dataset.discardDesignExperiment||'');if(LF.ActionData){LF.ActionData.removeProposal(exp,'design.infer',id);LF.ActionData.setStatus(exp,'design.infer',id,{state:'idle',updatedAt:new Date().toISOString(),message:''});}markModified('ai');render();LF.UI.toast('AI suggestion discarded.','info');return;}
+        const openDesignCabinet=e.target.closest('[data-open-design-cabinet]');if(openDesignCabinet){S.state.ui.designCabinetPicker=openDesignCabinet.dataset.openDesignCabinet||'';render();return;}
+        if(e.target.closest('[data-close-design-cabinet]')){S.state.ui.designCabinetPicker='';render();return;}
+        const useCabinetItem=e.target.closest('[data-use-cabinet-item]');if(useCabinetItem){
+          const item=LF.Cabinet&&LF.Cabinet.get(useCabinetItem.dataset.useCabinetItem),dev=(S.state.experiment.design.devices||[]).find(function(x){return String(x.id)===String(S.state.selectedDesignDeviceId);});if(!item||!dev)return;
+          if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with a snapshot of “'+item.name+'” from Lab Cabinet? The current experiment values will be replaced, but the Cabinet item remains independent.',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}
+          const out=LF.Cabinet.applyToDesign(S.state.experiment,dev.id,item.id,{replace:true});if(out.changed){markModified('design');S.state.ui.designCabinetPicker='';render();LF.UI.toast('Applied Cabinet snapshot: '+item.name+'.','success');}else LF.UI.toast('The selected Cabinet resource adds no new Design values.','info');return;
+        }
+        const saveSolutionCabinet=e.target.closest('[data-save-solution-cabinet]');if(saveSolutionCabinet){const item=LF.Cabinet.saveDesignSolution(S.state.experiment,saveSolutionCabinet.dataset.saveSolutionCabinet);S.state.ui.cabinetSelectedId=item.id;LF.UI.toast('Saved “'+item.name+'” to Lab Cabinet.','success');return;}
+        if(e.target.closest('#saveStackCabinet')){const item=LF.Cabinet.saveDesignStack(S.state.experiment,S.state.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.toast('Stack saved to Lab Cabinet.','success');return;}
+        if(e.target.closest('#saveProtocolCabinet')){const item=LF.Cabinet.saveDesignProtocol(S.state.experiment,S.state.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.toast('Process protocol saved to Lab Cabinet.','success');return;}
+
+        const cabinetKind=e.target.closest('[data-cabinet-kind]');if(cabinetKind){S.state.ui.cabinetKind=cabinetKind.dataset.cabinetKind||'all';render();return;}
+        const cabinetSelect=e.target.closest('[data-cabinet-select]');if(cabinetSelect){S.state.ui.cabinetSelectedId=cabinetSelect.dataset.cabinetSelect;render();return;}
+        if(e.target.closest('#cabinetAddItem')){const select=document.getElementById('cabinetNewKind'),kind=select&&select.value||'material',item=LF.Cabinet.create(kind,{});S.state.ui.cabinetKind=kind;S.state.ui.cabinetSelectedId=item.id;render();return;}
+        const cabinetDuplicate=e.target.closest('[data-cabinet-duplicate]');if(cabinetDuplicate){const item=LF.Cabinet.duplicate(cabinetDuplicate.dataset.cabinetDuplicate);S.state.ui.cabinetKind=item.kind;S.state.ui.cabinetSelectedId=item.id;render();LF.UI.toast('Cabinet resource duplicated.','success');return;}
+        if(e.target.closest('#cabinetExport')){const payload=LF.Cabinet.exportState(),blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='labflow-cabinet.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},0);LF.UI.toast('Cabinet backup exported.','success');return;}
+        if(e.target.closest('#cabinetImport')){const input=document.getElementById('cabinetImportFile');if(input)input.click();return;}
+        const cabinetDelete=e.target.closest('[data-cabinet-delete]');if(cabinetDelete){const item=LF.Cabinet.get(cabinetDelete.dataset.cabinetDelete);if(!item)return;const ok=await LF.UI.confirmAction('Delete “'+item.name+'” from Lab Cabinet? Existing experiments that used it keep their copied snapshots.',{title:'Delete Cabinet resource',confirmLabel:'Delete',cancelLabel:'Cancel',danger:true});if(!ok)return;LF.Cabinet.remove(item.id);S.state.ui.cabinetSelectedId=null;render();LF.UI.toast('Cabinet resource deleted. Existing experiment snapshots are unchanged.','success');return;}
+        if(e.target.closest('#cabinetAddLayer')){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).slice();layers.push({role:'',material:'',thickness:'',process:''});LF.Cabinet.update(item.id,{layers:layers});render();}return;}
+        const cabinetRemoveLayer=e.target.closest('[data-cabinet-remove-layer]');if(cabinetRemoveLayer){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).slice();layers.splice(Number(cabinetRemoveLayer.dataset.cabinetRemoveLayer),1);LF.Cabinet.update(item.id,{layers:layers});render();}return;}
+        const cabinetUseDesign=e.target.closest('[data-cabinet-use-design]');if(cabinetUseDesign){if(!hasExperiment()){LF.UI.toast('Upload an experiment before using Cabinet resources in Design.','info');return;}const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.selectedDesignDeviceId);})||(exp.design.devices||[])[0],item=LF.Cabinet.get(cabinetUseDesign.dataset.cabinetUseDesign);if(!dev||!item){LF.UI.toast('No Design experiment is available.','warning');return;}if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with “'+item.name+'”?',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}const out=LF.Cabinet.applyToDesign(exp,dev.id,item.id,{replace:true});if(out.changed){S.state.selectedDesignDeviceId=dev.id;markModified('design');S.setRoute('experiment-design');LF.UI.toast('Cabinet snapshot applied to '+(dev.name||'Design')+'.','success');}return;}
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD validation refreshed.','success');return;}
 
         const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.curveSelection=[openCurve.dataset.openSingleCurve];S.state.curveView='single';S.state.resultsTab='curves';render();return;}
@@ -422,7 +303,7 @@
         const resolve=e.target.closest('[data-resolve-finding]');if(resolve){const f=S.state.experiment.findings.find(function(x){return x.id===resolve.dataset.resolveFinding;});if(f){f.status='resolved';Log.info('validation.finding-resolved',{id:f.id,code:f.code});markModified('validation');render();}return;}
 
         if(e.target.closest('#addDesignDevice')){const d=ensureExperimentShape(S.state.experiment).design,dev={id:C.uid('device'),name:'New experiment',group:'',sampleNames:[],isRef:false,solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},status:'user_confirmed',evidence:'User entry',confidence:1};d.devices.push(dev);S.state.selectedDesignDeviceId=dev.id;Log.info('design.experiment-added',{count:d.devices.length});markModified('design');render();return;}
-        if(e.target.closest('#removeSelectedDevice')){const exp=S.state.experiment,d=ensureExperimentShape(exp).design,id=S.state.selectedDesignDeviceId,idx=d.devices.findIndex(function(x){return x.id===id;}),dev=idx>=0?d.devices[idx]:null;if(!dev)return;const ok=await LF.UI.confirmAction('Remove “'+(dev.name||dev.group||'this variant')+'” from the Working Copy? Source data is not deleted; source-derived variants can be reconstructed with Re-read source.',{title:'Remove Design variant',confirmLabel:'Remove variant',cancelLabel:'Cancel',danger:true});if(!ok)return;const removed=d.devices.splice(idx,1)[0];if(exp.aiDesignProposals&&id)delete exp.aiDesignProposals[id];if(exp.designAiStatus&&id)delete exp.designAiStatus[id];if(exp.aiDesignProposal&&String(exp.aiDesignProposal.targetDeviceId||'')===String(id))delete exp.aiDesignProposal;const next=d.devices[Math.min(idx,d.devices.length-1)]||d.devices[0]||null;S.state.selectedDesignDeviceId=next?next.id:null;activateDesignProposal(S.state.selectedDesignDeviceId);Log.info('design.device-removed',{id:id,samples:(removed.sampleNames||[]).length,remaining:d.devices.length});markModified('design');render();LF.UI.toast('Design variant removed.','success');return;}
+        if(e.target.closest('#removeSelectedDevice')){const exp=S.state.experiment,d=ensureExperimentShape(exp).design,id=S.state.selectedDesignDeviceId,idx=d.devices.findIndex(function(x){return x.id===id;}),dev=idx>=0?d.devices[idx]:null;if(!dev)return;const ok=await LF.UI.confirmAction('Remove “'+(dev.name||dev.group||'this variant')+'” from the LabFlow Data? Source data is not deleted; source-derived variants can be reconstructed with Re-read source.',{title:'Remove Design variant',confirmLabel:'Remove variant',cancelLabel:'Cancel',danger:true});if(!ok)return;const removed=d.devices.splice(idx,1)[0];if(LF.ActionData&&id){LF.ActionData.removeProposal(exp,'design.infer',id);LF.ActionData.removeStatus(exp,'design.infer',id);}const next=d.devices[Math.min(idx,d.devices.length-1)]||d.devices[0]||null;S.state.selectedDesignDeviceId=next?next.id:null;activateDesignProposal(S.state.selectedDesignDeviceId);Log.info('design.device-removed',{id:id,samples:(removed.sampleNames||[]).length,remaining:d.devices.length});markModified('design');render();LF.UI.toast('Design variant removed.','success');return;}
         if(e.target.closest('#addSolution')){const d=ensureExperimentShape(S.state.experiment).design,solution={id:C.uid('sol'),name:'New formulation',role:'',solutes:'',solvents:'',concentration:'',additives:'',preparation:'',evidence:'User entry',status:'user_confirmed'},dev=d.devices.find(function(item){return item.id===S.state.selectedDesignDeviceId;});d.solutions.push(solution);if(dev){dev.solutionIds=dev.solutionIds||[];dev.solutionIds.push(solution.id);}Log.info('design.formulation-added',{count:d.solutions.length,experimentId:dev&&dev.id||''});markModified('design');render();return;}
         const devicePick=e.target.closest('[data-design-device]');if(devicePick){S.state.selectedDesignDeviceId=devicePick.dataset.designDevice;render();return;}
         if(e.target.closest('#addDeviceLayer')){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev.stack.push({id:C.uid('layer'),role:'',material:'',thickness:'',process:'',evidence:'User entry',status:'user_confirmed'});dev.status='user_confirmed';markModified('design');render();}return;}
@@ -432,12 +313,12 @@
         const moveLayer=e.target.closest('[data-move-layer]');if(moveLayer){const i=Number(moveLayer.dataset.moveLayer),dir=moveLayer.dataset.direction==='up'?1:-1,j=i+dir,arr=S.state.experiment.design.stack;if(j>=0&&j<arr.length){const tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;Log.info('design.layer-moved',{from:i,to:j});markModified('design');render();}return;}
         if(e.target.closest('#addLayer')){S.state.experiment.design.stack.push({id:C.uid('layer'),role:'',material:'',thickness:'',process:'',evidence:'User entry',notes:'',status:'user_confirmed'});Log.info('design.layer-added',{count:S.state.experiment.design.stack.length});markModified('design');render();return;}
         const designProposalDecision=e.target.closest('[data-design-proposal-decision]');if(designProposalDecision){updateDesignProposalDecision(designProposalDecision.dataset.designProposalDecision,Number(designProposalDecision.dataset.proposalIndex),designProposalDecision.dataset.decision||'pending');return;}
-        if(e.target.closest('#acceptAllDesignProposal')){const proposal=S.state.experiment.aiDesignProposal;if(proposal){(proposal.solutions||[]).concat(proposal.devices||[]).forEach(function(item){if(!item.applied&&(item.decision||'pending')==='pending')item.decision='accepted';});proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');render();}return;}
-        if(e.target.closest('#discardDesignProposal')){const exp=S.state.experiment,id=S.state.selectedDesignDeviceId;if(exp.aiDesignProposals&&id)delete exp.aiDesignProposals[id];delete exp.aiDesignProposal;Log.info('design.proposal-discarded',{deviceId:id||''});markModified('ai');render();LF.UI.toast('AI design proposal discarded.','info');return;}
+        if(e.target.closest('#acceptAllDesignProposal')){const proposal=selectedDesignProposal();if(proposal){(proposal.solutions||[]).concat(proposal.devices||[]).forEach(function(item){if(!item.applied&&(item.decision||'pending')==='pending')item.decision='accepted';});proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');render();}return;}
+        if(e.target.closest('#discardDesignProposal')){const exp=S.state.experiment,id=S.state.selectedDesignDeviceId;if(LF.ActionData&&id)LF.ActionData.removeProposal(exp,'design.infer',id);Log.info('design.proposal-discarded',{deviceId:id||''});markModified('ai');render();LF.UI.toast('AI design proposal discarded.','info');return;}
 
-        if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim()||'Matteo Ginesi',defaultAuthor:document.getElementById('userDefaultAuthor').value.trim()||document.getElementById('userName').value.trim()||'Matteo Ginesi',organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});if(hasExperiment()){const r=LF.Report.ensureReport(S.state.experiment);if(!r.author){r.author=LF.Storage.getUserProfile().defaultAuthor;markModified('report');}}LF.UI.toast('Profile saved.','success');render();return;}
+        if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim()||'Matteo Ginesi',organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});LF.UI.toast('Profile saved.','success');render();return;}
         if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,memoryTurns:Number(document.getElementById('assistantMemoryTurns').value),memoryChars:Number(document.getElementById('assistantMemoryChars').value),messageChars:Number(document.getElementById('assistantMessageChars').value),maxOutputTokens:Number(document.getElementById('assistantMaxOutputTokens').value),temperature:Number(document.getElementById('assistantTemperature').value),contextChars:Number(document.getElementById('assistantContextChars').value)});LF.UI.toast('Assistant settings saved.','success');render();return;}
-        if(e.target.closest('#saveActionEditor')){const btn=e.target.closest('#saveActionEditor'),id=btn.dataset.actionId,defText=document.getElementById('actionDefinitionEditor').value,promptText=document.getElementById('actionPromptEditor').value;try{const def=JSON.parse(defText);if(!def||def.id!==id)throw new Error('Action id must remain '+id+'.');if(!Array.isArray(def.steps)||!def.steps.length)throw new Error('Action definition requires at least one step.');LF.Storage.saveActionOverride(id,{definition:def,prompt:promptText});LF.UI.toast('Action runtime configuration saved.','success');render();}catch(err){LF.UI.toast('Action not saved: '+(err.message||String(err)),'error');}return;}
+        if(e.target.closest('#saveActionEditor')){const btn=e.target.closest('#saveActionEditor'),id=btn.dataset.actionId,defText=document.getElementById('actionDefinitionEditor').value,promptText=document.getElementById('actionPromptEditor').value;try{const def=JSON.parse(defText);if(!def||def.id!==id)throw new Error('Action id must remain '+id+'.');if(!def.contract||!def.execution||!Array.isArray(def.execution.steps)||!def.execution.steps.length)throw new Error('Action definition requires contract and execution.steps.');LF.Storage.saveActionOverride(id,{definition:def,prompt:promptText});LF.UI.toast('Action runtime configuration saved.','success');render();}catch(err){LF.UI.toast('Action not saved: '+(err.message||String(err)),'error');}return;}
         if(e.target.closest('#resetActionEditor')){const btn=e.target.closest('#resetActionEditor'),id=btn.dataset.actionId;if(await LF.UI.confirmAction('Reset '+id+' to its source action.json and prompt.md?',{title:'Reset Action configuration',confirmLabel:'Reset Action'})){LF.Storage.resetActionOverride(id);LF.UI.toast('Action reset to source definition.','success');render();}return;}
         if(e.target.closest('#clearAssistantConversation')){if(hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation and its memory?',{title:'Clear Assistant memory',confirmLabel:'Clear conversation',danger:true})){const d=LF.State.ensureDerived(S.state.experiment);d.chat=d.chat||{conversation:[]};d.chat.conversation=[];markModified('ai');LF.UI.toast('Assistant conversation cleared.','success');render();}return;}
         if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({enabled:document.getElementById('logEnabled').checked,level:document.getElementById('logLevel').value,maxEntries:Number(document.getElementById('logMaxEntries').value)||2500,interactions:document.getElementById('logInteractions').checked,network:document.getElementById('logNetwork').checked});LF.UI.toast('Logging settings applied. Reload only if you changed network instrumentation.','success');render();return;}
@@ -450,16 +331,10 @@
         if(e.target.closest('#saveAiSettings')){LF.AISettings.saveFromForm();return;}
         if(e.target.closest('#detectProviderModel')){LF.AISettings.detectModel();return;}
         if(e.target.closest('#testAiConnection')){await LF.AISettings.testConnection(e.target.closest('#testAiConnection'));return;}
-        if(e.target.closest('#saveNomadSettings')){saveNomadSettings();if(hasExperiment()){LF.Nomad.validate(S.state.experiment);markModified('nomad');render();}return;}
-        if(e.target.closest('#downloadNomadPackage')){downloadNomadPackage();return;}
-        if(e.target.closest('#nomadDemoUpload')){await simulateNomadUpload();return;}
-        if(e.target.closest('#downloadMockNomadPackage')){downloadMockNomadPackage();return;}
+        if(e.target.closest('#reanalyzeDataset')){refreshPipeline(S.state.experiment,'manual-review');render();LF.UI.toast('Deterministic data pipeline refreshed.','success');return;}
+        if(e.target.closest('#refreshNomadMapping')||e.target.closest('#rebuildNomadMapping')){LF.Nomad.buildMapping(S.state.experiment);LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD mapping and local validation refreshed.','success');return;}
         if(e.target.closest('#exportMeasurementsCsv')){C.downloadBlob(C.textBlob(LF.Analysis.toCSV(S.state.experiment),'text/csv;charset=utf-8'),C.safeName(S.state.experiment.meta.name)+'_measurements.csv');return;}
         const canvasExport=e.target.closest('[data-export-canvas]');if(canvasExport){LF.ResultsPage.exportCanvas(canvasExport.dataset.exportCanvas,canvasExport.dataset.exportName||'labflow-chart.png');return;}
-        if(e.target.closest('#reportMd')){const doc=syncActiveReportEditor('markdown-export'),result=LF.Report.exportMarkdown(S.state.experiment);LF.UI.toast(doc.label+' exported from '+result.words+' words.','success');return;}
-        if(e.target.closest('#reportTex')){const doc=syncActiveReportEditor('latex-export');LF.Report.exportLatex(S.state.experiment);LF.UI.toast(doc.label+' exported as LaTeX.','success');return;}
-        if(e.target.closest('#reportDocx')){downloadReportDocx();return;}
-        if(e.target.closest('#reportPdf')){downloadReportPdf();return;}
         if(e.target.closest('#exportCurvePng')){LF.ResultsPage.exportCanvas('curveCanvas',C.safeName(S.state.experiment.meta.name)+'_jv_curves.png');return;}
         if(e.target.closest('#boxSelectAll')){S.state.boxPlot.groups=Array.from(new Set(S.state.experiment.measurements.map(function(m){return LF.ResultsPage.groupName(m);}))).sort();render();return;}
         if(e.target.closest('#boxSelectRef')){S.state.boxPlot.groups=Array.from(new Set(S.state.experiment.measurements.filter(function(m){return m.isRef;}).map(function(m){return LF.ResultsPage.groupName(m);}))).sort();render();return;}
@@ -470,18 +345,12 @@
 
     document.addEventListener('change',function(e){
       try {
-        if(e.target.id==='knowledgeEntryKind'){S.state.knowledgeDraftKind=e.target.value;S.state.knowledgeCreating=true;render();return;}
-        if(e.target.id==='knowledgeKindFilter'){S.state.knowledgeKind=e.target.value||'all';render();return;}
-        if(e.target.id==='knowledgeImportInput'){const file=e.target.files&&e.target.files[0];e.target.value='';if(file)file.text().then(function(content){return LF.KnowledgeBase.importLibrary(content);}).then(function(out){if(!out)return;S.state.knowledgeCreating=false;S.state.knowledgeSelectedId=null;render();LF.UI.toast('Imported '+out.imported+' record'+(out.imported===1?'':'s')+' · '+out.total+' total in the Knowledge Base.','success');}).catch(function(err){LF.UI.toast(err.message||String(err),'error');});return;}
         if(e.target.id==='uiKitGlobalFilter'){S.state.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
         if(e.target.id==='aiModelSelect'){const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return;}
         if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
         if(e.target.id==='designDeviceSelect'){S.state.selectedDesignDeviceId=e.target.value;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
-        if(e.target.id==='actionReportDocKind'){S.state.settingsActionDocKind=e.target.value==='paper'?'paper':'lab';if(S.persist)S.persist();render();return;}
-        if(e.target.id==='markdownBlockStyle'){if(e.target.value)applyMarkdownTool(e.target.value);e.target.value='';return;}
-        if(e.target.id==='figurePickerGroup'){if(LF.ReportPage&&LF.ReportPage.filterFigurePicker)LF.ReportPage.filterFigurePicker();return;}
         if(e.target.id==='curveView'){S.state.curveView=e.target.value;render();return;}
         if(e.target.id==='curveGroup'){S.state.curveGroup=e.target.value;render();return;}
         if(e.target.id==='curveDirection'){S.state.curveDirection=e.target.value;render();return;}
@@ -499,33 +368,25 @@
         const deviceSolution=e.target.closest('[data-device-solution-id]');if(deviceSolution){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){const id=deviceSolution.dataset.deviceSolutionId;dev.solutionIds=dev.solutionIds||[];if(deviceSolution.checked&&!dev.solutionIds.includes(id))dev.solutionIds.push(id);if(!deviceSolution.checked)dev.solutionIds=dev.solutionIds.filter(function(x){return x!==id;});dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceSample=e.target.closest('[data-device-sample-name]');if(deviceSample){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;}),name=deviceSample.dataset.deviceSampleName;if(dev){dev.sampleNames=dev.sampleNames||[];if(deviceSample.checked){d.devices.forEach(function(other){if(other.id!==dev.id)other.sampleNames=(other.sampleNames||[]).filter(function(x){return x!==name;});});if(!dev.sampleNames.includes(name))dev.sampleNames.push(name);d.devices=d.devices.filter(function(other){return other.id===dev.id||other.status!=='raw_evidence'||(other.sampleNames||[]).length>0;});}else dev.sampleNames=dev.sampleNames.filter(function(x){return x!==name;});dev.status='user_confirmed';markModified('design');render();}return;}
         if(e.target.id==='confirmSelectedDevice'){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev.status=e.target.checked?'user_confirmed':'raw_evidence';markModified('design');render();}return;}
-        const pickerFigure=e.target.closest('[data-figure-picker-key]');if(pickerFigure){LF.ReportPage.updateFigurePickerCount();if(pickerFigure.checked&&LF.ReportPage.previewFigurePickerCard)LF.ReportPage.previewFigurePickerCard(pickerFigure);return;}
-        const reportFigure=e.target.closest('[data-report-figure]');if(reportFigure){LF.Report.setFigure(S.state.experiment,reportFigure.dataset.reportFigure,reportFigure.checked);markModified('report');render();return;}
-        const reportOption=e.target.closest('[data-report-option]');if(reportOption){const r=LF.Report.ensureReport(S.state.experiment);r[reportOption.dataset.reportOption]=reportOption.checked;r.updatedAt=new Date().toISOString();markDraft('report');return;}
       } catch(err){Log.error('ui.change-handler-failed',{target:e.target&&e.target.id||'',error:err});}
     });
 
     document.addEventListener('input',function(e){
       try {
         if(e.target.id==='aiKey'){if(LF.AISettings&&LF.AISettings.syncModelControls)LF.AISettings.syncModelControls();return;}
-        if(e.target.id==='knowledgeSearch'){S.state.knowledgeQuery=e.target.value;clearTimeout(S.state._knowledgeSearchTimer);S.state._knowledgeSearchTimer=setTimeout(function(){render();const input=document.getElementById('knowledgeSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},140);return;}
         if(e.target.id==='uiKitGlobalSearch'){S.state.uiKitQuery=e.target.value;applyUiKitFilter();return;}
         if(e.target.id==='docsSearch'){S.state.docsQuery=e.target.value;LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='logSearch'){LF.LogsPage.setQuery(e.target.value);clearTimeout(S.state._logSearchTimer);S.state._logSearchTimer=setTimeout(function(){render();const search=document.getElementById('logSearch');if(search){search.focus();search.setSelectionRange(search.value.length,search.value.length);}},180);return;}
         if(e.target.id==='curveSearch'){S.state.curveSearch=e.target.value;clearTimeout(S.state._curveSearchTimer);S.state._curveSearchTimer=setTimeout(function(){render();},140);return;}
-        if(e.target.id==='figurePickerSearch'){if(LF.ReportPage&&LF.ReportPage.filterFigurePicker)LF.ReportPage.filterFigurePicker();return;}
         if(e.target.id==='measurementSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#measurementTable tbody tr').forEach(function(tr){tr.hidden=q&&!tr.dataset.search.includes(q);});return;}
-        if(e.target.id==='reportMarkdown'){
-          LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);markDraft('report');scheduleReportEditorPreview(e.target.value);const hint=document.querySelector('.report-empty-hint');if(hint)hint.hidden=!!e.target.value.trim();
-          const info=LF.Report.documentInfo(S.state.experiment),count=document.getElementById('reportWordCount'),status=document.getElementById('reportExportStatus'),saved=document.getElementById('reportSaveState');if(count)count.textContent=info.words+' words · '+info.chars+' characters';const len=document.getElementById('reportPreviewLength');if(len)len.textContent=info.words+' words';if(status)status.textContent='Current editor text · '+info.words+' words';if(saved)saved.textContent='Editing · '+info.words+' words';return;
-        }
-        const reportTitle=e.target.closest('[data-report-title]');if(reportTitle){LF.Report.setActiveTitle(S.state.experiment,reportTitle.value);markDraft('report');const cover=document.querySelector('.report-preview-cover strong');if(cover)cover.textContent=reportTitle.value;return;}
-        const reportMeta=e.target.closest('[data-report-meta]');if(reportMeta){const r=LF.Report.ensureReport(S.state.experiment);r[reportMeta.dataset.reportMeta]=reportMeta.value;r.updatedAt=new Date().toISOString();markDraft('report');return;}
+        if(e.target.id==='cabinetSearch'){S.state.ui.cabinetQuery=e.target.value;clearTimeout(S.state._cabinetSearchTimer);S.state._cabinetSearchTimer=setTimeout(function(){render();const input=document.getElementById('cabinetSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},160);return;}
+        const cabinetField=e.target.closest('[data-cabinet-field]');if(cabinetField){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item){const key=cabinetField.dataset.cabinetField,value=key==='tags'?cabinetField.value.split(',').map(function(x){return x.trim();}).filter(Boolean):cabinetField.value;const patch={};patch[key]=value;LF.Cabinet.update(item.id,patch);}return;}
+        const cabinetLayerField=e.target.closest('[data-cabinet-layer-field]');if(cabinetLayerField){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).map(function(x){return Object.assign({},x);}),layer=layers[Number(cabinetLayerField.dataset.cabinetLayerIndex)];if(layer){layer[cabinetLayerField.dataset.cabinetLayerField]=cabinetLayerField.value;LF.Cabinet.update(item.id,{layers:layers});}}return;}
         const solField=e.target.closest('[data-solution-field]');if(solField){const sol=S.state.experiment.design.solutions[Number(solField.dataset.solutionIndex)];if(sol){sol[solField.dataset.solutionField]=solField.value;sol.userEdited=true;sol.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
-        const proposalSolutionField=e.target.closest('[data-proposal-solution-index]');if(proposalSolutionField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.solutions&&proposal.solutions[Number(proposalSolutionField.dataset.proposalSolutionIndex)];if(item){const field=proposalSolutionField.dataset.proposalField,previous=item[field];item[field]=proposalSolutionField.value;if(field==='name'&&String(previous)!==item.name)(proposal.devices||[]).forEach(function(device){device.solution_names=(device.solution_names||[]).map(function(name){return String(name)===String(previous)?item.name:name;});});if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
-        const proposalLayerField=e.target.closest('[data-proposal-layer-field]');if(proposalLayerField){const proposal=S.state.experiment.aiDesignProposal,device=proposal&&proposal.devices&&proposal.devices[Number(proposalLayerField.dataset.proposalDeviceIndex)],layer=device&&device.stack&&device.stack[Number(proposalLayerField.dataset.proposalLayerIndex)];if(layer){layer[proposalLayerField.dataset.proposalLayerField]=proposalLayerField.value;if(device.applied){device.applied=false;device.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
-        const proposalProcessField=e.target.closest('[data-proposal-process-field]');if(proposalProcessField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.devices&&proposal.devices[Number(proposalProcessField.dataset.proposalDeviceIndex)];if(item){item.process=item.process||{};item.process[proposalProcessField.dataset.proposalProcessField]=proposalProcessField.value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
-        const proposalDeviceField=e.target.closest('[data-proposal-device-index][data-proposal-field]');if(proposalDeviceField){const proposal=S.state.experiment.aiDesignProposal,item=proposal&&proposal.devices&&proposal.devices[Number(proposalDeviceField.dataset.proposalDeviceIndex)];if(item){const value=proposalDeviceField.dataset.proposalArray==='true'?proposalDeviceField.value.split(',').map(function(x){return x.trim();}).filter(Boolean):proposalDeviceField.value;item[proposalDeviceField.dataset.proposalField]=value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
+        const proposalSolutionField=e.target.closest('[data-proposal-solution-index]');if(proposalSolutionField){const proposal=selectedDesignProposal(),item=proposal&&proposal.solutions&&proposal.solutions[Number(proposalSolutionField.dataset.proposalSolutionIndex)];if(item){const field=proposalSolutionField.dataset.proposalField,previous=item[field];item[field]=proposalSolutionField.value;if(field==='name'&&String(previous)!==item.name)(proposal.devices||[]).forEach(function(device){device.solution_names=(device.solution_names||[]).map(function(name){return String(name)===String(previous)?item.name:name;});});if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
+        const proposalLayerField=e.target.closest('[data-proposal-layer-field]');if(proposalLayerField){const proposal=selectedDesignProposal(),device=proposal&&proposal.devices&&proposal.devices[Number(proposalLayerField.dataset.proposalDeviceIndex)],layer=device&&device.stack&&device.stack[Number(proposalLayerField.dataset.proposalLayerIndex)];if(layer){layer[proposalLayerField.dataset.proposalLayerField]=proposalLayerField.value;if(device.applied){device.applied=false;device.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
+        const proposalProcessField=e.target.closest('[data-proposal-process-field]');if(proposalProcessField){const proposal=selectedDesignProposal(),item=proposal&&proposal.devices&&proposal.devices[Number(proposalProcessField.dataset.proposalDeviceIndex)];if(item){item.process=item.process||{};item.process[proposalProcessField.dataset.proposalProcessField]=proposalProcessField.value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
+        const proposalDeviceField=e.target.closest('[data-proposal-device-index][data-proposal-field]');if(proposalDeviceField){const proposal=selectedDesignProposal(),item=proposal&&proposal.devices&&proposal.devices[Number(proposalDeviceField.dataset.proposalDeviceIndex)];if(item){const value=proposalDeviceField.dataset.proposalArray==='true'?proposalDeviceField.value.split(',').map(function(x){return x.trim();}).filter(Boolean):proposalDeviceField.value;item[proposalDeviceField.dataset.proposalField]=value;if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
         const deviceField=e.target.closest('[data-device-field]');if(deviceField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){dev[deviceField.dataset.deviceField]=deviceField.value;dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceLayerField=e.target.closest('[data-device-layer-field]');if(deviceLayerField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;}),item=dev&&dev.stack[Number(deviceLayerField.dataset.deviceLayerIndex)];if(item){item[deviceLayerField.dataset.deviceLayerField]=deviceLayerField.value;item.status='user_confirmed';dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
         const deviceProcessField=e.target.closest('[data-device-process-field]');if(deviceProcessField){const d=ensureExperimentShape(S.state.experiment).design,dev=d.devices.find(function(x){return x.id===S.state.selectedDesignDeviceId;});if(dev){const field=deviceProcessField.dataset.deviceProcessField;dev.process=dev.process||{};dev.process[field]=deviceProcessField.value;dev.processProvenance=dev.processProvenance||{};dev.processProvenance[field]={status:'user_confirmed',evidence:'User entry'};dev.status='user_confirmed';markDraft('design');refreshDesignProjection();}return;}
@@ -534,27 +395,25 @@
       } catch(err){Log.error('ui.input-handler-failed',{target:e.target&&e.target.id||'',error:err});}
     });
 
-    document.addEventListener('focusout',function(e){if(e.target&&e.target.id==='reportMarkdown'){renderReportEditorPreview(e.target.value);commitDraft('report');return;}if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}});
+    document.addEventListener('change',async function(e){if(e.target&&e.target.id==='cabinetImportFile'){const file=e.target.files&&e.target.files[0];if(!file)return;try{const text=await file.text(),out=LF.Cabinet.importState(text,'merge');S.state.ui.cabinetSelectedId=null;S.state.ui.cabinetKind='all';render();LF.UI.toast('Imported '+out.imported+' Cabinet resource'+(out.imported===1?'':'s')+'.','success');}catch(err){LF.UI.toast('Cabinet import failed: '+(err.message||String(err)),'error');}finally{e.target.value='';}}});
+
+    document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}if(e.target&&e.target.closest&&e.target.closest('[data-cabinet-field],[data-cabinet-layer-field]')&&S.state.route==='cabinet')render();});
+
+    document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.resultInspectorId){LF.ResultsPage.closeResultInspector();}});
 
     document.addEventListener('submit',async function(e){
-      if(e.target.id==='knowledgeEntryForm'){
-        e.preventDefault();
-        try{const record=await LF.KnowledgeBase.upsert(LF.KnowledgePage.readForm(e.target));S.state.knowledgeSelectedId=record.id;S.state.knowledgeCreating=false;render();LF.UI.toast('Knowledge record saved as a local browser edit.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}
-        return;
-      }
       if(e.target.id==='samplePatchForm'){
         e.preventDefault();
         try {
           const fd=new FormData(e.target),from=String(fd.get('from')||'').trim(),to=LF.Parser.canonicalSample(fd.get('to')),reason=String(fd.get('reason')||'').trim();if(!from||!to||!reason)return;
           let changed=0;S.state.experiment.measurements.forEach(function(m){if(m.sample===from){m.sample=to;m.group=LF.Parser.groupFromSample(to);m.isRef=LF.Parser.isReference(to);changed++;}});
           if(!changed)throw new Error('No measurement uses the selected current sample identity.');
-          S.state.experiment.patches.push({id:C.uid('patch'),type:'sample_mapping',target:from,from:from,to:to,source:'user',reason:reason,evidence:['Researcher-confirmed manual correction'],reviewStatus:'accepted',createdAt:new Date().toISOString()});
-          if(LF.DatasetCorrections&&LF.DatasetCorrections.rebuildSamples)LF.DatasetCorrections.rebuildSamples(S.state.experiment);else rebuildSamples(S.state.experiment);markModified('dataset');if(LF.DatasetCorrections&&LF.DatasetCorrections.refresh)LF.DatasetCorrections.refresh(S.state.experiment);render();LF.UI.toast('Canonical sample mapping applied to '+changed+' measurement'+(changed===1?'':'s')+'.','success');
+          LF.DataModel.addPatch(S.state.experiment,{patchType:'sample_mapping',target:{kind:'dataset',id:S.state.experiment.id},operation:'set',field:'sample_mapping',from:from,to:to,source:'user',reason:reason,evidence:['Researcher-confirmed manual correction'],reviewStatus:'accepted',status:'applied',appliedAt:new Date().toISOString()},{touch:false});
+          LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast('Canonical sample mapping applied to '+changed+' measurement'+(changed===1?'':'s')+'.','success');
         } catch(err){Log.error('validation.manual-mapping-failed',{error:err});LF.UI.toast(err.message||String(err),'error');}
       }
     });
 
-    const inspectorShade=document.getElementById('resultInspectorShade');if(inspectorShade)inspectorShade.addEventListener('click',function(ev){if(ev.target===inspectorShade)LF.ResultsPage.closeResultInspector();});document.addEventListener('keydown',function(ev){if(LF.ReportPage&&LF.ReportPage.handleFigurePickerKey&&LF.ReportPage.handleFigurePickerKey(ev))return;if(ev.key==='Escape'&&document.body.classList.contains('mobile-nav-open')){closeMobileNav();return;}if(ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.resultInspectorId){LF.ResultsPage.closeResultInspector();}});
     document.getElementById('datasetInput').addEventListener('change',function(){const f=this.files[0];this.value='';if(f)importDataset(f);});
     Log.debug('events.bind.end');
   }
@@ -565,13 +424,12 @@
   async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
-      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);if(LF.KnowledgeBase&&LF.KnowledgeBase.initialize)try{await LF.KnowledgeBase.initialize();}catch(error){Log.warn('knowledge.initialize-skipped',{error:error});}
-      /* The current scientific Working Copy persists in IndexedDB. Reset is the
-         explicit boundary that clears it; provider/key/theme remain independent. */
+      S.state.route='experiment-import';S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      /* ExperimentData is autosaved in IndexedDB for browser recovery. Reset session is the explicit clear boundary; provider/key/theme remain independent. */
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
-      if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
+      if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);try{refreshPipeline(S.state.experiment,'workspace-restore');}catch(err){Log.warn('workspace.restore-pipeline-failed',{experimentId:S.state.experiment.id,error:err});}Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
       else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
-      S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen!==false;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      S.state.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
       bindEvents();setMobileNav(false);window.addEventListener('resize',function(){if(window.innerWidth>1100)closeMobileNav();},{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun'&&reason!=='assistant')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}

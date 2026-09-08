@@ -1,73 +1,77 @@
-# JavaScript module map
+---
+title: JavaScript module ownership
+section: Core architecture
+summary: Source-level module map and write boundaries for contributors.
+order: 25
+---
 
-LabFlow is a static browser application. Modules attach a bounded namespace to `window.LabFlow`; page modules render from the single Working Copy and do not own scientific state. The list below documents every shipped JavaScript module. Comments inside source explain contracts and non-obvious decisions; ordinary expressions are intentionally not narrated line by line.
+# JavaScript module ownership
 
-## Application shell and shared services
+LabFlow is a local-first browser application. Modules attach bounded APIs to `window.LabFlow`. The bundled Python server only serves public files and relays Z.AI Chat Completions through a fixed same-origin route; scientific/application ownership remains in the browser modules.
 
-- `core.js` — escaping, Markdown rendering, IDs, cloning and shared formatting helpers.
-- `logger.js` — structured in-browser logs with credential-aware request redaction.
-- `math.js` — deterministic numeric and statistical helpers.
-- `storage.js` — browser-local preferences, provider-scoped API keys, persisted Working Copy access, lightweight Knowledge Base overrides and bounded compatibility migrations.
-- `state.js` — the sole Working Copy lifecycle, autosave, dirty/revision tracking and compact Action history.
-- `page-context.js` — current route/selection context shared with bounded AI contexts.
-- `app.js` — boot, route normalization, event delegation and top-level page orchestration.
+## Architectural kernel
 
-## Scientific data and experiment model
+- `experiment/domain-schema.js` — canonical record factories, root ownership/persistence, detached snapshot contract.
+- `experiment/data-model.js` — `ExperimentData` aggregate/query/mutation API.
+- `experiment/data-contracts.js` — graph/invariant validation.
+- `experiment/derived-state.js` — derived dependency/invalidation registry.
+- `data/pipeline.js` — declarative deterministic stage registry/executor.
+- `experiment/action-data.js` — single Action proposal/annotation/status store.
 
-- `data/importer.js` — immutable ZIP-byte cloning, archive inventory and import orchestration.
-- `data/parser.js` — deterministic known-format parsing and identity evidence.
-- `data/analysis.js` — deterministic JV metrics, ranking and findings.
-- `data/analysis-summary.js` — deterministic Analysis Dossier/group statistics bundle.
-- `experiment/data-model.js` — normalized experiment construction.
-- `experiment/model.js` — Working Copy query/mutation helpers.
-- `experiment/canonical-store.js` — canonical-v2 semantic index, stable relations, aliases and evidence.
-- `knowledge/library-bundle.js` — generated browser bundle of `science.json` and `labflow.json`; it is available immediately without network, database or folder access.
-- `knowledge/knowledge-base.js` — bundled records plus browser-local overrides, JSON interchange and deterministic ranked lookup for Assistant/Action Context Packs.
+## Import and scientific processing
 
-## AI, Actions and Tools
+- `data/importer.js` — archive orchestration and source evidence creation.
+- `data/parser.js` — known source-format/naming parsing.
+- `data/analysis.js` — deterministic JV analysis/findings.
+- `data/analysis-summary.js` — deterministic statistics/brief projections.
+- `experiment/canonical-store.js` — pure read index/aliases/relations/evidence.
+- `experiment/design-model.js` — Design-owned projection and Design mutation helpers; it does not define the global experiment shape.
 
-- `tools/registry.js` — typed Tool registry and Assistant read-only allowlist boundary.
-- `ai/providers.js` — declarative provider capabilities and provider-specific payload mappings.
-- `ai/transport.js` — Chat Completions URL/auth adapter, discovery, capability probes, SSE/JSON normalization, thinking policy, budgets, timing and bounded retry.
-- `ai/api-diagnostics.js` — stable error classification and safe environment guidance.
-- `ai/settings.js` — provider form persistence, explicitly triggered local-model detection and rich connection-test report.
-- `ai/context.js` — bounded Context Pack construction over Canonical Store references.
-- `ai/structured.js` — structured response parsing and schema validation used by Actions.
-- `ai/action-steps.js` — deterministic Action step implementations behind Tools.
-- `ai/actions.js` — single-run sequential Action runner, bounded semantic retries and Assistant read-tool loop.
-- `ai/action-ui.js` — truthful Action progress, sequential multi-Action projection and result publication.
-- `ai/assistant.js` — constrained Chat UI integration and reasoning/final-content presentation.
-- `ai/action-registry.js` — generated Action contract bundle; edit `actions/*`, not this file.
-- `ai/prompt-bundle.js` — generated prompt bundle; edit `actions/*` and `prompts/*`, not this file.
+## State/persistence
 
-## Pages and UI
+- `state.js` — single LabFlow Data lifecycle, revision, autosave and route/UI state; feature invalidation delegates to `DerivedState`.
+- `storage.js` — browser persistence/preferences/provider keys.
 
-- `pages/shared.js` — page-level shared rendering and scientific status helpers.
-- `pages/import-page.js` — mandatory Upload & Review entry point and integrated review workbench.
-- `pages/understand-page.js` — review-workbench renderer composed by Import; it is not an alternate route.
-- `pages/results-page.js` — deterministic Results tables, plots and comparisons.
-- `pages/design-page.js` — direct Design editing, provenance and bounded missing-field proposals.
-- `pages/knowledge-page.js` — Knowledge Base status, searchable science/help catalog, local record editor and JSON import/export, available independently of an experiment.
-- `pages/report-page.js` — Report/Paper editor, writing controls, preview and figure picker.
-- - `pages/nomad-page.js` — deterministic mapping, readiness and export controls.
-- `pages/settings-page.js` — provider, Action and preference forms.
-- `pages/logs-page.js` — local structured diagnostic log viewer.
-- `pages/docs-page.js` — searchable Markdown documentation browser and local Mermaid flowchart renderer.
-- `pages/docs-bundle.js` — generated `file://`-safe bundle of canonical Markdown sources; edit `docs/**/*.md`, not this file.
-- `pages/ui-kit-page.js` — in-app UI Kit route.
-- `pages/ui-kit-inline.js` — generated inline UI Kit mirror for `file://` use.
-- `ui/feedback.js` — toasts, progress totem and provider-output disclosure.
-- `ui/icons.js` — shared icon markup.
-- `ui/theme.js` — theme selection and persistence.
+## Actions/AI
 
-## Report, export and NOMAD
+- `ai/action-registry.js` — generated bundle from `actions/*/action.json`.
+- `ai/action-guards.js` — Action availability guards.
+- `ai/action-steps.js` — deterministic Action checkpoint implementations/apply services.
+- `ai/actions.js` — generic sequential runner/retry/contract execution.
+- `ai/action-ui.js` — Action UI orchestration; Design “Suggest all” sequences `design.infer`.
+- `ai/context.js` — bounded Context profile registry/builders.
+- `ai/structured.js` — structured parse/schema normalization/validation.
+- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, transport and settings; Z.AI declares the bundled same-origin relay route while retaining the official upstream endpoint as provider configuration.
+- `ai/assistant.js` — read-only Assistant turns.
+- `tools/registry.js` — typed deterministic/internal tools.
 
-- `report/report.js` — the two Markdown documents, document-scoped figures and PDF/DOCX/TeX export from current editor text.
-- `export/export.js` — durable LabFlow ZIP serialization while preserving original source bytes.
-- `nomad/nomad.js` — single Canonical-to-NOMAD mapping plan, validation, staging and ZIP generation.
+Generated files (`action-registry.js`, `prompt-bundle.js`) must be rebuilt from sources, not manually edited.
 
-## Compatibility and deletion policy
+## Feature projections/exports
 
-Compatibility code is retained only where it migrates browser-persisted user data or normalizes a historical public route. Current retained migrations cover the old `experiment-understand` route, legacy Report figure selection, older Action overrides and canonical aliases. The obsolete boolean AI thinking preference is discarded and replaced by the validated `auto|off|on` policy. Persisted-data migrations must be removed only with an explicit version boundary.
+- `export/nomad.js` — deterministic NOMAD projection/validation/export.
+- `export/export.js` — original/LabFlow Data package export.
+- `page-context.js` — bounded page context for Assistant/Actions.
+- `experiment/data-console.js` — live introspection facade.
 
-Unused convenience exports, empty Report/Paper templates and obsolete diagnostic aliases are not compatibility contracts and have been removed. Generated files are rebuilt, never hand-edited. Every module must pass `node --check`; behavior is covered by the unit suites under `tests/unit/`.
+## Pages
+
+Files under `pages/` render/query the current aggregate/projections and may retain UI-only selection/filter state. They must not become scientific owners.
+
+## Shared/UI
+
+- `core.js`, `math.js`, `logger.js` — shared deterministic infrastructure.
+- `ui/*`, `pages/shared.js` — presentation helpers.
+
+## Write boundary summary
+
+| Owner | May write |
+|---|---|
+| Importer | source evidence roots during import |
+| Domain services | LabFlow Data records/patches through explicit APIs |
+| Analysis | analysis/findings/owned derived values |
+| DesignModel | `design` |
+| Actions | `actionData`, interaction history; scientific apply only via deterministic services |
+| Pipeline | runtime trace plus stage-owned outputs |
+| Pages | UI state only, except through owner APIs |
+| NOMAD | NOMAD projection/export state |

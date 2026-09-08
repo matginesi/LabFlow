@@ -22,9 +22,8 @@ ROUTES = (
     "experiment-import",
     "experiment-results",
     "experiment-design",
-    "experiment-report",
-    "experiment-changes",
-    "experiment-nomad",
+    "experiment-export",
+    "cabinet",
     "settings",
     "logs",
     "ui-kit",
@@ -38,9 +37,9 @@ AUDIT_JS = r"""() => {
   };
   const localScroll = node => node.closest([
     '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
-    '.stack-editor-scroll', '.design-variant-rail .panel-body', '.design-variant-rail-v3 .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.report-ai-tools', '.report-toolbar', '.experiment-strip',
-    '.review-compact-status', '.changes-table-scroll', '.changes-diff-scroll', '.changes-provenance-scroll'
+    '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
+    '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.docs-mermaid-canvas',
+    '.review-compact-status'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -64,7 +63,7 @@ AUDIT_JS = r"""() => {
     viewport: {width:innerWidth,height:innerHeight},
     documentOverflow: document.documentElement.scrollWidth > innerWidth,
     documentWidth: document.documentElement.scrollWidth,
-    mainOverflow: main.scrollWidth > main.clientWidth + 1,
+    mainOverflow: main.scrollWidth > main.getBoundingClientRect().width + 1,
     main: {left:Math.round(mainRect.left),right:Math.round(mainRect.right),clientWidth:main.clientWidth,scrollWidth:main.scrollWidth},
     sidebar: {top:Math.round(sidebarRect.top),left:Math.round(sidebarRect.left),width:Math.round(sidebarRect.width),height:Math.round(sidebarRect.height)},
     stepper: strip ? {clientWidth:strip.clientWidth,scrollWidth:strip.scrollWidth,steps} : null,
@@ -85,6 +84,17 @@ def main() -> int:
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
 
+        # The navigation is a summonable drawer at every viewport and the AI
+        # assistant must not occupy the workspace until explicitly opened.
+        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        assert not page.locator("#assistantPanel").is_visible()
+        page.locator("#mobileNavToggle").click()
+        page.wait_for_timeout(220)
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
+        page.locator("#sidebarDismiss").click()
+        page.wait_for_timeout(220)
+        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+
         # Audit the upload-first state before adding experiment data.
         findings.append(page.evaluate(AUDIT_JS))
         page.locator("#datasetInput").set_input_files(str(ZIP_PATH))
@@ -93,6 +103,22 @@ def main() -> int:
         page.evaluate("window.LabFlow.UI.activityHide()")
         if page.locator("#assistantClose").is_visible():
             page.locator("#assistantClose").click()
+        suggested_exclusions = page.locator("[data-apply-review-fix]").count()
+        assert suggested_exclusions > 0
+        assert page.locator("#applyAllReviewFixes").is_visible()
+        assert page.evaluate("() => LabFlow.State.state.experiment.measurements.filter(item => item.excluded).length") == 0
+        page.evaluate("""() => {
+          LabFlow.Cabinet.reset({items:[]});
+          LabFlow.Cabinet.create('stack',{name:'Reference n-i-p stack',tags:['perovskite','baseline'],layers:[
+            {role:'Substrate / TCO',material:'Glass / FTO'},
+            {role:'Electron transport',material:'SnO₂'},
+            {role:'Absorber',material:'Perovskite'},
+            {role:'Hole transport',material:'Spiro-OMeTAD'},
+            {role:'Top contact',material:'Au'}
+          ]});
+          LabFlow.Cabinet.create('solution',{name:'Perovskite precursor',role:'Absorber precursor',solutes:'FAI, PbI₂',solvents:'DMF, DMSO',concentration:'1.3 M'});
+          LabFlow.Cabinet.create('protocol',{name:'Baseline spin coat',coating:'Spin coating',annealing:'100 °C · 30 min',atmosphere:'N₂'});
+        }""")
 
         for width, height in VIEWPORTS:
             page.set_viewport_size({"width": width, "height": height})
@@ -115,14 +141,6 @@ def main() -> int:
                         nested = page.evaluate(AUDIT_JS)
                         nested["surface"] = f"results:{tab}"
                         findings.append(nested)
-                elif route == "experiment-report":
-                    if width <= 700:
-                        for mode in ("editor", "preview"):
-                            page.locator(f'[data-report-mode="{mode}"]').click()
-                            page.wait_for_timeout(60)
-                            nested = page.evaluate(AUDIT_JS)
-                            nested["surface"] = f"report:{mode}"
-                            findings.append(nested)
                 elif route == "settings":
                     for section in ("provider", "assistant", "workspace", "advanced"):
                         page.locator(f'[data-settings-section="{section}"]').click()
@@ -133,12 +151,12 @@ def main() -> int:
                 elif route == "ui-kit":
                     inner = page.evaluate("""() => {
                       const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
-                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.design-variant-rail-v3 .panel-body,.code-block,.md-table-wrap,.report-ai-tools,.report-toolbar';
+                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap';
                       const offenders=[...root.querySelectorAll('*')].filter(node => {
                         const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
                         return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
                       }).slice(0,12).map(node => ({tag:node.tagName.toLowerCase(),cls:String(node.className).slice(0,100),right:Math.round(node.getBoundingClientRect().right),width:Math.round(node.getBoundingClientRect().width)}));
-                      return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.clientWidth+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
+                      return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.getBoundingClientRect().width+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
                     }""")
                     result["uiKitDocument"] = inner
                 if width in (900, 390):
@@ -153,7 +171,7 @@ def main() -> int:
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item.get("stepper") and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
-            len(item["stepper"]["steps"]) != 6 or
+            len(item["stepper"]["steps"]) != 4 or
             not all(step["visible"] for step in item["stepper"]["steps"])
         ))
     )]

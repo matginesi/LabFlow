@@ -20,7 +20,7 @@ module.exports=function(t,LF,ctx){
   t['documentation page renders search, provenance and selected Markdown']=function(){
     const html=LF.DocsPage.render();
     assert(html.includes('id="docsSearch"'),true,'search control');
-    assert(html.includes('Versioned Markdown'),true,'source provenance');
+    assert(html.includes('Canonical Markdown'),true,'source provenance');
     assert(html.includes('<h1 id="start-with-labflow">Start with LabFlow</h1>'),true,'rendered Markdown heading');
     assert(html.includes('data-copy-doc="guides--getting-started"'),true,'copy Markdown action');
   };

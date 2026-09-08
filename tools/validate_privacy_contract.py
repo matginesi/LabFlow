@@ -75,7 +75,6 @@ def validate_local_assets(errors: list[str]) -> None:
         ROOT / "assets/icons/labflow-favicon.svg",
         ROOT / "vendor/lucide/LICENSE",
         ROOT / "vendor/lucide/NOTICE.txt",
-        ROOT / "vendor/report-export/NOTICE.txt",
         ROOT / "LICENSE",
         ROOT / "docs/PRIVACY.md",
     )

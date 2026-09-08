@@ -9,21 +9,21 @@ output: text
 
 ## Purpose
 
-This document is the **authoritative import contract** for laboratory ZIP files consumed by LabFlow. It defines archive structure, file families, identity rules and the boundary between measured evidence and interpretation. The deterministic parser uses it directly; only the ambiguity-repair Action receives it in full. Downstream Design, Results and Report AI Actions receive smaller canonical Context Packs instead of this entire contract.
+This document is the **authoritative import contract** for laboratory ZIP files consumed by LabFlow. It defines archive structure, file families, identity rules and the boundary between measured evidence and interpretation. The deterministic parser uses it directly; only the ambiguity-repair Action receives it in full. Downstream Design and Results AI Actions receive smaller canonical Context Packs instead of this entire contract.
 
 The source ZIP is immutable. A path, filename, header, unit, value or relationship that is not present in RAW evidence must never be presented as a measured fact.
 
 ## Archive model
 
-A normal experiment is a ZIP containing one experiment root directory. Under it there may be:
+A normal upload is a **dataset/batch archive**, not automatically one scientific experiment. The ZIP normally contains one archive root directory. Under it there may be:
 
 - root-level JV summary tables;
-- sample/device directories;
-- one or more run/time directories below each sample/device;
+- device/cell directories;
+- one or more run/time directories below each device/cell;
 - per-run JV, Parameters and Tracking text files;
 - unknown or auxiliary files, which remain in the manifest even when LabFlow does not parse them.
 
-The archive does **not** need to be perfectly conformant. Missing summaries are allowed when individual JV files provide usable evidence. Repeated runs are allowed. Different samples/devices, groups, references, formulations and process variants may coexist in the same ZIP and must not be collapsed into one entity merely because they share a file layout.
+One archive may contain **multiple logical experiments/conditions**. Repeated devices/cells and repeated JV acquisitions are trials/measurements inside those experiments; they must never be promoted to separate experiments merely because they produced separate files or result rows. Missing summaries are allowed when individual JV files provide usable evidence. Different experiments, devices, references, formulations and process variants may coexist in the same ZIP.
 
 ## Known file families
 
@@ -121,7 +121,17 @@ For each detected family, an AI format review must report: representative RAW pa
 
 ## Identity and relationships
 
-A **measurement** represents one JV measurement source and may contain FW only, RV only, or a matched FW/RV pair.
+LabFlow keeps the acquisition hierarchy explicit:
+
+1. **Dataset / batch** — the uploaded archive and its immutable RAW evidence.
+2. **Experiment / condition** — the scientific group being compared, for example `N1`, `N2`, `N3`, `REF`, `NEW`.
+3. **Sample / device / cell** — the physical measured identity, for example `N3_1_1A`. Multiple samples can belong to the same experiment.
+4. **Run** — one acquisition session/time directory for a sample. A sample may have repeated runs.
+5. **Measurement** — one JV source file/acquisition inside a run. A run may contain repeated JV measurements (`0001`, `0002`, ...).
+6. **Scan** — `FW` and/or `RV` within a measurement.
+7. **Result** — a metric value or curve point belonging to that scan/measurement. A result is never an experiment.
+
+A **measurement** therefore represents one JV measurement source and may contain FW only, RV only, or a matched FW/RV pair.
 
 A **sample/device identity** is established from evidence in this order:
 
@@ -132,19 +142,19 @@ A **sample/device identity** is established from evidence in this order:
 5. related Parameters/Tracking files;
 6. repeated naming convention elsewhere in the same ZIP.
 
-A **group** is a working classification derived from the sample/device identity or explicit metadata. It is not a new physical fact.
+The **experiment/condition identity** is then derived deterministically from the canonical device name using the configured grouping grammar. This is structural parsing of the laboratory naming convention, not AI inference. For `N3_1_1A`, the experiment is `N3`, position token is `1`, and cell token is `1A`. For `ADDITIVE-1A`, the experiment is `ADDITIVE` and the cell token is `1A`.
 
 `REF` is treated as a reference marker only when it is a clear standalone token/prefix in the source evidence.
 
 ### Canonical laboratory naming
 
-Once the identity itself is established, formatting that identity to the laboratory naming convention is **deterministic** and must not be delegated to AI. RAW names and paths remain verbatim provenance; the Working Copy exposes a canonical name.
+Once the identity itself is established, formatting that identity to the laboratory naming convention is **deterministic** and must not be delegated to AI. RAW names and paths remain verbatim provenance; the LabFlow Data exposes a canonical name.
 
 For the current dataset family, canonical device/sample tokens use underscores: `N<batch>_<position>_<cell>`, `REF_<position>_<cell>`, and `NEW_<cell>`. Examples: `N1 3 -1A` → `N1_3_1A`, `N 12-1A` → `N1_2_1A`, `REF 3 -1A` → `REF_3_1A`. Known `Stability (...)` filenames retain their acquisition prefix and family marker while only the trailing device/sample token is canonicalized.
 
 This is a formatting conversion, not a change in scientific identity. It never requires an AI proposal or human semantic review.
 
-The same ZIP may contain many samples/devices and many groups. Design reconstruction must consider all of them. If evidence suggests different stacks, solutions or process variants for different devices/groups, they must be represented separately rather than merged into one generic design.
+The same ZIP may contain many samples/devices and multiple experiments/conditions. Design reconstruction is experiment-centric: samples belonging to the same experiment remain linked as members/cells of that experiment unless source evidence demonstrates that their fabrication/design differs. A repeated JV measurement does not create a new Design experiment.
 
 ## Experimental-design evidence
 
@@ -177,7 +187,6 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
 
 ```json labflow-ground-truth
 {
-  "version": "1.1",
   "archive": {
     "root_count_expected": 1,
     "allow_unknown_files": true,
@@ -261,7 +270,11 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
     "unknown_label": "Unknown sample"
   },
   "grouping": {
-    "strip_patterns": ["[-_]\\d+[A-Za-z](?:\\b|$)", "[-_]?[A-D](?:\\b|$)"]
+    "identity_patterns": [
+      {"regex": "^(.+?)[_-](\\d+)[_-](\\d+[A-Za-z])$", "experiment_capture": 1, "position_capture": 2, "cell_capture": 3},
+      {"regex": "^(.+?)[_-](\\d+[A-Za-z])$", "experiment_capture": 1, "position_capture": 0, "cell_capture": 2}
+    ],
+    "fallback_experiment": "sample"
   },
   "normalization": {
     "trim": true,
@@ -299,4 +312,4 @@ Solutions/formulations, device stacks and process conditions may be one-to-many.
 
 ## AI constraint
 
-When semantic ambiguity repair receives this Data Contract, it is authoritative for ZIP interpretation. The model must inspect every entity present in the bounded ambiguity Context Pack, not only the first example. It must never collapse multiple devices, solutions or design variants without evidence. If context is insufficient, return `unknown` or an explicit unresolved item. Downstream Design, Results and Report Actions do not receive this full contract; they rely on canonical Context Packs assembled after deterministic import.
+When semantic ambiguity repair receives this Data Contract, it is authoritative for ZIP interpretation. The model must inspect every entity present in the bounded ambiguity Context Pack, not only the first example. It must never collapse multiple devices, solutions or design variants without evidence. If context is insufficient, return `unknown` or an explicit unresolved item. Downstream Design and Results Actions do not receive this full contract; they rely on canonical Context Packs assembled after deterministic import.

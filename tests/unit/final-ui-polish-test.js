@@ -14,19 +14,18 @@ module.exports=function(t){
   const logs=fs.readFileSync(path.join(root,'assets/js/pages/logs-page.js'),'utf8');
   const logger=fs.readFileSync(path.join(root,'assets/js/logger.js'),'utf8');
   const state=fs.readFileSync(path.join(root,'assets/js/state.js'),'utf8');
-  const reportExport=fs.readFileSync(path.join(root,'vendor/report-export/report-export.js'),'utf8');
   const uiKitInline=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
   const actionUi=fs.readFileSync(path.join(root,'assets/js/ai/action-ui.js'),'utf8');
   const feedback=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
+  const transport=fs.readFileSync(path.join(root,'assets/js/ai/transport.js'),'utf8');
 
   t['Every route uses one canonical page frame width']=function(){
-    assert(tokensCss.includes('--page-max-w: 1600px'),true,'one page width token');
+    assert(tokensCss.includes('--page-max-w: 1480px'),true,'one page width token');
     assert(css.includes('.main-area > .page'),true,'canonical page frame selector');
     assert(css.includes('max-width:var(--page-max-w)!important'),true,'canonical frame max width');
     assert(css.includes('.review-page-compact{max-width:'),false,'Review has no private page width');
     assert(css.includes('.design-table-page{max-width:'),false,'Design has no private page width');
     assert(css.includes('.settings-page{width:100%;max-width:'),false,'Settings has no private page width');
-    assert(css.includes('.report-page{max-width:'),false,'Report has no private page width');
     assert(css.includes('.upload-review-page{max-width:'),false,'Upload/Review has no private page width');
   };
 
@@ -85,15 +84,17 @@ module.exports=function(t){
     assert(actionUi.includes('Model:settings.model'),false,'Action totem never exposes the raw llama.cpp path');
     assert(feedback.includes('C.modelDisplayName(providerId, body.model)'),true,'request activity uses the shared display-model helper');
     assert(feedback.includes('body:safeBody'),true,'request preview uses a display-only request clone');
+    assert(transport.includes("request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model)"),true,'AI timing logs hide local filesystem paths');
   };
 
-  t['Design is a simple visual solution-and-stack workbench with explicit AI acceptance']=function(){
+  t['Design is a simple visual chemistry-stack-process workbench with explicit AI acceptance']=function(){
     assert(designPage.includes('Solutions · solvents · solutes'),true,'solution chemistry editor');
     assert(designPage.includes('Layer stack'),true,'device stack editor');
+    assert(designPage.includes('Fabrication process'),true,'fabrication process editor');
     assert(designPage.includes('design-chem-card'),true,'graphical chemistry representation');
     assert(designPage.includes('design-stack-diagram'),true,'graphical layer representation');
     assert(designPage.includes('data-action-sequence="design-all"'),true,'global Suggest all action');
-    assert(designPage.includes('Suggest all with AI'),true,'global AI command is labelled clearly');
+    assert(designPage.includes('Suggest missing for all'),true,'global AI command is labelled clearly');
     assert(designPage.includes('Accept all suggestions'),true,'global explicit acceptance');
     assert(designPage.includes('Accept experiment'),true,'per-experiment explicit acceptance');
     assert(designPage.includes('Retry'),true,'per-experiment errors are retryable');
@@ -101,32 +102,6 @@ module.exports=function(t){
     assert(designPage.includes('NEXT STEP'),false,'old state-machine guidance removed');
     assert(css.includes('.design-two-column'),true,'simple two-panel Design layout styling');
     assert(css.includes('.design-stack-layer'),true,'layer visualization styling');
-  };
-
-  t['Report editor updates source immediately but debounces expensive preview work']=function(){
-    assert(app.includes("LF.Report.setActiveMarkdown(S.state.experiment,e.target.value);markDraft('report');scheduleReportEditorPreview(e.target.value)"),true,'editor source updates on every input');
-    assert(app.includes('window.setTimeout(function(){renderReportEditorPreview(markdown);},220)'),true,'preview and MathJax are debounced');
-    assert(app.includes("syncActiveReportEditor('pdf-export')"),true,'PDF export synchronizes visible editor first');
-    assert(app.includes("syncActiveReportEditor('before-ai-writing-help')"),true,'AI writing help synchronizes visible editor first');
-  };
-
-  t['Report figure selection is visual and selected figures are visible in preview']=function(){
-    const reportPage=fs.readFileSync(path.join(root,'assets/js/pages/report-page.js'),'utf8');
-    assert(reportPage.includes('figure-picker-preview'),true,'visual thumbnails in picker');
-    assert(reportPage.includes('reportFigureChoices'),true,'picker starts from the full lightweight dynamic catalog');
-    assert(reportPage.includes('reportFigureByKey'),true,'individual previews are rendered lazily instead of rasterizing every curve at open');
-    assert(reportPage.includes('data-figure-picker-all="true"'),true,'select all control');
-    assert(reportPage.includes('data-figure-picker-all="false"'),true,'select none control');
-    assert(reportPage.includes('report-preview-figures-head'),true,'selected figures are visible in document preview');
-    assert(css.includes('.figure-picker-tools'),true,'picker tools styling');
-  };
-
-  t['Report equations are compact in preview PDF and DOCX']=function(){
-    assert(css.includes('.report-preview .math-display mjx-container[display="true"]{font-size:.86em!important}'),true,'compact preview equation scale');
-    assert(reportExport.includes('scale=Math.min(1,430/w,82/h)'),true,'DOCX equations never upscale beyond their natural raster size');
-    assert(reportExport.includes('maxW=Math.min(390'),true,'bounded PDF equation width');
-    assert(reportExport.includes('maxH=42'),true,'compact PDF equation height');
-    assert(reportExport.includes('Math.max(125'),false,'PDF no longer forces a huge minimum equation width');
   };
 
   t['Long-session navigation avoids unbounded DOM and log payload work']=function(){
@@ -165,10 +140,10 @@ module.exports=function(t){
 
   t['Action lifecycle updates do not rebuild the active page editor']=function(){
     assert(app.includes("if(reason!=='actionRun'&&reason!=='assistant')render()"),true,'actionRun and Assistant lifecycle must not trigger a full page render');
-    assert(app.includes("if(reason!=='actionRun')scheduleWorkspaceSave"),true,'transient action lifecycle must not autosave the Working Copy');
+    assert(app.includes("if(reason!=='actionRun')scheduleWorkspaceSave"),true,'transient action lifecycle must not autosave the LabFlow Data');
   };
 
-  t['Working Copy restores from IndexedDB and Reset is the explicit clear boundary']=function(){
+  t['LabFlow Data restores from IndexedDB and Reset is the explicit clear boundary']=function(){
     assert(app.includes('await LF.Storage.loadExperiment()'),true,'load persisted experiment');
     assert(app.includes("scheduleWorkspaceSave('draft:"),true,'draft autosave');
     assert(app.includes("persistWorkspace('pagehide')"),true,'pagehide persistence');

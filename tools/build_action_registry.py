@@ -29,7 +29,10 @@ js=f"""// GENERATED from actions/*/action.json + optional prompt.md. Edit source
   function ids(){{return Object.keys(ACTIONS);}}
   function prompt(id){{return PROMPTS[id]||'';}}
   function schema(id){{return SCHEMAS[id]?clone(SCHEMAS[id]):null;}}
-  LF.ActionRegistry={{action:action,actions:ids,prompt:prompt,schema:schema,definitions:ACTIONS,schemas:SCHEMAS}};
+  function steps(idOrDef){{const d=typeof idOrDef==='string'?ACTIONS[idOrDef]:idOrDef;return d&&d.execution&&Array.isArray(d.execution.steps)?clone(d.execution.steps):[];}}
+  function contract(idOrDef){{const d=typeof idOrDef==='string'?ACTIONS[idOrDef]:idOrDef;return d&&d.contract?clone(d.contract):null;}}
+  function mode(idOrDef){{const d=typeof idOrDef==='string'?ACTIONS[idOrDef]:idOrDef;return String(d&&d.execution&&d.execution.mode||'');}}
+  LF.ActionRegistry={{action:action,actions:ids,prompt:prompt,schema:schema,steps:steps,contract:contract,mode:mode,definitions:ACTIONS,schemas:SCHEMAS}};
 }}());
 """
 (ROOT/'assets/js/ai/action-registry.js').write_text(js,encoding='utf-8')

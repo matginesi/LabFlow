@@ -210,7 +210,9 @@ module.exports = function (t, LF) {
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
     assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
-    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,null,'GLM-4.7-Flash output maximum is not fabricated when current docs do not state one');
+    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'GLM-4.7-Flash documented maximum output');
+    assert(AI.knownCapability('zai','glm-5.3').contextWindow,1000000,'GLM-5.3 documented context window');
+    assert(AI.knownCapability('zai','glm-5.3').reasoningStatus,'required','GLM-5.3 reasoning cannot be disabled');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},32000,64000,1000),32000,'action/assistant cap');
     assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5680,'context ceiling subtracts input and reserve');
@@ -399,7 +401,7 @@ module.exports = function (t, LF) {
     const encoder=new TextEncoder(),payload='event: error\ndata: '+JSON.stringify({error:{message:'Engine protocol predict request returned 400: {\"error\":{\"code\":400,\"message\":\"request (37174 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":37174,\"n_ctx\":32768}}'}})+'\n\n';
     global.fetch=async function(){let done=false;return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return name==='content-type'?'text/event-stream':null;},forEach:function(){}},body:{getReader:function(){return{read:async function(){if(done)return{done:true};done=true;return{done:false,value:encoder.encode(payload)};},cancel:async function(){}};}}};};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};LF.AIProviders={lmstudio:{id:'lmstudio',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'large'}],stream:true,maxTokens:512,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'analysis.enrich.enrich.response'});}catch(e){err=e;}assert(!!err,true,'context error raised');assert(err.code,'MODEL_CONTEXT_LENGTH','classified context code');assert(err.isNetwork===true,false,'not rewritten as network/CORS');assert(err.promptTokens,37174,'provider prompt token count');assert(err.contextWindow,32768,'provider context size');assert(/Model context exceeded/.test(err.message),true,'actionable message');}
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'large'}],stream:true,maxTokens:512,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'results.interpret.interpret.response'});}catch(e){err=e;}assert(!!err,true,'context error raised');assert(err.code,'MODEL_CONTEXT_LENGTH','classified context code');assert(err.isNetwork===true,false,'not rewritten as network/CORS');assert(err.promptTokens,37174,'provider prompt token count');assert(err.contextWindow,32768,'provider context size');assert(/Model context exceeded/.test(err.message),true,'actionable message');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -475,6 +477,24 @@ module.exports = function (t, LF) {
     const future=new Date(Date.now()+4000).toUTCString(),dated={get:function(name){return name==='retry-after'?future:'';}};
     const parsed=AI.retryAfterMs(dated);
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
+  };
+
+  t['Z.AI static-server 501 falls back once to the bundled local relay'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
+    global.fetch=async function(url){
+      calls++;
+      if(calls===1){assert(String(url),'http://127.0.0.1:8765/__labflow/zai/chat/completions','same-origin relay URL');return{ok:false,status:501,statusText:'Not Implemented',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return '<!DOCTYPE HTML><html><head><style>body{color:red}</style></head><body><h1>Error response</h1><p>Message: Unsupported method (\'POST\').</p></body></html>';}};}
+      assert(String(url),'http://127.0.0.1:8000/__labflow/zai/chat/completions','bundled local relay URL');
+      return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'relay-ok',model:'glm-4.7-flash',choices:[{message:{content:'working'},finish_reason:'stop'}]});}};
+    };
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,browserRelayPath:'/__labflow/zai/chat/completions',tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    try{
+      const spec=AI.buildRequest({messages:[{role:'user',content:'test relay'}],stream:false,maxTokens:32}),result=await AI.send(spec,{label:'relay-test'});
+      assert(result.content,'working','local relay response returned');
+      assert(calls,2,'only the rejected static request and one local-relay retry');
+    }finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['Z.AI 1305 does not create local cooldown state or block a later user request'] = async function () {

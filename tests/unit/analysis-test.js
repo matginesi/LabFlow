@@ -16,18 +16,22 @@ module.exports = function (t, LF) {
 
   function experiment(factor) {
     return {
-      id:'exp',analysisSettings:{mismatchFactor:factor||1},patches:[],findings:[],samples:[
-        {id:'s1',name:'DEVICE A'},{id:'s2',name:'REF CONTROL'}
+      id:'exp',analysisSettings:{mismatchFactor:factor||1},patches:[],findings:[],experiments:[{id:'e1',name:'A'},{id:'e2',name:'REF'}],runs:[{id:'r1'},{id:'r2'}],samples:[
+        {id:'s1',name:'DEVICE A',experiment:'A',group:'A'},{id:'s2',name:'REF CONTROL',experiment:'REF',group:'REF'}
       ],measurements:[
-        {id:'m1',file:'a.txt',sample:'DEVICE A',group:'A',isRef:false,fw:{voc:1.0,jsc:20,ff:0.8,eff:18},rv:{voc:1.0,jsc:20,ff:0.8,eff:20}},
-        {id:'m2',file:'ref.txt',sample:'REF CONTROL',group:'REF',isRef:true,fw:{voc:1.0,jsc:20,ff:0.8,eff:17},rv:{voc:1.0,jsc:20,ff:0.8,eff:19}}
+        {id:'m1',file:'a.txt',sample:'DEVICE A',experiment:'A',group:'A',isRef:false,fw:{voc:1.0,jsc:20,ff:0.8,eff:18},rv:{voc:1.0,jsc:20,ff:0.8,eff:20}},
+        {id:'m2',file:'ref.txt',sample:'REF CONTROL',experiment:'REF',group:'REF',isRef:true,fw:{voc:1.0,jsc:20,ff:0.8,eff:17},rv:{voc:1.0,jsc:20,ff:0.8,eff:19}}
       ]
     };
   }
 
   t['analysis builds separate REF and non-REF rankings'] = function () {
     const exp=experiment(1),a=LF.Analysis.analyze(exp);
+    assert(a.summary.experimentCount,2,'experiment count');
+    assert(a.summary.sampleCount,2,'sample count');
+    assert(a.summary.runCount,2,'run count');
     assert(a.summary.measurementCount,2,'measurement count');
+    assert(a.bestByExperiment.length,2,'best per logical experiment');
     assert(a.topNonRef.length,1,'non-ref count');
     assert(a.topNonRef[0].sample,'DEVICE A','non-ref sample');
     assert(a.topRef.length,1,'ref count');

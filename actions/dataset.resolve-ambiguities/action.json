@@ -1,57 +1,75 @@
 {
   "id": "dataset.resolve-ambiguities",
-  "type": "HYBRID",
+  "title": "Suggest ambiguity resolutions",
+  "short_title": "Suggest resolutions",
   "category": "dataset",
   "role": "researcher",
-  "title": "Suggest resolutions",
-  "short_title": "Suggest resolutions",
-  "purpose": "Suggest evidence-backed resolutions for records whose canonical meaning the deterministic analysis cannot establish.",
-  "strategy": "One bounded Context Pack containing only unresolved findings, linked entities and evidence. AI may answer unresolved; it never writes directly.",
-  "output": "json",
-  "mutation_scope": "",
-  "requires": [
-    "dataset.analyze"
-  ],
+  "visibility": "public",
+  "purpose": "Suggest evidence-backed resolutions only for semantic ambiguities that deterministic analysis cannot resolve.",
+  "strategy": "The model receives only active ambiguous findings and linked evidence. Suggestions are validated against the current revision, stored for researcher review, and never applied automatically.",
   "policies": [
     "policy.data-ground-truth",
     "policy.data-format-repair",
     "policy.scientific-provenance",
     "policy.structured-output"
   ],
-  "steps": [
-    {
-      "id": "collect",
-      "type": "DETERMINISTIC",
-      "weight": 0.1,
-      "tool": "dataset.collect-ambiguities"
+  "contract": {
+    "target": {
+      "kind": "review_ambiguity",
+      "cardinality": "many"
     },
-    {
-      "id": "resolve",
-      "type": "AI",
-      "prompt": "prompt.md",
-      "output": "json",
+    "context": {
+      "profile": "ambiguity",
+      "scope": "active_ambiguities"
+    },
+    "result": {
+      "format": "json",
       "schema": "dataset_corrections",
-      "thinking": "on",
-      "timeout_ms": 180000,
-      "weight": 0.8,
-      "max_output_tokens": 4096,
-      "deadline_ms": 150000,
-      "max_retries": 1,
-      "min_output_tokens": 900,
-      "target_output_tokens": 1800,
-      "max_input_tokens": 8000
+      "kind": "proposal"
     },
-    {
-      "id": "store",
-      "type": "DETERMINISTIC",
-      "weight": 0.1,
-      "tool": "dataset.store-corrections"
-    }
-  ],
-  "version": 1,
-  "input_scope": "working-copy.ambiguities",
-  "visibility": "public",
-  "input": {
-    "context": "ambiguity"
+    "effect": {
+      "mode": "store_proposal",
+      "writes": [
+        "experiment.actionData.proposals.dataset.resolve-ambiguities"
+      ]
+    },
+    "guards": [
+      "dataset.loaded",
+      "review.ambiguities_available"
+    ]
+  },
+  "execution": {
+    "mode": "hybrid",
+    "result_step": "resolve",
+    "steps": [
+      {
+        "id": "collect",
+        "type": "DETERMINISTIC",
+        "weight": 0.1,
+        "tool": "dataset.collect-ambiguities"
+      },
+      {
+        "id": "resolve",
+        "type": "AI",
+        "prompt": "prompt.md",
+        "output": "json",
+        "schema": "dataset_corrections",
+        "thinking": "on",
+        "timeout_ms": 120000,
+        "weight": 0.8,
+        "max_output_tokens": 1800,
+        "deadline_ms": 120000,
+        "max_retries": 1,
+        "min_output_tokens": 120,
+        "target_output_tokens": 800,
+        "max_input_tokens": 7000
+      },
+      {
+        "id": "store",
+        "type": "DETERMINISTIC",
+        "weight": 0.1,
+        "tool": "dataset.store-corrections"
+      }
+    ]
   }
 }

@@ -13,12 +13,13 @@ DOCS = ROOT / "docs"
 TARGET = ROOT / "assets/js/pages/docs-bundle.js"
 
 SECTION_ORDER = {
-    "Researcher guide": 0,
-    "Operating model": 1,
-    "Scientific data": 2,
-    "AI and Actions": 3,
-    "Export and NOMAD": 4,
-    "Engineering reference": 5,
+    "Start here": 0,
+    "Researcher guide": 1,
+    "Operating model": 2,
+    "Scientific data": 3,
+    "AI and Actions": 4,
+    "Export and NOMAD": 5,
+    "Engineering reference": 6,
 }
 
 
@@ -41,13 +42,13 @@ def section_for(relative: Path) -> str:
     name = relative.name
     if path.startswith("guides/"):
         return "Researcher guide"
-    if path.startswith("data/") or name in {"EXPERIMENT_MODEL.md"}:
+    if path.startswith("data/") or name == "DATA_MODEL.md":
         return "Scientific data"
-    if name in {"AI.md"} or name in {"ACTIONS.md", "AI_PROVIDERS.md", "TOOLS.md"}:
+    if name in {"ACTIONS.md", "AI_PROVIDERS.md", "TOOLS.md"}:
         return "AI and Actions"
     if name in {"NOMAD.md", "IMPORT_EXPORT.md"}:
         return "Export and NOMAD"
-    if name in {"WORKFLOW.md", "ARCHITECTURE.md"}:
+    if name in {"ARCHITECTURE.md", "PIPELINE.md"}:
         return "Operating model"
     return "Engineering reference"
 

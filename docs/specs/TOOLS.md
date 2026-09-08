@@ -1,86 +1,41 @@
-# LabFlow internal Tool contract
+---
+title: Tools and internal services
+section: AI and Actions
+summary: Defines stable read tools and internal Action-step tools; tools are implementation capabilities, not user-facing Actions.
+order: 30
+---
 
-LabFlow separates **Actions** from **Tools**.
+# Tools and internal services
 
-- An **Action** is a researcher-understandable goal/workflow.
-- A **Tool** is one small, typed capability over the current Canonical LabFlow Data Model.
-- An Action may use multiple Tools plus AI checkpoints.
-- The Assistant may see only explicitly allowlisted **read-only** Tools.
+## Read tools
 
-## Canonical boundary
+Read tools query the current canonical `ExperimentData`/indexes and may be used by the Assistant or internal code. Agent mode may invoke read-only tools but is prevented from invoking write tools.
 
-All Tool calls operate on the one current `LF.State.state.experiment` through `LF.CanonicalStore`. The Canonical Store is a deterministic view/index over the Working Copy, not a second editable state.
+The exact catalog is available at runtime through `LabFlow.ToolRegistry`.
 
-Internal canonical v2 domains are:
+## Current internal Action-step tools
+
+These IDs support the current Action manifests:
 
 ```text
-experiment
-source
-entities
-  files
-  samples
-  measurements
-scientific
-  design
-  results
-  findings
-documents
-  lab
-  paper
-evidence
-relations
-aliases
-provenance
+dataset.collect-ambiguities      read
+dataset.store-corrections        write
+
+design.collect-selected          read
+design.validate-coverage         read
+design.store-proposal            write
+
+results.validate-comparison      read
+results.store-interpretation     write
+results.store-comparison         write
 ```
 
-The store retains compatibility aliases used by existing POC pages while new Tools should prefer the grouped domains.
+They are **not** separate Actions and should not appear as researcher workflow buttons.
 
-## Tool classes
+## Deterministic data services
 
-### Read tools exposed to the Assistant
+Naming normalization, safe cleanup, hierarchy rebuild, JV analysis, canonical indexing, review analysis, Design projection and NOMAD preparation are local services/pipeline logic. They should not be wrapped in fake Actions merely to make them callable.
 
-- `experiment.summary`
-- `samples.list`
-- `sample.get`
-- `measurements.query`
-- `results.get`
-- `findings.list`
-- `design.get`
-- `document.get`
-- `figures.list`
-- `evidence.search`
-- `provenance.list`
-- `nomad.get`
+## Extension
 
-These Tools must not mutate the Working Copy.
-
-### Internal service tools
-
-Deterministic Action checkpoints are registered through the same Tool Registry but are not agent-visible. Examples include `dataset.analyze`, `dataset.apply-safe-fixes`, `report.store-edit-blocks` and `nomad.validate`.
-
-This keeps one capability boundary without pretending that low-level implementation services are researcher-facing Actions.
-
-## Assistant safety contract
-
-The Assistant uses a bounded read-tool loop:
-
-1. receive a small bootstrap context;
-2. select at most one allowlisted read Tool per round;
-3. LabFlow validates the Tool ID, read/write policy and typed JSON arguments, then executes it locally;
-4. repeat for at most the configured round cap;
-5. produce the final answer from the retrieved observations.
-
-The Assistant cannot:
-
-- call write Tools;
-- invoke mutating Actions;
-- edit Report/Paper;
-- apply dataset patches;
-- alter Design;
-- decide NOMAD readiness.
-
-Any attempted non-read Tool invocation is rejected by `LF.ToolRegistry.execute(..., {agent:true})`. Missing required arguments, wrong primitive types and invalid enum values fail before the handler executes.
-
-## Why this exists
-
-The Tool boundary prepares the POC for a later Python backend and more autonomous agent without making the current JavaScript POC depend on an autonomous loop. Actions remain explicit and testable; agentic behavior is currently limited to read-only evidence retrieval in the Assistant.
+Action-step tools register beside their implementation via `ActionStepRegistry` / `ToolRegistry.registerActionStep(...)`. Read/write access metadata is mandatory so agent mode can enforce the boundary.

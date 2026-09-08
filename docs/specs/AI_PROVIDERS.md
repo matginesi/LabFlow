@@ -4,7 +4,7 @@ This document is the contract for provider-specific behavior in LabFlow. Scienti
 
 ## Common transport
 
-LabFlow calls providers directly from the browser through the OpenAI-compatible Chat Completions shape:
+LabFlow uses the OpenAI-compatible Chat Completions shape. Most providers are called directly from the browser; Z.AI is the one deliberate exception and uses the narrow same-origin relay bundled in `tools/serve_static.py` because the public `api.z.ai` endpoint does not permit LabFlow's browser origin to call Chat Completions directly:
 
 ```text
 POST <base>/chat/completions
@@ -20,22 +20,22 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 - A base ending in `/v1` resolves to `/v1/chat/completions`; an already complete endpoint is preserved and duplicated suffixes are normalized.
 - Only `http:` and `https:` endpoints are accepted.
 - A bearer key is sent only for providers declaring `keyRequired` or `optionalKey`. Ollama, LM Studio and llama.cpp never inherit a key saved for a cloud provider.
-- Cloud API keys are stored separately by provider. The legacy single-key setting is merged once into the provider that was active when it was saved, even when keys for other providers already exist; existing provider-specific keys are never overwritten.
+- Cloud API keys are stored separately by provider.
 - Provider-declared static headers are allowlisted in the registry. Z.AI sends its documented `Accept-Language`; OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
-- Browser-origin access remains a provider responsibility. LabFlow does not prescribe a separate application server: LM Studio, Ollama or llama.cpp only needs to accept requests from the browser origin currently running LabFlow.
+- Browser-origin access remains a provider responsibility for direct adapters. LM Studio, Ollama or llama.cpp must accept the browser origin currently running LabFlow. Z.AI uses the bundled same-origin relay and therefore requires LabFlow to be served with `tools/serve_static.py` rather than a generic static-only server.
 
 ## Model discovery and capability detection
 
 - Standard and custom providers use their OpenAI-compatible `/models` response.
-- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. **Detect** reads capabilities and presents returned model IDs in a real select when available. Z.AI uses the same **Detect** pipeline and result UI, but is declared `remoteModelMetadata: false`: its model field remains exact/manual (default `glm-4.7-flash`), the catalogue step is reported as not queried, and capability resolution uses built-in model metadata. This prevents inaccessible catalogue variants from replacing the model tied to the researcher's API key without maintaining a separate Z.AI implementation.
+- NVIDIA NIM uses the declared hosted catalogue `https://integrate.api.nvidia.com/v1/models` with the researcher-supplied bearer key. **Detect** reads capabilities and presents returned model IDs in a real select when available. Z.AI uses the same **Detect** UI with a documented built-in catalogue snapshot and built-in capability metadata (default `glm-4.7-flash`); LabFlow does not invent an undocumented Z.AI `/models` dependency.
 - Gemini supplements this with the native Models API output and input ceilings.
 - Ollama supplements this with `/api/show`, including `num_predict` and model context metadata.
 - LM Studio supplements this with `/api/v1/models`. `loaded_instances` is authoritative for the active model and runtime context; a listed but unloaded model is not silently treated as active.
 - llama.cpp uses the OpenAI-compatible `/v1/models` catalogue exposed by `llama-server` for model IDs and `GET /props` for runtime metadata. `default_generation_settings.n_ctx` is the effective context of one server slot and `total_slots` is retained for diagnostics. The LabFlow runtime profile is `--parallel 1 --ctx-size 65536`, so a matching server reports `n_ctx = 65536` and `total_slots = 1`; LabFlow uses that 65K context directly and never divides the reported `n_ctx` again. The preset base is `http://127.0.0.1:8080/v1`; the selected model ID is whatever the running server reports.
 
-Discovery is cached by provider, endpoint and model. Opening Settings, editing provider fields and running an Action never contacts a provider for metadata. Every provider uses the same explicit **Detect** pipeline. Providers that expose useful catalogues read them; configured-model-only providers such as Z.AI mark that step as not queried and continue through the same capability/result path. Without detected or built-in metadata, Actions use their own bounded output contract and a conservative unknown-capability fallback. **Save & test connection** does not run discovery: it sends one small portable probe to the currently configured endpoint/model. Exact output limits are preferred when Detect has established them, and a context window is not mislabeled as an output limit. Cloud/catalogue providers preserve the configured model instead of selecting the first catalogue row. Local providers are the only exception: LM Studio, Ollama and llama.cpp auto-select a model only when Detect can prove that exactly one model is currently loaded/running/served; with zero or multiple running models the current selection is preserved.
+Discovery is cached by provider, endpoint and model. Opening Settings, editing provider fields and running an Action never contacts a provider for metadata. Every provider uses the same explicit **Detect** pipeline. Providers that expose useful catalogues read them; Z.AI uses its documented built-in catalogue snapshot and continues through the same capability/result path without an undocumented remote catalogue call. Without detected or built-in metadata, Actions use their own bounded output contract and a conservative unknown-capability fallback. **Save & test connection** does not run discovery: it sends one small portable probe to the currently configured endpoint/model. Exact output limits are preferred when Detect has established them, and a context window is not mislabeled as an output limit. Cloud/catalogue providers preserve the configured model instead of selecting the first catalogue row. Local providers are the only exception: LM Studio, Ollama and llama.cpp auto-select a model only when Detect can prove that exactly one model is currently loaded/running/served; with zero or multiple running models the current selection is preserved.
 
-For a catalogue provider the intended sequence is **enter API key → Detect → choose model → Save & test connection**. For configured-model-only providers such as Z.AI it is **enter the exact model ID → Detect → Save & test connection**; Detect does not query a provider-wide catalogue in that case. Provider-scoped keys stay local to the browser and no detection step sends experiment data.
+For a catalogue provider the intended sequence is **enter API key → Detect → choose model → Save & test connection**. Z.AI follows the same sequence using the built-in documented model snapshot; Detect itself does not send experiment data.
 
 ### llama.cpp (`llama-server`)
 
@@ -94,6 +94,14 @@ Provider reasoning is normalized separately from final content. LabFlow accepts 
 
 `transport.js` shares one header/auth builder (`providerAuthHeaders`), one URL resolver (`resolveChatUrl`/`resolveModelsUrl`), one metadata fetch (`metadataFetch`/`fetchJson`) and one error classifier (`parseProviderError`/`limitInfo`) for connection test, capability Detect and model listing. `listModels`, `resolveModelCapabilities`, `benchmarkTokensPerSecond` and `testConnection` are strategies inside the same transport contract rather than separate provider UI workflows. `send()` performs exactly one HTTP request and surfaces provider throttles unchanged; semantic Action retries, when declared, remain a separate runner concern.
 
-Transport logs expose simple phase timings without secrets: request preparation, response headers, first streamed token, generation duration, request duration, finalization, total duration and HTTP request count. The live UI shows token-oriented telemetry; raw SSE events/wire bytes remain diagnostic because chunk count and envelope size do not equal token use. Action context logs separately expose capability lookup, Context Pack/Knowledge Base preparation and compaction passes.
+Transport logs expose simple phase timings without secrets: request preparation, response headers, first streamed token, generation duration, request duration, finalization, total duration and HTTP request count. The live UI shows token-oriented telemetry; raw SSE events/wire bytes remain diagnostic because chunk count and envelope size do not equal token use. Action context logs separately expose capability lookup, Context Pack preparation and compaction passes.
 
 Errors retain the provider response and are classified separately as browser/CORS, authentication, unavailable model, context overflow, output-length contract failure, transient rate/concurrency/capacity limit, quota exhaustion or provider server failure. The transport never repeats a provider request automatically. The Action runner may repeat only a failed work unit when that Action explicitly declares a bounded semantic retry; provider rate/quota errors are excluded from semantic retry. Diagnostic helpers have one public API: `networkMessage`, `statusHint`, `errorSummary` and `contextNote`.
+
+## Z.AI
+
+LabFlow exposes one **Z.AI** provider. Its default model is `glm-4.7-flash` and its configured upstream is the official General API Chat Completions endpoint:
+
+`https://api.z.ai/api/paas/v4/chat/completions`
+
+The old GLM/Z.AI split and Coding Plan endpoint selector are removed. Legacy browser settings that used a GLM alias or `/api/coding/paas/v4` are migrated to the single Z.AI provider and General API endpoint. The configured upstream remains visible in Settings, while browser requests are sent to the same-origin `/__labflow/zai/chat/completions` relay provided by `tools/serve_static.py`. The relay is intentionally narrow and forwards only Z.AI Chat Completions; it is not a generic proxy.

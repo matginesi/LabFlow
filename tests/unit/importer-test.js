@@ -4,6 +4,7 @@ require('../../assets/js/ai/prompt-bundle.js');
 require('../../assets/js/experiment/data-model.js');
 require('../../assets/js/data/parser.js');
 require('../../assets/js/data/importer.js');
+require('../../assets/js/export/export.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -33,14 +34,17 @@ module.exports = function (t, LF, env) {
     assert(typeof exp.raw.sha256, 'string', 'sha256 set on raw');
     assert(exp.raw.sha256.length, 64, 'sha256 64 hex chars');
     assert(exp.files.length > 0, true, 'files present');
-    assert(exp.entities.length, 6, 'entities (samples)');
+    assert(exp.samples.length, 6, 'samples');
+    assert(exp.experiments.map(function (x) { return x.name; }).sort(), ['ADDITIVE','BASELINE','REF CONTROL'], '3 logical experiments');
+    assert(exp.samples.length, 6, 'samples');
+    assert(exp.runs.length, 6, 'runs');
     assert(exp.measurements.length, 6, 'measurements');
     assert(exp.auxiliaryEvidence.length, 12, 'auxiliary evidence (6 param + 6 tracking)');
     assert(exp.findings.length, 0, 'no deterministic findings on clean fixture');
     assert(exp.blocks.length > 0, true, 'canonical blocks present');
   };
 
-  t['clean fixture blocks: file identity, headers, entities, directions'] = async function () {
+  t['clean fixture blocks: file identity, headers, typed refs, directions'] = async function () {
     const exp = await Im.parseDataset(loadFixture('01_PRECISO_PERFETTO_COMPLETO.zip'), 'z.zip');
     const metricBlocks = exp.blocks.filter(function (b) { return b.family === 'jv' && b.type === 'table'; });
     const curveBlocks = exp.blocks.filter(function (b) { return b.family === 'jv' && b.type === 'series'; });
@@ -51,7 +55,9 @@ module.exports = function (t, LF, env) {
     assert(summaryBlocks.length, 2, '2 summary table blocks');
     truthy(auxBlocks.length > 0, 'auxiliary blocks present');
     metricBlocks.forEach(function (b) {
-      assert(Array.isArray(b.entities) && b.entities.length, 1, 'entity linked');
+      assert(Array.isArray(b.refs) && b.refs.length, 1, 'typed ref linked');
+      assert(b.refs[0].kind, 'sample', 'block ref kind');
+      truthy(exp.samples.some(function(s){return s.id===b.refs[0].id;}), 'block sample ref resolves');
       assert(b.file.path && exp.files.some(function (f) { return f.path === b.file.path; }), true, 'block file resolves to a real archive path');
       assert(Array.isArray(b.data.rows) && b.data.rows.length, 1, 'one metric row');
       assert(Array.isArray(b.data.header) && b.data.header.indexOf('voc') >= 0, true, 'metric header has voc');
@@ -64,7 +70,7 @@ module.exports = function (t, LF, env) {
     });
   };
 
-  t['clean fixture: every measurement is a distinct entity with summary + jv provenance'] = async function () {
+  t['clean fixture: every measurement is distinct with summary + jv provenance'] = async function () {
     const exp = await Im.parseDataset(loadFixture('01_PRECISO_PERFETTO_COMPLETO.zip'), 'z.zip');
     assert(exp.samples.length, 6, '6 samples');
     const sampleNames = new Set(exp.samples.map(function (s) { return s.name; }));
@@ -108,6 +114,9 @@ module.exports = function (t, LF, env) {
     assert(P.canonicalSample('N1 3 -1A'), 'N1_3_1A', 'canonical sample convention');
     assert(P.canonicalSample('N 12-1A'), 'N1_2_1A', 'compact malformed N1 position');
     assert(P.canonicalSample('REF 3 -1A'), 'REF_3_1A', 'reference convention');
+    assert(P.sampleHierarchy('N3_1_1A'), {sample:'N3_1_1A',experiment:'N3',position:'1',cell:'1A',matched:true}, 'structured N3 hierarchy');
+    assert(P.groupFromSample('N3_1_1A'), 'N3', 'N3 group is logical experiment, not N3_1');
+    assert(P.sampleHierarchy('ADDITIVE-1A').experiment, 'ADDITIVE', 'generic condition hierarchy');
     assert(P.isReference('REF_1_1A'), true, 'canonical reference with underscore token separator');
     assert(P.isReference('REF_CONTROL'), true, 'reference with underscore suffix');
     assert(P.isReference('REF 3 -1A'), true, 'reference with space token separator');
@@ -123,6 +132,15 @@ module.exports = function (t, LF, env) {
     assert(f.path.indexOf(raw)>=0,true,'raw archive path remains untouched');
     assert(exp.findings.some(function(x){return x.type==='naming';}),false,'cosmetic naming is not an AI ambiguity finding');
     truthy(exp.measurements.some(function(m){return m.sample==='N1_3_1A';}),'measurement uses canonical sample identity');
+    assert(exp.experiments.map(function(x){return x.name;}).sort(), ['N1','N2','N3','NEW','REF'], 'real fixture logical experiments');
+    assert(exp.samples.length,31,'real fixture physical samples/cells');
+    assert(exp.runs.length,42,'real fixture acquisition runs');
+    assert(exp.measurements.length,72,'real fixture JV measurements');
+    const repeated=exp.samples.find(function(x){return x.name==='N2_1_1A';});
+    truthy(repeated,'repeated sample exists');
+    assert(repeated.experiment,'N2','sample links to logical experiment');
+    assert(repeated.runIds.length,1,'one acquisition run for N2_1_1A');
+    assert(repeated.measurementIds.length,5,'five JV measurements stay under one cell');
   };
 
   t['rejects missing JSZip cleanly'] = async function () {
@@ -141,8 +159,10 @@ module.exports = function (t, LF, env) {
   t['scientific collections exist once on the canonical root'] = async function () {
     const exp = await Im.parseDataset(loadFixture('01_PRECISO_PERFETTO_COMPLETO.zip'), 'z.zip');
     assert(Array.isArray(exp.manifest), true, 'manifest');
-    assert(Array.isArray(exp.measurements), true, 'measurements');
+    assert(Array.isArray(exp.experiments), true, 'experiments');
     assert(Array.isArray(exp.samples), true, 'samples');
+    assert(Array.isArray(exp.runs), true, 'runs');
+    assert(Array.isArray(exp.measurements), true, 'measurements');
     assert(Array.isArray(exp.findings), true, 'findings');
     assert(Array.isArray(exp.rawFormatEvidence), true, 'rawFormatEvidence');
     assert(Array.isArray(exp.auxiliaryEvidence), true, 'auxiliaryEvidence');
@@ -157,5 +177,15 @@ module.exports = function (t, LF, env) {
     assert(read.block.id, metric.id, 'readBlock resolves');
     assert(read.rows[0].eff, metric.data.rows[0].eff, 'effective rows match parsed values');
     assert(DM.getBlockSummary(exp, metric.id).rows, 1, 'getBlockSummary rows');
+  };
+  t['LabFlow Export ZIP round-trips the data representation and immutable RAW source'] = async function () {
+    const original = await Im.parseDataset(loadFixture('01_PRECISO_PERFETTO_COMPLETO.zip'), '01_PRECISO_PERFETTO_COMPLETO.zip');
+    const sourceSha=original.raw.sha256, measurementCount=original.measurements.length, sampleCount=original.samples.length;
+    const blob=await LF.Export.save(original), restored=await Im.parseDataset(await blob.arrayBuffer(), 'portable_labflow.zip');
+    assert(restored.meta.importMethod,'labflow-save','save detected');
+    assert(restored.measurements.length,measurementCount,'measurements round-trip');
+    assert(restored.samples.length,sampleCount,'samples round-trip');
+    assert(restored.raw.sha256,sourceSha,'RAW digest round-trip');
+    assert(restored.raw.sourceArchive instanceof ArrayBuffer,true,'RAW bytes restored');
   };
 };

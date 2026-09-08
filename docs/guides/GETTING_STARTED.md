@@ -1,71 +1,59 @@
 ---
-title: Start with LabFlow
+title: Getting started
 section: Researcher guide
-summary: Import a laboratory ZIP, review the evidence, and move through the experiment workflow without losing provenance.
+summary: The shortest path from a ZIP archive to trustworthy Results with minimal researcher interaction.
 order: 1
 ---
 
 # Start with LabFlow
 
-LabFlow is a local-first workbench for turning one laboratory ZIP into reviewed Results, an explicit experimental Design, scientific documents and a validated NOMAD package.
+## Shortest workflow
 
-> The uploaded ZIP is immutable source evidence. Every correction and edit applies only to the Working Copy.
+1. Open **Upload & Review**.
+2. Drop/select the experiment ZIP.
+3. Let LabFlow normalize names, rebuild hierarchy, analyze data and perform safe automatic cleanup.
+4. If Review says **Scientific decisions: Clear**, go directly to **Results**.
+5. If ambiguities remain, click **Resolve with AI**, inspect the suggestions and optionally **Apply all suggestions**.
+6. Use **Design** or **NOMAD** only when needed.
 
-## The five-step workflow
+That is the intended normal workflow. Researchers should not have to understand the internal pipeline to get trustworthy deterministic Results.
+
+## What happens automatically
 
 ```mermaid
 flowchart LR
-  ZIP[Upload ZIP] --> REVIEW[1 Upload & Review]
-  REVIEW --> RESULTS[2 Results]
-  RESULTS --> DESIGN[3 Design]
-  DESIGN --> REPORT[4 Report]
-  REPORT --> NOMAD[5 NOMAD]
+    A[ZIP] --> B[Canonical naming]
+    B --> C[Hierarchy + JV analysis]
+    C --> D[Automatic safe cleanup]
+    D --> E{Semantic ambiguity?}
+    E -->|No| F[Results]
+    E -->|Yes| G[Review / Resolve with AI]
+    G --> F
 ```
 
-The workflow bar is navigation, not five independent copies of the experiment. Every step reads the same current Working Copy.
+## During import
 
-## First successful run
+LabFlow performs no AI request. It automatically:
 
-1. Open **Upload & Review** and choose the original ZIP.
-2. Wait for deterministic import and analysis to complete.
-3. Review source receipt, warnings, findings and proposed safe corrections.
-4. Inspect **Results** before filling missing Design information.
-5. Complete **Design** manually or review AI suggestions.
-6. Draft/edit **Report** or Scientific Paper from the current experiment state.
-7. Resolve required **NOMAD** mappings and prepare the package.
-8. Use **Save** for an explicit browser checkpoint and **Export ZIP** for a durable LabFlow package.
+- preserves RAW evidence;
+- identifies canonical names;
+- creates Experiment/Sample/Run/Measurement relationships;
+- parses and pairs FW/RV JV data;
+- calculates deterministic metrics/results;
+- excludes only mechanically proven invalid ranking records in the LabFlow Data;
+- records automatic corrections in provenance;
+- checks structural invariants.
 
-## What happens during import
+## AI is optional
 
-Import itself does not require AI. LabFlow inventories the ZIP, parses known formats, resolves canonical identities, reconstructs deterministic data where safe, calculates Results and builds the deterministic Experiment Brief.
+Without any provider configured you can still import, review deterministic findings, inspect Results, edit/confirm Design manually and prepare deterministic export data.
 
-If an AI provider is configured, a small internal `analysis.enrich` Action may then add optional semantic context. Failure, truncation or provider throttling never blocks the deterministic import.
+AI is a convenience for ambiguity resolution, Design suggestions, Results interpretation/comparison and questions.
 
-## What stays local
+## Useful console command
 
-The following run in the browser:
+```js
+LabFlow.Data.help()
+```
 
-- ZIP parsing and recovery;
-- scientific calculations and ranking;
-- canonical identity/evidence construction;
-- validation and safe corrections;
-- Working Copy autosave in IndexedDB;
-- Report/Paper/NOMAD export generation;
-- Knowledge Base search.
-
-Only explicit/declared AI Actions send bounded Context Packs to the selected provider. API keys and provider preferences remain browser-local.
-
-## If AI is unavailable
-
-LabFlow should still support the core scientific workflow. You can import, review, inspect Results, edit Design manually, write documents manually and prepare deterministic NOMAD mappings without a working external model.
-
-This is intentional: AI is an assistive layer, not the runtime foundation.
-
-## Continue reading
-
-- [How LabFlow works](HOW_LABFLOW_WORKS.md)
-- [Research workflow](RESEARCH_WORKFLOW.md)
-- [Data lifecycle and provenance](DATA_LIFECYCLE.md)
-- [AI assistance](AI_ASSISTANCE.md)
-- [AI tokens, limits and rate limiting](AI_TOKENS_AND_RATE_LIMITS.md)
-- [Troubleshooting](TROUBLESHOOTING.md)
+This documents the exact live data object used by the application.

@@ -33,10 +33,6 @@
               "reference_classification",
               "field_mapping",
               "unit_mapping",
-              "scale_factor",
-              "exclude_measurement",
-              "restore_measurement",
-              "derived_metric_recovery",
               "metadata_value"
             ]
           },

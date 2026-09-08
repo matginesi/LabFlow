@@ -45,7 +45,6 @@ Typical scopes include:
 - `ai`
 - `assistant`
 - `network`
-- `report`
 - `nomad`
 - `ui`
 - `ui.event`

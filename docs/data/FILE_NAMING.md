@@ -1,6 +1,6 @@
 # File naming and canonical identity
 
-Real experiment archives contain inconsistent spaces/separators, sample/group tokens, `REF`, repeated runs and laboratory-specific filenames. LabFlow never rewrites RAW paths. Instead it keeps the verbatim RAW name/path as provenance and exposes a deterministic canonical name in the Working Copy.
+Real experiment archives contain inconsistent spaces/separators, sample/group tokens, `REF`, repeated runs and laboratory-specific filenames. LabFlow never rewrites RAW paths. Instead it keeps the verbatim RAW name/path as provenance and exposes a deterministic canonical name in the LabFlow Data.
 
 A **file is not a sample**. Import keeps file identity and scientific sample identity separate:
 

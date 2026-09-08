@@ -1,135 +1,118 @@
 # LabFlow
 
-Local-first browser workbench for perovskite/JV laboratory experiments.
+LabFlow is a local-first browser application for importing experimental archives, turning them into one explicit scientific data model, calculating deterministic results, reviewing only genuine ambiguities, reconstructing experiment design, and preparing deterministic NOMAD-oriented exports.
+
+The product is deliberately researcher-first: a normal import should require as few decisions as possible.
+
+## Researcher workflow
 
 ```text
-Upload & Review → Results → Design → Report → NOMAD
+ZIP
+ ↓
+automatic import + canonical naming
+ ↓
+automatic safe LabFlow Data cleanup
+ ↓
+Review only genuine semantic ambiguities
+ ↓
+Results / Design / NOMAD
 ```
 
-LabFlow treats the uploaded laboratory ZIP as **immutable source evidence**. It creates one separate editable **Working Copy**, builds a deterministic semantic/analysis layer over it, and uses optional AI only for bounded interpretation, suggestions and scientific writing.
+If deterministic evidence is sufficient, the researcher can go directly from import to Results. AI is optional and never blocks import.
 
-## What LabFlow does
+## Scientific data model
 
-From one experiment ZIP, LabFlow can:
-
-- inventory and parse known laboratory files;
-- recover deterministically available JV information from redundant source representations;
-- resolve canonical sample identities while retaining filenames/aliases as provenance;
-- calculate deterministic JV Results, rankings, comparisons and quality findings;
-- review safe corrections and genuine ambiguities;
-- maintain solution chemistry and device-stack Design;
-- optionally use AI to enrich context, suggest missing Design, interpret Results and draft/edit documents;
-- keep Lab Report and Scientific Paper as editable Markdown sources of truth;
-- validate and prepare deterministic Canonical → NOMAD exports;
-- autosave the Working Copy locally and create explicit durable exports.
-
-## Core logic
+The in-memory source of truth is one `ExperimentData` aggregate:
 
 ```text
-Original ZIP (immutable)
-        ↓
-Deterministic import / recovery
-        ↓
-Working Copy  ←──── accepted researcher changes
-        ↓
-Canonical Store + evidence / relations
-        ↓
-Deterministic analysis
-   ┌────┼───────────────┬─────────────┐
-   ↓    ↓               ↓             ↓
-Review Results         Design        NOMAD
-        │               │
-        └──────┬────────┘
-               ↓
-       bounded AI Context Packs
-               ↓
-        optional AI provider
-               ↓
- interpretation / proposal / draft
-               ↓
- local validation + researcher review
+ExperimentData
+└─ experiments[]
+   └─ samples[]
+      └─ runs[]
+         └─ measurements[]
+            ├─ FW metrics + curve
+            └─ RV metrics + curve
 ```
 
-The Canonical Store is a deterministic semantic index over the Working Copy, not a second editable experiment.
+For the bundled JV fixture `2026_01_22.zip`, the expected hierarchy is:
 
-## Documentation
-
-Start with **[`docs/README.md`](docs/README.md)**. It contains reading paths for researchers, scientific/data work, AI/provider integration and engineering.
-
-Recommended first pages:
-
-- [`docs/guides/GETTING_STARTED.md`](docs/guides/GETTING_STARTED.md) — first import and normal workflow;
-- [`docs/guides/HOW_LABFLOW_WORKS.md`](docs/guides/HOW_LABFLOW_WORKS.md) — the logic behind LabFlow end to end;
-- [`docs/guides/DATA_LIFECYCLE.md`](docs/guides/DATA_LIFECYCLE.md) — RAW → Working Copy → Canonical Store → derived outputs;
-- [`docs/guides/AI_ASSISTANCE.md`](docs/guides/AI_ASSISTANCE.md) — where AI is allowed and where it is not;
-- [`docs/guides/AI_TOKENS_AND_RATE_LIMITS.md`](docs/guides/AI_TOKENS_AND_RATE_LIMITS.md) — request budgets, streaming, local truncation and provider rate-limit handling;
-- [`docs/guides/TROUBLESHOOTING.md`](docs/guides/TROUBLESHOOTING.md) — how to read common LabFlow logs.
-
-Canonical technical references include:
-
-- [`docs/WORKFLOW.md`](docs/WORKFLOW.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/specs/DATA_MODEL.md`](docs/specs/DATA_MODEL.md)
-- [`docs/specs/ACTIONS.md`](docs/specs/ACTIONS.md)
-- [`docs/specs/TOOLS.md`](docs/specs/TOOLS.md)
-- [`docs/AI.md`](docs/AI.md)
-- [`docs/specs/AI_PROVIDERS.md`](docs/specs/AI_PROVIDERS.md)
-- [`docs/specs/IMPORT_EXPORT.md`](docs/specs/IMPORT_EXPORT.md)
-- [`docs/NOMAD.md`](docs/NOMAD.md)
-- [`docs/UI.md`](docs/UI.md)
-- [`docs/VISUAL_LANGUAGE.md`](docs/VISUAL_LANGUAGE.md)
-- [`docs/LOGGING.md`](docs/LOGGING.md)
-- [`docs/VALIDATION.md`](docs/VALIDATION.md)
-- [`LABFLOW_POC_SPEC.md`](LABFLOW_POC_SPEC.md)
-
-The in-app **Documentation** page is generated from the versioned Markdown under `docs/` and works without a documentation backend.
-
-## AI design
-
-AI is not required for the core import/Results/NOMAD pipeline.
-
-Every AI Action is a versioned contract under `actions/` with explicit context profile, input cap, output target/ceiling, deadline and retry policy. Structured Actions also use JSON schemas.
-
-`analysis.enrich` is intentionally a **micro semantic layer**, not a second analysis engine. It receives a compact experiment summary and adds only likely goal, variables, comparisons, labelled interpretations/hypotheses and important metadata gaps. Current defaults are bounded to roughly **3,200 input tokens**, **320 target output tokens** and a **700-token ceiling**; failure never blocks import.
-
-For Z.AI `glm-4.7-flash`, LabFlow does **not** change model or fall back automatically. A 429/`1305` is surfaced after the single HTTP attempt, with `Retry-After` when supplied; no hidden retry, pacing or local cooldown is added. Bulk workflows stop while preserving completed work. See [`docs/guides/AI_TOKENS_AND_RATE_LIMITS.md`](docs/guides/AI_TOKENS_AND_RATE_LIMITS.md).
-
-## Storage and privacy
-
-The POC is static and local-first:
-
-- source snapshot + Working Copy are autosaved in IndexedDB;
-- provider/model/UI preferences and provider-scoped API keys are stored browser-locally;
-- provider rate-limit state is not persisted; only the provider response and optional `Retry-After` are reported for the current request;
-- scientific parsing/calculation/validation/export runs in the browser;
-- only configured AI Actions send bounded request context to the selected external provider.
-
-API credentials are redacted from structured logs. The uploaded ZIP is never overwritten.
-
-## Local providers
-
-LM Studio, Ollama and llama.cpp (`llama-server`) use the same OpenAI-compatible Chat Completions transport as cloud providers. No Python application backend is required. The local server must be running and allow the browser origin (CORS). The llama.cpp preset defaults to `http://127.0.0.1:8080/v1`, discovers served model IDs through `/v1/models`, and reads the effective **per-slot** context plus slot count from `/props`.
-
-For LabFlow, the recommended llama.cpp runtime is deliberately **single-slot**: `--parallel 1 --ctx-size 65536`. With that profile, `/props.default_generation_settings.n_ctx` should report `65536` and `total_slots` should report `1`; LabFlow uses the full 65K runtime context and does not divide it again. Detect reports a clear runtime-profile mismatch if the server is started with a different slot/context configuration. Reasoning remains a per-Action concern: LabFlow sends explicit reasoning-off controls only for Actions that declare `thinking: off`; those Actions also use a final-only guard, and streamed llama.cpp generations can end an ignored reasoning block at runtime. Reasoning-capable Actions may use the server/model default. The connection probe distinguishes HTTP/API reachability from final-text quality, so an HTTP 200 reasoning-only bounded probe is reported as reachable/inconclusive rather than as a network failure.
-
-Recommended launcher core:
-
-```bash
-llama-server \
-  --model /path/to/model.gguf \
-  --alias local-model \
-  --ctx-size 65536 \
-  --parallel 1 \
-  --host 127.0.0.1 \
-  --port 8080 \
-  --jinja
+```text
+5 experiments → 31 samples/cells → 42 runs → 72 measurements
 ```
 
-A local provider returning HTTP 200 while a remote provider returns immediate 429 is a useful diagnostic distinction: it isolates provider availability from LabFlow's deterministic import/Action pipeline.
+RAW source data is immutable. Corrections are patches on the LabFlow Data with provenance.
+
+## Architecture kernel
+
+Contributor-facing stability is centered on five modules: `DomainSchema`, `ExperimentData`, `DataContracts`, `DerivedState` and `DataPipeline`. Action outputs use the separate `ActionData` store. See `docs/ARCHITECTURE.md` and `docs/guides/EXTENDING_LABFLOW.md`.
+
+## Deterministic pipeline
+
+Import runs one deterministic pipeline:
+
+1. `normalize`
+2. `link`
+3. `validate-structure`
+4. `analyze`
+5. `index`
+6. `review`
+7. `auto-cleanup`
+8. `project-design`
+9. `summarize`
+10. `validate-final`
+
+Canonical naming and mechanically provable corrections are automatic. The pipeline never calls an AI provider.
+
+## Actions
+
+Only user-facing capabilities are Actions. The current catalog is intentionally small:
+
+| Action | Purpose | Effect |
+|---|---|---|
+| `dataset.resolve-ambiguities` | Suggest resolutions for semantic ambiguities deterministic rules cannot settle | stores proposals only |
+| `design.infer` | Suggest missing qualitative chemistry, complete device architecture and/or fabrication process | stores proposal only |
+| `results.interpret` | Interpret deterministic Results | stores derived annotation |
+| `results.compare` | Explain differences between selected result groups | stores derived annotation |
+| `assistant.chat` | Answer questions about current data/page | read-only |
+
+There is no “analyze dataset” Action: analysis is pipeline work. There is no “apply safe fixes” Action: safe mechanical cleanup is automatic. NOMAD preparation is a deterministic service, not an Action.
+
+## Action contract
+
+Every Action declares:
+
+```text
+contract.target   → what it acts on
+contract.context  → what data it may read
+contract.result   → what it must return
+contract.effect   → what state it may write
+contract.guards   → when it is available
+execution         → how it runs and which step is the semantic result
+```
+
+AI structured output is validated before any proposal/annotation is stored. `design.infer` treats `insufficient_evidence` as a valid scientific outcome rather than a technical failure.
+
+## Data Console
+
+Open DevTools and run:
+
+```js
+LabFlow.Data.help()
+LabFlow.Data.summary()
+LabFlow.Data.tree()
+LabFlow.Data.validate()
+LabFlow.Data.pipeline()
+LabFlow.Data.actions()
+LabFlow.Data.contracts()
+```
+
+See `docs/guides/DATA_CONSOLE.md` for the complete API.
+
+## Privacy and storage
+
+LabFlow is local-first. API keys/provider preferences remain local to the browser. RAW archives are kept as source evidence and are not modified by automatic cleanup. Scientific LabFlow Data changes carry revision/provenance metadata.
 
 ## Build and verify
-
-After changing prompts, Actions, schemas or documentation, rebuild generated assets before testing:
 
 ```bash
 python tools/build_prompt_bundle.py
@@ -137,17 +120,34 @@ python tools/build_action_registry.py
 python tools/build_action_reference.py
 python tools/build_docs_bundle.py
 python tools/build_ui_kit_inline.py
-```
-
-Then run:
-
-```bash
 python tools/validate_action_contract.py
+python tools/validate_architecture_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
 python tools/validate_privacy_contract.py
-node tests/unit/run.js $(find tests/unit -maxdepth 1 -name '*-test.js' -printf '%p ' | sort)
-find assets/js tests -name '*.js' -print0 | xargs -0 -n1 node --check
+node tests/unit/run.js
 ```
 
-`ui-kit.html` is the visual component/theme ground truth. The application uses the same token/primitive system and the in-app UI Kit is a generated file-safe mirror.
+The generated bundles must be rebuilt after changing their source files.
+
+## Documentation
+
+Start with:
+
+- `docs/guides/GETTING_STARTED.md`
+- `docs/guides/RESEARCH_WORKFLOW.md`
+- `docs/specs/DATA_MODEL.md`
+- `docs/specs/PIPELINE.md`
+- `docs/specs/ACTIONS.md`
+- `docs/guides/DATA_CONSOLE.md`
+- `docs/guides/EXTENDING_LABFLOW.md`
+
+## Run locally
+
+Use the bundled server:
+
+```bash
+python tools/serve_static.py --host 0.0.0.0 --port 8000
+```
+
+This serves the static application and the narrow same-origin Z.AI relay at `/__labflow/zai/chat/completions`. A generic `python -m http.server` can render LabFlow but cannot make the Z.AI provider work because `api.z.ai` blocks the browser cross-origin request.

@@ -22,7 +22,7 @@ def reset(page):
         LF.State.state.experiment = {
           id: 'assistant-browser-test',
           meta: {name: 'Assistant browser test', sourceName: 'test.zip'},
-          sync: {revision: 1, savedRevision: 1, dirty: false},
+          sync: {revision: 1, revision: 1},
           derived: {chat: {conversation: []}},
           samples: [], measurements: [], findings: [], design: {devices: [], solutions: []},
           analysis: {}, patches: []

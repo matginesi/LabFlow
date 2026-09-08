@@ -1,172 +1,208 @@
+---
+title: Architecture
+section: Core architecture
+summary: Authoritative boundaries, ownership and extension rules for the LabFlow codebase.
+order: 5
+---
+
 # LabFlow architecture
 
-Read [`WORKFLOW.md`](WORKFLOW.md) first. This document describes module boundaries and invariants.
+This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. `tools/serve_static.py` serves public assets and provides one narrow same-origin relay for Z.AI Chat Completions; it is not an application backend and does not own scientific state.
 
-## 1. Architectural objective
+## 1. Core rule
 
-LabFlow is a static, local-first browser workbench. It deliberately avoids a server-side application architecture for the POC.
-
-The scientific architecture is:
+There is exactly one mutable scientific aggregate:
 
 ```text
-Immutable Source Vault
-        ↓
-Working Copy
-        ↓
-Canonical Data Model / Store
-        ↓
-Tool Registry
-   ┌────┴──────────────────┐
-   ↓                       ↓
-Actions                Assistant
-(explicit workflows)   (single read-only request)
-   ↓                       ↓
-validated writes       bounded context
-   └────────────┬──────────┘
-                ↓
-           Working Copy
+LF.State.state.experiment : ExperimentData
 ```
 
-## 2. Source Vault
+Everything else is either immutable source evidence, a deterministic projection/cache, an Action output, interaction history, or an export projection.
 
-The uploaded archive bytes are cloned on import. The source snapshot is immutable by contract.
+```text
+ZIP bytes (immutable)
+      ↓
+Importer / Parser
+      ↓
+ExperimentData  ← DomainSchema + DataContracts
+      ↓
+DataPipeline
+      ├─ deterministic Analysis
+      ├─ CanonicalStore read index
+      ├─ Review projection
+      ├─ Design projection
+      └─ deterministic summaries
+      ↓
+Pages / NOMAD / Actions / Assistant
+```
 
-No editable state shares the caller-owned upload buffer. Exporting the original returns a copy of the original source bytes.
+## 2. Architectural kernel
 
-## 3. Working Copy
+Five modules define the stable core.
 
-`LF.State.state.experiment` is the only mutable scientific experiment.
+### `DomainSchema`
+`assets/js/experiment/domain-schema.js`
 
-Pages and Actions must not create alternate editable scientific models.
+Owns:
+- record factories and normalization;
+- root-field ownership/layer/persistence metadata;
+- the persistent snapshot contract;
+- supported mutation/invalidation scopes.
 
-The Working Copy contains parsed scientific collections plus report/NOMAD/derived state belonging to the current experiment.
+No other module should redefine the canonical default shape of `ExperimentData` records.
 
-## 4. Canonical Store
+### `ExperimentData`
+`assets/js/experiment/data-model.js`
 
-Module: `assets/js/experiment/canonical-store.js`
+The single aggregate root and public domain API. Records remain plain objects; LabFlow deliberately does not create a class hierarchy for every record type.
 
-Responsibilities:
+Use `ExperimentData` query/mutation methods or feature services. Do not create a second editable experiment object.
 
-- provide the internal `labflow-canonical-v2` grouped representation used across LabFlow;
-- normalize semantic access over imperfect naming;
-- maintain sample aliases;
-- expose current scientific domains (Design, Results, findings) and current Report/Paper document views;
-- build evidence items, relations and provenance views;
-- build lookup indexes;
-- expose compact retrieval helpers.
+### `DataContracts`
+`assets/js/experiment/data-contracts.js`
 
-The Canonical Store is still a deterministic view/index over the one Working Copy, not a second editable model. It references Working Copy scientific arrays rather than duplicating RAW arrays. Compatibility aliases keep older modules working while new Tools consume the grouped domains.
+Validates record shape, IDs, typed relations, backlinks, patches, Design references and the single Action-output boundary. Structural violations fail closed with `DATA_CONTRACT_INVALID`.
 
-### Current relation families
+### `DerivedState`
+`assets/js/experiment/derived-state.js`
 
-Examples include:
+Declares which recomputable projections depend on which mutation scopes and how they are invalidated. `State` must not know feature-specific cache paths.
 
-- `sample_measurement`;
-- `measurement_file`;
-- `sample_file`;
-- `entity_evidence`;
-- `file_evidence`;
-- `sample_design`.
+### `DataPipeline`
+`assets/js/data/pipeline.js`
 
-### Current evidence families
+Runs the deterministic lifecycle. Stages declare dependency order, phase, read set, write set and description. A stage may request a bounded restart instead of directly invoking other stages.
 
-Examples include:
+## 3. Data layers and ownership
 
-- source file evidence;
-- format evidence;
-- auxiliary evidence;
-- finding evidence.
+`DomainSchema.rootFields()` is authoritative. The main layers are:
 
-## 5. Deterministic data pipeline
+| Layer | Examples | Owner | Persistence |
+|---|---|---|---|
+| immutable source | `raw`, `files`, `manifest`, format/auxiliary evidence | importer | persistent |
+| LabFlow Data | experiments, samples, runs, measurements, patches, Design | domain / design | persistent |
+| deterministic scientific result | `analysis`, findings | analysis | persistent |
+| Action output | `actionData` | Actions | persistent |
+| interaction history | `derived.actions`, `derived.chat` | runtime/state | persistent |
+| runtime derived cache | canonical/review/brief/pipeline caches | owning projection | runtime only |
+| export projection | NOMAD state | NOMAD | persistent where required |
 
-Primary modules:
+A module may read other layers when its contract requires it, but it should write only fields it owns.
 
-- `assets/js/data/importer.js` — archive inventory/import orchestration;
-- `assets/js/data/parser.js` — known format parsing and sample naming rules;
-- `assets/js/data/analysis.js` — deterministic JV analysis;
-- `assets/js/experiment/data-model.js` — normalized experiment shape;
-- `assets/js/experiment/canonical-store.js` — semantic indexes/evidence/relations.
+## 4. Scientific hierarchy
 
-Scientific calculation and validation belong here, not in AI prompts.
+```text
+ExperimentData / imported batch
+└─ Experiment / condition
+   └─ Sample / physical cell
+      └─ Run / acquisition session
+         └─ Measurement / repeated JV acquisition
+            ├─ FW scan
+            └─ RV scan
+```
 
-## 6. Tools, Actions and AI architecture
+FW/RV are scans of one measurement. A result row or scan is never promoted to a new experiment.
 
-Primary modules:
+Stable IDs define relations. Human-readable names are labels/search aliases and must not become the primary relational key when an ID exists.
 
-- `assets/js/tools/registry.js` — shared typed Tool Registry; read Tools expose Canonical data, internal service Tools wrap deterministic implementation functions;
-- `assets/js/ai/context.js` — bounded, declarative Context Pack builder;
-- `assets/js/ai/action-steps.js` — deterministic service implementations behind internal Tools;
-- `assets/js/ai/actions.js` — generic sequential Action runner and prerequisite gate;
-- `assets/js/ai/transport.js` — provider request/SSE transport;
-- `assets/js/ai/structured.js` — structured output parse/validation;
-- `assets/js/ai/assistant.js` — Assistant integration.
+## 5. Source, LabFlow Data and provenance
 
-Provider/model discovery, endpoint adaptation, thinking modes and normalized response behavior are specified in [`docs/specs/AI_PROVIDERS.md`](specs/AI_PROVIDERS.md). The complete source ownership map is in [`docs/specs/JAVASCRIPT_MODULES.md`](specs/JAVASCRIPT_MODULES.md).
+The uploaded archive is immutable source evidence. Automatic/manual corrections affect only the LabFlow Data.
 
-Actions remain explicit workflows: pressing an Action never delegates the workflow choice to an autonomous agent. AI never owns parsing, deterministic Results or NOMAD readiness. The Assistant is also read-only, but it no longer runs an LLM planning loop: LabFlow builds a bounded deterministic context locally and sends one model request per turn.
+All LabFlow Data correction provenance uses the single `patch` record shape with a typed target:
 
-## 7. Page architecture
+```js
+{
+  kind: 'patch',
+  target: { kind: 'measurement', id: 'm_...' },
+  operation: 'set',
+  field: '...',
+  from: ...,
+  to: ...,
+  source: 'automatic | researcher | action',
+  reason: '...',
+  evidence: [...],
+  status: 'applied | proposed | rejected | superseded'
+}
+```
 
-Pages read the current Working Copy/Canonical Store. They do not own parallel scientific projections.
+Do not create parallel provenance arrays or feature-specific patch formats.
 
-- Review — Analysis Dossier, safe corrections, AI proposals/human decisions;
-- Results — deterministic measurements/results; Compare statistics read the Analysis Summary bundle when fresh;
-- Design — simple researcher-editable solution chemistry + device stack, with optional bounded scientific Knowledge Base context for per-experiment AI suggestions; empty retrieval continues normally, suggestions remain separate until explicit researcher acceptance, and failures are resumable per experiment;
-- Report — current Markdown editor + explicit dynamic figure selection; summary plots, group overlays and dataset-specific JV curves are discovered from the current Working Copy, while deterministic statistics read the Analysis Summary bundle when fresh; figure rasters are generated lazily and cached per revision;
-- NOMAD — one deterministic mapping plan + validation; the derived `analysis.json` bundles deterministic analysis with the Analysis Summary bundle.
-- Documentation — read-only browser over versioned Markdown sources with locally rendered Mermaid diagrams; it never reads or mutates scientific state.
-- Knowledge Base — a bundled, versioned local library split into `knowledge-base/science.json` and `knowledge-base/labflow.json`. It is ready at startup with no folder, permission, external database or retrieval switch. Scientific Actions perform small optional searches over `science`; the Assistant may also search `labflow` help. A miss simply adds no context. User edits/imports are browser-local overrides and the library remains outside the Working Copy.
+## 6. Canonical Store
 
-## 8. Report architecture
+`CanonicalStore` is a **read projection/index**, not another data model. Its internal collection is called `records` specifically to avoid introducing a second scientific concept called “entity”.
 
-The Report Markdown editor is the authoritative textual document.
+It may create aliases, relations and evidence indexes for retrieval, but building it must not mutate LabFlow Data records.
 
-Report generation/improvement writes into that editor. PDF/DOCX serialize the editor content and selected figures. Export code must not regenerate independent prose.
+## 7. Action outputs
 
-## 9. NOMAD architecture
+All persisted Action-specific proposals/annotations/status live under:
 
-Module: `assets/js/nomad/nomad.js`
+```js
+experiment.actionData = {
+  proposals: {},
+  annotations: {},
+  status: {}
+}
+```
 
-One revision-scoped Canonical → NOMAD mapping is shared by:
+Use `LF.ActionData`; never add fields such as `aiDesignProposal`, `aiCorrectionPlan` or `analysis.aiInterpretation`. `DataContracts` rejects those ad-hoc fields.
 
-- NOMAD UI;
-- validation;
-- generated entry YAML;
-- exported mapping metadata.
+Scientific data changes occur only after an explicit apply/accept path owned by deterministic code.
 
-Do not build separate mapping logic inside the page and exporter.
+## 8. State and invalidation
 
-## 10. State and invalidation
+`State.touch(scope)` advances the LabFlow Data revision and delegates feature invalidation to `DerivedState`.
 
-Module: `assets/js/state.js`
+Typical scopes are:
 
-Scientific mutation advances the Working Copy revision and invalidates dependent derived state as appropriate.
+```text
+dataset · analysis · design · metadata · ai · nomad · validation
+```
 
-Derived objects must either match the current revision or be visibly stale/absent.
+A new derived feature registers its dependency instead of modifying `State.touch()`.
 
-Only **Save** marks the internal browser representation as saved. **Export** and other derived exports create files and do not implicitly mark later changes saved.
+## 9. Pipeline vs Actions vs services
 
-## 11. Export architecture
+```text
+Pipeline  = establish/repair/validate deterministic scientific state
+Action    = explicit researcher capability with a contract and trace
+Service   = reusable deterministic implementation detail
+Page      = render/interact with the above; never own scientific truth
+```
 
-Primary modules:
+Import, naming normalization, hierarchy rebuild, analysis, safe mechanical cleanup and final validation are pipeline work. They are not Actions.
 
-- `assets/js/export/export.js` — LabFlow original/working package export;
-- `assets/js/report/report.js` — Report document/figure export;
-- `assets/js/nomad/nomad.js` — NOMAD package export.
+## 10. Persistence
 
-All derived exports read the current Working Copy. None rewrites original source bytes.
+Persistence is schema-driven. `DomainSchema.snapshot(exp)` copies only roots declared persistent and returns a detached snapshot. Unknown temporary properties and runtime caches do not silently enter storage.
 
-## 12. Architectural anti-patterns
+When a persisted object is restored, `DataModel.hydrate()` recreates the current aggregate shape and the deterministic pipeline rebuilds runtime projections.
+
+## 11. Extension points
+
+Use registries instead of editing central switch statements:
+
+- record/root contract: `DomainSchema`;
+- deterministic stage: `DataPipeline.register({...})`;
+- derived cache invalidation: `DerivedState.register(...)`;
+- Action: `actions/<id>/action.json` plus optional prompt/schema;
+- Action guard: guard registry;
+- Action deterministic checkpoint: Tool/Action-step registry;
+- Context profile: `ContextBuilder.registerProfile(...)`.
+
+See `docs/guides/EXTENDING_LABFLOW.md`.
+
+## 12. Anti-patterns
 
 Do not add:
-
-- second experiment state;
-- hidden autosave model;
-- page-owned scientific copies;
-- AI parsing/calculation;
-- background workflow server;
-- provider queue;
-- parallel model calls for one Action;
-- full experiment serialization as default model context;
-- alternate NOMAD mapping implementation;
-- export-specific regenerated Report prose.
+- a second editable experiment/store;
+- page-owned scientific arrays;
+- duplicate record defaults outside `DomainSchema`;
+- direct filename-to-identity guessing in pages;
+- feature-specific patch/provenance formats;
+- Action outputs at arbitrary root paths;
+- pipeline stages that manually call downstream stages;
+- AI parsing/calculation of deterministic scientific metrics;
+- an Action for an internal service merely to expose it;
+- alternate NOMAD mapping logic in the UI.

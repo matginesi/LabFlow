@@ -42,7 +42,7 @@ If two high-priority sources disagree materially, do not silently choose one. Cr
 - Repeated internal whitespace may be collapsed when the meaning is otherwise unchanged.
 - Once device/sample identity is established, canonical laboratory naming is deterministic: use the patterns declared by the Data Contract (for the current dataset family, e.g. `N1 3 -1A` → `N1_3_1A`).
 - Known `Stability (...)` filenames keep their acquisition prefix/family marker and canonicalize only the trailing device/sample token.
-- RAW filename/path remains verbatim provenance; canonical naming affects only the Working Copy representation.
+- RAW filename/path remains verbatim provenance; canonical naming affects only the LabFlow Data representation.
 - A purely cosmetic canonical rename is never an AI ambiguity and never needs human semantic review.
 - `REF` is a semantic reference marker when it appears as a standalone token or clear sample prefix.
 - Do not infer a new sample identity solely from cosmetic normalization.
@@ -186,11 +186,11 @@ When this policy is supplied to an AI Action, the model must use it as a constra
 
 ## Export and NOMAD readiness
 
-An export package must contain the current reviewed working interpretation and enough provenance to reconstruct how it differs from RAW. Apply these rules to every NOMAD Action and pre-upload review:
+An export package must contain the current reviewed working interpretation and enough provenance to reconstruct how it differs from RAW. Apply these rules to NOMAD mapping/export preparation and pre-upload review:
 
 - Never export an AI proposal as an applied correction. A correction affects exported canonical data only after the application records an accepted patch with target, before/after values, source, evidence, review status and timestamp.
 - Keep the original RAW archive separate from corrected/canonical tables. Never rewrite the RAW ZIP to make it look compliant.
 - Preserve unknown or missing scientific values as null/blank with status metadata. Never replace them with `0`, an empty scientific claim or an AI estimate.
 - Treat unresolved danger findings, accepted-but-unapplied corrections, stale mapping reviews and missing provenance for a scientific correction as export blockers or explicit review items.
 - Export derived values only when their deterministic source and active conversion factor are recorded. Keep AI-inferred Design values labelled `ai_inferred` until human confirmation.
-- A NOMAD Action may assess, map or recommend. It must not claim that the ZIP conforms to the target deployment; only deterministic local checks plus processing by the selected NOMAD deployment can establish that.
+- NOMAD mapping/export services may assess readiness and build deterministic mappings. They must not claim that the ZIP conforms to the target deployment; only deterministic local checks plus processing by the selected NOMAD deployment can establish that.

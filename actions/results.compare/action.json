@@ -1,0 +1,67 @@
+{
+  "id": "results.compare",
+  "title": "Compare selected result groups",
+  "short_title": "Compare with AI",
+  "category": "results",
+  "role": "researcher",
+  "visibility": "public",
+  "purpose": "Explain deterministic differences between the currently selected Results comparison groups without recalculating statistics.",
+  "strategy": "The model receives only the selected groups, active metric/scan filters and deterministic per-group statistics. It reports supported contrasts, cautious hypotheses, limitations and next checks.",
+  "policies": [
+    "policy.scientific-provenance",
+    "policy.structured-output"
+  ],
+  "contract": {
+    "target": {
+      "kind": "results_group_selection",
+      "cardinality": "many",
+      "minimum": 2
+    },
+    "context": {
+      "profile": "results_compare",
+      "scope": "selected_result_groups"
+    },
+    "result": {
+      "format": "json",
+      "schema": "results_comparison",
+      "kind": "derived_annotation"
+    },
+    "effect": {
+      "mode": "store_derived",
+      "writes": [
+        "experiment.actionData.annotations.results.compare"
+      ]
+    },
+    "guards": [
+      "dataset.loaded",
+      "results.compare_groups"
+    ]
+  },
+  "execution": {
+    "mode": "hybrid",
+    "result_step": "compare",
+    "steps": [
+      {
+        "id": "compare",
+        "type": "AI",
+        "prompt": "prompt.md",
+        "output": "json",
+        "schema": "results_comparison",
+        "thinking": "off",
+        "timeout_ms": 120000,
+        "max_output_tokens": 1200,
+        "deadline_ms": 120000,
+        "max_retries": 1,
+        "min_output_tokens": 90,
+        "target_output_tokens": 520,
+        "max_input_tokens": 7000,
+        "validate_with": "results.validate-comparison"
+      },
+      {
+        "id": "store",
+        "type": "DETERMINISTIC",
+        "tool": "results.store-comparison"
+      }
+    ]
+  }
+}

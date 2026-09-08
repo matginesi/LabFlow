@@ -1,38 +1,55 @@
 {
   "id": "assistant.chat",
-  "type": "AI",
   "title": "General experiment assistant",
   "short_title": "Assistant",
-  "purpose": "Answer a question about the current LabFlow experiment and page.",
-  "output": "text",
+  "category": "assistant",
+  "role": "assistant",
+  "visibility": "internal",
+  "purpose": "Answer a question about the current experiment and page without mutating scientific data.",
+  "strategy": "One bounded read-only request over current page context, selected experiment evidence and bounded conversation memory.",
   "policies": [
     "policy.scientific-provenance"
   ],
-  "steps": [
-    {
-      "id": "chat",
-      "type": "AI",
-      "prompt": "prompt.md",
-      "output": "text",
-      "thinking": "off",
-      "timeout_ms": 60000,
-      "max_output_tokens": 2048,
-      "deadline_ms": 90000,
-      "max_retries": 1,
-      "min_output_tokens": 160,
-      "target_output_tokens": 700,
-      "max_input_tokens": 12000
-    }
-  ],
-  "category": "assistant",
-  "role": "assistant",
-  "strategy": "Single-request read-only assistant. LabFlow deterministically prepares the current page, relevant experiment evidence, bounded conversation history and optional local Knowledge Base matches before contacting the provider. Lightweight chat runs with thinking disabled by default for predictable latency; the global Thinking override may still explicitly enable it. A knowledge miss never blocks the answer. The Assistant cannot mutate the Working Copy.",
-  "mutation_scope": "",
-  "visibility": "internal",
-  "version": 1,
-  "input_scope": "current-page-context",
-  "requires": [],
-  "input": {
-    "context": "chat"
+  "contract": {
+    "target": {
+      "kind": "current_experiment_context",
+      "cardinality": "one"
+    },
+    "context": {
+      "profile": "chat",
+      "scope": "current_page"
+    },
+    "result": {
+      "format": "text",
+      "kind": "assistant_message"
+    },
+    "effect": {
+      "mode": "read_only",
+      "writes": []
+    },
+    "guards": [
+      "dataset.loaded",
+      "assistant.question"
+    ]
+  },
+  "execution": {
+    "mode": "ai",
+    "result_step": "chat",
+    "steps": [
+      {
+        "id": "chat",
+        "type": "AI",
+        "prompt": "prompt.md",
+        "output": "text",
+        "thinking": "off",
+        "timeout_ms": 60000,
+        "max_output_tokens": 2048,
+        "deadline_ms": 90000,
+        "max_retries": 1,
+        "min_output_tokens": 100,
+        "target_output_tokens": 650,
+        "max_input_tokens": 12000
+      }
+    ]
   }
 }

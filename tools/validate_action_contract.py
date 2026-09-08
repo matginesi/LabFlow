@@ -1,105 +1,167 @@
 #!/usr/bin/env python3
-"""Validate the deliberately small LabFlow Action catalog."""
+"""Validate the single current LabFlow Action contract.
+
+Actions are user-facing capabilities. Deterministic data lifecycle work belongs to
+DataPipeline/local services. The catalog is discovery-based: every
+actions/<id>/action.json must be self-contained and valid against this contract.
+"""
 from __future__ import annotations
 import json,re
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]; ACTIONS=ROOT/'actions'
-EXPECTED={'analysis.enrich','analysis.summarize','assistant.chat','dataset.analyze','dataset.correct-safe','dataset.resolve-ambiguities','design.infer','design.infer-batch','nomad.prepare','report.generate','report.improve','results.interpret'}
-KNOWLEDGE_ACTIONS={'analysis.enrich','design.infer','design.infer-batch','results.interpret','report.generate','report.improve'}
-ROLES={'automatic','researcher','assistant'}; VIS={'public','internal'}; TYPES={'AI','HYBRID','DETERMINISTIC'}
+
+ROOT=Path(__file__).resolve().parents[1]
+ACTIONS=ROOT/'actions'
+ROLES={'automatic','researcher','assistant'}
+VIS={'public','internal'}
+MODES={'ai','hybrid','deterministic'}
+RESULT_FORMATS={'json','text'}
+EFFECT_MODES={'read_only','store_derived','store_proposal','apply'}
+CARDINALITIES={'one','many'}
+FORBIDDEN_TOP_LEVEL={'type','steps','input','output','input_scope','mutation_scope','requires','max_input_tokens','max_output_tokens','prerequisites','mutation'}
+FORBIDDEN_CONTRACT={'mutation','prerequisites','requires','input','output'}
 errors=[]; defs={}
+
+def err(msg): errors.append(msg)
+
+def load_json(path):
+    try:return json.loads(path.read_text(encoding='utf-8'))
+    except Exception as exc:err(f'{path}: invalid JSON: {exc}');return None
+
 for p in sorted(ACTIONS.glob('*/action.json')):
-    try:d=json.loads(p.read_text())
-    except Exception as e:errors.append(f'{p}: invalid JSON: {e}');continue
-    aid=d.get('id');defs[aid]=d
-    if aid!=p.parent.name:errors.append(f'{p}: id must match directory')
-    for k in ('version','id','title','category','role','purpose','strategy','type','input','output','mutation_scope','steps','visibility'):
-        if k not in d:errors.append(f'{aid}: missing {k}')
-    if d.get('version')!=1:errors.append(f'{aid}: version must be 1')
-    if d.get('type') not in TYPES:errors.append(f'{aid}: invalid type')
-    if d.get('role') not in ROLES:errors.append(f'{aid}: invalid role {d.get("role")}')
-    if d.get('visibility') not in VIS:errors.append(f'{aid}: invalid visibility')
-    if not isinstance(d.get('input'),dict) or not str((d.get('input') or {}).get('context') or '').strip():errors.append(f'{aid}: input.context must declare the Context Pack profile')
-    knowledge=(d.get('input') or {}).get('knowledge')
-    if aid in KNOWLEDGE_ACTIONS:
-        if not isinstance(knowledge,dict):errors.append(f'{aid}: input.knowledge must declare optional Knowledge Base lookup')
+    d=load_json(p)
+    if not isinstance(d,dict):continue
+    aid=str(d.get('id') or '').strip()
+    if not aid:err(f'{p}: id is required');continue
+    if aid in defs:err(f'{aid}: duplicate Action id')
+    defs[aid]=d
+    if aid!=p.parent.name:err(f'{p}: id must match directory')
+    for k in ('id','title','category','role','visibility','purpose','strategy','contract','execution'):
+        if k not in d:err(f'{aid}: missing {k}')
+    forbidden=sorted(FORBIDDEN_TOP_LEVEL.intersection(d))
+    if forbidden:err(f'{aid}: obsolete top-level fields are forbidden: {", ".join(forbidden)}')
+    if d.get('role') not in ROLES:err(f'{aid}: invalid role {d.get("role")}')
+    if d.get('visibility') not in VIS:err(f'{aid}: invalid visibility {d.get("visibility")}')
+
+    contract=d.get('contract') if isinstance(d.get('contract'),dict) else {}
+    bad=sorted(FORBIDDEN_CONTRACT.intersection(contract))
+    if bad:err(f'{aid}: obsolete contract fields are forbidden: {", ".join(bad)}')
+    for key in ('target','context','result','effect','guards'):
+        if key not in contract:err(f'{aid}: contract.{key} is required')
+
+    target=contract.get('target') if isinstance(contract.get('target'),dict) else {}
+    if not str(target.get('kind') or '').strip():err(f'{aid}: contract.target.kind is required')
+    if target.get('cardinality') not in CARDINALITIES:err(f'{aid}: contract.target.cardinality must be one|many')
+    if target.get('minimum') is not None:
+        try: minimum=int(target['minimum'])
+        except Exception:err(f'{aid}: contract.target.minimum must be an integer')
         else:
-            if not isinstance(knowledge.get('limit'),int) or not 1<=knowledge.get('limit',0)<=40:errors.append(f'{aid}: input.knowledge.limit must be 1..40')
-            if not isinstance(knowledge.get('kinds'),list) or not knowledge.get('kinds'):errors.append(f'{aid}: input.knowledge.kinds must be a non-empty list')
-            if not str(knowledge.get('query_hint') or '').strip():errors.append(f'{aid}: input.knowledge.query_hint is required')
-    elif knowledge is not None:errors.append(f'{aid}: unexpected input.knowledge declaration')
-    if d.get('mutation_scope') not in ('','dataset','design','report','metadata','nomad'):errors.append(f'{aid}: invalid mutation_scope')
-    if d.get('mutation_scope') and d.get('role')!='researcher':errors.append(f'{aid}: mutating Actions must be researcher-triggered')
-    for text_field in ('title','purpose','strategy','output'):
-        if not str(d.get(text_field) or '').strip():errors.append(f'{aid}: empty {text_field}')
-    steps=d.get('steps') or []
-    if not steps:errors.append(f'{aid}: no steps');continue
+            if minimum<1:err(f'{aid}: contract.target.minimum must be >= 1')
+            if target.get('cardinality')!='many':err(f'{aid}: contract.target.minimum is only valid for cardinality=many')
+
+    context=contract.get('context') if isinstance(contract.get('context'),dict) else {}
+    if not str(context.get('profile') or '').strip():err(f'{aid}: contract.context.profile is required')
+    if not str(context.get('scope') or '').strip():err(f'{aid}: contract.context.scope is required')
+
+    result=contract.get('result') if isinstance(contract.get('result'),dict) else {}
+    if result.get('format') not in RESULT_FORMATS:err(f'{aid}: contract.result.format must be json|text')
+    if not str(result.get('kind') or '').strip():err(f'{aid}: contract.result.kind is required')
+    sid=str(result.get('schema') or '').strip()
+    if result.get('format')=='json' and sid and not (ACTIONS/'schemas'/f'{sid}.json').is_file():err(f'{aid}: contract.result.schema {sid} does not exist')
+    if result.get('format')=='text' and sid:err(f'{aid}: text result must not declare a JSON schema')
+
+    effect=contract.get('effect') if isinstance(contract.get('effect'),dict) else {}
+    if effect.get('mode') not in EFFECT_MODES:err(f'{aid}: contract.effect.mode must be one of {sorted(EFFECT_MODES)}')
+    writes=effect.get('writes')
+    if not isinstance(writes,list) or any(not isinstance(x,str) or not x.strip() for x in writes):err(f'{aid}: contract.effect.writes must be an array of non-empty paths')
+    elif effect.get('mode')=='read_only' and writes:err(f'{aid}: read_only Action must not declare write targets')
+    elif effect.get('mode')!='read_only' and not writes:err(f'{aid}: {effect.get("mode")} Action must declare at least one write target')
+
+    guards=contract.get('guards')
+    if not isinstance(guards,list) or not guards or any(not isinstance(x,str) or not x.strip() for x in guards):err(f'{aid}: contract.guards must be a non-empty array of guard ids')
+    elif len(guards)!=len(set(guards)):err(f'{aid}: contract.guards contains duplicates')
+
+    execution=d.get('execution') if isinstance(d.get('execution'),dict) else {}
+    mode=str(execution.get('mode') or '').lower()
+    if mode not in MODES:err(f'{aid}: execution.mode must be ai|hybrid|deterministic')
+    steps=execution.get('steps') if isinstance(execution.get('steps'),list) else []
+    if not steps:err(f'{aid}: execution.steps must contain at least one step');continue
     step_ids=[s.get('id') for s in steps]
-    if None in step_ids or len(step_ids)!=len(set(step_ids)):errors.append(f'{aid}: step ids must be present and unique')
+    if None in step_ids or '' in step_ids or len(step_ids)!=len(set(step_ids)):err(f'{aid}: step ids must be present and unique')
+    result_step=str(execution.get('result_step') or '').strip()
+    if not result_step:err(f'{aid}: execution.result_step is required')
+    elif result_step not in step_ids:err(f'{aid}: execution.result_step must reference a declared step')
+
     ai=[s for s in steps if s.get('type')=='AI']; det=[s for s in steps if s.get('type')=='DETERMINISTIC']
-    for s in det:
-        if not str(s.get('tool') or '').strip():errors.append(f'{aid}/{s.get("id")}: deterministic step requires tool')
-        if s.get('fn'):errors.append(f'{aid}/{s.get("id")}: legacy fn is not allowed; use tool')
-    if len(ai)+len(det)!=len(steps):errors.append(f'{aid}: unsupported step type')
-    expected_type='HYBRID' if ai and det else ('AI' if ai else 'DETERMINISTIC')
-    if d.get('type')!=expected_type:errors.append(f'{aid}: type must be {expected_type} for its declared steps')
+    if len(ai)+len(det)!=len(steps):err(f'{aid}: step type must be AI or DETERMINISTIC')
+    expected='hybrid' if ai and det else ('ai' if ai else 'deterministic')
+    if mode!=expected:err(f'{aid}: execution.mode must be {expected} for declared steps')
+    for step in det:
+        if not str(step.get('tool') or '').strip():err(f'{aid}/{step.get("id")}: deterministic step requires tool')
+        if 'fn' in step:err(f'{aid}/{step.get("id")}: fn is unsupported; register a deterministic tool')
     prompt=p.parent/'prompt.md'
     if ai:
-        if not prompt.is_file():errors.append(f'{aid}: AI Action missing prompt.md')
-        if not d.get('policies'):errors.append(f'{aid}: AI Action requires provenance/policy contract')
-        for s in ai:
-            if s.get('prompt')!='prompt.md':errors.append(f'{aid}/{s.get("id")}: AI step must use action-local prompt.md')
-            if s.get('thinking') not in {'off','auto','on'}:errors.append(f'{aid}/{s.get("id")}: AI step requires thinking = off|auto|on')
-            input_budget=s.get('max_input_tokens',d.get('max_input_tokens'))
-            if input_budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_input_tokens cap')
-            else:
-                try: input_budget=int(input_budget)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: max_input_tokens must be an integer'); input_budget=0
-                if input_budget and not 256<=input_budget<=262144: errors.append(f'{aid}/{s.get("id")}: max_input_tokens must be 256..262144')
-            budget=s.get('max_output_tokens',d.get('max_output_tokens'))
-            if budget is None: errors.append(f'{aid}/{s.get("id")}: AI step requires an explicit max_output_tokens target')
-            else:
-                try: budget=int(budget)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: max_output_tokens must be an integer'); budget=0
-                if budget and not 16<=budget<=1048576:errors.append(f'{aid}/{s.get("id")}: output target must be 16..1048576')
-            retries=s.get('max_retries')
-            if retries is not None:
-                try: retries=int(retries)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: max_retries must be an integer when present'); retries=-1
-                if not 0<=retries<=2:errors.append(f'{aid}/{s.get("id")}: max_retries must be 0..2')
-            deadline=s.get('deadline_ms')
-            if deadline is not None:
-                try: deadline=int(deadline)
-                except Exception: errors.append(f'{aid}/{s.get("id")}: deadline_ms must be an integer when present'); deadline=0
-                if deadline and not 5000<=deadline<=600000:errors.append(f'{aid}/{s.get("id")}: deadline_ms must be 5000..600000')
-            if s.get('output')=='json':
-                sid=s.get('schema')
-                if not sid or not (ACTIONS/'schemas'/f'{sid}.json').is_file():errors.append(f'{aid}/{s.get("id")}: JSON output requires a registered schema')
+        if not prompt.is_file():err(f'{aid}: AI Action missing prompt.md')
+        if not isinstance(d.get('policies'),list) or not d.get('policies'):err(f'{aid}: AI Action requires policies[]')
+        for step in ai:
+            if step.get('prompt')!='prompt.md':err(f'{aid}/{step.get("id")}: AI step must use prompt.md')
+            if step.get('thinking') not in {'off','auto','on'}:err(f'{aid}/{step.get("id")}: thinking must be off|auto|on')
+            for key,lo,hi in [('max_input_tokens',256,262144),('max_output_tokens',16,1048576)]:
+                try:value=int(step.get(key))
+                except Exception:err(f'{aid}/{step.get("id")}: {key} must be an integer');continue
+                if not lo<=value<=hi:err(f'{aid}/{step.get("id")}: {key} must be {lo}..{hi}')
+            if step.get('output')=='json':
+                ss=str(step.get('schema') or '').strip()
+                if not ss or not (ACTIONS/'schemas'/f'{ss}.json').is_file():err(f'{aid}/{step.get("id")}: JSON output requires a registered schema')
+            elif step.get('schema'):err(f'{aid}/{step.get("id")}: non-JSON AI step must not declare schema')
+            if step.get('validate_with') is not None and not str(step.get('validate_with') or '').strip():err(f'{aid}/{step.get("id")}: validate_with must be a deterministic tool id')
     else:
-        if prompt.exists():errors.append(f'{aid}: deterministic Action must not have prompt.md')
-        if d.get('policies'):errors.append(f'{aid}: deterministic Action must not carry AI policies')
-    for req in d.get('requires') or []:
-        if req not in EXPECTED:errors.append(f'{aid}: unknown dependency {req}')
-if set(defs)!=EXPECTED:errors.append(f'Action ids differ: missing={sorted(EXPECTED-set(defs))}, extra={sorted(set(defs)-EXPECTED)}')
-tool_source=(ROOT/'assets/js/tools/registry.js').read_text()
-tool_ids=set(re.findall(r"'([a-z0-9_.-]+)'\s*:\s*(?:\{|\[)",tool_source))
+        if prompt.exists():err(f'{aid}: deterministic Action must not have prompt.md')
+        if d.get('policies'):err(f'{aid}: deterministic Action must not carry AI policies')
+
+    # The semantic Action result and AI schema must describe one current contract.
+    rs=next((s for s in steps if s.get('id')==result_step),None)
+    if rs and result.get('format')=='json' and rs.get('type')=='AI':
+        if not sid:err(f'{aid}: JSON AI result must declare contract.result.schema')
+        elif str(rs.get('schema') or '')!=sid:err(f'{aid}: result_step schema must match contract.result.schema')
+    if rs and result.get('format')=='text' and rs.get('type')=='AI' and rs.get('output')!='text':err(f'{aid}: text result_step must request text output')
+
+# Registered deterministic tools.
+tool_source=(ROOT/'assets/js/tools/registry.js').read_text(encoding='utf-8')
+step_source=(ROOT/'assets/js/ai/action-steps.js').read_text(encoding='utf-8')
+tool_ids=set(re.findall(r"'([a-z0-9_.-]+)'\s*:\s*\{",tool_source))
+tool_ids.update(re.findall(r"^\s*'([a-z0-9_.-]+)'\s*:\s*function",step_source,re.M))
 for aid,d in defs.items():
-    for s in d.get('steps',[]):
-        tid=s.get('tool')
-        if tid and tid not in tool_ids:errors.append(f'{aid}/{s.get("id")}: unknown deterministic tool {tid}')
-        if s.get('agent'):
-            errors.append(f'{aid}/{s.get("id")}: legacy model-driven agent planning is not supported; build deterministic context and use one AI request')
-# Static UI references must resolve to an Action id when literal.
-ui='\n'.join(p.read_text(errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))
-rendered=set(re.findall(r'data-action="([^"]+)"',ui)); unknown={x for x in rendered-set(defs) if '+' not in x and 'escapeHtml' not in x}
-if unknown:errors.append('UI references unknown Actions: '+', '.join(sorted(unknown)))
-# There must be one source/runner/context/editor system, not Operations + Helpers twins.
-active='\n'.join(p.read_text(errors='ignore') for p in list((ROOT/'assets/js').rglob('*.js'))+[ROOT/'index.html'])
-for marker in ('OperationRunner','OperationRegistry','OperationContext','data-operation=','Operations Workshop','AI Helpers'):
-    if marker in active:errors.append('legacy execution marker remains: '+marker)
-if not (ROOT/'assets/js/ai/action-registry.js').is_file():errors.append('generated Action registry missing')
-if not (ROOT/'assets/js/ai/actions.js').is_file():errors.append('Action runner missing')
-if not (ROOT/'assets/js/ai/action-ui.js').is_file():errors.append('Action totem bridge missing')
+    for step in (d.get('execution') or {}).get('steps',[]):
+        for field in ('tool','validate_with'):
+            tid=step.get(field)
+            if tid and tid not in tool_ids:err(f'{aid}/{step.get("id")}: unknown deterministic tool {tid} referenced by {field}')
+
+# Guards are independently registered and must resolve.
+guard_source=(ROOT/'assets/js/ai/action-guards.js').read_text(encoding='utf-8')
+guard_ids=set(re.findall(r"register\('([^']+)'",guard_source))
+for aid,d in defs.items():
+    for gid in (d.get('contract') or {}).get('guards') or []:
+        if gid not in guard_ids:err(f'{aid}: unknown Action guard {gid}')
+
+# Context profiles are registry-based. `review` is deterministic and intentionally
+# has no AI packer; all AI profiles must exist in ContextBuilder.
+context_source=(ROOT/'assets/js/ai/context.js').read_text(encoding='utf-8')
+m=re.search(r'const PACKERS=\{([^}]+)\}',context_source)
+profiles=set(re.findall(r'([a-zA-Z0-9_-]+)\s*:',m.group(1))) if m else set()
+for aid,d in defs.items():
+    prof=str(((d.get('contract') or {}).get('context') or {}).get('profile') or '')
+    if prof and prof not in profiles and prof!='review':err(f'{aid}: unknown Context profile {prof}')
+
+# Static UI references must resolve to real Actions.
+ui='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))
+rendered=set(re.findall(r'data-action="([^"]+)"',ui))
+unknown={x for x in rendered-set(defs) if '+' not in x and 'escapeHtml' not in x}
+if unknown:err('UI references unknown Actions: '+', '.join(sorted(unknown)))
+
+if not defs:err('No Action manifests found')
 if errors:
-    print('Action contract: FAILED');[print(' - '+e) for e in errors];raise SystemExit(1)
-print(f'Action contract: OK ({len(defs)} Actions; {sum(d["type"]=="AI" for d in defs.values())} AI, {sum(d["type"]=="HYBRID" for d in defs.values())} hybrid, {sum(d["type"]=="DETERMINISTIC" for d in defs.values())} deterministic)')
+    print('Action contract: FAILED')
+    [print(' - '+e) for e in errors]
+    raise SystemExit(1)
+counts={m:sum(str((d.get('execution') or {}).get('mode'))==m for d in defs.values()) for m in MODES}
+print(f'Action contract: OK ({len(defs)} Actions; {counts["ai"]} AI, {counts["hybrid"]} hybrid, {counts["deterministic"]} deterministic; {len(guard_ids)} guards)')

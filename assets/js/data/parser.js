@@ -117,15 +117,27 @@
     return String(ident.unknown_label || '');
   }
 
-  function groupFromSample(sample) {
-    let s = canonicalSample(sample);
-    const patterns = ((rules().grouping || {}).strip_patterns || []);
-    patterns.forEach(function(pattern){
-      const re=configuredRegex(pattern,'i');
-      if(re) s=s.replace(re,'').trim();
-    });
-    return s || sample;
+  function sampleHierarchy(sample) {
+    const canonical = canonicalSample(sample);
+    const grouping = rules().grouping || {};
+    const patterns = Array.isArray(grouping.identity_patterns) ? grouping.identity_patterns : [];
+    for (let i = 0; i < patterns.length; i++) {
+      const item = patterns[i] || {}, re = configuredRegex(item.regex, 'i');
+      const match = re ? canonical.match(re) : null;
+      if (!match) continue;
+      const experimentIndex = Number(item.experiment_capture);
+      const positionIndex = Number(item.position_capture);
+      const cellIndex = Number(item.cell_capture);
+      const experiment = Number.isInteger(experimentIndex) && experimentIndex > 0 && match[experimentIndex] != null ? String(match[experimentIndex]).trim() : canonical;
+      const position = Number.isInteger(positionIndex) && positionIndex > 0 && match[positionIndex] != null ? String(match[positionIndex]).trim() : '';
+      const cell = Number.isInteger(cellIndex) && cellIndex > 0 && match[cellIndex] != null ? String(match[cellIndex]).trim() : '';
+      return { sample: canonical, experiment: experiment || canonical, position: position, cell: cell, matched: true };
+    }
+    return { sample: canonical, experiment: canonical, position: '', cell: '', matched: false };
   }
+
+  function groupFromSample(sample) { return sampleHierarchy(sample).experiment; }
+  function experimentFromSample(sample) { return sampleHierarchy(sample).experiment; }
 
   function parseSummary(text, direction) {
     const cfg = rules().summary_format || {};
@@ -300,5 +312,5 @@
   }
 
 
-  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, canonicalFileName, canonicalFilePath, sampleFromFilename, groupFromSample, isReference, rules, basename, classify, formatEvidence };
+  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, canonicalFileName, canonicalFilePath, sampleFromFilename, sampleHierarchy, experimentFromSample, groupFromSample, isReference, rules, basename, classify, formatEvidence };
 }());

@@ -2,66 +2,56 @@
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
   const Log=LF.Logger.scope('storage');
-  const DB_NAME='labflow.workspace', DB_VERSION=3, EXP_STORE='workspace';
-  const API_KEY_STORE='labflow.ai.keys', LEGACY_API_KEY_STORE='labflow.ai.key';
+  const DB_NAME='labflow.workspace.current', EXP_STORE='workspace';
+  const API_KEY_STORE='labflow.ai.keys';
+  const CABINET_STORE='labflow.cabinet';
   function read(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(err){Log.warn('local.read-failed',{key:key,error:err});return fallback;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(err){Log.warn('local.write-failed',{key:key,error:err});return false;}}
   function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
   function getAiSettings(){
     const defaults={provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',temperature:0.7,thinkingMode:'auto',streaming:true,inactivityTimeoutMs:90000,maxOutputTokensCap:0};
-    const out=Object.assign({},defaults,read('labflow.ai.settings',{}));out.endpoint=String(out.endpoint||'').replace(/\/chat\/completions(?:\/chat\/completions)+\/?$/i,'/chat/completions');if(out.provider==='zai'&&/api\.z\.ai\/api\/paas\/v4\/?$/i.test(out.endpoint))out.endpoint=out.endpoint.replace(/\/?$/,'/chat/completions');out.thinkingMode=['auto','off','on'].includes(out.thinkingMode)?out.thinkingMode:'auto';delete out.thinking;out.streaming=out.streaming!==false;out.inactivityTimeoutMs=Math.max(15000,Math.min(600000,Number(out.inactivityTimeoutMs)||90000));out.maxOutputTokensCap=Math.max(0,Math.min(1048576,Number(out.maxOutputTokensCap)||0));return out;
+    const out=Object.assign({},defaults,read('labflow.ai.settings',{}));out.endpoint=String(out.endpoint||'').replace(/\/chat\/completions(?:\/chat\/completions)+\/?$/i,'/chat/completions');if(['glm','glm-zai','glm/z.ai','z.ai'].includes(String(out.provider||'').toLowerCase()))out.provider='zai';if(out.provider==='zai'){out.endpoint='https://api.z.ai/api/paas/v4/chat/completions';out.model=String(out.model||'glm-4.7-flash').trim()||'glm-4.7-flash';delete out.zaiAccess;}out.thinkingMode=['auto','off','on'].includes(out.thinkingMode)?out.thinkingMode:'auto';delete out.thinking;out.streaming=out.streaming!==false;out.inactivityTimeoutMs=Math.max(15000,Math.min(600000,Number(out.inactivityTimeoutMs)||90000));out.maxOutputTokensCap=Math.max(0,Math.min(1048576,Number(out.maxOutputTokensCap)||0));return out;
   }
   function saveAiSettings(v){write('labflow.ai.settings',v);Log.info('ai-settings.saved',{provider:v&&v.provider,model:v&&v.model});}
   function getAssistantSettings(){const d={memoryEnabled:true,memoryTurns:6,memoryChars:6000,messageChars:1800,contextChars:12000,maxOutputTokens:0,temperature:0.4},raw=read('labflow.assistant.settings',{}),o=Object.assign({},d,raw);o.memoryEnabled=o.memoryEnabled!==false;o.memoryTurns=Math.max(0,Math.min(20,Number(o.memoryTurns)||0));o.memoryChars=Math.max(500,Math.min(32000,Number(o.memoryChars)||d.memoryChars));o.messageChars=Math.max(250,Math.min(8000,Number(o.messageChars)||d.messageChars));o.contextChars=Math.max(2000,Math.min(48000,Number(o.contextChars)||d.contextChars));o.maxOutputTokens=Math.max(0,Math.min(1048576,Number(o.maxOutputTokens)||0));o.temperature=Math.max(0,Math.min(2,Number(o.temperature)));if(!Number.isFinite(o.temperature))o.temperature=d.temperature;return o;}
   function saveAssistantSettings(v){const next=Object.assign({},getAssistantSettings(),v||{});write('labflow.assistant.settings',next);return getAssistantSettings();}
-  function apiKeys(){
-    let keys=read(API_KEY_STORE,{});if(!keys||typeof keys!=='object'||Array.isArray(keys))keys={};
-    try{const legacy=localStorage.getItem(LEGACY_API_KEY_STORE)||'';if(!legacy)return keys;const saved=read('labflow.ai.settings',{}),provider=String(saved.provider||'zai');if(!keys[provider])keys[provider]=legacy;const stored=write(API_KEY_STORE,keys);if(stored){localStorage.removeItem(LEGACY_API_KEY_STORE);Log.info('api-key.migrated',{provider:provider});}return keys;}catch(_){return keys;}
-  }
+  function apiKeys(){const keys=read(API_KEY_STORE,{});return keys&&typeof keys==='object'&&!Array.isArray(keys)?keys:{};}
   function getApiKey(providerId){try{const provider=String(providerId||getAiSettings().provider||'zai');return String(apiKeys()[provider]||'');}catch(_){return'';}}
   function saveApiKey(key,providerId){try{const provider=String(providerId||getAiSettings().provider||'zai'),keys=apiKeys();if(key)keys[provider]=String(key);else delete keys[provider];const stored=write(API_KEY_STORE,keys);if(!stored)Log.warn('api-key.save-failed',{provider:provider});return stored;}catch(err){Log.warn('api-key.save-failed',{error:err});return false;}}
 
-  /* Action overrides are the one browser-local runtime configuration layer.
-     Versioned action.json / prompt.md files remain the resettable source defaults. */
-  function actionOverrides(){
-    const current=read('labflow.action.overrides',null);
-    if(current&&typeof current==='object')return current;
-    const legacy=read('labflow.operation.overrides',{});
-    if(legacy&&Object.keys(legacy).length)write('labflow.action.overrides',legacy);
-    return legacy||{};
-  }
+  /* Browser-local Action overrides; source action.json / prompt.md stay authoritative defaults. */
+  function actionOverrides(){const current=read('labflow.action.overrides',{});return current&&typeof current==='object'&&!Array.isArray(current)?current:{};}
   function getActionOverride(id){const all=actionOverrides();return all&&all[id]?clone(all[id]):null;}
   function saveActionOverride(id,override){const all=actionOverrides();all[id]=Object.assign({},all[id]||{},clone(override||{}),{updatedAt:new Date().toISOString()});write('labflow.action.overrides',all);Log.info('action.override-saved',{actionId:id,hasDefinition:!!(override&&override.definition),hasPrompt:override&&typeof override.prompt==='string'});return getActionOverride(id);}
   function resetActionOverride(id){const all=actionOverrides();delete all[id];write('labflow.action.overrides',all);Log.info('action.override-reset',{actionId:id});}
-  function getEffectiveAction(id){const base=LF.ActionRegistry&&LF.ActionRegistry.action?LF.ActionRegistry.action(id):null,ov=getActionOverride(id);if(!base)return null;if(!ov||!ov.definition)return base;const custom=clone(ov.definition),merged=Object.assign({},base,custom,{id:base.id});if(Array.isArray(custom.steps)){const baseById={};(base.steps||[]).forEach(function(step){if(step&&step.id)baseById[step.id]=step;});merged.steps=custom.steps.map(function(step){const source=step&&step.id&&baseById[step.id]||{};return Object.assign({},source,step||{});});}return merged;}
+  function getEffectiveAction(id){const base=LF.ActionRegistry&&LF.ActionRegistry.action?LF.ActionRegistry.action(id):null,ov=getActionOverride(id);if(!base)return null;if(!ov||!ov.definition)return base;const custom=clone(ov.definition),merged=Object.assign({},base,custom,{id:base.id});merged.contract=Object.assign({},base.contract||{},custom.contract||{});merged.execution=Object.assign({},base.execution||{},custom.execution||{});const customSteps=custom.execution&&custom.execution.steps,baseSteps=base.execution&&base.execution.steps||[];if(Array.isArray(customSteps)){const baseById={};baseSteps.forEach(function(step){if(step&&step.id)baseById[step.id]=step;});merged.execution.steps=customSteps.map(function(step){const source=step&&step.id&&baseById[step.id]||{};return Object.assign({},source,step||{});});}return merged;}
   function getEffectivePrompt(id){const ov=getActionOverride(id);if(ov&&typeof ov.prompt==='string')return ov.prompt;return LF.ActionRegistry&&LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(id):'';}
 
-  function getUserProfile(){return Object.assign({name:'Matteo Ginesi',organization:'',email:'',defaultAuthor:'Matteo Ginesi'},read('labflow.user.profile',{}));}
+  function getUserProfile(){return Object.assign({name:'Matteo Ginesi',organization:'',email:''},read('labflow.user.profile',{}));}
   function saveUserProfile(v){write('labflow.user.profile',Object.assign({},getUserProfile(),v||{}));}
-  function getUiSettings(){return Object.assign({assistantOpen:true,theme:'instrument'},read('labflow.ui.settings',{}));}
+  function getUiSettings(){return Object.assign({assistantOpen:false,theme:'instrument'},read('labflow.ui.settings',{}));}
   function saveUiSettings(v){write('labflow.ui.settings',Object.assign({},getUiSettings(),v||{}));}
-  function getNomadSettings(){return Object.assign({instance:'NOMAD Central',endpoint:'https://nomad-lab.eu/prod/v1/api/v1',includeRaw:true,includeDerived:true,includeReport:true},read('labflow.nomad.settings',{}));}
-  function saveNomadSettings(v){write('labflow.nomad.settings',v);}
-  function getLocalKnowledgeLibrary(){
-    const current=read('labflow.knowledge.local',{version:1,records:[],updatedAt:null});
-    if(current&&Array.isArray(current.records))return clone(current);
-    return{version:1,records:[],updatedAt:null};
+
+  function getCabinetState(){
+    const raw=read(CABINET_STORE,{items:[],updatedAt:null});
+    return raw&&typeof raw==='object'&&!Array.isArray(raw)?clone(raw):{items:[],updatedAt:null};
   }
-  function saveLocalKnowledgeLibrary(value){
-    const next=value&&Array.isArray(value.records)?clone(value):{version:1,records:[],updatedAt:null};
-    next.version=1;next.updatedAt=new Date().toISOString();write('labflow.knowledge.local',next);return clone(next);
-  }
-  function takeLegacyKnowledgeLibrary(){
-    const legacy=read('labflow.design.knowledge-base',null);
-    if(!legacy||!Array.isArray(legacy.records)||!legacy.records.length)return null;
-    try{localStorage.removeItem('labflow.design.knowledge-base');}catch(_){}
-    return clone(legacy);
+  function saveCabinetState(value){
+    const payload=clone(value&&typeof value==='object'?value:{items:[]})||{items:[]};
+    payload.items=Array.isArray(payload.items)?payload.items:[];
+    payload.updatedAt=new Date().toISOString();
+    const ok=write(CABINET_STORE,payload);
+    if(ok)Log.info('cabinet.saved',{items:payload.items.length});
+    return ok;
   }
 
-  function db(){return new Promise(function(resolve,reject){if(!window.indexedDB){reject(new Error('IndexedDB is unavailable in this browser.'));return;}const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=function(){const d=req.result;if(!d.objectStoreNames.contains(EXP_STORE))d.createObjectStore(EXP_STORE);};req.onsuccess=function(){resolve(req.result);};req.onerror=function(){reject(req.error||new Error('Could not open LabFlow workspace storage.'));};});}
-  async function saveExperiment(exp,ui){const d=await db();return new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite'),store=tx.objectStore(EXP_STORE),payload={version:2,savedAt:new Date().toISOString(),experiment:exp,ui:{route:ui&&ui.route||'experiment-import',resultsTab:ui&&ui.resultsTab||'overview',selectedMeasurementId:ui&&ui.selectedMeasurementId||null,selectedDesignDeviceId:ui&&ui.selectedDesignDeviceId||null}};store.put(payload,'current');tx.oncomplete=function(){d.close();resolve(payload);};tx.onerror=function(){const err=tx.error||new Error('Could not save the LabFlow workspace.');d.close();reject(err);};});}
+  function getExportSettings(){return Object.assign({instance:'NOMAD Central',endpoint:'https://nomad-lab.eu/prod/v1/api/v1',includeRaw:true,includeDerived:true},read('labflow.export.settings',{}));}
+  function saveExportSettings(v){write('labflow.export.settings',v);}
+
+  function db(){return new Promise(function(resolve,reject){if(!window.indexedDB){reject(new Error('IndexedDB is unavailable in this browser.'));return;}const req=indexedDB.open(DB_NAME);req.onupgradeneeded=function(){const d=req.result;if(!d.objectStoreNames.contains(EXP_STORE))d.createObjectStore(EXP_STORE);};req.onsuccess=function(){resolve(req.result);};req.onerror=function(){reject(req.error||new Error('Could not open LabFlow workspace storage.'));};});}
+  async function saveExperiment(exp,ui){const d=await db();return new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite'),store=tx.objectStore(EXP_STORE),payload={savedAt:new Date().toISOString(),experiment:(LF.DataModel&&LF.DataModel.serialize?LF.DataModel.serialize(exp):exp),ui:{route:ui&&ui.route||'experiment-import',resultsTab:ui&&ui.resultsTab||'overview',selectedMeasurementId:ui&&ui.selectedMeasurementId||null,selectedDesignDeviceId:ui&&ui.selectedDesignDeviceId||null}};store.put(payload,'current');tx.oncomplete=function(){d.close();resolve(payload);};tx.onerror=function(){const err=tx.error||new Error('Could not save the LabFlow workspace.');d.close();reject(err);};});}
   async function loadExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readonly'),req=tx.objectStore(EXP_STORE).get('current');req.onsuccess=function(){const v=req.result||null;d.close();resolve(v);};req.onerror=function(){const err=req.error||new Error('Could not read saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.load-failed',{error:err});return null;}}
   async function clearSavedExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite');tx.objectStore(EXP_STORE).delete('current');tx.oncomplete=function(){d.close();resolve(true);};tx.onerror=function(){const err=tx.error||new Error('Could not clear saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.clear-failed',{error:err});return false;}}
 
-  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getNomadSettings:getNomadSettings,saveNomadSettings:saveNomadSettings,getLocalKnowledgeLibrary:getLocalKnowledgeLibrary,saveLocalKnowledgeLibrary:saveLocalKnowledgeLibrary,takeLegacyKnowledgeLibrary:takeLegacyKnowledgeLibrary,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
+  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getExportSettings:getExportSettings,saveExportSettings:saveExportSettings,getCabinetState:getCabinetState,saveCabinetState:saveCabinetState,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
 }());

@@ -35,6 +35,10 @@ global.LabFlow.Core = global.LabFlow.Core || {
     }, space == null ? 2 : space);
   }
 };
+// Load the one canonical domain schema before suites import DataModel.
+require(path.join(root, 'assets', 'js', 'experiment', 'domain-schema.js'));
+require(path.join(root, 'assets', 'js', 'experiment', 'action-data.js'));
+
 // JSZip is vendored for the browser; when runnable under Node it is exported as a module.
 try {
   global.window.JSZip = global.window.JSZip || require(path.join(root, 'vendor', 'jszip', 'jszip.min.js'));

@@ -1,236 +1,188 @@
-# LabFlow data model contract
+---
+title: Data model contract
+section: Core architecture
+summary: Canonical ExperimentData hierarchy, record schemas, ownership, persistence and invariants.
+order: 10
+---
+
+# Data model contract
+
+## 1. Single aggregate root
+
+`ExperimentData` is the only mutable scientific aggregate. JSON is a serialization format, not the internal API.
 
-Read [`../WORKFLOW.md`](../WORKFLOW.md) for the complete lifecycle.
+```text
+ExperimentData
+├─ source evidence
+├─ LabFlow Data records
+├─ deterministic analysis
+├─ Design
+├─ patches/findings
+├─ ActionData
+├─ interaction history
+└─ runtime projections
+```
 
-## 1. Source versus semantic data
+The canonical shape comes only from `DomainSchema`.
 
-The uploaded ZIP and the LabFlow experiment are deliberately different objects.
+## 2. Scientific hierarchy
 
-### Source Vault
+```text
+Experiment / condition
+└─ Sample / cell
+   └─ Run / acquisition session
+      └─ Measurement / repeated JV acquisition
+         ├─ FW scan
+         └─ RV scan
+```
 
-Immutable-by-contract source snapshot:
+For `TEST_DATA/2026_01_22.zip` the regression contract is:
 
-- byte-for-byte original archive;
-- original paths/names;
-- RAW and auxiliary source evidence.
+```text
+5 experiments → 31 samples → 42 runs → 72 measurements
+```
 
-### Working Copy
+## 3. Registered record kinds
 
-`LF.State.state.experiment` is the one editable scientific state.
+`DomainSchema` currently registers:
 
-### Canonical Data Model / Store
+- `file`
+- `manifest_entry`
+- `format_evidence`
+- `auxiliary_evidence`
+- `experiment`
+- `sample`
+- `run`
+- `measurement`
+- `finding`
+- `block`
+- `patch`
+- `design_solution`
+- `design_layer`
+- `design_device`
 
-`LF.CanonicalStore` is the deterministic internal representation and semantic index/view over the Working Copy, not another editable state. Internal format `labflow-canonical-v2` groups data into explicit domains for UI, Tools and Actions while retaining compatibility aliases for existing modules.
+Use `DomainSchema.create(kind, seed)` / `normalize(kind, record)`. For top-level record kinds, `ExperimentData.addRecord(kind, seed)` stores the normalized record in the root declared by `DomainSchema.rootForRecordKind(kind)`.
 
-Current grouped domains are:
+Nested Design records remain owned by `DesignModel` rather than being inserted as independent roots.
 
-- `experiment` and `source`;
-- `entities.files`, `entities.samples`, `entities.measurements`;
-- `scientific.design`, `scientific.results`, `scientific.findings`;
-- `documents.lab`, `documents.paper`, `documents.active_kind`;
-- `evidence`, `relations`, `aliases`;
-- `provenance.patches`, `provenance.document_edits`, `provenance.records`.
+## 4. Measurement semantics
 
-This internal v2 representation is rebuilt/cached from the Working Copy. It does not own independent scientific mutations.
+A `measurement` is one repeated JV acquisition/source file within a run. FW and RV are paired scan directions of that measurement.
 
-## 2. Working Copy root
+A scan may contain:
+- Voc (V)
+- Jsc (mA/cm²)
+- Vmpp (V)
+- Jmpp (mA/cm²)
+- Pmpp (mW/cm²)
+- Rs (Ω)
+- Rsh (Ω)
+- FF (%)
+- Efficiency/PCE (%)
 
-The normalized experiment contains the scientific collections and derived state required by the UI. Major concepts include:
+Missing numeric data remains `null`; missing values are never normalized to zero.
 
-- experiment metadata;
-- source/raw archive reference;
-- files;
-- samples;
-- measurements;
-- findings;
-- patches/provenance;
-- Design;
-- Results analysis;
-- Report;
-- NOMAD state;
-- derived Action/chat state;
-- sync/revision metadata.
+Curve points live under `measurement.curve.fw[]` / `measurement.curve.rv[]`.
 
-Do not create separate mutable copies of these collections for individual pages.
+## 5. Relations
 
-## 3. Canonical identity
+Relations are ID-first and bidirectional where appropriate:
 
-### Files
+- experiment → `sampleIds`, `runIds`, `measurementIds`
+- sample → `experimentId`, `runIds`, `measurementIds`
+- run → `experimentId`, `sampleId`, `measurementIds`
+- measurement → `experimentId`, `sampleId`, `runId`
+- Design device → `experimentId`, `sampleIds`, `solutionIds`
 
-File identity is the full source archive path / stable LabFlow file ID.
+Names (`experiment`, `sample`, `group`, `sampleNames`) are labels/caches and do not replace stable IDs.
 
-### Samples
+Blocks use generic typed refs:
 
-Sample identity is a stable LabFlow sample ID plus a canonical human-facing name.
+```js
+refs: [
+  { kind: 'sample', id: 'sample_...' },
+  { kind: 'measurement', id: 'm_...' }
+]
+```
 
-Original names remain aliases/provenance.
+Do not add a parallel `entities[]` collection.
 
-### Measurements
+## 6. Patch/provenance contract
 
-Measurements have stable IDs and point to the canonical sample plus source file/path.
+`patches[]` is the persistent provenance of LabFlow Data changes. Every patch has one typed target and one operation (`set`, `add`, `remove`).
 
-A measurement file name is not automatically the sample identity.
+An exact `measurement` target is measurement-scoped; it must not expand to sibling measurements of the same sample.
 
-## 4. Alias model
+RAW bytes and original source records are never rewritten.
 
-Aliases preserve original naming without forcing laboratory users to rename their archives.
+## 7. ActionData contract
 
-A canonical sample can retain:
+Action outputs use one root:
 
-- canonical name;
-- raw/internal name;
-- filename-derived name;
-- known equivalent aliases.
+```js
+actionData: {
+  proposals: { '<action.id>': ... },
+  annotations: { '<action.id>': ... },
+  status: { '<action.id>': ... }
+}
+```
 
-Alias lookup is case/format normalized for retrieval, while original display strings remain preserved.
+`LF.ActionData` is the only API for this state. Action IDs are literal keys and may contain dots; code must not interpret them as property paths.
 
-## 5. Evidence model
+ActionData is persisted because proposals/status must survive a browser reload, but it is not scientific source truth.
 
-Evidence is compact and referential. It should explain why LabFlow believes a fact without copying an entire source file into every finding/context.
+## 8. Root ownership and persistence
 
-Evidence fields conceptually include:
+Inspect the authoritative table at runtime:
 
-- stable evidence ID;
-- evidence type;
-- source file/finding ID;
-- source path;
-- related entity IDs;
-- fact/summary;
-- locator such as path/row/finding ID.
+```js
+LabFlow.Data.ownership()
+```
 
-Evidence is used by Review, Design, AI Context Packs and provenance.
+Runtime caches such as pipeline trace, canonical index, review dossier, Design analysis and Experiment Brief are excluded from persisted snapshots and are rebuilt.
 
-## 6. Relation model
+## 9. Validation invariants
 
-Relations connect stable IDs rather than relying on repeated name matching.
+`DataContracts.validate(exp)` checks:
 
-Current relation types include:
+- required fields and `kind`;
+- unique record IDs;
+- valid relation targets;
+- parent/child backlinks;
+- parent consistency between measurement/run/sample/experiment;
+- typed block refs;
+- typed patch targets;
+- Design references;
+- the single ActionData boundary.
 
-- sample → measurement;
-- measurement → file;
-- sample → file;
-- entity → evidence;
-- file → evidence;
-- sample → Design.
+Structural failure is `DATA_CONTRACT_INVALID` and pipeline execution fails closed.
 
-Future relations should follow the same ID-based pattern.
+## 10. Public domain API
 
-## 7. Findings
+Preferred queries:
 
-Findings are deterministic observations about the current Working Copy.
+```js
+exp.experiment(ref)
+exp.sample(ref)
+exp.run(ref)
+exp.measurement(ref)
+exp.selectSamples(query)
+exp.selectMeasurements(query)
+exp.measurementsForSample(ref)
+exp.measurementsForExperiment(ref)
+exp.bestMeasurementForSample(ref)
+exp.inspect(ref)
+exp.tree()
+```
 
-They can be classified for Review as:
+Preferred mutations:
 
-- safe-correctable;
-- semantic ambiguity;
-- informational/technical;
-- resolved.
+```js
+exp.addRecord(kind, seed)
+exp.addPatch(...)
+exp.applyPatch(...)
+exp.setMismatchFactor(...)
+exp.reanalyze()
+```
 
-A finding is not automatically an error and is not automatically an Action.
-
-## 8. Design source projection
-
-`design` is populated from explicit source evidence before AI. LabFlow scans relevant imported auxiliary metadata (for example notes containing stack, precursor/passivation formulation, coating, antisolvent, annealing or atmosphere), normalizes it, and groups replicates that share the same source-backed design signature.
-
-The Design model records:
-
-- `sourceEvidence`: bounded RAW-backed fabrication notes with sample/group/path references;
-- `evidenceSummary`: source record count, parsed record count, covered samples and recovered variants;
-- `sourceProjection`: projection version/summary used to make normal rendering idempotent;
-- source-derived solutions, stack and process fields with `raw_evidence` provenance.
-
-The projection is fill-only for existing Design records. Once the researcher edits a field, a normal `ensureShape()` / re-render must not restore the RAW value over that edit. An explicit **Re-read source** operation may rerun projection deliberately.
-
-If the archive contains measurements but no fabrication recipe, LabFlow preserves the experimental/sample structure and explicit unknown fields; absence of source Design evidence must never be represented as an empty or silently inferred experiment.
-
-## 8.1 Knowledge Base
-
-The Knowledge Base is separate from experiment state and uses schema version `1`. Its shipped source is intentionally split by purpose:
-
-- `knowledge-base/science.json` — sourced scientific `material`, `solution`, `process`, `stack` and `concept` records;
-- `knowledge-base/labflow.json` — `guide` records that explain LabFlow itself.
-
-`tools/build_knowledge_bundle.py` combines these files into the browser bundle. The bundled library is ready at startup: no directory permission, external database, indexing step or retrieval toggle exists. Resetting the experiment does not alter it because it is neither part of `LF.State.state.experiment` nor a Canonical Store domain.
-
-The Knowledge Base page may create, import or edit records. Those changes are stored only as small browser-local overrides keyed by stable record ID. A same-ID override wins over the bundled record and can be reset; a new ID behaves as a custom local record. JSON import merges into those overrides and JSON export serializes the effective versioned library.
-
-Lookup is deterministic and bounded. Query terms are matched against record names, tags, summaries, kind-specific data and source metadata. Scientific Action Context Packs search only the `science` collection and receive `knowledge_context` only when useful records exist. The Assistant may search both collections. A lookup miss or lookup failure simply means no additional context; it is never an Action failure.
-
-Retrieved scientific records are external candidate knowledge, not evidence about the imported experiment. `design.infer` may cite a supporting record in `knowledge_refs`. Model-only scientific suggestions have no fabricated record IDs and are confidence-capped. Exact model-only recipe quantities are kept visible for researcher review but are not automatically applied; qualitative identifiers such as `N2`, `SnO2`, `C60` or `2PACz` are not treated as quantitative settings merely because they contain digits. The ordinary fill-only Design apply gate remains the only mutation path.
-
-## 9. Patches and provenance
-
-Every applied correction must be traceable.
-
-Patch records should preserve, as applicable:
-
-- patch type;
-- target;
-- field;
-- before/from;
-- after/to;
-- source (`deterministic`, `ai`, `user` or equivalent);
-- reason;
-- evidence IDs/summaries;
-- confidence when AI-derived;
-- review status/reviewer;
-- timestamp.
-
-AI proposals are not patches until they are deterministically validated and applied.
-
-## 10. Derived state
-
-Derived state includes data such as:
-
-- Analysis Dossier;
-- Results interpretation;
-- Design AI proposal;
-- NOMAD mapping/validation.
-
-Derived state is revision-scoped and must not masquerade as current after relevant scientific mutation.
-
-## 11. Analysis Dossier
-
-The dossier is compact by design.
-
-It may contain:
-
-- source revision;
-- status;
-- counts;
-- compact sample/measurement references;
-- safe fixes;
-- ambiguity list;
-- informational findings;
-- evidence coverage;
-- deterministic Results summary.
-
-It must not duplicate full RAW curves or giant source text.
-
-## 12. Tool views and Context Packs
-
-A Tool result and a Context Pack are ephemeral bounded views, not persistent scientific truth. Read Tools retrieve named slices of the Canonical Data Model with typed arguments. AI Actions receive a profile declared in `action.json` under `input.context`.
-
-The Assistant begins from a small bootstrap Context Pack and obtains additional data only through explicit allowlisted read Tools. Returned observations are bounded before reuse. Stable IDs/evidence references should be preferred over copied raw data.
-
-## 13. Serialization
-
-### Working package
-
-`experiment.json` represents the current Working Copy.
-
-### Canonical snapshot
-
-`canonical.json` (`labflow-canonical-v2`) contains a portable compact semantic snapshot:
-
-- canonical identities;
-- aliases;
-- compact measurements;
-- relations;
-- evidence;
-- findings;
-- patches;
-- Design;
-- provenance.
-
-Large RAW curve arrays are not duplicated into `canonical.json`.
+Do not mutate root arrays directly from UI code when an owning service/API exists.

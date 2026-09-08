@@ -7,6 +7,11 @@ function assert(actual, expected, label) {
 }
 
 module.exports=function(t,LF){
+  function current(def){
+    if(def&&def.execution&&def.contract)return def;
+    const steps=def&&Array.isArray(def.steps)?def.steps:[],hasAi=steps.some(function(x){return x.type==='AI';}),hasDet=steps.some(function(x){return x.type==='DETERMINISTIC';}),mode=hasAi&&hasDet?'hybrid':hasAi?'ai':'deterministic';
+    return Object.assign({},def,{contract:{context:{profile:'test',scope:'experiment'},result:{format:(def&&def.output)||'text',kind:'test'},mutation:{scope:def&&def.mutation_scope||'none',mode:def&&def.mutation_scope?'apply':'read_only'},prerequisites:def&&def.requires||[]},execution:{mode:mode,steps:steps}});
+  }
   function install(steps){
     const exp={id:'exp_test',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.action',type:'DETERMINISTIC',steps:[
@@ -14,7 +19,7 @@ module.exports=function(t,LF){
       {id:'two',type:'DETERMINISTIC',fn:'two'},
       {id:'three',type:'DETERMINISTIC',fn:'three'}
     ]};
-    LF.Storage={getEffectiveAction:function(){return def;}};
+    LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps=steps;
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
@@ -40,7 +45,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.budget',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
     let built=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'compact brief'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'done',finishReason:'stop'};}};
@@ -54,7 +59,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_thinking',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.thinking',type:'AI',steps:[{id:'draft',type:'AI',output:'text',thinking:'off',max_output_tokens:512,max_retries:0}]};
     let built=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'openai',model:'gpt-5.2',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'openai',model:'gpt-5.2',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'Write directly.'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 12;},resolveModelCapabilities:async function(){return{maxOutputTokens:4096,reasoningStatus:'optional'};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},resolveThinkingPolicy:function(cap,action,global){assert(action,'off','Action policy input');assert(global,'auto','global follows Action');return{requested:'off',transportMode:'off',capability:cap.reasoningStatus,effective:'off',reason:'Action policy'};},buildRequest:function(opts){built=opts;return Object.assign({body:{messages:opts.messages}},opts);},send:async function(spec){return{content:'done',finishReason:'stop',thinkingMode:spec.thinkingMode,thinkingPolicy:spec.thinkingPolicy};}};
@@ -67,7 +72,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_draft_budget',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.draft-budget',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:0}]};
     let contextWorkItem=null,built=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:2048};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:2048};}};
     LF.ActionContext={build:function(action,step,opts){contextWorkItem=opts.workItem;return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
     LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
@@ -84,7 +89,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_draft_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.draft-retry',type:'HYBRID',steps:[{id:'collect',type:'DETERMINISTIC',fn:'draft.collect'},{id:'draft',type:'AI',output:'text',foreach:'collect.blocks',min_output_tokens:1800,target_output_tokens:6500,max_output_tokens:12288,max_retries:1}]};
     const targets=[];let calls=0;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){targets.push(opts.workItem.target_words);return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
     LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
@@ -100,9 +105,9 @@ module.exports=function(t,LF){
 
   t['Action context is compacted before LM Studio request to fit the loaded runtime context'] = async function(){
     const exp={id:'exp_context_fit',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
-    const def={id:'analysis.enrich',type:'AI',steps:[{id:'enrich',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
+    const def={id:'test.ai-budget',type:'AI',steps:[{id:'enrich',type:'AI',output:'text',max_output_tokens:3072,deadline_ms:90000,max_retries:0}]};
     const builds=[];let sent=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){
       const limit=Number(opts&&opts.maxChars)||50000;builds.push(limit);
       const content='X'.repeat(Math.max(1200,Math.min(50000,limit)));
@@ -110,7 +115,7 @@ module.exports=function(t,LF){
     }};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return Math.ceil(String(messages[0].content||'').length/1.5);},resolveModelCapabilities:async function(){return{contextWindow:32768,maxOutputTokens:8192,source:'LM Studio loaded instance context'};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,Math.max(16,cap.contextWindow-inputTokens-512));},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'compact done',finishReason:'stop'};}};
-    const out=await LF.ActionRunner.run('analysis.enrich');
+    const out=await LF.ActionRunner.run('test.ai-budget');
     assert(out.status,'done','status');
     if(!(builds.length>=2&&builds.some(function(v){return v<50000;})))throw new Error('context builder must be invoked again with a smaller maxChars budget');
     if(!sent||!sent.messages||Math.ceil(sent.messages[0].content.length/1.5)>28000)throw new Error('final request must fit comfortably inside the 32k runtime context');
@@ -118,7 +123,7 @@ module.exports=function(t,LF){
 
   t['structured Action reserves its target rather than falsely requiring its full output ceiling']=async function(){
     const exp={id:'exp_context_target',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'design.infer',type:'AI',steps:[{id:'infer',type:'AI',output:'json',max_output_tokens:6144,min_output_tokens:1200,target_output_tokens:2800,max_retries:0}]},previousStructured=LF.StructuredOutput;let sent=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'mid-context',streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'mid-context',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){const content='X'.repeat(4000);return{context:{payload:content},messageList:[{role:'user',content:content}]};}};
     LF.StructuredOutput={parse:function(){return{value:{},strategy:'JSON'};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
@@ -127,11 +132,46 @@ module.exports=function(t,LF){
     finally{LF.StructuredOutput=previousStructured;}
   };
 
+  t['AI validate_with semantic failure regenerates the AI checkpoint with validator feedback'] = async function(){
+    const exp={id:'exp_semantic_validator',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.semantic-validator',steps:[{id:'infer',type:'AI',output:'json',schema:'test_schema',max_output_tokens:512,max_retries:1,validate_with:'test.validate'}]};
+    let calls=0;const retryFeedback=[];const previousStructured=LF.StructuredOutput,previousSteps=LF.ActionSteps,previousRegistry=LF.ActionRegistry,realSetTimeout=global.setTimeout;
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(action,step,opts){retryFeedback.push(String(opts&&opts.retryFeedback||''));return{context:{},messageList:[{role:'user',content:String(opts&&opts.retryFeedback||'first attempt')}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.ActionRegistry={schema:function(){return{};}};
+    LF.StructuredOutput={parse:function(content){return{value:JSON.parse(content),strategy:'JSON'};},normalizeForSchema:function(id,v){return v;},validate:function(){return[];},contractError:function(){const e=new Error('contract');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;return e;}};
+    LF.ActionSteps={'test.validate':function(ctx){if(!ctx.candidate||!ctx.candidate.stack||!ctx.candidate.stack.length){const e=new Error('Return at least one stack layer.');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;e.validationErrors=['stack must contain a useful layer'];throw e;}return ctx.candidate;}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(){return 10;},buildRequest:function(x){return x;},send:async function(){calls++;return{content:calls===1?'{"stack":[]}':'{"stack":["SnO2"]}',finishReason:'stop'};}};
+    global.setTimeout=function(fn){return realSetTimeout(fn,0);};
+    try{
+      const out=await LF.ActionRunner.run('test.semantic-validator');
+      assert(out.status,'done','semantic retry status');assert(calls,2,'AI regenerated after semantic validation');
+      if(!retryFeedback.some(function(x){return /stack must contain a useful layer|Return at least one stack layer/i.test(x);}))throw new Error('validator feedback must reach regenerated AI request');
+      assert(out.aiOutput,{stack:['SnO2']},'validated candidate becomes AI output');
+    }finally{LF.StructuredOutput=previousStructured;LF.ActionSteps=previousSteps;LF.ActionRegistry=previousRegistry;global.setTimeout=realSetTimeout;}
+  };
+
+  t['semantic validator may return insufficient evidence as a successful AI outcome'] = async function(){
+    const exp={id:'exp_semantic_uncertain',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.semantic-uncertain',steps:[{id:'infer',type:'AI',output:'json',schema:'test_schema',max_output_tokens:512,max_retries:1,validate_with:'test.validate-insufficient'}]};
+    let calls=0;const previousStructured=LF.StructuredOutput,previousSteps=LF.ActionSteps,previousRegistry=LF.ActionRegistry;
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(){return{context:{},messageList:[{role:'user',content:'infer design'}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.ActionRegistry={schema:function(){return{};}};
+    LF.StructuredOutput={parse:function(content){return{value:JSON.parse(content),strategy:'JSON'};},normalizeForSchema:function(id,v){return v;},validate:function(){return[];},contractError:function(){const e=new Error('contract');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;return e;}};
+    LF.ActionSteps={'test.validate-insufficient':function(ctx){return Object.assign({},ctx.candidate,{status:'insufficient_evidence',summary:'More source context is required.',solutions:[],stack:[],unknowns:['stack materials']});}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(){return 10;},buildRequest:function(x){return x;},send:async function(){calls++;return{content:'{"summary":"no reliable proposal","solutions":[],"stack":[],"unknowns":["stack materials"]}',finishReason:'stop'};}};
+    try{const out=await LF.ActionRunner.run('test.semantic-uncertain');assert(out.status,'done','scientific uncertainty is a completed Action');assert(calls,1,'no retry is needed for a valid insufficient-evidence result');assert(out.aiOutput.status,'insufficient_evidence','validated status');}
+    finally{LF.StructuredOutput=previousStructured;LF.ActionSteps=previousSteps;LF.ActionRegistry=previousRegistry;}
+  };
+
   t['truncation gets one technical adaptive recovery even when semantic retries are disabled'] = async function(){
     const exp={id:'exp_truncation_recovery',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.truncation-recovery',type:'AI',steps:[{id:'brief',type:'AI',output:'text',thinking:'off',max_output_tokens:700,target_output_tokens:320,max_retries:0}]};
     let calls=0;const budgets=[],retries=[];
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'llamacpp',model:'local-model',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'llamacpp',model:'local-model',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){return{messageList:[{role:'user',content:(opts.retryFeedback||'')+' return a short final answer'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AIProviders={llamacpp:{safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none'}}}};
@@ -145,7 +185,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_no_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.no-retry',type:'AI',steps:[{id:'brief',type:'AI',output:'text',max_output_tokens:3072,max_retries:0}]};
     let calls=0,retries=0;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;throw new Error('provider failed');}};
@@ -158,7 +198,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_rate',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.rate',type:'AI',steps:[{id:'chat',type:'AI',output:'text',max_retries:2}]};
     let calls=0,retries=0;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;const e=new Error('rate');e.status=429;e.providerCode='1305';throw e;}};
@@ -170,7 +210,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_ai',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.ai',type:'AI',max_output_tokens:100,steps:[{id:'review',type:'AI',output:'text'}]};
     let calls=0;const retries=[];
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxTokens:100};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxTokens:100};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;if(calls<3){const e=new Error('temporary');e.code='MODEL_OUTPUT_INVALID';throw e;}return{content:'ok'};}};
@@ -187,7 +227,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_trace',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.trace',type:'HYBRID',max_output_tokens:512,steps:[{id:'enrich',type:'AI',output:'text'},{id:'store',type:'DETERMINISTIC',fn:'trace.store',capture_result:true}]};
     let observed=null;
-    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{streaming:false,maxTokens:512};}};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxTokens:512};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'bounded context'}]};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.ActionSteps={'trace.store':function(){return{stored:true};}};
@@ -225,7 +265,7 @@ module.exports=function(t,LF){
       {id:'finish',type:'DETERMINISTIC',fn:'finish'}
     ]};
     const calls=[];let fail=true;
-    LF.Storage={getEffectiveAction:function(){return def;}};
+    LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps={collect:function(){return{items:[{id:'a'},{id:'b'},{id:'c'}]};},batch:function(ctx){calls.push(ctx.workItem.id);if(ctx.workItem.id==='b'&&fail){fail=false;throw new Error('batch b failed');}return ctx.workItem.id.toUpperCase();},finish:function(){calls.push('finish');return'done';}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
@@ -241,7 +281,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_commit',sync:{revision:4},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.commit',type:'DETERMINISTIC',mutation_scope:'dataset',steps:[{id:'commit',type:'DETERMINISTIC',fn:'commit'}]};
     let touches=0;
-    LF.Storage={getEffectiveAction:function(){return def;}};
+    LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps={commit:function(){LF.State.touch('dataset');return{revision:exp.sync.revision};}};
     LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){touches++;exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
@@ -251,26 +291,10 @@ module.exports=function(t,LF){
     assert(exp.sync.revision,5,'one revision advance');
   };
 
-  t['requires is an actual current-revision prerequisite gate'] = async function(){
-    const exp={id:'exp_gate',sync:{revision:3},derived:{actions:{},chat:{conversation:[]}}};
-    const def={id:'test.consumer',type:'DETERMINISTIC',requires:['test.producer'],steps:[{id:'consume',type:'DETERMINISTIC',fn:'consume'}]};
-    let calls=0;
-    LF.Storage={getEffectiveAction:function(){return def;}};
-    LF.ActionSteps={consume:function(){calls++;return'ok';}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
-    LF.AI={acceptController:function(){}};
-    const blocked=await LF.ActionRunner.run('test.consumer');
-    assert(blocked.status,'error','blocked status');
-    assert(blocked.code,'ACTION_PREREQUISITE_REQUIRED','blocked code');
-    assert(blocked.requires,['test.producer'],'required action');
-    assert(calls,0,'consumer did not run');
-    exp.derived.actions['test.producer']={runs:[{status:'done',sourceRevision:2}]};
-    const stale=await LF.ActionRunner.run('test.consumer');
-    assert(stale.code,'ACTION_PREREQUISITE_REQUIRED','stale prerequisite blocked');
-    exp.derived.actions['test.producer'].runs.push({status:'done',sourceRevision:3});
-    const out=await LF.ActionRunner.run('test.consumer');
-    assert(out.status,'done','fresh prerequisite accepted');
-    assert(calls,1,'consumer ran once');
+  t['Action guards block execution before the first checkpoint'] = async function(){
+    const exp={id:'exp_gate',sync:{revision:3},derived:{actions:{},chat:{conversation:[]}}},def={id:'test.consumer',contract:{context:{profile:'test',scope:'experiment'},result:{format:'text',kind:'test'},effect:{mode:'read_only',writes:[]},guards:['test.blocked']},execution:{mode:'deterministic',result_step:'consume',steps:[{id:'consume',type:'DETERMINISTIC',fn:'consume'}]}},previousGuards=LF.ActionGuards;let calls=0;
+    LF.Storage={getEffectiveAction:function(){return def;}};LF.ActionSteps={consume:function(){calls++;return'ok';}};LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};LF.AI={acceptController:function(){}};
+    LF.ActionGuards={check:function(){return[{id:'test.blocked',ok:false,message:'Blocked by current data state.'}];}};const blocked=await LF.ActionRunner.run('test.consumer');assert(blocked.status,'error','blocked status');assert(blocked.code,'ACTION_GUARD_FAILED','guard code');assert(calls,0,'checkpoint did not run');LF.ActionGuards={check:function(){return[];}};const out=await LF.ActionRunner.run('test.consumer');assert(out.status,'done','allowed status');assert(calls,1,'checkpoint ran once');LF.ActionGuards=previousGuards;
   };
 
   t['AI retry classification skips permanent provider errors']=function(){

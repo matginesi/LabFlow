@@ -1,5 +1,6 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/experiment/data-model.js');
 const LF=global.LabFlow;
 LF.Parser=LF.Parser||{
   canonicalSample:function(v){return String(v||'').trim().toUpperCase();},
@@ -30,12 +31,22 @@ module.exports=function(t,LF){
     assert(review.summary.blockingFindings,0,'no workflow blockers');
     const active=Object.assign({},base,{measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:false,blockingFlags:[{label:'Bad metric'}]}]});
     const blocked=LF.DatasetCorrections.analysis(active,1);
-    assert(blocked.status,'cleanup_required','safe deterministic exclusion is cleanup, not hard blocked');
-    assert(blocked.summary.blockingFindings,0,'safe correction is not counted as hard workflow blocker');
+    assert(blocked.status,'blocked','unapproved scientific exclusion remains blocked');
+    assert(blocked.summary.blockingFindings,1,'unapproved exclusion remains a workflow blocker');
+    assert(blocked.reviewFixes.length,1,'blocked measurement has an explicit review suggestion');
     const hard=Object.assign({},active,{findings:active.findings.concat([{id:'f-hard',type:'archive',severity:'danger',title:'Archive corruption',status:'open'}])});
     const hardBlocked=LF.DatasetCorrections.analysis(hard,1);
     assert(hardBlocked.status,'blocked','non-fixable danger remains hard blocker');
     LF.CanonicalStore=oldStore;
+  };
+
+  t['previous automatic exclusions are withdrawn and returned for human review']=function(){
+    const exp={sync:{revision:1},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[{patchType:'exclude_measurement',target:{kind:'measurement',id:'m1'},source:'automatic',status:'applied',reviewStatus:'accepted'}],samples:[],measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:true,blockingFlags:[{label:'Efficiency exceeds guardrail'}]}]};
+    const out=LF.DatasetCorrections.applyAutomaticSafeFixes(exp);
+    assert(exp.measurements[0].excluded,false,'automatic exclusion reverted');
+    assert(exp.patches[0].status,'withdrawn','automatic patch retained as withdrawn provenance');
+    assert(out.applied,0,'withdrawn exclusion is no longer counted as automatic cleanup');
+    assert(LF.DatasetCorrections.reviewFixes(exp).length,1,'measurement is offered for explicit approval');
   };
 
   t['AI correction storage rejects stale or non-semantic mutations before UI application']=function(){
@@ -44,9 +55,9 @@ module.exports=function(t,LF){
     const out=LF.ActionSteps['dataset.store-corrections'](ctx);
     assert(out.proposals,1,'only semantic proposal stored');
     assert(out.rejected,1,'unsafe AI mutation rejected');
-    assert(exp.aiCorrectionPlan.proposals[0].requires_human_review,true,'human review forced');
-    assert(exp.aiCorrectionPlan.proposals[0].target,'m1','canonical measurement target forced');
-    assert(exp.aiCorrectionPlan.unresolved.length,1,'rejected proposal retained as unresolved diagnostic');
+    const plan=LF.ActionData.proposal(exp,'dataset.resolve-ambiguities');assert(plan.proposals[0].requires_human_review,true,'human review forced');
+    assert(plan.proposals[0].target,'m1','canonical measurement target forced');
+    assert(plan.unresolved.length,1,'rejected proposal retained as unresolved diagnostic');
   };
   return t;
 };

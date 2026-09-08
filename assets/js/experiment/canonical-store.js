@@ -20,7 +20,7 @@
     const parts=[];preferred.forEach(function(k){if(x[k]!=null&&x[k]!==''&&parts.length<5)parts.push(k+': '+compact(x[k],180));});
     return parts.length?parts.join(' · '):compact(JSON.stringify(compact(x,160)),360);
   }
-  function inferEntityIds(exp,value){
+  function inferRecordIds(exp,value){
     const hay=norm(typeof value==='string'?value:JSON.stringify(compact(value,220))),ids=[];
     if(!hay)return ids;
     (exp.samples||[]).forEach(function(s){const aliases=[s.name,s.rawName].concat(s.aliases||[]).map(norm).filter(function(x){return x.length>1;});if(aliases.some(function(a){return hay.indexOf(a)>=0;}))ids.push(s.id);});
@@ -30,61 +30,56 @@
   function addEvidence(out,item){if(!item||!item.id)return;if(!out.some(function(x){return x.id===item.id;}))out.push(item);}
   function buildEvidence(exp){
     const out=[];
-    (exp.files||[]).forEach(function(f){addEvidence(out,{id:'ev:file:'+f.id,type:'file',source_id:f.id,source_path:f.path||f.name||'',entity_ids:inferEntityIds(exp,f.path||f.name||''),fact:'source file',summary:[f.family||f.type||'unknown',f.path||f.name||''].filter(Boolean).join(' · '),locator:{path:f.path||f.name||''}});});
-    (exp.rawFormatEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path);addEvidence(out,{id:'ev:format:'+i,type:'format',source_id:f&&f.id||'',source_path:path,entity_ids:inferEntityIds(exp,x),fact:'format evidence',summary:evidenceSummary(x),locator:path?{path:path}:null});});
-    (exp.auxiliaryEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path),meta=x&&x.meta||{},designBits=[];Object.keys(meta).forEach(function(k){if(/note|stack|precursor|solution|solvent|anneal|coating|fabricat|process|atmosphere/i.test(k)&&clean(meta[k]))designBits.push(k+': '+compact(meta[k],700));});const summary=[evidenceSummary(x)].concat(designBits.slice(0,3)).filter(Boolean).join(' · ');addEvidence(out,{id:'ev:aux:'+i,type:'auxiliary',source_id:f&&f.id||'',source_path:path,entity_ids:inferEntityIds(exp,x),fact:designBits.length?'auxiliary design evidence':'auxiliary evidence',summary:summary,locator:path?{path:path}:null});});
-    (exp.findings||[]).forEach(function(f){(f.evidence||[]).forEach(function(ev,i){addEvidence(out,{id:'ev:finding:'+String(f.id||i)+':'+i,type:'finding',source_id:String(f.id||''),source_path:'',entity_ids:inferEntityIds(exp,[f.target,ev]),fact:f.title||f.type||'finding evidence',summary:compact(ev,360),locator:{finding_id:String(f.id||'')}});});});
+    (exp.files||[]).forEach(function(f){addEvidence(out,{id:'ev:file:'+f.id,type:'file',source_id:f.id,source_path:f.path||f.name||'',record_ids:inferRecordIds(exp,f.path||f.name||''),fact:'source file',summary:[f.family||f.type||'unknown',f.path||f.name||''].filter(Boolean).join(' · '),locator:{path:f.path||f.name||''}});});
+    (exp.rawFormatEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path);addEvidence(out,{id:'ev:format:'+i,type:'format',source_id:f&&f.id||'',source_path:path,record_ids:inferRecordIds(exp,x),fact:'format evidence',summary:evidenceSummary(x),locator:path?{path:path}:null});});
+    (exp.auxiliaryEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path),meta=x&&x.meta||{},designBits=[];Object.keys(meta).forEach(function(k){if(/note|stack|precursor|solution|solvent|anneal|coating|fabricat|process|atmosphere/i.test(k)&&clean(meta[k]))designBits.push(k+': '+compact(meta[k],700));});const summary=[evidenceSummary(x)].concat(designBits.slice(0,3)).filter(Boolean).join(' · ');addEvidence(out,{id:'ev:aux:'+i,type:'auxiliary',source_id:f&&f.id||'',source_path:path,record_ids:inferRecordIds(exp,x),fact:designBits.length?'auxiliary design evidence':'auxiliary evidence',summary:summary,locator:path?{path:path}:null});});
+    (exp.findings||[]).forEach(function(f){(f.evidence||[]).forEach(function(ev,i){addEvidence(out,{id:'ev:finding:'+String(f.id||i)+':'+i,type:'finding',source_id:String(f.id||''),source_path:'',record_ids:inferRecordIds(exp,[f.target,ev]),fact:f.title||f.type||'finding evidence',summary:compact(ev,360),locator:{finding_id:String(f.id||'')}});});});
     return out;
   }
   function buildRelations(exp,evidence){
     const out=[],seen=new Set();
     function add(type,from,to,meta){if(!from||!to)return;const key=type+'|'+from+'|'+to;if(seen.has(key))return;seen.add(key);out.push({id:'rel:'+out.length,type:type,from:from,to:to,meta:meta||{}});}
-    const samples=exp.samples||[],measurements=exp.measurements||[];
+    const experiments=exp.experiments||[],samples=exp.samples||[],runs=exp.runs||[],measurements=exp.measurements||[];
     const sampleByName=new Map();samples.forEach(function(s){[s.name,s.rawName].concat(s.aliases||[]).map(norm).filter(Boolean).forEach(function(a){sampleByName.set(a,s);});});
-    measurements.forEach(function(m){const sample=sampleByName.get(norm(m.sample))||sampleByName.get(norm(m.rawSample));if(sample)add('sample_measurement',sample.id,m.id);const f=fileByPath(exp,m.path||m.file);if(f)add('measurement_file',m.id,f.id);if(sample&&f)add('sample_file',sample.id,f.id);});
-    evidence.forEach(function(ev){(ev.entity_ids||[]).forEach(function(id){add('entity_evidence',id,ev.id);});if(ev.source_id)add('file_evidence',ev.source_id,ev.id);});
-    (exp.design&&exp.design.devices||[]).forEach(function(d){(d.sampleNames||[]).forEach(function(name){const s=sampleByName.get(norm(name));if(s)add('sample_design',s.id,d.id);});});
+    experiments.forEach(function(experiment){(experiment.sampleIds||[]).forEach(function(id){add('experiment_sample',experiment.id,id);});(experiment.runIds||[]).forEach(function(id){add('experiment_run',experiment.id,id);});});
+    runs.forEach(function(run){if(run.sampleId)add('sample_run',run.sampleId,run.id);(run.measurementIds||[]).forEach(function(id){add('run_measurement',run.id,id);});});
+    measurements.forEach(function(m){const sample=sampleByName.get(norm(m.sample))||sampleByName.get(norm(m.rawSample));if(sample)add('sample_measurement',sample.id,m.id);if(m.experimentId)add('experiment_measurement',m.experimentId,m.id);const f=fileByPath(exp,m.path||m.file);if(f)add('measurement_file',m.id,f.id);if(sample&&f)add('sample_file',sample.id,f.id);});
+    evidence.forEach(function(ev){(ev.record_ids||[]).forEach(function(id){add('record_evidence',id,ev.id);});if(ev.source_id)add('file_evidence',ev.source_id,ev.id);});
+    (exp.design&&exp.design.devices||[]).forEach(function(d){(d.sampleIds||[]).forEach(function(id){add('sample_design',id,d.id);});if(d.experimentId)add('experiment_design',d.experimentId,d.id);});
     return out;
   }
   function buildAliases(exp){
-    return(exp.samples||[]).map(function(s){const values=[s.name,s.rawName].concat(s.aliases||[]);(exp.measurements||[]).forEach(function(m){if(norm(m.sample)===norm(s.name)){if(m.rawSample)values.push(m.rawSample);(m.sampleAliases||[]).forEach(function(a){values.push(a);});}});const aliases=Array.from(new Set(values.map(clean).filter(Boolean)));s.aliases=aliases.slice();return{entity_id:s.id,kind:'sample',canonical:s.name||'',aliases:aliases};});
+    return(exp.samples||[]).map(function(s){const values=[s.name,s.rawName].concat(s.aliases||[]);(exp.measurements||[]).forEach(function(m){if(norm(m.sample)===norm(s.name)){if(m.rawSample)values.push(m.rawSample);(m.sampleAliases||[]).forEach(function(a){values.push(a);});}});const aliases=Array.from(new Set(values.map(clean).filter(Boolean)));return{record_id:s.id,kind:'sample',canonical:s.name||'',aliases:aliases};});
   }
   function indexes(exp,evidence,relations){
-    const idx={byId:new Map(),evidenceByEntity:new Map(),relationsByNode:new Map(),sampleByAlias:new Map()};
-    (exp.files||[]).concat(exp.samples||[],exp.measurements||[],exp.findings||[],exp.design&&exp.design.devices||[]).forEach(function(x){if(x&&x.id)idx.byId.set(String(x.id),x);});
-    evidence.forEach(function(ev){idx.byId.set(ev.id,ev);(ev.entity_ids||[]).forEach(function(id){if(!idx.evidenceByEntity.has(id))idx.evidenceByEntity.set(id,[]);idx.evidenceByEntity.get(id).push(ev);});});
+    const idx={byId:new Map(),evidenceByRecord:new Map(),relationsByNode:new Map(),sampleByAlias:new Map()};
+    (exp.files||[]).concat(exp.experiments||[],exp.samples||[],exp.runs||[],exp.measurements||[],exp.findings||[],exp.design&&exp.design.devices||[]).forEach(function(x){if(x&&x.id)idx.byId.set(String(x.id),x);});
+    evidence.forEach(function(ev){idx.byId.set(ev.id,ev);(ev.record_ids||[]).forEach(function(id){if(!idx.evidenceByRecord.has(id))idx.evidenceByRecord.set(id,[]);idx.evidenceByRecord.get(id).push(ev);});});
     relations.forEach(function(r){[r.from,r.to].forEach(function(id){if(!idx.relationsByNode.has(id))idx.relationsByNode.set(id,[]);idx.relationsByNode.get(id).push(r);});});
     (exp.samples||[]).forEach(function(s){(s.aliases||[s.name]).forEach(function(a){idx.sampleByAlias.set(norm(a),s);});});
     return idx;
   }
-  function reportDocuments(exp){
-    const r=exp.report||{},legacy=r.figureSelection&&typeof r.figureSelection==='object'?r.figureSelection:{},selections=r.figureSelections||{};
-    function doc(kind){const paper=kind==='paper',md=String(paper?r.paperMarkdown:r.labMarkdown||''),title=String(paper?r.paperTitle:r.labTitle||r.title||'');return{kind:kind,title:title,markdown:md,words:(md.trim().match(/\S+/g)||[]).length,chars:md.length,updated_at:paper?r.paperUpdatedAt:r.labUpdatedAt||r.updatedAt||'',figure_selection:Object.assign({},legacy,selections[kind]||{})};}
-    return{lab:doc('lab'),paper:doc('paper'),active_kind:r.kind==='paper'?'paper':'lab'};
-  }
-  function resultView(exp){const a=exp.analysis||{};return{summary:compact(a.summary||{},600),top_non_ref:compact((a.topNonRef||[]).slice(0,12),500),top_ref:compact((a.topRef||[]).slice(0,12),500),best_by_sample:compact((a.bestBySample||[]).slice(0,48),500),interpretation:a.aiInterpretation?{markdown:String(a.aiInterpretation.markdown||''),source_revision:a.aiInterpretation.sourceRevision,generated_at:a.aiInterpretation.generatedAt||''}:null};}
-  function stamp(exp){const s=exp&&exp.sync||{},r=exp&&exp.report||{};return[Number(s.revision||0),String(s.lastChange||''),String(r.labUpdatedAt||''),String(r.paperUpdatedAt||''),String(r.updatedAt||''),String(r.kind||''),JSON.stringify(r.figureSelections||r.figureSelection||{})].join('|');}
+  function resultView(exp){const a=exp.analysis||{};return{summary:compact(a.summary||{},600),top_non_ref:compact((a.topNonRef||[]).slice(0,12),500),top_ref:compact((a.topRef||[]).slice(0,12),500),best_by_sample:compact((a.bestBySample||[]).slice(0,48),500),best_by_experiment:compact((a.bestByExperiment||[]).slice(0,48),500),interpretation:a.aiInterpretation?{markdown:String(a.aiInterpretation.markdown||''),source_revision:a.aiInterpretation.sourceRevision,generated_at:a.aiInterpretation.generatedAt||''}:null};}
+  function stamp(exp){const sync=exp&&exp.sync||{};return[Number(sync.revision||0),String(sync.lastChange||''),(exp&&exp.files||[]).length,(exp&&exp.measurements||[]).length,(exp&&exp.findings||[]).length].join('|');}
   function build(exp){
     if(!exp||typeof exp!=='object')return null;
-    const aliases=buildAliases(exp),evidence=buildEvidence(exp),relations=buildRelations(exp,evidence),revision=Number(exp.sync&&exp.sync.revision||0),documents=reportDocuments(exp),results=resultView(exp);
+    const aliases=buildAliases(exp),evidence=buildEvidence(exp),relations=buildRelations(exp,evidence),revision=Number(exp.sync&&exp.sync.revision||0),results=resultView(exp);
     const experiment={id:exp.id||'',name:exp.meta&&exp.meta.name||'',sourceName:exp.meta&&exp.meta.sourceName||''};
     const source={archive_name:experiment.sourceName,immutable:true,file_count:(exp.files||[]).length};
-    const entities={files:exp.files||[],samples:exp.samples||[],measurements:exp.measurements||[]};
+    const records={files:exp.files||[],experiments:exp.experiments||[],samples:exp.samples||[],runs:exp.runs||[],measurements:exp.measurements||[]};
     const scientific={design:exp.design||{},results:results,findings:exp.findings||[]};
-    const provenance={patches:exp.patches||[],document_edits:exp.documentEdits||[],records:exp.provenance||[]};
-    const store={format:'labflow-canonical-v2',version:2,revision:revision,generatedAt:new Date().toISOString(),experiment:experiment,source:source,entities:entities,scientific:scientific,documents:documents,evidence:evidence,relations:relations,aliases:aliases,provenance:provenance,
-      /* Compatibility aliases for existing POC code. Canonical v2 consumers should prefer the grouped domains above. */
-      files:entities.files,samples:entities.samples,measurements:entities.measurements,findings:scientific.findings,patches:provenance.patches,design:scientific.design,results:scientific.results};
+    const provenance={patches:exp.patches||[]};
+    const store={format:'labflow-canonical',revision:revision,generatedAt:new Date().toISOString(),experiment:experiment,source:source,records:records,scientific:scientific,evidence:evidence,relations:relations,aliases:aliases,provenance:provenance};
     exp.canonical=store;cache.set(exp,{stamp:stamp(exp),store:store,index:indexes(exp,evidence,relations)});return store;
   }
   function ensure(exp){const hit=cache.get(exp),sig=stamp(exp);if(hit&&hit.stamp===sig&&exp.canonical===hit.store)return hit.store;return build(exp);}
   function index(exp){ensure(exp);return(cache.get(exp)||{}).index||null;}
-  function summary(exp){const s=ensure(exp)||{};return{revision:s.revision||0,files:(s.files||[]).length,samples:(s.samples||[]).length,measurements:(s.measurements||[]).length,findings:(s.findings||[]).filter(function(f){return f.status!=='resolved';}).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,x){return n+(x.aliases||[]).length;},0),documents:Object.keys(s.documents||{}).filter(function(k){return k==='lab'||k==='paper';}).length};}
-  function entity(exp,id){const idx=index(exp);return idx&&idx.byId.get(String(id))||null;}
-  function sample(exp,nameOrId){const idx=index(exp);return entity(exp,nameOrId)||(idx&&idx.sampleByAlias.get(norm(nameOrId)))||null;}
+  function summary(exp){const s=ensure(exp)||{},records=s.records||{},scientific=s.scientific||{};return{revision:s.revision||0,files:(records.files||[]).length,experiments:(records.experiments||[]).length,samples:(records.samples||[]).length,runs:(records.runs||[]).length,measurements:(records.measurements||[]).length,findings:(scientific.findings||[]).filter(function(f){return f.status!=='resolved';}).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,x){return n+(x.aliases||[]).length;},0)};}
+  function record(exp,id){const idx=index(exp);return idx&&idx.byId.get(String(id))||null;}
+  function sample(exp,nameOrId){const idx=index(exp);return record(exp,nameOrId)||(idx&&idx.sampleByAlias.get(norm(nameOrId)))||null;}
   function related(exp,id,type){const idx=index(exp);const list=idx&&idx.relationsByNode.get(String(id))||[];return type?list.filter(function(r){return r.type===type;}):list.slice();}
-  function evidence(exp,opts){opts=opts||{};const store=ensure(exp),ids=new Set((opts.entity_ids||opts.entityIds||[]).map(String)),types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,Number(opts.limit)||20);let rows=(store&&store.evidence||[]).filter(function(ev){if(ids.size&&!Array.from(ids).some(function(id){return(ev.entity_ids||[]).includes(id)||ev.source_id===id;}))return false;if(types.size&&!types.has(ev.type))return false;if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
-  function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;}),store=ensure(exp),out=[];if(!terms.length)return out;(store.samples||[]).forEach(function(s){const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});});return out.slice(0,limit||12);}
-  function domain(exp,name){const s=ensure(exp);if(!s)return null;const map={experiment:s.experiment,source:s.source,entities:s.entities,scientific:s.scientific,documents:s.documents,results:s.results,design:s.design,findings:s.findings,evidence:s.evidence,relations:s.relations,aliases:s.aliases,provenance:s.provenance};return map[name]!==undefined?map[name]:null;}
-  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,entity:entity,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,domain:domain,compact:compact};
+  function evidence(exp,opts){opts=opts||{};const store=ensure(exp),ids=new Set((opts.record_ids||opts.recordIds||[]).map(String)),types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,Number(opts.limit)||20);let rows=(store&&store.evidence||[]).filter(function(ev){if(ids.size&&!Array.from(ids).some(function(id){return(ev.record_ids||[]).includes(id)||ev.source_id===id;}))return false;if(types.size&&!types.has(ev.type))return false;if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
+  function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;}),store=ensure(exp),out=[];if(!terms.length)return out;((store.records&&store.records.samples)||[]).forEach(function(s){const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});});return out.slice(0,limit||12);}
+  function domain(exp,name){const s=ensure(exp);if(!s)return null;const map={experiment:s.experiment,source:s.source,records:s.records,scientific:s.scientific,evidence:s.evidence,relations:s.relations,aliases:s.aliases,provenance:s.provenance};return map[name]!==undefined?map[name]:null;}
+  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,record:record,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,domain:domain,compact:compact};
 }());
