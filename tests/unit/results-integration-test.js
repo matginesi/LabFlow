@@ -99,5 +99,23 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('FW median±IQR')>=0&&html.indexOf('RV min–max')>=0,'per-scan columns');
     assert(data[0].stats.fw.med,18.5,'compareData unchanged alongside bundle');
   };
+
+
+  t['overview exposes dynamic chart controls and visual/data exports'] = async function(){
+    await ready('overview');const html=LF.ResultsPage.render();
+    truthy(html.indexOf('id="overviewMetric"')>=0,'overview metric control');
+    truthy(html.indexOf('id="overviewDirection"')>=0,'overview scan control');
+    truthy(html.indexOf('data-chart-export="png"')>=0,'PNG exports');
+    truthy(html.indexOf('data-chart-export="svg"')>=0,'SVG exports');
+    truthy(html.indexOf('data-chart-csv=')>=0,'CSV exports');
+    truthy(html.indexOf('data-chart-tip=')>=0,'interactive chart inspection');
+  };
+
+  t['histogram CSV keeps already normalized best PCE values'] = function(){
+    const e=synExp();e.measurements.forEach(function(m){m.bestEff=Math.max(m.fw.eff,m.rv.eff)/2;});
+    const state=stateFor(e);state.resultsTab='overview';LF.State={state:state};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');
+    const rows=LF.ResultsPage.chartDataRows('histogram');
+    assert(rows[0].best_pce_percent,20,'bestEff must not be mismatch-corrected twice');
+  };
   return t;
 };

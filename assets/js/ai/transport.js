@@ -682,7 +682,7 @@
       const capability=opts.modelCapability&&typeof opts.modelCapability==='object'?opts.modelCapability:{},explicitFormat=String(opts.reasoningFormat||''),detectedFormat=String(capability.reasoningParserFormat||''),lfmFallback=/lfm2(?:\.5)?/i.test(String(model||''))?'deepseek':'',format=explicitFormat||detectedFormat||lfmFallback;
       if(format)body.reasoning_format=format;
     }
-    if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
+    if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:provider.jsonSchemaStrict===true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
     const timeoutMs=opts.connectionTest?Math.max(5000,Number(opts.timeoutMs)||15000):Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
     const hardTimeoutMs=Math.max(0,Number(opts.hardTimeoutMs)||Number(provider.requestDeadlineMs)||0);

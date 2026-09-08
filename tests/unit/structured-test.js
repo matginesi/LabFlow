@@ -32,12 +32,43 @@ module.exports = function (t, LF) {
     assert(v.stack.length,2,'root device_stack normalized');
     assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'normalized provider output satisfies schema');
   };
+  t['Design normalization preserves chemistry when provider omits a display name'] = function(){
+    const v=SO.normalizeForSchema('design_suggestion',{solutions:[{role:'absorber precursor',solutes:['FAI','PbI2'],solvents:['DMF','DMSO']}],stack:[],process:{},unknowns:[]});
+    assert(v.status,'suggested','chemistry remains useful');
+    assert(v.solutions[0].name,'Absorber Precursor','role becomes deterministic display name');
+    assert(v.solutions[0].solutes,'FAI, PbI2','solute list preserved');
+    assert(v.solutions[0].solvents,'DMF, DMSO','solvent list preserved');
+    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'provider variant satisfies canonical schema');
+  };
+  t['Design normalization accepts keyed solution maps and top-level chemistry'] = function(){
+    const keyed=SO.normalizeForSchema('design_suggestion',{solutions:{absorber:{solutes:'FAI + PbI2',solvents:'DMF + DMSO'}},stack:[],process:{},unknowns:[]});
+    assert(keyed.solutions[0].name,'absorber','map key becomes name');
+    assert(keyed.solutions[0].solvents,'DMF + DMSO','map solvent preserved');
+    const root=SO.normalizeForSchema('design_suggestion',{solutes:'PEAI',solvents:'IPA',solution_role:'passivation'});
+    assert(root.solutions[0].solutes,'PEAI','top-level solute preserved');
+    assert(root.solutions[0].solvents,'IPA','top-level solvent preserved');
+  };
   t['Design normalization converts empty content to insufficient evidence without fabricating a device'] = function(){
     const v=SO.normalizeForSchema('design_suggestion',{summary:'no reliable reconstruction',solutions:[],unknowns:['exact stack']});
     assert(v.status,'insufficient_evidence','empty inference becomes explicit scientific uncertainty');
     assert(v.stack,[],'no fake device or stack required');
     assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'insufficient result satisfies schema');
   };
+  t['Design normalization keeps a solvent-only suggestion without a provider name'] = function(){
+    const v=SO.normalizeForSchema('design_suggestion',{solutions:[{role:'absorber precursor',solvents:'DMF + DMSO'}],stack:[],process:{},unknowns:[]});
+    assert(v.solutions.length,1,'solvent-only suggestion is kept');
+    assert(v.solutions[0].name,'Absorber Precursor','role supplies display name');
+    assert(v.solutions[0].solvents,'DMF + DMSO','solvent preserved');
+    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'solvent-only suggestion remains schema-valid');
+  };
+  t['Design structured recovery accepts labelled provider text when JSON envelope is missing'] = function(){
+    const v=SO.recoverForSchema('design_suggestion','Solution role: absorber precursor\nSolvents: DMF + DMSO\nCoating: spin coating\nAtmosphere: inert atmosphere');
+    if(!v)throw new Error('expected bounded recovery');
+    assert(v.solutions[0].solvents,'DMF + DMSO','recovered solvent');
+    assert(v.process.coating,'spin coating','recovered process');
+    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'recovered text satisfies schema');
+  };
+  t['Design structured recovery refuses unrelated prose'] = function(){assert(SO.recoverForSchema('design_suggestion','I cannot answer this request.'),null,'unrelated prose stays invalid');};
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

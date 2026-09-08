@@ -59,3 +59,5 @@ Do not invent exact temperatures, durations, speeds or pressures. A qualitative 
 ## Output discipline
 
 Return JSON only, matching the supplied schema. Keep it compact.
+
+For `solutes` and `solvents`, prefer short strings such as `FAI + PbI2` and `DMF + DMSO`. Arrays are tolerated by LabFlow, but a compact string is the most portable provider output. Never omit the whole solution merely because its display name is uncertain: use a concise role-based name such as `Absorber precursor` when the qualitative chemistry itself is useful.

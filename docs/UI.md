@@ -1,37 +1,50 @@
 # UI contract
 
-`ui-kit.html` is the visual source of truth. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application layouts in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit.
+`ui-kit.html` demonstrates the visual system. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application/page composition in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit.
 
-## Shell and responsive behavior
+## Workflow and shell
 
-- The left navigation is an off-canvas drawer at every viewport. The menu button opens it; its close control, backdrop, route selection and `Escape` close it.
-- The Assistant is closed by default and opens only after an explicit user action.
-- Page content must not create document-level horizontal scrolling. Tables, tab rows, diagrams and other wide data surfaces may scroll inside a clearly bounded local region.
-- Controls and normal workflow labels use readable shared type/control tokens. Micro type is reserved for metadata.
+The primary workflow is **Upload & Review → Results → Design → Export**. Cabinet, Documentation and Settings are utility destinations, not extra workflow steps.
+
+- The left navigation is an off-canvas drawer at every viewport. Menu, close, backdrop, route selection and `Escape` close it.
+- The Assistant is closed by default and opens only after explicit user action.
+- Page content must not create document-level horizontal scrolling. Tables, tabs, diagrams and wide charts may scroll inside a clearly bounded local region.
+- Normal workflow content uses readable shared type/control tokens. Micro type is reserved for secondary technical metadata; primary labels/actions must not fall into 7–9 px text.
+- Heading, eyebrow and supporting metadata require explicit vertical rhythm and must not visually collide.
 - Motion respects `prefers-reduced-motion`.
-
-The main workflow is Upload & Review → Results → Design → NOMAD. The stepper contains those four destinations and remains readable on narrow screens.
 
 ## Upload & Review
 
-Upload copy, source metadata and actions reflow into a single column on narrow screens. Deterministic naming and purely mechanical transformations happen automatically and remain visible with provenance. Excluding a measurement or resolving semantic ambiguity is suggestion-only: the researcher chooses **Apply**, **Apply all**, or **Ignore**.
+Upload copy, source metadata and actions reflow into one column on narrow screens. Deterministic naming and mechanical transformations happen automatically and remain visible with provenance. Excluding a measurement or resolving semantic ambiguity is suggestion/researcher-controlled: the researcher chooses the mutation.
+
+## Results and charts
+
+Results visualize the canonical deterministic measurement model. Interactive behavior must not become a second calculation path.
+
+Primary charts support the interactions appropriate to their data: metric/scan/group controls, hover/focus value inspection, series toggles for overlays and local scrolling for many categories. Chart exports are first-class: PNG and SVG export the visual, while CSV exports the canonical rows underlying the plotted view. The local SVG renderer is preferred so Results remains self-contained offline and in static deployment.
 
 ## Design and Cabinet
 
-Design exposes complete experiment architecture rather than treating one absorber layer as a complete stack. It supports solution chemistry, ordered device layers and process information. AI output is a proposal and never overwrites known values silently.
+Design exposes complete experiment architecture rather than treating one layer as a complete stack. It supports solution chemistry, ordered device layers and process information. AI output is a proposal and never overwrites known values silently.
 
-Lab Cabinet is a reusable, browser-local scientific shelf—not inventory or LIMS. Resources are grouped by kind, searchable, editable and copied into Design as versioned snapshots. Empty, populated and filtered states must all remain usable.
+Lab Cabinet is a reusable browser-local scientific shelf, not inventory or LIMS. Resources are grouped by kind, searchable, editable and copied into Design as snapshots. Incomplete resources may be edited but are not valid matches/apply targets.
+
+## Export
+
+Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD options are separated from artifact choice; readiness/mapping is a separate status surface with blocking issues visible and the mapping table progressively disclosed. Export never implies network upload.
 
 ## Actions and Assistant
 
-User-facing capabilities use `button[data-action]`. Provider output is collapsed by default. A running Action exposes cancel; a terminal Action exposes close. Structured output is validated before proposals or annotations are stored.
+User-facing capabilities use `button[data-action]`. Provider output/telemetry is progressively disclosed. A running Action exposes cancel and all Action execution still passes through guards/contracts.
 
-Assistant messages use bounded Context Packs assembled from canonical data, page, query and selection. The Assistant never receives the full experiment or RAW curves by default and never mutates scientific state through chat.
+The Assistant may launch public Actions and may display bounded Action results inline so a follow-up question can reference them. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
 
-## Local documentation
+## Responsive/readability rules
 
-The Documentation route renders the canonical Markdown under `docs/` without network requests. `assets/js/pages/docs-bundle.js` is generated by `python tools/build_docs_bundle.py`; generated bundles are not editing sources.
+Reflow content before shrinking it. Flex/grid children with scientific text use `min-width:0`; long paths/names wrap or truncate deliberately. Local scrolling is acceptable for data surfaces but not for the whole document. Buttons remain usable on touch layouts and essential text remains at shared readable sizes.
 
-## Verification
+## Local documentation and verification
 
-Run `python tools/test_responsive_browser.py` through the bundled server after layout changes, plus `python tools/validate_ui_contract.py` and the unit suite. The browser audit covers every route at desktop, tablet and mobile widths.
+The Documentation route renders canonical Markdown under `docs/` without network requests. `assets/js/pages/docs-bundle.js` is generated by `python tools/build_docs_bundle.py`; generated bundles are not editing sources.
+
+After layout changes, run the responsive browser audit when available, `python tools/validate_ui_contract.py`, syntax checks and the unit suite. Search for late duplicate selectors when a shared pattern changes so stale overrides do not silently restore old spacing, micro-fonts or workflow counts.

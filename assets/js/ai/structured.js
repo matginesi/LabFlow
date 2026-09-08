@@ -195,11 +195,19 @@
   function normalizeDesignSolution(item,index) {
     item=item&&typeof item==='object'?item:{name:item};
     const source=normalizeDesignSource(item.provenance_kind||item.provenanceKind||item.source_kind,'model_inference');
+    let solutes=designText(item.solutes||item.solute||item.materials||item.precursors||item.precursor),solvents=designText(item.solvents||item.solvent||item.solvent_system||item.solventSystem);
+    const recipe=designText(item.chemistry||item.formulation||item.recipe||item.composition_text||item.compositionText);
+    if(recipe&&(!solutes||!solvents)){
+      const match=recipe.match(/^(.*?)\s+(?:in|using|dissolved in)\s+(.+)$/i);
+      if(match){if(!solutes)solutes=designText(match[1]);if(!solvents)solvents=designText(match[2]);}
+      else if(!solutes)solutes=recipe;
+    }
+    const role=designText(item.role||item.type||item.function||item.purpose),explicitName=designText(item.name||item.title||item.solution_name||item.solutionName),fallbackName=role?role.replace(/\b\w/g,function(ch){return ch.toUpperCase();}):((solutes||solvents)?'Solution '+((index||0)+1):'');
     return{
-      name:designText(item.name||item.title||item.solution_name||item.solutionName),
-      role:designText(item.role||item.type||item.function),
-      solutes:designText(item.solutes||item.solute||item.materials||item.precursors),
-      solvents:designText(item.solvents||item.solvent||item.solvent_system),
+      name:explicitName||fallbackName,
+      role:role,
+      solutes:solutes,
+      solvents:solvents,
       concentration:designText(item.concentration||item.composition||item.ratio||item.composition_or_concentration),
       additives:designText(item.additives||item.additive),
       preparation:designText(item.preparation||item.process||item.notes),
@@ -223,10 +231,31 @@
       reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
     };
   }
+  function recoverDesignText(value) {
+    const raw=String(value==null?'':value).trim();if(!raw)return null;
+    function field(label){const re=new RegExp('(?:^|\\n)\\s*(?:[-*]\\s*)?(?:'+label+')\\s*[:=-]\\s*([^\\n]+)','i'),m=raw.match(re);return m?String(m[1]||'').replace(/[`*_]/g,'').trim():'';}
+    let solutes=field('solutes?|precursors?'),solvents=field('solvents?|solvent\\s*system'),role=field('role|solution\\s*role'),name=field('solution\\s*name|formulation\\s*name');
+    const chemistry=field('solution|formulation|chemistry|precursor\\s*solution');
+    if(chemistry&&(!solutes||!solvents)){const m=chemistry.match(/^(.*?)\\s+(?:in|using|dissolved\\s+in)\\s+(.+)$/i);if(m){if(!solutes)solutes=m[1].trim();if(!solvents)solvents=m[2].trim();}}
+    const coating=field('coating|deposition|deposition\\s*method'),annealing=field('annealing|anneal'),atmosphere=field('atmosphere|environment'),notes=field('process\\s*notes|fabrication\\s*notes');
+    const recognized=!!(solutes||solvents||coating||annealing||atmosphere||notes);if(!recognized)return null;
+    const solution=(solutes||solvents)?[{name:name||role||'Suggested solution',role:role,solutes:solutes,solvents:solvents,provenance_kind:'model_inference',confidence:0.5,reason:'Recovered from a provider response that did not use the requested JSON envelope.'}]:[];
+    return normalizeDesignProposal({status:'suggested',summary:'Recovered qualitative Design fields from provider text for researcher review.',solutions:solution,stack:[],process:{coating:coating,annealing:annealing,atmosphere:atmosphere,notes:notes,provenance_kind:'model_inference',confidence:0.5,reason:'Recovered from provider text.'},unknowns:[]});
+  }
   function normalizeDesignProposal(value) {
     const v=unwrapDesign(value);
     let solutionSource=v.solutions||v.formulations||v.recipes||v.solution_chemistry||v.solutionChemistry||v.solution_suggestion||v.solutionSuggestion||v.formulation||v.recipe||v.chemistry||v.solution||[];
     if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)&&Array.isArray(solutionSource.solutions))solutionSource=solutionSource.solutions;
+    /* Small/local models often return chemistry as a keyed object or expose
+       solutes/solvents directly. Normalize those common shapes before schema
+       validation instead of turning a scientifically useful answer into a
+       provider-contract failure. */
+    if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)){
+      const chemistryKeys=['name','title','role','type','solutes','solute','solvents','solvent','chemistry','formulation','recipe'];
+      const isOne=chemistryKeys.some(function(k){return Object.prototype.hasOwnProperty.call(solutionSource,k);});
+      if(!isOne)solutionSource=Object.keys(solutionSource).slice(0,4).map(function(key){const value=solutionSource[key];return value&&typeof value==='object'?Object.assign({name:key},value):{name:key,chemistry:value};});
+    }
+    if(!designList(solutionSource).length&&(v.solutes||v.solute||v.solvents||v.solvent))solutionSource=[{name:v.solution_name||v.solutionName||'Suggested solution',role:v.solution_role||v.solutionRole||'',solutes:v.solutes||v.solute||'',solvents:v.solvents||v.solvent||'',evidence:v.evidence||'',confidence:v.confidence,provenance_kind:v.provenance_kind||v.provenanceKind}];
     let stackSource=v.stack||v.layers||v.device_stack||v.deviceStack||v.stack_suggestion||v.stackSuggestion||v.suggested_stack||v.suggestedStack||v.materials||[];
     if(!designList(stackSource).length){
       const deviceSource=designList(v.devices||v.variants||v.device_variants||v.deviceVariants||v.device_suggestion||v.deviceSuggestion||v.device);
@@ -262,6 +291,11 @@
   function hypothesisItem(item){const x=item&&typeof item==='object'&&!Array.isArray(item)?item:{statement:item};return{statement:resultText(x.statement||x.hypothesis||x.explanation||x.text,260),basis:resultList(x.basis||x.evidence||x.sources).map(function(v){return resultText(v,140);}).filter(Boolean).slice(0,5),confidence:resultConfidence(x.confidence,0.4)};}
   function normalizeResultsInterpretation(value){const v=unwrapResult(value);if(!v||typeof v!=='object'||Array.isArray(v))return value;const recognized=['summary','observations','findings','hypotheses','interpretations','limitations','caveats','next_checks','nextChecks','recommendations','status'];if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;const observations=resultList(v.observations||v.findings).map(evidenceItem).filter(function(x){return x.statement;}).slice(0,8),hypotheses=resultList(v.hypotheses||v.interpretations).map(hypothesisItem).filter(function(x){return x.statement;}).slice(0,6),limitations=resultList(v.limitations||v.caveats).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();return{status:explicit==='limited'||(!observations.length&&!hypotheses.length)?'limited':'interpreted',summary:resultText(v.summary||v.assessment||v.description,700),observations:observations,hypotheses:hypotheses,limitations:limitations,next_checks:next};}
   function normalizeResultsComparison(value){const v=unwrapResult(value);if(!v||typeof v!=='object'||Array.isArray(v))return value;const recognized=['summary','groups','contrasts','differences','observations','hypotheses','limitations','caveats','next_checks','nextChecks','recommendations','status'];if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;const contrasts=resultList(v.contrasts||v.differences||v.observations).map(evidenceItem).filter(function(x){return x.statement;}).slice(0,10),hypotheses=resultList(v.hypotheses).map(hypothesisItem).filter(function(x){return x.statement;}).slice(0,6),groups=resultList(v.groups).map(function(x){return resultText(x,100);}).filter(Boolean).slice(0,12),limitations=resultList(v.limitations||v.caveats).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();return{status:explicit==='insufficient_evidence'||!contrasts.length?'insufficient_evidence':'compared',summary:resultText(v.summary||v.assessment||v.description,600),groups:groups,contrasts:contrasts,hypotheses:hypotheses,limitations:limitations,next_checks:next};}
+
+  function recoverForSchema(schemaId, text) {
+    if(schemaId==='design_suggestion')return recoverDesignText(text);
+    return null;
+  }
 
   function normalizeForSchema(schemaId, value) {
     if (schemaId === 'design_suggestion') return normalizeDesignProposal(value);
@@ -312,6 +346,7 @@
     parse: parse,
     validate: validate,
     normalizeForSchema: normalizeForSchema,
+    recoverForSchema: recoverForSchema,
     contractError: contractError
   };
   if (Log) Log.info('structured.ready', { parsers: ['balanced-json', 'syntax-normalize'], validator: 'schema-based' });

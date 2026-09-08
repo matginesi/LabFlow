@@ -209,6 +209,11 @@
   function setMobileNav(open){const next=!!open;document.body.classList.toggle('mobile-nav-open',next);const toggle=document.getElementById('mobileNavToggle');if(toggle){toggle.setAttribute('aria-expanded',next?'true':'false');toggle.setAttribute('aria-label',next?'Close navigation':'Open navigation');}const sidebar=document.getElementById('primarySidebar');if(sidebar)sidebar.setAttribute('aria-hidden',(!next&&window.matchMedia&&window.matchMedia('(max-width:1100px)').matches)?'true':'false');}
   function closeMobileNav(){setMobileNav(false);}
 
+  function chartTooltipNode(){let tip=document.getElementById('resultsChartTooltip');if(tip)return tip;tip=document.createElement('div');tip.id='resultsChartTooltip';tip.className='chart-tooltip';tip.setAttribute('role','status');tip.hidden=true;document.body.appendChild(tip);return tip;}
+  function positionChartTooltip(tip,x,y){const gap=12,w=tip.offsetWidth||220,h=tip.offsetHeight||48,left=Math.min(window.innerWidth-w-gap,Math.max(gap,(Number(x)||0)+gap)),top=Math.min(window.innerHeight-h-gap,Math.max(gap,(Number(y)||0)+gap));tip.style.left=left+'px';tip.style.top=top+'px';}
+  function showChartTooltip(target,event){if(!target||!target.dataset.chartTip)return;const tip=chartTooltipNode();tip.textContent=target.dataset.chartTip;tip.hidden=false;const box=target.getBoundingClientRect(),x=event&&Number.isFinite(event.clientX)?event.clientX:box.left+box.width/2,y=event&&Number.isFinite(event.clientY)?event.clientY:box.top+box.height/2;positionChartTooltip(tip,x,y);}
+  function hideChartTooltip(){const tip=document.getElementById('resultsChartTooltip');if(tip)tip.hidden=true;}
+
   /* ---------- delegated user interaction ---------- */
   function bindEvents(){
     Log.debug('events.bind.start');
@@ -218,6 +223,9 @@
         const route=e.target.closest('[data-route]');
         if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.docsSlug=docLink.dataset.docSlug;render();return;}
+        const seriesToggle=e.target.closest('[data-chart-series-toggle]');if(seriesToggle){const wrap=seriesToggle.closest('.svg-chart-wrap')||seriesToggle.closest('.panel')||document,series=seriesToggle.dataset.chartSeriesToggle,next=!seriesToggle.classList.contains('active');seriesToggle.classList.toggle('active',next);seriesToggle.setAttribute('aria-pressed',String(next));wrap.querySelectorAll('[data-chart-series="'+series+'"]') .forEach(function(node){node.classList.toggle('chart-series-hidden',!next);});return;}
+        const chartExport=e.target.closest('[data-chart-export]');if(chartExport){const format=chartExport.dataset.chartExport,id=chartExport.dataset.chartId,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(id||'chart');if(format==='svg')LF.ResultsPage.exportSvg(id,base+'.svg');else LF.ResultsPage.exportCanvas(id,base+'.png');return;}
+        const chartCsv=e.target.closest('[data-chart-csv]');if(chartCsv){const kind=chartCsv.dataset.chartCsv,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(kind||'chart');LF.ResultsPage.exportChartCsv(kind,base+'.csv');return;}
         const copyDoc=e.target.closest('[data-copy-doc]');if(copyDoc){const ok=C.copyText(LF.DocsPage.markdownFor(copyDoc.dataset.copyDoc));LF.UI.toast(ok?'Markdown copied.':'Could not copy Markdown.',ok?'success':'warning');return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
@@ -362,6 +370,8 @@
         const curveSelect=e.target.closest('[data-curve-select]');if(curveSelect){S.state.selectedMeasurementId=curveSelect.dataset.curveSelect;S.state.curveSelection=[curveSelect.dataset.curveSelect];render();return;}
         const curve=e.target.closest('[data-curve-check]');if(curve){S.state.curveOverlaySelection=S.state.curveOverlaySelection||[];if(curve.checked&&!S.state.curveOverlaySelection.includes(curve.dataset.curveCheck))S.state.curveOverlaySelection.push(curve.dataset.curveCheck);if(!curve.checked)S.state.curveOverlaySelection=S.state.curveOverlaySelection.filter(function(id){return id!==curve.dataset.curveCheck;});render();return;}
         const boxGroup=e.target.closest('[data-box-group]');if(boxGroup){const name=boxGroup.dataset.boxGroup;S.state.boxPlot.groups=S.state.boxPlot.groups||[];if(boxGroup.checked&&!S.state.boxPlot.groups.includes(name))S.state.boxPlot.groups.push(name);if(!boxGroup.checked)S.state.boxPlot.groups=S.state.boxPlot.groups.filter(function(x){return x!==name;});render();return;}
+        if(e.target.id==='overviewMetric'){S.state.resultsOverviewMetric=e.target.value||'eff';if(S.state.resultsOverviewMetric==='hysteresis')S.state.resultsOverviewDirection='best';render();return;}
+        if(e.target.id==='overviewDirection'){S.state.resultsOverviewDirection=e.target.value||'best';render();return;}
         if(e.target.id==='boxMetric'){S.state.boxPlot.metric=e.target.value;render();return;}
         if(e.target.id==='boxDirection'){S.state.boxPlot.direction=e.target.value;render();return;}
         if(e.target.id==='boxEligibleOnly'){S.state.boxPlot.eligibleOnly=e.target.checked;render();return;}
@@ -416,6 +426,12 @@
         } catch(err){Log.error('validation.manual-mapping-failed',{error:err});LF.UI.toast(err.message||String(err),'error');}
       }
     });
+
+    document.addEventListener('pointerover',function(e){const target=e.target.closest&&e.target.closest('[data-chart-tip]');if(target)showChartTooltip(target,e);});
+    document.addEventListener('pointermove',function(e){const target=e.target.closest&&e.target.closest('[data-chart-tip]'),tip=document.getElementById('resultsChartTooltip');if(target&&tip&&!tip.hidden)positionChartTooltip(tip,e.clientX,e.clientY);});
+    document.addEventListener('pointerout',function(e){const target=e.target.closest&&e.target.closest('[data-chart-tip]');if(target&&!target.contains(e.relatedTarget))hideChartTooltip();});
+    document.addEventListener('focusin',function(e){const target=e.target.closest&&e.target.closest('[data-chart-tip]');if(target)showChartTooltip(target);});
+    document.addEventListener('focusout',function(e){const target=e.target.closest&&e.target.closest('[data-chart-tip]');if(target)hideChartTooltip();});
 
     document.getElementById('datasetInput').addEventListener('change',function(){const f=this.files[0];this.value='';if(f)importDataset(f);});
     Log.debug('events.bind.end');

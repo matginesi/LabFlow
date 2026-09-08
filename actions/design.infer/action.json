@@ -57,13 +57,14 @@
         "thinking": "off",
         "timeout_ms": 90000,
         "weight": 0.8,
-        "max_output_tokens": 1200,
+        "max_output_tokens": 1600,
         "deadline_ms": 90000,
-        "max_retries": 1,
+        "max_retries": 2,
         "min_output_tokens": 80,
-        "target_output_tokens": 520,
+        "target_output_tokens": 650,
         "max_input_tokens": 6500,
-        "validate_with": "design.validate-coverage"
+        "validate_with": "design.validate-coverage",
+        "provider_schema": false
       },
       {
         "id": "store",

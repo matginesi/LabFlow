@@ -48,11 +48,16 @@
       <div class="chat-log" id="chatLog"></div>
       <button class="chat-jump-latest" id="chatJumpLatest" type="button" hidden>↓ New response</button>
       <div class="chat-compose" id="chatCompose">
+        <div class="chat-action-launcher">
+          <button class="button ghost compact" type="button" id="assistantActionsToggle" aria-expanded="false" aria-controls="assistantActionMenu"><span data-icon="zap" aria-hidden="true"></span><span>Actions</span></button>
+          <span class="chat-action-context" id="assistantActionHint">Run a LabFlow Action from here</span>
+          <div class="chat-action-menu" id="assistantActionMenu" hidden></div>
+        </div>
         <div class="chat-commandbar">
           <textarea id="chatInput" rows="1" aria-label="Message" placeholder="Ask LabFlow…"></textarea>
           <button class="chat-command-send" type="button" id="chatSend" aria-label="Send message">Send</button>
         </div>
-        <div class="chat-compose-foot"><span>Context follows the current page</span><span>Enter sends · Shift+Enter adds a line</span></div>
+        <div class="chat-compose-foot"><span>Context follows the current page · /actions opens Actions</span><span>Enter sends · Shift+Enter adds a line</span></div>
       </div>
     </aside>
   </div>

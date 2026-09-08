@@ -7,7 +7,8 @@ Read before structural changes:
 3. `docs/specs/PIPELINE.md`
 4. `docs/specs/ACTIONS.md`
 5. `docs/guides/EXTENDING_LABFLOW.md`
-6. the feature-specific docs/tests
+6. `.agent/skills/labflow-ui/SKILL.md` before any UI/layout/chart change
+7. the feature-specific docs/tests
 
 ## Non-negotiable invariants
 
@@ -31,10 +32,12 @@ Upload ZIP
 → deterministic naming/hierarchy/analysis
 → automatic mechanically-safe cleanup
 → researcher sees only genuine semantic ambiguity
-→ Results / Design / NOMAD
+→ Results / Design / Export
 ```
 
 Do not add clicks for deterministic work LabFlow can safely perform itself.
+
+For UI work, `.agent/skills/labflow-ui/SKILL.md` is the visual/interaction contract. Keep the primary navigation and mental model exactly **Upload & Review → Results → Design → Export**; NOMAD is an export target, not a primary workflow page.
 
 ## Pipeline vs Action
 
