@@ -81,11 +81,11 @@ module.exports=function(t,LF){
   };
 
   t['Z.AI settings use the same Detect control and result semantics as other providers']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['Action runtime override changes effective definition and prompt and resets cleanly']=function(){
@@ -98,7 +98,7 @@ module.exports=function(t,LF){
     assert(LF.Storage.getEffectivePrompt(id)===sourcePrompt,'prompt reset failed');
   };
   function actionSettingsState(actionId){
-    LF.State={state:{settingsSection:'actions',settingsActionId:actionId,ui:{settingsActionId:actionId},experiment:{meta:{sourceName:'fixture.zip'}}}};
+    LF.State={state:{ui:{settingsSection:'actions',settingsActionId:actionId},experiment:{meta:{sourceName:'fixture.zip'}}}};
   }
 
   t['Settings exposes one Actions manager and no split AI helper surface']=function(){
@@ -116,7 +116,7 @@ module.exports=function(t,LF){
   t['Local model controls display only the model basename while retaining the exact ID']=function(){
     const full='/home/user/models/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf';
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:full}));
-    LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};
+    LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};
     const html=LF.SettingsPage.render();
     assert(html.indexOf('>NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf</option>')>=0,'local select shows basename');
     assert(html.indexOf('>/home/user/models/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf</option>')<0,'local select must not show path');

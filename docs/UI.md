@@ -22,7 +22,7 @@ Upload copy, source metadata and actions reflow into one column on narrow screen
 
 Results visualize the canonical deterministic measurement model. Interactive behavior must not become a second calculation path.
 
-The researcher-facing structure is **Overview / Data / JV / Compare**. Overview is a triage surface, not a gallery: surface best sample, best group, eligible coverage, warnings and a robust group-distribution view before detailed tables. Data owns All/Best/Warnings/Top subsets. JV owns single-scan diagnostics and multi-scan overlay. Compare owns group statistics. Prefer median + IQR + min–max for group summaries, with mean available as an explicit alternative. The main tab strip is a stable workspace anchor: switching a main tab or a subordinate Data/JV mode preserves that anchor instead of restoring an absolute scroll position, so the page must not visibly jump when view heights differ.
+The researcher-facing structure is **Overview / Data / JV / Compare**. Overview is a triage surface, not a gallery: surface best sample, best group, eligible coverage, warnings and a robust group-distribution view before detailed tables. Data owns All/Best/Warnings/Top subsets. JV owns single-scan diagnostics and multi-scan overlay. Compare owns group statistics. Prefer median + IQR + min–max for group summaries, with mean available as an explicit alternative. Route changes start the destination page at its beginning. Switching a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and starts the new view at its beginning; scroll from another tab is never restored into the new content. Only bounded local scroll regions may be preserved within the same view context.
 
 Primary charts support the interactions appropriate to their data: metric/scan/group controls, hover/focus value inspection, series toggles for overlays and local scrolling for many categories. Chart exports are first-class: PNG and SVG export the visual, while CSV exports the canonical rows underlying the plotted view. The local SVG renderer is preferred so Results remains self-contained offline and in static deployment.
 
@@ -40,9 +40,16 @@ Export is artifact-first. The portable **LabFlow ZIP** is the primary save artif
 
 User-facing capabilities use `button[data-action]`. Provider output/telemetry is progressively disclosed. A running Action exposes cancel and all Action execution still passes through guards/contracts.
 
-The Assistant may launch public Actions and may display bounded Action results inline so a follow-up question can reference them. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
+The Assistant may launch public Actions and may display bounded Action results inline so a follow-up question can reference them. It exposes one compact **Actions** launcher/menu, with page-recommended Actions first and unavailable reasons visible; do not duplicate this with a persistent recommended-actions strip. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
 
 Global destructive `Reset session` is intentionally visible in the topbar. It uses danger styling and remains reachable as an icon on phone layouts; do not move it back into navigation utilities.
+
+
+## Settings and Knowledge Base
+
+Settings uses one shared horizontally scrollable tab strip and one active section at a time. Changing Settings section starts the selected section at the workspace beginning rather than inheriting scroll from the previous section.
+
+The Scientific Knowledge Base is managed inside **Settings → Knowledge Base** with the standard LabFlow surfaces: one search/filter toolbar, one bounded entry catalogue and one detail editor. Bundled records are read-only; custom records are browser-local and editable. Drafts may be incomplete but are excluded from AI context; active records require a traceable source. Import/export is backup/transfer, not a second scientific datastore. KB statements remain reference knowledge and never acquire ExperimentData/evidence styling.
 
 ## Responsive/readability rules
 

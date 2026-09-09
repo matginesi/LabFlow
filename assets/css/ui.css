@@ -318,27 +318,27 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 .activity-disclosure > summary { display: flex; align-items: center; gap: 7px; min-height: 31px; padding: 5px 7px; cursor: pointer; }
 .activity-disclosure > summary::before { content: "›"; color: var(--text-muted); font-size: 14px; transform: rotate(0deg); transition: transform .12s ease; }
 .activity-disclosure[open] > summary::before { transform: rotate(90deg); }
-.activity-disclosure > summary span { color: var(--text); font-size: 10px; font-weight: 700; text-transform: none; letter-spacing: 0; }
-.activity-disclosure > summary strong { margin-left: auto; color: var(--text-muted); font-size: 9px; font-weight: 600; }
+.activity-disclosure > summary span { color: var(--text); font-size: var(--font-xs); font-weight: 700; text-transform: none; letter-spacing: 0; }
+.activity-disclosure > summary strong { margin-left: auto; color: var(--text-muted); font-size: var(--font-micro); font-weight: 600; }
 .activity-disclosure pre { margin: 0; max-height: 180px; padding: 8px; overflow: auto; border-top: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.45 var(--font-mono); color: var(--text); }
 .activity-disclosure .activity-response { border-top: 1px solid var(--border); }
 .activity-request-body { max-height: 420px; padding: 8px; overflow: auto; border-top: 1px solid var(--border); background: var(--surface-2); scrollbar-gutter: stable; }
 .activity-request-facts { display: grid; grid-template-columns: 90px minmax(0,1fr); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
 .activity-request-facts > div { min-width: 0; display: contents; }
-.activity-request-facts span, .activity-request-facts strong { padding: 5px 7px; border-bottom: 1px solid var(--border); font-size: 9px; }
+.activity-request-facts span, .activity-request-facts strong { padding: 5px 7px; border-bottom: 1px solid var(--border); font-size: var(--font-micro); }
 .activity-request-facts span { color: var(--text-muted); }
 .activity-request-facts strong { overflow-wrap: anywhere; font-family: var(--font-mono); font-weight: 600; }
 .activity-request-facts > div:last-child span, .activity-request-facts > div:last-child strong { border-bottom: 0; }
 .activity-request-config { margin-top: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
-.activity-request-config > summary { padding: 6px 7px; cursor: pointer; color: var(--text-muted); font-size: 9px; font-weight: 700; }
+.activity-request-config > summary { padding: 6px 7px; cursor: pointer; color: var(--text-muted); font-size: var(--font-micro); font-weight: 700; }
 .activity-request-config > .structured-kv, .activity-request-config > .structured-block { margin: 5px 7px 7px; }
 .activity-request-messages { display: grid; gap: 6px; margin-top: 6px; }
 .activity-request-message { min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
 .activity-request-message header { min-height: 28px; display: flex; align-items: center; gap: 6px; padding: 4px 7px; border-bottom: 1px solid var(--border); }
 .activity-request-message header span { width: 17px; height: 17px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; color: var(--text-muted); font:var(--font-micro) var(--font-mono); }
-.activity-request-message header strong { font-size: 9px; }
+.activity-request-message header strong { font-size: var(--font-micro); }
 .activity-request-message header small { margin-left: auto; color: var(--text-muted); font-size:var(--font-micro); }
-.activity-request-message pre { max-height: 240px; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 9px/1.45 var(--font-mono); }
+.activity-request-message pre { max-height: 240px; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--font-micro)/1.45 var(--font-mono); }
 @media (max-width: 560px) {
   .activity-head { flex-wrap: wrap; }
   .activity-head > div:first-child { flex: 1 0 100%; }
@@ -372,7 +372,7 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
   font: 10px/1.45 var(--font-mono);
   scrollbar-gutter: stable;
 }
-.json-highlight.compact { margin: 0; max-height: 230px; padding: 6px 7px; font-size: 9px; line-height: 1.4; }
+.json-highlight.compact { margin: 0; max-height: 230px; padding: 6px 7px; font-size: var(--font-micro); line-height: 1.4; }
 .json-highlight code { font: inherit; color: inherit; }
 .json-highlight .tok-json-key, .json-shell .tok-json-key { color: var(--json-key); font-weight: 650; }
 .json-highlight .tok-string, .json-shell .tok-string { color: var(--json-string); }
@@ -387,7 +387,7 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 .json-shell .code-toolbar { border-color: var(--json-border); color: var(--json-punct); background: transparent; }
 .json-shell .code-toolbar .button { color: var(--json-text); }
 .json-shell .code-block { background: transparent; color: var(--json-text); }
-.streaming-output { margin: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: inherit; font: 9px/1.35 var(--font-mono); }
+.streaming-output { margin: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: inherit; font: var(--font-micro)/1.35 var(--font-mono); }
 .activity-response.is-streaming { white-space: normal; }
 
 /* Assistant structured output always inherits the Assistant palette. Do not mix
@@ -412,7 +412,7 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 }
 .activity-response .code-toolbar { border-color: var(--border); color: var(--text-muted); }
 .activity-response .code-toolbar .button { color: var(--text); }
-.activity-response .code-block { background: transparent; color: var(--text); font-size: 9px; }
+.activity-response .code-block { background: transparent; color: var(--text); font-size: var(--font-micro); }
 .activity-response .tok-key, .activity-response .tok-json-key { color: var(--accent); }
 .activity-response .tok-string { color: var(--success); }
 .activity-response .tok-number { color: var(--warning); }
@@ -463,7 +463,7 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 /* Live assistant stream: plain compact text while incomplete; final JSON/Markdown
    is rendered and highlighted only after the provider closes the response. */
 .chat-pending-body { min-width: 0; width: 100%; }
-.chat-streaming-output { margin: 5px 0 0; max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: var(--assistant-text); font: 9px/1.35 var(--font-mono); scrollbar-gutter: stable; }
+.chat-streaming-output { margin: 5px 0 0; max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: transparent; color: var(--assistant-text); font: var(--font-micro)/1.35 var(--font-mono); scrollbar-gutter: stable; }
 
 /* Compact read-only OPERATION facts used by UI Kit/documentation examples. */
 .operation-contract-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin:0; border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
@@ -471,5 +471,5 @@ body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--as
 .operation-contract-facts > div:nth-child(2n) { border-right:0; }
 .operation-contract-facts > div:nth-last-child(-n+2) { border-bottom:0; }
 .operation-contract-facts dt { color:var(--text-muted); font-size:var(--font-micro); font-weight:800; letter-spacing:.03em; text-transform:uppercase; }
-.operation-contract-facts dd { margin:2px 0 0; color:var(--text); font-size:9px; line-height:1.4; overflow-wrap:anywhere; }
+.operation-contract-facts dd { margin:2px 0 0; color:var(--text); font-size:var(--font-xs); line-height:1.4; overflow-wrap:anywhere; }
 @media (max-width:560px){.operation-contract-facts{grid-template-columns:1fr}.operation-contract-facts>div{border-right:0!important;border-bottom:1px solid var(--border)!important}.operation-contract-facts>div:last-child{border-bottom:0!important}}

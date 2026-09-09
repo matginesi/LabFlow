@@ -70,7 +70,7 @@ Only user-facing capabilities are Actions. The current catalog is intentionally 
 | Action | Purpose | Effect |
 |---|---|---|
 | `dataset.resolve-ambiguities` | Suggest resolutions for semantic ambiguities deterministic rules cannot settle | stores proposals only |
-| `design.infer` | Suggest missing qualitative chemistry, complete device architecture and/or fabrication process | stores proposal only |
+| `design.infer` | Complete missing qualitative chemistry, device architecture and/or fabrication process by proposal | stores proposal only |
 | `results.interpret` | Interpret deterministic Results | stores derived annotation |
 | `results.compare` | Explain differences between selected result groups | stores derived annotation |
 | `assistant.chat` | Answer questions about current data/page | read-only |
@@ -116,6 +116,7 @@ LabFlow is local-first. API keys/provider preferences remain local to the browse
 
 ```bash
 python tools/build_prompt_bundle.py
+python tools/build_knowledge_bundle.py
 python tools/build_action_registry.py
 python tools/build_action_reference.py
 python tools/build_docs_bundle.py

@@ -71,10 +71,10 @@
       "experiment-results"
     ],
     "bindings": {
-      "groups": "boxPlot.groups",
-      "metric": "boxPlot.metric",
-      "direction": "boxPlot.direction",
-      "eligibleOnly": "boxPlot.eligibleOnly"
+      "groups": "ui.boxPlot.groups",
+      "metric": "ui.boxPlot.metric",
+      "direction": "ui.boxPlot.direction",
+      "eligibleOnly": "ui.boxPlot.eligibleOnly"
     }
   }
 }

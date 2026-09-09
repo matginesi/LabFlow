@@ -53,7 +53,7 @@ module.exports=function(t,LF){
     assert(threwMissing,'missing proposal throws');
   };
   t['apply all per-variant AI proposals preserves researcher values and may leave real gaps']=function(){
-    LF.State={state:{selectedDesignDeviceId:'a'}};
+    LF.State={state:{ui:{selectedDesignDeviceId:'a'}}};
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:['A1'],solutionIds:[],stack:[],process:{coating:'researcher spin',annealing:'',atmosphere:''},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:['B1'],solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:''},status:'user_confirmed'}
@@ -224,7 +224,7 @@ module.exports=function(t,LF){
   };
 
   t['Accept experiment applies only that saved suggestion and clears it from review']=function(){
-    LF.State={state:{selectedDesignDeviceId:'a'}};
+    LF.State={state:{ui:{selectedDesignDeviceId:'a'}}};
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
@@ -240,7 +240,7 @@ module.exports=function(t,LF){
   };
 
   t['Accept all suggestions validates saved experiments independently']=function(){
-    LF.State={state:{selectedDesignDeviceId:'a'}};
+    LF.State={state:{ui:{selectedDesignDeviceId:'a'}}};
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
@@ -254,7 +254,7 @@ module.exports=function(t,LF){
   };
 
   t['Accept all keeps same-named but scientifically different solutions separated']=function(){
-    LF.State={state:{selectedDesignDeviceId:'a'}};
+    LF.State={state:{ui:{selectedDesignDeviceId:'a'}}};
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
@@ -270,7 +270,7 @@ module.exports=function(t,LF){
   };
 
   t['Accept never labels a partial stale Design suggestion as complete']=function(){
-    LF.State={state:{selectedDesignDeviceId:'a'}};
+    LF.State={state:{ui:{selectedDesignDeviceId:'a'}}};
     const exp={design:{status:'reviewing',solutions:[],devices:[{id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}]}};
     put(exp,{targetDeviceId:'a',solutions:[],devices:[{sample_names:[],stack:[{role:'Absorber',material:'Perovskite'}]}],unknowns:[]},'a');
     const out=LF.DesignAnalysis.acceptProposal(exp,'a');

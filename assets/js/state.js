@@ -27,16 +27,8 @@
     };
   }
 
-  const state = {
-    user: { name: '', organization: '', email: '' },
-    workspace: { theme: 'instrument' },
-    project: {},
-    experiment: emptyExperiment(),
-    actionRun: null,
-    docsSlug: 'guides--getting-started',
-    docsQuery: '',
-    docsSection: 'all',
-    ui: {
+  function defaultUiState() {
+    return {
       route: 'experiment-import',
       uploadLanding: false,
       assistantOpen: false,
@@ -48,6 +40,7 @@
       resultsOverviewStatistic: 'median',
       selectedMeasurementId: null,
       curveSelection: [],
+      curveOverlaySelection: [],
       curveView: 'all',
       curveGroup: 'all',
       curveDirection: 'both',
@@ -66,9 +59,24 @@
       boxPlot: { metric: 'eff', direction: 'both', groups: [], eligibleOnly: true, experimentId: null },
       settingsSection: 'provider',
       settingsActionId: 'dataset.resolve-ambiguities',
+      settingsKnowledgeId: '',
+      settingsKnowledgeQuery: '',
+      settingsKnowledgeKind: 'all',
+      docsSlug: 'guides--getting-started',
+      docsQuery: '',
+      docsSection: 'all',
       logFilters: { level: 'all', category: 'all', query: '', scope: 'all' },
       pageContext: { page: '', view: '', selected: {}, filters: {}, visible: [] }
-    }
+    };
+  }
+
+  const state = {
+    user: { name: '', organization: '', email: '' },
+    workspace: { theme: 'instrument' },
+    project: {},
+    experiment: emptyExperiment(),
+    actionRun: null,
+    ui: defaultUiState()
   };
 
   Object.defineProperty(state, 'route', {
@@ -215,7 +223,14 @@
   function currentExperiment(reason){ return ensureExperiment(reason||'current'); }
 
   function resetSession() {
-    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.resultsDataMode='all'; state.ui.resultsJvMode='single'; state.ui.resultsOverviewMetric='eff'; state.ui.resultsOverviewDirection='best'; state.ui.resultsOverviewStatistic='median'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.curveZoom=1; state.ui.pceDistributionZoom=1; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.designCabinetPicker=''; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
+    state.experiment = emptyExperiment();
+    state.actionRun = null;
+    /* Keep the `ui` object identity stable for modules that reference it, but
+       reset every transient view field from one canonical default factory. */
+    Object.keys(state.ui).forEach(function (key) { delete state.ui[key]; });
+    Object.assign(state.ui, defaultUiState());
+    notify('reset');
+    return state;
   }
 
 

@@ -4,6 +4,7 @@ Run before packaging or merging architectural changes:
 
 ```bash
 python tools/build_prompt_bundle.py
+python tools/build_knowledge_bundle.py
 python tools/build_action_registry.py
 python tools/build_action_reference.py
 python tools/build_docs_bundle.py
@@ -24,8 +25,8 @@ find assets vendor -name '*.js' -print0 | xargs -0 -n1 node --check
 
 - `validate_architecture_contract.py`: one `ExperimentData` aggregate, schema-owned roots, no parallel `entities[]` model, declared pipeline metadata, the single `actionData` boundary, and repository exclusions for ZIP/fixture folders.
 - `validate_action_contract.py`: only current researcher-facing Actions, explicit target/context/result/effect/guards/execution contracts, bounded AI steps and valid semantic result steps.
-- `validate_state_contract.py`: state ownership and persistence boundaries.
-- `validate_ui_contract.py`: routes and UI references agree with the current runtime.
+- `validate_state_contract.py`: state ownership and persistence boundaries, including canonical transient UI state under `state.ui` and `ui.*` Action bindings.
+- `validate_ui_contract.py`: routes/UI references agree with runtime, UI Kit and the LabFlow UI skill; it also guards workspace-start navigation, retired compatibility selectors and sub-10px literal UI type.
 - `validate_privacy_contract.py`: local-first assets/provider transport and no tracker APIs.
 
 The unit suite includes architecture regressions for `DomainSchema`, persistence snapshots, `DerivedState`, `ActionData`, CanonicalStore purity and DataPipeline plan/trace separation. The real JV fixture also verifies the stable hierarchy `5 experiments → 31 samples → 42 runs → 72 measurements` through repeated deterministic refreshes.

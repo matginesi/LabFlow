@@ -16,7 +16,7 @@ module.exports=function(t,LF,env){
   function fixture(){const b=fs.readFileSync(path.join(env.root,'TEST_DATA','2026_01_22.zip'));return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);}
   async function ready(tab){
     const exp=await LF.Importer.parseDataset(fixture(),'2026_01_22.zip');LF.Analysis.analyze(exp);
-    LF.State={state:{experiment:exp,resultsTab:tab||'overview',boxPlot:{metric:'eff',direction:'both',groups:[],eligibleOnly:true,experimentId:null},curveSelection:[],curveView:'all',curveGroup:'all',curveDirection:'both',curveEligibleOnly:false,curveSearch:''}};
+    LF.State={state:{experiment:exp,ui:{resultsTab:tab||'overview',boxPlot:{metric:'eff',direction:'both',groups:[],eligibleOnly:true,experimentId:null},curveSelection:[],curveView:'all',curveGroup:'all',curveDirection:'both',curveEligibleOnly:false,curveSearch:'',resultsOverviewMetric:'eff',resultsOverviewDirection:'best',resultsOverviewStatistic:'median',pceDistributionZoom:1,curveZoom:1}}};
     LF.PageShell={hasExperiment:function(){return true;},needExperiment:function(){return'';},badge:function(text,kind){return'<span class="badge '+(kind||'')+'">'+LF.Core.escapeHtml(text)+'</span>';},workflowHead:function(){return'<header></header>';}};
     delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');return exp;
   }
@@ -69,7 +69,7 @@ module.exports=function(t,LF,env){
     ],analysis:{summary:{}},findings:[]};
   }
   function stateFor(e){
-    return {experiment:e,resultsTab:'boxplots',boxPlot:{metric:'eff',direction:'both',groups:['A','B'],eligibleOnly:true,experimentId:e.id},curveSelection:[],curveView:'all',curveGroup:'all',curveDirection:'both',curveEligibleOnly:false,curveSearch:''};
+    return {experiment:e,ui:{resultsTab:'boxplots',boxPlot:{metric:'eff',direction:'both',groups:['A','B'],eligibleOnly:true,experimentId:e.id},curveSelection:[],curveView:'all',curveGroup:'all',curveDirection:'both',curveEligibleOnly:false,curveSearch:'',resultsOverviewMetric:'eff',resultsOverviewDirection:'best',resultsOverviewStatistic:'median',pceDistributionZoom:1,curveZoom:1}};
   }
   function boxState(state){LF.State={state:state||stateFor(synExp())};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');}
 
@@ -119,7 +119,7 @@ module.exports=function(t,LF,env){
 
   t['histogram CSV keeps already normalized best PCE values'] = function(){
     const e=synExp();e.measurements.forEach(function(m){m.bestEff=Math.max(m.fw.eff,m.rv.eff)/2;});
-    const state=stateFor(e);state.resultsTab='overview';LF.State={state:state};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');
+    const state=stateFor(e);state.ui.resultsTab='overview';LF.State={state:state};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');
     const rows=LF.ResultsPage.chartDataRows('histogram');
     assert(rows[0].best_pce_percent,20,'bestEff must not be mismatch-corrected twice');
   };
@@ -130,15 +130,15 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('What matters first')>=0,'research snapshot');
     truthy(html.indexOf('id="overviewStatistic"')>=0,'robust statistic selector');
     truthy(html.indexOf('min–max')>=0&&html.indexOf('Q1–Q3')>=0,'distribution-first group chart');
-    LF.State.state.resultsTab='all';html=LF.ResultsPage.render();
+    LF.State.state.ui.resultsTab='all';html=LF.ResultsPage.render();
     truthy((html.match(/data-results-data-mode=/g)||[]).length>=5,'data drill-down modes');
-    LF.State.state.resultsTab='curves';html=LF.ResultsPage.render();
+    LF.State.state.ui.resultsTab='curves';html=LF.ResultsPage.render();
     truthy((html.match(/data-results-jv-mode=/g)||[]).length>=2,'JV single/overlay modes');
   };
 
   t['group chart CSV exports the plotted robust summary'] = function(){
     const e=synExp();e.measurements.forEach(function(m){m.bestEff=Math.max(m.fw.eff,m.rv.eff)/2;});
-    const state=stateFor(e);state.resultsTab='overview';state.resultsOverviewMetric='eff';state.resultsOverviewDirection='best';state.resultsOverviewStatistic='median';
+    const state=stateFor(e);state.ui.resultsTab='overview';state.ui.resultsOverviewMetric='eff';state.ui.resultsOverviewDirection='best';state.ui.resultsOverviewStatistic='median';
     LF.State={state:state};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');
     const rows=LF.ResultsPage.chartDataRows('group');
     assert(rows.length,2,'two group summaries');

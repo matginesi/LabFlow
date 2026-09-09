@@ -19,7 +19,7 @@
 
   function currentRoute() {
     const s = state();
-    return String(s.route || s.ui && s.ui.route || '');
+    return String(s.ui && s.ui.route || s.route || '');
   }
 
   function readPath(root, path) {

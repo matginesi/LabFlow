@@ -6,7 +6,7 @@
 
   function documents() { return LF.DocsBundle && Array.isArray(LF.DocsBundle.documents) ? LF.DocsBundle.documents : []; }
   function selectedDocument() {
-    const docs = documents(), slug = LF.State && LF.State.state && LF.State.state.docsSlug;
+    const docs = documents(), slug = LF.State && LF.State.state && LF.State.state.ui.docsSlug;
     return docs.find(function (doc) { return doc.slug === slug; }) || docs[0] || null;
   }
   function normalizePath(path) {
@@ -124,7 +124,7 @@
     const docs = documents(), doc = selectedDocument();
     if (!doc) return '<section class="page"><div class="notice warning"><strong>Documentation bundle is empty.</strong><span>Run the documentation bundle builder.</span></div></section>';
     const sections = Array.from(new Set(docs.map(function (item) { return item.section; })));
-    const query = LF.State.state.docsQuery || '', section = LF.State.state.docsSection || 'all';
+    const query = LF.State.state.ui.docsQuery || '', section = LF.State.state.ui.docsSection || 'all';
     return '<section class="page docs-page">' + LF.PageShell.pageHead('Documentation','Researcher guidance and technical reference, rendered locally from the current Markdown sources.') +
       '<div class="docs-provenance"><span><strong>' + docs.length + '</strong> Markdown documents</span><span><strong>' + sections.length + '</strong> collections</span><span><strong>Local</strong> no documentation network requests</span><span><strong>Mermaid</strong> diagrams from fenced source</span></div>' +
       '<div class="docs-workbench">' +
@@ -135,7 +135,7 @@
   }
   function apply(root) {
     root = root || document;
-    const query = String(LF.State.state.docsQuery || '').trim().toLowerCase(), section = LF.State.state.docsSection || 'all';
+    const query = String(LF.State.state.ui.docsQuery || '').trim().toLowerCase(), section = LF.State.state.ui.docsSection || 'all';
     let visible = 0;
     root.querySelectorAll('[data-doc-search]').forEach(function (button) {
       const group = button.closest('[data-doc-group]'), inSection = section === 'all' || (group && group.querySelector('h2').textContent === section);

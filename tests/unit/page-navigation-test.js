@@ -4,7 +4,7 @@ function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringif
 module.exports=function(t,LF,ctx){
   const root=ctx.root;
   LF.DataModel=LF.DataModel||{hydrate:function(x){return x;}};
-  LF.State={state:{route:'experiment-import',experiment:null},ensureExperiment:function(){return this.state.experiment;}};
+  LF.State={state:{route:'experiment-import',ui:{route:'experiment-import'},experiment:null},ensureExperiment:function(){return this.state.experiment;}};
   delete require.cache[require.resolve(path.join(root,'assets/js/pages/shared.js'))];
   require(path.join(root,'assets/js/pages/shared.js'));
 
@@ -43,10 +43,16 @@ module.exports=function(t,LF,ctx){
   };
 
 
-  t['Results workspace switches tabs without jumping the page']=function(){
+  t['route and tab navigation start the selected workspace predictably']=function(){
     const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
-    if(!app.includes("renderKeepingAnchor('.results-main-tabs')"))throw new Error('Results tab and mode switches must preserve the Results workspace anchor');
-    if(!app.includes('main.scrollTop+=delta'))throw new Error('anchor restoration must compensate for view-height changes');
+    if(!app.includes("renderAtWorkspaceStart('.results-main-tabs')"))throw new Error('Results tab and mode switches must align the selected workspace to its start');
+    if(!app.includes("renderAtWorkspaceStart('.settings-tabs')"))throw new Error('Settings section switches must align the selected workspace to its start');
+    if(!app.includes("renderAtWorkspaceStart('.docs-workbench')"))throw new Error('Documentation topic switches must align the selected document workspace to its start');
+    if(!app.includes("renderAtWorkspaceStart('.cabinet-filter-tabs')"))throw new Error('Cabinet kind switches must align the selected shelf workspace to its start');
+    if(!app.includes("if(!renderedRoute||routeChanged)main.scrollTop=0"))throw new Error('route changes must start the destination page at the top');
+    if(app.includes('nodes=[root]'))throw new Error('main document scroll must not be restored as local scroll memory');
+    if(!app.includes("if(id==='experiment-results')return id+':'+String(ui.resultsTab||'overview')"))throw new Error('Results local scroll memory must be view-scoped');
+    if(!app.includes("if(id==='documentation')return id+':'+String(ui.docsSlug||'')"))throw new Error('Documentation local scroll memory must be document-scoped');
     if(!/\.results-main-tabs\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/.test(css))throw new Error('Results main tabs must remain a stable sticky workspace anchor');
   };
 

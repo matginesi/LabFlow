@@ -53,7 +53,7 @@ Current Actions:
 - `results.compare`
 - `assistant.chat`
 
-Do not reintroduce analysis/safe-cleanup/report/NOMAD preparation as Actions. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
+Do not reintroduce analysis, safe cleanup or NOMAD preparation as Actions. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
 
 ## Mutations
 

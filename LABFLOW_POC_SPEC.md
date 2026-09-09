@@ -153,7 +153,7 @@ Current guard families include:
 AI is explicit and optional. It may:
 
 - resolve semantic ambiguity by proposal;
-- suggest missing qualitative Design content;
+- complete missing qualitative Design content by reviewable proposal;
 - interpret deterministic Results;
 - compare selected Results groups;
 - answer read-only questions.

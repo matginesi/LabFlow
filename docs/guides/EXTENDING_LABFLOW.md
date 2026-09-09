@@ -117,6 +117,7 @@ When applicable run:
 
 ```bash
 python tools/build_prompt_bundle.py
+python tools/build_knowledge_bundle.py
 python tools/build_action_registry.py
 python tools/build_action_reference.py
 python tools/build_docs_bundle.py

@@ -33,7 +33,7 @@ module.exports=function(t){
     assert(results.includes('data-pce-zoom="in"'),true,'zoom in control');
     assert(results.includes('histogramStats'),true,'distribution statistics');
     assert(results.includes('chart-stat-median'),true,'median marker');
-    assert(results.includes('S.state.pceDistributionZoom||1'),true,'zoom state');
+    assert(results.includes('S.state.ui.pceDistributionZoom||1'),true,'zoom state');
     assert(css.includes('.overview-pce-panel'),true,'narrow PCE panel style');
   };
 

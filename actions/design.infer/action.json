@@ -80,7 +80,7 @@
       "experiment-design"
     ],
     "bindings": {
-      "deviceId": "selectedDesignDeviceId"
+      "deviceId": "ui.selectedDesignDeviceId"
     }
   }
 }

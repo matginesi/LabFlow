@@ -154,6 +154,10 @@ Scientific data changes occur only after an explicit apply/accept path owned by 
 
 ## 8. State and invalidation
 
+`State` keeps scientific truth and transient interface state deliberately separate. The canonical UI namespace is `LF.State.state.ui`; route, selected record, tab, filter, zoom and page-local workbench state belong there. `state.route` remains only a non-enumerable proxy to `state.ui.route`, not a second stored value. Action manifest bindings that consume a UI selection use `ui.*` paths.
+
+Route changes reset the main workspace to its beginning. Content-defining switches inside Results, Settings, Documentation and Cabinet establish a new scroll context; only explicitly bounded local scroll regions may be restored within the same context. This prevents one page/tab from inheriting an unrelated document position.
+
 `State.touch(scope)` advances the LabFlow Data revision and delegates feature invalidation to `DerivedState`.
 
 Typical scopes are:

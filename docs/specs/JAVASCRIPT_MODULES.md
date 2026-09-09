@@ -29,7 +29,7 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 
 ## State/persistence
 
-- `state.js` — single LabFlow Data lifecycle, revision, autosave and route/UI state; feature invalidation delegates to `DerivedState`.
+- `state.js` — single LabFlow Data lifecycle, revision and autosave plus the canonical `state.ui` namespace for route/selection/filter/tab state; feature invalidation delegates to `DerivedState`. `state.route` is only a proxy to `state.ui.route`.
 - `storage.js` — browser persistence/preferences/provider keys.
 
 ## Actions/AI
@@ -57,7 +57,7 @@ Generated files (`action-registry.js`, `prompt-bundle.js`) must be rebuilt from 
 
 ## Pages
 
-Files under `pages/` render/query the current aggregate/projections and may retain UI-only selection/filter state. They must not become scientific owners.
+Files under `pages/` render/query the current aggregate/projections and may retain UI-only selection/filter state under `LF.State.state.ui`. They must not duplicate that state at the root and must not become scientific owners.
 
 ## Shared/UI
 

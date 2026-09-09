@@ -4,7 +4,7 @@ function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringif
 module.exports=function(t,LF,ctx){
   require(path.join(ctx.root,'assets/js/core.js'));
   require(path.join(ctx.root,'assets/js/pages/docs-bundle.js'));
-  LF.State={state:{docsSlug:'guides--getting-started',docsQuery:'',docsSection:'all'}};
+  LF.State={state:{ui:{docsSlug:'guides--getting-started',docsQuery:'',docsSection:'all'}}};
   LF.PageShell={pageHead:function(title,subtitle){return'<div class="page-head"><h1>'+title+'</h1><p>'+subtitle+'</p></div>';}};
   require(path.join(ctx.root,'assets/js/pages/docs-page.js'));
 

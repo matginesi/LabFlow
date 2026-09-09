@@ -14,7 +14,7 @@ order: 1
 3. Let LabFlow normalize names, rebuild hierarchy, analyze data and perform safe automatic cleanup.
 4. If Review says **Scientific decisions: Clear**, go directly to **Results**.
 5. If ambiguities remain, click **Resolve with AI**, inspect the suggestions and optionally **Apply all suggestions**.
-6. Use **Design** or **NOMAD** only when needed.
+6. Use **Design** or **Export** when needed. NOMAD artifacts live inside Export.
 
 That is the intended normal workflow. Researchers should not have to understand the internal pipeline to get trustworthy deterministic Results.
 

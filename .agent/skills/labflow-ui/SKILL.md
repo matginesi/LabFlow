@@ -51,6 +51,13 @@ LabFlow is a compact scientific workbench, not an oversized card dashboard and n
 - Avoid card nesting for decoration. A surface should represent a real task, state or grouping.
 - On mobile, reflow before compressing typography. Buttons may stack/full-width; essential labels remain readable.
 
+### Navigation and scroll contract
+
+- Opening a different route starts that page at the top; do not restore the previous route's main-document scroll position.
+- Switching a content-defining tab/filter (Results workspace, Settings section, Documentation topic, Cabinet kind) aligns that workspace's tab/filter anchor to the top and starts the new content at its beginning.
+- Preserve scroll only for explicitly bounded local regions within the **same** view context (for example a long selector list), keyed by that view identity. Never reuse local scroll memory across different tabs/documents.
+- Do not work around navigation jumps with delayed arbitrary pixel offsets or page-specific scroll hacks.
+
 ## Export page pattern
 
 Export is artifact-first, not a settings form.
@@ -100,7 +107,7 @@ Page failures are recovered where they happen. Results, Design and Export offer 
 
 User-facing capabilities use `button[data-action]` and the Action contracts. The Assistant may launch public Actions and show their bounded outcomes, but it must still run them through `ActionUI`/guards/confirmation semantics rather than bypassing contracts.
 
-Recommended Actions for the current page are visible directly above the composer. Slash commands such as `/interpret`, `/design`, `/compare` and `/resolve` are rendered as accent command chips in Action controls and Action events. The full catalog remains accessible, but page-recommended Actions are shown first and unrelated Actions must not dominate the current workflow.
+The Assistant exposes exactly one compact **Actions** launcher near the composer. Its menu contains the complete public Action catalog, orders page-recommended Actions first, and explains unavailable Actions; do not duplicate that catalog as a persistent recommended-actions strip above the composer. Slash commands such as `/interpret`, `/design`, `/compare` and `/resolve` remain visible inside Action controls/events when useful. The current page changes recommendation order, never catalog membership.
 
 Action results shown in chat should be readable at normal compact UI sizes. Full JSON/provider telemetry stays behind progressive disclosure. The Assistant can receive a bounded `recent_actions` summary for follow-up conversation, but Action events are not silently rewritten into user messages or scientific state.
 
@@ -108,13 +115,20 @@ AI surfaces must state responsibility: deterministic analysis is authoritative; 
 
 ## Results workspace stability
 
-Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. The main tab strip stays visually anchored while switching views. Changing a main tab or a subordinate Data/JV mode must preserve the Results workspace anchor rather than restoring an absolute page scroll position that can make the page jump when content above changes height. The main Results tabs may be sticky within the page scroll container; they must remain responsive, locally scrollable if needed and must not create document-level horizontal overflow.
+Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. A route change opens the destination page at its beginning. Changing a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and shows the new view from its beginning; never transplant an absolute scroll offset from another tab. Ordinary rerenders inside the same view may preserve explicitly bounded local scroll regions. The main Results tabs may be sticky within the page scroll container; they must remain responsive, locally scrollable if needed and must not create document-level horizontal overflow.
 
 ## Design and Cabinet
 
 Design is one selected experiment/variant at a time: solution chemistry, ordered stack and process. Keep the default workbench light: automatically expand domains that are missing or need researcher attention and keep already-complete domains collapsed until requested. One `design.infer` run attempts every currently missing domain and uses its bounded internal retries for incomplete model output; do not introduce a second "Suggest missing" state. Only after those attempts fail should the UI offer `Retry inference`. **Exactly one** Retry inference control may be visible for the selected failed experiment: it lives in the active-experiment strip. Do not duplicate it in the AI proposal panel, error panel, bulk toolbar, or Action activity totem. AI proposals remain visibly separate until accepted.
 
 Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomplete resources can be edited but must not be presented as applicable matches. Copying Cabinet content into Design uses snapshots and must preserve chemistry/stack/process content. Cabinet belongs to the scientific canvas, not the dark navigation chrome: controls use the **same shared LabFlow tabs, fields, buttons, badges and notices** as the rest of the application; resource kinds may use restrained chart-token accents only for recognition. Keep exactly one search/create command bar, one resource-kind filter strip, one locally scrollable resource shelf and one detail editor, with backup/restore behind progressive disclosure. The canonical layout is **responsive shelf above, full-width editor below**. The shelf uses compact selectable resource tiles (not a KPI/card dashboard and not a table header with grey slabs): 3 columns on wide canvas, 2 on tablet, 1 on phone. At narrow widths the command bar stacks, scientific fields become one column, editor actions become full-width controls, and page-level horizontal scrolling remains zero. Do not add a second toolbar, a permanent left/right master-detail split, native-looking unstyled filter buttons, or compatibility CSS for retired Cabinet layouts.
+
+
+## Settings and Scientific Knowledge Base
+
+Settings uses the shared LabFlow tab pattern and renders exactly one active section. Switching Connection / Actions / Assistant / Knowledge Base / Workspace / Data contract establishes a new view context: align the Settings tab strip to the workspace start and do not reuse document scroll from the previous section.
+
+The Knowledge Base management surface uses one search/filter toolbar, one bounded entry catalogue and one detail editor built from the standard panel/field/button/badge/notice primitives. Bundled entries are visibly read-only; custom entries are editable. Draft entries may be incomplete but must be visually distinguished from AI-eligible active entries, and active entries must surface source/provenance readiness. Do not turn the KB into a dashboard, graph browser, RAG console, inventory UI or separate design system. Source citations use normal readable UI sizes and progressive disclosure where needed.
 
 ## Sidebar and themes
 
