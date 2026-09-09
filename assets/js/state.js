@@ -53,6 +53,8 @@
       curveDirection: 'both',
       curveEligibleOnly: false,
       curveSearch: '',
+      curveZoom: 1,
+      pceDistributionZoom: 1,
       selectedDesignDeviceId: null,
       resultInspectorId: null,
       cabinetKind: 'all',
@@ -213,7 +215,7 @@
   function currentExperiment(reason){ return ensureExperiment(reason||'current'); }
 
   function resetSession() {
-    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.resultsDataMode='all'; state.ui.resultsJvMode='single'; state.ui.resultsOverviewMetric='eff'; state.ui.resultsOverviewDirection='best'; state.ui.resultsOverviewStatistic='median'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.designCabinetPicker=''; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
+    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.resultsDataMode='all'; state.ui.resultsJvMode='single'; state.ui.resultsOverviewMetric='eff'; state.ui.resultsOverviewDirection='best'; state.ui.resultsOverviewStatistic='median'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.curveZoom=1; state.ui.pceDistributionZoom=1; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.designCabinetPicker=''; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
   }
 
 

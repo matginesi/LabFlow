@@ -19,9 +19,9 @@ module.exports = function (t, LF) {
     const errors=SO.validate('design_suggestion',{status:'suggested',summary:'x',solutions:[{name:'candidate',role:'absorber precursor',solutes:'perovskite precursor family',solvents:'polar aprotic solvent family',provenance_kind:'model_inference',confidence:.4,reason:'inferred'}],stack:[],process:{},unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
-  t['Design schema permits a valid insufficient-evidence result']=function(){
+  t['Design schema has one successful proposal state; missing coverage is retried by the Action']=function(){
     const e=SO.validate('design_suggestion',{status:'insufficient_evidence',summary:'More source context is needed.',solutions:[],stack:[],process:{},unknowns:['stack materials unknown']},{registry:LF.ActionRegistry});
-    assert(e,[],'scientific uncertainty is valid');
+    if(!e.length)throw new Error('insufficient_evidence must not be a successful Design proposal state');
   };
   t['Design normalization reduces common provider variants to one canonical model-facing shape'] = function(){
     const v=SO.normalizeForSchema('design_suggestion',{assessment:'candidate',solution:{name:'absorber',solutes:['FAI','PbI2'],solvents:['DMF','DMSO']},device_stack:[{function:'substrate',material:'ITO'},{role:'absorber',material:'perovskite'}]});
@@ -48,11 +48,11 @@ module.exports = function (t, LF) {
     assert(root.solutions[0].solutes,'PEAI','top-level solute preserved');
     assert(root.solutions[0].solvents,'IPA','top-level solvent preserved');
   };
-  t['Design normalization converts empty content to insufficient evidence without fabricating a device'] = function(){
+  t['Design normalization never fabricates content when coverage is empty'] = function(){
     const v=SO.normalizeForSchema('design_suggestion',{summary:'no reliable reconstruction',solutions:[],unknowns:['exact stack']});
-    assert(v.status,'insufficient_evidence','empty inference becomes explicit scientific uncertainty');
+    assert(v.status,'suggested','normalizer returns one candidate state for semantic validation');
     assert(v.stack,[],'no fake device or stack required');
-    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'insufficient result satisfies schema');
+    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'candidate shape remains schema-valid before coverage validation');
   };
   t['Design normalization keeps a solvent-only suggestion without a provider name'] = function(){
     const v=SO.normalizeForSchema('design_suggestion',{solutions:[{role:'absorber precursor',solvents:'DMF + DMSO'}],stack:[],process:{},unknowns:[]});

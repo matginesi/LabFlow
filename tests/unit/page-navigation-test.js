@@ -30,7 +30,32 @@ module.exports=function(t,LF,ctx){
     const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
     if(!/\.app-shell\s*\{[\s\S]*?grid-template-columns:\s*var\(--sidebar-w\)\s+minmax\(0,\s*1fr\)/.test(css))throw new Error('Desktop shell must reserve a sidebar column');
     if(!/@media\s*\(max-width:\s*1100px\)[\s\S]*?\.sidebar\s*\{[\s\S]*?position:\s*fixed!important/.test(css))throw new Error('<=1100 sidebar must become off-canvas');
-    if(!/@media\s*\(max-width:\s*700px\)[\s\S]*?\.page-nav-button\s*\{[^}]*min-height:\s*46px/.test(css))throw new Error('Phone page navigation must keep touch-sized buttons');
+    if(!/\.page-nav-next\{[^}]*background:var\(--accent-soft\)/.test(css))throw new Error('Next navigation must receive a visible themed accent treatment');
+    if(!/@media\s*\(max-width:\s*700px\)[\s\S]*?\.workflow-page-nav \.page-nav-position\{display:none\}[\s\S]*?\.workflow-page-nav \.page-nav-button\{[^}]*min-height:\s*48px/.test(css))throw new Error('Phone navigation must hide the center pill and keep touch-sized Previous/Next buttons');
+  };
+
+
+  t['Design runtime uses the shared workflow header so Previous and Next cannot disappear']=function(){
+    const design=fs.readFileSync(path.join(root,'assets/js/pages/design-page.js'),'utf8');
+    if(!design.includes("options.workflowHead?options.workflowHead('Design Experiment'"))throw new Error('Design must render the shared workflow header');
+    if(!design.includes("'Complete with AI'"))throw new Error('Design must expose one completion action rather than a second Suggest missing step');
+    if(!design.includes("'Retry inference'"))throw new Error('Design must expose Retry inference only after an exhausted attempt');
+  };
+
+
+  t['Results workspace switches tabs without jumping the page']=function(){
+    const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+    if(!app.includes("renderKeepingAnchor('.results-main-tabs')"))throw new Error('Results tab and mode switches must preserve the Results workspace anchor');
+    if(!app.includes('main.scrollTop+=delta'))throw new Error('anchor restoration must compensate for view-height changes');
+    if(!/\.results-main-tabs\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/.test(css))throw new Error('Results main tabs must remain a stable sticky workspace anchor');
+  };
+
+  t['Design reflows the workbench before shrinking scientific controls']=function(){
+    const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+    if(!/@media\(max-width:980px\)[\s\S]*?\.design-active-strip\{grid-template-columns:minmax\(0,1fr\) auto/.test(css))throw new Error('Design active strip must simplify before phone widths');
+    if(!/@media\(max-width:700px\)[\s\S]*?\.design-variant-cards\{display:flex;overflow-x:auto/.test(css))throw new Error('Design experiment cards must become a local horizontal scroller on phone');
+    if(!/@media\(max-width:700px\)[\s\S]*?\.design-active-strip\{grid-template-columns:1fr/.test(css))throw new Error('Design active strip must become one column on phone');
+    if(!/@media\(max-width:430px\)[\s\S]*?\.design-page \.design-chem-grid\{grid-template-columns:1fr/.test(css))throw new Error('Design chemistry must become one column on narrow phones');
   };
 
   t['workflow navigation is rendered at the top only for the four primary pages']=function(){

@@ -32,7 +32,7 @@ Do not restore legacy `Report`, `Paper` or standalone `NOMAD` workflow steps.
 
 ## Density and typography
 
-LabFlow is a compact scientific workbench, not an oversized card dashboard and not a micro-font console.
+LabFlow is a compact scientific workbench, not an oversized card dashboard and not a micro-font console. Density is shared across the product: use the tokenized page gap, panel head/body padding and task gap before inventing feature-local spacing. A feature may reflow, but should not become visibly looser or tighter than neighboring pages without a scientific reason.
 
 - Normal content should generally use the shared `--font-sm` / `--font-md` scale.
 - `--font-xs` is appropriate for labels and compact metadata.
@@ -90,7 +90,7 @@ Chart colors come from `--chart-*` tokens. Theme accent is for interaction/state
 
 ## Primary workflow simplicity
 
-Optimize the first view for a researcher who wants the answer before the controls. Upload, Results, Design and Export must expose the primary decision/action first and place secondary diagnostics, normalization knobs, provenance tables, complete mappings and already-resolved details behind native progressive disclosure. Do not remove capability; delay it until the researcher asks for it or the data state makes it relevant. A blocker may open or foreground its own resolution, but unrelated advanced sections stay closed.
+Optimize the first view for a researcher who wants the answer before the controls. Upload, Results, Design and Export must expose the primary decision/action first and place secondary diagnostics, normalization knobs, provenance tables, complete mappings and already-resolved details behind native progressive disclosure. Do not remove capability; delay it until the researcher asks for it or the data state makes it relevant. A blocker may open or foreground its own resolution, but unrelated advanced sections stay closed. Compact does not mean showing everything simultaneously: density comes from smaller, consistent spacing and progressive disclosure, not from filling every viewport with controls.
 
 ## Error recovery
 
@@ -106,11 +106,15 @@ Action results shown in chat should be readable at normal compact UI sizes. Full
 
 AI surfaces must state responsibility: deterministic analysis is authoritative; AI suggests, interprets or drafts. Never style an AI enrichment as if it recalculated a metric.
 
+## Results workspace stability
+
+Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. The main tab strip stays visually anchored while switching views. Changing a main tab or a subordinate Data/JV mode must preserve the Results workspace anchor rather than restoring an absolute page scroll position that can make the page jump when content above changes height. The main Results tabs may be sticky within the page scroll container; they must remain responsive, locally scrollable if needed and must not create document-level horizontal overflow.
+
 ## Design and Cabinet
 
-Design is one selected experiment/variant at a time: solution chemistry, ordered stack and process. Keep the default workbench light: automatically expand domains that are missing or need researcher attention and keep already-complete domains collapsed until requested. AI proposals remain visibly separate until accepted.
+Design is one selected experiment/variant at a time: solution chemistry, ordered stack and process. Keep the default workbench light: automatically expand domains that are missing or need researcher attention and keep already-complete domains collapsed until requested. One `design.infer` run attempts every currently missing domain and uses its bounded internal retries for incomplete model output; do not introduce a second "Suggest missing" state. Only after those attempts fail should the UI offer `Retry inference`. **Exactly one** Retry inference control may be visible for the selected failed experiment: it lives in the active-experiment strip. Do not duplicate it in the AI proposal panel, error panel, bulk toolbar, or Action activity totem. AI proposals remain visibly separate until accepted.
 
-Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomplete resources can be edited but must not be presented as applicable matches. Copying Cabinet content into Design uses snapshots and must preserve chemistry/stack/process content.
+Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomplete resources can be edited but must not be presented as applicable matches. Copying Cabinet content into Design uses snapshots and must preserve chemistry/stack/process content. Cabinet belongs to the scientific canvas, not the dark navigation chrome: controls use theme-native canvas surfaces and resource kinds may use restrained chart-token accents for recognition. Keep exactly one search/create command bar, one resource-kind filter strip, one locally scrollable catalog and one detail editor, with backup/restore behind progressive disclosure. The canonical layout is **catalog above, full-width editor below**: the catalog is table-like rather than a card dashboard or permanent left/right master-detail split. This keeps the editor spacious and makes tablet/phone behavior deterministic. At narrow widths catalog rows reflow into stacked summaries and scientific fields become one column before typography shrinks. Do not add a second toolbar, dense resource cards, page-level horizontal scrolling or compatibility CSS for retired Cabinet layouts.
 
 ## Sidebar and themes
 
@@ -120,7 +124,7 @@ The primary workflow destinations are visible directly in navigation: **Upload &
 
 - At desktop widths (`>1100px`) the sidebar is persistent and occupies its own shell column. Do not turn desktop navigation into a drawer.
 - At tablet/mobile widths (`<=1100px`) the same sidebar becomes an off-canvas drawer with menu button, backdrop, close control and `Escape` support. Resize transitions must resynchronize `aria-hidden`/drawer state; never leave desktop navigation accessibility state behind after crossing the breakpoint.
-- Only **Upload & Review, Results, Design and Export** receive shared in-page **Previous / Next** navigation from `PageShell`. It sits near the top immediately after the page heading; utility pages do not show it. The route order is declared once. On phones these controls are two readable touch targets at least ~44 px high.
+- Only **Upload & Review, Results, Design and Export** receive shared in-page **Previous / Next** navigation from `PageShell`. It sits near the top immediately after the page heading; utility pages do not show it. The route order is declared once. Make the controls visually obvious without leaving the theme: surface-backed buttons, a stronger accent treatment for **Next**, readable destination labels and approximately 48 px touch height. On phones show the two destinations side by side and hide the nonessential central position pill rather than wrapping it onto a new row.
 - Do not duplicate the desktop workflow with a second large stepper; the compact workflow strip is primarily a narrow-screen orientation aid.
 
 ### Responsive ownership
@@ -128,6 +132,10 @@ The primary workflow destinations are visible directly in navigation: **Upload &
 Use one shell contract only: desktop `>1100px`, drawer/tablet `<=1100px`, phone `<=700px`. Shared phone selectors such as `.page`, `.panel-head`, `.panel-body`, `.topbar`, `.sidebar` and `.assistant-panel` must have one canonical responsive definition. Feature media queries may reflow their own grids/tables/charts, but must not re-declare global shell spacing as a late "fix". Remove retired selectors when markup changes instead of preserving compatibility CSS.
 
 Theme variants use identical markup and component structure. Theme differences belong in tokens. JSON, Markdown, charts, Assistant, export surfaces and totems inherit active theme variables; do not hard-code light/dark surfaces.
+
+The default instrument theme is intentionally hybrid: dark structural chrome around a light scientific canvas. Never set one global dark native `color-scheme` and let browser form controls leak charcoal backgrounds into the canvas. The main scientific canvas uses light native controls; Sidebar/Topbar/Assistant may opt into dark native chrome locally. The fully light theme keeps all regions light.
+
+Assistant is a local themed surface. Every embedded badge, notice, Markdown blockquote/table, code block, JSON/structured result, Action card and composer control must use Assistant tokens while inside `.assistant-panel`. Never place canvas `--surface*` or light semantic slabs inside a dark Assistant. Conversely, light theme Assistant must not retain dark code/JSON islands.
 
 ## Verification
 

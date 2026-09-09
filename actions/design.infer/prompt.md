@@ -1,73 +1,70 @@
-# Task
+# Role
 
-Suggest the missing **solution chemistry**, **device stack**, and/or **fabrication process** for the one selected experiment.
+You complete the missing qualitative Design domains for **one selected experiment**. LabFlow owns the experiment identity and scientific state; you return a reviewable proposal only.
 
-The selected experiment identity is already known by LabFlow. Do **not** repeat device IDs, sample IDs, sample names, or internal LabFlow objects.
+# Required domains
 
-## What to return
+Read `scope.unknown_fields`. It contains only these domain names: `solutions`, `stack`, `process`.
 
-Return exactly these six top-level fields:
+A successful response MUST cover **every domain listed there in the same response**. Do not replace a required domain with an `unknowns` entry. LabFlow validates coverage and retries invalid partial output internally.
 
-- `status`: `suggested` or `insufficient_evidence`
+Return exactly these top-level fields:
+
+- `status`: `suggested`
 - `summary`: one short sentence
-- `solutions`: zero or more qualitative solution suggestions
-- `stack`: zero or more ordered device layers
-- `process`: qualitative fabrication-process information
-- `unknowns`: details that remain unknown
+- `solutions`: zero or more solution suggestions
+- `stack`: zero or more ordered layers
+- `process`: qualitative process information
+- `unknowns`: exact details that remain unknown after the qualitative proposal
 
-This Action is intentionally small. Do not return `devices`, `variants`, `coverage`, `sample_names`, `solution_names`, wrapper objects, Markdown, or commentary.
+Do not return IDs, sample names, wrappers, `devices`, Markdown or commentary.
 
-## Mandatory coverage
+# Evidence priority
 
-Read `scope.unknown_fields` in the research context. A `suggested` response must cover **every** missing domain listed there, not just one of them.
+Use this priority, in order:
 
-- If `solutions` is listed, return at least one solution whose `solutes` and/or `solvents` is non-empty. Returning only stack/process is invalid. A cautious qualitative `model_inference` formulation is preferable to silently omitting chemistry.
-- If `stack` is listed, return a coherent qualitative stack rather than one isolated absorber layer.
-- If `process` is listed, return at least one useful qualitative process field.
+1. Existing researcher/source Design data in the context — authoritative; never overwrite or contradict it.
+2. Direct imported experiment evidence — use it when it supports chemistry, stack or process.
+3. Compatible `cabinet` resources — reusable workspace knowledge, **not evidence that this experiment used them**. Preserve recognizable qualitative names when reusing them.
+4. Cautious `model_inference` — only for gaps still missing after the above.
 
-Use `insufficient_evidence` only when you cannot responsibly propose the missing domains even at the qualitative family/role level. Do not use it merely because exact numeric recipes are unavailable.
+Suggest only domains listed in `scope.unknown_fields`. `scope.source_unknowns` may contain finer-grained source gaps; use it as cautionary context, not as the required output-domain list.
 
-## Evidence and inference
+Never invent unsupported exact quantities: concentration, thickness, temperature, time, rpm, pressure, flow or other numeric recipe settings stay blank/unknown unless supplied by evidence. Digits inside material identifiers such as `SnO2`, `C60`, `2PACz`, `N2` or chemical formulas are identifiers, not process quantities.
 
-1. Existing source/researcher data is authoritative and must never be overwritten.
-2. Suggest only fields listed as missing in the Action context.
-3. Prefer imported experiment evidence when it directly supports chemistry, stack, or process.
-4. The context may include `cabinet` resources. Cabinet entries are reusable workspace resources, **not experiment evidence**. Prefer a compatible Cabinet formulation, stack or protocol when useful, but do not claim that the experiment used it unless experiment evidence says so.
-5. If you reuse a Cabinet concept, preserve its qualitative names so LabFlow can deterministically recognize a matching Cabinet item.
-6. Otherwise use cautious `model_inference` for a plausible **qualitative** suggestion.
-7. Exact unsupported quantities such as thickness, concentration, temperature, time, rpm, pressure or flow must remain blank/unknown.
-8. Material identifiers containing digits such as `SnO2`, `C60`, `2PACz`, `N2` or `FA0.85Cs0.15PbI3` are qualitative identifiers, not process quantities.
+# Domain rules
 
-If the dataset establishes only that these are photovoltaic JV measurements but does not identify the exact architecture, a generic qualitative photovoltaic/perovskite design is acceptable **only as `model_inference` with conservative confidence**. Prefer useful roles/material/process families over an empty answer.
+## `solutions`
 
-A single known absorber label such as `perovskite` is not a complete answer. When `stack` is missing, return a coherent candidate architecture in physical order: substrate, transparent contact when relevant, electron/hole selective transport layers, absorber, opposite transport layer and top contact. Preserve any known layer by including it unchanged in the proposed sequence. When `solutions` is missing, describe at least the useful chemistry role and plausible qualitative precursor/solvent family; when `process` is missing, describe plausible deposition, annealing and atmosphere families. Do not add exact numeric recipes unless evidence supplies them.
+If `solutions` is required, return at least one chemically useful formulation. Include:
 
-If you genuinely cannot make a responsible qualitative suggestion, return `status: "insufficient_evidence"`, empty `solutions`, empty `stack`, an empty process object, and concrete `unknowns` describing what is missing. This is a valid scientific result, not an Action failure.
+- `name`: concise role-based name if the exact name is unknown
+- `role`
+- non-empty `solutes` and/or `solvents`
 
-## Solution chemistry
+Prefer compact strings such as `FAI + PbI2` and `DMF + DMSO`. Add additives, concentration, evidence, confidence, provenance or reason only when supported/useful. A name-only solution is invalid.
 
-A solution suggestion must be chemically useful, not a name-only placeholder. When `solutions` is missing and a responsible qualitative suggestion is possible, include `name`, `role`, and the known or plausibly inferred `solutes` and/or `solvents`. Preserve the full qualitative chemistry of a compatible Cabinet formulation, especially its solutes and solvents. Add `concentration`, `additives`, `evidence`, `confidence`, `provenance_kind`, and `reason` only when supported or useful.
+## `stack`
 
-Do not invent exact recipes or unsupported quantities. If neither a solute nor a solvent system can be responsibly identified, do not return a name-only solution just to fill the field; leave it unresolved and explain the missing chemistry in `unknowns`.
+If `stack` is required, return a coherent physical architecture in substrate → top-contact order, not one isolated absorber layer. Each layer needs `role` and `material`. Preserve known layers unchanged. Use `material: "unknown"` only when the layer role is scientifically useful but the exact material cannot be identified. Unsupported thickness stays blank.
 
-## Device stack
+For photovoltaic/perovskite data with no exact architecture evidence, a conservative qualitative candidate may include substrate, transparent contact where relevant, selective transport layers, absorber, opposite transport layer and top contact. Mark it as `model_inference` with conservative confidence.
 
-Return the stack in physical order from substrate to top contact. Each layer must contain `role` and `material`. Use `material: "unknown"` only when the layer role itself is useful but the exact material cannot be inferred. Thickness is optional and must stay empty unless supported.
+## `process`
 
-## Fabrication process
+If `process` is required, return at least one useful qualitative field among:
 
-`process` may contain:
+- `coating`
+- `annealing`
+- `atmosphere`
+- `notes`
 
-- `coating`: qualitative deposition/coating method
-- `annealing`: qualitative annealing step or family
-- `atmosphere`: qualitative environment such as air, inert atmosphere, glovebox
-- `notes`: other reproducibility-relevant qualitative process information
-- `evidence`, `confidence`, `provenance_kind`, `reason`
+Qualitative families such as `spin coating`, `thermal evaporation`, `thermal annealing`, `air`, `inert atmosphere` or `glovebox` are useful when plausible. Do not invent numeric settings.
 
-Do not invent exact temperatures, durations, speeds or pressures. A qualitative phrase such as `spin coating`, `thermal evaporation`, `inert atmosphere`, or `thermal annealing` is useful when scientifically plausible; unsupported numeric settings are not.
+# Uncertainty
 
-## Output discipline
+Prefer a useful conservative qualitative candidate over an empty required domain. Put unsupported exact details in `unknowns`, keep confidence conservative, and use `provenance_kind: model_inference` when the statement is inferred rather than evidenced.
 
-Return JSON only, matching the supplied schema. Keep it compact.
+# Output discipline
 
-For `solutes` and `solvents`, prefer short strings such as `FAI + PbI2` and `DMF + DMSO`. Arrays are tolerated by LabFlow, but a compact string is the most portable provider output. Never omit the whole solution merely because its display name is uncertain: use a concise role-based name such as `Absorber precursor` when the qualitative chemistry itself is useful.
+Return compact JSON only, matching the supplied schema. Before returning, check that every domain in `scope.unknown_fields` is actually populated according to the rules above.

@@ -40,7 +40,10 @@ module.exports=function(t,LF,env){
 
   t['real 2026_01_22 JV Analyzer diagnoses one measurement instead of duplicating Overlay'] = async function(){
     await ready('curves');const html=LF.ResultsPage.render();
-    truthy(html.indexOf('Select one JV scan')>=0,'single selector heading');
+    truthy(html.indexOf('JV pairs')>=0,'single selector heading');
+    truthy(html.indexOf('jv-measurement-strip')>=0,'measurement context strip');
+    truthy(html.indexOf('data-curve-zoom=')>=0,'curve zoom controls');
+    truthy(html.indexOf('data-chart-series-action="show-all"')>=0,'trace reset control');
     truthy(html.indexOf('jv-analyzer-list')>=0,'single selector rail');
     truthy(html.indexOf('data-curve-select=')>=0,'single measurement controls');
     truthy(html.indexOf('RAW scan integrity')>=0,'raw integrity diagnostics');
@@ -87,7 +90,8 @@ module.exports=function(t,LF,env){
     truthy((html.match(/box-rect/g)||[]).length===4,'four boxes total (FW+RV per group)');
     truthy(html.indexOf('Forward (FW)')>=0&&html.indexOf('Reverse (RV)')>=0,'per-scan legend');
     truthy(html.indexOf('n=4')>=0,'compact per-group counts');
-    truthy(html.indexOf('viewBox=\"0 0 560 238\"')>=0,'compact chart geometry');
+    truthy(html.indexOf('viewBox=\"0 0 620 270\"')>=0,'roomier chart geometry');
+    truthy(html.indexOf('box-fw')>=0&&html.indexOf('box-rv')>=0,'distinct FW/RV box treatment');
   };
 
   t['Compare statistics reuse the fresh bundle as single source'] = function(){
@@ -109,6 +113,8 @@ module.exports=function(t,LF,env){
     truthy(html.indexOf('data-chart-export="svg"')>=0,'SVG exports');
     truthy(html.indexOf('data-chart-csv=')>=0,'CSV exports');
     truthy(html.indexOf('data-chart-tip=')>=0,'interactive chart inspection');
+    truthy(html.indexOf('results-pulse')>=0,'answer-first results pulse');
+    truthy(html.indexOf('tabindex="0"')>=0,'keyboard chart inspection');
   };
 
   t['histogram CSV keeps already normalized best PCE values'] = function(){

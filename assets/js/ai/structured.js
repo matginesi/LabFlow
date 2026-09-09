@@ -253,11 +253,9 @@
     const po=processSource&&typeof processSource==='object'&&!Array.isArray(processSource)?processSource:{};
     const process={coating:designText(po.coating||po.deposition||po.method),annealing:designText(po.annealing||po.anneal),atmosphere:designText(po.atmosphere||po.environment),notes:designText(po.notes||po.details),evidence:clip(po.evidence||po.source,500),confidence:designConfidence(po.confidence,0.5),provenance_kind:normalizeDesignSource(po.provenance_kind||po.provenanceKind||po.source_kind,'model_inference'),reason:clip(po.reason||po.rationale||'Model suggestion for researcher review.',180)};
     const processUseful=[process.coating,process.annealing,process.atmosphere,process.notes].some(function(x){return !!designText(x);});
-    const explicit=String(v.status||v.inference_status||v.inferenceStatus||'').trim().toLowerCase();
-    const status=explicit==='insufficient_evidence'?'insufficient_evidence':((solutions.length||stack.length||processUseful)?'suggested':'insufficient_evidence');
     return{
-      status:status,
-      summary:clip(v.summary||v.assessment||v.description||(status==='insufficient_evidence'?'The available experiment evidence is insufficient for a reliable Design suggestion.':'Design suggestion ready for review.'),260),
+      status:'suggested',
+      summary:clip(v.summary||v.assessment||v.description||'Design suggestion ready for validation and review.',260),
       solutions:solutions,
       stack:stack,
       process:process,

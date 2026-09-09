@@ -93,14 +93,12 @@ module.exports=function(t,LF){
     LF.DesignModel=oldModel;
   };
 
-  t['Design validation records insufficient evidence instead of failing an empty scientific suggestion']=function(){
+  t['Design validation retries an empty scientific suggestion instead of creating a second missing state']=function(){
     const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
     const proposal={status:'insufficient_evidence',summary:'Not enough source context',solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[],provenance_kind:'model_inference',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
-    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});
-    assert(out.status==='insufficient_evidence','scientific uncertainty is a valid result');
-    assert(out.validation.applicableFields.length===0,'no fields are falsely marked applicable');
-    assert(out.unknowns.length>=1,'missing context stays explicit');
-    LF.DesignModel=oldModel;
+    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){err=e;}finally{LF.DesignModel=oldModel;}
+    assert(err&&err.isContract===true,'empty Design output must trigger the Action retry path');
+    assert((err.validationErrors||[]).some(function(x){return /stack/i.test(String(x));}),'retry feedback names the missing domain');
   };
 
   t['Design validation keeps qualitative model inference reviewable and exact quantities non-automatic']=function(){
@@ -244,19 +242,21 @@ module.exports=function(t,LF){
     assert(Object.keys(map(exp)).length===0,'accepted queue should be empty');
   };
 
-  t['An insufficient-evidence Design result does not remove an independently stored success']=function(){
+  t['A failed sparse Design attempt does not remove an independently stored success']=function(){
     const oldModel=LF.DesignModel,oldContext=LF.ContextBuilder;
     LF.DesignModel={normalizeProposal:function(v){return v;}};LF.ContextBuilder={pack:function(){return{};}};
     const exp={design:{solutions:[],devices:[{id:'a',sampleNames:[],solutionIds:[],stack:[]},{id:'b',sampleNames:[],solutionIds:[],stack:[]}]}};
-    const good={status:'suggested',summary:'A',solutions:[],devices:[{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]};
-    const goodCtx={exp:exp,params:{deviceId:'a'},sourceRevision:1,outputs:{collect:{device_id:'a',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:good},lastResult:good};
-    goodCtx.outputs.infer=LF.ActionSteps['design.validate-coverage'](goodCtx);LF.ActionSteps['design.store-proposal'](goodCtx);
-    const sparse={status:'insufficient_evidence',summary:'B lacks context',solutions:[],devices:[{sample_names:[],stack:[],provenance_kind:'model_inference',confidence:.5,reason:'unknown'}],unknowns:['stack']};
-    const sparseCtx={exp:exp,params:{deviceId:'b'},sourceRevision:1,outputs:{collect:{device_id:'b',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:sparse},lastResult:sparse};
-    sparseCtx.outputs.infer=LF.ActionSteps['design.validate-coverage'](sparseCtx);LF.ActionSteps['design.store-proposal'](sparseCtx);
-    assert(map(exp).a&&status(exp,'a').state==='suggested','successful first proposal remains stored');
-    assert(map(exp).b&&status(exp,'b').state==='insufficient_evidence','scientific uncertainty is stored separately without a technical error');
-    LF.DesignModel=oldModel;LF.ContextBuilder=oldContext;
+    try{
+      const good={status:'suggested',summary:'A',solutions:[],devices:[{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]};
+      const goodCtx={exp:exp,params:{deviceId:'a'},sourceRevision:1,outputs:{collect:{device_id:'a',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:good},lastResult:good};
+      goodCtx.outputs.infer=LF.ActionSteps['design.validate-coverage'](goodCtx);LF.ActionSteps['design.store-proposal'](goodCtx);
+      const sparse={status:'insufficient_evidence',summary:'B lacks context',solutions:[],devices:[{sample_names:[],stack:[],provenance_kind:'model_inference',confidence:.5,reason:'unknown'}],unknowns:['stack']};
+      const sparseCtx={exp:exp,params:{deviceId:'b'},sourceRevision:1,outputs:{collect:{device_id:'b',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:sparse},lastResult:sparse};
+      let err=null;try{LF.ActionSteps['design.validate-coverage'](sparseCtx);}catch(e){err=e;}
+      assert(err&&err.isContract===true,'sparse second experiment must stay in retry flow');
+      assert(map(exp).a&&status(exp,'a').state==='suggested','successful first proposal remains stored');
+      assert(!map(exp).b,'failed retry candidate is not stored as a second missing state');
+    }finally{LF.DesignModel=oldModel;LF.ContextBuilder=oldContext;}
   };
 
   t['Name-only or role-only solution does not satisfy Design chemistry']=function(){
@@ -290,11 +290,11 @@ module.exports=function(t,LF){
     assert(device.stack.length===5,'accepted stack must be applied');
   };
 
-  t['Name-only Design Action chemistry is insufficient evidence for a missing solution']=function(){
+  t['Name-only Design Action chemistry triggers an internal retry for a missing solution']=function(){
     const proposal={status:'suggested',summary:'placeholder',solutions:[{name:'Perovskite ink'}],stack:[],process:{},unknowns:[]};
-    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions']},infer:proposal},lastResult:proposal});
-    assert(out.status==='insufficient_evidence','name-only chemistry must not pass semantic validation');
-    assert(out.validation.applicableFields.length===0,'name-only chemistry must not count as applicable');
+    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
+    assert(err&&err.isContract===true,'name-only chemistry must stay in retry flow');
+    assert((err.validationErrors||[]).some(function(x){return /solutes.*solvents/i.test(String(x));}),'retry asks for useful chemistry');
   };
 
   t['Partial Design suggestion retries when solution chemistry is still missing']=function(){

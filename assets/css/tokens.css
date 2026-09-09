@@ -105,6 +105,13 @@
   --space-5: 20px;
   --space-6: 24px;
 
+  /* Shared density contract. Pages may reflow, but should not invent a new rhythm. */
+  --page-gap: 9px;
+  --panel-head-py: 7px;
+  --panel-head-px: 9px;
+  --panel-body-pad: 9px;
+  --task-gap: 8px;
+
   --font-xs: 11px;
   --font-sm: 12px;
   --font-md: 13px;

@@ -36,9 +36,11 @@ module.exports=function(t){
     assert(context.includes('action_catalog=actionCatalog(exp)'),'Action catalog is part of Assistant context');
     assert(context.includes('recent_actions=recentActionEvents(exp)'),'recent Action outcomes are separately available to later Assistant turns');
     assert(prompt.includes('Treat `action_catalog` as the authoritative Action catalog'),'prompt uses Action catalog');
-    assert(design.includes('design-top-grid'),'Design selector and active experiment share a compact top workbench');
-    assert(css.includes('.design-page .design-top-grid'),'Design workbench layout is styled');
-    assert(css.includes('.design-page .panel-head{min-height:40px!important'),'Design has route-local compact panel density');
+    assert(design.includes('design-experiment-workbench'),'Design selector and active experiment share one compact workbench');
+    assert(design.includes('design-active-strip'),'active experiment is a compact strip rather than a duplicate panel');
+    assert(!design.includes('SELECTED EXPERIMENT'),'legacy selected-experiment hero is removed');
+    assert(css.includes('.design-active-strip'),'compact active-experiment strip is styled');
+    assert(css.includes('.design-page .panel-head{min-height:44px!important'),'Design has readable route-local panel density');
   };
   return t;
 };

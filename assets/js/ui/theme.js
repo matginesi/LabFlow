@@ -23,7 +23,10 @@
   function apply(theme, persist) {
     const next = normalize(theme);
     document.documentElement.dataset.theme = next;
-    document.documentElement.style.colorScheme = next === 'light' ? 'light' : 'dark';
+    // LabFlow's instrument theme uses dark chrome around a light scientific canvas.
+    // Component-local CSS sets dark color-scheme only on chrome/Assistant; the root
+    // stays light so native controls in forms/Cabinet never turn charcoal by accident.
+    document.documentElement.style.colorScheme = 'light';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = next === 'light' ? '#f8faf9' : '#0b141d';
     if (persist !== false && LF.Storage && LF.Storage.saveUiSettings) {

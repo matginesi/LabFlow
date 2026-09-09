@@ -33,7 +33,7 @@ Canonical naming is deterministic. If a scientific token is genuinely ambiguous,
 
 ## `MODEL_OUTPUT_INVALID`
 
-This is a technical structured/semantic contract failure. Logs now include invalid JSON/schema/semantic details where available. It is different from `design.infer` returning `insufficient_evidence`, which is successful and shown as **Needs context**.
+This is a structured/semantic contract failure. Logs include invalid JSON/schema/semantic details where available. For `design.infer`, incomplete coverage is retried inside the same Action; only after bounded retries are exhausted does the selected experiment expose **Retry inference**.
 
 ## `MODEL_OUTPUT_TRUNCATED`
 
@@ -53,7 +53,7 @@ Current LabFlow should display only the basename in user-visible model/log surfa
 
 ## Design says Needs context
 
-This is not an error. It means the model returned `insufficient_evidence` for the selected experiment. Add/confirm Design evidence manually or leave the field unresolved.
+For Design there is no separate successful “insufficient evidence” state. The Action attempts the missing domains and retries incomplete output internally. If all attempts fail, review the available evidence manually or use **Retry inference** for another provider run.
 
 ## What to copy when reporting a bug
 

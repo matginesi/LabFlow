@@ -50,8 +50,8 @@ module.exports=function(t,LF,env){
     assert(/Solutions · solvents · solutes/.test(html)&&/Layer stack/.test(html)&&/Fabrication process/.test(html),'three researcher-facing Design editors should be visible');
     assert(/design-chem-card/.test(html)&&/design-stack-diagram/.test(html),'solution chemistry and stack should have graphical views');
     assert((html.match(/data-design-card=/g)||[]).length===clean.design.devices.length,'every experimental variant should have one navigator card');
-    assert(/data-action-sequence="design-all"/.test(html)&&/Suggest missing for all/.test(html),'one global Suggest all control should exist');
-    assert(/Accept all suggestions/.test(html),'global acceptance control should exist');
+    assert(/data-action-sequence="design-all"/.test(html)&&/Complete all missing with AI/.test(html),'one bulk completion control should exist when multiple experiments need work');
+    assert(/Accept all/.test(html),'global acceptance control should exist');
     assert(!/Proposal confidence/.test(html)&&!/NEXT STEP/.test(html),'old complex Design state-machine workflow should be absent');
 
     const current=await LF.Importer.parseDataset(fixture('2026_01_22.zip'),'dataset.zip'),ui2={};LF.DesignModel.ensure(current,ui2);const selected=current.design.devices[0],html2=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
@@ -62,7 +62,10 @@ module.exports=function(t,LF,env){
     LF.ActionData.setProposal(current,'design.infer',selected.id,{targetDeviceId:selected.id,summary:'One suggestion',solutions:[{name:'Candidate',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference'}],devices:[{stack:[{role:'ETL',material:'SnO2'}]}],unknowns:[]});
     const html3=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
     assert(/Review before accepting/.test(html3)&&/Accept experiment/.test(html3),'pending AI suggestion should have one explicit per-experiment acceptance path');
-    assert(/Retry AI/.test(html3)&&/Discard/.test(html3),'suggestion can be retried or discarded without changing accepted work');
+    assert(!/Retry AI|Retry inference/.test(html3)&&/Discard/.test(html3),'a valid proposal is accepted or discarded; it does not expose a duplicate retry control');
+    LF.ActionData.removeProposal(current,'design.infer',selected.id);LF.ActionData.setStatus(current,'design.infer',selected.id,{state:'error',message:'provider failed after internal retries'});
+    const html4=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
+    assert((html4.match(/Retry inference/g)||[]).length===1,'an exhausted selected experiment must expose exactly one Retry inference control');
   };
   t['Design source projection is idempotent and does not overwrite researcher edits on render']=async function(){
     const exp=await LF.Importer.parseDataset(fixture('01_PRECISO_PERFETTO_COMPLETO.zip'),'clean.zip'),ui={};LF.DesignModel.ensure(exp,ui);

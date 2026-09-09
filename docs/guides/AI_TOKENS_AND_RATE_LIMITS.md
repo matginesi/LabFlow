@@ -31,7 +31,7 @@ Provider throttling/429 responses are not silently replayed by the transport.
 
 ## Bulk Design
 
-“Suggest all” is a sequence of independent `design.infer` runs. Completed suggestions remain stored if a later experiment fails. Provider rate limiting stops subsequent requests rather than creating hidden background traffic.
+**Complete all missing with AI** is a sequence of independent `design.infer` runs for multiple incomplete experiments. Each run attempts all missing domains and uses bounded internal retries. Completed suggestions remain stored if a later experiment fails. Provider rate limiting stops subsequent requests rather than creating hidden background traffic.
 
 ## Diagnosing local-model truncation
 

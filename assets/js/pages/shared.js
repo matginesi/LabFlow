@@ -41,9 +41,9 @@
   }
 
   function navigationButton(direction,item,disabled){
-    const back=direction==='previous',label=back?'Previous':'Next',icon=back?'arrow-left':'arrow-right';
+    const back=direction==='previous',label=back?'Previous':'Next',glyph=back?'←':'→';
     if(!item)return '<span class="page-nav-spacer" aria-hidden="true"></span>';
-    return '<button class="button page-nav-button '+(back?'page-nav-previous':'page-nav-next')+'" type="button" data-route="'+item.id+'" '+(disabled?'disabled aria-disabled="true"':'')+'><span data-icon="'+icon+'" aria-hidden="true"></span><span class="page-nav-copy"><small>'+label+'</small><strong>'+C.escapeHtml(item.short||item.label)+'</strong></span></button>';
+    return '<button class="button page-nav-button '+(back?'page-nav-previous':'page-nav-next')+'" type="button" data-route="'+item.id+'" '+(disabled?'disabled aria-disabled="true"':'')+'><span class="page-nav-arrow" aria-hidden="true">'+glyph+'</span><span class="page-nav-copy"><small>'+label+'</small><strong>'+C.escapeHtml(item.short||item.label)+'</strong></span></button>';
   }
 
   function pageNavigation(route) {

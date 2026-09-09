@@ -14,8 +14,7 @@
     "status": {
       "type": "string",
       "enum": [
-        "suggested",
-        "insufficient_evidence"
+        "suggested"
       ]
     },
     "summary": {

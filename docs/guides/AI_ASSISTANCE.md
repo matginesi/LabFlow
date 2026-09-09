@@ -17,7 +17,7 @@ ZIP parsing, naming normalization, safe automatic cleanup, hierarchy validation 
 `dataset.resolve-ambiguities` suggests mappings/classifications only when deterministic rules cannot settle semantic meaning. Suggestions are stored for review, not silently applied.
 
 ### Design suggestions
-`design.infer` proposes missing qualitative solution chemistry, a complete device architecture and/or fabrication process for one incomplete experiment. One absorber layer is still incomplete. `Suggest all` runs the same Action sequentially. `insufficient_evidence` is a normal **Needs context** outcome.
+`design.infer` completes missing qualitative solution chemistry, a complete device architecture and/or fabrication process for one incomplete experiment. One absorber layer is still incomplete. One run attempts every missing domain; incomplete model output is retried internally. For multiple experiments, **Complete all missing with AI** runs the same Action sequentially. If bounded retries are exhausted, that experiment becomes a retryable Action error rather than a second “Suggest missing” / “Needs context” state.
 
 ### Results interpretation
 `results.interpret` produces a structured, evidence-bounded interpretation of deterministic statistics/findings.

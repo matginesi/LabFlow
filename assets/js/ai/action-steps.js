@@ -178,22 +178,12 @@
          That made chemistry disappear whenever the model returned stack/process first.
          For a suggested result, require every currently-missing domain. The thrown
          contract error feeds the exact gaps back into the bounded AI retry. */
-      if(missingRequired.length&&applicable.length){
-        const labels=missingRequired.map(function(field){return field==='solutions'?'solutions: return at least one formulation with non-empty solutes and/or solvents':field==='stack'?'stack: return a coherent qualitative device stack':'process: return at least one qualitative coating/annealing/atmosphere/notes field';});
-        const err=new Error('Design suggestion is partial. Missing required domain(s): '+missingRequired.join(', ')+'.');
+      if(missingRequired.length){
+        const labels=missingRequired.map(function(field){return field==='solutions'?'solutions: return at least one qualitative formulation with non-empty solutes and/or solvents':field==='stack'?'stack: return a coherent qualitative device stack':'process: return at least one qualitative coating/annealing/atmosphere/notes field';});
+        const err=new Error('Design inference did not cover every missing domain: '+missingRequired.join(', ')+'.');
         err.code='MODEL_OUTPUT_INVALID';err.isContract=true;err.validationErrors=labels;throw err;
       }
-      if(!missingRequired.length&&applicable.length){
-        proposal.status='suggested';
-      }else{
-        proposal.status='insufficient_evidence';
-        proposal.unknowns=proposal.unknowns||[];
-        required.forEach(function(field){
-          const key=String(field);const label=key==='solutions'?'Exact solution chemistry is not established by the available experiment evidence.':key==='process'?'Exact fabrication-process information is not established by the available experiment evidence.':'Exact device-stack materials are not established by the available experiment evidence.';
-          if(!proposal.unknowns.includes(label))proposal.unknowns.push(label);
-        });
-        if(!String(proposal.summary||'').trim()||/ready for review/i.test(String(proposal.summary)))proposal.summary='The available experiment evidence is insufficient for a reliable qualitative Design suggestion.';
-      }
+      proposal.status='suggested';
       proposal.validation={targetDeviceId:String(scope.device_id||''),manualVariant:!!scope.manual_variant,applicableFields:applicable,unresolvedCount:(proposal.unknowns||[]).length};
       return proposal;
     },
@@ -203,7 +193,7 @@
       p.sourceRevision=ctx.sourceRevision;p.targetDeviceId=deviceId;p.generatedAt=new Date().toISOString();p.cabinetMatches=LF.Cabinet&&LF.Cabinet.matchProposal?LF.Cabinet.matchProposal(p):[];
       if(LF.ContextBuilder&&LF.ContextBuilder.pack){const pack=LF.ContextBuilder.pack('design',{exp:ctx.exp,params:{deviceId:deviceId}});if(pack&&pack.design_evidence_summary)p.contextBasis=pack.design_evidence_summary;}
       p.applicationSummary=designApplicationSummary(p);
-      if(deviceId){LF.ActionData.setProposal(ctx.exp,'design.infer',deviceId,p);LF.ActionData.setStatus(ctx.exp,'design.infer',deviceId,{state:p.status==='insufficient_evidence'?'insufficient_evidence':'suggested',updatedAt:p.generatedAt,message:p.status==='insufficient_evidence'?String(p.summary||'Insufficient evidence'):''});}
+      if(deviceId){LF.ActionData.setProposal(ctx.exp,'design.infer',deviceId,p);LF.ActionData.setStatus(ctx.exp,'design.infer',deviceId,{state:'suggested',updatedAt:p.generatedAt,message:''});}
       return{stored:true,status:p.status,targetDeviceId:deviceId,devices:p.devices.length,solutions:p.solutions.length,unresolvedCount:(p.unknowns||[]).length};
     }
   };

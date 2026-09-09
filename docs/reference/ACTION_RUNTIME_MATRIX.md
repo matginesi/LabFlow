@@ -15,7 +15,7 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 |---|---|---|---:|---:|---:|---|---:|
 | assistant.chat | assistant | ai | 12000 | 650 | 2048 | 1 semantic | 90 s |
 | dataset.resolve-ambiguities | researcher | hybrid | 7000 | 800 | 1800 | 1 semantic | 120 s |
-| design.infer | researcher | hybrid | 6500 | 650 | 1600 | 2 semantic | 90 s |
+| design.infer | researcher | hybrid | 7600 | 900 | 2200 | 2 semantic | 100 s |
 | results.compare | researcher | hybrid | 7000 | 520 | 1200 | 1 semantic | 120 s |
 | results.interpret | researcher | hybrid | 9000 | 600 | 1400 | 1 semantic | 120 s |
 

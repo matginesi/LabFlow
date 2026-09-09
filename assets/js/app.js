@@ -37,6 +37,14 @@
     if(!root)return;const apply=function(){scrollMemoryNodes(root).forEach(function(el){const state=scrollMemory.get(scrollNodeKey(el,root,route));if(!state)return;if(el.scrollTop!==undefined)el.scrollTop=Math.min(state.top,Math.max(0,el.scrollHeight-el.clientHeight));if(el.scrollLeft!==undefined)el.scrollLeft=Math.min(state.left,Math.max(0,el.scrollWidth-el.clientWidth));});};apply();if(window.requestAnimationFrame)window.requestAnimationFrame(apply);
   }
 
+  function renderKeepingAnchor(selector){
+    const main=document.getElementById('main'),anchor=main&&main.querySelector(selector),before=anchor&&anchor.getBoundingClientRect?anchor.getBoundingClientRect().top:null;
+    render();
+    if(before==null||!main)return;
+    const restore=function(){const next=main.querySelector(selector);if(!next||!next.getBoundingClientRect)return;const delta=next.getBoundingClientRect().top-before;if(Math.abs(delta)>1)main.scrollTop+=delta;};
+    if(window.requestAnimationFrame)window.requestAnimationFrame(restore);else restore();
+  }
+
   function activateDesignProposal(deviceId){const exp=S.state.experiment;if(!exp||!LF.ActionData)return null;return LF.ActionData.proposal(exp,'design.infer',String(deviceId||''));}
   function selectedDesignProposal(){return activateDesignProposal(S.state.selectedDesignDeviceId);}
   function ambiguityPlan(){return hasExperiment()&&LF.ActionData?LF.ActionData.proposal(S.state.experiment,'dataset.resolve-ambiguities'):null;}
@@ -50,7 +58,8 @@
       selectedDeviceId: S.state.selectedDesignDeviceId,
       stepper: experimentStepper(),
       pageHead: pageHead,
-      badge: badge
+      badge: badge,
+      workflowHead: workflowHead
     });
   }
 
@@ -187,7 +196,7 @@
       exp.nomad=exp.nomad||{validation:null,upload:null,mappingPlan:null};
       S.setExperiment(exp);
       refreshPipeline(exp,'import');
-      S.state.resultsTab='overview';S.state.resultsDataMode='all';S.state.resultsJvMode='single';S.state.resultsOverviewMetric='eff';S.state.resultsOverviewDirection='best';S.state.resultsOverviewStatistic='median';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveOverlaySelection=[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';
+      S.state.resultsTab='overview';S.state.resultsDataMode='all';S.state.resultsJvMode='single';S.state.resultsOverviewMetric='eff';S.state.resultsOverviewDirection='best';S.state.resultsOverviewStatistic='median';S.state.curveSelection=exp.measurements[0]?[exp.measurements[0].id]:[];S.state.curveOverlaySelection=[];S.state.curveView='all';S.state.curveGroup='all';S.state.curveDirection='both';S.state.curveEligibleOnly=false;S.state.curveSearch='';S.state.curveZoom=1;S.state.pceDistributionZoom=1;
       const briefMode='deterministic';
       LF.UI.activityUpdate({stage:'Validating LabFlow Data',progress:.82,message:'Deterministic pipeline complete · no AI request during import',details:{Experiments:(exp.experiments||[]).length,Samples:exp.samples.length,Runs:(exp.runs||[]).length,Measurements:exp.measurements.length,Pipeline:exp.pipeline&&exp.pipeline.status||'ready'}});
       S.setRoute('experiment-import');
@@ -233,6 +242,7 @@
         if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.docsSlug=docLink.dataset.docSlug;render();return;}
         const seriesToggle=e.target.closest('[data-chart-series-toggle]');if(seriesToggle){const wrap=seriesToggle.closest('.svg-chart-wrap')||seriesToggle.closest('.panel')||document,series=seriesToggle.dataset.chartSeriesToggle,next=!seriesToggle.classList.contains('active');seriesToggle.classList.toggle('active',next);seriesToggle.setAttribute('aria-pressed',String(next));wrap.querySelectorAll('[data-chart-series="'+series+'"]') .forEach(function(node){node.classList.toggle('chart-series-hidden',!next);});return;}
+        const seriesAction=e.target.closest('[data-chart-series-action]');if(seriesAction){const wrap=seriesAction.closest('.panel')||document,show=seriesAction.dataset.chartSeriesAction!=='hide-all';wrap.querySelectorAll('[data-chart-series-toggle]').forEach(function(button){button.classList.toggle('active',show);button.setAttribute('aria-pressed',String(show));});wrap.querySelectorAll('[data-chart-series]').forEach(function(node){node.classList.toggle('chart-series-hidden',!show);});return;}
         const chartExport=e.target.closest('[data-chart-export]');if(chartExport){const format=chartExport.dataset.chartExport,id=chartExport.dataset.chartId,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(id||'chart');if(format==='svg')LF.ResultsPage.exportSvg(id,base+'.svg');else LF.ResultsPage.exportCanvas(id,base+'.png');return;}
         const chartCsv=e.target.closest('[data-chart-csv]');if(chartCsv){const kind=chartCsv.dataset.chartCsv,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(kind||'chart');LF.ResultsPage.exportChartCsv(kind,base+'.csv');return;}
         const copyDoc=e.target.closest('[data-copy-doc]');if(copyDoc){const ok=C.copyText(LF.DocsPage.markdownFor(copyDoc.dataset.copyDoc));LF.UI.toast(ok?'Markdown copied.':'Could not copy Markdown.',ok?'success':'warning');return;}
@@ -240,6 +250,7 @@
         if(e.target.closest('[data-retry-page]')){render();return;}
         if(e.target.closest('[data-rebuild-derived]')){try{if(!hasExperiment())throw new Error('No experiment is loaded.');refreshPipeline(S.state.experiment,'page-recovery:'+S.state.route);render();LF.UI.toast('Derived data rebuilt from the current LabFlow Data.','success');}catch(err){Log.error('render.recovery-failed',{route:S.state.route,error:err});LF.UI.toast(err.message||String(err),'error');}return;}
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.pceDistributionZoom)||1));S.state.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
+        const curveZoom=e.target.closest('[data-curve-zoom]');if(curveZoom){const mode=curveZoom.dataset.curveZoom,current=Math.max(1,Math.min(4,Number(S.state.curveZoom)||1));S.state.curveZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);renderKeepingAnchor('.results-main-tabs');return;}
         if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted LabFlow session, action history, chat, Design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.toast('Session reset. Ready for a new ZIP.','info');return;}
         if(e.target.closest('#exportLabFlowZip')){await exportLabFlowZip();return;}
         if(e.target.closest('#exportNomadEntry')){exportNomadEntry();return;}
@@ -257,10 +268,10 @@
         const themeChoice=e.target.closest('[data-theme-choice]');if(themeChoice){LF.Theme.apply(themeChoice.dataset.themeChoice);return;}
         if(e.target.closest('#resultInspectorClose')){LF.ResultsPage.closeResultInspector();return;}
 
-        const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;render();return;}
-        const dataMode=e.target.closest('[data-results-data-mode]');if(dataMode){S.state.resultsDataMode=dataMode.dataset.resultsDataMode||'all';S.state.resultsTab='all';render();return;}
-        const jvMode=e.target.closest('[data-results-jv-mode]');if(jvMode){S.state.resultsJvMode=jvMode.dataset.resultsJvMode||'single';S.state.curveView=S.state.resultsJvMode==='overlay'?'overlay':'single';S.state.resultsTab='curves';render();return;}
-        const quick=e.target.closest('[data-results-quick]');if(quick){const q=quick.dataset.resultsQuick;if(q==='jv'){S.state.resultsJvMode='single';S.state.curveView='single';S.state.resultsTab='curves';}else if(q==='compare'){S.state.resultsTab='boxplots';}else if(q==='warnings'){S.state.resultsDataMode='warnings';S.state.resultsTab='all';}else if(q==='top'){S.state.resultsDataMode='top';S.state.resultsTab='all';}else{S.state.resultsDataMode='all';S.state.resultsTab='all';}render();return;}
+        const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.resultsTab=resultTab.dataset.resultTab;renderKeepingAnchor('.results-main-tabs');return;}
+        const dataMode=e.target.closest('[data-results-data-mode]');if(dataMode){S.state.resultsDataMode=dataMode.dataset.resultsDataMode||'all';S.state.resultsTab='all';renderKeepingAnchor('.results-main-tabs');return;}
+        const jvMode=e.target.closest('[data-results-jv-mode]');if(jvMode){S.state.resultsJvMode=jvMode.dataset.resultsJvMode||'single';S.state.curveView=S.state.resultsJvMode==='overlay'?'overlay':'single';S.state.resultsTab='curves';renderKeepingAnchor('.results-main-tabs');return;}
+        const quick=e.target.closest('[data-results-quick]');if(quick){const q=quick.dataset.resultsQuick;if(q==='jv'){S.state.resultsJvMode='single';S.state.curveView='single';S.state.resultsTab='curves';}else if(q==='compare'){S.state.resultsTab='boxplots';}else if(q==='warnings'){S.state.resultsDataMode='warnings';S.state.resultsTab='all';}else if(q==='top'){S.state.resultsDataMode='top';S.state.resultsTab='all';}else{S.state.resultsDataMode='all';S.state.resultsTab='all';}renderKeepingAnchor('.results-main-tabs');return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.selectedDesignDeviceId);render();return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.settingsSection=settingsSection.dataset.settingsSection;render();return;}
@@ -327,7 +338,7 @@
         const cabinetUseDesign=e.target.closest('[data-cabinet-use-design]');if(cabinetUseDesign){try{if(!hasExperiment()){LF.UI.toast('Upload an experiment before using Cabinet resources in Design.','info');return;}const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.selectedDesignDeviceId);})||(exp.design.devices||[])[0],item=LF.Cabinet.get(cabinetUseDesign.dataset.cabinetUseDesign);if(!dev||!item){LF.UI.toast('No Design experiment is available.','warning');return;}if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with “'+item.name+'”?',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}const out=LF.Cabinet.applyToDesign(exp,dev.id,item.id,{replace:true});if(out.changed){S.state.selectedDesignDeviceId=dev.id;markModified('design');S.setRoute('experiment-design');LF.UI.toast('Cabinet snapshot applied to '+(dev.name||'Design')+'.','success');}else LF.UI.toast('The selected Cabinet resource adds no new Design values.','info');}catch(err){LF.UI.toast('Cabinet resource could not be applied: '+(err&&err.message||String(err)),'error');}return;}
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD validation refreshed.','success');return;}
 
-        const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.curveSelection=[openCurve.dataset.openSingleCurve];S.state.curveView='single';S.state.resultsTab='curves';render();return;}
+        const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.curveSelection=[openCurve.dataset.openSingleCurve];S.state.curveView='single';S.state.resultsTab='curves';renderKeepingAnchor('.results-main-tabs');return;}
         const row=e.target.closest('[data-measurement-row]');if(row){S.state.selectedMeasurementId=row.dataset.measurementRow;const inlineDesktop=!!row.closest('.results-master-detail')&&window.matchMedia&&window.matchMedia('(min-width: 1181px)').matches;if(inlineDesktop){S.state.resultInspectorId=null;render();}else{S.state.resultInspectorId=row.dataset.measurementRow;LF.ResultsPage.renderResultInspector();}return;}
         const resolve=e.target.closest('[data-resolve-finding]');if(resolve){const f=S.state.experiment.findings.find(function(x){return x.id===resolve.dataset.resolveFinding;});if(f){f.status='resolved';Log.info('validation.finding-resolved',{id:f.id,code:f.code});markModified('validation');render();}return;}
 

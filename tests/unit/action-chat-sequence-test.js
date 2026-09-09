@@ -90,19 +90,6 @@ module.exports=function(t,LF){
     assert(env.finishes[0].message==='Action completed.','totem should report a normal completed suggestion');
   };
 
-  t['Design inference insufficient evidence is a successful Needs context state']=async function(){
-    const env=loadUi(function(id,cb){
-      const proposal={status:'insufficient_evidence',targetDeviceId:cb.params.deviceId,summary:'Source metadata does not identify solution chemistry or layer materials.',solutions:[],devices:[{stack:[]}],unknowns:['solution chemistry','device stack']};
-      const exp=LF.State.state.experiment;LF.ActionData.setProposal(exp,'design.infer',cb.params.deviceId,proposal);
-      return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true,status:'insufficient_evidence'},requestMeta:{}});
-    });
-    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
-    const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
-    assert(out.status==='done','insufficient evidence remains a completed Action');
-    assert(LF.ActionData.status(exp,'design.infer','d1').state==='insufficient_evidence','experiment is marked Needs context rather than Error');
-    assert(env.errors.length===0,'scientific uncertainty must not open technical retry UI');
-  };
-
   t['Design inference failure becomes a retryable per-experiment state']=async function(){
     const env=loadUi(function(){return Promise.resolve({status:'error',actionId:'design.infer',message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});});
     const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
@@ -110,10 +97,11 @@ module.exports=function(t,LF){
     assert(out.status==='error','failed provider request should stay an Action error');
     assert(LF.ActionData.status(exp,'design.infer','d1').state==='error','failure should be stored only on the selected experiment');
     assert(/provider failed/.test(LF.ActionData.status(exp,'design.infer','d1').message),'retry state should retain a useful reason');
-    assert(env.errors.length===1,'normal Action retry UI remains available');
+    assert(env.errors.length===1,'Design failure should still be visible in the Action totem');
+    assert(!env.errors[0].options.onRetry&&!env.errors[0].options.retryLabel,'Design totem must not duplicate the page-level Retry inference control');
   };
 
-  t['Design Suggest all runs the same design.infer Action independently for every experiment']=async function(){
+  t['Design complete-all runs the same design.infer Action independently for every experiment']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){
       calls.push({id:id,deviceId:cb.params.deviceId});
@@ -127,13 +115,13 @@ module.exports=function(t,LF){
     LF.ActionData.clear(exp,'design.infer');
     const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
     assert(out&&out.status==='done'&&out.failed===2,'ordinary per-experiment failures become retry items');
-    assert(calls.length===2&&calls.every(function(x){return x.id==='design.infer';}),'Suggest all must reuse design.infer, never a batch Action');
+    assert(calls.length===2&&calls.every(function(x){return x.id==='design.infer';}),'Complete-all must reuse design.infer, never a batch Action');
     assert(calls[0].deviceId==='d1'&&calls[1].deviceId==='d2','each experiment gets its own Action context');
     assert(LF.ActionData.status(exp,'design.infer','d1').state==='error'&&LF.ActionData.status(exp,'design.infer','d2').state==='error','failures are isolated per experiment');
     assert(env.finishes.length===1,'sequence completes its own totem');
   };
 
-  t['Design Suggest all preserves earlier successes and stops after first provider rate limit']=async function(){
+  t['Design complete-all preserves earlier successes and stops after first provider rate limit']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){
       const deviceId=cb.params.deviceId;calls.push(deviceId);const exp=LF.State.state.experiment;
@@ -156,7 +144,7 @@ module.exports=function(t,LF){
     assert(env.finishes.length===1&&/No further requests were sent/.test(String(env.finishes[0].response||'')),'totem explains stop');
   };
 
-  t['Design Suggest all continues after a malformed structured output and stores later successes']=async function(){
+  t['Design complete-all continues after an exhausted malformed output and stores later successes']=async function(){
     const calls=[];
     const env=loadUi(function(id,cb){
       const deviceId=cb.params.deviceId;calls.push(deviceId);const exp=LF.State.state.experiment;
@@ -178,29 +166,6 @@ module.exports=function(t,LF){
     assert(env.finishes.length===1&&/1 experiment suggested/.test(String(env.finishes[0].response||'')),'summary reports mixed outcome');
   };
 
-  t['Design Suggest all counts insufficient evidence separately from technical failures']=async function(){
-    const calls=[];
-    const env=loadUi(function(id,cb){
-      const deviceId=cb.params.deviceId,exp=LF.State.state.experiment;calls.push(deviceId);
-      if(deviceId==='d1'){
-        const proposal={status:'insufficient_evidence',targetDeviceId:deviceId,summary:'Need source context',solutions:[],devices:[{stack:[]}],unknowns:['stack']};
-        LF.ActionData.setProposal(exp,'design.infer',deviceId,proposal);
-        return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true,status:'insufficient_evidence'},requestMeta:{}});
-      }
-      const proposal={status:'suggested',targetDeviceId:deviceId,summary:'Qualitative stack proposed',solutions:[],devices:[{stack:[{role:'absorber',material:'perovskite'}]}],unknowns:[]};
-      LF.ActionData.setProposal(exp,'design.infer',deviceId,proposal);
-      return Promise.resolve({status:'done',actionId:id,aiOutput:proposal,result:{stored:true,status:'suggested'},requestMeta:{}});
-    });
-    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[
-      {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
-      {id:'d2',name:'D2',sampleNames:[],solutionIds:[],stack:[],process:{}}
-    ]};
-    LF.ActionData.clear(exp,'design.infer');
-    const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
-    assert(out&&out.status==='done'&&out.suggested===1&&out.insufficient===1&&out.failed===0,'scientific uncertainty is counted separately');
-    assert(LF.ActionData.status(exp,'design.infer','d1').state==='insufficient_evidence'&&LF.ActionData.status(exp,'design.infer','d2').state==='suggested','per-experiment scientific states are preserved');
-    assert(env.errors.length===0,'mixed scientific outcomes do not become technical Action errors');
-  };
 
   return t;
 };

@@ -93,9 +93,11 @@ module.exports=function(t){
     assert(designPage.includes('Fabrication process'),true,'fabrication process editor');
     assert(designPage.includes('design-chem-card'),true,'graphical chemistry representation');
     assert(designPage.includes('design-stack-diagram'),true,'graphical layer representation');
-    assert(designPage.includes('data-action-sequence="design-all"'),true,'global Suggest all action');
-    assert(designPage.includes('Suggest missing for all'),true,'global AI command is labelled clearly');
-    assert(designPage.includes('Accept all suggestions'),true,'global explicit acceptance');
+    assert(designPage.includes('data-action-sequence="design-all"'),true,'global complete-all action');
+    assert(designPage.includes('Complete all missing with AI'),true,'bulk AI completion command is labelled clearly');
+    assert(designPage.includes('design-active-strip'),true,'selected experiment is represented by a compact active strip');
+    assert(designPage.includes('SELECTED EXPERIMENT'),false,'legacy selected experiment panel is removed');
+    assert(designPage.includes('Accept all'),true,'global explicit acceptance');
     assert(designPage.includes('Accept experiment'),true,'per-experiment explicit acceptance');
     assert(designPage.includes('Retry'),true,'per-experiment errors are retryable');
     assert(designPage.includes('Proposal confidence'),false,'global confidence dial removed');

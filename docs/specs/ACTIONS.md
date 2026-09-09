@@ -36,7 +36,7 @@ An AI step may declare `validate_with`. If semantic validation rejects generated
 | Action | Target | Result | Effect |
 |---|---|---|---|
 | `dataset.resolve-ambiguities` | active semantic ambiguities | structured resolution proposal | `actionData.proposals['dataset.resolve-ambiguities']` |
-| `design.infer` | one incomplete Design experiment | qualitative suggestion or `insufficient_evidence` | per-target proposal/status under `actionData` |
+| `design.infer` | one incomplete Design experiment | validated qualitative proposal; exhausted incomplete output becomes retryable failure | per-target proposal/status under `actionData` |
 | `results.interpret` | deterministic Results bundle | structured interpretation | `actionData.annotations['results.interpret']` |
 | `results.compare` | 2+ selected result groups | structured comparison | `actionData.annotations['results.compare']` |
 | `assistant.chat` | current experiment/page + question | text answer | read-only |
@@ -67,9 +67,9 @@ Guard failure means **unavailable now**, not provider failure. Preflight happens
 
 ## Scientific vs technical outcomes
 
-`design.infer` explicitly allows `insufficient_evidence`: this is a successful scientific outcome shown as **Needs context**. Malformed JSON/schema/provider errors remain technical failures.
+`design.infer` has one successful proposal state. It attempts every domain that is missing for the selected experiment; missing semantic coverage is a contract failure that uses the Action’s bounded internal retries. Only an exhausted run becomes a retryable per-experiment failure.
 
-## “Suggest all”
+## Complete all missing with AI
 
 Design bulk convenience is orchestration of the same `design.infer` Action once per target. There is no separate batch schema/Action. Each target stores and reports success/failure independently.
 
