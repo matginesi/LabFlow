@@ -117,5 +117,30 @@ module.exports=function(t,LF,env){
     const rows=LF.ResultsPage.chartDataRows('histogram');
     assert(rows[0].best_pce_percent,20,'bestEff must not be mismatch-corrected twice');
   };
+
+  t['Results exposes four researcher workspaces with drill-down modes'] = async function(){
+    await ready('overview');let html=LF.ResultsPage.render();
+    assert((html.match(/data-result-tab=/g)||[]).length,4,'four top-level workspaces');
+    truthy(html.indexOf('What matters first')>=0,'research snapshot');
+    truthy(html.indexOf('id="overviewStatistic"')>=0,'robust statistic selector');
+    truthy(html.indexOf('min–max')>=0&&html.indexOf('Q1–Q3')>=0,'distribution-first group chart');
+    LF.State.state.resultsTab='all';html=LF.ResultsPage.render();
+    truthy((html.match(/data-results-data-mode=/g)||[]).length>=5,'data drill-down modes');
+    LF.State.state.resultsTab='curves';html=LF.ResultsPage.render();
+    truthy((html.match(/data-results-jv-mode=/g)||[]).length>=2,'JV single/overlay modes');
+  };
+
+  t['group chart CSV exports the plotted robust summary'] = function(){
+    const e=synExp();e.measurements.forEach(function(m){m.bestEff=Math.max(m.fw.eff,m.rv.eff)/2;});
+    const state=stateFor(e);state.resultsTab='overview';state.resultsOverviewMetric='eff';state.resultsOverviewDirection='best';state.resultsOverviewStatistic='median';
+    LF.State={state:state};delete require.cache[require.resolve('../../assets/js/pages/results-page.js')];require('../../assets/js/pages/results-page.js');
+    const rows=LF.ResultsPage.chartDataRows('group');
+    assert(rows.length,2,'two group summaries');
+    assert(rows[0].experiment,'A','best median group first');
+    assert(rows[0].median,21,'A median matches plotted PCE');
+    truthy(Number.isFinite(rows[0].q1)&&Number.isFinite(rows[0].q3),'IQR exported');
+    truthy(Number.isFinite(rows[0].min)&&Number.isFinite(rows[0].max),'range exported');
+  };
+
   return t;
 };

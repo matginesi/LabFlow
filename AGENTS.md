@@ -21,6 +21,8 @@ Read before structural changes:
 - Runtime derived caches are recomputable and excluded from persistent snapshots.
 - `CanonicalStore` is a pure read index, not a second model.
 - Persisted Action outputs live only in `actionData` via `LF.ActionData`.
+- `ActionCapabilities` is the only Action availability/preflight service. Public Actions are globally discoverable; routes only affect recommendation.
+- Public Action target/filter bindings and slash commands belong in `action.json`, never in Assistant/page Action-ID switches.
 - `State.touch()` must not accumulate feature-specific invalidation code; use `DerivedState`.
 - The deterministic pipeline never calls AI.
 - AI never calculates authoritative JV metrics or silently mutates source/LabFlow Data.
@@ -51,7 +53,7 @@ Current Actions:
 - `results.compare`
 - `assistant.chat`
 
-Do not reintroduce analysis/safe-cleanup/report/NOMAD preparation as Actions.
+Do not reintroduce analysis/safe-cleanup/report/NOMAD preparation as Actions. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
 
 ## Mutations
 

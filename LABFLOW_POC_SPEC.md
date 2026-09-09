@@ -126,9 +126,14 @@ execution
   mode
   result_step
   steps[]
+
+ui                   # public Actions
+  command
+  routes[]            # recommendation only
+  bindings?           # Action parameter -> application-state path
 ```
 
-The manifest is the source of truth for execution and UI introspection. Old alternate manifest forms are not supported.
+The manifest is the source of truth for execution, target bindings, command discovery and UI introspection.
 
 ## 8. Guard contract
 
@@ -141,7 +146,7 @@ Current guard families include:
 - `results.compare_groups`
 - `assistant.question`
 
-Guard failure means the Action is unavailable for the current state, not that the provider failed.
+`ActionCapabilities` resolves manifest bindings and evaluates these guards before any execution UI/provider check. Every public Action remains visible in the global catalog; the current page only changes whether it is recommended. Guard failure means the Action is unavailable for the current state, not that the provider failed. The Runner resolves/rechecks the same bindings and guards immediately before execution.
 
 ## 9. AI boundary
 
@@ -157,7 +162,7 @@ It must not silently mutate RAW data, recalculate deterministic metrics, or fabr
 
 ## 10. Extensibility
 
-A new Action is added under `actions/<action-id>/` with `action.json` and optional `prompt.md` / `schema.json`. Registry discovery, context profiles, guards and Action-step tools are extensible without a central Action whitelist.
+A new Action is added under `actions/<action-id>/` with `action.json` and optional `prompt.md` / `schema.json`. Public Actions declare their command, recommended routes and any state bindings in the manifest. Registry discovery, capability preflight, context profiles, guards and Action-step tools are extensible without a central Action whitelist or Action-ID switches in the Assistant.
 
 A new deterministic transformation should normally be a `DataPipeline.register(...)` stage or internal service, not an Action.
 

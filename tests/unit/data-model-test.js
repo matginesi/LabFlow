@@ -29,7 +29,7 @@ module.exports = function (t, LF) {
     return { exp: exp, fw: fw, s1: s1, metrics: metrics };
   }
 
-  t['create produces the canonical aggregate shape without legacy aliases'] = function () {
+  t['create produces the canonical aggregate shape without parallel aggregate aliases'] = function () {
     const exp = DM.create({ bytes: new Uint8Array([9]).buffer, sourceName: 'x.zip' });
     assert(exp.files, [], 'files');
     assert(exp.blocks, [], 'blocks');
@@ -38,7 +38,7 @@ module.exports = function (t, LF) {
     assert(exp.samples, [], 'samples');
     assert(exp.runs, [], 'runs');
     assert(exp.measurements, [], 'measurements');
-    assert(Object.prototype.hasOwnProperty.call(exp, 'entities'), false, 'no legacy entities collection');
+    assert(Object.prototype.hasOwnProperty.call(exp, 'entities'), false, 'no parallel entities collection');
     assert(exp.raw.sourceName, 'x.zip', 'raw.sourceName');
     assert(exp.raw.sourceArchive.byteLength, 1, 'raw bytes immutably retained');
     assert(exp.meta.name, 'x', 'name from zip basename');
@@ -148,7 +148,7 @@ module.exports = function (t, LF) {
     assert(json.meta.name, exp.meta.name, 'canonical metadata');
     assert(json.files.length, 2, 'all files listed');
     assert(json.samples.length, 1, 'samples');
-    assert(Object.prototype.hasOwnProperty.call(json, 'entities'), false, 'no legacy entities');
+    assert(Object.prototype.hasOwnProperty.call(json, 'entities'), false, 'no parallel entities');
     assert(json.blocks[0].refs, [{ kind: 'sample', id: s1.id }], 'typed refs');
     assert(json.blocks[0].rows, [{ voc: 1.05, jsc: 24.1 }], 'bounded source rows');
     assert(json.blocks[0].columns, ['voc', 'jsc'], 'columns from schema');

@@ -148,7 +148,7 @@ module.exports=function(t){
     assert(app.includes("scheduleWorkspaceSave('draft:"),true,'draft autosave');
     assert(app.includes("persistWorkspace('pagehide')"),true,'pagehide persistence');
     assert(app.includes('LF.Storage.clearSavedExperiment'),true,'reset clears persistent workspace');
-    assert(html.includes('id="resetAll"'),true,'visible reset control');
+    assert(html.includes('id="resetAll"'),true,'visible reset control');assert(html.includes('topbar-reset')&&html.includes('Reset session'),true,'reset is prominent in topbar');assert(css.includes('.topbar .button.topbar-reset'),true,'topbar reset overrides normal transparent topbar buttons');
   };
   return t;
 };

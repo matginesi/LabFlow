@@ -51,5 +51,14 @@ module.exports=function(t,LF){
     exportSettings.includeRaw=false;
   };
 
+  t['NOMAD provenance audit uses patchType rather than obsolete type field']=function(){
+    const e=exp();e.patches=[{id:'p1',kind:'patch',patchType:'sample_mapping',source:'user',createdAt:'2026-09-09T00:00:00Z',reason:'Confirmed mapping',evidence:['researcher evidence']}];
+    const v=LF.NomadExport.validate(e,null);assert(v.checks.incompletePatchProvenance,0,'valid current patch schema is complete');
+  };
+  t['excluded measurement danger findings no longer block NOMAD export']=function(){
+    const e=exp();e.measurements[0].excluded=true;e.findings=[{id:'f1',severity:'danger',status:'open',measurementId:'m1',target:'m1'}];
+    const v=LF.NomadExport.validate(e,null);assert(v.checks.unresolvedDanger,0,'excluded measurement danger ignored for staging blocker');
+  };
+
   return t;
 };

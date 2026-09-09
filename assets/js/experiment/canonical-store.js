@@ -59,8 +59,8 @@
     (exp.samples||[]).forEach(function(s){(s.aliases||[s.name]).forEach(function(a){idx.sampleByAlias.set(norm(a),s);});});
     return idx;
   }
-  function resultView(exp){const a=exp.analysis||{};return{summary:compact(a.summary||{},600),top_non_ref:compact((a.topNonRef||[]).slice(0,12),500),top_ref:compact((a.topRef||[]).slice(0,12),500),best_by_sample:compact((a.bestBySample||[]).slice(0,48),500),best_by_experiment:compact((a.bestByExperiment||[]).slice(0,48),500),interpretation:a.aiInterpretation?{markdown:String(a.aiInterpretation.markdown||''),source_revision:a.aiInterpretation.sourceRevision,generated_at:a.aiInterpretation.generatedAt||''}:null};}
-  function stamp(exp){const sync=exp&&exp.sync||{};return[Number(sync.revision||0),String(sync.lastChange||''),(exp&&exp.files||[]).length,(exp&&exp.measurements||[]).length,(exp&&exp.findings||[]).length].join('|');}
+  function resultView(exp){const a=exp.analysis||{};return{summary:compact(a.summary||{},600),top_non_ref:compact((a.topNonRef||[]).slice(0,12),500),top_ref:compact((a.topRef||[]).slice(0,12),500),best_by_sample:compact((a.bestBySample||[]).slice(0,48),500),best_by_experiment:compact((a.bestByExperiment||[]).slice(0,48),500)};}
+  function stamp(exp){const sync=exp&&exp.sync||{},design=exp&&exp.design||{};return[Number(sync.revision||0),JSON.stringify(sync.lastChange||''),(exp&&exp.files||[]).length,(exp&&exp.measurements||[]).length,(exp&&exp.findings||[]).length,(exp&&exp.patches||[]).length,(design.solutions||[]).length,(design.devices||[]).length].join('|');}
   function build(exp){
     if(!exp||typeof exp!=='object')return null;
     const aliases=buildAliases(exp),evidence=buildEvidence(exp),relations=buildRelations(exp,evidence),revision=Number(exp.sync&&exp.sync.revision||0),results=resultView(exp);

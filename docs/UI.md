@@ -6,7 +6,8 @@
 
 The primary workflow is **Upload & Review → Results → Design → Export**. Cabinet, Documentation and Settings are utility destinations, not extra workflow steps.
 
-- The left navigation is fixed/persistent on desktop widths above 1100 px and becomes an off-canvas drawer at tablet/mobile widths. Menu, close, backdrop, route selection and `Escape` operate the drawer only where appropriate.
+- The left navigation is fixed/persistent on desktop widths above 1100 px and becomes an off-canvas drawer at tablet/mobile widths. Menu, close, backdrop, route selection and `Escape` operate the drawer only where appropriate; crossing the breakpoint resynchronizes drawer/ARIA state.
+- Every route also receives shared in-page **Previous / Next** controls so navigation remains obvious when the sidebar is hidden. The order lives once in `PageShell`; individual pages do not hard-code neighbor routes.
 - The Assistant is closed by default and opens only after explicit user action.
 - Page content must not create document-level horizontal scrolling. Tables, tabs, diagrams and wide charts may scroll inside a clearly bounded local region.
 - Normal workflow content uses readable shared type/control tokens. Micro type is reserved for secondary technical metadata; primary labels/actions must not fall into 7–9 px text.
@@ -20,6 +21,8 @@ Upload copy, source metadata and actions reflow into one column on narrow screen
 ## Results and charts
 
 Results visualize the canonical deterministic measurement model. Interactive behavior must not become a second calculation path.
+
+The researcher-facing structure is **Overview / Data / JV / Compare**. Overview is a triage surface, not a gallery: surface best sample, best group, eligible coverage, warnings and a robust group-distribution view before detailed tables. Data owns All/Best/Warnings/Top subsets. JV owns single-scan diagnostics and multi-scan overlay. Compare owns group statistics. Prefer median + IQR + min–max for group summaries, with mean available as an explicit alternative.
 
 Primary charts support the interactions appropriate to their data: metric/scan/group controls, hover/focus value inspection, series toggles for overlays and local scrolling for many categories. Chart exports are first-class: PNG and SVG export the visual, while CSV exports the canonical rows underlying the plotted view. The local SVG renderer is preferred so Results remains self-contained offline and in static deployment.
 
@@ -39,9 +42,11 @@ User-facing capabilities use `button[data-action]`. Provider output/telemetry is
 
 The Assistant may launch public Actions and may display bounded Action results inline so a follow-up question can reference them. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
 
+Global destructive `Reset session` is intentionally visible in the topbar. It uses danger styling and remains reachable as an icon on phone layouts; do not move it back into navigation utilities.
+
 ## Responsive/readability rules
 
-Reflow content before shrinking it. Flex/grid children with scientific text use `min-width:0`; long paths/names wrap or truncate deliberately. Local scrolling is acceptable for data surfaces but not for the whole document. Buttons remain usable on touch layouts and essential text remains at shared readable sizes.
+Reflow content before shrinking it. The shell has three responsive ownership levels only: desktop `>1100px`, drawer/tablet `<=1100px`, and phone `<=700px`. Global phone rules for page/panel/topbar/sidebar spacing are defined once; feature media queries may reflow only their own surfaces. Flex/grid children with scientific text use `min-width:0`; long paths/names wrap or truncate deliberately. Local scrolling is acceptable for data surfaces but not for the whole document. Buttons remain usable on touch layouts; Previous/Next controls stay at least touch-sized; essential text remains at shared readable sizes. Retired markup loses its CSS instead of keeping compatibility selectors.
 
 ## Local documentation and verification
 

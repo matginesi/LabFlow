@@ -63,6 +63,7 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.llamacpp.optionalKey===true,'llama.cpp can use an optional server API key');
     assert(LF.AIProviders.gemini.model==='gemini-3.7-flash','Gemini preset tracks the current OpenAI-compatible example model');
     assert(LF.AIProviders.zai.requestDeadlineMs===180000,'Z.AI has a defensive provider-level request deadline');
+    assert(LF.AIProviders.zai.connectionTestMaxTokens===128,'Z.AI connection probe has enough output room for reasoning-capable GLM models');
   };
 
   t['Z.AI is one provider with the official General API, default Flash model and Detect catalogue']=function(){
@@ -73,13 +74,14 @@ module.exports=function(t,LF){
     assert(provider.modelSelect===true,'Detect-backed model select');
     assert(provider.staticModelCatalogue===true,'documented static catalogue declared');
     assert(provider.knownModels.includes('glm-4.7-flash'),'default model present in Detect catalogue');
-    assert(provider.browserRelayPath==='/__labflow/zai/chat/completions','same-origin relay declared');
+    assert(provider.supportsStreaming===false,'Z.AI uses the conservative direct non-streaming browser path');
+    assert(!Object.prototype.hasOwnProperty.call(provider,'browserRelayPath'),'Z.AI has no LabFlow-specific relay');
     assert(provider.remoteModelMetadata===false,'no undocumented remote model-list endpoint is probed');
-    assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'legacy Coding Plan endpoint switch removed');
+    assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'retired Coding Plan endpoint switch absent');
   };
 
   t['Z.AI settings use the same Detect control and result semantics as other providers']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'legacy access mode removed');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{settingsSection:'provider',experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
@@ -121,21 +123,10 @@ module.exports=function(t,LF){
     localStorage.removeItem('labflow.ai.settings');
   };
 
-  t['legacy GLM and Coding endpoint settings migrate to the single Z.AI General API']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'glm',zaiAccess:'coding',endpoint:'https://api.z.ai/api/coding/paas/v4/chat/completions',model:''}));
-    const saved=LF.Storage.getAiSettings();
-    assert(saved.provider==='zai','legacy provider id migrated');
-    assert(saved.endpoint==='https://api.z.ai/api/paas/v4/chat/completions','legacy Coding endpoint migrated to General API');
-    assert(saved.model==='glm-4.7-flash','empty legacy model gets default');
-    assert(!Object.prototype.hasOwnProperty.call(saved,'zaiAccess'),'legacy access-mode state removed');
-    localStorage.removeItem('labflow.ai.settings');
-  };
-
-
-  t['Legacy Action overrides without a source signature are ignored after source updates']=function(){
+  t['Unsigned Action overrides cannot shadow the current source contract']=function(){
     const id='results.interpret',base=LF.ActionRegistry.action(id),sourcePrompt=LF.ActionRegistry.prompt(id);
     localStorage.setItem('labflow.action.overrides',JSON.stringify({[id]:{definition:Object.assign({},base,{title:'STALE TITLE'}),prompt:'STALE PROMPT',updatedAt:'2026-01-01T00:00:00Z'}}));
-    assert(LF.Storage.getActionOverride(id)===null,'unsigned legacy override should not shadow current source Action');
+    assert(LF.Storage.getActionOverride(id)===null,'unsigned override should not shadow current source Action');
     assert(LF.Storage.getEffectiveAction(id).title===base.title,'current source definition must win over stale override');
     assert(LF.Storage.getEffectivePrompt(id)===sourcePrompt,'current source prompt must win over stale override');
     localStorage.removeItem('labflow.action.overrides');

@@ -88,7 +88,9 @@ actions/my.action/
 └─ schema.json    # structured result only
 ```
 
-Manifest must define target/context/result/effect/guards/execution. Use `ActionData` for stored proposals/annotations/status. Scientific apply logic stays deterministic and target-validated.
+Manifest must define target/context/result/effect/guards/execution. A public Action also declares `ui.command` and `ui.routes`; declare `ui.bindings` when target/filter parameters come from application state. `ActionCapabilities` resolves those bindings and guards once for every UI surface, so do not add Action-ID switches to Assistant/pages. Use `ActionData` for stored proposals/annotations/status. Scientific apply logic stays deterministic and target-validated.
+
+Guards must read the resolved Action context/parameters rather than DOM or page-specific globals. Routes express recommendation only; they must never determine whether an Action exists.
 
 A bulk UI operation should usually sequence the same single-target Action rather than invent a second batch Action/schema.
 
@@ -147,4 +149,6 @@ Also run JS syntax checks and the real JV fixture regression when core data/pipe
 - Is pipeline work deterministic and idempotent?
 - Does an Action represent a researcher goal rather than an internal function?
 - Are Action outputs in `ActionData`?
+- Does Action availability come only from `ActionCapabilities` + guards, with page routes affecting recommendation only?
+- Are target/filter bindings declared in the Action manifest rather than hardcoded by Action ID?
 - Can a new contributor discover the contract from console/docs/tests?

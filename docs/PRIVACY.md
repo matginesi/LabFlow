@@ -1,6 +1,6 @@
 # Privacy and local-first boundary
 
-LabFlow is a local-first browser application. Scientific parsing, analysis, validation, experiment-context retrieval, browser persistence and export generation remain client-side. The bundled local server has one narrow network role: a same-origin relay for Z.AI Chat Completions, required because the Z.AI API is not callable reliably from browser JavaScript under CORS.
+LabFlow is a local-first browser application. Scientific parsing, analysis, validation, experiment-context retrieval, browser persistence and export generation remain client-side. LabFlow does not require an application server or provider relay for its normal runtime.
 
 ## Local runtime
 
@@ -22,7 +22,7 @@ Request diagnostics may contain HTTP status, provider code/message, timing and `
 
 ## External AI requests
 
-`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. For Z.AI only, browser requests go to the bundled same-origin route `/__labflow/zai/chat/completions`; `tools/serve_static.py` forwards that route to the fixed official Z.AI General API Chat Completions endpoint. The relay is not a general-purpose proxy.
+`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted providers, including Z.AI, are contacted directly at their configured endpoint. A browser CORS/network failure is reported explicitly and is not bypassed with a hidden proxy.
 
 Requests use:
 
@@ -37,7 +37,7 @@ A connection test sends only a tiny provider probe and no experiment context.
 
 ## API keys
 
-API keys are provider-scoped and are stored in browser localStorage. For direct providers they are used by the browser request. For Z.AI, the browser sends the Authorization header to the same-origin local LabFlow relay, which forwards it to Z.AI and does not persist it server-side.
+API keys are provider-scoped and are stored in browser localStorage. They are used directly by the browser request to the selected provider endpoint.
 
 The structured logger redacts common credential fields such as API keys, Authorization headers, passwords, tokens and secrets. No `.env` file is required or shipped for normal browser use, and `.env` is excluded by `.gitignore`.
 

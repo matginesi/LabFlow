@@ -9,8 +9,8 @@ module.exports=function(t,LF,ctx){
     scripts.forEach(function(src){assert(fs.existsSync(path.join(root,src)),src+' is referenced by index.html but missing');});
     assert(scripts.includes('assets/js/export/nomad.js'),'NOMAD export module must use the current path');
     assert(scripts.includes('assets/js/pages/export-page.js'),'Export page module must use the current path');
-    assert(!scripts.includes('assets/js/nomad/nomad.js'),'legacy NOMAD module path must not remain');
-    assert(!scripts.includes('assets/js/pages/nomad-page.js'),'legacy NOMAD page path must not remain');
+    assert(!scripts.includes('assets/js/nomad/nomad.js'),'obsolete NOMAD module path must not remain');
+    assert(!scripts.includes('assets/js/pages/nomad-page.js'),'obsolete NOMAD page path must not remain');
   };
   t['Export page registers the render API expected by app.js']=function(){
     const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');

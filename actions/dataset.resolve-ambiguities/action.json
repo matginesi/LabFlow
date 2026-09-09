@@ -71,5 +71,12 @@
         "tool": "dataset.store-corrections"
       }
     ]
+  },
+  "ui": {
+    "command": "/resolve",
+    "routes": [
+      "experiment-import",
+      "experiment-export"
+    ]
   }
 }

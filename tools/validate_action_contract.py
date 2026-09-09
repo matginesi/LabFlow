@@ -41,6 +41,14 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     if forbidden:err(f'{aid}: obsolete top-level fields are forbidden: {", ".join(forbidden)}')
     if d.get('role') not in ROLES:err(f'{aid}: invalid role {d.get("role")}')
     if d.get('visibility') not in VIS:err(f'{aid}: invalid visibility {d.get("visibility")}')
+    ui=d.get('ui') if isinstance(d.get('ui'),dict) else {}
+    if d.get('visibility')=='public':
+        command=str(ui.get('command') or '').strip()
+        routes=ui.get('routes')
+        if not command.startswith('/') or ' ' in command.strip('/'):err(f'{aid}: public Action ui.command must be one slash command such as /resolve')
+        if not isinstance(routes,list) or not routes or any(not isinstance(x,str) or not x.strip() for x in routes):err(f'{aid}: public Action ui.routes must list one or more recommended application routes')
+        bindings=ui.get('bindings',{})
+        if not isinstance(bindings,dict) or any(not isinstance(k,str) or not k.strip() or not isinstance(v,str) or not v.strip() for k,v in bindings.items()):err(f'{aid}: ui.bindings must map Action parameter names to application-state paths')
 
     contract=d.get('contract') if isinstance(d.get('contract'),dict) else {}
     bad=sorted(FORBIDDEN_CONTRACT.intersection(contract))
@@ -51,6 +59,8 @@ for p in sorted(ACTIONS.glob('*/action.json')):
     target=contract.get('target') if isinstance(contract.get('target'),dict) else {}
     if not str(target.get('kind') or '').strip():err(f'{aid}: contract.target.kind is required')
     if target.get('cardinality') not in CARDINALITIES:err(f'{aid}: contract.target.cardinality must be one|many')
+    selection_param=str(target.get('selection_param') or '').strip()
+    if selection_param and d.get('visibility')=='public' and selection_param not in (ui.get('bindings') or {}):err(f'{aid}: public Action target.selection_param {selection_param} must have a ui.bindings entry')
     if target.get('minimum') is not None:
         try: minimum=int(target['minimum'])
         except Exception:err(f'{aid}: contract.target.minimum must be an integer')
@@ -151,6 +161,14 @@ profiles=set(re.findall(r'([a-zA-Z0-9_-]+)\s*:',m.group(1))) if m else set()
 for aid,d in defs.items():
     prof=str(((d.get('contract') or {}).get('context') or {}).get('profile') or '')
     if prof and prof not in profiles and prof!='review':err(f'{aid}: unknown Context profile {prof}')
+
+# Generic Action surfaces discover public capabilities from manifests; they must
+# not grow Action-id switches when a new capability is added.
+public_ids={aid for aid,d in defs.items() if d.get('visibility')=='public'}
+for rel in ['assets/js/ai/action-capabilities.js','assets/js/ai/assistant.js']:
+    text=(ROOT/rel).read_text(encoding='utf-8')
+    hardcoded=sorted(aid for aid in public_ids if aid in text)
+    if hardcoded:err(f'{rel}: generic Action surface hardcodes public Action ids: {", ".join(hardcoded)}')
 
 # Static UI references must resolve to real Actions.
 ui='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))

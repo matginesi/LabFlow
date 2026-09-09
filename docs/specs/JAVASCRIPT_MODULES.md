@@ -7,7 +7,7 @@ order: 25
 
 # JavaScript module ownership
 
-LabFlow is a local-first browser application. Modules attach bounded APIs to `window.LabFlow`. The bundled Python server only serves public files and relays Z.AI Chat Completions through a fixed same-origin route; scientific/application ownership remains in the browser modules.
+LabFlow is a local-first browser application. Modules attach bounded APIs to `window.LabFlow`; scientific/application ownership remains in the browser modules and no application-specific server is required.
 
 ## Architectural kernel
 
@@ -35,14 +35,15 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 ## Actions/AI
 
 - `ai/action-registry.js` — generated bundle from `actions/*/action.json`.
-- `ai/action-guards.js` — Action availability guards.
+- `ai/action-guards.js` — pure Action precondition checks over resolved Action context/parameters.
+- `ai/action-capabilities.js` — global public catalog, manifest state bindings, availability reasons, recommendations and slash-command resolution; the single preflight API for UI/Assistant.
 - `ai/action-steps.js` — deterministic Action checkpoint implementations/apply services.
 - `ai/actions.js` — generic sequential runner/retry/contract execution.
 - `ai/action-ui.js` — Action UI orchestration; Design “Suggest all” sequences `design.infer`.
 - `ai/context.js` — bounded Context profile registry/builders.
 - `ai/structured.js` — structured parse/schema normalization/validation.
-- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, transport and settings; Z.AI declares the bundled same-origin relay route while retaining the official upstream endpoint as provider configuration.
-- `ai/assistant.js` — read-only Assistant turns.
+- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, direct browser transport and settings; provider-specific request behavior is declarative and no hidden relay fallback is used.
+- `ai/assistant.js` — read-only Assistant turns plus presentation of the global Action catalog; it does not own Action availability rules.
 - `tools/registry.js` — typed deterministic/internal tools.
 
 Generated files (`action-registry.js`, `prompt-bundle.js`) must be rebuilt from sources, not manually edited.

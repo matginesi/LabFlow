@@ -479,22 +479,34 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
-  t['Z.AI static-server 501 falls back once to the bundled local relay'] = async function () {
+  t['Z.AI sends exactly one direct request to the official endpoint'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenUrl='',seenBody=null;
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
+    global.fetch=async function(url,opts){calls++;seenUrl=String(url);seenBody=JSON.parse(opts.body);return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'direct-ok',model:'glm-4.7-flash',choices:[{message:{content:'working'},finish_reason:'stop'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:true,thinkingMode:'off'};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'direct'}],stream:true,maxTokens:32}),result=await AI.send(spec,{label:'zai-direct'});assert(result.content,'working','direct provider response returned');assert(calls,1,'no hidden fallback request');assert(seenUrl,'https://api.z.ai/api/paas/v4/chat/completions','official endpoint used directly');assert(seenBody.stream,false,'provider capability disables streaming even when global setting asks for it');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Z.AI HTTP errors stay provider errors and never trigger localhost fallback'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
     global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
-    global.fetch=async function(url){
-      calls++;
-      if(calls===1){assert(String(url),'http://127.0.0.1:8765/__labflow/zai/chat/completions','same-origin relay URL');return{ok:false,status:501,statusText:'Not Implemented',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return '<!DOCTYPE HTML><html><head><style>body{color:red}</style></head><body><h1>Error response</h1><p>Message: Unsupported method (\'POST\').</p></body></html>';}};}
-      assert(String(url),'http://127.0.0.1:8000/__labflow/zai/chat/completions','bundled local relay URL');
-      return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'relay-ok',model:'glm-4.7-flash',choices:[{message:{content:'working'},finish_reason:'stop'}]});}};
-    };
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,browserRelayPath:'/__labflow/zai/chat/completions',tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
-    try{
-      const spec=AI.buildRequest({messages:[{role:'user',content:'test relay'}],stream:false,maxTokens:32}),result=await AI.send(spec,{label:'relay-test'});
-      assert(result.content,'working','local relay response returned');
-      assert(calls,2,'only the rejected static request and one local-relay retry');
-    }finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+    global.fetch=async function(){calls++;return{ok:false,status:501,statusText:'Not Implemented',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{message:'upstream rejected request'}});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false}};
+    try{let err=null;try{await AI.send(AI.buildRequest({messages:[{role:'user',content:'x'}],stream:false,maxTokens:32}),{label:'zai-http'});}catch(e){err=e;}assert(!!err,true,'provider error returned');assert(err.status,501,'HTTP status retained');assert(calls,1,'no localhost retry');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Z.AI browser fetch failure becomes one direct network or CORS diagnostic'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
+    global.fetch=async function(){calls++;throw new TypeError('Failed to fetch');};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',streaming:false};},getApiKey:function(){return'key';}};
+    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false}};
+    try{let err=null;try{await AI.send(AI.buildRequest({messages:[{role:'user',content:'x'}],stream:false,maxTokens:32}),{label:'zai-network'});}catch(e){err=e;}assert(!!err,true,'network diagnostic returned');assert(err.isNetwork,true,'classified as network/browser failure');assert(/Z\.AI|CORS|browser/i.test(err.message),true,'diagnostic names browser/provider boundary');assert(calls,1,'single direct attempt only');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['Z.AI 1305 does not create local cooldown state or block a later user request'] = async function () {

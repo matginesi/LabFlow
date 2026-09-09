@@ -24,6 +24,7 @@ ROUTES = (
     "experiment-design",
     "experiment-export",
     "cabinet",
+    "documentation",
     "settings",
     "logs",
     "ui-kit",
@@ -58,6 +59,8 @@ AUDIT_JS = r"""() => {
   }) : [];
   const sidebarRect = sidebar.getBoundingClientRect();
   const mainRect = main.getBoundingClientRect();
+  const pageNav = document.querySelector('.page-nav');
+  const pageNavButtons = pageNav ? [...pageNav.querySelectorAll('.page-nav-button')].map(node => { const r=node.getBoundingClientRect(); return {width:Math.round(r.width),height:Math.round(r.height),disabled:node.disabled}; }) : [];
   return {
     route: window.LabFlow.State.state.route,
     viewport: {width:innerWidth,height:innerHeight},
@@ -67,6 +70,7 @@ AUDIT_JS = r"""() => {
     main: {left:Math.round(mainRect.left),right:Math.round(mainRect.right),clientWidth:main.clientWidth,scrollWidth:main.scrollWidth},
     sidebar: {top:Math.round(sidebarRect.top),left:Math.round(sidebarRect.left),width:Math.round(sidebarRect.width),height:Math.round(sidebarRect.height)},
     stepper: strip ? {clientWidth:strip.clientWidth,scrollWidth:strip.scrollWidth,steps} : null,
+    pageNavigation: pageNav ? {clientWidth:pageNav.clientWidth,scrollWidth:pageNav.scrollWidth,buttons:pageNavButtons} : null,
     offenders
   };
 }"""
@@ -84,16 +88,24 @@ def main() -> int:
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
 
-        # The navigation is a summonable drawer at every viewport and the AI
-        # assistant must not occupy the workspace until explicitly opened.
-        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        # Desktop navigation is persistent; tablet/mobile use the same sidebar
+        # as an off-canvas drawer. The Assistant stays closed until requested.
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
+        assert not page.locator("#mobileNavToggle").is_visible()
         assert not page.locator("#assistantPanel").is_visible()
+        page.set_viewport_size({"width": 900, "height": 800})
+        page.wait_for_timeout(220)
+        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        assert page.locator("#mobileNavToggle").is_visible()
         page.locator("#mobileNavToggle").click()
         page.wait_for_timeout(220)
         assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
         page.locator("#sidebarDismiss").click()
         page.wait_for_timeout(220)
         assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        page.set_viewport_size({"width": 1440, "height": 900})
+        page.wait_for_timeout(220)
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
 
         # Audit the upload-first state before adding experiment data.
         findings.append(page.evaluate(AUDIT_JS))
@@ -169,6 +181,10 @@ def main() -> int:
         item.get("uiKitDocument", {}).get("documentOverflow") or
         item.get("uiKitDocument", {}).get("mainOverflow") or
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
+        (item["viewport"]["width"] > 1100 and item["sidebar"]["left"] < 0) or
+        not item.get("pageNavigation") or
+        item["pageNavigation"]["scrollWidth"] > item["pageNavigation"]["clientWidth"] + 1 or
+        (item["viewport"]["width"] <= 700 and any(button["height"] < 44 for button in item["pageNavigation"]["buttons"])) or
         (item.get("stepper") and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
             len(item["stepper"]["steps"]) != 4 or

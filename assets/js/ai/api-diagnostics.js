@@ -10,6 +10,7 @@
       const providerHint=providerId==='lmstudio'?' Check that LM Studio has its local API enabled and accepts this browser origin.':providerId==='llamacpp'?' Check that llama-server is running at the configured endpoint and accepts this browser origin.':' Check that Ollama is running and accepts this browser origin.';
       return label+' ended before LabFlow could read an HTTP response from '+name+'. This may be connectivity or browser-origin policy; it is not evidence of a malformed messages payload.'+providerHint;
     }
+    if(providerId==='zai')return label+' did not expose an HTTP response from Z.AI to this browser. Check API connectivity and credentials; if curl succeeds while the browser fails, treat this as a browser CORS/origin restriction rather than an Action or JSON error.';
     return label+' could not reach '+name+'. Check that the service is running and that the configured endpoint is correct.';
   }
 
@@ -24,7 +25,6 @@
     if(c==='1302')return' Provider concurrency is saturated. LabFlow stops this request without retrying it.';
     if(c==='1303')return' Provider request frequency is too high. LabFlow stops this request without retrying it.';
     if(status===429||c==='1305')return' The provider rate limit was reached. LabFlow does not retry automatically and does not create a local cooldown; bulk Design stops immediately and preserves completed suggestions.';
-    if(c==='LABFLOW_RELAY_UNAVAILABLE')return' Run `python tools/serve_static.py` and open the URL it serves; generic static servers cannot forward Z.AI POST requests.';
     if(status>=500)return' The provider reported a server-side error.';
     if(c==='1261'||c==='MODEL_CONTEXT_LENGTH')return' The loaded model context window was exceeded. LabFlow will compact bounded Action context before the next request.';
     return'';
@@ -34,29 +34,28 @@
     const e=error||{},status=Number(e.status||0),code=String(e.providerCode||e.code||'');
     let category='Provider error',next='Review the endpoint, model and provider status.';
     if(e.cancelled){category='Cancelled';next='Run the Action again when ready.';}
-    else if(e.timedOut){category='Timeout';next='Retry the request or increase the provider timeout for a slow local model.';}
+    else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');category='Timeout';next=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Retry the request or increase the inactivity timeout if the local model is still loading.':'The provider did not expose a response before the connection-test deadline. Retry once; if a console/curl probe succeeds while the browser test does not, inspect browser network/CORS. LabFlow does not classify this as a slow local model.';}
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
       category=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Local endpoint unreachable':'Network';
       if(providerId==='lmstudio')next='Confirm that the LM Studio Local Server is started and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check LM Studio CORS/browser-origin settings.';
       else if(providerId==='ollama')next='Confirm that Ollama is running and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check browser-origin settings.';
       else if(providerId==='llamacpp')next='Confirm that llama-server is running and listening at the configured host/port and serves /v1/chat/completions. If the endpoint answers outside LabFlow but the browser still fails, then check CORS/browser-origin settings.';
-      else if(providerId==='zai')next='Start LabFlow with tools/serve_static.py so the same-origin Z.AI relay is available, then verify the API key and try again.';
+      else if(providerId==='zai'){category='Browser / CORS';next='LabFlow called the official Z.AI endpoint directly but the browser exposed no HTTP response. Verify endpoint and API key; if the same request works in curl but fails here, the browser is blocking the cross-origin request and frontend JavaScript cannot bypass that policy.';}
       else next='Check that the provider process is running and the endpoint is reachable from this browser.';
     }
     else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. LabFlow uses the runtime context capability and compacts the Action Context Pack; if this persists, increase the loaded context or narrow the Action.';}
     else if(e.isContract&&String(e.finishReason||'')==='length'){category='Model output limit';next='The provider returned a valid response envelope but exhausted the bounded output budget before final text. In Test connection, supported local providers report this as reachable/inconclusive instead of a connection failure; in a normal Action, reduce the task or increase that Action budget within its contract.';}
     else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load it in the provider, then press Detect or run the connection test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
-    else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
+    else if(status===404){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');category=providerId==='nvidia'?'Model unavailable':'Endpoint / model';next=providerId==='nvidia'?'The NVIDIA catalogue can include IDs that are no longer invocable on the hosted endpoint. Choose a currently served model, press Detect, then test again.':'Check the endpoint path and configured model.';}
     else if(['1304','1308','1310'].includes(code)||(e.rateLimited&&e.rateLimitRetryable===false)){category='Provider quota';next=code==='1304'?'The daily quota is exhausted. Check the provider quota/reset status or use another provider.':code==='1310'?'The current plan period is exhausted. Check the provider reset/plan status or use another provider.':'The provider usage window is exhausted. Check its reset time or use another provider.';}
     else if(status===429||['1302','1303','1305','1312'].includes(code)||e.rateLimited){category=code==='1312'?'Model capacity':'Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=code==='1312'?'The model is temporarily under high traffic. Retry later after the provider has recovered.':retryMs?'LabFlow stopped at the provider throttle without retrying. The provider returned Retry-After; retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'LabFlow stopped at the provider throttle without retrying. Retry later or use another provider.';}
-    else if(code==='LABFLOW_RELAY_UNAVAILABLE'){category='LabFlow server';next='Start LabFlow with `python tools/serve_static.py`, open the served URL, and retry. A generic static server cannot forward Z.AI requests.';}
     else if(status>=500){category='Provider server';next='Check the provider logs and retry.';}
     return{category:category,next:next,status:status||'',providerCode:code};
   }
 
-  function contextNote(providerId){providerId=String(providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'')||'');return providerId==='zai'?'LabFlow sends Z.AI requests through its bundled same-origin relay; the configured endpoint remains the official Z.AI General API.':'LabFlow sends AI requests directly from the browser to the configured endpoint.';}
+  function contextNote(providerId){providerId=String(providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'')||'');return providerId==='zai'?'LabFlow sends Z.AI requests directly from the browser to the official General API endpoint. No LabFlow relay or custom server is used.':'LabFlow sends AI requests directly from the browser to the configured endpoint.';}
 
   LF.AIDiagnostics={networkMessage:networkMessage,statusHint:statusHint,errorSummary:errorSummary,contextNote:contextNote};
 }());

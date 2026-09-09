@@ -4,7 +4,7 @@ This document is the contract for provider-specific behavior in LabFlow. Scienti
 
 ## Common transport
 
-LabFlow uses the OpenAI-compatible Chat Completions shape. Most providers are called directly from the browser; Z.AI is the one deliberate exception and uses the narrow same-origin relay bundled in `tools/serve_static.py` because the public `api.z.ai` endpoint does not permit LabFlow's browser origin to call Chat Completions directly:
+LabFlow uses the OpenAI-compatible Chat Completions shape. Providers, including Z.AI, are called directly from the browser using their configured official endpoint:
 
 ```text
 POST <base>/chat/completions
@@ -21,8 +21,8 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 - Only `http:` and `https:` endpoints are accepted.
 - A bearer key is sent only for providers declaring `keyRequired` or `optionalKey`. Ollama, LM Studio and llama.cpp never inherit a key saved for a cloud provider.
 - Cloud API keys are stored separately by provider.
-- Provider-declared static headers are allowlisted in the registry. Z.AI sends its documented `Accept-Language`; OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
-- Browser-origin access remains a provider responsibility for direct adapters. LM Studio, Ollama or llama.cpp must accept the browser origin currently running LabFlow. Z.AI uses the bundled same-origin relay and therefore requires LabFlow to be served with `tools/serve_static.py` rather than a generic static-only server.
+- Provider-declared static headers are allowlisted in the registry. OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
+- Browser-origin access remains a provider responsibility. Local servers such as LM Studio, Ollama and llama.cpp must accept the current page origin. Hosted endpoints such as Z.AI must permit browser CORS for direct use; when the browser exposes no HTTP response LabFlow reports a network/CORS diagnostic and does not attempt a hidden localhost proxy.
 
 ## Model discovery and capability detection
 
@@ -104,4 +104,4 @@ LabFlow exposes one **Z.AI** provider. Its default model is `glm-4.7-flash` and 
 
 `https://api.z.ai/api/paas/v4/chat/completions`
 
-The old GLM/Z.AI split and Coding Plan endpoint selector are removed. Legacy browser settings that used a GLM alias or `/api/coding/paas/v4` are migrated to the single Z.AI provider and General API endpoint. The configured upstream remains visible in Settings, while browser requests are sent to the same-origin `/__labflow/zai/chat/completions` relay provided by `tools/serve_static.py`. The relay is intentionally narrow and forwards only Z.AI Chat Completions; it is not a generic proxy.
+The configured Z.AI endpoint is the endpoint used by the browser. LabFlow sends one direct non-streaming Chat Completions request for this provider, retains provider HTTP errors as provider errors, and reports fetch failures as browser/network/CORS diagnostics. LabFlow reads only the current provider settings contract; it carries no migration path for retired provider IDs or endpoint modes.

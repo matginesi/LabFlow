@@ -191,27 +191,8 @@
     return exp;
   }
 
-  function ensureLayer(layer) {
-    if (!layer.id) layer.id = C.uid('layer');
-    if (layer.layer && !layer.role) layer.role = layer.layer;
-    if (layer.status == null) layer.status = 'unknown';
-    if (layer.evidence == null) layer.evidence = '';
-    if (layer.process == null) layer.process = '';
-  }
-
-  function experimentsFromSamples(samples) {
-    const grouped = new Map();
-    (samples || []).forEach(function (sample) {
-      const name = clean(sample.experiment || sample.group || sample.name) || 'Unknown experiment';
-      if (!grouped.has(name)) grouped.set(name, {id:C.uid('experiment'),name:name,isRef:!!sample.isRef,sampleIds:[],sampleNames:[]});
-      const experiment = grouped.get(name);
-      experiment.isRef = experiment.isRef || !!sample.isRef;
-      if (sample.id && !experiment.sampleIds.includes(sample.id)) experiment.sampleIds.push(sample.id);
-      if (sample.name && !experiment.sampleNames.includes(sample.name)) experiment.sampleNames.push(sample.name);
-    });
-    return Array.from(grouped.values());
-  }
-
+  
+  
   function deviceFromExperiment(experiment, samples) {
     const sampleNames = Array.isArray(experiment.sampleNames) && experiment.sampleNames.length
       ? experiment.sampleNames.slice()

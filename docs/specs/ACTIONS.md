@@ -22,6 +22,9 @@ contract.guards     availability conditions
 execution.mode      AI / hybrid / deterministic
 execution.result_step
 execution.steps[]
+ui.command          Assistant slash command for public Actions
+ui.routes           pages where the Action is recommended, never hidden
+ui.bindings         Action parameter → application-state path bindings
 ```
 
 `result_step` identifies the semantic result; later validation/storage checkpoints cannot accidentally replace it.
@@ -46,7 +49,11 @@ Actions must use `LF.ActionData` for persistent proposal/annotation/status outpu
 
 An Action proposal is not scientific truth. A deterministic apply/accept service validates target identity, current revision and mutation rules before LabFlow Data changes.
 
-## Guards
+## Availability and guards
+
+`LF.ActionCapabilities` is the single preflight layer used by Assistant, page UI and Settings. It discovers the complete public catalog from `ActionRegistry`, resolves declarative `ui.bindings`, runs the same guards used by the Runner, and returns `available`, `reason`, `params` and `recommended`.
+
+A page never adds or removes Actions. `ui.routes` changes recommendation/order only. If a prerequisite is missing, the Action remains discoverable as **unavailable** with the exact reason. `ActionRunner` resolves bindings and rechecks guards immediately before execution as the final safety boundary.
 
 Current guards include:
 - `dataset.loaded`
@@ -56,7 +63,7 @@ Current guards include:
 - `results.compare_groups`
 - `assistant.question`
 
-Guard failure means **unavailable now**, not provider failure.
+Guard failure means **unavailable now**, not provider failure. Preflight happens before provider checks, progress UI or model telemetry, so a blocked Action never appears as `1% · Failed`.
 
 ## Scientific vs technical outcomes
 
@@ -71,11 +78,12 @@ Design bulk convenience is orchestration of the same `design.infer` Action once 
 1. Create `actions/<id>/action.json`.
 2. Add `prompt.md` only for AI steps.
 3. Add/reuse one output schema for structured results.
-4. Reuse/register Context profiles and guards.
-5. Register deterministic checkpoint tools beside their implementation.
-6. Store transient/persistent Action output through `ActionData`.
-7. Keep scientific mutation in deterministic apply services.
-8. Add contract, structured-output and behavior tests.
-9. Rebuild Action/prompt/reference bundles.
+4. For a public Action, declare one `ui.command`, recommended `ui.routes`, and any `ui.bindings` needed to resolve target/filter parameters from application state.
+5. Reuse/register Context profiles and guards. Guards consume resolved Action parameters, not page DOM or route-specific state directly.
+6. Register deterministic checkpoint tools beside their implementation.
+7. Store transient/persistent Action output through `ActionData`.
+8. Keep scientific mutation in deterministic apply services.
+9. Add contract, capability/preflight, structured-output and behavior tests.
+10. Rebuild Action/prompt/reference bundles.
 
 Do not introduce a central Action whitelist or special-case the Action ID in the generic runner when a manifest/registry contract can express the behavior.

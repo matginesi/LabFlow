@@ -7,7 +7,7 @@ order: 5
 
 # LabFlow architecture
 
-This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. `tools/serve_static.py` serves public assets and provides one narrow same-origin relay for Z.AI Chat Completions; it is not an application backend and does not own scientific state.
+This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. LabFlow can be opened as static browser content or served by a normal static server; no application backend or provider relay owns scientific state.
 
 ## 1. Core rule
 
@@ -146,9 +146,11 @@ experiment.actionData = {
 }
 ```
 
-Use `LF.ActionData`; never add fields such as `aiDesignProposal`, `aiCorrectionPlan` or `analysis.aiInterpretation`. `DataContracts` rejects those ad-hoc fields.
+Use `LF.ActionData` as the single persistent boundary for Action proposals, annotations and per-target status. Canonical scientific projections remain deterministic and do not embed AI annotations.
 
 Scientific data changes occur only after an explicit apply/accept path owned by deterministic code.
+
+`ActionCapabilities` is the single availability/preflight service. Public Actions are globally discoverable from manifests. A route may mark an Action as recommended, but cannot add/remove it. Manifest `ui.bindings` resolve current selections/filters into Action parameters; guards, Context Packs, validators and storage checkpoints consume those resolved parameters instead of reading page UI state independently.
 
 ## 8. State and invalidation
 

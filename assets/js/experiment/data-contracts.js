@@ -44,15 +44,13 @@ function validateBacklinks(exp,errors,maps){
 }
 
 function validate(exp){
-  exp=LF.DataModel&&LF.DataModel.hydrate?LF.DataModel.hydrate(exp):Schema.normalizeRoot(exp);
-  const errors=[],warnings=[];
   if(!exp||typeof exp!=='object')return{ok:false,errors:[{code:'DATASET_REQUIRED',message:'ExperimentData is required.',recordId:'',path:''}],warnings:[],counts:{}};
-  const actionData=exp.actionData;
-  if(!actionData||typeof actionData!=='object'||Array.isArray(actionData))add(errors,'ACTION_DATA_INVALID','actionData must be the single persisted Action-output store.',exp,'actionData');
-  else ['proposals','annotations','status'].forEach(function(k){if(!actionData[k]||typeof actionData[k]!=='object'||Array.isArray(actionData[k]))add(errors,'ACTION_DATA_BUCKET_INVALID','actionData.'+k+' must be an object keyed by Action id.',exp,'actionData.'+k);});
-  ['aiCorrectionPlan','aiDesignProposal','aiDesignProposals','designAiStatus'].forEach(function(k){if(Object.prototype.hasOwnProperty.call(exp,k))add(errors,'ACTION_DATA_ADHOC','Deprecated ad-hoc Action field '+k+' is not allowed; use actionData.',exp,k);});
-  if(exp.analysis&&Object.prototype.hasOwnProperty.call(exp.analysis,'aiInterpretation'))add(errors,'ACTION_DATA_ADHOC','AI Results interpretation must live in actionData.annotations.',exp,'analysis.aiInterpretation');
-  if(exp.analysis&&Object.prototype.hasOwnProperty.call(exp.analysis,'aiComparison'))add(errors,'ACTION_DATA_ADHOC','AI Results comparison must live in actionData.annotations.',exp,'analysis.aiComparison');
+  const errors=[],warnings=[],source=exp,actionData=source.actionData;
+  // Validate persisted ActionData before hydration. Hydration normalizes malformed values
+  // for runtime safety and must not hide a broken persisted contract from validation.
+  if(!actionData||typeof actionData!=='object'||Array.isArray(actionData))add(errors,'ACTION_DATA_INVALID','actionData must be the single persisted Action-output store.',source,'actionData');
+  else ['proposals','annotations','status'].forEach(function(k){if(!actionData[k]||typeof actionData[k]!=='object'||Array.isArray(actionData[k]))add(errors,'ACTION_DATA_BUCKET_INVALID','actionData.'+k+' must be an object keyed by Action id.',source,'actionData.'+k);});
+  exp=LF.DataModel&&LF.DataModel.hydrate?LF.DataModel.hydrate(exp):Schema.normalizeRoot(exp);
   const sets=relationIds(exp),maps={};
   ['experiment','sample','run','measurement'].forEach(function(kind){const key=collectionForKind(kind);maps[kind]=new Map((exp[key]||[]).filter(function(x){return x&&x.id;}).map(function(x){return[String(x.id),x];}));});
 

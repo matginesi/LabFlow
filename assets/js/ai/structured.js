@@ -217,21 +217,7 @@
       reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
     };
   }
-  function normalizeDesignDevice(item,index) {
-    item=item&&typeof item==='object'?item:{};
-    const source=normalizeDesignSource(item.provenance_kind||item.provenanceKind||item.source_kind,'model_inference'),confidence=designConfidence(item.confidence,0.5),layers=designList(item.stack||item.layers||item.device_stack||item.deviceStack).slice(0,14).map(function(layer){return normalizeDesignLayer(layer,source,confidence);});
-    return{
-      name:designText(item.name||item.title||item.group),
-      sample_names:designStringList(item.sample_names||item.sampleNames||item.samples,32),
-      solution_names:designStringList(item.solution_names||item.solutionNames||item.solutions,12),
-      stack:layers,
-      evidence:clip(item.evidence||item.source,500),
-      confidence:confidence,
-      provenance_kind:source,
-      reason:clip(item.reason||item.rationale||'Model suggestion for researcher review.',180)
-    };
-  }
-  function recoverDesignText(value) {
+    function recoverDesignText(value) {
     const raw=String(value==null?'':value).trim();if(!raw)return null;
     function field(label){const re=new RegExp('(?:^|\\n)\\s*(?:[-*]\\s*)?(?:'+label+')\\s*[:=-]\\s*([^\\n]+)','i'),m=raw.match(re);return m?String(m[1]||'').replace(/[`*_]/g,'').trim():'';}
     let solutes=field('solutes?|precursors?'),solvents=field('solvents?|solvent\\s*system'),role=field('role|solution\\s*role'),name=field('solution\\s*name|formulation\\s*name');

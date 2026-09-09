@@ -61,5 +61,11 @@
         "tool": "results.store-interpretation"
       }
     ]
+  },
+  "ui": {
+    "command": "/interpret",
+    "routes": [
+      "experiment-results"
+    ]
   }
 }

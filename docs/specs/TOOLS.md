@@ -38,4 +38,4 @@ Naming normalization, safe cleanup, hierarchy rebuild, JV analysis, canonical in
 
 ## Extension
 
-Action-step tools register beside their implementation via `ActionStepRegistry` / `ToolRegistry.registerActionStep(...)`. Read/write access metadata is mandatory so agent mode can enforce the boundary.
+Action-step tools register beside their implementation through `ActionStepRegistry`, which also exposes them to `ToolRegistry` with explicit read/write metadata. Action execution resolves deterministic checkpoints through `ToolRegistry`; agent mode can invoke only tools explicitly marked read-only and agent-visible.

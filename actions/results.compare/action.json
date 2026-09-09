@@ -15,7 +15,8 @@
     "target": {
       "kind": "results_group_selection",
       "cardinality": "many",
-      "minimum": 2
+      "minimum": 2,
+      "selection_param": "groups"
     },
     "context": {
       "profile": "results_compare",
@@ -63,5 +64,17 @@
         "tool": "results.store-comparison"
       }
     ]
+  },
+  "ui": {
+    "command": "/compare",
+    "routes": [
+      "experiment-results"
+    ],
+    "bindings": {
+      "groups": "boxPlot.groups",
+      "metric": "boxPlot.metric",
+      "direction": "boxPlot.direction",
+      "eligibleOnly": "boxPlot.eligibleOnly"
+    }
   }
 }

@@ -59,13 +59,6 @@
     if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')throw new Error('AI endpoint must use http:// or https://.');
     return parsed.toString();
   }
-  function providerRequestUrl(provider,url){
-    const relay=provider&&String(provider.browserRelayPath||'').trim();
-    if(!relay||typeof location==='undefined'||!location)return url;
-    if(String(location.protocol||'')==='file:')return 'http://127.0.0.1:8000'+relay;
-    if(!/^https?:$/.test(String(location.protocol||'')))return url;
-    try{return new URL(relay,location.origin).toString();}catch(_){return relay;}
-  }
   function isLocalAddress(url){
     let host='';
     try{host=new URL(String(url||'')).hostname.toLowerCase();}catch(_){return false;}
@@ -126,15 +119,13 @@
     try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
     catch(_){message=String(text||'').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,420);}
     const providerId=LF.Storage&&LF.Storage.getAiSettings?(LF.Storage.getAiSettings()||{}).provider:'';
-    const relayUnsupported=providerId==='zai'&&Number(status)===501&&/unsupported method|server does not support/i.test(message);
-    if(relayUnsupported){code='LABFLOW_RELAY_UNAVAILABLE';message='This web server cannot forward Z.AI requests. Start LabFlow with its bundled server, then retry.';}
     const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
     if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
     const limit=overflow?{limited:false,retryable:false,kind:'',label:''}:limitInfo(effectiveStatus,code,message);
-    const label=relayUnsupported?'Z.AI relay unavailable':overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
+    const label=overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
     const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code,message):'';
     const err=new Error(label+(overflow&&overflow.promptTokens&&overflow.contextWindow?' · '+overflow.promptTokens+' input tokens > '+overflow.contextWindow+' context tokens':'')+(!overflow&&code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=effectiveStatus;err.code=overflow?'MODEL_CONTEXT_LENGTH':relayUnsupported?'LABFLOW_RELAY_UNAVAILABLE':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=relayUnsupported?'':String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
+    err.status=effectiveStatus;err.providerId=String(providerId||'');err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
     if(overflow){err.promptTokens=overflow.promptTokens;err.contextWindow=overflow.contextWindow;err.isContextOverflow=true;}
     return err;
   }
@@ -285,7 +276,7 @@
         failure.isNetwork=!wasCancelled;failure.cancelled=wasCancelled;failure.timedOut=!wasCancelled&&requestState.timedOut;failure.timeoutReason=requestState.timeoutReason;failure.timeoutMs=requestState.timeoutReason==='deadline'?hardLimit:limit;failure.elapsedMs=elapsed;failure.cause=err;
       }else if(!(err&&err.status)&&!(err&&err.code)&&!(err&&err.isProvider)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
         const providerId=(LF.Storage.getAiSettings()||{}).provider||'';
-        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId):label+' could not reach the AI service. Check the endpoint and provider status.';
+        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId):(providerId==='zai'?label+' could not reach Z.AI from the browser. Check the API key and endpoint; if the same request works outside the browser, inspect CORS/origin policy.':label+' could not reach the AI service. Check the endpoint and provider status.');
         failure=new Error(message);failure.isNetwork=true;failure.providerId=providerId;failure.elapsedMs=elapsed;failure.cause=err;
       }
       const responseDetail=responseMeta||{received:false,body:null,bodyChars:0,note:failure.timedOut?'No provider bytes before the inactivity timeout.':failure.cancelled?'Request cancelled before an HTTP response.':'No HTTP response received.'};
@@ -315,12 +306,11 @@
     const provider=(LF.AIProviders&&LF.AIProviders[settings.provider])||{};
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||settings.provider)+' requires an API key. Open Settings.');
-    const officialUrl=validateHttpUrl(resolveChatUrl(settings.endpoint));
-    const url=providerRequestUrl(provider,officialUrl);
+    const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
     const baseHeaders=providerAuthHeaders(provider,key);
     const headers=Object.assign({'Content-Type':'application/json'},baseHeaders);
     // Avoid duplicating auth header construction; providerAuthHeaders is the single source
-    return{settings:settings,provider:provider,url:url,officialUrl:officialUrl,headers:headers};
+    return{settings:settings,provider:provider,url:url,headers:headers};
   }
 
   /** Build an isolated config for local diagnostics without depending on saved streaming choices. */
@@ -330,8 +320,8 @@
     const settings=Object.assign({},saved,{provider:providerId,endpoint:String(endpoint||saved.endpoint||''),model:String(model||saved.model||''),streaming:true,thinkingMode:'off'});
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
-    const officialUrl=validateHttpUrl(resolveChatUrl(settings.endpoint));
-    return{settings:settings,provider:provider,url:providerRequestUrl(provider,officialUrl),officialUrl:officialUrl,headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
+    const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    return{settings:settings,provider:provider,url:url,headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
   }
 
   function textFrom(value){
@@ -476,6 +466,14 @@
   }
   async function fetchJson(url,options){const response=await metadataFetch(url,options),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers);try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
+  function modelId(row){return String(row&&row.id||row&&row.model||row&&row.name||row&&row.key||'').trim();}
+  function numericPrice(value){const n=Number(value);return Number.isFinite(n)?n:null;}
+  function modelCatalogueEntry(row,providerId){
+    const id=modelId(row),pricing=row&&row.pricing&&typeof row.pricing==='object'?row.pricing:{},prompt=numericPrice(pricing.prompt),completion=numericPrice(pricing.completion),request=numericPrice(pricing.request);
+    const freeByPrice=prompt===0&&completion===0&&(request===null||request===0),free=/:free(?:$|:)/i.test(id)||freeByPrice;
+    return{id:id,free:free,pricing:{prompt:prompt,completion:completion,request:request},contextWindow:positiveInt(row&&row.context_length||row&&row.contextWindow||row&&row.context_window),name:String(row&&row.name||''),provider:providerId||''};
+  }
+  function catalogueEntries(obj,providerId){return modelRows(obj).map(function(row){return modelCatalogueEntry(row,providerId);}).filter(function(row){return row.id;});}
   function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
     const url=providerModelsUrl(provider,endpoint),obj=await fetchJson(url,{method:'GET',headers:providerAuthHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,providerId==='openrouter'?'OpenRouter model metadata':'provider model metadata');
@@ -551,7 +549,7 @@
     if(provider.remoteModelMetadata===false&&provider.staticModelCatalogue===true&&Array.isArray(provider.knownModels)){
       const models=Array.from(new Set(provider.knownModels.map(String).filter(Boolean)));
       Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:0,skipped:false,reason:'documented-static-catalogue'});
-      return{models:models,loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'documented provider catalogue snapshot',static:true,skipped:false};
+      return{models:models,entries:models.map(function(id){return{id:id,free:false,pricing:{prompt:null,completion:null,request:null},provider:activeProviderId};}),loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'documented provider catalogue snapshot',static:true,skipped:false};
     }
     if(provider.remoteModelMetadata===false){
       Log.info('models.list',{provider:activeProviderId,count:0,loaded:0,skipped:true,reason:'configured-model-only'});
@@ -587,9 +585,9 @@
       return{models:models,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:source};
     }
 
-    const url=providerModelsUrl(provider,base),result=await read(url),models=uniqueModels(modelRows(result.obj)),loadedModels=activeProviderId==='llamacpp'?models.slice():[];
-    Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:loadedModels.length,url:url});
-    return{models:models,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:'provider model catalogue'};
+    const url=providerModelsUrl(provider,base),result=await read(url),entries=catalogueEntries(result.obj,activeProviderId),models=Array.from(new Set(entries.map(function(row){return row.id;}))),loadedModels=activeProviderId==='llamacpp'?models.slice():[];
+    Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:loadedModels.length,free:entries.filter(function(row){return row.free;}).length,url:url});
+    return{models:models,entries:entries,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:'provider model catalogue'};
   }
 
   /**
@@ -630,7 +628,7 @@
   }
 
   async function testConnection(options){
-    options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(30000,Number(cfg.provider.connectionTestTimeoutMs)||15000));
+    options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(120000,Number(cfg.provider.connectionTestTimeoutMs)||30000));
     const probe=connectionProbePolicy(cfg.provider);
     const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,guardThinking:probe.thinkingMode==='off',connectionTest:true});
     let r;
@@ -696,13 +694,6 @@
     try{
       r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
     }catch(err){
-      const providerId=String(spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),localOrigin=typeof location!=='undefined'&&location&&isLocalAddress(String(location.origin||'')),relayPath=String(spec.provider&&spec.provider.browserRelayPath||''),fallbackUrl='http://127.0.0.1:8000'+relayPath;
-      if(err&&err.code==='LABFLOW_RELAY_UNAVAILABLE'&&providerId==='zai'&&localOrigin&&relayPath&&String(spec.url)!==fallbackUrl){
-        Log.warn('relay.same-origin-unavailable',{from:spec.url,to:fallbackUrl,retry:'local-relay-only'});
-        r=await request(fallbackUrl,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
-      }
-      if(r){/* The rejected request was handled by a static server, never by Z.AI. */}
-      else {
       if(isRateLimitError(err)){
         const retryMs=Math.max(0,Number(err.retryAfterMs)||0);
         err.retryInMs=retryMs;
@@ -710,7 +701,6 @@
         if(opts.onProgress)opts.onProgress({transportState:'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:0,retries:0,willRetry:false});
       }
       throw err;
-      }
     }
     const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),normalized=normalizeAssistantEnvelope(extracted.content,extracted.reasoning,spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),usage=obj.usage||{},content=normalized.content,reasoning=normalized.reasoning;
     if(normalized.changed)Log.warn('response.reasoning-envelope-normalized',{provider:spec.settings&&spec.settings.provider||'',model:obj.model||spec.settings&&spec.settings.model||'',resultBlocks:normalized.resultBlocks,rawContentChars:String(extracted.content||'').length,finalContentChars:content.length,reasoningChars:reasoning.length});
@@ -735,6 +725,15 @@
     return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
   }
 
+  async function probe(options){
+    options=options||{};
+    const saved=LF.Storage.getAiSettings(),providerId=String(options.provider||saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
+    const endpoint=String(options.endpoint||provider.endpoint||saved.endpoint||''),model=String(options.model||provider.model||saved.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
+    const cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),timeout=Math.max(5000,Math.min(120000,Number(options.timeoutMs)||Number(provider.connectionTestTimeoutMs)||30000));
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,thinkingMode:options.thinkingMode||'off',guardThinking:true,connectionTest:true});
+    return send(spec,{label:String(options.label||'Provider console probe')});
+  }
+
   LF.AI={
     buildRequest:buildRequest,
     send:send,
@@ -744,7 +743,6 @@
     isBusy:function(){return inFlight;},
     resolveChatUrl:resolveChatUrl,
     validateHttpUrl:validateHttpUrl,
-    providerRequestUrl:providerRequestUrl,
     estimateTokens:estimateTokens,
     estimatePromptTokens:estimatePromptTokens,
     isLocalAddress:isLocalAddress,
@@ -766,6 +764,7 @@
     reasoningControlUrl:reasoningControlUrl,
     connectionProbePolicy:connectionProbePolicy,
     benchmarkTokensPerSecond:benchmarkTokensPerSecond,
-    testConnection:testConnection
+    testConnection:testConnection,
+    probe:probe
   };
 }());

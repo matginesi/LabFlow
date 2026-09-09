@@ -39,10 +39,10 @@ The unit suite includes architecture regressions for `DomainSchema`, persistence
 Serve locally with:
 
 ```bash
-python tools/serve_static.py --host 0.0.0.0 --port 8000
+python -m http.server 8000
 ```
 
-Use this bundled server, not `python -m http.server`, when testing Z.AI: it provides the narrow same-origin relay required by the browser adapter.
+The browser smoke test needs only ordinary static serving. Hosted AI providers are contacted directly by the browser; live provider checks remain separate because they require credentials and provider CORS/network availability.
 
 Then run:
 

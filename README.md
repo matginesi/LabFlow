@@ -15,7 +15,7 @@ automatic safe LabFlow Data cleanup
  ↓
 Review only genuine semantic ambiguities
  ↓
-Results / Design / NOMAD
+Results / Design / Export
 ```
 
 If deterministic evidence is sufficient, the researcher can go directly from import to Results. AI is optional and never blocks import.
@@ -144,10 +144,15 @@ Start with:
 
 ## Run locally
 
-Use the bundled server:
+Serve it with any ordinary static server if you do not want to open `index.html` directly:
 
 ```bash
-python tools/serve_static.py --host 0.0.0.0 --port 8000
+python -m http.server 8000
 ```
 
-This serves the static application and the narrow same-origin Z.AI relay at `/__labflow/zai/chat/completions`. A generic `python -m http.server` can render LabFlow but cannot make the Z.AI provider work because `api.z.ai` blocks the browser cross-origin request.
+LabFlow is a static browser application. A generic static server is sufficient; Z.AI and other hosted providers are called directly from the browser using the configured endpoint. You may also open the page directly when your browser permits local-file module/script access.
+
+
+## AI provider console
+
+Open browser DevTools and run `LabFlow.AIConsole.help()` for provider/model diagnostics. See `docs/guides/AI_PROVIDER_CONSOLE.md`.

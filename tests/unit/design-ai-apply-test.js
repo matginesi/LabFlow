@@ -84,11 +84,6 @@ module.exports=function(t,LF){
     assert(p.devices.length===1&&p.devices[0].stack.length===2&&p.devices[0].stack[0].material==='SnO2','natural stack key normalizes');
   };
 
-  t['Design decision metric averages only proposed fields without provenance caps']=function(){
-    const metric=LF.DesignDecisionMetric.calculate({solutions:[{name:'Ink',confidence:.95,provenance_kind:'model_inference'}],devices:[{confidence:.9,provenance_kind:'experiment',evidence:'RAW metadata',process:{annealing:'100 C'},stack:[{material:'SnO2',confidence:.88,provenance_kind:'experiment',evidence:'source row'}]}]});
-    assert(metric.value===91,'mean field confidence should be deterministic');assert(metric.decisions===3,'only proposed fields should be counted');assert(metric.modelInferred===1&&metric.experimentBacked===2,'simple source counts retained');assert(metric.estimated===true&&metric.method==='proposed_field_confidence_mean','score must be explicit and explainable');
-  };
-
   t['Design validation binds provider output to the selected canonical variant']=function(){
     const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
     const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[{role:'electron transport layer',material:'SnO2'}],provenance_kind:'model_inference',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2'],unknown_fields:['stack']},infer:proposal},lastResult:proposal};

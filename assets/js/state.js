@@ -41,6 +41,11 @@
       uploadLanding: false,
       assistantOpen: false,
       resultsTab: 'overview',
+      resultsDataMode: 'all',
+      resultsJvMode: 'single',
+      resultsOverviewMetric: 'eff',
+      resultsOverviewDirection: 'best',
+      resultsOverviewStatistic: 'median',
       selectedMeasurementId: null,
       curveSelection: [],
       curveView: 'all',
@@ -102,8 +107,7 @@
     return exp;
   }
 
-  /** Compatibility-free facade for callers that explicitly request NOMAD invalidation.
-      The dependency itself is registered in DerivedState, not hardcoded here. */
+  /** Invalidate NOMAD-derived state through the dependency registry. */
   function invalidateNomad(exp, scope) {
     if (LF.DerivedState && LF.DerivedState.invalidate) LF.DerivedState.invalidate(exp, scope || 'metadata');
   }
@@ -124,6 +128,7 @@
   function setRoute(route) {
     const previous = state.ui.route;
     route = normalizeRoute(route);
+    if (previous !== route) commitAllDrafts();
     ensureExperiment('route:' + route);
     state.ui.route = route;
     state.ui.uploadLanding = false;
@@ -205,8 +210,10 @@
 
   function commitAllDrafts(){return commitDraft();}
 
+  function currentExperiment(reason){ return ensureExperiment(reason||'current'); }
+
   function resetSession() {
-    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.designCabinetPicker=''; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
+    state.experiment=emptyExperiment(); state.actionRun=null; state.ui.route='experiment-import'; state.ui.uploadLanding=false; state.ui.resultsTab='overview'; state.ui.resultsDataMode='all'; state.ui.resultsJvMode='single'; state.ui.resultsOverviewMetric='eff'; state.ui.resultsOverviewDirection='best'; state.ui.resultsOverviewStatistic='median'; state.ui.selectedMeasurementId=null; state.ui.curveSelection=[]; state.ui.selectedDesignDeviceId=null; state.ui.resultInspectorId=null; state.ui.designCabinetPicker=''; state.ui.pageContext={page:'',view:'',selected:{},filters:{},visible:[]}; notify('reset'); return state;
   }
 
 
@@ -229,6 +236,7 @@
     markDraft: markDraft,
     commitDraft: commitDraft,
     commitAllDrafts: commitAllDrafts,
+    currentExperiment: currentExperiment,
     resetSession: resetSession
   };
 }());

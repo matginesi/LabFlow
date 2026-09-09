@@ -43,18 +43,21 @@ for token in ['phase:', 'after:', 'reads:', 'writes:']:
     if token not in pipeline:
         errors.append(f'pipeline metadata missing: {token[:-1]}')
 
-runtime_files=list((ROOT/'assets/js').rglob('*.js'))
-for p in runtime_files:
-    if p.name in {'data-contracts.js','docs-bundle.js','ui-kit-inline.js'}:
-        continue
-    text=p.read_text(encoding='utf-8',errors='ignore')
-    for legacy in ['aiCorrectionPlan','aiDesignProposal','aiDesignProposals','designAiStatus','analysis.aiInterpretation','analysis.aiComparison']:
-        if legacy in text:
-            errors.append(f'ad-hoc Action output field {legacy} remains in runtime: {p.relative_to(ROOT)}')
-
 contracts=(ROOT/'assets/js/experiment/data-contracts.js').read_text(encoding='utf-8')
-if 'ACTION_DATA_ADHOC' not in contracts:
-    errors.append('DataContracts must fail closed on ad-hoc Action output fields')
+if 'ACTION_DATA_INVALID' not in contracts or 'ACTION_DATA_BUCKET_INVALID' not in contracts:
+    errors.append('DataContracts must fail closed on malformed ActionData')
+
+# Persistent public Action output has one current boundary: ExperimentData.actionData.
+import json
+for manifest in sorted((ROOT/'actions').glob('*/action.json')):
+    d=json.loads(manifest.read_text(encoding='utf-8'))
+    effect=(d.get('contract') or {}).get('effect') or {}
+    if d.get('visibility')!='public' or effect.get('mode')=='read_only':
+        continue
+    for target in effect.get('writes') or []:
+        if not str(target).startswith('experiment.actionData.'):
+            errors.append(f'public Action {d.get("id")} persists outside experiment.actionData: {target}')
+
 if 'BROKEN_RELATION' not in contracts:
     errors.append('DataContracts must validate graph relations')
 

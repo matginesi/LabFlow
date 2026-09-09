@@ -52,10 +52,10 @@ module.exports = function (t, LF) {
     const snap = LF.DomainSchema.snapshot(e);
     snap.actionData.proposals['design.infer'].d1.summary = 'changed snapshot';
     assert(LF.ActionData.proposal(e, 'design.infer', 'd1').summary, 'proposal', 'snapshot cannot mutate live aggregate');
-    e.aiDesignProposal = { legacy: true };
+    e.actionData.annotations = [];
     const invalid = LF.DataContracts.validate(e);
-    truthy(invalid.errors.some(function (x) { return x.code === 'ACTION_DATA_ADHOC'; }), 'ad-hoc Action fields fail the domain contract');
-    delete e.aiDesignProposal;
+    truthy(invalid.errors.some(function (x) { return x.code === 'ACTION_DATA_BUCKET_INVALID'; }), 'malformed ActionData buckets fail the domain contract');
+    e.actionData.annotations = {};
   };
 
   t['DerivedState invalidates ActionData by Action id without path parsing'] = function () {

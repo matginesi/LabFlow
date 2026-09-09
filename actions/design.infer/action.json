@@ -73,5 +73,14 @@
         "tool": "design.store-proposal"
       }
     ]
+  },
+  "ui": {
+    "command": "/design",
+    "routes": [
+      "experiment-design"
+    ],
+    "bindings": {
+      "deviceId": "selectedDesignDeviceId"
+    }
   }
 }

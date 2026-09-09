@@ -69,6 +69,11 @@ Export is artifact-first, not a settings form.
 
 Results are deterministic first. Charts visualize canonical measurements; they do not recalculate scientific truth.
 
+Results should be optimized for researcher triage before exhaustive inspection. Keep exactly four top-level workspaces: **Overview / Data / JV / Compare**. Put ranking, warnings and subset choices inside Data; put single-scan analysis and overlays inside JV. Do not grow the top-level tab count as features are added.
+
+Overview answers the lazy-researcher questions first: **what is best, which group is strongest, how much data is eligible, what needs attention, and where should I drill down next**. Prefer robust group summaries (median + IQR + min–max) over mean-only bars; mean may be selectable but should not be the sole/default statistic.
+
+
 Every primary chart should, where the data supports it:
 
 - react to current metric/scan/group filters rather than being a static screenshot;
@@ -83,9 +88,19 @@ Every primary chart should, where the data supports it:
 
 Chart colors come from `--chart-*` tokens. Theme accent is for interaction/state, not for making every data series the same accent color.
 
+## Primary workflow simplicity
+
+Optimize the first view for a researcher who wants the answer before the controls. Upload, Results, Design and Export must expose the primary decision/action first and place secondary diagnostics, normalization knobs, provenance tables, complete mappings and already-resolved details behind native progressive disclosure. Do not remove capability; delay it until the researcher asks for it or the data state makes it relevant. A blocker may open or foreground its own resolution, but unrelated advanced sections stay closed.
+
+## Error recovery
+
+Page failures are recovered where they happen. Results, Design and Export offer Retry, a deterministic derived-data rebuild when safe, and Logs. Never use Upload & Review as a generic error destination. Route to source review only when the actual blocker is missing or ambiguous source evidence, and say why. A guard/precondition is `unavailable`, not a failed provider request.
+
 ## Actions and Assistant
 
 User-facing capabilities use `button[data-action]` and the Action contracts. The Assistant may launch public Actions and show their bounded outcomes, but it must still run them through `ActionUI`/guards/confirmation semantics rather than bypassing contracts.
+
+Recommended Actions for the current page are visible directly above the composer. Slash commands such as `/interpret`, `/design`, `/compare` and `/resolve` are rendered as accent command chips in Action controls and Action events. The full catalog remains accessible, but page-recommended Actions are shown first and unrelated Actions must not dominate the current workflow.
 
 Action results shown in chat should be readable at normal compact UI sizes. Full JSON/provider telemetry stays behind progressive disclosure. The Assistant can receive a bounded `recent_actions` summary for follow-up conversation, but Action events are not silently rewritten into user messages or scientific state.
 
@@ -93,7 +108,7 @@ AI surfaces must state responsibility: deterministic analysis is authoritative; 
 
 ## Design and Cabinet
 
-Design is one selected experiment/variant at a time: solution chemistry, ordered stack and process. Keep the workbench dense and comparable to Results/Review. AI proposals remain visibly separate until accepted.
+Design is one selected experiment/variant at a time: solution chemistry, ordered stack and process. Keep the default workbench light: automatically expand domains that are missing or need researcher attention and keep already-complete domains collapsed until requested. AI proposals remain visibly separate until accepted.
 
 Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomplete resources can be edited but must not be presented as applicable matches. Copying Cabinet content into Design uses snapshots and must preserve chemistry/stack/process content.
 
@@ -101,9 +116,16 @@ Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomp
 
 The primary workflow destinations are visible directly in navigation: **Upload & Review → Results → Design → Export**. Cabinet and Documentation are workspace utilities; Logs and UI Kit are advanced utilities; Settings stays in the bottom utility region.
 
+`Reset session` is a global destructive operation and belongs in the **topbar**, not in the sidebar or a page footer. Keep it visibly distinct from routine actions with the danger token; on phone the icon remains visible even when its text label collapses.
+
 - At desktop widths (`>1100px`) the sidebar is persistent and occupies its own shell column. Do not turn desktop navigation into a drawer.
-- At tablet/mobile widths (`<=1100px`) the same sidebar becomes an off-canvas drawer with menu button, backdrop, close control and `Escape` support.
+- At tablet/mobile widths (`<=1100px`) the same sidebar becomes an off-canvas drawer with menu button, backdrop, close control and `Escape` support. Resize transitions must resynchronize `aria-hidden`/drawer state; never leave desktop navigation accessibility state behind after crossing the breakpoint.
+- Only **Upload & Review, Results, Design and Export** receive shared in-page **Previous / Next** navigation from `PageShell`. It sits near the top immediately after the page heading; utility pages do not show it. The route order is declared once. On phones these controls are two readable touch targets at least ~44 px high.
 - Do not duplicate the desktop workflow with a second large stepper; the compact workflow strip is primarily a narrow-screen orientation aid.
+
+### Responsive ownership
+
+Use one shell contract only: desktop `>1100px`, drawer/tablet `<=1100px`, phone `<=700px`. Shared phone selectors such as `.page`, `.panel-head`, `.panel-body`, `.topbar`, `.sidebar` and `.assistant-panel` must have one canonical responsive definition. Feature media queries may reflow their own grids/tables/charts, but must not re-declare global shell spacing as a late "fix". Remove retired selectors when markup changes instead of preserving compatibility CSS.
 
 Theme variants use identical markup and component structure. Theme differences belong in tokens. JSON, Markdown, charts, Assistant, export surfaces and totems inherit active theme variables; do not hard-code light/dark surfaces.
 
@@ -117,4 +139,18 @@ After UI changes:
 4. run the unit suite;
 5. run `python tools/test_responsive_browser.py` when the environment permits it;
 6. verify every local `<script src>` / stylesheet path exists;
-7. search for stale duplicate selectors and obsolete workflow labels after changing a shared pattern.
+7. search for stale duplicate selectors, unreferenced runtime classes/helpers and obsolete workflow labels after changing a shared pattern;
+8. do not add chronological CSS layers such as "final fix", "polish" or versioned overrides. Consolidate the owning rule instead.
+
+## Hosted provider browser transport
+
+Hosted providers use their configured official endpoint directly from the browser. The UI must not require a LabFlow-specific relay/server. Z.AI uses the official General API endpoint; a browser CORS/network block is diagnosed as such and is never disguised as an Action/schema failure or retried through a hidden localhost fallback.
+
+
+## Export recovery and shared state
+
+- Export blockers are resolved in Export whenever the affected data can be inspected there. Never use Upload & Review as a generic error destination.
+- `Recheck` operations use the activity totem and rebuild deterministic projections from the current ExperimentData.
+- Before route changes, Actions, or Assistant turns, pending drafts must be committed so every surface reads the same revision.
+- Previous/Next belongs only to Upload & Review, Results, Design and Export, at the top of those pages.
+- On phones, primary workflow controls become full-width/two-column touch targets without horizontal page overflow.
