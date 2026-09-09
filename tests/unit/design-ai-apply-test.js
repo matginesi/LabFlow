@@ -67,7 +67,7 @@ module.exports=function(t,LF){
   };
 
   t['Design proposals are stored per experimental variant for sequential review']=function(){
-    const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
+    const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
     const exp={design:{devices:[{id:'a'},{id:'b'}],solutions:[]}};
     const store=LF.ActionSteps['design.store-proposal'];
     store({exp:exp,outputs:{infer:{summary:'A',solutions:[],devices:[{sample_names:['A1']}]}},lastResult:null,params:{deviceId:'a'},sourceRevision:3});
@@ -85,8 +85,8 @@ module.exports=function(t,LF){
   };
 
   t['Design validation binds provider output to the selected canonical variant']=function(){
-    const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
-    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[{role:'electron transport layer',material:'SnO2'}],provenance_kind:'model_inference',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2'],unknown_fields:['stack']},infer:proposal},lastResult:proposal};
+    const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
+    const proposal={solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[{role:'Transparent electrode',material:'ITO'},{role:'electron transport layer',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],provenance_kind:'model_inference',confidence:.3,reason:'candidate'}],unknowns:[]},ctx={outputs:{collect:{device_id:'deviceA',sample_names:['A1','A2'],unknown_fields:['stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx);
     assert(JSON.stringify(out.devices[0].sample_names)===JSON.stringify(['A1','A2']),'model-provided sample identity must be replaced by selected canonical scope');
     assert(out.validation.targetDeviceId==='deviceA'&&out.validation.applicableFields[0]==='stack','deterministic target binding/applicability result missing');
@@ -94,7 +94,7 @@ module.exports=function(t,LF){
   };
 
   t['Design validation retries an empty scientific suggestion instead of creating a second missing state']=function(){
-    const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
+    const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
     const proposal={status:'insufficient_evidence',summary:'Not enough source context',solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[],provenance_kind:'model_inference',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
     let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){err=e;}finally{LF.DesignModel=oldModel;}
     assert(err&&err.isContract===true,'empty Design output must trigger the Action retry path');
@@ -102,8 +102,8 @@ module.exports=function(t,LF){
   };
 
   t['Design validation keeps qualitative model inference reviewable and exact quantities non-automatic']=function(){
-    const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
-    const proposal={solutions:[{name:'Ink',role:'absorber precursor',solutes:'perovskite precursor family',concentration:'1.2 M',preparation:'stir 12 h',provenance_kind:'model_inference',confidence:.86}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},provenance_kind:'model_inference',confidence:.84,stack:[{material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',provenance_kind:'model_inference',confidence:.88}]}],unknowns:[]};
+    const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
+    const proposal={solutions:[{name:'Ink',role:'absorber precursor',solutes:'perovskite precursor family',concentration:'1.2 M',preparation:'stir 12 h',provenance_kind:'model_inference',confidence:.86}],devices:[{sample_names:['MODEL'],process:{coating:'spin 4000 rpm',annealing:'100 C',atmosphere:'nitrogen'},provenance_kind:'model_inference',confidence:.84,stack:[{role:'Transparent electrode',material:'ITO',provenance_kind:'model_inference',confidence:.88},{role:'electron transport layer',material:'C60',thickness:'30 nm',process:'evaporate below 4e-6 torr',provenance_kind:'model_inference',confidence:.88},{role:'Absorber',material:'Perovskite',provenance_kind:'model_inference',confidence:.88}]}],unknowns:[]};
     const ctx={exp:{design:{devices:[],solutions:[]}},outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['solutions','stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx),clean=out;
     assert(clean.solutions[0].concentration==='1.2 M'&&clean.solutions[0].preparation==='stir 12 h','model-only quantities remain visible for researcher review');
@@ -157,13 +157,13 @@ module.exports=function(t,LF){
   };
 
   t['Manual Design variant validation does not require canonical sample names']=function(){
-    const oldModel=LF.DesignModel;LF.DesignModel={normalizeProposal:function(v){return v;}};
-    const proposal={summary:'candidate',solutions:[],devices:[{name:'Suggested design',sample_names:['MODEL-GUESS'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:[]};
+    const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
+    const proposal={summary:'candidate',solutions:[],devices:[{name:'Suggested design',sample_names:['MODEL-GUESS'],stack:[{role:'Transparent electrode',material:'ITO',provenance_kind:'model_inference',confidence:.86,reason:'plausible'},{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.86,reason:'plausible'},{role:'Absorber',material:'Perovskite',provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],provenance_kind:'model_inference',confidence:.86,reason:'plausible'}],unknowns:[]};
     const ctx={outputs:{collect:{device_id:'manual1',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal};
     const out=LF.ActionSteps['design.validate-coverage'](ctx);
     assert(out.validation&&out.validation.manualVariant===true,'manual variant should validate successfully');
     assert(out.devices[0].sample_names.length===0,'provider-guessed sample identity must be removed for a manual variant');
-    assert(out.devices[0].stack[0].material==='SnO2','qualitative stack suggestion remains usable');
+    assert(out.devices[0].stack.some(function(x){return x.material==='SnO2';}),'qualitative stack suggestion remains usable');
     LF.DesignModel=oldModel;
   };
 
@@ -179,14 +179,14 @@ module.exports=function(t,LF){
 
   t['Sequential Design validation and storage bind each proposal to its exact experiment ID']=function(){
     const oldModel=LF.DesignModel,oldContext=LF.ContextBuilder;
-    LF.DesignModel={normalizeProposal:function(v){return v;}};
+    LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
     LF.ContextBuilder={pack:function(){return{design_evidence_summary:{evidence_items:0,design_relevant_items:0}};}};
     const exp={design:{solutions:[],devices:[
       {id:'manualA',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{}},
       {id:'manualB',name:'New experiment',sampleNames:[],solutionIds:[],stack:[],process:{}}
     ]}};
     function validateAndStore(deviceId,material){
-      const proposal={summary:deviceId,solutions:[],devices:[{sample_names:['MODEL-GUESS'],stack:[{role:'transport',material:material,provenance_kind:'model_inference',confidence:.84,reason:'candidate'}],provenance_kind:'model_inference',confidence:.84,reason:'candidate'}],unknowns:[]};
+      const proposal={summary:deviceId,solutions:[],devices:[{sample_names:['MODEL-GUESS'],stack:[{role:'Transparent electrode',material:'ITO',provenance_kind:'model_inference',confidence:.84,reason:'candidate'},{role:'transport',material:material,provenance_kind:'model_inference',confidence:.84,reason:'candidate'},{role:'Absorber',material:'Perovskite',provenance_kind:'model_inference',confidence:.84,reason:'candidate'}],provenance_kind:'model_inference',confidence:.84,reason:'candidate'}],unknowns:[]};
       const ctx={exp:exp,params:{deviceId:deviceId},outputs:{collect:{device_id:deviceId,sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal,sourceRevision:7};
       ctx.outputs.infer=LF.ActionSteps['design.validate-coverage'](ctx);
       LF.ActionSteps['design.store-proposal'](ctx);
@@ -195,7 +195,7 @@ module.exports=function(t,LF){
     const saved=map(exp);assert(saved.manualA.targetDeviceId==='manualA','A bound to exact experiment ID');
     assert(saved.manualB.targetDeviceId==='manualB','B bound to exact experiment ID');
     assert(saved.manualA.devices[0].sample_names.length===0&&saved.manualB.devices[0].sample_names.length===0,'manual experiments never inherit guessed sample identity');
-    assert(saved.manualA.devices[0].stack[0].material==='SnO2'&&saved.manualB.devices[0].stack[0].material==='PTAA','independent suggestions remain independent');
+    assert(saved.manualA.devices[0].stack.some(function(x){return x.material==='SnO2';})&&saved.manualB.devices[0].stack.some(function(x){return x.material==='PTAA';}),'independent suggestions remain independent');
     LF.DesignModel=oldModel;LF.ContextBuilder=oldContext;
   };
 
@@ -216,15 +216,24 @@ module.exports=function(t,LF){
     assert(out.unknown_fields.length===1&&out.unknown_fields[0]==='stack','partial absorber evidence should request the missing device architecture');
   };
 
+  t['Design semantic validation rejects a one-layer stack before storing the suggestion']=function(){
+    const proposal={status:'suggested',summary:'partial stack',solutions:[],stack:[{role:'Absorber',material:'Perovskite'}],process:{},unknowns:[]};
+    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
+    assert(err&&err.isContract===true,'one-layer stack must remain inside the bounded AI retry flow');
+    assert((err.validationErrors||[]).some(function(x){return /coherent qualitative device stack/i.test(String(x));}),'retry feedback should request a coherent stack');
+  };
+
   t['Accept experiment applies only that saved suggestion and clears it from review']=function(){
     LF.State={state:{selectedDesignDeviceId:'a'}};
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
-    ]}};put(exp,{targetDeviceId:'a',solutions:[{name:'Ink A',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],devices:[{sample_names:[],solution_names:['Ink A'],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},'a');put(exp,{targetDeviceId:'b',solutions:[],devices:[{sample_names:[],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},'b');
+    ]}};
+    put(exp,{targetDeviceId:'a',solutions:[{name:'Ink A',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],devices:[{sample_names:[],solution_names:['Ink A'],process:{coating:'spin coating'},stack:[{role:'Transparent electrode',material:'ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},'a');
+    put(exp,{targetDeviceId:'b',solutions:[{name:'Ink B',role:'absorber',solutes:'CsI + PbI2',solvents:'DMSO',provenance_kind:'model_inference',confidence:.8}],devices:[{sample_names:[],solution_names:['Ink B'],process:{coating:'spin coating'},stack:[{role:'Transparent electrode',material:'ITO'},{role:'HTL',material:'PTAA'},{role:'Absorber',material:'Perovskite'}]}],unknowns:[]},'b');
     const out=LF.DesignAnalysis.acceptProposal(exp,'a');
-    assert(out.deviceId==='a'&&out.changed>0,'selected suggestion should be accepted');
-    assert(exp.design.devices[0].stack[0].material==='SnO2','selected stack should be copied into editable Design');
+    assert(out.deviceId==='a'&&out.changed>0&&out.complete===true,'selected suggestion should complete and be accepted');
+    assert(exp.design.devices[0].stack.some(function(x){return x.material==='SnO2';}),'selected stack should be copied into editable Design');
     assert(exp.design.devices[1].stack.length===0,'other experiment must remain untouched');
     assert(status(exp,'a').state==='accepted','accepted experiment gets a simple accepted state');
     assert(!map(exp).a&&!!map(exp).b,'only accepted suggestion should leave the review queue');
@@ -235,19 +244,47 @@ module.exports=function(t,LF){
     const exp={design:{status:'reviewing',solutions:[],devices:[
       {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
       {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
-    ]}};put(exp,{targetDeviceId:'a',solutions:[],devices:[{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},'a');put(exp,{targetDeviceId:'b',solutions:[],devices:[{sample_names:[],stack:[{role:'HTL',material:'PTAA',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]},'b');
+    ]}};
+    put(exp,{targetDeviceId:'a',solutions:[{name:'Ink A',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF'}],devices:[{sample_names:[],solution_names:['Ink A'],process:{coating:'spin coating'},stack:[{role:'Transparent electrode',material:'ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}]}],unknowns:[]},'a');
+    put(exp,{targetDeviceId:'b',solutions:[{name:'Ink B',role:'absorber',solutes:'CsI + PbI2',solvents:'DMSO'}],devices:[{sample_names:[],solution_names:['Ink B'],process:{coating:'spin coating'},stack:[{role:'Transparent electrode',material:'ITO'},{role:'HTL',material:'PTAA'},{role:'Absorber',material:'Perovskite'}]}],unknowns:[]},'b');
     const out=LF.DesignAnalysis.acceptAllProposals(exp);
-    assert(out.accepted===2&&out.failed.length===0,'all independent suggestions should be accepted');
-    assert(exp.design.devices[0].stack[0].material==='SnO2'&&exp.design.devices[1].stack[0].material==='PTAA','each experiment keeps its own accepted stack');
+    assert(out.accepted===2&&out.incomplete.length===0&&out.failed.length===0,'all independent complete suggestions should be accepted');
+    assert(exp.design.devices[0].stack.some(function(x){return x.material==='SnO2';})&&exp.design.devices[1].stack.some(function(x){return x.material==='PTAA';}),'each experiment keeps its own accepted stack');
     assert(Object.keys(map(exp)).length===0,'accepted queue should be empty');
+  };
+
+  t['Accept all keeps same-named but scientifically different solutions separated']=function(){
+    LF.State={state:{selectedDesignDeviceId:'a'}};
+    const exp={design:{status:'reviewing',solutions:[],devices:[
+      {id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
+      {id:'b',name:'B',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
+    ]}};
+    const stack=[{role:'Transparent electrode',material:'ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}];
+    put(exp,{targetDeviceId:'a',solutions:[{name:'Perovskite precursor',role:'absorber',solutes:'FAI + PbI2',solvents:'DMF'}],devices:[{sample_names:[],solution_names:['Perovskite precursor'],process:{coating:'spin coating'},stack:stack}],unknowns:[]},'a');
+    put(exp,{targetDeviceId:'b',solutions:[{name:'Perovskite precursor',role:'absorber',solutes:'CsI + PbI2',solvents:'DMSO'}],devices:[{sample_names:[],solution_names:['Perovskite precursor'],process:{coating:'spin coating'},stack:stack}],unknowns:[]},'b');
+    const out=LF.DesignAnalysis.acceptAllProposals(exp),a=exp.design.devices[0],b=exp.design.devices[1];
+    assert(out.accepted===2&&exp.design.solutions.length===2,'different chemistry must create two distinct Design solutions even when AI names match');
+    assert(a.solutionIds.length===1&&b.solutionIds.length===1&&a.solutionIds[0]!==b.solutionIds[0],'each experiment must link only its own accepted solution');
+    const sa=exp.design.solutions.find(function(x){return x.id===a.solutionIds[0];}),sb=exp.design.solutions.find(function(x){return x.id===b.solutionIds[0];});
+    assert(sa.solutes==='FAI + PbI2'&&sb.solutes==='CsI + PbI2','Accept all must not cross-contaminate solution chemistry');
+  };
+
+  t['Accept never labels a partial stale Design suggestion as complete']=function(){
+    LF.State={state:{selectedDesignDeviceId:'a'}};
+    const exp={design:{status:'reviewing',solutions:[],devices:[{id:'a',name:'A',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}]}};
+    put(exp,{targetDeviceId:'a',solutions:[],devices:[{sample_names:[],stack:[{role:'Absorber',material:'Perovskite'}]}],unknowns:[]},'a');
+    const out=LF.DesignAnalysis.acceptProposal(exp,'a');
+    assert(out.complete===false&&out.remaining.includes('stack')&&out.remaining.includes('solutions')&&out.remaining.includes('process'),'post-accept completeness must be checked against the real Design model');
+    assert(status(exp,'a').state==='incomplete','stale partial proposal must not be marked accepted');
+    assert(!map(exp).a,'exhausted partial proposal is cleared so Complete with AI can run again');
   };
 
   t['A failed sparse Design attempt does not remove an independently stored success']=function(){
     const oldModel=LF.DesignModel,oldContext=LF.ContextBuilder;
-    LF.DesignModel={normalizeProposal:function(v){return v;}};LF.ContextBuilder={pack:function(){return{};}};
+    LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});LF.ContextBuilder={pack:function(){return{};}};
     const exp={design:{solutions:[],devices:[{id:'a',sampleNames:[],solutionIds:[],stack:[]},{id:'b',sampleNames:[],solutionIds:[],stack:[]}]}};
     try{
-      const good={status:'suggested',summary:'A',solutions:[],devices:[{sample_names:[],stack:[{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]};
+      const good={status:'suggested',summary:'A',solutions:[],devices:[{sample_names:[],stack:[{role:'Transparent electrode',material:'ITO',provenance_kind:'model_inference',confidence:.8,reason:'candidate'},{role:'ETL',material:'SnO2',provenance_kind:'model_inference',confidence:.8,reason:'candidate'},{role:'Absorber',material:'Perovskite',provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],provenance_kind:'model_inference',confidence:.8,reason:'candidate'}],unknowns:[]};
       const goodCtx={exp:exp,params:{deviceId:'a'},sourceRevision:1,outputs:{collect:{device_id:'a',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:good},lastResult:good};
       goodCtx.outputs.infer=LF.ActionSteps['design.validate-coverage'](goodCtx);LF.ActionSteps['design.store-proposal'](goodCtx);
       const sparse={status:'insufficient_evidence',summary:'B lacks context',solutions:[],devices:[{sample_names:[],stack:[],provenance_kind:'model_inference',confidence:.5,reason:'unknown'}],unknowns:['stack']};

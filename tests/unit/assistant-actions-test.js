@@ -15,6 +15,7 @@ module.exports=function(t){
 
   t['Assistant exposes one global Action catalog with manifest-defined commands']=function(){
     assert(html.includes('assistantActionsToggle')&&html.includes('assistantActionMenu'),'Action launcher exists');
+    assert(!html.includes('assistantQuickActions')&&!assistant.includes('renderQuickActions'),'redundant always-visible Action strip is removed');
     assert(assistant.includes('LF.ActionCapabilities&&LF.ActionCapabilities.resolveCommand'),'Assistant resolves commands through capability catalog');
     assert(!assistant.includes("const aliases={'/design'"),'slash command aliases are not duplicated in Assistant');
     ['design.infer','results.interpret','results.compare','dataset.resolve-ambiguities'].forEach(function(id){const d=JSON.parse(fs.readFileSync(path.join(root,'actions',id,'action.json'),'utf8'));assert(d.ui&&/^\//.test(d.ui.command),id+' declares one slash command');assert(Array.isArray(d.ui.routes)&&d.ui.routes.length,id+' declares recommended routes');});

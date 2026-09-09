@@ -25,8 +25,8 @@ module.exports=function(t){
   };
 
   t['Assistant embedded components use Assistant tokens only']=function(){
-    ok(app.includes('.chat-quick-actions')&&app.includes('background:var(--assistant-bg)'), 'quick actions inherit Assistant surface');
-    ok(app.includes('.chat-quick-action')&&app.includes('background:var(--assistant-surface)'), 'quick action cards use Assistant surface');
+    ok(app.includes('.chat-action-menu')&&app.includes('background:var(--assistant-surface)'), 'Action menu uses the Assistant surface');
+    ok(app.includes('.chat-action-item')&&app.includes('var(--assistant-border)'), 'Action menu items stay inside the Assistant palette');
     ok(app.includes('.chat-event.unavailable{border-left-color:var(--assistant-border);background:var(--assistant-surface-2)}'),'unavailable event stays in Assistant palette');
     ok(ui.includes('.assistant-panel .badge')&&ui.includes('background: var(--assistant-surface-2)'), 'assistant badges are locally themed');
     ok(ui.includes('.assistant-panel .notice')&&ui.includes('background: var(--assistant-surface)'), 'assistant notices are locally themed');

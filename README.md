@@ -90,7 +90,7 @@ contract.guards   → when it is available
 execution         → how it runs and which step is the semantic result
 ```
 
-AI structured output is validated before any proposal/annotation is stored. `design.infer` treats `insufficient_evidence` as a valid scientific outcome rather than a technical failure.
+AI structured output is validated before any proposal/annotation is stored. `design.infer` must cover every Design domain that is currently missing; stack coverage uses the same completeness predicate as the Design page, so a partial architecture stays inside the bounded retry flow instead of being stored as a successful suggestion. Accept/Accept all re-check the resulting Design state before labelling an experiment accepted.
 
 ## Data Console
 

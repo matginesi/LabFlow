@@ -1,0 +1,13 @@
+'use strict';
+require('../../assets/js/logger.js');
+require('../../assets/js/core.js');
+require('../../assets/js/storage.js');
+require('../../assets/js/knowledge/kb-bundle.js');
+require('../../assets/js/knowledge/knowledge-base.js');
+module.exports=function(t,LF){
+  function reset(){localStorage.removeItem('labflow.knowledge');LF.KnowledgeBase.resetCustom();}
+  t['Knowledge drafts persist but are excluded from AI retrieval']=function(){reset();const item=LF.KnowledgeBase.save({kind:'material',title:'Tin oxide',summary:'Electron-selective material.',status:'draft',tags:'SnO2, ETL'});if(!LF.KnowledgeBase.get(item.id))throw new Error('Draft did not persist');if(LF.KnowledgeBase.search('SnO2',{limit:8}).some(function(x){return x.id===item.id;}))throw new Error('Draft leaked into AI retrieval');};
+  t['Active knowledge requires a traceable source']=function(){reset();let threw=false;try{LF.KnowledgeBase.save({kind:'concept',title:'Fill factor',summary:'A photovoltaic performance metric.',status:'active'});}catch(err){threw=/source/i.test(String(err.message));}if(!threw)throw new Error('Unsourced active knowledge must fail closed');};
+  t['Active sourced knowledge is searchable and assistant markers resolve only real ids']=function(){reset();const item=LF.KnowledgeBase.save({id:'concept.test-fill-factor',kind:'concept',title:'Test fill factor reference',aliases:'TESTFF',tags:'JV_TEST, photovoltaic',summary:'A photovoltaic performance metric used only by this regression test.',facts:['Used with Voc and Jsc when discussing device performance.'],status:'active',sources:[{title:'Reference paper',doi:'10.1234/example.1',year:2024,authors:'A. Author'}]});const found=LF.KnowledgeBase.search('TESTFF JV_TEST',{limit:8});if(!found.some(function(x){return x.id===item.id;}))throw new Error('Active knowledge was not retrieved');const refs=LF.KnowledgeBase.referencesFromText('Relevant statement [KB:concept.test-fill-factor]. Fake [KB:not-real].');if(refs.length!==1||refs[0].id!==item.id)throw new Error('KB citation resolution is not fail-closed');};
+  t['Knowledge import export preserves custom entries and validates sources']=function(){reset();LF.KnowledgeBase.save({id:'process.spin',kind:'process',title:'Spin coating',summary:'A solution deposition process.',status:'active',sources:[{title:'Process reference',citation:'Book chapter 4'}]});const exported=LF.KnowledgeBase.exportState();LF.KnowledgeBase.resetCustom();const out=LF.KnowledgeBase.importState(exported,'merge');if(out.imported!==1)throw new Error('Expected one imported entry');if(!LF.KnowledgeBase.get('process.spin'))throw new Error('Imported entry missing');};
+};

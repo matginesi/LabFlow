@@ -164,7 +164,29 @@ dataset · analysis · design · metadata · ai · nomad · validation
 
 A new derived feature registers its dependency instead of modifying `State.touch()`.
 
-## 9. Pipeline vs Actions vs services
+## 9. Reference Knowledge Base
+
+The Scientific Knowledge Base is a global browser/workspace reference service, not part of `ExperimentData`. It lives outside the single mutable scientific aggregate because KB statements are reusable background knowledge rather than facts about the current experiment.
+
+```text
+knowledge/kb.json (source-controlled baseline)
+        +
+browser-local custom entries
+        ↓
+KnowledgeBase deterministic lexical retrieval
+        ↓
+ContextBuilder
+   ├─ assistant.chat
+   └─ design.infer
+```
+
+Only validated `active` entries are retrievable. `draft` entries persist but never enter AI context. Every active entry requires a traceable source. KB-supported Design proposals use `knowledge_reference` provenance and remain review-only; they do not become experiment evidence.
+
+Design completion has one deterministic completeness boundary shared by inference validation, the page state and acceptance. A `design.infer` proposal is stored only when it covers every currently missing domain; in particular, stack proposals must satisfy `DesignModel.stackAssessment()`. `Accept` and `Accept all` apply only missing values, then re-run `DesignModel.missingDomains()` before setting an accepted state. Bulk acceptance also keeps same-named solution proposals separate when their scientific composition conflicts.
+
+The browser-local overlay uses the same lightweight persistence pattern as other non-scientific workspace preferences/resources and can be exported/imported as JSON. No database, embeddings or network retrieval are required at runtime.
+
+## 10. Pipeline vs Actions vs services
 
 ```text
 Pipeline  = establish/repair/validate deterministic scientific state
@@ -175,13 +197,13 @@ Page      = render/interact with the above; never own scientific truth
 
 Import, naming normalization, hierarchy rebuild, analysis, safe mechanical cleanup and final validation are pipeline work. They are not Actions.
 
-## 10. Persistence
+## 11. Persistence
 
 Persistence is schema-driven. `DomainSchema.snapshot(exp)` copies only roots declared persistent and returns a detached snapshot. Unknown temporary properties and runtime caches do not silently enter storage.
 
 When a persisted object is restored, `DataModel.hydrate()` recreates the current aggregate shape and the deterministic pipeline rebuilds runtime projections.
 
-## 11. Extension points
+## 12. Extension points
 
 Use registries instead of editing central switch statements:
 
@@ -195,7 +217,7 @@ Use registries instead of editing central switch statements:
 
 See `docs/guides/EXTENDING_LABFLOW.md`.
 
-## 12. Anti-patterns
+## 13. Anti-patterns
 
 Do not add:
 - a second editable experiment/store;

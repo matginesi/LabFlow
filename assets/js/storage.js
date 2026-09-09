@@ -5,6 +5,7 @@
   const DB_NAME='labflow.workspace.current', EXP_STORE='workspace';
   const API_KEY_STORE='labflow.ai.keys';
   const CABINET_STORE='labflow.cabinet';
+  const KNOWLEDGE_STORE='labflow.knowledge';
   function read(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(err){Log.warn('local.read-failed',{key:key,error:err});return fallback;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(err){Log.warn('local.write-failed',{key:key,error:err});return false;}}
   function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
@@ -49,6 +50,21 @@
     return ok;
   }
 
+
+  function getKnowledgeState(){
+    const raw=read(KNOWLEDGE_STORE,{schemaVersion:1,entries:[],updatedAt:null});
+    return raw&&typeof raw==='object'&&!Array.isArray(raw)?clone(raw):{schemaVersion:1,entries:[],updatedAt:null};
+  }
+  function saveKnowledgeState(value){
+    const payload=clone(value&&typeof value==='object'?value:{entries:[]})||{entries:[]};
+    payload.schemaVersion=1;
+    payload.entries=Array.isArray(payload.entries)?payload.entries:[];
+    payload.updatedAt=new Date().toISOString();
+    const ok=write(KNOWLEDGE_STORE,payload);
+    if(ok)Log.info('knowledge.saved',{entries:payload.entries.length});
+    return ok;
+  }
+
   function getExportSettings(){return Object.assign({instance:'NOMAD Central',endpoint:'https://nomad-lab.eu/prod/v1/api/v1',includeRaw:true,includeDerived:true},read('labflow.export.settings',{}));}
   function saveExportSettings(v){write('labflow.export.settings',v);}
 
@@ -57,5 +73,5 @@
   async function loadExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readonly'),req=tx.objectStore(EXP_STORE).get('current');req.onsuccess=function(){const v=req.result||null;d.close();resolve(v);};req.onerror=function(){const err=req.error||new Error('Could not read saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.load-failed',{error:err});return null;}}
   async function clearSavedExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite');tx.objectStore(EXP_STORE).delete('current');tx.oncomplete=function(){d.close();resolve(true);};tx.onerror=function(){const err=tx.error||new Error('Could not clear saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.clear-failed',{error:err});return false;}}
 
-  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getExportSettings:getExportSettings,saveExportSettings:saveExportSettings,getCabinetState:getCabinetState,saveCabinetState:saveCabinetState,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
+  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getExportSettings:getExportSettings,saveExportSettings:saveExportSettings,getCabinetState:getCabinetState,saveCabinetState:saveCabinetState,getKnowledgeState:getKnowledgeState,saveKnowledgeState:saveKnowledgeState,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
 }());

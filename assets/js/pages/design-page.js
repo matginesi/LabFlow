@@ -7,6 +7,7 @@ function badge(v,t){return LF.PageShell.badge(v,t||'');}
 function sourceBadge(item){
   const provenance=String(item&&item.provenance_kind||item&&item.provenanceKind||'').toLowerCase(),s=String(item&&item.status||'').toLowerCase();
   return provenance==='cabinet_snapshot'?badge('Cabinet','info'):
+    provenance==='knowledge_reference'?badge('KB','info'):
     s==='user_confirmed'?badge('Researcher','success'):
     s==='raw_evidence'||s==='experiment'?badge('Source','info'):
     s==='ai_inferred'||s==='model_inference'?badge('AI','ai'):badge('Unknown','warning');

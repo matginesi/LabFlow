@@ -64,6 +64,7 @@
             "type": "string",
             "enum": [
               "experiment",
+              "knowledge_reference",
               "model_inference"
             ]
           },
@@ -107,6 +108,7 @@
             "type": "string",
             "enum": [
               "experiment",
+              "knowledge_reference",
               "model_inference"
             ]
           },
@@ -144,6 +146,7 @@
           "type": "string",
           "enum": [
             "experiment",
+            "knowledge_reference",
             "model_inference"
           ]
         },

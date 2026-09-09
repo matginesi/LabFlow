@@ -26,7 +26,8 @@ Use this priority, in order:
 1. Existing researcher/source Design data in the context — authoritative; never overwrite or contradict it.
 2. Direct imported experiment evidence — use it when it supports chemistry, stack or process.
 3. Compatible `cabinet` resources — reusable workspace knowledge, **not evidence that this experiment used them**. Preserve recognizable qualitative names when reusing them.
-4. Cautious `model_inference` — only for gaps still missing after the above.
+4. Relevant `knowledge.entries` — sourced scientific reference knowledge, **not experiment evidence**. When it materially supports a proposed item, set `provenance_kind` to `knowledge_reference` and put one or more exact `KB:<id>` references in `evidence`. Knowledge-supported values remain review-only.
+5. Cautious `model_inference` — only for gaps still missing after the above.
 
 Suggest only domains listed in `scope.unknown_fields`. `scope.source_unknowns` may contain finer-grained source gaps; use it as cautionary context, not as the required output-domain list.
 
@@ -48,6 +49,8 @@ Prefer compact strings such as `FAI + PbI2` and `DMF + DMSO`. Add additives, con
 
 If `stack` is required, return a coherent physical architecture in substrate → top-contact order, not one isolated absorber layer. Each layer needs `role` and `material`. Preserve known layers unchanged. Use `material: "unknown"` only when the layer role is scientifically useful but the exact material cannot be identified. Unsupported thickness stays blank.
 
+LabFlow validates `stack` with the **same completeness rule used by the Design page**: at least three meaningful layers must collectively establish (1) an absorber/photoactive layer, (2) a boundary/contact/electrode/substrate layer, and (3) a transport/selective layer. A one-layer or otherwise structurally partial stack is rejected and retried internally rather than being exposed as a successful suggestion.
+
 For photovoltaic/perovskite data with no exact architecture evidence, a conservative qualitative candidate may include substrate, transparent contact where relevant, selective transport layers, absorber, opposite transport layer and top contact. Mark it as `model_inference` with conservative confidence.
 
 ## `process`
@@ -63,7 +66,7 @@ Qualitative families such as `spin coating`, `thermal evaporation`, `thermal ann
 
 # Uncertainty
 
-Prefer a useful conservative qualitative candidate over an empty required domain. Put unsupported exact details in `unknowns`, keep confidence conservative, and use `provenance_kind: model_inference` when the statement is inferred rather than evidenced.
+Prefer a useful conservative qualitative candidate over an empty required domain. Put unsupported exact details in `unknowns`, keep confidence conservative, and use `provenance_kind: knowledge_reference` only when a supplied KB entry directly supports the qualitative proposal; otherwise use `model_inference` when the statement is inferred rather than evidenced.
 
 # Output discipline
 

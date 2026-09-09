@@ -32,6 +32,8 @@ module.exports=function(t,LF){
     assert(source.includes('FW / RV separation'),true,'scan separation diagnostics');
     assert(source.includes('curveOverlaySelection'),true,'overlay owns an independent selection set');
     assert(source.includes('data-curve-select'),true,'analyzer uses a single measurement selector');
+    const app=fs.readFileSync(path.resolve(__dirname,'../../assets/js/app.js'),'utf8'),clickStart=app.indexOf("document.addEventListener('click',async function(e){"),changeStart=app.indexOf("document.addEventListener('change',function(e){");
+    assert(clickStart>=0&&changeStart>clickStart&&app.slice(clickStart,changeStart).includes("[data-curve-select]"),true,'JV pair selector is handled by delegated click, not change');
   };
   return t;
 };
