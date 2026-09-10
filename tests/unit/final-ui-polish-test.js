@@ -86,7 +86,7 @@ module.exports=function(t){
     assert(settingsPage.includes('Follow each Action'),true,'Action-owned default');
     assert(settingsPage.includes('id="aiConnectivitySummary"'),true,'compact connection diagnostics');
     assert(settings.includes('connection verified with'),true,'round-trip success message');
-    assert(settingsPage.includes('Global override only; each Action keeps its own thinking contract.'),true,'thinking policy is explained');
+    assert(settingsPage.includes('Action/global off/on are preferences: LabFlow never forces reasoning off when the selected model or routed endpoint requires it.'),true,'thinking policy is explained');
   };
 
   t['Action totem displays a readable llama.cpp model name without changing the request model id']=function(){

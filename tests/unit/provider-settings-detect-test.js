@@ -76,6 +76,15 @@ module.exports=function(t,LF){
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
+  t['NVIDIA Detect can verify the configured model when catalogue access alone is unavailable']=async function(){
+    localStorage.clear();const configured=LF.AIProviders.nvidia.model,form=installForm(LF,{provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,apiKey:'nv-key',model:configured});
+    const oldAI=LF.AI,oldUI=LF.UI;let probeArgs=null,events=[];
+    LF.AI={listModels:async function(){const error=new TypeError('Failed to fetch');error.providerId='nvidia';error.phase='models';throw error;},testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model,elapsedMs:12,transport:'direct'};},resolveModelCapabilities:async function(){return{reasoningStatus:'unknown',source:'provider default'};}};
+    LF.UI=activityUI(events);
+    try{const models=await LF.AISettings.detectModel();assert(models,[configured],'verified configured model remains available after catalogue fallback');assert(probeArgs.model,configured,'configured NVIDIA model receives the authoritative chat probe');assert(!!lastEvent(events,'finish'),true,'successful live probe finishes Detect');assert(/catalogue could not be read/i.test(lastEvent(events,'finish').payload.response),true,'fallback is disclosed rather than hidden');}
+    finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+
   t['Detect cannot report success when the real provider probe fails even after catalogue discovery']=async function(){
     localStorage.clear();const form=installForm(LF,{provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,apiKey:'nv-key',model:LF.AIProviders.nvidia.model});
     const oldAI=LF.AI,oldUI=LF.UI;let events=[];

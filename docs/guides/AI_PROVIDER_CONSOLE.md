@@ -41,3 +41,7 @@ If the terminal probe succeeds but the browser test reports no HTTP status, the 
 ## Browser transport note
 
 `LabFlow.AIConsole.doctor(...)` exercises the same direct-browser transport as Settings. No relay/backend fallback is used; browser CORS/network failures are reported explicitly.
+
+## Reasoning compatibility
+
+Connection probes use provider-default reasoning for cloud/router providers. A provider-specific local adapter may opt into a safe probe override (llama.cpp does). If a real request is explicitly rejected because reasoning is mandatory, LabFlow performs one transport compatibility retry without disable-reasoning fields; this is logged separately and does not consume an Action semantic retry.

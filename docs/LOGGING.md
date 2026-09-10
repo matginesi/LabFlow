@@ -89,7 +89,8 @@ AI logging records:
 - latency;
 - returned content/reasoning character counts;
 - structured-JSON parse strategy, safe-syntax cleanup and detailed failure diagnosis;
-- provider `finish_reason`, JSON-mode state and requested reasoning effort.
+- provider `finish_reason`, JSON-mode state and requested/effective reasoning policy;
+- a `thinking.provider-required` warning when an endpoint rejects a disable-reasoning override, plus `reasoningCompatibilityRetry=true` on the recovered request metadata and the real HTTP request count.
 
 If the provider returns HTTP 200 but the model output is empty, truncated,
 malformed JSON, or violates an Action contract, LabFlow records an `ERROR`

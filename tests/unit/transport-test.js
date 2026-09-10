@@ -193,9 +193,9 @@ module.exports = function (t, LF) {
     const provider={connectionTestMaxTokens:128};
     const optional=AI.connectionProbePolicy({connectionTestMaxTokens:128,thinkingModes:{off:{reasoning_effort:'none'}}});
     const unknown=AI.connectionProbePolicy({id:'custom',connectionTestMaxTokens:128});
-    assert(optional.thinkingMode,'off','connection probe disables supported thinking');
+    assert(optional.thinkingMode,'auto','generic cloud probe keeps provider-default reasoning');
     assert(unknown.thinkingMode,'auto','unsupported provider receives no invented control');
-    assert(optional.maxTokens,64,'provider-specific local probe budget is bounded at 64');assert(unknown.maxTokens,64,'explicit probe budget is bounded at 64');
+    assert(optional.maxTokens,128,'provider-specific probe budget is bounded and preserved');assert(unknown.maxTokens,128,'explicit probe budget is bounded and preserved');
   };
 
   t['normal capability resolution never probes provider metadata implicitly']=async function(){
@@ -302,7 +302,7 @@ module.exports = function (t, LF) {
     assert(AI.knownCapability('openai','gpt-4.1-mini').reasoningStatus,'none','GPT-4.1 non-reasoning');
     assert(AI.knownCapability('openai','gpt-5.2').reasoningStatus,'optional','newer GPT-5 configurable reasoning');
     assert(AI.knownCapability('openai','gpt-5-pro').reasoningStatus,'required','GPT-5 pro required reasoning');
-    const openRouter=AI.capabilityFromRow({supported_parameters:['max_tokens'],context_length:8192},'OpenRouter model metadata');assert(openRouter.reasoningStatus,'none','OpenRouter absence is explicit for a concrete model');
+    const openRouter=AI.capabilityFromRow({supported_parameters:['max_tokens'],context_length:8192},'OpenRouter model metadata');assert(openRouter.reasoningStatus,undefined,'OpenRouter omission stays unknown because router and non-reasoning models both omit reasoning metadata');
   };
 
   t['Gemini capability probe reads outputTokenLimit from the native Models API'] = async function () {
@@ -348,7 +348,7 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
-    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(result.httpRequests,1,'one HTTP request');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(seen.opts.mode,'cors','local request uses CORS mode');assert(seen.opts.targetAddressSpace,'loopback','loopback request declares target address space');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(sent.messages[0].content,'Reply OK','connection test content');assert(sent.max_tokens,16,'tiny probe budget');assert(sent.reasoning_effort,'none','connection probe disables reasoning');assert(sent.chat_template_kwargs.enable_thinking,false,'connection probe disables template thinking');}
+    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(result.httpRequests,1,'one HTTP request');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(seen.opts.mode,'cors','local request uses CORS mode');assert(seen.opts.targetAddressSpace,'loopback','loopback request declares target address space');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(sent.messages[0].content,'Reply OK','connection test content');assert(sent.max_tokens,16,'tiny probe budget');assert(Object.prototype.hasOwnProperty.call(sent,'reasoning_effort'),false,'generic LM Studio probe does not speculate about reasoning');assert(Object.prototype.hasOwnProperty.call(sent,'chat_template_kwargs'),false,'generic LM Studio probe keeps template defaults');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -387,7 +387,7 @@ module.exports = function (t, LF) {
     global.fetch=async function(url,opts){seen={url:String(url),opts:opts};return{ok:true,status:200,statusText:'OK',headers:{get:function(name){return String(name).toLowerCase()==='x-request-id'?'llama-probe':'';},forEach:function(){}},text:async function(){return JSON.stringify({id:'chatcmpl-test',model:'local-model',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'';}};
-    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:15000,connectionTestMaxTokens:64,safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true}}}}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:15000,connectionTestMaxTokens:64,connectionTestThinkingMode:'off',safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true}}}}};
     try{const result=await AI.testConnection();assert(result.ok,true,'llama.cpp probe succeeds');assert(seen.url,'http://127.0.0.1:8080/v1/chat/completions','llama.cpp chat endpoint');const sent=JSON.parse(seen.opts.body);assert(sent.max_tokens,64,'local probe gets enough final-answer budget');assert(sent.reasoning_effort,'none','llama.cpp probe disables reasoning effort');assert(sent.chat_template_kwargs.reasoning_effort,'none','llama.cpp template kwargs also request no reasoning');assert(sent.chat_template_kwargs.enable_thinking,false,'llama.cpp template thinking disabled');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -543,6 +543,33 @@ module.exports = function (t, LF) {
   };
 
 
+  t['OpenRouter dynamic router capability never infers that reasoning can be disabled'] = function () {
+    const cap=AI.capabilityFromRow({id:'openrouter/free',context_length:200000,supported_parameters:['max_tokens','temperature']},'OpenRouter model metadata');
+    const policy=AI.resolveThinkingPolicy(cap,'off','auto',{id:'openrouter',thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}});
+    assert(cap.reasoningStatus,undefined,'dynamic router reasoning remains unknown');
+    assert(policy.transportMode,'auto','Action off preference does not force reasoning off on a dynamic router');
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'openrouter/free',streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'key';}};
+    LF.AIProviders={openrouter:{id:'openrouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'test'}],stream:false,thinkingMode:policy.transportMode,thinkingPolicy:policy,modelCapability:cap});assert(Object.prototype.hasOwnProperty.call(spec.body,'reasoning'),false,'no reasoning disable is sent');}
+    finally{delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['provider mandatory-reasoning rejection retries once with provider defaults'] = async function () {
+    const oldFetch=global.fetch;let calls=0,bodies=[];
+    global.fetch=async function(url,opts){calls++;bodies.push(JSON.parse(opts.body));if(calls===1)return{ok:false,status:400,statusText:'Bad Request',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:400,message:'Reasoning is mandatory for this endpoint and cannot be disabled.'}});}};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'ok',model:'routed/reasoner',choices:[{message:{content:'done'},finish_reason:'stop'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'openrouter/free',inactivityTimeoutMs:60000,streaming:false,thinkingMode:'auto'};},getApiKey:function(){return'key';}};
+    LF.AIProviders={openrouter:{id:'openrouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,thinkingPromptGuard:true,thinkingModes:{off:{reasoning:{effort:'none'}}}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'final only'}],stream:false,maxTokens:128,thinkingMode:'off',guardThinking:true}),result=await AI.send(spec,{label:'reasoning-compat'});assert(calls,2,'one technical compatibility retry');assert(bodies[0].reasoning.effort,'none','first request carries explicit disable');assert(/OUTPUT MODE:/.test(JSON.stringify(bodies[0].messages)),true,'first request carries final-only prompt guard');assert(Object.prototype.hasOwnProperty.call(bodies[1],'reasoning'),false,'retry removes provider-incompatible reasoning override');assert(/OUTPUT MODE:/.test(JSON.stringify(bodies[1].messages)),false,'retry removes contradictory final-only thinking guard');assert(result.content,'done','retry response returned');assert(result.reasoningCompatibilityRetry,true,'compatibility recovery is recorded');assert(result.httpRequests,2,'technical retry counted as HTTP request');assert(result.thinkingMode,'auto','effective transport mode becomes provider default');}
+    finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['connection probes keep cloud reasoning on provider defaults'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'openrouter/free',streaming:false,thinkingMode:'off'};},getApiKey:function(){return'key';}};
+    LF.AIProviders={openrouter:{id:'openrouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,thinkingModes:{off:{reasoning:{effort:'none'}}}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'OK'}],stream:false,thinkingMode:'auto',connectionTest:true});assert(Object.prototype.hasOwnProperty.call(spec.body,'reasoning'),false,'cloud probe sends no disable override');}
+    finally{delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['provider rate-limit classification remains explicit without transport retry state'] = function () {
     assert(AI.isRateLimitError({providerCode:'1305'}),true,'provider code 1305');
     assert(AI.isRateLimitError({status:429}),true,'HTTP 429');
@@ -622,7 +649,7 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
     LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000}};
-    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(progress.some(function(p){return p.transportState==='rate_limit';}),true,'rate-limit progress is surfaced once');assert(seenBody.max_tokens,16,'tiny token budget');assert(seenBody.thinking,{type:'disabled'},'Z.AI thinking disabled');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
+    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(progress.some(function(p){return p.transportState==='rate_limit';}),true,'rate-limit progress is surfaced once');assert(seenBody.max_tokens,16,'tiny token budget');assert(Object.prototype.hasOwnProperty.call(seenBody,'thinking'),false,'Z.AI probe keeps provider-default reasoning');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 

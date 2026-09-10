@@ -148,7 +148,7 @@ module.exports=function(t,LF){
     assert(html.indexOf('Compare selected result groups')>=0||html.indexOf('Compare with AI')>=0,'Results compare Action missing from manager');
   };
   t['Actions manager exposes AI step thinking policy']=function(){
-    actionSettingsState('design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking off')>=0,'Design inference thinking policy visible');
+    actionSettingsState('design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking preference off')>=0,'Design inference thinking preference visible');
   };
 
   t['Local model controls display only the model basename while retaining the exact ID']=function(){

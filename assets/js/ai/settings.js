@@ -177,9 +177,11 @@
           const fallbackAllowed=provider.local!==true&&provider.catalogueFallbackToConfiguredModel===true&&!!String(config.model||provider.model||'').trim();
           Log.warn('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'catalogue',status:fallbackAllowed?'fallback':'failed',error:error});
           if(!fallbackAllowed)throw error;
-          syncModelControls(null,{manualFallback:true,preserveHint:true});
-          if(!config.model&&provider.model)setModelValue(provider.model);
-          if(useActivity)updateProviderActivity({stepId:'catalogue',stepStatus:'done',stepNote:'Catalogue unavailable; probing configured model',stage:'Preparing live probe',progress:.42});
+          const fallbackModel=String(config.model||provider.model||'').trim();
+          models=fallbackModel?[fallbackModel]:[];
+          if(fallbackModel){syncModelControls(models,{preserveHint:true});setModelValue(fallbackModel);}
+          else syncModelControls(null,{manualFallback:true,preserveHint:true});
+          if(useActivity)updateProviderActivity({stepId:'catalogue',stepStatus:'done',stepNote:'Catalogue unavailable; probing configured model',stage:'Preparing live probe',progress:.42,details:{Models:fallbackModel?'1 configured':'—',Loaded:'—'}});
         }
       }else if(useActivity){
         updateProviderActivity({stepId:'catalogue',stepStatus:'done',stepNote:'Not required for this provider',stage:'Preparing live probe',progress:.42});

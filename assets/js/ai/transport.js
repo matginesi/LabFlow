@@ -9,6 +9,7 @@
   let injectedController=null;
   const METADATA_TIMEOUT_MS=15000;
   const STREAM_DIAGNOSTIC_CHARS=131072;
+  const THINKING_PROMPT_GUARD='OUTPUT MODE: Do not emit chain-of-thought, hidden reasoning, analysis, or <think> blocks. Produce only the final requested answer. For structured output, begin with the requested JSON immediately.';
 
   /** The ActionRunner hands over the single shared AbortController for a run. */
   function acceptController(c){injectedController=c||null;}
@@ -31,16 +32,19 @@
   function applyThinkingPromptGuard(messages,provider,mode,enabled){
     const rows=(messages||[]).map(function(message){return Object.assign({},message);});
     if(enabled!==true||mode!=='off'||!(provider&&provider.thinkingPromptGuard===true))return rows;
-    const guard='OUTPUT MODE: Do not emit chain-of-thought, hidden reasoning, analysis, or <think> blocks. Produce only the final requested answer. For structured output, begin with the requested JSON immediately.';
+    const guard=THINKING_PROMPT_GUARD;
     if(rows.length&&rows[0].role==='system')rows[0].content=String(rows[0].content||'').replace(/\s+$/,'')+'\n\n'+guard;
     else rows.unshift({role:'system',content:guard});
     return rows;
   }
 
-  /** Keep connectivity boring: one tiny request, no capability discovery. */
+  /** Keep connectivity boring: one tiny request, no capability discovery.
+      Cloud/router probes must not force reasoning off: the selected upstream may
+      require reasoning even when the route/model alias does not expose metadata. */
   function connectionProbePolicy(provider){
-    const configured=Math.max(8,Math.min(64,Number(provider&&provider.connectionTestMaxTokens)||16));
-    return{thinkingMode:provider&&provider.thinkingModes&&provider.thinkingModes.off?'off':'auto',maxTokens:configured};
+    const configured=Math.max(8,Math.min(256,Number(provider&&provider.connectionTestMaxTokens)||16));
+    const mode=provider&&['off','on','auto'].includes(provider.connectionTestThinkingMode)?provider.connectionTestThinkingMode:'auto';
+    return{thinkingMode:mode,maxTokens:configured};
   }
 
   function resolveChatUrl(endpoint){
@@ -156,6 +160,34 @@
     return err;
   }
   function isRateLimitError(err){if(!err)return false;if(err.rateLimited===true)return true;return limitInfo(err.status,err.providerCode,err.providerMessage||err.message).limited;}
+
+  function reasoningDisablePresent(body){
+    body=body||{};const reasoning=body.reasoning&&typeof body.reasoning==='object'?body.reasoning:{},thinking=body.thinking&&typeof body.thinking==='object'?body.thinking:{},kwargs=body.chat_template_kwargs&&typeof body.chat_template_kwargs==='object'?body.chat_template_kwargs:{};
+    return String(body.reasoning_effort||'').toLowerCase()==='none'||String(reasoning.effort||'').toLowerCase()==='none'||reasoning.enabled===false||String(thinking.type||'').toLowerCase()==='disabled'||kwargs.enable_thinking===false||String(kwargs.reasoning_effort||'').toLowerCase()==='none'||body.reasoning_control===true;
+  }
+  function reasoningRequiredError(err){
+    if(!err||Number(err.status)!==400)return false;
+    const text=[err.providerMessage,err.providerResponse,err.message].filter(Boolean).join(' ').toLowerCase();
+    return /reasoning[^.\n]{0,100}(?:mandatory|required|cannot be disabled|can(?:not|'t) disable)|(?:mandatory|required)[^.\n]{0,80}reasoning/.test(text);
+  }
+  function providerDefaultThinkingBody(body){
+    const out=JSON.parse(JSON.stringify(body||{}));
+    delete out.reasoning_effort;delete out.reasoning;delete out.thinking;delete out.reasoning_control;
+    if(out.chat_template_kwargs&&typeof out.chat_template_kwargs==='object'){
+      delete out.chat_template_kwargs.enable_thinking;delete out.chat_template_kwargs.reasoning_effort;
+      if(!Object.keys(out.chat_template_kwargs).length)delete out.chat_template_kwargs;
+    }
+    if(Array.isArray(out.messages)){
+      out.messages=out.messages.map(function(message){
+        const copy=Object.assign({},message);
+        if(copy.role==='system'&&typeof copy.content==='string'){
+          copy.content=copy.content.replace(THINKING_PROMPT_GUARD,'').replace(/\n{3,}/g,'\n\n').trim();
+        }
+        return copy;
+      }).filter(function(message){return message.role!=='system'||String(message.content||'').trim()!=='';});
+    }
+    return out;
+  }
 
   function headersObject(headers){
     const out={};
@@ -353,7 +385,7 @@
   function diagnosticRequestConfig(providerId,endpoint,model,apiKey){
     const saved=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(providerId);
-    const settings=Object.assign({},saved,{provider:providerId,endpoint:endpoint!=null?String(endpoint):String(saved.endpoint||''),model:model!=null?String(model):String(saved.model||''),streaming:true,thinkingMode:'off'});
+    const settings=Object.assign({},saved,{provider:providerId,endpoint:endpoint!=null?String(endpoint):String(saved.endpoint||''),model:model!=null?String(model):String(saved.model||''),streaming:true,thinkingMode:'auto'});
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
     const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
@@ -448,7 +480,9 @@
     }
     const supported=Array.isArray(row.supported_parameters)?row.supported_parameters.map(function(x){return String(x).toLowerCase();}):[];
     if(supported.includes('reasoning')||supported.includes('reasoning_effort'))return{reasoningStatus:'optional',reasoningAllowedOptions:[],reasoningDefault:''};
-    if(supported.length&&/openrouter/i.test(String(source||'')))return{reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off'};
+    /* OpenRouter deliberately omits `reasoning` for non-reasoning models AND
+       dynamic routers such as openrouter/free/auto. Absence therefore means
+       unknown, never proof that reasoning can safely be disabled. */
     return null;
   }
   function capabilityFromRow(row,source){
@@ -730,17 +764,31 @@
 
   async function send(spec,opts){
     opts=opts||{};const overallStarted=performance.now();
-    let r;
+    let r,technicalThinkingRetry=false;
+    const providerId=spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'';
     try{
-      r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'');
+      r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),providerId);
     }catch(err){
-      if(isRateLimitError(err)){
-        const retryMs=Math.max(0,Number(err.retryAfterMs)||0);
-        err.retryInMs=retryMs;
-        Log.warn('rate-limit.provider-response',{provider:spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'',model:spec.model||spec.settings&&spec.settings.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'rate_limit',retryAfterMs:retryMs||null,retried:false,persisted:false,httpRequests:1});
-        if(opts.onProgress)opts.onProgress({transportState:'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:spec.settings&&spec.settings.provider||'',model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:0,retries:0,willRetry:false});
+      /* Capability metadata can be absent/stale and router aliases may select a
+         different upstream per request. If the provider explicitly rejects a
+         disable-reasoning override, retry exactly once with provider defaults.
+         This is transport compatibility recovery, not an Action semantic retry. */
+      if(reasoningRequiredError(err)&&reasoningDisablePresent(spec.body)){
+        const fallbackBody=providerDefaultThinkingBody(spec.body);
+        technicalThinkingRetry=true;
+        Log.warn('thinking.provider-required',{provider:providerId,model:spec.model||spec.settings&&spec.settings.model||'',status:Number(err.status)||400,action:'retry-with-provider-default',previousMode:spec.thinkingMode||'off'});
+        if(opts.onProgress)opts.onProgress({transportState:'thinking-adapt',provider:providerId,model:spec.model||'',message:'Provider requires reasoning; retrying with provider default.',attempt:1,retries:1,willRetry:true});
+        try{r=await request(spec.url,spec.headers,fallbackBody,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),providerId);}
+        catch(retryErr){retryErr.reasoningCompatibilityRetry=true;retryErr.cause=retryErr.cause||err;throw retryErr;}
+      }else{
+        if(isRateLimitError(err)){
+          const retryMs=Math.max(0,Number(err.retryAfterMs)||0);
+          err.retryInMs=retryMs;
+          Log.warn('rate-limit.provider-response',{provider:providerId,model:spec.model||spec.settings&&spec.settings.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),kind:err.rateLimitKind||'rate_limit',retryAfterMs:retryMs||null,retried:false,persisted:false,httpRequests:1});
+          if(opts.onProgress)opts.onProgress({transportState:'rate_limit',rateLimit:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryInMs:retryMs,provider:providerId,model:spec.model||'',providerCode:String(err.providerCode||''),status:Number(err.status||0),attempt:0,retries:0,willRetry:false});
+        }
+        throw err;
       }
-      throw err;
     }
     const finalizeStarted=performance.now(),obj=r.json,extracted=extractAssistant(obj),normalized=normalizeAssistantEnvelope(extracted.content,extracted.reasoning,spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||''),usage=obj.usage||{},content=normalized.content,reasoning=normalized.reasoning;
     if(normalized.changed)Log.warn('response.reasoning-envelope-normalized',{provider:spec.settings&&spec.settings.provider||'',model:obj.model||spec.settings&&spec.settings.model||'',resultBlocks:normalized.resultBlocks,rawContentChars:String(extracted.content||'').length,finalContentChars:content.length,reasoningChars:reasoning.length});
@@ -749,8 +797,8 @@
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
     const exactReasoningTokens=usage.completion_tokens_details&&Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?Number(usage.completion_tokens_details.reasoning_tokens):null,estimatedReasoningTokens=reasoning?estimateTokens(reasoning):0,reasoningTokens=exactReasoningTokens==null?estimatedReasoningTokens:exactReasoningTokens,answerTokens=Math.max(0,completionTokens-reasoningTokens);
     const normalizedUsage={promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,reasoningTokens:reasoningTokens,answerTokens:answerTokens,reasoningEstimated:exactReasoningTokens==null&&!!reasoning,estimated:!obj.usage};
-    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),httpRequests=1+controlRequests;
-    if(spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
+    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),httpRequests=1+controlRequests+(technicalThinkingRetry?1:0);
+    if(!technicalThinkingRetry&&spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
     if(!content){
       Log.warn('response.empty-content',{model:logModel(spec.settings.provider,obj.model||spec.settings.model),finishReason:extracted.finishReason,reasoningChars:reasoning.length,completionTokens:completionTokens,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
       const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
@@ -762,7 +810,8 @@
       throw emptyError;
     }
     Log.info('request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
-    return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:spec.thinkingMode||'auto',thinkingPolicy:spec.thinkingPolicy||null,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,transport:r.transport||'direct',rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
+    const finalThinkingPolicy=technicalThinkingRetry?Object.assign({},spec.thinkingPolicy||{},{transportMode:'auto',effective:'required',reason:'Provider rejected reasoning disable; retried with provider default'}):(spec.thinkingPolicy||null);
+    return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,reasoningCompatibilityRetry:technicalThinkingRetry,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:technicalThinkingRetry?'auto':(spec.thinkingMode||'auto'),thinkingPolicy:finalThinkingPolicy,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,transport:r.transport||'direct',rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
   }
 
   async function probe(options){
@@ -770,7 +819,7 @@
     const saved=LF.Storage.getAiSettings(),providerId=options.provider!=null?String(options.provider):String(saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const endpoint=options.endpoint!=null?String(options.endpoint):String(saved.endpoint||provider.endpoint||''),model=options.model!=null?String(options.model):String(saved.model||provider.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
     const cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),timeout=Math.max(5000,Math.min(120000,Number(options.timeoutMs)||Number(provider.connectionTestTimeoutMs)||30000));
-    const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,thinkingMode:options.thinkingMode||'off',guardThinking:true,connectionTest:true});
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,thinkingMode:options.thinkingMode||'auto',guardThinking:options.thinkingMode==='off',connectionTest:true});
     return send(spec,{label:String(options.label||'Provider console probe')});
   }
 

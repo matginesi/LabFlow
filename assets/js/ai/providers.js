@@ -11,12 +11,12 @@
       note:'Z.AI General API via direct browser Chat Completions.'
     },
     openrouter: {
-      id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000,
-      note:'OpenRouter OpenAI-compatible endpoint.'
+      id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
+      note:'OpenRouter OpenAI-compatible endpoint. Dynamic router aliases keep provider-default reasoning.'
     },
     nvidia: {
-      id:'nvidia', name:'NVIDIA NIM', catalogueFallbackToConfiguredModel:true, endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', model:'nvidia/nemotron-3.5-lightning-30b-a3b', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000,
-      note:'NVIDIA hosted NIM OpenAI-compatible endpoint.'
+      id:'nvidia', name:'NVIDIA NIM', catalogueFallbackToConfiguredModel:true, endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', model:'nvidia/nemotron-3.5-lightning-30b-a3b', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
+      note:'NVIDIA NIM OpenAI-compatible endpoint. Hosted browser access still depends on NVIDIA CORS policy.'
     },
     openai: {
       id:'openai', name:'OpenAI', catalogueFallbackToConfiguredModel:true, endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
@@ -35,7 +35,7 @@
       note:'LM Studio OpenAI-compatible endpoint.'
     },
     llamacpp: {
-      id:'llamacpp', name:'llama.cpp', local:true, endpoint:'http://127.0.0.1:8080/v1', model:'local-model', keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'llama.cpp model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, requestTimeoutMs:300000, connectionTestTimeoutMs:15000, connectionTestMaxTokens:64, connectionTestAcceptReasoningOnly:true, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true, thinkingPromptGuard:true, recommendedRuntime:{parallelSlots:1,contextWindow:65536}, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}},
+      id:'llamacpp', name:'llama.cpp', local:true, endpoint:'http://127.0.0.1:8080/v1', model:'local-model', keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'llama.cpp model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, requestTimeoutMs:300000, connectionTestTimeoutMs:15000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off', connectionTestAcceptReasoningOnly:true, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true, thinkingPromptGuard:true, recommendedRuntime:{parallelSlots:1,contextWindow:65536}, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}},
       note:'llama.cpp llama-server OpenAI-compatible endpoint.'
     },
     custom: {
