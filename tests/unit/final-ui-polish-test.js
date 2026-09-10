@@ -59,12 +59,11 @@ module.exports=function(t){
     assert(feedback.includes('totem-toast'),false,'retired custom Totem clone');
   };
 
-  t['Detect and Save & test use the canonical Message Totem']=function(){
-    assert(settings.includes("notify(error.message||String(error),'error','Detect failed')"),true,'Detect failure Message Totem');
-    assert(settings.includes("'success','Detect completed'"),true,'Detect success Message Totem');
-    assert(settings.includes("'success','Save & test completed'"),true,'Save & test success Message Totem');
-    assert(settings.includes("'error','Save & test failed'"),true,'Save & test failure Message Totem');
-    assert(settings.includes('activityStart('),false,'provider checks do not misuse Action Totem');
+  t['Detect and Save & test use the canonical Action Totem']=function(){
+    assert(settings.includes("startProviderActivity('Detect AI provider'"),true,'Detect opens Action Totem');
+    assert(settings.includes("startProviderActivity('Save & test AI provider'"),true,'Save & test opens Action Totem');
+    assert(settings.includes('finishProviderActivity({'),true,'provider checks finish in Action Totem');
+    assert(settings.includes('failProviderActivity(error'),true,'provider checks fail in Action Totem');
   };
 
   t['Console logs expose a readable summary before structured details']=function(){

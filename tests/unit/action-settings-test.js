@@ -82,19 +82,22 @@ module.exports=function(t,LF){
     assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'retired Coding Plan endpoint switch absent');
   };
 
-  t['Z.AI settings use the shared fail-closed Detect and Message Totem semantics']=function(){
+  t['Z.AI settings use the shared fail-closed Detect and Action Totem semantics']=function(){
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('API key required. Detect will validate')>=0,'missing key is explicit before Detect');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
   };
 
-  t['NVIDIA Detect stays actionable without a key so the Message Totem can report the real error']=function(){
+  t['NVIDIA Detect stays actionable without a key so the Action Totem can report the real error']=function(){
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel"')>=0&&html.indexOf('id="detectProviderModel" disabled')<0,'Detect remains clickable');assert(html.indexOf('API key required. Detect will validate')>=0,'key requirement is explicit');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');localStorage.removeItem('labflow.ai.settings');
   };
 
 
-  t['Detect and Save & test use only the canonical Message Totem for operation feedback']=function(){
+  t['Detect and Save & test use the canonical Action Totem for the full provider operation']=function(){
     const detectSource=String(LF.AISettings.detectModel),testSource=String(LF.AISettings.testConnection);
-    assert(detectSource.indexOf('notify(')>=0,'Detect must report through Message Totem');
-    assert(testSource.indexOf('notify(')>=0,'Save & test must report through Message Totem');
+    assert(detectSource.indexOf('startProviderActivity(')>=0,'Detect must open Action Totem');
+    assert(detectSource.indexOf('finishProviderActivity(')>=0&&detectSource.indexOf('failProviderActivity(')>=0,'Detect must finish/error in Action Totem');
+    assert(testSource.indexOf('startProviderActivity(')>=0,'Save & test must open Action Totem');
+    assert(testSource.indexOf('finishProviderActivity(')>=0&&testSource.indexOf('failProviderActivity(')>=0,'Save & test must finish/error in Action Totem');
+    assert(detectSource.indexOf('notify(')<0&&testSource.indexOf('notify(')<0,'provider operations must not emit a parallel Message Totem');
     assert(detectSource.indexOf('providerFeedback')<0&&testSource.indexOf('providerFeedback')<0,'provider operations must not use an inline feedback clone');
   };
 

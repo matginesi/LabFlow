@@ -19,7 +19,7 @@ function providerPanel(s,key){
   const endpointHint=activeProvider.local?'<div class="help" id="aiEndpointHint">Same device: <span class="mono">127.0.0.1</span>. Other device: prefer <span class="mono">fedora.local</span> or the machine private IP.</div>':'';
   const keyHelp=activeProvider.keyRequired?'Required. Detect and Save &amp; test will fail without it.':activeProvider.optionalKey?'Optional; use it only if the endpoint requires authentication.':'Not used by this provider.';
   return sectionHead('AI connection','Choose the provider and verify the exact connection used by LabFlow.',true)
-    +'<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Provider</h3><div class="meta">Uses the exact values shown below. Cloud calls use the local same-origin relay automatically when LabFlow is served with its local server.</div></div><div class="spacer"></div>'+badge(activeProvider.name||s.provider,'info')+'</div>'
+    +'<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Provider</h3><div class="meta">Uses the exact values shown below. Provider requests are sent directly from this browser; browser CORS/network policy is reported explicitly when it blocks access.</div></div><div class="spacer"></div>'+badge(activeProvider.name||s.provider,'info')+'</div>'
     +'<div class="panel-body stack">'
     +'<div class="form-grid settings-provider-grid">'
     +field('Provider','<select class="select" id="aiProvider">'+providers+'</select>')

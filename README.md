@@ -147,13 +147,13 @@ Start with:
 
 ## Run locally
 
-For normal local development, serve LabFlow with its small standard-library server:
+LabFlow remains a static vanilla-JS application. Serve it with any ordinary static web server when developing locally, for example:
 
 ```bash
-python3 tools/labflow_server.py --host 0.0.0.0 --port 8000
+python3 -m http.server 8000 --bind 0.0.0.0
 ```
 
-The UI remains a static vanilla-JS application. This server only serves the files and exposes a same-origin, allow-listed relay for hosted AI providers whose APIs do not permit browser CORS. Local/LAN providers such as Ollama, LM Studio and llama.cpp are still contacted directly. A generic static server can still be used when no hosted-provider relay is needed, but browser CORS may prevent some cloud providers from working even when the API itself is healthy.
+AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
 
 
 ## llama.cpp on the local network

@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 ROOT=Path(__file__).resolve().parents[1]
-index=(ROOT/'index.html').read_text(); action_ui=(ROOT/'assets/js/ai/action-ui.js').read_text(); feedback=(ROOT/'assets/js/ui/feedback.js').read_text(); pages='\n'.join(p.read_text() for p in (ROOT/'assets/js/pages').glob('*.js')); css=(ROOT/'assets/css/app.css').read_text(); ui_css=(ROOT/'assets/css/ui.css').read_text(); settings=(ROOT/'assets/js/pages/settings-page.js').read_text(); app=(ROOT/'assets/js/app.js').read_text(); kit=(ROOT/'ui-kit.html').read_text(); skill=(ROOT/'.agent/skills/labflow-ui/SKILL.md').read_text(); errors=[]
+index=(ROOT/'index.html').read_text(); action_ui=(ROOT/'assets/js/ai/action-ui.js').read_text(); ai_settings=(ROOT/'assets/js/ai/settings.js').read_text(); feedback=(ROOT/'assets/js/ui/feedback.js').read_text(); pages='\n'.join(p.read_text() for p in (ROOT/'assets/js/pages').glob('*.js')); css=(ROOT/'assets/css/app.css').read_text(); ui_css=(ROOT/'assets/css/ui.css').read_text(); settings=(ROOT/'assets/js/pages/settings-page.js').read_text(); app=(ROOT/'assets/js/app.js').read_text(); kit=(ROOT/'ui-kit.html').read_text(); skill=(ROOT/'.agent/skills/labflow-ui/SKILL.md').read_text(); errors=[]
 if "closest('button[data-action]')" not in action_ui and 'closest("button[data-action]")' not in action_ui:errors.append('Action delegation not button-only')
 for tag in re.findall(r'<([a-zA-Z0-9]+)\b[^>]*data-action=',pages):
     if tag.lower()!='button':errors.append('data-action on non-button '+tag)
@@ -15,6 +15,11 @@ if "['actions','Actions'" not in settings:errors.append('Actions Settings naviga
 if 'AI Helpers' in settings or 'Operations Workshop' in settings:errors.append('split Operations/AI Helpers Settings UI remains')
 if 'Actions are capabilities, not pipeline stages.' not in settings or 'Capability contract' not in settings:errors.append('Action execution contract copy missing')
 if 'aria-label="Current action"' not in index:errors.append('Action totem not named consistently')
+if "startProviderActivity('Detect AI provider'" not in ai_settings or "startProviderActivity('Save & test AI provider'" not in ai_settings:errors.append('Detect/Save & test do not open the canonical Action Totem')
+if 'finishProviderActivity({' not in ai_settings or 'failProviderActivity(error' not in ai_settings:errors.append('provider checks do not complete/fail through the canonical Action Totem')
+for fn in ('detectModel','testConnection'):
+    match=re.search(r'async function '+fn+r'\([^)]*\)\s*\{([\s\S]*?)(?=\n  /\*\*|\n  LF\.AISettings)',ai_settings)
+    if match and 'notify(' in match.group(1):errors.append(fn+' emits a parallel Message Totem; provider checks must use only the Action Totem')
 if 'class="message-totem info" id="messageTotem"' not in index:errors.append('canonical Message Totem confirmation surface missing')
 if 'id="messageRegion"' not in index or 'class="message-region"' not in index:errors.append('canonical shared Message Totem live region missing')
 if "element.className = 'message-totem ' + semantic" not in feedback or 'function message(message, type, titleText)' not in feedback:errors.append('transient feedback does not use the canonical Message Totem service')

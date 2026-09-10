@@ -40,4 +40,4 @@ If the terminal probe succeeds but the browser test reports no HTTP status, the 
 
 ## Browser transport note
 
-`LabFlow.AIConsole.doctor(...)` exercises the same transport as Settings. When LabFlow is served with `python3 tools/labflow_server.py --host 0.0.0.0 --port 8000`, allow-listed hosted providers automatically use the same-origin relay when available; the report/logs identify that route as `relay`. A direct static/GitHub Pages page cannot provide this relay, so a provider CORS block may still prevent hosted calls even with valid credentials.
+`LabFlow.AIConsole.doctor(...)` exercises the same direct-browser transport as Settings. No relay/backend fallback is used; browser CORS/network failures are reported explicitly.

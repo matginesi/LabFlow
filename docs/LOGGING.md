@@ -80,7 +80,7 @@ AI logging records:
 - Action/feature ID and provider diagnostic correlation ID;
 - provider, model and sanitized endpoint;
 - explicit phase (`validate`, `catalogue`, `chat-probe`, `capabilities`, `persist` where applicable);
-- network route (`direct` or `relay`) and whether a same-origin relay was available;
+- direct-browser network route, target address space and request phase;
 - message count and character counts;
 - prompt/context sizes;
 - direct SSE/JSON request lifecycle, including stream events, bytes and time to first content;
@@ -103,11 +103,11 @@ It does **not** intentionally dump API keys. Common secret fields are redacted b
 
 ### Provider diagnostics
 
-**Detect** and **Save & test** use one diagnostic ID per operation. The Logs page groups their most recent lifecycles under **Provider checks**, while the API category includes catalogue/model metadata requests, chat requests, relay routing and provider errors. A green result therefore requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
+**Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. The Logs page groups their most recent lifecycles under **Provider checks**, while the API category includes catalogue/model metadata requests, chat requests and provider errors. A successful result therefore requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
 
-Network routing is explicit in both console and Logs. `network.route` identifies `direct` versus `relay`; `network.direct-failed` records a browser/network failure before any relay retry; `relay.start` / `relay.end` / `relay.failed` identify same-origin relay activity. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
+Network routing is explicit in both console and Logs. `network.route` identifies the direct-browser request and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
 
-The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The local relay never logs authorization values; the browser logger also redacts credential-like keys and Bearer/query tokens before buffering or printing them.
+The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The browser logger redacts credential-like keys and Bearer/query tokens before buffering or printing them.
 
 ### Errors
 

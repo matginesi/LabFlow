@@ -7,7 +7,7 @@ order: 5
 
 # LabFlow architecture
 
-This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. LabFlow can be opened as static browser content or served locally; no server owns scientific state. The optional `tools/labflow_server.py` only serves static files and bridges browser CORS for an allow-list of hosted AI provider hosts.
+This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. LabFlow is a static browser application; no server owns scientific state or AI transport. Provider calls are made directly from the browser to the endpoint configured by the user.
 
 ## 1. Core rule
 
@@ -240,7 +240,7 @@ Do not add:
 - alternate NOMAD mapping logic in the UI.
 
 
-## Browser transport and local relay
+## Browser AI transport
 
-The browser remains the application runtime. Local/LAN AI providers are called directly from the browser. Hosted providers are also attempted directly when browser CORS permits it; when the page is served by `tools/labflow_server.py`, `transport.js` can route allow-listed hosted-provider calls through its same-origin relay. The relay is intentionally narrow (known provider → known official host, GET/POST only) and exists only to bridge browser CORS; it does not own AI semantics, settings, retries or provider selection. Provider HTTP errors pass through unchanged.
+The browser remains the application runtime and the only AI transport. Local/LAN and hosted providers are called directly at the endpoint configured by the user. LabFlow has no relay/backend fallback. Local/LAN calls therefore depend on bind address, reachability, Local Network Access policy and CORS; hosted calls depend on the provider exposing browser-compatible CORS. HTTP provider errors pass through unchanged, while a browser-level CORS/network block is reported as such.
 

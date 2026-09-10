@@ -11,7 +11,7 @@ module.exports=function(t,LF){
     assert(/Detect/.test(out.next),true,'detect guidance');
   };
   t['provider context note is exposed through one documented API']=function(){
-    assert(/configured endpoint|direct|relay/i.test(LF.AIDiagnostics.contextNote()),true,'context note');
+    assert(/configured|direct|browser/i.test(LF.AIDiagnostics.contextNote()),true,'context note');
     assert(Object.prototype.hasOwnProperty.call(LF.AIDiagnostics,'environmentNote'),false,'obsolete alias removed');
   };
   t['reasoning-only output limits get a non-network diagnosis']=function(){

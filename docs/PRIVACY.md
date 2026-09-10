@@ -1,6 +1,6 @@
 # Privacy and local-first boundary
 
-LabFlow is a local-first browser application. Scientific parsing, analysis, validation, experiment-context retrieval, browser persistence and export generation remain client-side. LabFlow does not require an application backend for scientific state. When served with the optional standard-library `tools/labflow_server.py`, an allow-listed same-origin relay may bridge hosted-provider browser CORS; it owns no scientific data or AI semantics.
+LabFlow is a local-first browser application. Scientific parsing, analysis, validation, experiment-context retrieval, browser persistence and export generation remain client-side. LabFlow does not require an application backend for scientific state or AI transport.
 
 ## Local runtime
 
@@ -23,7 +23,7 @@ Request diagnostics may contain HTTP status, provider code/message, timing and `
 
 ## External AI requests
 
-`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted providers use their configured endpoint. The browser attempts direct transport when allowed; when the page is served by `tools/labflow_server.py`, its explicit same-origin allow-listed relay may forward hosted-provider requests to that same official endpoint. A plain static/GitHub Pages deployment has no such relay, so browser CORS/network failures remain explicit.
+`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted and local/LAN providers use the configured endpoint directly from the browser. There is no relay/backend fallback, so browser CORS/network failures remain explicit.
 
 Requests use:
 
