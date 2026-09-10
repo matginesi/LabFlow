@@ -114,6 +114,7 @@ Chart colors come from `--chart-*` tokens. Theme accent is for interaction/state
 ## Primary workflow simplicity
 
 Optimize the first view for a researcher who wants the answer before the controls. Upload, Results, Design and Export must expose the primary decision/action first and place secondary diagnostics, normalization knobs, provenance tables, complete mappings and already-resolved details behind native progressive disclosure. Do not remove capability; delay it until the researcher asks for it or the data state makes it relevant. A blocker may open or foreground its own resolution, but unrelated advanced sections stay closed. Compact does not mean showing everything simultaneously: density comes from smaller, consistent spacing and progressive disclosure, not from filling every viewport with controls.
+For Upload & Review specifically, keep the Experiment Brief as a shallow summary strip (primary fact plus compact counts), and keep Manual/Diagnostics behind one Advanced disclosure. Inside it, manual override and diagnostics are mutually exclusive native disclosures so opening one does not stack both deep panels; long diagnostics use a bounded local vertical scroll rather than extending the whole page.
 
 ## Error recovery
 

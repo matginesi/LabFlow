@@ -1,6 +1,7 @@
 # UI contract
 
 `ui-kit.html` demonstrates the visual system. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application/page composition in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit. The frontend remains semantic HTML, vanilla JavaScript and ordinary local CSS. Its class conventions are Bootstrap-compatible where useful, but this repository currently loads no separate Bootstrap runtime; do not add a framework/CDN dependency merely for UI cleanup.
+Upload & Review keeps sidebar summaries intentionally shallow: the Experiment Brief uses a compact fact/count strip, while Manual & Diagnostics is closed by default. Its Researcher override and Diagnostics disclosures are mutually exclusive, and long diagnostic tables scroll inside a bounded local region instead of stretching the page.
 
 ## Shared typography, controls and spacing
 
