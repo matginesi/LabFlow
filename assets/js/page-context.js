@@ -34,11 +34,13 @@
       const plan=exp.nomad&&exp.nomad.mappingPlan||{};
       return{readiness:plan.readiness||'',missing:take(plan.missing,30).map(compact),validation:compact(exp.nomad&&exp.nomad.validation||null),mapping_count:Array.isArray(plan.mappings)?plan.mappings.length:0};
     }
-    if(route==='settings'&&LF.Storage){const ai=clone(LF.Storage.getAiSettings?LF.Storage.getAiSettings():{});delete ai.apiKey;delete ai.key;return{ai:compact(ai)};}
-    if(route==='logs'&&LF.Logger&&LF.Logger.entries){const entries=LF.Logger.entries();return{entries:entries.length,recent:entries.slice(-20).map(compact)};}
+    /* Settings/provider configuration and diagnostic logs are UI/runtime data, not
+       experiment semantics. Never feed them into an Assistant Context Pack. */
+    if(route==='settings')return{section:'settings'};
+    if(route==='logs')return{section:'logs'};
     return{experiment:{name:exp.meta&&exp.meta.name||'',samples:(exp.samples||[]).length,measurements:(exp.measurements||[]).length}};
   }
-  function snapshot(){const ui=uiState(),base=clone(ui&&ui.pageContext||{});base.data=pageData();base.updatedAt=new Date().toISOString();return base;}
+  function snapshot(){const ui=uiState(),s=state(),route=s&&s.route||s&&s.ui&&s.ui.route||'',base=clone(ui&&ui.pageContext||{});if(route==='settings'){base.page='Settings';base.view='';base.selected={};base.filters={};base.visible=[];}else if(route==='logs'){base.page='Logs';base.view='';base.selected={};base.filters={};base.visible=[];}base.data=pageData();base.updatedAt=new Date().toISOString();return base;}
   function summary(ctx){ctx=ctx||snapshot();const parts=[];if(ctx.page)parts.push(ctx.page);if(ctx.view)parts.push(ctx.view);const s=ctx.selected||{};['experiment','sample','measurement','group','finding','component','document','mapping'].forEach(function(k){if(s[k])parts.push(cleanText(s[k]));});return parts.filter(Boolean).join(' · ')||'Current page';}
   LF.PageContext={publish:publish,clear:clear,snapshot:snapshot,summary:summary,cleanText:cleanText,pageData:pageData};
 }());

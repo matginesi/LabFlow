@@ -69,6 +69,7 @@ module.exports = function (t, LF) {
     assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'recovered text satisfies schema');
   };
   t['Design structured recovery refuses unrelated prose'] = function(){assert(SO.recoverForSchema('design_suggestion','I cannot answer this request.'),null,'unrelated prose stays invalid');};
+  t['structured Action contracts reject transport-only fields instead of storing them']=function(){const value=SO.normalizeForSchema('dataset_corrections',{summary:'ok',proposals:[],unresolved:[],reasoning_control:true,reasoning_format:'deepseek',response_format:{type:'json_object'}}),errors=SO.validate('dataset_corrections',value,{registry:LF.ActionRegistry});if(!errors.some(function(x){return /unexpected field (reasoning_control|reasoning_format|response_format)/.test(x);}))throw new Error('transport metadata must fail the semantic schema: '+JSON.stringify(errors));};
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

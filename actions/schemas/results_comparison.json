@@ -58,7 +58,8 @@
             "minimum": 0,
             "maximum": 1
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "hypotheses": {
@@ -89,7 +90,8 @@
             "minimum": 0,
             "maximum": 1
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "limitations": {
@@ -108,5 +110,6 @@
         "maxLength": 220
       }
     }
-  }
+  },
+  "additionalProperties": false
 }

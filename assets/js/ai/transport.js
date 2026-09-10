@@ -137,6 +137,15 @@
     else Object.keys(headers||{}).forEach(function(key){out[key]=headers[key];});
     return out;
   }
+  function diagnosticHeaders(headers){
+    const out=headersObject(headers);Object.keys(out).forEach(function(key){if(/authorization|api.?key|token|secret|cookie|credential/i.test(String(key)))out[key]='[redacted]';});return out;
+  }
+  function diagnosticTransportBody(body){
+    const out={};Object.keys(body||{}).forEach(function(key){if(key!=='messages')out[key]=body[key];});out.message_count=Array.isArray(body&&body.messages)?body.messages.length:0;out.message_chars=(body&&body.messages||[]).reduce(function(n,m){return n+String(m&&m.content||'').length;},0);return out;
+  }
+  function diagnosticSemanticMessages(body){
+    return(body&&Array.isArray(body.messages)?body.messages:[]).map(function(message){return{role:String(message&&message.role||''),content:String(message&&message.content||'').slice(0,16000)};});
+  }
 
   function providerAuthHeaders(provider,key){
     const h={'Accept':'application/json'};
@@ -243,7 +252,8 @@
     let responseMeta=null;
     const msgChars=(body.messages||[]).reduce(function(n,m){return n+String(m&&m.content||'').length;},0),maxTokens=body.max_completion_tokens||body.max_tokens||body.max_output_tokens||null;
     Log.info('request.start',{requestLogId:requestLogId,label:label,endpoint:url,model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,bodyChars:requestBody.length,maxTokens:maxTokens,thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,localTarget:isLocalAddress(url)});
-    Log.debug('request.payload',{requestLogId:requestLogId,headers:headersObject(headers),body:body});
+    Log.debug('request.semantic',{requestLogId:requestLogId,messages:diagnosticSemanticMessages(body)});
+    Log.debug('request.transport',{requestLogId:requestLogId,headers:diagnosticHeaders(headers),body:diagnosticTransportBody(body)});
     try{
       const response=await fetch(url,fetchOptions(url,headers,requestBody,controller));
       const responseHeadersMs=Math.round(performance.now()-started);
@@ -285,7 +295,7 @@
       if(!Number.isFinite(Number(failure.elapsedMs)))failure.elapsedMs=elapsed;
       failure.requestLogId=requestLogId;
       const failureLog={requestLogId:requestLogId,label:label,endpoint:url,model:body.model,elapsedMs:elapsed,timeoutMs:limit,hardTimeoutMs:hardLimit||null,status:failure&&failure.status||responseMeta&&responseMeta.status||0,providerCode:failure&&failure.providerCode||'',providerMessage:failure&&failure.providerMessage||'',requestId:failure&&failure.requestId||responseMeta&&responseMeta.requestId||'',bodyChars:requestBody.length,responseChars:Number(responseDetail&&responseDetail.bodyChars)||0,error:failure};
-      if(isRateLimitError(failure))Log.warn('request.rate-limited',failureLog);else Log.error('request.failed',failureLog);Log.debug('request.failed-details',{requestLogId:requestLogId,request:{headers:headersObject(headers),body:body},response:responseDetail});
+      if(isRateLimitError(failure))Log.warn('request.rate-limited',failureLog);else Log.error('request.failed',failureLog);Log.debug('request.failed-details',{requestLogId:requestLogId,request:{headers:diagnosticHeaders(headers),transport:diagnosticTransportBody(body),messages:diagnosticSemanticMessages(body)},response:responseDetail});
       throw failure;
     }finally{
       clearTimeout(timeout);clearTimeout(hardTimeout);if(parentController)parentController.signal.removeEventListener('abort',abortFromTask);if(activeRequest===requestState)activeRequest=null;inFlight=false;
@@ -748,6 +758,9 @@
     isLocalAddress:isLocalAddress,
     mergeStreamContent:mergeStreamContent,
     normalizeAssistantEnvelope:normalizeAssistantEnvelope,
+    diagnosticHeaders:diagnosticHeaders,
+    diagnosticTransportBody:diagnosticTransportBody,
+    diagnosticSemanticMessages:diagnosticSemanticMessages,
     outputLoopDetected:outputLoopDetected,
     retryAfterMs:retryAfterMs,
     isRateLimitError:isRateLimitError,

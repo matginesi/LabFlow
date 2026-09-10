@@ -19,7 +19,7 @@ LabFlow is **not memory-only**:
 - provider rate-limit/cooldown state is not persisted; a 429 and optional `Retry-After` exist only in the current request result;
 - **Reset session** clears the persisted scientific session/RAW snapshot but keeps provider credentials/preferences unless separately changed.
 
-Request diagnostics may contain HTTP status, provider code/message, timing and `Retry-After`; they do not contain API-key values.
+Request diagnostics may contain HTTP status, provider code/message, timing and `Retry-After`; they do not contain API-key values. Semantic messages and transport metadata are logged separately, and credential-bearing headers are explicitly redacted before they reach the diagnostic event.
 
 ## External AI requests
 
@@ -32,7 +32,7 @@ credentials: omit
 cache: no-store
 ```
 
-AI Actions send a bounded Context Pack selected for that Action. RAW curves and the full experiment are not sent by default.
+AI Actions send a bounded Context Pack selected for that Action. RAW curves and the full experiment are not sent by default. Settings/provider configuration and Logs contents are excluded from model-visible Context Packs. Provider transport metadata (model routing, endpoint-derived request options, reasoning controls and response-format controls) is kept outside semantic prompt content.
 
 A connection test sends only a tiny provider probe and no experiment context.
 

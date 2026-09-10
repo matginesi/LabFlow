@@ -152,6 +152,17 @@ module.exports=function(t,LF){
     }finally{LF.StructuredOutput=previousStructured;LF.ActionSteps=previousSteps;LF.ActionRegistry=previousRegistry;global.setTimeout=realSetTimeout;}
   };
 
+  t['provider/server retry never feeds raw transport metadata back into the model']=async function(){
+    const exp={id:'exp_transport_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'test.transport-retry',steps:[{id:'answer',type:'AI',output:'text',max_output_tokens:256,max_retries:1}]},feedback=[],realSetTimeout=global.setTimeout,calls={n:0};
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
+    LF.ActionContext={build:function(action,step,opts){feedback.push(String(opts&&opts.retryFeedback||''));return{context:{},messageList:[{role:'user',content:'clean semantic request'+(opts&&opts.retryFeedback?'\n'+opts.retryFeedback:'')}]};}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(){return 20;},buildRequest:function(x){return x;},send:async function(){calls.n++;if(calls.n===1){const e=new Error('provider server failure');e.status=500;e.providerResponse='{"reasoning_control":true,"reasoning_format":"deepseek","response_format":{"type":"json_object"}}';throw e;}return{content:'clean final answer',finishReason:'stop'};}};
+    global.setTimeout=function(fn){return realSetTimeout(fn,0);};
+    try{const out=await LF.ActionRunner.run('test.transport-retry');assert(out.status,'done','retry succeeds');assert(calls.n,2,'one bounded retry');assert(feedback[1],'','transport retry has no semantic feedback');}
+    finally{global.setTimeout=realSetTimeout;}
+  };
+
   t['semantic validator may return insufficient evidence as a successful AI outcome'] = async function(){
     const exp={id:'exp_semantic_uncertain',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.semantic-uncertain',steps:[{id:'infer',type:'AI',output:'json',schema:'test_schema',max_output_tokens:512,max_retries:1,validate_with:'test.validate-insufficient'}]};

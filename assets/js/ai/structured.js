@@ -122,9 +122,11 @@
       return errors;
     }
     if (actual === 'object') {
-      Object.keys(schema.properties || {}).forEach(function (key) {
+      const properties=schema.properties||{};
+      if(schema.additionalProperties===false)Object.keys(value).forEach(function(key){if(!Object.prototype.hasOwnProperty.call(properties,key))errors.push(path+' contains unexpected field '+key+'.');});
+      Object.keys(properties).forEach(function (key) {
         if (!(key in value)) return;
-        errors.push.apply(errors, schemaErrors(schema.properties[key], value[key], path + '.' + key));
+        errors.push.apply(errors, schemaErrors(properties[key], value[key], path + '.' + key));
       });
       return errors;
     }

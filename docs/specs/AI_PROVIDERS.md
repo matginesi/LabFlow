@@ -86,6 +86,19 @@ Provider reasoning is normalized separately from final content. LabFlow accepts 
 - Every AI step has an explicit operational `max_input_tokens` cap. Context preflight uses the tighter of this Action cap and model/runtime context headroom, reserves the Action target output first, and compacts deterministically before reporting a genuine context overflow. A 200K model context therefore never becomes permission for a 200K LabFlow prompt.
 - Rate-limit handling never changes the selected model. Every provider request makes one HTTP attempt. HTTP 429 and provider codes `1302`/`1303`/`1305`/`1312` are surfaced immediately with `Retry-After` when present; quota codes `1304`/`1308`/`1310` also fail immediately. LabFlow keeps no transport backoff, hidden retry, persisted cooldown or client pacing. Multi-request Action sequences stop at the first provider throttle and preserve completed work; a later explicit researcher action may try again.
 
+
+## Semantic request vs transport metadata
+
+LabFlow keeps the model-visible task separate from provider transport configuration. Action/Assistant Context Packs may contain only task-relevant experiment/page data. Provider/model selection, endpoint, timeout, reasoning controls, `reasoning_format`, `response_format`, `chat_template_kwargs` and similar fields belong to `transport.js` and are added only to the HTTP body when the selected provider requires them.
+
+Settings and Logs are runtime/debug surfaces: their provider configuration and diagnostic contents are deliberately excluded from Assistant Context Packs. The user request is carried once as `<user_request>` rather than duplicated inside the Context Pack.
+
+Retries caused by browser/network/provider server failures resend the same clean semantic request. Raw HTTP/provider error bodies are never appended to a retry prompt. Only semantic contract failures may feed back bounded validation errors plus the previous **assistant output**, never the transport request/response envelope.
+
+The response path is likewise one-way: raw provider envelope → assistant content extraction → optional reasoning-envelope normalization → structured parsing/validation. Structured Action schemas are closed (`additionalProperties: false`), so transport-like keys cannot silently become persisted Action data.
+
+Debug logging presents semantic messages and transport metadata as separate events. Credential-bearing headers are redacted before diagnostic logging; the logger's generic secret sanitizer remains a second local safeguard.
+
 ## Connection test
 
 **Save & test connection** persists the current provider, model and provider-scoped key, verifies browser retention, then attempts one minimal non-streaming request through the unified transport (single attempt, no retry). It uses `Reply only with OK.`, a small output ceiling, a shorter timeout and an explicit thinking-off field when the provider declares one. It performs no capability/model discovery and does not change the selected model. HTTP 429 and known provider limit/quota codes produce a reachable-but-limited result with provider code/message and `Retry-After` when available; they create no local cooldown and do not block a later explicit request. The provider output includes the model reply plus measured timing, token usage or a clearly marked estimate, payload size, finish reason and request ID. It does not send experiment data.

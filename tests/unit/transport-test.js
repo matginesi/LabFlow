@@ -105,6 +105,21 @@ module.exports = function (t, LF) {
     }finally{delete LF.Storage;delete LF.AIProviders;}
   };
 
+  t['transport-only reasoning and response fields never enter model-visible messages'] = function () {
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'/models/LFM2.5-test.gguf',streaming:true,thinkingMode:'off'};},getApiKey:function(){return'super-secret';}};
+    LF.AIProviders={llamacpp:{id:'llamacpp',optionalKey:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,supportsJsonMode:true,supportsReasoningControl:true,thinkingPromptGuard:true,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'semantic task only'}],stream:true,maxTokens:128,thinkingMode:'off',guardThinking:true,jsonMode:true,modelCapability:{reasoningParserFormat:'deepseek'}}),visible=spec.body.messages.map(function(m){return m.content;}).join('\n');assert(spec.body.reasoning_control,true,'transport reasoning control');assert(spec.body.reasoning_format,'deepseek','transport reasoning parser');assert(spec.body.response_format,{type:'json_object'},'transport json mode');if(/reasoning_control|reasoning_format|response_format|LFM2\.5-test|127\.0\.0\.1:8080/.test(visible))throw new Error('transport metadata leaked into model-visible messages: '+visible);const headers=AI.diagnosticHeaders(spec.headers),transport=AI.diagnosticTransportBody(spec.body),semantic=AI.diagnosticSemanticMessages(spec.body);assert(headers.Authorization,'[redacted]','diagnostic auth redacted');assert(Object.prototype.hasOwnProperty.call(transport,'messages'),false,'transport diagnostic excludes semantic messages');assert(semantic[semantic.length-1].content,'semantic task only','semantic diagnostic remains inspectable');}
+    finally{delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['provider response envelope metadata never becomes assistant content'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.fetch=async function(){return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'r1',model:'transport-model',reasoning_control:true,reasoning_format:'deepseek',response_format:{type:'json_object'},choices:[{message:{role:'assistant',content:'{"answer":"semantic only"}'},finish_reason:'stop'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'transport-model',streaming:false};},getApiKey:function(){return'';}};LF.AIProviders={custom:{id:'custom',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'answer'}],stream:false,maxTokens:64}),out=await AI.send(spec,{label:'envelope-boundary'});assert(out.content,'{"answer":"semantic only"}','assistant content only');if(/reasoning_control|reasoning_format|response_format/.test(out.content))throw new Error('response envelope leaked into semantic output');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['provider-declared headers are applied and Z.AI omits unsupported stream options'] = function () {
     let requestedProvider='';
     LF.Storage = {

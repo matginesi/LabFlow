@@ -52,6 +52,10 @@
           "additives": {
             "type": "string"
           },
+          "preparation": {
+            "type": "string",
+            "maxLength": 500
+          },
           "evidence": {
             "type": "string"
           },
@@ -72,7 +76,8 @@
             "type": "string",
             "maxLength": 180
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "stack": {
@@ -116,7 +121,8 @@
             "type": "string",
             "maxLength": 180
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "process": {
@@ -154,7 +160,8 @@
           "type": "string",
           "maxLength": 180
         }
-      }
+      },
+      "additionalProperties": false
     },
     "unknowns": {
       "type": "array",
@@ -164,5 +171,6 @@
         "maxLength": 160
       }
     }
-  }
+  },
+  "additionalProperties": false
 }

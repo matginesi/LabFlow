@@ -78,7 +78,8 @@
           "finding_id": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "unresolved": {
@@ -104,8 +105,10 @@
               "type": "string"
             }
           }
-        }
+        },
+        "additionalProperties": false
       }
     }
-  }
+  },
+  "additionalProperties": false
 }
