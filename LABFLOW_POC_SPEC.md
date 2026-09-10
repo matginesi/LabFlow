@@ -160,6 +160,8 @@ AI is explicit and optional. It may:
 
 It must not silently mutate RAW data, recalculate deterministic metrics, or fabricate missing quantitative evidence. Insufficient scientific evidence is a valid non-error outcome where the Action schema allows it.
 
+AI transport uses the exact endpoint visible in Settings. Z.AI and hosted NVIDIA NIM use an explicit loopback relay preset (`tools/provider_relay.py`) because those hosted endpoints are not browser-CORS compatible with the deployed GitHub Pages origin. The relay is an allowlisted transport helper only: it stores no provider key or LabFlow state and performs no provider selection or fallback routing.
+
 ## 10. Extensibility
 
 A new Action is added under `actions/<action-id>/` with `action.json` and optional `prompt.md` / `schema.json`. Public Actions declare their command, recommended routes and any state bindings in the manifest. Registry discovery, capability preflight, context profiles, guards and Action-step tools are extensible without a central Action whitelist or Action-ID switches in the Assistant.

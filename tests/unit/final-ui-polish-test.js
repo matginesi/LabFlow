@@ -116,6 +116,13 @@ module.exports=function(t){
     assert(css.includes('.design-stack-layer'),true,'layer visualization styling');
   };
 
+  t['Logs use one unified event stream without provider-specific log panels']=function(){
+    assert(logs.includes('Provider checks'),false,'provider check panel removed');
+    assert(logs.includes('Provider transactions'),false,'provider transaction panel removed');
+    assert(logs.includes('<h2 class="h2">Event stream</h2>'),true,'single event stream remains');
+    assert(logs.includes('runtime and API events'),true,'copy explains unified stream');
+  };
+
   t['Long-session navigation avoids unbounded DOM and log payload work']=function(){
     assert(app.includes('SCROLL_MEMORY_SELECTOR'),true,'bounded scroll-memory selector');
     assert(app.includes("main.querySelector('.math-display,.math-inline')"),true,'MathJax only when active page has math');

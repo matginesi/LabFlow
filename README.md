@@ -153,7 +153,15 @@ LabFlow remains a static vanilla-JS application. Serve it with any ordinary stat
 python3 -m http.server 8000 --bind 0.0.0.0
 ```
 
-Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
+Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. Provider requests are sent from the browser to the endpoint shown in Settings. Hosted providers therefore normally need browser CORS support.
+
+The hosted Z.AI and NVIDIA NIM endpoints used by LabFlow do not expose a browser-compatible response from the deployed GitHub Pages origin. Their built-in presets therefore target the bundled, stateless standard-library relay on `http://127.0.0.1:8099`. Start it in a second terminal with:
+
+```bash
+python3 tools/provider_relay.py
+```
+
+The relay is deliberately allowlisted: it forwards only Z.AI `POST /chat/completions` and NVIDIA `GET /models` / `POST /chat/completions`, never stores bearer keys, and owns no LabFlow/scientific state. Custom/self-hosted endpoints that already permit the LabFlow browser origin can still be entered directly in Settings. No provider is silently rerouted: the endpoint visible in Settings is always the endpoint the browser contacts.
 
 
 ## llama.cpp on the local network

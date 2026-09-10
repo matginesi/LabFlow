@@ -228,6 +228,7 @@ auto_reasoning_format() {
 
 validate() {
     [[ -x "$SERVER" ]] || die "llama-server not executable: $SERVER"
+    [[ -n "$MODEL" ]] || die "model is required; pass --model PATH or set LABFLOW_MODEL"
     [[ -f "$MODEL" ]] || die "model not found: $MODEL"
     SERVER_HELP="$("$SERVER" --help 2>&1 || true)"
 

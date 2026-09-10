@@ -40,7 +40,7 @@ If the terminal probe succeeds but the browser test reports no HTTP status, the 
 
 ## Browser transport note
 
-`LabFlow.AIConsole.doctor(...)` exercises the same direct-browser transport as Settings. No relay/backend fallback is used; browser CORS/network failures are reported explicitly.
+`LabFlow.AIConsole.doctor(...)` exercises the same configured-endpoint transport as Settings. Z.AI and NVIDIA presets explicitly use `tools/provider_relay.py`; there is no hidden relay/backend fallback, and browser CORS/network failures are reported explicitly.
 
 ## Reasoning compatibility
 

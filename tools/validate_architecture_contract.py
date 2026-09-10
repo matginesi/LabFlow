@@ -22,6 +22,7 @@ for path in [
     'assets/js/experiment/design-analysis.js',
     'assets/js/data/pipeline.js',
     'docs/guides/EXTENDING_LABFLOW.md',
+    'tools/provider_relay.py',
 ]: need(path)
 
 index=(ROOT/'index.html').read_text(encoding='utf-8')
@@ -93,6 +94,21 @@ for manifest in sorted((ROOT/'actions').glob('*/action.json')):
 
 if 'BROKEN_RELATION' not in contracts:
     errors.append('DataContracts must validate graph relations')
+
+providers=(ROOT/'assets/js/ai/providers.js').read_text(encoding='utf-8')
+for token in ["endpoint:'http://127.0.0.1:8099/zai/v1'", "endpoint:'http://127.0.0.1:8099/nvidia/v1'", 'browserRelay:true']:
+    if token not in providers:
+        errors.append(f'provider registry missing explicit browser-relay contract: {token}')
+relay=(ROOT/'tools/provider_relay.py').read_text(encoding='utf-8')
+for route in [
+    '("POST", "/zai/v1/chat/completions")',
+    '("GET", "/nvidia/v1/models")',
+    '("POST", "/nvidia/v1/chat/completions")',
+]:
+    if route not in relay:
+        errors.append(f'provider relay missing allowlisted route: {route}')
+if 'Access-Control-Allow-Private-Network' not in relay:
+    errors.append('provider relay must answer browser Private Network preflight')
 
 ignore=(ROOT/'.gitignore').read_text(encoding='utf-8') if (ROOT/'.gitignore').exists() else ''
 for rule in ['*.zip','*.ZIP','**/ORIGINAL_REQUEST/','**/TEST_DATA/']:

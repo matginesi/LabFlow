@@ -91,7 +91,7 @@
   }
 
   function pageOrigin(){try{return typeof location!=='undefined'&&location.origin?String(location.origin):'';}catch(_){return'';}}
-  /** All providers are contacted directly from the browser. There is no LabFlow relay/backend. */
+  /** Send one request to the endpoint visible in Settings. Z.AI/NVIDIA presets may point at the explicit local provider relay; transport never adds hidden fallback routing. */
   async function providerFetch(url,options,providerId,phase){
     options=options||{};providerId=String(providerId||'');phase=String(phase||'request');
     Log.info('network.route',{provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote'});

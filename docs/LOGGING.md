@@ -95,18 +95,18 @@ AI logging records:
 If the provider returns HTTP 200 but the model output is empty, truncated,
 malformed JSON, or violates an Action contract, LabFlow records an `ERROR`
 event named `assistant.response.rejected`. It shares the transport
-`requestLogId`, so **Provider transactions** shows the call as **Rejected
-response** and exposes the sanitized raw provider envelope, model output,
-finish reason, token usage, validation error, stack and cause. A successful
-HTTP response is therefore never mistaken for a usable Action result.
+`requestLogId`, so the unified **Event stream** preserves the call as a **Rejected
+response** and its lazy detail exposes the sanitized raw provider envelope,
+model output, finish reason, token usage, validation error, stack and cause. A
+successful HTTP response is therefore never mistaken for a usable Action result.
 
 It does **not** intentionally dump API keys. Common secret fields are redacted by the logger.
 
 ### Provider diagnostics
 
-**Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. The Logs page groups their most recent lifecycles under **Provider checks**, while the API category includes catalogue/model metadata requests, chat requests and provider errors. A successful result therefore requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
+**Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. The Logs page intentionally has one diagnostic surface: provider catalogue requests, chat requests, failures and the rest of LabFlow events all appear in the unified **Event stream**, with **Recent errors** kept above it for quick triage. A successful provider result still requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
 
-Network routing is explicit in both console and Logs. `network.route` identifies the direct-browser request and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
+Network routing is explicit in both console and Logs. `network.route` identifies the browser request to the endpoint configured in Settings and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. For the built-in Z.AI and NVIDIA hosted presets that endpoint is the local provider relay; upstream HTTP errors still pass through unchanged. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
 
 The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The browser logger redacts credential-like keys and Bearer/query tokens before buffering or printing them.
 

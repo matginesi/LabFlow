@@ -38,7 +38,9 @@ module.exports=function(t,LF){
   t['provider registry includes OpenRouter and NVIDIA NIM presets']=function(){
     assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
-    assert(LF.AIProviders.nvidia.endpoint==='https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA NIM endpoint');
+    assert(LF.AIProviders.nvidia.endpoint==='http://127.0.0.1:8099/nvidia/v1','NVIDIA NIM browser relay endpoint');
+    assert(LF.AIProviders.nvidia.upstreamEndpoint==='https://integrate.api.nvidia.com/v1','NVIDIA NIM upstream endpoint is explicit metadata');
+    assert(LF.AIProviders.nvidia.browserRelay===true,'NVIDIA declares the explicit browser relay');
     assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.nvidia,'modelsEndpoint'),'NVIDIA catalogue follows the configured endpoint rather than a hidden fixed URL');
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
@@ -71,13 +73,15 @@ module.exports=function(t,LF){
   t['Z.AI is one provider with the official General API, default Flash model and Detect catalogue']=function(){
     const provider=LF.AIProviders.zai;
     assert(provider.name==='Z.AI','provider display name');
-    assert(provider.endpoint==='https://api.z.ai/api/paas/v4/chat/completions','official General API endpoint');
+    assert(provider.endpoint==='http://127.0.0.1:8099/zai/v1','Z.AI browser relay endpoint');
+    assert(provider.upstreamEndpoint==='https://api.z.ai/api/paas/v4/chat/completions','official General API upstream endpoint');
+    assert(provider.browserRelay===true,'Z.AI declares the explicit browser relay');
     assert(provider.model==='glm-4.7-flash','default remains free Flash');
     assert(provider.modelSelect===true,'Detect-backed model select');
     assert(provider.staticModelCatalogue===true,'documented static catalogue declared');
     assert(provider.knownModels.includes('glm-4.7-flash'),'default model present in Detect catalogue');
     assert(provider.supportsStreaming===false,'Z.AI uses the conservative direct non-streaming browser path');
-    assert(!Object.prototype.hasOwnProperty.call(provider,'browserRelayPath'),'Z.AI has no LabFlow-specific relay');
+    assert(provider.browserRelay===true,'Z.AI relay use is explicit rather than hidden fallback');
     assert(provider.remoteModelMetadata===false,'no undocumented remote model-list endpoint is probed');
     assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'retired Coding Plan endpoint switch absent');
   };
