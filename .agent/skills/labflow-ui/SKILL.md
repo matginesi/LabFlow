@@ -199,7 +199,7 @@ After UI changes:
 
 ## Hosted provider browser transport
 
-Hosted providers use their configured official endpoint directly from the browser. The UI must not require a LabFlow-specific relay/server. Z.AI uses the official General API endpoint; a browser CORS/network block is diagnosed as such and is never disguised as an Action/schema failure or retried through a hidden localhost fallback. LAN-capable provider requests likewise remain direct browser requests: classify loopback separately from LAN, support single-label hostnames such as `fedora`, `.local` names and private IPs, and declare the browser target address space when supported. Never imply that frontend code can bypass Local Network Access, mixed-content or CORS policy.
+Hosted providers always use the endpoint and credentials visible in Settings. Direct browser transport is attempted when the provider/browser permits it; when LabFlow is served with `tools/labflow_server.py`, allow-listed hosted providers may use its explicit same-origin relay to avoid provider CORS. This relay is not a generic proxy, is never used for LAN/local providers, and must never hide authentication/provider HTTP errors. A plain static/GitHub Pages deployment cannot provide that local relay, so UI diagnostics must say clearly when browser CORS is the limiting layer. LAN-capable provider requests remain direct browser requests: classify loopback separately from LAN, support single-label hostnames such as `fedora`, `.local` names and private IPs, and declare the browser target address space when supported. Never imply that frontend code can bypass Local Network Access, mixed-content or CORS policy.
 
 
 ## Export recovery and shared state

@@ -40,10 +40,10 @@ The unit suite includes architecture regressions for `DomainSchema`, persistence
 Serve locally with:
 
 ```bash
-python -m http.server 8000
+python3 tools/labflow_server.py --host 0.0.0.0 --port 8000
 ```
 
-The browser smoke test needs only ordinary static serving. Hosted AI providers are contacted directly by the browser; live provider checks remain separate because they require credentials and provider CORS/network availability.
+The browser smoke test itself needs only static serving. The LabFlow local server is used in development because it also supplies the optional same-origin relay for hosted providers that block direct browser CORS. Live provider checks remain separate because they require user credentials and external provider availability.
 
 Then run:
 

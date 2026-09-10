@@ -7,23 +7,23 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:true, remoteModelMetadata:false, staticModelCatalogue:true, modelCatalogueRequired:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:false, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, connectionTestTimeoutMs:90000, connectionTestMaxTokens:128, requestDeadlineMs:180000, knownModels:['glm-4.7-flash','glm-5.3','glm-5.2','glm-5.1','glm-5','glm-4.7','glm-4.7-flashx','glm-4.6','glm-4.5','glm-4.5-air','glm-4.5-x','glm-4.5-airx','glm-4.5-flash','glm-4-32b-0414-128k'],
+      id:'zai', name:'Z.AI', relayEligible:true, endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:true, remoteModelMetadata:false, staticModelCatalogue:true, modelCatalogueRequired:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:false, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, connectionTestTimeoutMs:90000, connectionTestMaxTokens:128, requestDeadlineMs:180000, knownModels:['glm-4.7-flash','glm-5.3','glm-5.2','glm-5.1','glm-5','glm-4.7','glm-4.7-flashx','glm-4.6','glm-4.5','glm-4.5-air','glm-4.5-x','glm-4.5-airx','glm-4.5-flash','glm-4-32b-0414-128k'],
       note:'Z.AI General API via direct browser Chat Completions.'
     },
     openrouter: {
-      id:'openrouter', name:'OpenRouter', endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000,
+      id:'openrouter', name:'OpenRouter', relayEligible:true, catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000,
       note:'OpenRouter OpenAI-compatible endpoint.'
     },
     nvidia: {
-      id:'nvidia', name:'NVIDIA NIM', endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', model:'nvidia/nemotron-3.5-lightning-30b-a3b', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000,
+      id:'nvidia', name:'NVIDIA NIM', relayEligible:true, catalogueFallbackToConfiguredModel:true, endpoint:'https://integrate.api.nvidia.com/v1/chat/completions', model:'nvidia/nemotron-3.5-lightning-30b-a3b', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, connectionTestTimeoutMs:60000,
       note:'NVIDIA hosted NIM OpenAI-compatible endpoint.'
     },
     openai: {
-      id:'openai', name:'OpenAI', endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
+      id:'openai', name:'OpenAI', relayEligible:true, catalogueFallbackToConfiguredModel:true, endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
       note:'OpenAI Chat Completions endpoint.'
     },
     gemini: {
-      id:'gemini', name:'Google Gemini', endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model:'gemini-3.7-flash', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Google Gemini model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
+      id:'gemini', name:'Google Gemini', relayEligible:true, catalogueFallbackToConfiguredModel:true, endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model:'gemini-3.7-flash', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Google Gemini model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
       note:'Gemini OpenAI-compatible endpoint.'
     },
     ollama: {

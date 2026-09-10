@@ -78,7 +78,7 @@
   function consoleSummary(data) {
     if (data == null) return '';
     if (typeof data !== 'object') return consoleScalar(data);
-    const preferred = ['action','provider','model','endpoint','status','providerCode','code','elapsedMs','durationMs','requestId','step','route','experimentId','entries','policies','message'];
+    const preferred = ['diagnosticId','action','provider','phase','transport','model','endpoint','url','status','providerCode','code','elapsedMs','durationMs','requestId','targetAddressSpace','relayAvailable','keyConfigured','step','route','experimentId','entries','policies','message'];
     const parts = [];
     const used = new Set();
     preferred.forEach(function (key) {
@@ -111,7 +111,7 @@
       name:value.name || 'Error', message:sanitizeString(value.message || String(value)),
       stack:sanitizeString(value.stack || '')
     };
-    ['status','statusText','code','providerCode','providerMessage','requestId','requestLogId','isNetwork','isContract','cancelled','timedOut','truncated','finishReason','timeoutMs','elapsedMs','usage'].forEach(function (key) {
+    ['status','statusText','code','providerCode','providerMessage','requestId','requestLogId','providerId','phase','url','transport','relayAvailable','directBrowser','isNetwork','isContract','cancelled','timedOut','truncated','finishReason','timeoutMs','elapsedMs','usage'].forEach(function (key) {
       if (value[key] != null && value[key] !== '') out[key] = sanitize(value[key], depth + 1, seen);
     });
     if (value.providerResponse) out.providerResponse = sanitizeString(value.providerResponse);
@@ -173,12 +173,18 @@
     }
     if (settings.console && window.console) {
       const method = level === 'error' ? 'error' : level === 'warn' ? 'warn' : level === 'info' ? 'info' : 'debug';
-      const prefix = '[LabFlow][' + entry.level + '][' + entry.scope + '] ' + entry.event;
+      const clock = entry.ts.slice(11, 23);
+      const prefix = '[LabFlow][' + clock + '][+' + Math.round(entry.elapsedMs) + 'ms][' + entry.level + '][' + entry.scope + '] ' + entry.event;
       try {
         if (entry.data === undefined) console[method](prefix);
         else {
-          const summary = consoleSummary(entry.data);
-          console[method](summary ? prefix + ' · ' + summary : prefix, entry.data);
+          const summary = consoleSummary(entry.data), line=summary ? prefix + ' · ' + summary : prefix;
+          console[method](line, entry.data);
+          if (level === 'error' && entry.data && entry.data.error) {
+            const err=entry.data.error;
+            if(err.stack) console[method]('[LabFlow][stack] '+String(err.stack));
+            if(err.cause) console[method]('[LabFlow][cause]',err.cause);
+          }
         }
       } catch (_) {}
     }
@@ -241,7 +247,7 @@
   function environmentSnapshot() {
     return sanitize({
       sessionId:sessionId, startedAt:sessionStartedAt, generatedAt:nowIso(),
-      app:{route:LF.State&&LF.State.state&&LF.State.state.ui.route||'', experimentId:LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment.meta&&LF.State.state.experiment.meta.id||''},
+      app:{build:String(window.LABFLOW_BUILD||'dev'),route:LF.State&&LF.State.state&&LF.State.state.ui.route||'', experimentId:LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment.meta&&LF.State.state.experiment.meta.id||''},
       browser:{userAgent:navigator.userAgent, language:navigator.language, online:navigator.onLine, storage:'localStorage'},
       page:{protocol:location.protocol, host:location.host, pathname:location.pathname},
       viewport:{width:window.innerWidth, height:window.innerHeight, devicePixelRatio:window.devicePixelRatio||1},

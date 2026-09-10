@@ -111,45 +111,66 @@
     decorate();
   }
 
-  /** Detect against the exact visible configuration and fail closed on auth/network/catalogue errors. */
+  /** Detect against the exact visible configuration. Catalogue discovery is useful
+      but never allowed to fake connectivity; the final chat probe is authoritative. */
   async function detectModel(options) {
     options=options||{};
-    const button=field('detectProviderModel'),list=field('aiModelList');
+    const button=field('detectProviderModel'),list=field('aiModelList'),diagnosticId=LF.Core&&LF.Core.uid?LF.Core.uid('detect'):'detect_'+Date.now();
     let config;
     try{config=validateConnectionForm(connectionFromForm(),{allowCatalogueModel:true});}
-    catch(error){if(!options.silent)notify(error.message||String(error),'error','Detect failed');return[];}
+    catch(error){Log.error('detect.failed',{diagnosticId:diagnosticId,phase:'validate',error:error});if(!options.silent)notify(error.message||String(error),'error','Detect failed');return[];}
     const providerId=config.providerId,provider=config.provider,endpoint=config.endpoint,apiKey=config.apiKey;
     const oldText=button&&button.textContent||'Detect';
     if(button){button.disabled=true;button.textContent='Detecting…';button.dataset.loading='true';}
+    Log.info('detect.start',{diagnosticId:diagnosticId,provider:providerId,endpoint:endpointHost(endpoint),model:config.model||'',keyConfigured:!!apiKey,source:'visible-form',origin:typeof location!=='undefined'?location.origin:'',targetAddressSpace:LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(endpoint):'',relay:LF.AI&&LF.AI.relayStatus?LF.AI.relayStatus():null});
     try{
-      let models=[],loaded=[],catalogueSkipped=false;
+      let models=[],loaded=[],catalogueSkipped=false,catalogueError=null;
       if(provider.modelSelect){
-        const result=await LF.AI.listModels(providerId,endpoint,apiKey);
-        models=Array.isArray(result.models)?result.models.filter(Boolean):[];
-        loaded=Array.isArray(result.loadedModels)?result.loadedModels.filter(Boolean):[];
-        catalogueSkipped=result.skipped===true;
-        if(Array.isArray(result.entries)){modelCatalogueMeta[providerId]={};result.entries.forEach(function(entry){if(entry&&entry.id)modelCatalogueMeta[providerId][String(entry.id)]=entry;});}
-        if(!catalogueSkipped&&!models.length)throw new Error((provider.name||providerId)+' returned an empty model catalogue.');
-        const detectedChoices=Array.from(new Set(models.concat(loaded)));
-        if(list){list.replaceChildren();detectedChoices.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}
-        syncModelControls(detectedChoices.length?detectedChoices:null,{preserveHint:true});
-        if(provider.local===true&&loaded.length===1)setModelValue(loaded[0]);
-        else if(models.length)setModelValue(catalogueModel(provider,config.model,models));
+        Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'catalogue',status:'start'});
+        try{
+          const result=await LF.AI.listModels(providerId,endpoint,apiKey,{diagnosticId:diagnosticId});
+          models=Array.isArray(result.models)?result.models.filter(Boolean):[];
+          loaded=Array.isArray(result.loadedModels)?result.loadedModels.filter(Boolean):[];
+          catalogueSkipped=result.skipped===true;
+          if(Array.isArray(result.entries)){modelCatalogueMeta[providerId]={};result.entries.forEach(function(entry){if(entry&&entry.id)modelCatalogueMeta[providerId][String(entry.id)]=entry;});}
+          if(!catalogueSkipped&&!models.length)throw new Error((provider.name||providerId)+' returned an empty model catalogue.');
+          const detectedChoices=Array.from(new Set(models.concat(loaded)));
+          if(list){list.replaceChildren();detectedChoices.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}
+          syncModelControls(detectedChoices.length?detectedChoices:null,{preserveHint:true});
+          if(provider.local===true&&loaded.length===1)setModelValue(loaded[0]);
+          else if(models.length)setModelValue(catalogueModel(provider,config.model,models));
+          Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'catalogue',status:'ok',models:models.length,loaded:loaded.length});
+        }catch(error){
+          catalogueError=error;
+          const fallbackAllowed=provider.local!==true&&provider.catalogueFallbackToConfiguredModel===true&&!!String(config.model||provider.model||'').trim();
+          Log.warn('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'catalogue',status:fallbackAllowed?'fallback':'failed',error:error});
+          if(!fallbackAllowed)throw error;
+          syncModelControls(null,{manualFallback:true,preserveHint:true});
+          if(!config.model&&provider.model)setModelValue(provider.model);
+        }
       }
-      const selected=String(modelValue(providerId)||config.model||'').trim();
+      const selected=String(modelValue(providerId)||config.model||provider.model||'').trim();
       if(!selected)throw new Error('No model is selected after provider discovery.');
-      const probe=await LF.AI.testConnection({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey});
+      Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'chat-probe',status:'start',model:selected});
+      const probe=await LF.AI.testConnection({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,diagnosticId:diagnosticId});
       if(probe&&probe.rateLimited)throw new Error((provider.name||providerId)+' is reachable but rate limited; Detect cannot verify the model right now.');
       if(!probe||probe.ok!==true)throw new Error((provider.name||providerId)+' did not pass the connection probe.');
+      Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'chat-probe',status:'ok',model:selected,elapsedMs:probe.elapsedMs||null,transport:probe.transport||''});
+      Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'capabilities',status:'start',model:selected});
       const cap=LF.AI.resolveModelCapabilities?await LF.AI.resolveModelCapabilities({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,force:true}):null;
-      Log.info('detect.ok',{provider:providerId,endpoint:endpointHost(endpoint),model:selected,models:models.length,loaded:loaded.length,capability:cap&&{contextWindow:cap.contextWindow,maxOutputTokens:cap.maxOutputTokens,source:cap.source}});
-      if(!options.silent)notify((provider.name||providerId)+' reachable. '+(models.length?models.length+' models detected; ':'')+'using '+modelLabel(providerId,selected)+'.','success','Detect completed');
+      Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'capabilities',status:'ok',model:selected,source:cap&&cap.source||'none'});
+      Log.info('detect.ok',{diagnosticId:diagnosticId,provider:providerId,endpoint:endpointHost(endpoint),model:selected,models:models.length,loaded:loaded.length,catalogueFallback:!!catalogueError,capability:cap&&{contextWindow:cap.contextWindow,maxOutputTokens:cap.maxOutputTokens,source:cap.source}});
+      if(!options.silent){
+        if(catalogueError)notify((provider.name||providerId)+' connection verified with '+modelLabel(providerId,selected)+'. Model catalogue could not be read from this browser, so the configured model was tested directly.','warning','Detect completed with catalogue warning');
+        else notify((provider.name||providerId)+' reachable. '+(models.length?models.length+' models detected; ':'')+'using '+modelLabel(providerId,selected)+'.','success','Detect completed');
+      }
       if(cap&&cap.runtimeProfileStatus==='mismatch'&&!options.silent)notify(cap.runtimeProfileMessage||'llama.cpp runtime differs from the recommended LabFlow profile.','warning','llama.cpp runtime');
       return models;
     }catch(error){
       if(provider.modelSelect)syncModelControls(null,{manualFallback:true,preserveHint:true});
-      Log.error('detect.failed',{provider:providerId,endpoint:endpointHost(endpoint),model:config.model,error:error});
-      if(!options.silent)notify(error.message||String(error),'error','Detect failed');
+      const summary=LF.AIDiagnostics?LF.AIDiagnostics.errorSummary(error):null;
+      Log.error('detect.failed',{diagnosticId:diagnosticId,provider:providerId,phase:error&&error.phase||'detect',endpoint:endpointHost(endpoint),model:config.model||'',keyConfigured:!!apiKey,category:summary&&summary.category||'',next:summary&&summary.next||'',error:error});
+      if(!options.silent){const next=summary&&summary.next?(' '+summary.next):'';notify((error.message||String(error))+next,'error','Detect failed');}
       return[];
     }finally{
       if(button){delete button.dataset.loading;button.disabled=false;button.textContent=oldText;}
@@ -157,41 +178,37 @@
     }
   }
 
-  /** Save and probe the exact visible provider configuration; feedback is Message Totem only. */
+  /** Verify the exact visible configuration first; persist it only after a successful probe. */
   async function testConnection(button) {
-    const oldText=button&&button.textContent||'Save & test';
-    if(button){button.textContent='Saving…';button.disabled=true;}
-    let settings,config;
-    try{
-      config=validateConnectionForm(connectionFromForm());
-      settings=saveFromForm({toast:false});
-    }catch(error){
-      if(button){button.textContent=oldText;button.disabled=false;}
-      notify(error.message||String(error),'error','Save & test failed');
-      return null;
-    }
+    const oldText=button&&button.textContent||'Save & test',diagnosticId=LF.Core&&LF.Core.uid?LF.Core.uid('test'):'test_'+Date.now();
+    if(button){button.textContent='Testing…';button.disabled=true;}
+    let config;
+    try{config=validateConnectionForm(connectionFromForm());}
+    catch(error){if(button){button.textContent=oldText;button.disabled=false;}Log.error('connection-test.failed',{diagnosticId:diagnosticId,phase:'validate',error:error});notify(error.message||String(error),'error','Save & test failed');return null;}
     const provider=config.provider;
-    if(button)button.textContent='Testing…';
+    Log.info('connection-test.start',{diagnosticId:diagnosticId,provider:config.providerId,endpoint:endpointHost(config.endpoint),model:config.model,keyConfigured:!!config.apiKey,source:'visible-form'});
     try{
-      const result=await LF.AI.testConnection({provider:settings.provider,endpoint:settings.endpoint,model:settings.model,apiKey:config.apiKey});
+      const result=await LF.AI.testConnection({provider:config.providerId,endpoint:config.endpoint,model:config.model,apiKey:config.apiKey,diagnosticId:diagnosticId});
       if(result.rateLimited){
         const retryS=Number(result.retryAfterMs||0)>0?Math.max(1,Math.ceil(Number(result.retryAfterMs)/1000)):0;
-        const text=(provider.name||settings.provider)+' is reachable but rate limited'+(retryS?' · retry after about '+retryS+' s':'')+'.';
-        Log.warn('connection-test.rate-limited',{provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),retryAfterMs:result.retryAfterMs||0});
-        notify(text,'warning','Connection not ready');
-        return result;
+        const text=(provider.name||config.providerId)+' is reachable but rate limited'+(retryS?' · retry after about '+retryS+' s':'')+'. Settings were not changed.';
+        Log.warn('connection-test.rate-limited',{diagnosticId:diagnosticId,provider:config.providerId,model:config.model,endpoint:endpointHost(config.endpoint),retryAfterMs:result.retryAfterMs||0});
+        notify(text,'warning','Connection not ready');return result;
       }
-      Log.info('connection-test.ok',{provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),elapsedMs:result.elapsedMs,requestId:result.requestId||''});
-      notify((provider.name||settings.provider)+' connection verified with '+modelLabel(settings.provider,result.model||settings.model)+'.','success','Save & test completed');
+      if(!result||result.ok!==true)throw new Error((provider.name||config.providerId)+' did not pass the connection probe.');
+      if(button)button.textContent='Saving…';
+      Log.info('connection-test.stage',{diagnosticId:diagnosticId,provider:config.providerId,phase:'persist',status:'start'});
+      const settings=saveFromForm({toast:false});
+      Log.info('connection-test.stage',{diagnosticId:diagnosticId,provider:config.providerId,phase:'persist',status:'ok'});
+      Log.info('connection-test.ok',{diagnosticId:diagnosticId,provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),elapsedMs:result.elapsedMs,requestId:result.requestId||'',transport:result.transport||''});
+      notify((provider.name||settings.provider)+' connection verified and saved with '+modelLabel(settings.provider,result.model||settings.model)+'.','success','Save & test completed');
       return result;
     }catch(error){
-      Log.error('connection-test.failed',{provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),error:error});
-      const summary=LF.AIDiagnostics?LF.AIDiagnostics.errorSummary(error):null,next=summary&&summary.next?(' '+summary.next):'';
-      notify((error.message||String(error))+next,'error','Save & test failed');
-      return null;
-    }finally{
-      if(button){button.textContent=oldText;button.disabled=false;}
-    }
+      const summary=LF.AIDiagnostics?LF.AIDiagnostics.errorSummary(error):null;
+      Log.error('connection-test.failed',{diagnosticId:diagnosticId,provider:config.providerId,model:config.model,endpoint:endpointHost(config.endpoint),keyConfigured:!!config.apiKey,phase:error&&error.phase||'chat-probe',category:summary&&summary.category||'',next:summary&&summary.next||'',error:error});
+      const next=summary&&summary.next?(' '+summary.next):'';
+      notify((error.message||String(error))+next,'error','Save & test failed');return null;
+    }finally{if(button){button.textContent=oldText;button.disabled=false;}}
   }
 
   LF.AISettings = {decorate:decorate, saveFromForm:saveFromForm, selectProvider:selectProvider, detectModel:detectModel, testConnection:testConnection, syncModelControls:syncModelControls};

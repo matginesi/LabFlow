@@ -559,6 +559,24 @@ module.exports = function (t, LF) {
     assert(parsed>=2500&&parsed<=4500,true,'date retry-after');
   };
 
+  t['hosted providers use the same-origin relay when the LabFlow local server is available'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=[];
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
+    LF.AIProviders={nvidia:{id:'nvidia',relayEligible:true,keyRequired:true}};
+    global.fetch=async function(url,opts){calls.push({url:String(url),opts:opts||{}});if(String(url).endsWith('/__labflow__/health'))return{ok:true,status:200,json:async function(){return{ok:true,service:'labflow-local-server'};}};if(String(url).endsWith('/__labflow__/proxy'))return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return'{"data":[]}';}};throw new Error('unexpected direct provider fetch');};
+    try{const response=await AI.providerFetch('https://integrate.api.nvidia.com/v1/models',{method:'GET',headers:{Authorization:'Bearer secret'}},'nvidia','models');assert(response.labflowTransport,'relay','relay transport marker');assert(calls.length,2,'health plus relay only');const body=JSON.parse(calls[1].opts.body);assert(body.provider,'nvidia','relay provider');assert(body.url,'https://integrate.api.nvidia.com/v1/models','relay target');assert(body.phase,'models','relay phase');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.AIProviders;}
+  };
+
+  t['LAN providers stay direct even when a local relay is available'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location;let calls=[];
+    global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
+    LF.AIProviders={llamacpp:{id:'llamacpp',local:true,relayEligible:false}};
+    global.fetch=async function(url){calls.push(String(url));return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return'{}';}};};
+    try{const response=await AI.providerFetch('http://fedora.local:8080/v1/models',{method:'GET'},'llamacpp','models');assert(response.labflowTransport,'direct','LAN is direct');assert(calls,['http://fedora.local:8080/v1/models'],'no relay health/proxy request');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.AIProviders;}
+  };
+
   t['Z.AI sends exactly one direct request to the official endpoint'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenUrl='',seenBody=null;
     global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};

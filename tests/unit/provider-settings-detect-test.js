@@ -95,6 +95,16 @@ module.exports=function(t,LF){
     ['ollama','lmstudio','llamacpp'].forEach(function(id){assert(/\(local\)/i.test(LF.AIProviders[id].name),false,id+' display name');});
   };
 
+  t['Save & test does not persist visible settings when the live probe fails']=async function(){
+    localStorage.clear();LF.Storage.saveAiSettings({provider:'zai',endpoint:'https://saved.example/v1/chat/completions',model:'saved-model'});LF.Storage.saveApiKey('saved-key','zai');
+    const form=installForm(LF,{provider:'nvidia',endpoint:'https://broken.example/v1/chat/completions',apiKey:'bad-key',model:'broken-model'}),button=makeElement('');button.textContent='Save & test';
+    const oldAI=LF.AI,oldUI=LF.UI;let messages=[];
+    LF.AI={testConnection:async function(){const error=new Error('Failed to fetch');error.isNetwork=true;error.providerId='nvidia';error.phase='chat';throw error;}};
+    LF.UI={message:function(message,type,title){messages.push({message:message,type:type,title:title});}};
+    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'zai','previous provider retained');assert(saved.endpoint,'https://saved.example/v1/chat/completions','previous endpoint retained');assert(saved.model,'saved-model','previous model retained');assert(LF.Storage.getApiKey('zai'),'saved-key','previous key retained');assert(messages[messages.length-1].type,'error','failure uses Message Totem');}
+    finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+
   t['Save & test stores and probes the exact visible configuration and reports through Message Totem']=async function(){
     localStorage.clear();const form=installForm(LF,{provider:'nvidia',endpoint:'https://visible-save.example/v1/chat/completions',apiKey:'save-key',model:'meta/model'}),button=makeElement('');button.textContent='Save & test';
     const oldAI=LF.AI,oldUI=LF.UI;let probeArgs=null,messages=[];

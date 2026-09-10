@@ -19,7 +19,7 @@ Change these under **Settings → Logging configuration**. Inspect events on the
 Console messages use a readable one-line summary followed by the expandable structured object:
 
 ```text
-[LabFlow][LEVEL][scope] event · provider=... · model=... · endpoint=... · elapsedMs=... · error=...
+[LabFlow][15:11:34.221][+8253ms][LEVEL][scope] event · diagnosticId=... · provider=... · phase=... · transport=... · endpoint=... · status=... · elapsedMs=... · error=...
 ```
 
 Only scalar diagnostic fields are promoted into the summary; the sanitized structured payload remains available as the second console argument and in the Logs page.
@@ -77,9 +77,10 @@ This makes it possible to identify where a sample name, missing scan, metric, qu
 
 AI logging records:
 
-- action ID;
-- provider and model;
-- endpoint;
+- Action/feature ID and provider diagnostic correlation ID;
+- provider, model and sanitized endpoint;
+- explicit phase (`validate`, `catalogue`, `chat-probe`, `capabilities`, `persist` where applicable);
+- network route (`direct` or `relay`) and whether a same-origin relay was available;
 - message count and character counts;
 - prompt/context sizes;
 - direct SSE/JSON request lifecycle, including stream events, bytes and time to first content;
@@ -99,6 +100,14 @@ finish reason, token usage, validation error, stack and cause. A successful
 HTTP response is therefore never mistaken for a usable Action result.
 
 It does **not** intentionally dump API keys. Common secret fields are redacted by the logger.
+
+### Provider diagnostics
+
+**Detect** and **Save & test** use one diagnostic ID per operation. The Logs page groups their most recent lifecycles under **Provider checks**, while the API category includes catalogue/model metadata requests, chat requests, relay routing and provider errors. A green result therefore requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
+
+Network routing is explicit in both console and Logs. `network.route` identifies `direct` versus `relay`; `network.direct-failed` records a browser/network failure before any relay retry; `relay.start` / `relay.end` / `relay.failed` identify same-origin relay activity. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
+
+The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The local relay never logs authorization values; the browser logger also redacts credential-like keys and Bearer/query tokens before buffering or printing them.
 
 ### Errors
 

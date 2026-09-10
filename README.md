@@ -147,13 +147,13 @@ Start with:
 
 ## Run locally
 
-Serve it with any ordinary static server if you do not want to open `index.html` directly:
+For normal local development, serve LabFlow with its small standard-library server:
 
 ```bash
-python -m http.server 8000
+python3 tools/labflow_server.py --host 0.0.0.0 --port 8000
 ```
 
-LabFlow is a static browser application. A generic static server is sufficient; Z.AI and other hosted providers are called directly from the browser using the configured endpoint. You may also open the page directly when your browser permits local-file module/script access.
+The UI remains a static vanilla-JS application. This server only serves the files and exposes a same-origin, allow-listed relay for hosted AI providers whose APIs do not permit browser CORS. Local/LAN providers such as Ollama, LM Studio and llama.cpp are still contacted directly. A generic static server can still be used when no hosted-provider relay is needed, but browser CORS may prevent some cloud providers from working even when the API itself is healthy.
 
 
 ## llama.cpp on the local network
