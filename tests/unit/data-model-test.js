@@ -44,6 +44,15 @@ module.exports = function (t, LF) {
     assert(exp.meta.name, 'x', 'name from zip basename');
   };
 
+  t['DomainSchema preserves unknown Design confidence as null'] = function () {
+    const solution = LF.DomainSchema.create('design_solution', { name: 'Unknown confidence', confidence: null });
+    const layer = LF.DomainSchema.create('design_layer', { material: 'SnO2', confidence: '' });
+    const device = LF.DomainSchema.create('design_device', { name: 'D1' });
+    assert(solution.confidence, null, 'solution confidence');
+    assert(layer.confidence, null, 'layer confidence');
+    assert(device.confidence, null, 'device confidence');
+  };
+
   t['generic addRecord uses DomainSchema ownership to attach typed records'] = function () {
     const exp = DM.create({ sourceName: 'x.zip' });
     const experiment = DM.addRecord(exp, 'experiment', { name: 'N3' });

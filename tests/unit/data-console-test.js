@@ -2,6 +2,8 @@
 require('../../assets/js/logger.js');
 require('../../assets/js/core.js');
 require('../../assets/js/experiment/data-model.js');
+require('../../assets/js/experiment/action-data.js');
+require('../../assets/js/experiment/derived-state.js');
 require('../../assets/js/state.js');
 require('../../assets/js/data/analysis.js');
 require('../../assets/js/experiment/data-console.js');

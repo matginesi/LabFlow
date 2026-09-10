@@ -12,7 +12,6 @@ require(path.join(root,'assets/js/experiment/data-model.js'));
 require(path.join(root,'assets/js/experiment/action-data.js'));
 require(path.join(root,'assets/js/experiment/derived-state.js'));
 require(path.join(root,'assets/js/experiment/data-contracts.js'));
-require(path.join(root,'assets/js/experiment/design-model.js'));
 require(path.join(root,'assets/js/data/parser.js'));
 require(path.join(root,'assets/js/data/importer.js'));
 require(path.join(root,'assets/js/state.js'));
@@ -20,6 +19,9 @@ require(path.join(root,'assets/js/storage.js'));
 require(path.join(root,'assets/js/experiment/canonical-store.js'));
 require(path.join(root,'assets/js/data/analysis.js'));
 require(path.join(root,'assets/js/data/analysis-summary.js'));
+require(path.join(root,'assets/js/experiment/design-model.js'));
+require(path.join(root,'assets/js/data/dataset-corrections.js'));
+require(path.join(root,'assets/js/experiment/design-analysis.js'));
 require(path.join(root,'assets/js/data/pipeline.js'));
 require(path.join(root,'assets/js/pages/shared.js'));
 require(path.join(root,'assets/js/pages/import-page.js'));
@@ -49,7 +51,7 @@ async function main(){
   const exp=await LF.Importer.parseDataset(ab,'01_PRECISO_PERFETTO_COMPLETO.zip');
   LF.State.setExperiment(exp,ab);LF.DataPipeline.refresh(exp,{reason:'regression-import'});LF.State.setRoute('experiment-import');
   const receipt=LF.ImportPage.receipt(exp);
-  ok(receipt.includes('SOURCE ARCHIVE'),'source receipt exists after import');
+  ok(/Source archive/i.test(receipt),'source receipt exists after import');
   ok(receipt.includes('RAW preserved'),'receipt states immutable RAW source');
   ok(receipt.includes('Replace ZIP'),'same first step can replace ZIP');
 

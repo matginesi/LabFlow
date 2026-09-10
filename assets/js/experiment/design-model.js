@@ -2,7 +2,18 @@
   'use strict';
 
   const LF = window.LabFlow = window.LabFlow || {};
+  if (!LF.Core || !LF.DomainSchema || !LF.DataModel) {
+    throw new Error('design-model.js requires LabFlow.Core, LabFlow.DomainSchema and LabFlow.DataModel.');
+  }
   const C = LF.Core;
+  const STATUS = LF.DomainSchema.values.recordStatus;
+
+  const EDITABLE_FIELDS = Object.freeze({
+    solution: Object.freeze(['name', 'role', 'solutes', 'solvents', 'concentration', 'additives', 'preparation']),
+    device: Object.freeze(['name', 'group']),
+    layer: Object.freeze(['role', 'material', 'thickness', 'process']),
+    process: Object.freeze(['coating', 'annealing', 'atmosphere', 'notes'])
+  });
 
 
   function clean(value) { return String(value == null ? '' : value).trim(); }
@@ -173,9 +184,9 @@
     if (LF.DataModel && LF.DataModel.hydrate) exp = LF.DataModel.hydrate(exp);
     const DS=LF.DomainSchema;
     exp.design = exp.design && typeof exp.design === 'object' ? exp.design : {};
-    exp.design.solutions = Array.isArray(exp.design.solutions) ? exp.design.solutions.map(function(x){return DS.create('design_solution',x);}) : [];
-    exp.design.stack = Array.isArray(exp.design.stack) ? exp.design.stack.map(function(x){return DS.create('design_layer',x);}) : [];
-    exp.design.devices = Array.isArray(exp.design.devices) ? exp.design.devices.map(function(x){return DS.create('design_device',x);}) : [];
+    exp.design.solutions = Array.isArray(exp.design.solutions) ? exp.design.solutions.map(function(x){return DS.normalize('design_solution',x);}) : [];
+    exp.design.stack = Array.isArray(exp.design.stack) ? exp.design.stack.map(function(x){return DS.normalize('design_layer',x);}) : [];
+    exp.design.devices = Array.isArray(exp.design.devices) ? exp.design.devices.map(function(x){return DS.normalize('design_device',x);}) : [];
     exp.design.process = Object.assign({coating:'', annealing:'', atmosphere:'', notes:''}, exp.design.process || {});
     exp.design.evidenceSummary = Object.assign({sourceRecords:0,parsedRecords:0,samplesCovered:0,experimentsRecovered:0,sourceAvailable:false}, exp.design.evidenceSummary || {});
 
@@ -210,15 +221,351 @@
   }
 
   function ensureDevice(device, exp) {
-    device=LF.DomainSchema.create('design_device',device||{});
+    device=LF.DomainSchema.normalize('design_device',device||{});
     if(device.experimentId){
       const experiment=(exp.experiments||[]).find(function(x){return x.id===device.experimentId;});
       if(experiment){device.group=device.group||experiment.name;device.name=device.name||experiment.name;device.sampleIds=Array.from(new Set((device.sampleIds||[]).concat(experiment.sampleIds||[])));}
     }
     const sampleById=new Map((exp.samples||[]).map(function(s){return[s.id,s];}));
     device.sampleNames=(device.sampleIds||[]).map(function(id){const sample=sampleById.get(id);return sample&&sample.name||'';}).filter(Boolean);
-    device.stack=(device.stack||[]).map(function(layer){return LF.DomainSchema.create('design_layer',layer);});
+    device.stack=(device.stack||[]).map(function(layer){return LF.DomainSchema.normalize('design_layer',layer);});
     return device;
+  }
+
+  function requireDesign(exp) {
+    if (!exp || typeof exp !== 'object') throw new Error('DesignModel requires ExperimentData.');
+    ensure(exp);
+    return exp.design;
+  }
+
+  function fieldAllowed(group, field) {
+    return EDITABLE_FIELDS[group] && EDITABLE_FIELDS[group].includes(String(field || ''));
+  }
+
+  function assertEditable(group, field) {
+    if (!fieldAllowed(group, field)) throw new Error('Unsupported Design ' + group + ' field: ' + String(field || ''));
+    return String(field);
+  }
+
+  function device(exp, deviceId) {
+    const design = requireDesign(exp);
+    return (design.devices || []).find(function (item) { return String(item.id) === String(deviceId || ''); }) || null;
+  }
+
+  function solution(exp, ref) {
+    const design = requireDesign(exp);
+    if (Number.isInteger(Number(ref)) && String(ref).trim() !== '') return design.solutions[Number(ref)] || null;
+    return (design.solutions || []).find(function (item) { return String(item.id) === String(ref || ''); }) || null;
+  }
+
+  function createDevice(exp, seed) {
+    const design = requireDesign(exp);
+    const record = LF.DomainSchema.create('design_device', Object.assign({
+      name: 'New experiment',
+      status: STATUS.USER_CONFIRMED,
+      evidence: 'User entry',
+      confidence: 1,
+      provenanceKind: 'experiment'
+    }, seed || {}));
+    design.devices.push(record);
+    return record;
+  }
+
+  function removeDevice(exp, deviceId) {
+    const design = requireDesign(exp);
+    const index = design.devices.findIndex(function (item) { return String(item.id) === String(deviceId || ''); });
+    if (index < 0) return { removed: null, next: null, index: -1 };
+    const removed = design.devices.splice(index, 1)[0];
+    const next = design.devices[Math.min(index, design.devices.length - 1)] || design.devices[0] || null;
+    return { removed: removed, next: next, index: index };
+  }
+
+  function createSolution(exp, seed, deviceId) {
+    const design = requireDesign(exp);
+    const record = LF.DomainSchema.create('design_solution', Object.assign({
+      name: 'New formulation',
+      status: STATUS.USER_CONFIRMED,
+      evidence: 'User entry',
+      confidence: 1,
+      provenanceKind: 'experiment'
+    }, seed || {}));
+    design.solutions.push(record);
+    const target = deviceId ? device(exp, deviceId) : null;
+    if (target && !target.solutionIds.includes(record.id)) target.solutionIds.push(record.id);
+    return record;
+  }
+
+  function removeSolution(exp, ref) {
+    const design = requireDesign(exp);
+    const target = solution(exp, ref);
+    if (!target) return null;
+    design.solutions = design.solutions.filter(function (item) { return item !== target; });
+    design.devices.forEach(function (item) {
+      item.solutionIds = (item.solutionIds || []).filter(function (id) { return String(id) !== String(target.id); });
+    });
+    return target;
+  }
+
+  function createDeviceLayer(exp, deviceId, seed) {
+    const target = device(exp, deviceId);
+    if (!target) throw new Error('Design experiment not found.');
+    const layer = LF.DomainSchema.create('design_layer', Object.assign({
+      status: STATUS.USER_CONFIRMED,
+      evidence: 'User entry',
+      provenanceKind: 'experiment'
+    }, seed || {}));
+    target.stack.push(layer);
+    target.status = STATUS.USER_CONFIRMED;
+    return layer;
+  }
+
+  function removeDeviceLayer(exp, deviceId, index) {
+    const target = device(exp, deviceId);
+    if (!target) return null;
+    const position = Number(index);
+    if (!Number.isInteger(position) || position < 0 || position >= target.stack.length) return null;
+    const removed = target.stack.splice(position, 1)[0] || null;
+    target.status = STATUS.USER_CONFIRMED;
+    return removed;
+  }
+
+  function updateSolutionField(exp, ref, field, value) {
+    const target = solution(exp, ref);
+    if (!target) return null;
+    field = assertEditable('solution', field);
+    target[field] = value;
+    target.userEdited = true;
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
+  function updateDeviceField(exp, deviceId, field, value) {
+    const target = device(exp, deviceId);
+    if (!target) return null;
+    field = assertEditable('device', field);
+    target[field] = value;
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
+  function updateDeviceLayerField(exp, deviceId, index, field, value) {
+    const target = device(exp, deviceId);
+    const layer = target && target.stack[Number(index)];
+    if (!layer) return null;
+    field = assertEditable('layer', field);
+    layer[field] = value;
+    layer.status = STATUS.USER_CONFIRMED;
+    target.status = STATUS.USER_CONFIRMED;
+    return layer;
+  }
+
+  function updateDeviceProcessField(exp, deviceId, field, value) {
+    const target = device(exp, deviceId);
+    if (!target) return null;
+    field = assertEditable('process', field);
+    target.process = Object.assign({ coating: '', annealing: '', atmosphere: '', notes: '' }, target.process || {});
+    target.process[field] = value;
+    target.processProvenance = target.processProvenance || {};
+    target.processProvenance[field] = { status: STATUS.USER_CONFIRMED, evidence: 'User entry' };
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
+  function setSolutionStatus(exp, ref, confirmed) {
+    const target = solution(exp, ref);
+    if (!target) return null;
+    target.status = confirmed ? STATUS.USER_CONFIRMED : STATUS.UNKNOWN;
+    return target;
+  }
+
+  function setDeviceStatus(exp, deviceId, confirmed) {
+    const target = device(exp, deviceId);
+    if (!target) return null;
+    target.status = confirmed ? STATUS.USER_CONFIRMED : STATUS.RAW_EVIDENCE;
+    return target;
+  }
+
+  function setDeviceSolutionLinked(exp, deviceId, solutionId, linked) {
+    const target = device(exp, deviceId);
+    const design = requireDesign(exp);
+    if (!target) return null;
+    if (!(design.solutions || []).some(function (item) { return String(item.id) === String(solutionId); })) {
+      throw new Error('Design solution not found: ' + String(solutionId || ''));
+    }
+    target.solutionIds = Array.isArray(target.solutionIds) ? target.solutionIds : [];
+    if (linked && !target.solutionIds.includes(solutionId)) target.solutionIds.push(solutionId);
+    if (!linked) target.solutionIds = target.solutionIds.filter(function (id) { return String(id) !== String(solutionId); });
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
+  function setDeviceSampleAssigned(exp, deviceId, sampleName, assigned) {
+    const design = requireDesign(exp);
+    const target = device(exp, deviceId);
+    const sample = (exp.samples || []).find(function (item) { return String(item.name) === String(sampleName || ''); });
+    if (!target || !sample) return null;
+
+    design.devices.forEach(function (other) {
+      other.sampleIds = Array.isArray(other.sampleIds) ? other.sampleIds : [];
+      if (other.id !== target.id && assigned) {
+        other.sampleIds = other.sampleIds.filter(function (id) { return String(id) !== String(sample.id); });
+      }
+    });
+
+    target.sampleIds = Array.isArray(target.sampleIds) ? target.sampleIds : [];
+    if (assigned && !target.sampleIds.includes(sample.id)) target.sampleIds.push(sample.id);
+    if (!assigned) target.sampleIds = target.sampleIds.filter(function (id) { return String(id) !== String(sample.id); });
+
+    design.devices = design.devices.filter(function (other) {
+      return other.id === target.id || other.status !== STATUS.RAW_EVIDENCE || (other.sampleIds || []).length > 0;
+    });
+    target.status = STATUS.USER_CONFIRMED;
+    design.devices = design.devices.map(function (item) { return ensureDevice(item, exp); });
+    return device(exp, deviceId);
+  }
+
+  /*
+   * AI proposal mutation boundary.
+   *
+   * DesignAnalysis decides which proposal fields are admissible. These helpers
+   * are the only write primitives it needs: they keep all ExperimentData.design
+   * mutation inside DesignModel without introducing another service layer.
+   */
+  function devices(exp) {
+    return requireDesign(exp).devices;
+  }
+
+  function solutions(exp) {
+    return requireDesign(exp).solutions;
+  }
+
+  function evidenceSummary(exp) {
+    return requireDesign(exp).evidenceSummary;
+  }
+
+  function createInferredDevice(exp, seed) {
+    const design = requireDesign(exp);
+    const record = LF.DomainSchema.create('design_device', Object.assign({
+      status: STATUS.AI_INFERRED,
+      provenanceKind: 'model_inference'
+    }, seed || {}));
+    design.devices.push(record);
+    return record;
+  }
+
+  function createInferredSolution(exp, seed) {
+    const design = requireDesign(exp);
+    const record = LF.DomainSchema.create('design_solution', Object.assign({
+      status: STATUS.AI_INFERRED,
+      provenanceKind: 'model_inference'
+    }, seed || {}));
+    design.solutions.push(record);
+    return record;
+  }
+
+  function createInferredLayer(seed) {
+    return LF.DomainSchema.create('design_layer', Object.assign({
+      status: STATUS.AI_INFERRED,
+      provenanceKind: 'model_inference'
+    }, seed || {}));
+  }
+
+  function setInferenceField(record, field, value) {
+    if (!record || typeof record !== 'object') throw new Error('Design inference target is invalid.');
+    const key = field === 'provenance_kind' ? 'provenanceKind' : String(field || '');
+    if (!key) throw new Error('Design inference field is empty.');
+    record[key] = value;
+    return record;
+  }
+
+  function setInferenceProcessField(record, field, value) {
+    if (!record || record.kind !== 'design_device') throw new Error('Design inference process target must be a design_device.');
+    field = assertEditable('process', field);
+    record.process = Object.assign({ coating: '', annealing: '', atmosphere: '', notes: '' }, record.process || {});
+    record.process[field] = value;
+    return record;
+  }
+
+  function mergeInferenceSamples(record, sampleIds, sampleNames, exp) {
+    if (!record || record.kind !== 'design_device') throw new Error('Design inference sample target must be a design_device.');
+    record.sampleIds = Array.from(new Set((record.sampleIds || []).concat(sampleIds || []).map(String).filter(Boolean)));
+    const resolvedNames = record.sampleIds.map(function (id) {
+      const sample = (exp.samples || []).find(function (item) { return String(item.id) === String(id); });
+      return sample && sample.name || '';
+    }).filter(Boolean);
+    record.sampleNames = resolvedNames.length
+      ? Array.from(new Set(resolvedNames))
+      : Array.from(new Set((record.sampleNames || []).concat(sampleNames || []).map(String).filter(Boolean)));
+    return record;
+  }
+
+  function linkInferredSolution(record, solutionId) {
+    if (!record || record.kind !== 'design_device') throw new Error('Design inference solution target must be a design_device.');
+    const id = String(solutionId || '');
+    if (!id) return false;
+    record.solutionIds = Array.isArray(record.solutionIds) ? record.solutionIds : [];
+    if (record.solutionIds.some(function (value) { return String(value) === id; })) return false;
+    record.solutionIds.push(id);
+    return true;
+  }
+
+  function replaceInferenceStack(record, stack) {
+    if (!record || record.kind !== 'design_device') throw new Error('Design inference stack target must be a design_device.');
+    record.stack = (stack || []).map(function (layer) { return LF.DomainSchema.create('design_layer', layer); });
+    return record.stack;
+  }
+
+  function markInferenceApplied(record) {
+    if (!record || typeof record !== 'object') return record;
+    if (record.status !== STATUS.USER_CONFIRMED) record.status = STATUS.AI_INFERRED;
+    record.aiAssisted = true;
+    record.aiAssistedAt = new Date().toISOString();
+    return record;
+  }
+
+  function setDesignStatus(exp, status) {
+    requireDesign(exp).status = String(status || STATUS.UNKNOWN);
+    return requireDesign(exp).status;
+  }
+
+  function confirmInferredDevice(exp, deviceId, at) {
+    const target = device(exp, deviceId);
+    if (!target) return null;
+    const timestamp = at || new Date().toISOString();
+    target.validatedAt = timestamp;
+    target.validationSource = 'researcher_accept_ai';
+    target.status = STATUS.USER_CONFIRMED;
+    (target.stack || []).forEach(function (layer) {
+      if (layer.status === STATUS.AI_INFERRED) layer.status = STATUS.USER_CONFIRMED;
+    });
+    const linked = new Set((target.solutionIds || []).map(String));
+    solutions(exp).forEach(function (item) {
+      if (linked.has(String(item.id)) && item.status === STATUS.AI_INFERRED) item.status = STATUS.USER_CONFIRMED;
+    });
+    return target;
+  }
+
+  /* Dataset correction services may change Experiment/Sample parentage. Design
+     owns the corresponding projection update so dataset code never writes
+     Design records directly. */
+  function syncDatasetGroupLinks(exp, sampleIds, experiment) {
+    const ids = new Set((sampleIds || []).map(String));
+    if (!experiment || !ids.size) return 0;
+    let changed = 0;
+    requireDesign(exp).devices.forEach(function (item) {
+      const linked = (item.sampleIds || []).map(String).filter(function (id) { return ids.has(id); });
+      if (!linked.length) return;
+      const allInTarget = (item.sampleIds || []).map(String).filter(Boolean).every(function (id) {
+        const sample = (exp.samples || []).find(function (candidate) { return String(candidate.id) === id; });
+        return sample && String(sample.experimentId) === String(experiment.id);
+      });
+      if (!allInTarget) return;
+      if (String(item.experimentId) !== String(experiment.id) || item.group !== experiment.name || !!item.isRef !== !!experiment.isRef) changed++;
+      item.experimentId = experiment.id;
+      item.group = experiment.name;
+      item.isRef = !!experiment.isRef;
+    });
+    return changed;
   }
 
   function stackAssessment(stack) {
@@ -271,5 +618,45 @@
     return {status:'suggested',summary:text(source.summary||source.assessment||'Design suggestion ready for review.'),coverage:{input_experiments:Number(coverage.input_experiments)||0,proposed_experiments:Number(coverage.proposed_experiments)||devices.length,covered_sample_names:list(coverage.covered_sample_names).map(text),unmatched_sample_names:list(coverage.unmatched_sample_names).map(text)},solutions:solutions,devices:devices,process:{coating:text(process.coating||process.deposition),annealing:text(process.annealing),atmosphere:text(process.atmosphere),notes:text(process.notes),evidence:text(process.evidence||process.source),confidence:confidence(process.confidence),provenance_kind:text(process.provenance_kind||process.provenanceKind||process.source_kind),reason:text(process.reason||process.rationale)},stack:list(source.stack||source.layers).map(layer),unknowns:list(source.unknowns||source.unresolved||source.missing).map(function(v){return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);})};
   }
 
-  LF.DesignModel = {ensure:ensure, normalizeProposal:normalizeDesignProposal, projectSource:projectRawDesign, evidenceRecords:designEvidenceRecords, parseDesignNote:parseDesignNote, stackAssessment:stackAssessment, missingDomains:missingDomains};
+  LF.DesignModel = {
+    ensure: ensure,
+    device: device,
+    solution: solution,
+    createDevice: createDevice,
+    removeDevice: removeDevice,
+    createSolution: createSolution,
+    removeSolution: removeSolution,
+    createDeviceLayer: createDeviceLayer,
+    removeDeviceLayer: removeDeviceLayer,
+    updateSolutionField: updateSolutionField,
+    updateDeviceField: updateDeviceField,
+    updateDeviceLayerField: updateDeviceLayerField,
+    updateDeviceProcessField: updateDeviceProcessField,
+    setSolutionStatus: setSolutionStatus,
+    setDeviceStatus: setDeviceStatus,
+    setDeviceSolutionLinked: setDeviceSolutionLinked,
+    setDeviceSampleAssigned: setDeviceSampleAssigned,
+    syncDatasetGroupLinks: syncDatasetGroupLinks,
+    devices: devices,
+    solutions: solutions,
+    evidenceSummary: evidenceSummary,
+    createInferredDevice: createInferredDevice,
+    createInferredSolution: createInferredSolution,
+    createInferredLayer: createInferredLayer,
+    setInferenceField: setInferenceField,
+    setInferenceProcessField: setInferenceProcessField,
+    mergeInferenceSamples: mergeInferenceSamples,
+    linkInferredSolution: linkInferredSolution,
+    replaceInferenceStack: replaceInferenceStack,
+    markInferenceApplied: markInferenceApplied,
+    setDesignStatus: setDesignStatus,
+    confirmInferredDevice: confirmInferredDevice,
+    editableFields: EDITABLE_FIELDS,
+    normalizeProposal: normalizeDesignProposal,
+    projectSource: projectRawDesign,
+    evidenceRecords: designEvidenceRecords,
+    parseDesignNote: parseDesignNote,
+    stackAssessment: stackAssessment,
+    missingDomains: missingDomains
+  };
 }());

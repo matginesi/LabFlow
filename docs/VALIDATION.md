@@ -11,6 +11,7 @@ python tools/build_docs_bundle.py
 python tools/build_ui_kit_inline.py
 
 python tools/validate_architecture_contract.py
+python tools/validate_source_hygiene.py
 python tools/validate_action_contract.py
 python tools/validate_state_contract.py
 python tools/validate_ui_contract.py
@@ -23,6 +24,7 @@ find assets vendor -name '*.js' -print0 | xargs -0 -n1 node --check
 
 ## What the validators protect
 
+- `validate_source_hygiene.py`: owner/mutation boundaries, strict restore usage, no legacy version wrappers or developer-specific runtime defaults, plus readability warnings for overly dense source lines.
 - `validate_architecture_contract.py`: one `ExperimentData` aggregate, schema-owned roots, no parallel `entities[]` model, declared pipeline metadata, the single `actionData` boundary, and repository exclusions for ZIP/fixture folders.
 - `validate_action_contract.py`: only current researcher-facing Actions, explicit target/context/result/effect/guards/execution contracts, bounded AI steps and valid semantic result steps.
 - `validate_state_contract.py`: state ownership and persistence boundaries, including canonical transient UI state under `state.ui` and `ui.*` Action bindings.

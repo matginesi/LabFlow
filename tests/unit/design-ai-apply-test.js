@@ -1,6 +1,18 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/core.js');
+require('../../assets/js/experiment/data-model.js');
+require('../../assets/js/experiment/action-data.js');
+require('../../assets/js/experiment/data-contracts.js');
+require('../../assets/js/experiment/derived-state.js');
+require('../../assets/js/data/parser.js');
+require('../../assets/js/experiment/canonical-store.js');
+require('../../assets/js/data/analysis.js');
+require('../../assets/js/data/analysis-summary.js');
 require('../../assets/js/experiment/design-model.js');
+require('../../assets/js/data/dataset-corrections.js');
+require('../../assets/js/experiment/design-analysis.js');
+require('../../assets/js/data/pipeline.js');
 require('../../assets/js/ai/action-steps.js');
 function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){

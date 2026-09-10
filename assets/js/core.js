@@ -186,6 +186,24 @@
     return raw.replace(/\\/g,'/').split('/').filter(Boolean).pop()||raw;
   }
 
+  /**
+   * Fail fast when a module is used without one of its declared runtime
+   * dependencies. Classic browser scripts make load order implicit; this
+   * helper turns that implicit order into an executable contract without
+   * adding a module framework.
+   */
+  function requireModules(owner, names) {
+    const missing = (Array.isArray(names) ? names : [names]).filter(function (name) {
+      return !LF[name];
+    });
+    if (!missing.length) return true;
+    throw new Error(
+      String(owner || 'LabFlow module') +
+      ' requires LabFlow.' + missing.join(', LabFlow.') +
+      ' to be loaded first.'
+    );
+  }
+
   /** Associate every shared .field label with its first native control. */
   function bindFieldLabels(root) {
     const scope=root||document;
@@ -201,5 +219,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, modelDisplayName, bindFieldLabels };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels };
 }());

@@ -12,6 +12,56 @@ function collectionForKind(kind){return {file:'files',experiment:'experiments',s
 function relationIds(exp){const out={dataset:new Set([String(exp&&exp.id||'')].filter(Boolean))};Schema.rootFields().forEach(function(meta){if(meta.recordKind)out[meta.recordKind]=ids(exp[meta.key]);});out.design_solution=ids(exp.design&&exp.design.solutions);out.design_device=ids(exp.design&&exp.design.devices);return out;}
 function relationValues(record,field){const value=record&&record[field];return Array.isArray(value)?value:(value==null||value===''?[]:[value]);}
 
+
+/*
+ * Persisted-data trust boundary.
+ *
+ * Runtime hydration may fill harmless defaults for objects already owned by
+ * LabFlow. A saved/imported snapshot is different: validate its current
+ * structure before hydration so missing fields are never mistaken for a valid
+ * old format. LabFlow intentionally supports one current snapshot contract and
+ * does not maintain a migration/compatibility ladder.
+ */
+function validateSnapshot(snapshot){
+  const errors=[];
+  function fail(code,message,path){add(errors,code,message,snapshot,path||'');}
+  if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)){
+    fail('SNAPSHOT_REQUIRED','Persisted ExperimentData must be a JSON object.','');
+    return{ok:false,errors:errors};
+  }
+  const persistent=Schema.persistentKeys();
+  persistent.forEach(function(key){
+    if(!Object.prototype.hasOwnProperty.call(snapshot,key))fail('SNAPSHOT_FIELD_REQUIRED','Persisted ExperimentData is missing required root field "'+key+'".',key);
+  });
+  ['id'].forEach(function(key){if(!present(snapshot[key]))fail('SNAPSHOT_ID_REQUIRED','Persisted ExperimentData requires a stable id.',key);});
+  ['files','blocks','patches','manifest','rawFormatEvidence','auxiliaryEvidence','experiments','samples','runs','measurements','findings'].forEach(function(key){
+    if(Object.prototype.hasOwnProperty.call(snapshot,key)&&!Array.isArray(snapshot[key]))fail('SNAPSHOT_COLLECTION_INVALID','Persisted ExperimentData.'+key+' must be an array.',key);
+  });
+  ['meta','raw','analysisSettings','analysis','design','nomad','interpretationOverrides','derived','actionData','sync','autoCleanup'].forEach(function(key){
+    const value=snapshot[key];
+    if(Object.prototype.hasOwnProperty.call(snapshot,key)&&(!value||typeof value!=='object'||Array.isArray(value)))fail('SNAPSHOT_OBJECT_INVALID','Persisted ExperimentData.'+key+' must be an object.',key);
+  });
+  if(snapshot.design&&typeof snapshot.design==='object'&&!Array.isArray(snapshot.design)){
+    ['solutions','stack','devices'].forEach(function(key){if(!Array.isArray(snapshot.design[key]))fail('SNAPSHOT_DESIGN_COLLECTION_INVALID','Persisted ExperimentData.design.'+key+' must be an array.','design.'+key);});
+    if(!snapshot.design.process||typeof snapshot.design.process!=='object'||Array.isArray(snapshot.design.process))fail('SNAPSHOT_DESIGN_PROCESS_INVALID','Persisted ExperimentData.design.process must be an object.','design.process');
+  }
+  if(snapshot.actionData&&typeof snapshot.actionData==='object'&&!Array.isArray(snapshot.actionData)){
+    ['proposals','annotations','status'].forEach(function(key){const value=snapshot.actionData[key];if(!value||typeof value!=='object'||Array.isArray(value))fail('ACTION_DATA_BUCKET_INVALID','Persisted ExperimentData.actionData.'+key+' must be an object keyed by Action id.','actionData.'+key);});
+  }
+  if(Object.prototype.hasOwnProperty.call(snapshot,'entities'))fail('SNAPSHOT_LEGACY_ROOT','Unsupported parallel/legacy root "entities". Import a current LabFlow snapshot instead.','entities');
+  return{ok:errors.length===0,errors:errors};
+}
+function assertSnapshot(snapshot){
+  const out=validateSnapshot(snapshot);
+  if(!out.ok){
+    const error=new Error('Unsupported or invalid LabFlow workspace: '+out.errors.slice(0,8).map(function(item){return item.message;}).join(' | '));
+    error.code='SNAPSHOT_CONTRACT_INVALID';
+    error.validation=out;
+    throw error;
+  }
+  return out;
+}
+
 function validateRecordShape(errors,warnings,record,kind,path){
   const spec=Schema.describe(kind);if(!spec)return;
   const id=String(record&&record.id||'');
@@ -78,5 +128,5 @@ function assertValid(exp){const out=validate(exp);if(!out.ok){const e=new Error(
 function describe(type){return Schema.describe(String(type||'').toLowerCase())||({scan:{label:'JV scan',description:'FW or RV direction contained by one measurement.'},result:{label:'Deterministic result',description:'Recomputable projection derived from the LabFlow Data.'}}[String(type||'').toLowerCase()]||null);}
 function types(){return Schema.kinds().concat(['scan','result']);}
 function rootFields(){return Schema.rootFields();}
-LF.DataContracts={types:types,describe:describe,rootFields:rootFields,validate:validate,assert:assertValid};
+LF.DataContracts={types:types,describe:describe,rootFields:rootFields,validateSnapshot:validateSnapshot,assertSnapshot:assertSnapshot,validate:validate,assert:assertValid};
 }());

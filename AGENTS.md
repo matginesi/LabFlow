@@ -25,6 +25,8 @@ Read before structural changes:
 - Public Action target/filter bindings and slash commands belong in `action.json`, never in Assistant/page Action-ID switches.
 - `State.touch()` must not accumulate feature-specific invalidation code; use `DerivedState`.
 - The deterministic pipeline never calls AI.
+- Required runtime dependencies fail fast; do not hide missing modules behind fallback objects or conditional no-ops.
+- New scientific records are created through `DomainSchema`; Design writes go through `DesignModel`; dataset correction commits go through `DatasetCorrections`.
 - AI never calculates authoritative JV metrics or silently mutates source/LabFlow Data.
 
 ## Researcher-first workflow
@@ -63,7 +65,7 @@ When adding a derived projection, register dependencies with `DerivedState`. Whe
 
 ## Persistence
 
-`DomainSchema.snapshot()` defines persistence. Do not add ad-hoc temporary fields and assume they will/should persist. Restore through `DataModel.hydrate()` and rebuild runtime projections.
+`DomainSchema.snapshot()` defines persistence. Do not add ad-hoc temporary fields and assume they will/should persist. Persisted/imported snapshots restore through `DataModel.restore()` and must satisfy the current snapshot contract before hydration. `DataModel.hydrate()` is internal normalization for already-owned runtime objects, not a compatibility layer.
 
 ## Extension
 

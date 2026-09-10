@@ -101,11 +101,14 @@ Pages may:
 - invoke Actions/services;
 - keep UI-only selection/filter state.
 
+Pages call owner APIs for writes. In particular, Design edits go through `DesignModel` and reviewed dataset changes through `DatasetCorrections`; `app.js` should only delegate these operations.
+
 Pages must not:
 - own scientific arrays;
 - parse source files independently;
 - recreate domain defaults;
-- mutate ActionData/scientific records with ad-hoc assignment when an owner API exists.
+- mutate ActionData/scientific records with ad-hoc assignment when an owner API exists;
+- hide a missing required runtime module behind `LF.X || {}` or an optional no-op. Required dependencies fail fast.
 
 ### UI implementation
 
@@ -113,11 +116,17 @@ Read `.agent/skills/labflow-ui/SKILL.md` and reuse the production patterns in `u
 
 Use the Message Totem for application feedback/confirmation and the Action Totem for foreground execution progress/results. Inline notices are page content, not another Totem. Do not add custom Totem clones, CDN assets, trackers, frameworks or frontend infrastructure. The current runtime is vanilla JavaScript and local CSS; no separate Bootstrap runtime is loaded.
 
-## 7. Add an export
+## 7. Persistence and restore
+
+Persist with `DomainSchema.snapshot()` / `DataModel.serialize()`. Restore external or browser-persisted snapshots with `DataModel.restore()`, which validates the current snapshot contract before hydration. Do not add migration ladders, version adapters or silent default-filling for obsolete persisted shapes.
+
+Use `DataModel.hydrate()` only for objects that already belong to the current runtime and need canonical prototypes/default normalization.
+
+## 8. Add an export
 
 An export reads one validated LabFlow Data and builds a deterministic external representation. It never becomes a second editable data model and never marks itself as source truth.
 
-## 8. Update documentation and generated bundles
+## 9. Update documentation and generated bundles
 
 When applicable run:
 
@@ -130,7 +139,7 @@ python tools/build_docs_bundle.py
 python tools/build_ui_kit_inline.py
 ```
 
-## 9. Required verification
+## 10. Required verification
 
 Before merge:
 
@@ -145,7 +154,7 @@ python tools/validate_privacy_contract.py
 
 Also run JS syntax checks and the real JV fixture regression when core data/pipeline/import behavior changed.
 
-## 10. Review checklist
+## 11. Review checklist
 
 - Is there still exactly one `ExperimentData`?
 - Are new defaults defined once in `DomainSchema`?

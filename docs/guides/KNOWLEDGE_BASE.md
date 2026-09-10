@@ -54,7 +54,7 @@ The baseline file, browser-local custom store and Settings backup all use the sa
 {"id":"material.sno2","kind":"material","title":"SnO2","status":"active","summary":"…","sources":[{"title":"…","doi":"10.…"}]}
 ```
 
-`localStorage` contains custom entries only; bundled records continue to come from the source-controlled JSONL/bundle. LabFlow transparently migrates the immediately previous wrapped browser format to JSONL on first read so an application update does not discard researcher-created entries.
+`localStorage` contains custom entries only; bundled records continue to come from the source-controlled JSONL/bundle. The current contract is JSONL only: wrapper objects and alternate schema versions are rejected instead of migrated implicitly.
 
 ## Safe activation
 

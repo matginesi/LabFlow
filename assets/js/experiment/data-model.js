@@ -10,10 +10,11 @@
    * samples, runs or measurements and must not redefine record defaults.
    */
   const LF = window.LabFlow = window.LabFlow || {};
-  const C = LF.Core || {};
+  if (!LF.Core) throw new Error('LabFlow.Core must be loaded before data-model.js.');
+  const C = LF.Core;
   const Schema = LF.DomainSchema;
   if (!Schema) throw new Error('LabFlow.DomainSchema must be loaded before data-model.js.');
-  const uid = C.uid || (function () { let n = 0; return function (p) { return (p || 'x') + '_' + (++n); }; }());
+  const uid = C.uid;
   const OPERATIONS = ['set', 'remove', 'add'];
 
   function nowIso() { return new Date().toISOString(); }
@@ -215,7 +216,7 @@
     effectiveBlock(ref) { return getEffectiveBlock(this, ref); }
     applyPatch(patch) { return applyPatch(this, patch); }
     addPatch(patch, opts) { return addPatch(this, patch, opts); }
-    validate() { return LF.DataContracts ? LF.DataContracts.validate(this) : { ok: true, errors: [], warnings: [] }; }
+    validate() { if (!LF.DataContracts) throw new Error('LabFlow.DataContracts is not loaded.'); return LF.DataContracts.validate(this); }
     summary() { const a = this.analysis && this.analysis.summary || {}; return { id: this.id || '', name: this.meta && this.meta.name || '', source: this.meta && this.meta.sourceName || '', revision: Number(this.sync && this.sync.revision || 0), files: this.files.length, experiments: this.experiments.length, samples: this.samples.length, runs: this.runs.length, measurements: this.measurements.length, eligible: Number(a.eligibleCount || 0), findings: this.findings.filter(function (f) { return f.status !== 'resolved'; }).length, bestExperiment: a.bestExperiment || '', bestSample: a.bestSample || '', bestEfficiency: a.bestEfficiency == null ? null : a.bestEfficiency }; }
     tree() { const self = this; return this.experiments.map(function (e) { return { id: e.id, experiment: e.name, reference: !!e.isRef, samples: self.samplesForExperiment(e.id).map(function (s) { return { id: s.id, sample: s.name, position: s.position || '', cell: s.cell || '', runs: self.runsForSample(s.id).map(function (r) { return { id: r.id, run: r.label || r.path || '', measurements: self.selectMeasurements({ run: r.id }).map(function (m) { return { id: m.id, sequence: m.sequence, file: m.file, bestEff: m.bestEff, quality: m.qualityStatus }; }) }; }) }; }) }; }); }
     inspect(ref) { if (ref == null || ref === '') return this.summary(); const item = this.get(ref); if (!item) return null; if (this.experiments.includes(item)) return { type: 'experiment', value: item, samples: this.samplesForExperiment(item.id), measurements: this.measurementsForExperiment(item.id) }; if (this.samples.includes(item)) return { type: 'sample', value: item, runs: this.runsForSample(item.id), measurements: this.measurementsForSample(item.id), best: this.bestMeasurementForSample(item.id) }; if (this.runs.includes(item)) return { type: 'run', value: item, measurements: this.selectMeasurements({ run: item.id }) }; return { type: item.kind || item.type || 'record', value: item }; }
@@ -225,6 +226,21 @@
   }
 
   function hydrate(exp) { if (!exp || typeof exp !== 'object') return new ExperimentData(); return normalize(exp); }
+
+  /**
+   * Restore a persisted LabFlow snapshot. Unlike hydrate(), this is a trust
+   * boundary: external/persisted data must satisfy the current snapshot shape
+   * before defaults are applied. LabFlow intentionally has no legacy migration
+   * chain; incompatible snapshots fail with an actionable contract error.
+   */
+  function restore(snapshot) {
+    if (!LF.DataContracts || !LF.DataContracts.assertSnapshot) {
+      throw new Error('LabFlow.DataContracts must be loaded before restoring a persisted ExperimentData snapshot.');
+    }
+    LF.DataContracts.assertSnapshot(snapshot);
+    return hydrate(snapshot);
+  }
+
   function serialize(exp) { return Schema.snapshot(hydrate(exp)); }
   function create(opts) {
     opts = opts || {}; const exp = new ExperimentData();
@@ -249,5 +265,5 @@
   }
 
   LF.ExperimentData = ExperimentData;
-  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, serialize: serialize, normalize: normalize, touch: touch, getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock, getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch, toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
+  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, restore: restore, serialize: serialize, normalize: normalize, touch: touch, getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock, getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch, toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
 }());

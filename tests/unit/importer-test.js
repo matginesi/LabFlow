@@ -1,7 +1,10 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/core.js');
 require('../../assets/js/ai/prompt-bundle.js');
 require('../../assets/js/experiment/data-model.js');
+require('../../assets/js/experiment/action-data.js');
+require('../../assets/js/experiment/data-contracts.js');
 require('../../assets/js/data/parser.js');
 require('../../assets/js/data/importer.js');
 require('../../assets/js/export/export.js');

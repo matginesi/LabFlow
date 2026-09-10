@@ -18,12 +18,14 @@ for path in [
     'assets/js/experiment/derived-state.js',
     'assets/js/experiment/action-data.js',
     'assets/js/experiment/design-model.js',
+    'assets/js/data/dataset-corrections.js',
+    'assets/js/experiment/design-analysis.js',
     'assets/js/data/pipeline.js',
     'docs/guides/EXTENDING_LABFLOW.md',
 ]: need(path)
 
 index=(ROOT/'index.html').read_text(encoding='utf-8')
-order=['domain-schema.js','data-model.js','action-data.js','derived-state.js','data-contracts.js']
+order=['core.js','domain-schema.js','data-model.js','action-data.js','derived-state.js','data-contracts.js','parser.js','canonical-store.js','analysis.js','analysis-summary.js','design-model.js','dataset-corrections.js','design-analysis.js','pipeline.js','action-steps.js','actions.js']
 pos=[index.find(x) for x in order]
 if any(x < 0 for x in pos) or pos != sorted(pos):
     errors.append('architecture kernel script load order is invalid')
@@ -43,6 +45,36 @@ for stage in ['normalize','link','validate-structure','analyze','index','review'
 for token in ['phase:', 'after:', 'reads:', 'writes:']:
     if token not in pipeline:
         errors.append(f'pipeline metadata missing: {token[:-1]}')
+
+
+design_analysis=(ROOT/'assets/js/experiment/design-analysis.js').read_text(encoding='utf-8')
+if re.search(r'exp\.design\b', design_analysis):
+    errors.append('DesignAnalysis must delegate Design reads/writes through DesignModel')
+
+dataset_corrections=(ROOT/'assets/js/data/dataset-corrections.js').read_text(encoding='utf-8')
+if re.search(r"sample\s*=\s*\{[^\n]*kind\s*:\s*['\"]sample['\"]", dataset_corrections):
+    errors.append('DatasetCorrections must create sample records through DomainSchema')
+
+action_steps=(ROOT/'assets/js/ai/action-steps.js').read_text(encoding='utf-8')
+if re.search(r'LF\.DatasetCorrections\s*=', action_steps):
+    errors.append('ActionSteps must not define DatasetCorrections')
+if re.search(r'LF\.DesignAnalysis\s*=', action_steps):
+    errors.append('ActionSteps must not define DesignAnalysis')
+
+app=(ROOT/'assets/js/app.js').read_text(encoding='utf-8')
+for pattern, message in [
+    (r'S\.state\.experiment\.design\b', 'app.js must delegate Design access/mutations through feature owners'),
+    (r'\.design\.(?:devices|solutions)\.(?:push|splice)\s*\(', 'app.js directly mutates Design collections'),
+    (r'\.stack\.(?:push|splice)\s*\(', 'app.js directly mutates Design layers'),
+]:
+    if re.search(pattern, app): errors.append(message)
+
+data_model=(ROOT/'assets/js/experiment/data-model.js').read_text(encoding='utf-8')
+if 'DataContracts.assertSnapshot(snapshot)' not in data_model:
+    errors.append('DataModel.restore must validate persisted snapshots before hydration')
+importer=(ROOT/'assets/js/data/importer.js').read_text(encoding='utf-8')
+if 'DM.restore(data)' not in importer:
+    errors.append('LabFlow ZIP restore must use DataModel.restore')
 
 contracts=(ROOT/'assets/js/experiment/data-contracts.js').read_text(encoding='utf-8')
 if 'ACTION_DATA_INVALID' not in contracts or 'ACTION_DATA_BUCKET_INVALID' not in contracts:
@@ -71,4 +103,4 @@ if errors:
     print('Architecture contract: FAILED')
     for e in errors: print(' -',e)
     sys.exit(1)
-print('Architecture contract: OK (single aggregate, schema-owned roots, declared pipeline, ActionData boundary, repo exclusions)')
+print('Architecture contract: OK (single aggregate, explicit owners, strict restore, declared pipeline, ActionData boundary, repo exclusions)')

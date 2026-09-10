@@ -97,7 +97,7 @@ def app_guide_entry(relative_path: str) -> dict:
 
 def main() -> None:
     entries = load_jsonl(SOURCE) + [app_guide_entry(path) for path in APP_GUIDES]
-    payload = {"schema_version": 1, "entries": entries}
+    payload = {"entries": entries}
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     TARGET.write_text(

@@ -6,9 +6,14 @@ require('../../assets/js/experiment/data-model.js');
 require('../../assets/js/experiment/action-data.js');
 require('../../assets/js/experiment/data-contracts.js');
 require('../../assets/js/experiment/derived-state.js');
+require('../../assets/js/data/parser.js');
 require('../../assets/js/experiment/canonical-store.js');
+require('../../assets/js/data/analysis.js');
+require('../../assets/js/data/analysis-summary.js');
+require('../../assets/js/experiment/design-model.js');
+require('../../assets/js/data/dataset-corrections.js');
+require('../../assets/js/experiment/design-analysis.js');
 require('../../assets/js/data/pipeline.js');
-
 function assert(actual, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error((label || 'assert') + ': expected ' + JSON.stringify(expected) + ' got ' + JSON.stringify(actual));
 }
@@ -40,6 +45,25 @@ module.exports = function (t, LF) {
     assert(snap.pipeline, undefined, 'pipeline runtime excluded');
     assert(snap.canonical, undefined, 'canonical cache excluded');
     assert(snap.datasetAnalysis, undefined, 'review projection excluded');
+  };
+
+  t['Persisted restore validates the current snapshot before hydration'] = function () {
+    const e = LF.DataModel.create({ sourceName: 'restore.zip' });
+    const snapshot = LF.DataModel.serialize(e);
+    const restored = LF.DataModel.restore(JSON.parse(JSON.stringify(snapshot)));
+    assert(restored instanceof LF.ExperimentData, true, 'valid current snapshot restores');
+
+    const missingRoot = JSON.parse(JSON.stringify(snapshot));
+    delete missingRoot.samples;
+    let missingError = null;
+    try { LF.DataModel.restore(missingRoot); } catch (error) { missingError = error; }
+    truthy(missingError && missingError.code === 'SNAPSHOT_CONTRACT_INVALID', 'missing persistent roots fail closed');
+
+    const alternateRoot = JSON.parse(JSON.stringify(snapshot));
+    alternateRoot.entities = [];
+    let alternateError = null;
+    try { LF.DataModel.restore(alternateRoot); } catch (error) { alternateError = error; }
+    truthy(alternateError && alternateError.code === 'SNAPSHOT_CONTRACT_INVALID', 'parallel/obsolete roots are rejected instead of migrated');
   };
 
   t['DomainSchema snapshot is detached and ActionData is the only Action-output root'] = function () {

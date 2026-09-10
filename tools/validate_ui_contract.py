@@ -61,7 +61,7 @@ if not (ROOT/'knowledge/kb.jsonl').exists():errors.append('source-controlled Kno
 if (ROOT/'knowledge/kb.json').exists():errors.append('retired Knowledge Base JSON wrapper still present')
 if 'Export custom JSONL' not in settings or 'Import JSONL' not in settings:errors.append('Knowledge Base Settings does not expose JSONL backup/restore')
 if 'exportJsonl' not in kb or 'importJsonl' not in kb:errors.append('Knowledge Base JSONL import/export API missing')
-if "localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(entries))" not in storage:errors.append('Knowledge Base localStorage is not persisted as JSONL')
+if "localStorage.setItem(LOCAL_KEYS.KNOWLEDGE, knowledgeJsonl(entries))" not in storage:errors.append('Knowledge Base localStorage is not persisted as JSONL')
 
 # Split layouts respond to the actual workspace width, not just the browser viewport.
 if 'container-type: inline-size' not in css:errors.append('main workspace is not a responsive size container')
@@ -69,7 +69,7 @@ if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.kb-workbench[^}]*g
 if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.settings-workspace-grid',css):errors.append('shared settings split does not respond to real workspace width')
 
 # Safe cleanup is deterministic detection plus explicit researcher acceptance.
-pipeline=(ROOT/'assets/js/data/pipeline.js').read_text(); review=(ROOT/'assets/js/pages/review-panel.js').read_text(); corrections=(ROOT/'assets/js/ai/action-steps.js').read_text()
+pipeline=(ROOT/'assets/js/data/pipeline.js').read_text(); review=(ROOT/'assets/js/pages/review-panel.js').read_text(); corrections=(ROOT/'assets/js/data/dataset-corrections.js').read_text()
 if 'prepareAutomaticSafeFixes' not in pipeline or 'applyAutomaticSafeFixes(exp)' in pipeline:errors.append('pipeline must detect safe cleanup without silently applying new corrections')
 if 'id="applyAutomaticCleanup"' not in review or 'Accept safe cleanup' not in review:errors.append('Review missing explicit safe-cleanup acceptance')
 if "closest('#applyAutomaticCleanup')" not in app or 'commitAutomaticSafeFixes(exp)' not in app or 'function commitAutomaticSafeFixes(exp)' not in corrections:errors.append('safe-cleanup acceptance does not use the canonical dataset commit service')

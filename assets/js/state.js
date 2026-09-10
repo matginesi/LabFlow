@@ -1,6 +1,9 @@
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
+  if (!LF.Core || !LF.Logger || !LF.DataModel || !LF.DerivedState) {
+    throw new Error('state.js requires LabFlow.Core, LabFlow.Logger, LabFlow.DataModel and LabFlow.DerivedState.');
+  }
   const Log = LF.Logger.scope('state');
 
   /*
@@ -14,18 +17,9 @@
   function nowIso() { return new Date().toISOString(); }
 
   function emptyExperiment() {
-    if (LF.DataModel && LF.DataModel.create) return LF.DataModel.create({ sourceName: '' });
-    return {
-      id: null,
-      meta: { name: 'Untitled experiment', createdAt: null, modifiedAt: null, sourceName: '', sourceSize: 0 },
-      raw: { sourceName: '', sha256: '', sourceArchive: null },
-      files: [], blocks: [], patches: [], manifest: [], rawFormatEvidence: [], auxiliaryEvidence: [], experiments: [], samples: [], runs: [], measurements: [], findings: [],
-      analysisSettings: { mismatchFactor: 1 }, analysis: { summary: {}, bestBySample: [], bestByExperiment: [], topNonRef: [], topRef: [] },
-      design: { status: 'unknown', solutions: [], process: { coating: '', annealing: '', atmosphere: '', notes: '' }, stack: [], devices: [] }, nomad: {}, interpretationOverrides: {},
-      sync: { revision: 0, lastChange: null, pendingScopes: [] },
-      derived: {}
-    };
+    return LF.DataModel.create({ sourceName: '' });
   }
+
 
   function defaultUiState() {
     return {
@@ -102,8 +96,8 @@
     if (!state.experiment || typeof state.experiment !== 'object') state.experiment = emptyExperiment();
     if (!state.experiment.id) state.experiment.id = 'exp_' + Math.random().toString(36).slice(2, 10);
     let exp = state.experiment;
-    if (LF.DataModel && LF.DataModel.hydrate) { exp = LF.DataModel.hydrate(exp); state.experiment = exp; }
-    else if (LF.DataModel && LF.DataModel.normalize) LF.DataModel.normalize(exp);
+    exp = LF.DataModel.hydrate(exp);
+    state.experiment = exp;
     exp.raw = exp.raw || {};
     ensureDerived(exp);
     Log.trace('ensure.experiment', { reason: reason, id: exp.id, blocks: exp.blocks && exp.blocks.length });
@@ -112,7 +106,7 @@
 
   /** Invalidate NOMAD-derived state through the dependency registry. */
   function invalidateNomad(exp, scope) {
-    if (LF.DerivedState && LF.DerivedState.invalidate) LF.DerivedState.invalidate(exp, scope || 'metadata');
+    LF.DerivedState.invalidate(exp, scope || 'metadata');
   }
 
   function notify(reason) {
@@ -141,7 +135,7 @@
 
   function setExperiment(exp, rawArchive) {
     state.experiment = exp || emptyExperiment();
-    if (LF.DataModel && LF.DataModel.hydrate) state.experiment = LF.DataModel.hydrate(state.experiment);
+    state.experiment = LF.DataModel.hydrate(state.experiment);
     ensureExperiment('set');
     /* Preserve the uploaded source bytes as immutable evidence. The application
        works on ExperimentData and never rewrites this ArrayBuffer. */
@@ -161,8 +155,8 @@
     const exp = ensureExperiment('before-touch');
     if (!exp.id) return exp;
     const changeScope = scope || 'metadata';
-    if (LF.DataModel && LF.DataModel.touch) LF.DataModel.touch(exp, changeScope);
-    if (LF.DerivedState && LF.DerivedState.invalidate) {
+    LF.DataModel.touch(exp, changeScope);
+    {
       const invalidated=LF.DerivedState.invalidate(exp,changeScope);
       if(invalidated.length)Log.debug('derived.invalidated',{scope:changeScope,projections:invalidated});
     }
@@ -207,7 +201,7 @@
 
   function commitDraft(scope) {
     const exp=ensureExperiment('commit-draft'); exp.sync=exp.sync||{}; const pending=Array.isArray(exp.sync.pendingScopes)?exp.sync.pendingScopes:[];
-    const scopes=scope?[String(scope)]:pending.slice(); let changed=false; scopes.forEach(function(name){const i=pending.indexOf(name);if(i>=0){pending.splice(i,1);changed=true;if(LF.DataModel&&LF.DataModel.touch)LF.DataModel.touch(exp,name);if(LF.DerivedState&&LF.DerivedState.invalidate)LF.DerivedState.invalidate(exp,name);}});
+    const scopes=scope?[String(scope)]:pending.slice(); let changed=false; scopes.forEach(function(name){const i=pending.indexOf(name);if(i>=0){pending.splice(i,1);changed=true;LF.DataModel.touch(exp,name);LF.DerivedState.invalidate(exp,name);}});
     exp.sync.pendingScopes=pending; if(changed)notify('touch'); return exp;
   }
 

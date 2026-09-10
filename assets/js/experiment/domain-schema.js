@@ -1,9 +1,41 @@
 (function(){
 'use strict';
-const LF=window.LabFlow=window.LabFlow||{},C=LF.Core||{};
-const uid=C.uid||(function(){let n=0;return function(prefix){return String(prefix||'x')+'_'+(++n);};})();
+const LF=window.LabFlow=window.LabFlow||{};
+if(!LF.Core)throw new Error('LabFlow.Core must be loaded before domain-schema.js.');
+const C=LF.Core,uid=C.uid;
 const now=function(){return new Date().toISOString();};
 const RECORDS={},ROOT={};
+
+/*
+ * Canonical domain vocabulary. These values are data contracts, not UI copy.
+ * Keep them here so records, validators and feature services share one spelling.
+ */
+const VALUES=Object.freeze({
+  recordStatus:Object.freeze({
+    UNKNOWN:'unknown',
+    RAW_EVIDENCE:'raw_evidence',
+    USER_CONFIRMED:'user_confirmed',
+    AI_INFERRED:'ai_inferred'
+  }),
+  provenanceKind:Object.freeze({
+    EVIDENCE:'evidence',
+    EXPERIMENT:'experiment',
+    KNOWLEDGE_REFERENCE:'knowledge_reference',
+    MODEL_INFERENCE:'model_inference'
+  }),
+  patchStatus:Object.freeze({
+    APPLIED:'applied',
+    PROPOSED:'proposed',
+    REJECTED:'rejected',
+    SUPERSEDED:'superseded'
+  }),
+  patchSource:Object.freeze({
+    SYSTEM:'system',
+    AUTOMATIC:'automatic',
+    RESEARCHER:'researcher',
+    ACTION:'action'
+  })
+});
 
 function arr(v){return Array.isArray(v)?v:[];}
 function obj(v){return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}
@@ -80,22 +112,22 @@ registerRecord('block',{
 registerRecord('patch',{
   label:'LabFlow Data patch / provenance',description:'One auditable change/proposal record against a typed LabFlow Data target. RAW source bytes are never edited.',idPrefix:'patch',required:['id','kind','patchType','source','status','createdAt'],relations:{findingId:'finding'},
   defaults:function(){return{id:uid('patch'),kind:'patch',patchType:'value_change',target:{kind:'',id:''},operation:'set',field:'',from:null,to:null,source:'system',reason:'',evidence:[],findingId:'',confidence:null,status:'applied',reviewStatus:'accepted',reviewedBy:'',createdAt:now(),appliedAt:null};},
-  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('patch');r.kind='patch';r.patchType=text(r.patchType||r.type||'value_change');const target=obj(r.target);if(typeof r.target==='string')r.target={kind:text(r.targetKind),id:text(r.target)};else r.target={kind:text(target.kind||r.targetKind),id:text(target.id||r.targetId)};if(r.blockId&&!r.target.id)r.target={kind:'block',id:text(r.blockId)};r.operation=text(r.operation||'set');r.field=text(r.field);r.source=text(r.source||'system');r.reason=text(r.reason);r.evidence=arr(r.evidence);r.findingId=text(r.findingId);const c=Number(r.confidence);r.confidence=Number.isFinite(c)?c:null;r.status=text(r.status||'applied');r.reviewStatus=text(r.reviewStatus||'accepted');r.reviewedBy=text(r.reviewedBy);r.createdAt=r.createdAt||now();r.appliedAt=r.appliedAt||null;delete r.type;delete r.blockId;delete r.targetKind;delete r.targetId;return r;}
+  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('patch');r.kind='patch';r.patchType=text(r.patchType||r.type||'value_change');const target=obj(r.target);if(typeof r.target==='string')r.target={kind:text(r.targetKind),id:text(r.target)};else r.target={kind:text(target.kind||r.targetKind),id:text(target.id||r.targetId)};if(r.blockId&&!r.target.id)r.target={kind:'block',id:text(r.blockId)};r.operation=text(r.operation||'set');r.field=text(r.field);r.source=text(r.source||'system');r.reason=text(r.reason);r.evidence=arr(r.evidence);r.findingId=text(r.findingId);r.confidence=finiteOrNull(r.confidence);r.status=text(r.status||'applied');r.reviewStatus=text(r.reviewStatus||'accepted');r.reviewedBy=text(r.reviewedBy);r.createdAt=r.createdAt||now();r.appliedAt=r.appliedAt||null;delete r.type;delete r.blockId;delete r.targetKind;delete r.targetId;return r;}
 });
 registerRecord('design_solution',{
   label:'Design solution',description:'One solution/formulation record in the researcher-editable Design projection.',idPrefix:'sol',required:['id','kind','status'],
   defaults:function(){return{id:uid('sol'),kind:'design_solution',name:'',role:'',solutes:'',solvents:'',concentration:'',additives:'',preparation:'',evidence:'',status:'unknown',confidence:null,provenanceKind:'',cabinetRef:null,aiAssisted:false,aiAssistedAt:null};},
-  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('sol');r.kind='design_solution';['name','role','solutes','solvents','concentration','additives','preparation','evidence','status','provenanceKind'].forEach(function(k){r[k]=text(r[k]);});const c=Number(r.confidence);r.confidence=Number.isFinite(c)?c:null;r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;r.aiAssisted=!!r.aiAssisted;r.aiAssistedAt=r.aiAssistedAt||null;return r;}
+  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('sol');r.kind='design_solution';['name','role','solutes','solvents','concentration','additives','preparation','evidence','status','provenanceKind'].forEach(function(k){r[k]=text(r[k]);});r.confidence=finiteOrNull(r.confidence);r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;r.aiAssisted=!!r.aiAssisted;r.aiAssistedAt=r.aiAssistedAt||null;return r;}
 });
 registerRecord('design_layer',{
   label:'Design layer',description:'One material/process layer in a Design device stack.',idPrefix:'layer',required:['id','kind','status'],
   defaults:function(){return{id:uid('layer'),kind:'design_layer',role:'',material:'',thickness:'',process:'',evidence:'',status:'unknown',confidence:null,provenanceKind:'',cabinetRef:null};},
-  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('layer');r.kind='design_layer';if(r.layer&&!r.role)r.role=r.layer;['role','material','thickness','process','evidence','status','provenanceKind'].forEach(function(k){r[k]=text(r[k]);});const c=Number(r.confidence);r.confidence=Number.isFinite(c)?c:null;r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;delete r.layer;return r;}
+  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('layer');r.kind='design_layer';if(r.layer&&!r.role)r.role=r.layer;['role','material','thickness','process','evidence','status','provenanceKind'].forEach(function(k){r[k]=text(r[k]);});r.confidence=finiteOrNull(r.confidence);r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;delete r.layer;return r;}
 });
 registerRecord('design_device',{
   label:'Design experiment/device',description:'One Design projection for a logical experiment/device, linked to experiments/samples/solutions by stable IDs.',idPrefix:'device',required:['id','kind','solutionIds','sampleIds','stack','process','status'],relations:{experimentId:'experiment',sampleIds:'sample',solutionIds:'design_solution'},
   defaults:function(){return{id:uid('device'),kind:'design_device',name:'',group:'',experimentId:'',sampleIds:[],sampleNames:[],isRef:false,solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},stackSourceRef:null,processSourceRef:null,status:'unknown',evidence:'',confidence:null,provenanceKind:''};},
-  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('device');r.kind='design_device';r.name=text(r.name);r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.sampleIds).map(text);r.sampleNames=arr(r.sampleNames).map(text);r.isRef=!!r.isRef;r.solutionIds=arr(r.solutionIds).map(text);r.stack=arr(r.stack).map(function(layer){return create('design_layer',layer);});r.process=mergeDefaults({coating:'',annealing:'',atmosphere:'',notes:''},r.process);r.stackSourceRef=r.stackSourceRef&&typeof r.stackSourceRef==='object'?r.stackSourceRef:null;r.processSourceRef=r.processSourceRef&&typeof r.processSourceRef==='object'?r.processSourceRef:null;r.status=text(r.status||'unknown');r.evidence=text(r.evidence);const c=Number(r.confidence);r.confidence=Number.isFinite(c)?c:null;r.provenanceKind=text(r.provenanceKind);return r;}
+  normalize:function(r){r=obj(r);if(!r.id)r.id=uid('device');r.kind='design_device';r.name=text(r.name);r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.sampleIds).map(text);r.sampleNames=arr(r.sampleNames).map(text);r.isRef=!!r.isRef;r.solutionIds=arr(r.solutionIds).map(text);r.stack=arr(r.stack).map(function(layer){return create('design_layer',layer);});r.process=mergeDefaults({coating:'',annealing:'',atmosphere:'',notes:''},r.process);r.stackSourceRef=r.stackSourceRef&&typeof r.stackSourceRef==='object'?r.stackSourceRef:null;r.processSourceRef=r.processSourceRef&&typeof r.processSourceRef==='object'?r.processSourceRef:null;r.status=text(r.status||'unknown');r.evidence=text(r.evidence);r.confidence=finiteOrNull(r.confidence);r.provenanceKind=text(r.provenanceKind);return r;}
 });
 
 [
@@ -161,5 +193,5 @@ function normalizeRoot(exp){
 function cloneValue(value){if(value==null||typeof value!=='object')return value;if(value instanceof ArrayBuffer)return value.slice(0);if(typeof ArrayBuffer!=='undefined'&&ArrayBuffer.isView&&ArrayBuffer.isView(value)){const copy=value.buffer.slice(value.byteOffset,value.byteOffset+value.byteLength);return new value.constructor(copy);}if(Array.isArray(value))return value.map(cloneValue);const out={};Object.keys(value).forEach(function(k){out[k]=cloneValue(value[k]);});return out;}
 function snapshot(exp){exp=normalizeRoot(exp);const out={};persistentKeys().forEach(function(key){if(exp[key]!==undefined)out[key]=cloneValue(exp[key]);});return out;}
 
-LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootField:rootField,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};
+LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootField:rootField,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,values:VALUES,scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};
 }());

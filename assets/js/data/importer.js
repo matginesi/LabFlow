@@ -180,7 +180,7 @@
     if(!info||info.format!=='labflow-save')return null;
     if(onProgress)onProgress({stage:'Restoring LabFlow ZIP',progress:0.2});
     const data=JSON.parse(await dataFile.async('string'));
-    const exp=DM.hydrate(data);
+    const exp=DM.restore(data);
     const rawFile=zip.file('raw/source.zip');
     exp.raw=exp.raw||{};
     exp.raw.sourceArchive=rawFile?await rawFile.async('arraybuffer'):null;

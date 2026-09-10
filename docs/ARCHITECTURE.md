@@ -61,7 +61,7 @@ Use `ExperimentData` query/mutation methods or feature services. Do not create a
 ### `DataContracts`
 `assets/js/experiment/data-contracts.js`
 
-Validates record shape, IDs, typed relations, backlinks, patches, Design references and the single Action-output boundary. Structural violations fail closed with `DATA_CONTRACT_INVALID`.
+Validates record shape, IDs, typed relations, backlinks, patches, Design references and the single Action-output boundary. It also validates persisted snapshots *before* hydration. Structural violations fail closed; LabFlow supports the current snapshot contract rather than a migration ladder.
 
 ### `DerivedState`
 `assets/js/experiment/derived-state.js`
@@ -88,6 +88,19 @@ Runs the deterministic lifecycle. Stages declare dependency order, phase, read s
 | export projection | NOMAD state | NOMAD | persistent where required |
 
 A module may read other layers when its contract requires it, but it should write only fields it owns.
+
+### Mutation owners
+
+| Mutation | Canonical owner | Callers do |
+|---|---|---|
+| create canonical scientific record | `DomainSchema` / `ExperimentData.addRecord()` | request creation; never hand-build a competing record shape |
+| edit Design device/solution/layer/process | `DesignModel` | call the named mutation API |
+| apply dataset correction / safe cleanup | `DatasetCorrections` | commit an explicit reviewed correction |
+| invalidate recomputable projections | `DerivedState` | call `State.touch(scope)` / owner commit |
+| persist Action proposal/annotation/status | `ActionData` | use the ActionData API |
+| render/selection/filter | page module / `state.ui` | never mutate scientific arrays directly |
+
+`app.js` is an application coordinator: bootstrap, routing, shell events and delegation. It is not a domain owner.
 
 ## 4. Scientific hierarchy
 
@@ -209,7 +222,7 @@ Import, naming normalization, hierarchy rebuild, analysis, safe-cleanup detectio
 
 Persistence is schema-driven. `DomainSchema.snapshot(exp)` copies only roots declared persistent and returns a detached snapshot. Unknown temporary properties and runtime caches do not silently enter storage.
 
-When a persisted object is restored, `DataModel.hydrate()` recreates the current aggregate shape and the deterministic pipeline rebuilds runtime projections.
+When a persisted/imported object is restored, `DataModel.restore()` first checks the current persisted shape with `DataContracts.assertSnapshot()`, then hydrates the aggregate and lets the deterministic pipeline rebuild runtime projections. Missing roots or alternate/obsolete shapes are rejected instead of silently filled or migrated. `DataModel.hydrate()` is reserved for objects already owned by the current runtime.
 
 ## 12. Extension points
 

@@ -12,10 +12,11 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 ## Architectural kernel
 
 - `experiment/domain-schema.js` — canonical record factories, root ownership/persistence, detached snapshot contract.
-- `experiment/data-model.js` — `ExperimentData` aggregate/query/mutation API.
+- `experiment/data-model.js` — `ExperimentData` aggregate/query/mutation API; strict persisted restore boundary.
 - `experiment/data-contracts.js` — graph/invariant validation.
 - `experiment/derived-state.js` — derived dependency/invalidation registry.
-- `data/pipeline.js` — declarative deterministic stage registry/executor.
+- `data/dataset-corrections.js` — deterministic dataset repair/review/commit owner.
+- `data/pipeline.js` — declarative deterministic stage registry/executor; required stages/dependencies fail fast.
 - `experiment/action-data.js` — single Action proposal/annotation/status store.
 
 ## Import and scientific processing
@@ -25,7 +26,8 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 - `data/analysis.js` — deterministic JV analysis/findings.
 - `data/analysis-summary.js` — deterministic statistics/brief projections.
 - `experiment/canonical-store.js` — pure read index/aliases/relations/evidence.
-- `experiment/design-model.js` — Design-owned projection and Design mutation helpers; it does not define the global experiment shape.
+- `experiment/design-model.js` — sole owner of Design record mutations and Design projection; it does not define the global experiment shape.
+- `experiment/design-analysis.js` — deterministic Design analysis plus proposal application; no provider calls and no UI rendering.
 
 ## State/persistence
 
@@ -72,6 +74,7 @@ Files under `pages/` render/query the current aggregate/projections and may reta
 | Domain services | LabFlow Data records/patches through explicit APIs |
 | Analysis | analysis/findings/owned derived values |
 | DesignModel | `design` |
+| DatasetCorrections | reviewed dataset corrections + their patch/provenance commit |
 | Actions | `actionData`, interaction history; scientific apply only via deterministic services |
 | Pipeline | runtime trace plus stage-owned outputs |
 | Pages | UI state only, except through owner APIs |
