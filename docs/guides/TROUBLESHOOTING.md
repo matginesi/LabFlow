@@ -47,6 +47,13 @@ The request exceeds the configured model/server context. Inspect the Action's bo
 
 LabFlow surfaces provider throttling and does not create hidden automatic request loops. Retry later or use another configured provider/model.
 
+
+## Local provider works on the computer but not from another device
+
+`127.0.0.1` and `localhost` point to the device running the browser. From a phone, they point to the phone, not to the workstation. In **Settings → Connection**, use a LAN-resolvable host such as `http://fedora:8080/v1`, `http://fedora.local:8080/v1`, or the workstation private IP. The server must listen on a LAN interface and allow the LabFlow origin with CORS.
+
+For llama.cpp, bind `llama-server` with `--host 0.0.0.0` (or the intended interface) and configure `--cors-origins`. LM Studio must enable **Serve on Local Network** and CORS. Ollama must be exposed with `OLLAMA_HOST` and allow the LabFlow origin through `OLLAMA_ORIGINS`. If LabFlow is opened from an HTTPS host such as GitHub Pages, the browser may additionally require Local Network permission; if that browser cannot/does not allow HTTPS → HTTP LAN access, use an HTTPS model endpoint or a compatible local LabFlow origin.
+
 ## Local provider works but model name shows a path
 
 Current LabFlow should display only the basename in user-visible model/log surfaces while retaining the exact full ID internally. A full visible path is a regression.

@@ -50,7 +50,7 @@
   function providerFeedback(kind,title,message,details){
     const host=field('providerFeedback');
     if(!host)return;
-    host.className='settings-provider-feedback notice '+(kind||'info')+' compact-notice';
+    host.className='settings-provider-feedback '+(kind||'info');
     host.replaceChildren();
     const strong=document.createElement('strong');strong.textContent=title||'Provider status';host.appendChild(strong);
     if(message){const span=document.createElement('span');span.textContent=' '+String(message).replace(/^#+\s*/,'');host.appendChild(span);}
@@ -65,63 +65,40 @@
   function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
 
-  /**
-   * Add runtime-specific connectivity guidance after the Settings view is rendered.
-   * DOM APIs keep endpoint diagnostics escaped without growing the HTML template.
-   */
+  /** Keep the provider page compact while exposing the browser/network facts that matter. */
   function decorate() {
-    const providerSelect = field('aiProvider');
-    if (!providerSelect || !LF.AIDiagnostics) return;
-    const body = providerSelect.closest('.panel-body');
-    const form = providerSelect.closest('.form-grid');
-    if (!body || !form) return;
-
-    const saved = LF.Storage.getAiSettings();
-    const providerId = providerSelect.value || saved.provider;
-    const provider = LF.AIProviders[providerId] || LF.AIProviders.custom;
-    const endpointField = field('aiEndpoint');
-    const endpoint = endpointField ? endpointField.value.trim() : saved.endpoint;
-    let note = body.querySelector('[data-ai-connectivity-note]');
-    if (!note) {
-      note = document.createElement('div');
-      note.dataset.aiConnectivityNote = 'true';
-      form.parentElement.insertBefore(note, form);
+    const providerSelect=field('aiProvider');
+    if(!providerSelect)return;
+    const saved=LF.Storage.getAiSettings(),providerId=providerSelect.value||saved.provider,provider=LF.AIProviders[providerId]||LF.AIProviders.custom,endpointField=field('aiEndpoint'),endpoint=endpointField?endpointField.value.trim():saved.endpoint;
+    let parsed=null;try{parsed=new URL(endpoint);}catch(_){}
+    const space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(endpoint):'',host=parsed?parsed.hostname:'',securePage=typeof location!=='undefined'&&location.protocol==='https:',httpTarget=parsed&&parsed.protocol==='http:',supportsLna=LF.AI&&LF.AI.supportsLocalNetworkAccess?LF.AI.supportsLocalNetworkAccess():false;
+    const summary=field('aiConnectivityText'),badge=field('aiConnectivityBadge'),details=field('aiConnectivityDetails'),resolved=field('aiResolvedUrl'),endpointHint=field('aiEndpointHint');
+    if(resolved)resolved.textContent='Request URL: '+((LF.AI&&LF.AI.resolveChatUrl&&LF.AI.resolveChatUrl(endpoint))||'—');
+    if(provider.local===true){
+      if(space==='loopback'){
+        if(summary)summary.textContent='This-device endpoint. On a phone, this points to the phone itself.';
+        if(badge){badge.className='badge warning';badge.textContent='LOOPBACK';}
+        if(details)details.textContent='To use a model server on another computer, replace 127.0.0.1/localhost with a LAN-reachable hostname such as fedora, fedora.local, or a private IP. The model server must listen on a LAN interface and allow this page origin.';
+      }else if(space==='local'){
+        if(summary)summary.textContent='LAN endpoint · browser connects directly to '+(host||'the configured host')+'.';
+        if(badge){badge.className='badge success';badge.textContent='LAN';}
+        if(details)details.textContent=(securePage&&httpTarget?'This HTTPS page will request browser Local Network access where supported. Allow that permission when prompted. ':'')+'The model server must be reachable from this device, bound beyond loopback, and configured for CORS. '+(supportsLna?'This browser exposes the Local Network Access request API.':'This browser does not expose the Local Network Access request API; if HTTP is blocked from this HTTPS page, use an HTTPS endpoint or serve LabFlow from a compatible local origin.');
+      }else{
+        if(summary)summary.textContent='Custom endpoint · verify that this device can resolve and reach '+(host||'the host')+'.';
+        if(badge){badge.className='badge info';badge.textContent='CUSTOM';}
+        if(details)details.textContent='LabFlow sends the request directly from this browser. The endpoint must accept the current page origin and be reachable from the device running LabFlow.';
+      }
+      if(endpointHint)endpointHint.innerHTML='Same device: <span class="mono">127.0.0.1</span>. Another device: <span class="mono">fedora</span>, <span class="mono">fedora.local</span>, or a private IP.';
+    }else{
+      if(summary)summary.textContent='Direct browser API · '+(host||provider.name||providerId)+'.';
+      if(badge){badge.className='badge info';badge.textContent='REMOTE';}
+      if(details)details.textContent=provider.note||'LabFlow sends requests directly from the browser to the configured API endpoint.';
     }
-    note.className = 'notice ' + ((location.protocol === 'file:' || (provider && /^https?:\/\/(?:127\.|localhost|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/i.test(endpoint))) ? 'warning' : 'info');
-    note.replaceChildren();
-
-    const title = document.createElement('strong');
-    title.textContent = 'Direct browser connection. ';
-    note.appendChild(title);
-    note.appendChild(document.createTextNode(LF.AIDiagnostics.contextNote(providerId)));
-
-    const url = document.createElement('div');
-    url.className = 'mono meta mt-1';
-    url.textContent = 'Request URL: ' + (LF.AI.resolveChatUrl(endpoint) || '—');
-    note.appendChild(url);
-
-    if (provider && provider.note) {
-      const detail = document.createElement('div');
-      detail.className = 'meta mt-1';
-      detail.textContent = provider.note;
-      note.appendChild(detail);
-    }
-    const keyField=field('aiKey');
-    const providerUsesKey=!!(provider&&(provider.keyRequired||provider.optionalKey));
+    const keyField=field('aiKey'),keyWrap=document.querySelector('[data-ai-key-field]'),keyHint=field('aiKeyHint'),providerUsesKey=!!(provider&&(provider.keyRequired||provider.optionalKey));
     if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored separately for this provider…':'Not used by this provider';if(!providerUsesKey)keyField.value='';}
-    if (providerId === 'lmstudio' || providerId === 'ollama' || providerId === 'llamacpp') {
-      const local = document.createElement('div');
-      local.className = 'meta mt-1';
-      local.textContent = providerId === 'lmstudio'
-        ? 'LM Studio · OpenAI-compatible base http://127.0.0.1:1234/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Its local API must be running and accept the current browser origin.'
-        : providerId === 'llamacpp'
-          ? 'llama.cpp · llama-server OpenAI-compatible base http://127.0.0.1:8080/v1 · LabFlow sends POST /v1/chat/completions and reads /v1/models. Start llama-server with a browser-reachable host/CORS configuration.'
-          : 'Ollama · OpenAI-compatible base http://127.0.0.1:11434/v1 · LabFlow sends POST /v1/chat/completions with a messages array. Its local API must be running and accept the current browser origin.';
-      note.appendChild(local);
-    }
-
-    const testButton = field('testAiConnection');
-    if (testButton) testButton.textContent = 'Save & test connection';
+    if(keyWrap)keyWrap.classList.toggle('settings-key-unused',!providerUsesKey);
+    if(keyHint)keyHint.textContent=provider.keyRequired?'Required by this provider.':provider.optionalKey?'Optional; only needed if this endpoint requires authentication.':'This provider does not use an API key.';
+    const testButton=field('testAiConnection');if(testButton)testButton.textContent='Save & test';
     syncModelControls(null,{preserveHint:true});
   }
 
@@ -143,7 +120,7 @@
     };
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom;
     if(!settings.endpoint)invalidField('aiEndpoint','Enter the provider endpoint.');
-    try{new URL(settings.endpoint);}catch(_){invalidField('aiEndpoint','Enter a complete http(s) endpoint URL.');}
+    let endpointUrl;try{endpointUrl=new URL(settings.endpoint);}catch(_){invalidField('aiEndpoint','Enter a complete http(s) endpoint URL.');}if(endpointUrl&&!['http:','https:'].includes(endpointUrl.protocol))invalidField('aiEndpoint','Use an http:// or https:// endpoint.');
     if(!settings.model)invalidField(provider.modelSelect?'aiModelSelect':'aiModel','Choose or enter an exact model ID.');
     if(provider.keyRequired&&!String(field('aiKey')&&field('aiKey').value||'').trim())invalidField('aiKey','Enter the '+(provider.name||settings.provider)+' API key.');
     LF.Storage.saveAiSettings(settings);
@@ -211,7 +188,7 @@
         listError=error;
         Log.warn('models.list-failed',{provider:providerId,error:error});
         if(provider.modelSelect)syncModelControls(null,{manualFallback:true,preserveHint:true});
-        const localHint=provider.local===true?' Local server not reachable or CORS blocked. Ensure '+provider.name+' is running and allows the browser origin.':'';
+        const localHint=provider.local===true?' Endpoint not reachable from this browser. Check the LAN bind, hostname/IP, Local Network permission and CORS.':'';
         activity.activityUpdate({stepId:'models',stepStatus:'done',stepNote:'list unavailable',stage:'Model list unavailable',progress:.34,message:'The provider did not expose a usable model list.'+localHint+' LabFlow is still checking the configured model capability.'});
       }
       activity.activityUpdate({stepId:'capability',stepStatus:'active',stage:'Resolving model capability',progress:.52,message:'Reading output/context limits for the configured model.'});

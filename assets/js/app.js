@@ -452,6 +452,7 @@
 
     document.addEventListener('input',function(e){
       try {
+        if(e.target.id==='aiEndpoint'){if(LF.AISettings&&LF.AISettings.decorate)LF.AISettings.decorate();return;}
         if(e.target.id==='aiKey'){if(LF.AISettings&&LF.AISettings.syncModelControls)LF.AISettings.syncModelControls();return;}
         if(e.target.id==='kbSettingsSearch'){S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeQuery=e.target.value;clearTimeout(kbSettingsSearchTimer);kbSettingsSearchTimer=setTimeout(function(){render();const input=document.getElementById('kbSettingsSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},150);return;}
         if(e.target.id==='uiKitGlobalSearch'){S.state.ui.uiKitQuery=e.target.value;applyUiKitFilter();return;}

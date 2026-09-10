@@ -1,14 +1,18 @@
 (function () {
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
+  function localProvider(providerId){const provider=LF.AIProviders&&LF.AIProviders[providerId];return provider?provider.local===true:['ollama','lmstudio','llamacpp'].includes(String(providerId||''));}
 
-  function networkMessage(label,providerId){
+  function networkMessage(label,providerId,endpoint){
     const provider=(LF.AIProviders&&LF.AIProviders[providerId])||null;
     const name=provider&&provider.name?provider.name:'AI provider';
-    const local=providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp';
+    const local=localProvider(providerId);
     if(local){
-      const providerHint=providerId==='lmstudio'?' Check that LM Studio has its local API enabled and accepts this browser origin.':providerId==='llamacpp'?' Check that llama-server is running at the configured endpoint and accepts this browser origin.':' Check that Ollama is running and accepts this browser origin.';
-      return label+' ended before LabFlow could read an HTTP response from '+name+'. This may be connectivity or browser-origin policy; it is not evidence of a malformed messages payload.'+providerHint;
+      const target=String(endpoint||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().endpoint:'')||''),space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(target):'',securePage=typeof location!=='undefined'&&location.protocol==='https:';
+      const providerHint=providerId==='lmstudio'?' Enable Serve on Local Network and CORS when LabFlow runs on another device.':providerId==='llamacpp'?' Start llama-server on a LAN interface (for example --host 0.0.0.0) and allow the LabFlow origin with CORS.':' Expose Ollama on the LAN with OLLAMA_HOST and allow the LabFlow origin with OLLAMA_ORIGINS.';
+      const browserHint=securePage&&space==='local'?' If the browser asks for Local Network access, allow it; browsers without that capability require an HTTPS endpoint or LabFlow served from a compatible local origin.':'';
+      const loopbackHint=space==='loopback'?' A loopback endpoint points to the device running this browser, not to another computer on the Wi-Fi/LAN.':'';
+      return label+' ended before LabFlow could read an HTTP response from '+name+'. Check network reachability, bind address and browser-origin policy.'+loopbackHint+providerHint+browserHint;
     }
     if(providerId==='zai')return label+' did not expose an HTTP response from Z.AI to this browser. Check API connectivity and credentials; if curl succeeds while the browser fails, treat this as a browser CORS/origin restriction rather than an Action or JSON error.';
     return label+' could not reach '+name+'. Check that the service is running and that the configured endpoint is correct.';
@@ -34,13 +38,13 @@
     const e=error||{},status=Number(e.status||0),code=String(e.providerCode||e.code||'');
     let category='Provider error',next='Review the endpoint, model and provider status.';
     if(e.cancelled){category='Cancelled';next='Run the Action again when ready.';}
-    else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');category='Timeout';next=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Retry the request or increase the inactivity timeout if the local model is still loading.':'The provider did not expose a response before the connection-test deadline. Retry once; if a console/curl probe succeeds while the browser test does not, inspect browser network/CORS. LabFlow does not classify this as a slow local model.';}
+    else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:''),provider=LF.AIProviders&&LF.AIProviders[providerId];category='Timeout';next=provider&&provider.local===true?'Retry the request or increase the inactivity timeout if the model is still loading.':'The provider did not expose a response before the connection-test deadline. Retry once; if a console/curl probe succeeds while the browser test does not, inspect browser network/CORS.';}
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
-      category=(providerId==='lmstudio'||providerId==='ollama'||providerId==='llamacpp')?'Local endpoint unreachable':'Network';
-      if(providerId==='lmstudio')next='Confirm that the LM Studio Local Server is started and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check LM Studio CORS/browser-origin settings.';
-      else if(providerId==='ollama')next='Confirm that Ollama is running and listening at the configured host/port. If the endpoint answers outside LabFlow but the browser still fails, then check browser-origin settings.';
-      else if(providerId==='llamacpp')next='Confirm that llama-server is running and listening at the configured host/port and serves /v1/chat/completions. If the endpoint answers outside LabFlow but the browser still fails, then check CORS/browser-origin settings.';
+      const provider=LF.AIProviders&&LF.AIProviders[providerId];category=localProvider(providerId)?'Local endpoint unreachable':'Network';
+      if(providerId==='lmstudio')next='Confirm that LM Studio Serve on Local Network and CORS are enabled and use the LAN host/IP in the endpoint when LabFlow runs on another device.';
+      else if(providerId==='ollama')next='Confirm that Ollama is exposed on the LAN with OLLAMA_HOST and that OLLAMA_ORIGINS allows the LabFlow page origin.';
+      else if(providerId==='llamacpp')next='Confirm that llama-server is listening on a LAN-reachable address (for example --host 0.0.0.0), serves /v1/chat/completions, and allows the LabFlow page origin. From GitHub Pages or another HTTPS origin, allow the browser Local Network permission when prompted; otherwise use an HTTPS endpoint or a compatible local origin.';
       else if(providerId==='zai'){category='Browser / CORS';next='LabFlow called the official Z.AI endpoint directly but the browser exposed no HTTP response. Verify endpoint and API key; if the same request works in curl but fails here, the browser is blocking the cross-origin request and frontend JavaScript cannot bypass that policy.';}
       else next='Check that the provider process is running and the endpoint is reachable from this browser.';
     }

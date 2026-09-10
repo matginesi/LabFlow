@@ -23,8 +23,8 @@ module.exports=function(t,LF){
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio'};}};
     const out=LF.AIDiagnostics.errorSummary({isNetwork:true,providerId:'lmstudio',message:'Test connection could not read an HTTP response.'});
     assert(out.category,'Local endpoint unreachable','category');
-    assert(/Local Server is started/.test(out.next),true,'server start guidance');
-    assert(/If the endpoint answers outside LabFlow/.test(out.next),true,'CORS remains secondary guidance');
+    assert(/Serve on Local Network/.test(out.next),true,'server LAN guidance');
+    assert(/CORS/.test(out.next),true,'CORS guidance');
   };
   return t;
 };

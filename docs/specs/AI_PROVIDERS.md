@@ -22,7 +22,9 @@ The built-in adapters cover Z.AI, OpenAI Chat Completions, OpenRouter, NVIDIA NI
 - A bearer key is sent only for providers declaring `keyRequired` or `optionalKey`. Ollama, LM Studio and llama.cpp never inherit a key saved for a cloud provider.
 - Cloud API keys are stored separately by provider.
 - Provider-declared static headers are allowlisted in the registry. OpenRouter sends only the optional LabFlow application title and does not disclose the current experiment or page URL.
-- Browser-origin access remains a provider responsibility. Local servers such as LM Studio, Ollama and llama.cpp must accept the current page origin. Hosted endpoints such as Z.AI must permit browser CORS for direct use; when the browser exposes no HTTP response LabFlow reports a network/CORS diagnostic and does not attempt a hidden localhost proxy.
+- Browser-origin access remains a provider responsibility. Ollama, LM Studio and llama.cpp are displayed without a `(local)` suffix; locality is inferred from the configured endpoint. `127.0.0.1`/`localhost` always refers to the device running the browser. To use a model server from another phone/tablet/computer, configure a LAN-resolvable hostname such as `fedora` / `fedora.local` or a private IP, bind the model server beyond loopback, and allow the LabFlow page origin with CORS.
+- For LAN/loopback endpoints LabFlow marks Fetch requests with the appropriate browser target address space (`local` or `loopback`) when the browser supports Local Network Access. An HTTPS-hosted LabFlow page may still require an explicit Local Network permission. Browser security cannot be bypassed: when a browser does not support/allow that path, use an HTTPS model endpoint or serve LabFlow from a compatible local origin.
+- Hosted endpoints such as Z.AI must permit browser CORS for direct use; when the browser exposes no HTTP response LabFlow reports a network/CORS diagnostic and does not attempt a hidden localhost proxy.
 
 ## Model discovery and capability detection
 
@@ -47,7 +49,7 @@ A tiny **Test connection** probe is a transport test, not an Action-quality test
 
 The recommended LabFlow launcher does **not** globally disable reasoning. Reasoning is controlled per Action: checkpoints declared `thinking: off` receive llama.cpp's explicit off mapping, while reasoning-capable checkpoints may use the model/server default. This keeps one single-slot 65K server useful for both deterministic-style structured Actions and the few Actions that intentionally request reasoning. Structured Actions may use JSON mode when declared, but LabFlow's own parser/schema validator remains authoritative; provider-side structure enforcement is never trusted as the only validation layer.
 
-Recommended llama.cpp core flags for LabFlow are `--ctx-size 65536 --parallel 1 --alias local-model --host 127.0.0.1 --port 8080 --jinja`. Additional GPU/KV-cache flags remain machine-specific and are intentionally outside the provider contract.
+Recommended llama.cpp core flags for same-device use are `--ctx-size 65536 --parallel 1 --alias local-model --host 127.0.0.1 --port 8080 --jinja`. For LAN use, bind with `--host 0.0.0.0` (or the intended LAN interface) and configure `--cors-origins` for the LabFlow page origin; do not expose the server beyond the trusted network without appropriate authentication/network controls. Additional GPU/KV-cache flags remain machine-specific and are intentionally outside the provider contract.
 
 ## Thinking and non-thinking models
 

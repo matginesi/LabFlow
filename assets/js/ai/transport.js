@@ -59,21 +59,31 @@
     if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')throw new Error('AI endpoint must use http:// or https://.');
     return parsed.toString();
   }
-  function isLocalAddress(url){
+  function targetAddressSpace(url){
     let host='';
-    try{host=new URL(String(url||'')).hostname.toLowerCase();}catch(_){return false;}
-    if(host==='localhost'||host==='127.0.0.1'||host==='::1'||host==='[::1]'||host.endsWith('.local'))return true;
+    try{host=new URL(String(url||'')).hostname.toLowerCase().replace(/^\[|\]$/g,'');}catch(_){return '';}
+    if(host==='localhost'||host==='127.0.0.1'||host==='::1')return 'loopback';
+    if(host.endsWith('.local')||(!host.includes('.')&&!host.includes(':')))return 'local';
     const parts=host.split('.').map(Number);
     if(parts.length===4&&parts.every(Number.isFinite)){
-      if(parts[0]===10||parts[0]===127)return true;
-      if(parts[0]===192&&parts[1]===168)return true;
-      if(parts[0]===172&&parts[1]>=16&&parts[1]<=31)return true;
-      if(parts[0]===169&&parts[1]===254)return true;
+      if(parts[0]===127)return 'loopback';
+      if(parts[0]===10||(parts[0]===192&&parts[1]===168)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||(parts[0]===169&&parts[1]===254))return 'local';
     }
-    return false;
+    if(/^f[cd][0-9a-f]{2}:/i.test(host)||/^fe[89ab][0-9a-f]:/i.test(host))return 'local';
+    return '';
+  }
+  function isLocalAddress(url){return !!targetAddressSpace(url);}
+  function supportsLocalNetworkAccess(){
+    try{return typeof Request!=='undefined'&&Request.prototype&&('targetAddressSpace' in Request.prototype);}
+    catch(_){return false;}
+  }
+  function networkFetchOptions(url,base){
+    const options=Object.assign({},base||{}),space=targetAddressSpace(url);
+    if(space){options.mode='cors';options.targetAddressSpace=space;}
+    return options;
   }
   function fetchOptions(url,headers,requestBody,controller){
-    return {method:'POST',headers:headers,body:requestBody,signal:controller.signal,cache:'no-store',credentials:'omit'};
+    return networkFetchOptions(url,{method:'POST',headers:headers,body:requestBody,signal:controller.signal,cache:'no-store',credentials:'omit'});
   }
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
   function estimatePromptTokens(value){
@@ -181,7 +191,7 @@
     const url=reasoningControlUrl(chatUrl),body={id:String(requestId||''),action:'reasoning_end'};if(model)body.model=model;
     if(!body.id)return{ok:false,status:0,message:'request id unavailable'};
     try{
-      const response=await fetch(url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},headers||{}),body:JSON.stringify(body),signal:signal,cache:'no-store',credentials:'omit'}),text=await response.text();
+      const response=await fetch(url,networkFetchOptions(url,{method:'POST',headers:Object.assign({'Content-Type':'application/json'},headers||{}),body:JSON.stringify(body),signal:signal,cache:'no-store',credentials:'omit'})),text=await response.text();
       let parsed={};try{parsed=text?JSON.parse(text):{};}catch(_){}
       const ok=!!(response.ok&&parsed.success!==false);
       Log[ok?'info':'warn']('thinking.control',{requestId:body.id,model:model||'',action:'reasoning_end',status:response.status,ok:ok,message:String(parsed.message||'')});
@@ -251,7 +261,7 @@
     const requestBody=JSON.stringify(body);
     let responseMeta=null;
     const msgChars=(body.messages||[]).reduce(function(n,m){return n+String(m&&m.content||'').length;},0),maxTokens=body.max_completion_tokens||body.max_tokens||body.max_output_tokens||null;
-    Log.info('request.start',{requestLogId:requestLogId,label:label,endpoint:url,model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,bodyChars:requestBody.length,maxTokens:maxTokens,thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,localTarget:isLocalAddress(url)});
+    Log.info('request.start',{requestLogId:requestLogId,label:label,endpoint:url,model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,bodyChars:requestBody.length,maxTokens:maxTokens,thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,localTarget:isLocalAddress(url),targetAddressSpace:targetAddressSpace(url)||'public',localNetworkAccessApi:supportsLocalNetworkAccess()});
     Log.debug('request.semantic',{requestLogId:requestLogId,messages:diagnosticSemanticMessages(body)});
     Log.debug('request.transport',{requestLogId:requestLogId,headers:diagnosticHeaders(headers),body:diagnosticTransportBody(body)});
     try{
@@ -286,7 +296,7 @@
         failure.isNetwork=!wasCancelled;failure.cancelled=wasCancelled;failure.timedOut=!wasCancelled&&requestState.timedOut;failure.timeoutReason=requestState.timeoutReason;failure.timeoutMs=requestState.timeoutReason==='deadline'?hardLimit:limit;failure.elapsedMs=elapsed;failure.cause=err;
       }else if(!(err&&err.status)&&!(err&&err.code)&&!(err&&err.isProvider)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
         const providerId=(LF.Storage.getAiSettings()||{}).provider||'';
-        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId):(providerId==='zai'?label+' could not reach Z.AI from the browser. Check the API key and endpoint; if the same request works outside the browser, inspect CORS/origin policy.':label+' could not reach the AI service. Check the endpoint and provider status.');
+        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId,url):(providerId==='zai'?label+' could not reach Z.AI from the browser. Check the API key and endpoint; if the same request works outside the browser, inspect CORS/origin policy.':label+' could not reach the AI service. Check the endpoint and provider status.');
         failure=new Error(message);failure.isNetwork=true;failure.providerId=providerId;failure.elapsedMs=elapsed;failure.cause=err;
       }
       const responseDetail=responseMeta||{received:false,body:null,bodyChars:0,note:failure.timedOut?'No provider bytes before the inactivity timeout.':failure.cancelled?'Request cancelled before an HTTP response.':'No HTTP response received.'};
@@ -470,7 +480,7 @@
   /** Metadata probes must never prevent the real connection request from starting. */
   async function metadataFetch(url,options){
     const controller=new AbortController(),timer=setTimeout(function(){controller.abort();},METADATA_TIMEOUT_MS);
-    try{return await fetch(url,Object.assign({cache:'no-store',credentials:'omit'},options||{},{signal:controller.signal}));}
+    try{return await fetch(url,networkFetchOptions(url,Object.assign({cache:'no-store',credentials:'omit'},options||{},{signal:controller.signal})));}
     catch(error){if(controller.signal.aborted){const timeout=new Error('Provider metadata request timed out after '+METADATA_TIMEOUT_MS+' ms.');timeout.timedOut=true;timeout.metadataOnly=true;timeout.cause=error;throw timeout;}throw error;}
     finally{clearTimeout(timer);}
   }
@@ -756,6 +766,9 @@
     estimateTokens:estimateTokens,
     estimatePromptTokens:estimatePromptTokens,
     isLocalAddress:isLocalAddress,
+    targetAddressSpace:targetAddressSpace,
+    supportsLocalNetworkAccess:supportsLocalNetworkAccess,
+    networkFetchOptions:networkFetchOptions,
     mergeStreamContent:mergeStreamContent,
     normalizeAssistantEnvelope:normalizeAssistantEnvelope,
     diagnosticHeaders:diagnosticHeaders,

@@ -73,14 +73,14 @@ module.exports=function(t){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
     assert(settings.includes('await detectModel({silent:true})'),false,'connection test must not trigger model detection');
-    assert(settingsPage.includes('Press Detect to read model capabilities and the catalogue when the provider exposes one.'),true,'shared Detect policy is visible');
+    assert(settingsPage.includes('Detect reads model identity and capability when the provider exposes them.'),true,'shared Detect policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
   };
 
   t['Provider settings expose portable thinking policy and rich connection diagnostics']=function(){
     assert(settingsPage.includes('id="aiThinkingMode"'),true,'thinking policy selector');
-    assert(settingsPage.includes('Follow each Action (recommended)'),true,'Action-owned default');
+    assert(settingsPage.includes('Follow each Action'),true,'Action-owned default');
     assert(settings.includes('## Connection diagnostics'),true,'rich connection diagnostics');
     assert(settings.includes('Successful provider round trip'),true,'round-trip metric');
     assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');

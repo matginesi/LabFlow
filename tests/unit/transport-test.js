@@ -69,6 +69,11 @@ module.exports = function (t, LF) {
     assert(AI.isLocalAddress('http://127.0.0.1:1234/v1/chat/completions'), true, 'loopback');
     assert(AI.isLocalAddress('http://localhost:1234/v1/chat/completions'), true, 'localhost');
     assert(AI.isLocalAddress('http://192.168.1.20:1234/v1/chat/completions'), true, 'lan');
+    assert(AI.isLocalAddress('http://fedora:8080/v1/chat/completions'), true, 'single-label LAN hostname');
+    assert(AI.isLocalAddress('http://fedora.local:8080/v1/chat/completions'), true, 'mDNS LAN hostname');
+    assert(AI.targetAddressSpace('http://127.0.0.1:1234/v1/chat/completions'), 'loopback', 'loopback address space');
+    assert(AI.targetAddressSpace('http://fedora:8080/v1/chat/completions'), 'local', 'single-label LAN address space');
+    assert(AI.targetAddressSpace('http://fedora.local:8080/v1/chat/completions'), 'local', 'mDNS LAN address space');
     assert(AI.isLocalAddress('https://api.example.com/v1/chat/completions'), false, 'public');
   };
 
@@ -292,8 +297,17 @@ module.exports = function (t, LF) {
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
     LF.Storage={getAiSettings:function(){return{provider:'lmstudio',endpoint:'http://127.0.0.1:1234/v1',model:'local-model',maxTokens:4096,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'';}};
     LF.AIProviders={lmstudio:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,connectionTestTimeoutMs:60000,thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false}}}}};
-    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(result.httpRequests,1,'one HTTP request');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(Object.prototype.hasOwnProperty.call(seen.opts,'mode'),false,'no explicit fetch mode');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(sent.messages[0].content,'Reply OK','connection test content');assert(sent.max_tokens,16,'tiny probe budget');assert(sent.reasoning_effort,'none','connection probe disables reasoning');assert(sent.chat_template_kwargs.enable_thinking,false,'connection probe disables template thinking');}
+    try{const result=await AI.testConnection();assert(result.ok,true,'connection result');assert(result.provider,'lmstudio','provider diagnostic');assert(result.finishReason,'stop','finish reason diagnostic');assert(Number.isFinite(result.requestElapsedMs),true,'successful request timing');assert(result.responseBytes>0,true,'response size diagnostic');assert(result.usage.estimated,true,'estimated usage marked');assert(result.httpRequests,1,'one HTTP request');assert(seen.url,'http://127.0.0.1:1234/v1/chat/completions','loopback URL');assert(seen.opts.mode,'cors','local request uses CORS mode');assert(seen.opts.targetAddressSpace,'loopback','loopback request declares target address space');const sent=JSON.parse(seen.opts.body);assert(Array.isArray(sent.messages),true,'messages array sent');assert(sent.messages[0].role,'user','connection test role');assert(sent.messages[0].content,'Reply OK','connection test content');assert(sent.max_tokens,16,'tiny probe budget');assert(sent.reasoning_effort,'none','connection probe disables reasoning');assert(sent.chat_template_kwargs.enable_thinking,false,'connection probe disables template thinking');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['LAN fetch options declare local address space for hostnames'] = function () {
+    const opts=AI.networkFetchOptions('http://fedora:8080/v1/chat/completions',{method:'POST'});
+    assert(opts.method,'POST','preserves base options');
+    assert(opts.mode,'cors','LAN request uses CORS');
+    assert(opts.targetAddressSpace,'local','LAN hostname declares local address space');
+    const remote=AI.networkFetchOptions('https://api.example.com/v1/chat/completions',{method:'POST'});
+    assert(Object.prototype.hasOwnProperty.call(remote,'targetAddressSpace'),false,'public request has no local address-space hint');
   };
 
   t['LM Studio model discovery prefers native metadata and exposes loaded LLMs'] = async function () {
