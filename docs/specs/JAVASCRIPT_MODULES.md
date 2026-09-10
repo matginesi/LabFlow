@@ -44,7 +44,7 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 - `ai/action-ui.js` — Action UI orchestration; Design **Complete all missing with AI** sequences the same `design.infer` Action across multiple incomplete experiments.
 - `ai/context.js` — bounded Context profile registry/builders.
 - `ai/structured.js` — structured parse/schema normalization/validation.
-- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, configured-endpoint browser transport and settings; local/LAN providers connect directly, while explicit browser-relay presets still use the exact endpoint shown in Settings.
+- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, direct configured-endpoint browser transport and settings. The endpoint shown in Settings is the endpoint actually called.
 - `ai/assistant.js` — read-only Assistant turns plus presentation of the global Action catalog; it does not own Action availability rules.
 - `tools/registry.js` — typed deterministic/internal tools.
 

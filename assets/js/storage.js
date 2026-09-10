@@ -58,7 +58,7 @@
   function getAiSettings() {
     const defaults = {
       provider: 'zai',
-      endpoint: 'http://127.0.0.1:8099/zai/v1',
+      endpoint: 'https://api.z.ai/api/paas/v4/chat/completions',
       model: 'glm-4.7-flash',
       temperature: 0.7,
       thinkingMode: 'auto',

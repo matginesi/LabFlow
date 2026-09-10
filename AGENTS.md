@@ -28,7 +28,6 @@ Read before structural changes:
 - Required runtime dependencies fail fast; do not hide missing modules behind fallback objects or conditional no-ops.
 - New scientific records are created through `DomainSchema`; Design writes go through `DesignModel`; dataset correction commits go through `DatasetCorrections`.
 - AI never calculates authoritative JV metrics or silently mutates source/LabFlow Data.
-- Browser transport always uses the endpoint visible in Settings. The built-in Z.AI/NVIDIA presets explicitly target `tools/provider_relay.py` because their hosted APIs are not readable from the deployed browser origin; do not add hidden fallback routing or broaden the relay allowlist without a concrete provider requirement.
 
 ## Researcher-first workflow
 

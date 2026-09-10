@@ -23,7 +23,7 @@ Request diagnostics may contain HTTP status, provider code/message, timing and `
 
 ## External AI requests
 
-`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted and local/LAN providers use the endpoint configured in Settings. The hosted Z.AI and NVIDIA presets explicitly use the bundled local provider relay; that helper stores no credential or scientific state and forwards only the current allowlisted provider request. There is no hidden/general relay fallback, so browser CORS/network failures remain explicit.
+`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted and local/LAN providers use the exact endpoint configured in Settings. There is no hidden proxy/relay fallback, so browser CORS/network failures remain explicit.
 
 Requests use:
 

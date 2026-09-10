@@ -82,8 +82,11 @@ def main():
         for mid,free,ctx in entries[:max(1,args.max_models)]: print(f'{"FREE " if free else "     "}{mid}{(" · ctx "+str(ctx)) if ctx else ""}')
         return 0
     model=args.model or cfg['model']; url=args.endpoint or cfg['chat']
-    payload={'model':model,'messages':[{'role':'user','content':'Reply with exactly: OK'}],'max_tokens':32,'stream':False}
+    payload={'model':model,'messages':[{'role':'user','content':'Reply with exactly: OK'}],'max_tokens':128,'stream':False}
     if args.provider=='zai': payload['thinking']={'type':'disabled'}
+    if args.provider=='nvidia':
+        payload['chat_template_kwargs']={'enable_thinking':False}
+        payload['temperature']=0
     status,ms,obj,raw=request(url,key,'POST',payload,args.timeout)
     print(f'{args.provider} · {model} · HTTP {status} · {ms} ms')
     if status>=400:

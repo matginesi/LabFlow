@@ -253,7 +253,8 @@ module.exports = function (t, LF) {
   };
 
   t['model catalogue URL is always derived from the exact configured endpoint']=function(){
-    assert(AI.resolveModelsUrl('https://integrate.api.nvidia.com/v1/chat/completions'),'https://integrate.api.nvidia.com/v1/models','NVIDIA hosted models');
+    assert(AI.resolveModelsUrl('https://integrate.api.nvidia.com/v1'),'https://integrate.api.nvidia.com/v1/models','NVIDIA hosted models from base URL');
+    assert(AI.resolveChatUrl('https://integrate.api.nvidia.com/v1'),'https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA hosted chat from base URL');
     assert(AI.resolveModelsUrl('https://api.openai.com/v1/chat/completions'),'https://api.openai.com/v1/models','OpenAI models');
     assert(AI.resolveModelsUrl('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'),'https://generativelanguage.googleapis.com/v1beta/openai/models','Gemini OpenAI-compatible models');
     assert(AI.resolveModelsUrl('https://openrouter.ai/api/v1/chat/completions'),'https://openrouter.ai/api/v1/models','OpenRouter models');
@@ -282,6 +283,8 @@ module.exports = function (t, LF) {
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
     assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
     assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'GLM-4.7-Flash documented maximum output');
+    assert(AI.knownCapability('nvidia','nvidia/nemotron-3.5-lightning-30b-a3b').maxOutputTokens,32768,'Nemotron 3.5 Lightning documented maximum output');
+    assert(AI.knownCapability('nvidia','nvidia/nemotron-3.5-lightning-30b-a3b').contextWindow,1000000,'Nemotron 3.5 Lightning documented context window');
     assert(AI.knownCapability('zai','glm-5.3').contextWindow,1000000,'GLM-5.3 documented context window');
     assert(AI.knownCapability('zai','glm-5.3').reasoningStatus,'required','GLM-5.3 reasoning cannot be disabled');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');

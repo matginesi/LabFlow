@@ -14,7 +14,6 @@
   function activeModelField(providerId){const provider=LF.AIProviders[providerId||providerIdFromForm()]||LF.AIProviders.custom;return provider.modelSelect&&field('aiModelSelect')&&!field('aiModelSelect').hidden?field('aiModelSelect'):field('aiModel');}
   function modelLabel(providerId,value){const raw=String(value==null?'':value),meta=modelCatalogueMeta[providerId]&&modelCatalogueMeta[providerId][raw],base=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(providerId,raw):raw;return meta&&meta.free?base+' · Free':base;}
   function localProvider(providerId){const provider=LF.AIProviders[providerId||providerIdFromForm()]||LF.AIProviders.custom;return provider.local===true;}
-  function relayEndpoint(endpoint){try{const url=new URL(String(endpoint||''));return ['127.0.0.1','localhost','::1'].includes(url.hostname)&&url.port==='8099'&&/^\/(?:zai|nvidia)\/v1(?:\/|$)/.test(url.pathname);}catch(_){return false;}}
   function setInputModel(input,providerId,value){if(!input)return;const raw=String(value||'');if(localProvider(providerId)&&raw){input.dataset.rawModel=raw;input.value=modelLabel(providerId,raw);}else{delete input.dataset.rawModel;input.value=raw;}}
   function modelValue(providerId){const model=activeModelField(providerId);if(!model)return'';const shown=String(model.value||'').trim(),raw=String(model.dataset&&model.dataset.rawModel||'').trim();if(raw&&shown===modelLabel(providerId,raw))return raw;return shown;}
   function setModelValue(value){value=String(value||'');const input=field('aiModel'),select=field('aiModelSelect'),providerId=providerIdFromForm();setInputModel(input,providerId,value);if(select){if(value&&!Array.from(select.options).some(function(option){return option.value===value;})){const option=document.createElement('option');option.value=value;option.textContent=modelLabel(providerId,value);select.appendChild(option);}select.value=value;}}
@@ -58,11 +57,7 @@
     let parsed=null;try{parsed=new URL(endpoint);}catch(_){}
     const space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(endpoint):'',host=parsed?parsed.hostname:'';
     const summary=field('aiConnectivityText'),badge=field('aiConnectivityBadge'),endpointHint=field('aiEndpointHint');
-    if(provider.browserRelay===true&&relayEndpoint(endpoint)){
-      if(summary)summary.textContent='Remote API via local relay · '+(parsed?parsed.host:'127.0.0.1:8099');
-      if(badge){badge.className='badge info';badge.textContent='RELAY';}
-      if(endpointHint)endpointHint.innerHTML='Browser relay: <span class="mono">python3 tools/provider_relay.py</span>. It forwards only the allowlisted provider API routes and stores no credentials or LabFlow state.';
-    }else if(provider.local===true){
+    if(provider.local===true){
       if(space==='loopback'){if(summary)summary.textContent='Same device only · '+(host||'loopback');if(badge){badge.className='badge warning';badge.textContent='LOOPBACK';}}
       else if(space==='local'){if(summary)summary.textContent='Local network · '+(host||'configured host');if(badge){badge.className='badge info';badge.textContent='LAN';}}
       else{if(summary)summary.textContent='Custom network target · '+(host||'unresolved');if(badge){badge.className='badge info';badge.textContent='CUSTOM';}}
@@ -70,7 +65,6 @@
     }else{
       if(summary)summary.textContent='Remote API · '+(host||provider.name||providerId);
       if(badge){badge.className='badge info';badge.textContent='REMOTE';}
-      if(endpointHint)endpointHint.textContent='';
     }
     const keyField=field('aiKey'),keyWrap=document.querySelector('[data-ai-key-field]'),keyHint=field('aiKeyHint'),providerUsesKey=!!(provider&&(provider.keyRequired||provider.optionalKey));
     if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored separately for this provider…':'Not used by this provider';if(!providerUsesKey)keyField.value='';}

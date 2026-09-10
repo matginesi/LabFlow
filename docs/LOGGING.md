@@ -106,7 +106,7 @@ It does **not** intentionally dump API keys. Common secret fields are redacted b
 
 **Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. The Logs page intentionally has one diagnostic surface: provider catalogue requests, chat requests, failures and the rest of LabFlow events all appear in the unified **Event stream**, with **Recent errors** kept above it for quick triage. A successful provider result still requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
 
-Network routing is explicit in both console and Logs. `network.route` identifies the browser request to the endpoint configured in Settings and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. For the built-in Z.AI and NVIDIA hosted presets that endpoint is the local provider relay; upstream HTTP errors still pass through unchanged. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
+Network routing is explicit in both console and Logs. `network.route` identifies the browser request to the endpoint configured in Settings and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. Hosted and local providers use that configured endpoint directly. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
 
 The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The browser logger redacts credential-like keys and Bearer/query tokens before buffering or printing them.
 

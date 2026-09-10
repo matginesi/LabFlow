@@ -45,13 +45,7 @@ Serve locally with any ordinary static server, for example:
 python3 -m http.server 8000 --bind 0.0.0.0
 ```
 
-Live provider checks remain separate because they require user credentials, provider availability and browser/network permission. They call the endpoint visible in Settings; the bundled provider relay is a narrow CORS transport for hosted Z.AI/NVIDIA requests only and never participates in scientific validation.
-
-The relay boundary itself is provider-free and regression-tested locally:
-
-```bash
-python3 tests/regression/provider-relay-contract.py
-```
+Live provider checks remain separate because they require user credentials, provider availability and browser/network permission. They call the exact endpoint visible in Settings and never participate in scientific validation. Hosted providers that do not permit browser CORS cannot be made reachable by the static LabFlow frontend.
 
 Then run:
 

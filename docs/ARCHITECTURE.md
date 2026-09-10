@@ -7,7 +7,7 @@ order: 5
 
 # LabFlow architecture
 
-This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. LabFlow is a static browser application and no server owns scientific state. Provider calls are sent from the browser to the endpoint configured in Settings. The bundled provider relay is a narrow, stateless CORS transport for the hosted Z.AI and NVIDIA APIs; it is transport infrastructure, not an application backend, and it may not own LabFlow data or general provider routing.
+This document is the architectural source of truth for contributors. LabFlow is intentionally a small local-first browser application; extensibility comes from explicit contracts and registries, not from adding framework layers. LabFlow is a static browser application and no server owns scientific state. Provider calls are sent directly from the browser to the endpoint configured in Settings. LabFlow does not hide a provider proxy, relay or fallback transport.
 
 ## 1. Core rule
 
@@ -255,5 +255,10 @@ Do not add:
 
 ## Browser AI transport
 
-The browser remains the application runtime and initiates every AI request against the endpoint configured by the user. Local/LAN calls depend on bind address, reachability, Local Network Access policy and CORS; hosted calls normally depend on the provider exposing browser-compatible CORS. Z.AI and NVIDIA hosted NIM are the built-in CORS exceptions: their presets point to the bundled stateless local relay, which forwards only the explicitly allowlisted API routes LabFlow uses. HTTP provider errors pass through unchanged, while a browser-level CORS/network block is reported as such.
+The browser remains the application runtime and initiates every AI request against the endpoint configured by the user. Local/LAN calls depend on bind address, reachability, Local Network Access policy and CORS; hosted calls depend on the provider exposing browser-compatible CORS. LabFlow does not attempt to bypass browser security policy. HTTP provider errors pass through unchanged, while a browser-level CORS/network block is reported as such.
 
+
+
+## Static asset coherence
+
+`index.html` versions first-party CSS, icons and JavaScript with the current `LABFLOW_BUILD` query key. This prevents a deploy from mixing a new `app.js` with cached older kernel modules such as `data-model.js`. The build marker and asset query key must change together for every shipped web build.

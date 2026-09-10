@@ -78,7 +78,7 @@
   function consoleSummary(data) {
     if (data == null) return '';
     if (typeof data !== 'object') return consoleScalar(data);
-    const preferred = ['diagnosticId','action','provider','phase','transport','model','endpoint','url','status','providerCode','code','elapsedMs','durationMs','requestId','targetAddressSpace','relayAvailable','keyConfigured','step','route','experimentId','entries','policies','message'];
+    const preferred = ['diagnosticId','action','provider','phase','transport','model','endpoint','url','status','providerCode','code','elapsedMs','durationMs','requestId','targetAddressSpace','keyConfigured','step','route','experimentId','entries','policies','message'];
     const parts = [];
     const used = new Set();
     preferred.forEach(function (key) {
@@ -111,7 +111,7 @@
       name:value.name || 'Error', message:sanitizeString(value.message || String(value)),
       stack:sanitizeString(value.stack || '')
     };
-    ['status','statusText','code','providerCode','providerMessage','requestId','requestLogId','providerId','phase','url','transport','relayAvailable','directBrowser','isNetwork','isContract','cancelled','timedOut','truncated','finishReason','timeoutMs','elapsedMs','usage'].forEach(function (key) {
+    ['status','statusText','code','providerCode','providerMessage','requestId','requestLogId','providerId','phase','url','transport','directBrowser','isNetwork','isContract','cancelled','timedOut','truncated','finishReason','timeoutMs','elapsedMs','usage'].forEach(function (key) {
       if (value[key] != null && value[key] !== '') out[key] = sanitize(value[key], depth + 1, seen);
     });
     if (value.providerResponse) out.providerResponse = sanitizeString(value.providerResponse);
