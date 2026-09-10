@@ -21,7 +21,7 @@ module.exports=function(t,LF){
     ]};
     LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps=steps;
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
     return exp;
   }
@@ -47,7 +47,7 @@ module.exports=function(t,LF){
     let built=null;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'compact brief'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'done',finishReason:'stop'};}};
     const out=await LF.ActionRunner.run('test.budget');
     assert(out.status,'done','status');
@@ -61,7 +61,7 @@ module.exports=function(t,LF){
     let built=null;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'openai',model:'gpt-5.2',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'Write directly.'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 12;},resolveModelCapabilities:async function(){return{maxOutputTokens:4096,reasoningStatus:'optional'};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},resolveThinkingPolicy:function(cap,action,global){assert(action,'off','Action policy input');assert(global,'auto','global follows Action');return{requested:'off',transportMode:'off',capability:cap.reasoningStatus,effective:'off',reason:'Action policy'};},buildRequest:function(opts){built=opts;return Object.assign({body:{messages:opts.messages}},opts);},send:async function(spec){return{content:'done',finishReason:'stop',thinkingMode:spec.thinkingMode,thinkingPolicy:spec.thinkingPolicy};}};
     const out=await LF.ActionRunner.run('test.thinking');
     assert(out.status,'done','status');assert(built.thinkingMode,'off','transport mode');assert(built.thinkingPolicy.capability,'optional','capability retained');
@@ -75,7 +75,7 @@ module.exports=function(t,LF){
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:2048};}};
     LF.ActionContext={build:function(action,step,opts){contextWorkItem=opts.workItem;return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
     LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:4096};},resolveOutputBudget:function(cap,actionCap,globalCap){return Math.min(cap.maxOutputTokens,actionCap,globalCap||Infinity);},buildRequest:function(opts){built=opts;return opts;},send:async function(){return{content:'# Discussion\n\nCompleted within the available budget.',finishReason:'stop'};}};
     const out=await LF.ActionRunner.run('test.draft-budget',{params:{},selection:null});
     assert(out.status,'done','status');
@@ -92,7 +92,7 @@ module.exports=function(t,LF){
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){targets.push(opts.workItem.target_words);return{messageList:[{role:'user',content:JSON.stringify(opts.workItem)}]};}};
     LF.ActionSteps={'draft.collect':function(){return{blocks:[{id:'discussion',label:'Discussion',target_words:1800,min_words:1200,max_words:2300}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimateTokens:function(){return 50;},resolveModelCapabilities:async function(){return{maxOutputTokens:131072};},resolveOutputBudget:function(cap,actionCap){return Math.min(cap.maxOutputTokens,actionCap);},buildRequest:function(opts){return opts;},send:async function(){calls++;return calls===1?{content:Array(901).join('partial '),finishReason:'length'}:{content:'# Discussion\n\nComplete shorter rewrite.',finishReason:'stop'};}};
     const realSetTimeout=global.setTimeout;global.setTimeout=function(fn){return realSetTimeout(fn,0);};
     try{
@@ -113,7 +113,7 @@ module.exports=function(t,LF){
       const content='X'.repeat(Math.max(1200,Math.min(50000,limit)));
       return{context:{payload:content},messageList:[{role:'user',content:content}]};
     }};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return Math.ceil(String(messages[0].content||'').length/1.5);},resolveModelCapabilities:async function(){return{contextWindow:32768,maxOutputTokens:8192,source:'LM Studio loaded instance context'};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,Math.max(16,cap.contextWindow-inputTokens-512));},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'compact done',finishReason:'stop'};}};
     const out=await LF.ActionRunner.run('test.ai-budget');
     assert(out.status,'done','status');
@@ -126,7 +126,7 @@ module.exports=function(t,LF){
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'mid-context',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){const content='X'.repeat(4000);return{context:{payload:content},messageList:[{role:'user',content:content}]};}};
     LF.StructuredOutput={parse:function(){return{value:{},strategy:'JSON'};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return String(messages[0].content||'').length;},resolveModelCapabilities:async function(){return{contextWindow:8192,maxOutputTokens:6144};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,cap.contextWindow-inputTokens-512);},resolveThinkingPolicy:function(){return{transportMode:'auto'};},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'{}',finishReason:'stop'};}};
     try{const out=await LF.ActionRunner.run('design.infer');assert(out.status,'done','target-sized context fits');if(!sent||sent.maxTokens<2800)throw new Error('valid target output budget must remain available');}
     finally{LF.StructuredOutput=previousStructured;}
@@ -138,7 +138,7 @@ module.exports=function(t,LF){
     let calls=0;const retryFeedback=[];const previousStructured=LF.StructuredOutput,previousSteps=LF.ActionSteps,previousRegistry=LF.ActionRegistry,realSetTimeout=global.setTimeout;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){retryFeedback.push(String(opts&&opts.retryFeedback||''));return{context:{},messageList:[{role:'user',content:String(opts&&opts.retryFeedback||'first attempt')}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.ActionRegistry={schema:function(){return{};}};
     LF.StructuredOutput={parse:function(content){return{value:JSON.parse(content),strategy:'JSON'};},normalizeForSchema:function(id,v){return v;},validate:function(){return[];},contractError:function(){const e=new Error('contract');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;return e;}};
     LF.ActionSteps={'test.validate':function(ctx){if(!ctx.candidate||!ctx.candidate.stack||!ctx.candidate.stack.length){const e=new Error('Return at least one stack layer.');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;e.validationErrors=['stack must contain a useful layer'];throw e;}return ctx.candidate;}};
@@ -156,7 +156,7 @@ module.exports=function(t,LF){
     const exp={id:'exp_transport_retry',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'test.transport-retry',steps:[{id:'answer',type:'AI',output:'text',max_output_tokens:256,max_retries:1}]},feedback=[],realSetTimeout=global.setTimeout,calls={n:0};
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){feedback.push(String(opts&&opts.retryFeedback||''));return{context:{},messageList:[{role:'user',content:'clean semantic request'+(opts&&opts.retryFeedback?'\n'+opts.retryFeedback:'')}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},estimatePromptTokens:function(){return 20;},buildRequest:function(x){return x;},send:async function(){calls.n++;if(calls.n===1){const e=new Error('provider server failure');e.status=500;e.providerResponse='{"reasoning_control":true,"reasoning_format":"deepseek","response_format":{"type":"json_object"}}';throw e;}return{content:'clean final answer',finishReason:'stop'};}};
     global.setTimeout=function(fn){return realSetTimeout(fn,0);};
     try{const out=await LF.ActionRunner.run('test.transport-retry');assert(out.status,'done','retry succeeds');assert(calls.n,2,'one bounded retry');assert(feedback[1],'','transport retry has no semantic feedback');}
@@ -169,7 +169,7 @@ module.exports=function(t,LF){
     let calls=0;const previousStructured=LF.StructuredOutput,previousSteps=LF.ActionSteps,previousRegistry=LF.ActionRegistry;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'test-model',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{context:{},messageList:[{role:'user',content:'infer design'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.ActionRegistry={schema:function(){return{};}};
     LF.StructuredOutput={parse:function(content){return{value:JSON.parse(content),strategy:'JSON'};},normalizeForSchema:function(id,v){return v;},validate:function(){return[];},contractError:function(){const e=new Error('contract');e.code='MODEL_OUTPUT_INVALID';e.isContract=true;return e;}};
     LF.ActionSteps={'test.validate-insufficient':function(ctx){return Object.assign({},ctx.candidate,{status:'insufficient_evidence',summary:'More source context is required.',solutions:[],stack:[],unknowns:['stack materials']});}};
@@ -184,7 +184,7 @@ module.exports=function(t,LF){
     let calls=0;const budgets=[],retries=[];
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'llamacpp',model:'local-model',thinkingMode:'auto',streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(action,step,opts){return{messageList:[{role:'user',content:(opts.retryFeedback||'')+' return a short final answer'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AIProviders={llamacpp:{safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{reasoning_effort:'none'}}}};
     LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},estimatePromptTokens:function(){return 20;},resolveModelCapabilities:async function(){return{maxOutputTokens:8192,contextWindow:16384,reasoningStatus:'unknown'};},resolveThinkingPolicy:function(){return{requested:'off',transportMode:'off',capability:'unknown',effective:'off',reason:'test'};},buildRequest:function(opts){budgets.push(opts.maxTokens);return opts;},send:async function(){calls++;return calls===1?{content:'partial',reasoning:'reasoning '.repeat(400),reasoningObserved:true,finishReason:'length',usage:{completionTokens:700,reasoningTokens:650}}:{content:'complete final answer',reasoning:'',reasoningObserved:false,finishReason:'stop',usage:{completionTokens:40}};}};
     const realSetTimeout=global.setTimeout;global.setTimeout=function(fn){return realSetTimeout(fn,0);};
@@ -198,7 +198,7 @@ module.exports=function(t,LF){
     let calls=0,retries=0;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;throw new Error('provider failed');}};
     const out=await LF.ActionRunner.run('test.no-retry',{onAutoRetry:function(){retries++;}});
     assert(out.status,'error','status');assert(calls,1,'one provider attempt');assert(retries,0,'no automatic retry');
@@ -211,7 +211,7 @@ module.exports=function(t,LF){
     let calls=0,retries=0;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxOutputTokensCap:0};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;const e=new Error('rate');e.status=429;e.providerCode='1305';throw e;}};
     const out=await LF.ActionRunner.run('test.rate',{onAutoRetry:function(){retries++;}});
     assert(out.status,'error','status');assert(out.code,'MODEL_RATE_LIMIT','classification');assert(calls,1,'transport exhaustion is not semantically retried');assert(retries,0,'no Action retry');
@@ -223,7 +223,7 @@ module.exports=function(t,LF){
     let calls=0;const retries=[];
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxTokens:100};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'x'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){},buildRequest:function(x){return x;},send:async function(){calls++;if(calls<3){const e=new Error('temporary');e.code='MODEL_OUTPUT_INVALID';throw e;}return{content:'ok'};}};
     const realSetTimeout=global.setTimeout;
     global.setTimeout=function(fn){return realSetTimeout(fn,0);};
@@ -240,7 +240,7 @@ module.exports=function(t,LF){
     let observed=null;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{streaming:false,maxTokens:512};}};
     LF.ActionContext={build:function(){return{messageList:[{role:'user',content:'bounded context'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.ActionSteps={'trace.store':function(){return{stored:true};}};
     LF.AI={acceptController:function(){},buildRequest:function(){return{url:'http://127.0.0.1:1234/v1/chat/completions',headers:{Authorization:'Bearer secret',Accept:'application/json'},body:{model:'local',messages:[{role:'user',content:'bounded context'}]}};},send:async function(){return{content:'model detail',finishReason:'stop'};}};
     const out=await LF.ActionRunner.run('test.trace',{onRequest:function(info){observed=info;}});
@@ -278,7 +278,7 @@ module.exports=function(t,LF){
     const calls=[];let fail=true;
     LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps={collect:function(){return{items:[{id:'a'},{id:'b'},{id:'c'}]};},batch:function(ctx){calls.push(ctx.workItem.id);if(ctx.workItem.id==='b'&&fail){fail=false;throw new Error('batch b failed');}return ctx.workItem.id.toUpperCase();},finish:function(){calls.push('finish');return'done';}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
     const first=await LF.ActionRunner.run('test.batch');
     assert(first.status,'error','first status');assert(first.failedStep,'batch','failed checkpoint');assert(first.failedWorkIndex,1,'failed unit index');assert(first.work.batch,1,'one unit retained');assert(calls,['a','b'],'first calls');
@@ -294,7 +294,7 @@ module.exports=function(t,LF){
     let touches=0;
     LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps={commit:function(){LF.State.touch('dataset');return{revision:exp.sync.revision};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){touches++;exp.sync.revision++;}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){touches++;exp.sync.revision++;}};
     LF.AI={acceptController:function(){}};
     const out=await LF.ActionRunner.run('test.commit');
     assert(out.status,'done','status');
@@ -309,7 +309,7 @@ module.exports=function(t,LF){
     LF.Storage={getEffectiveAction:function(){return current(def);}};
     LF.ActionSteps={concurrent:function(){exp.sync.revision++;return{observedRevision:exp.sync.revision};},store:function(){writes++;return{stored:true};}};
     LF.ActionStepTools={'store':{access:'write'}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
     LF.AI={acceptController:function(){}};
     try{
       const out=await LF.ActionRunner.run('test.stale');
@@ -319,7 +319,7 @@ module.exports=function(t,LF){
 
   t['Action guards block execution before the first checkpoint'] = async function(){
     const exp={id:'exp_gate',sync:{revision:3},derived:{actions:{},chat:{conversation:[]}}},def={id:'test.consumer',contract:{context:{profile:'test',scope:'experiment'},result:{format:'text',kind:'test'},effect:{mode:'read_only',writes:[]},guards:['test.blocked']},execution:{mode:'deterministic',result_step:'consume',steps:[{id:'consume',type:'DETERMINISTIC',fn:'consume'}]}},previousGuards=LF.ActionGuards;let calls=0;
-    LF.Storage={getEffectiveAction:function(){return def;}};LF.ActionSteps={consume:function(){calls++;return'ok';}};LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};LF.AI={acceptController:function(){}};
+    LF.Storage={getEffectiveAction:function(){return def;}};LF.ActionSteps={consume:function(){calls++;return'ok';}};LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};LF.AI={acceptController:function(){}};
     LF.ActionGuards={check:function(){return[{id:'test.blocked',ok:false,message:'Blocked by current data state.'}];}};const blocked=await LF.ActionRunner.run('test.consumer');assert(blocked.status,'unavailable','blocked status');assert(blocked.code,'ACTION_UNAVAILABLE','guard code');assert(calls,0,'checkpoint did not run');LF.ActionGuards={check:function(){return[];}};const out=await LF.ActionRunner.run('test.consumer');assert(out.status,'done','allowed status');assert(calls,1,'checkpoint ran once');LF.ActionGuards=previousGuards;
   };
 

@@ -213,19 +213,70 @@ module.exports = function (t, LF) {
     assert(Object.prototype.hasOwnProperty.call(spec.body,'max_tokens'),false,'no invented 8K limit');delete LF.Storage;delete LF.AIProviders;
   };
 
-  t['configured-model-only providers use shared Detect without remote metadata fetches']=async function(){
+  t['configured-model-only providers require credentials but do not fetch a remote catalogue']=async function(){
     const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('remote metadata should not be queried');};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash'};},getApiKey:function(){return'';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,remoteModelMetadata:false}};
+    LF.AIProviders={zai:{id:'zai',name:'Z.AI',keyRequired:true,remoteModelMetadata:false,staticModelCatalogue:true,knownModels:['glm-4.7-flash']}};
     try{
-      const listed=await AI.listModels('zai','https://api.z.ai/api/paas/v4/chat/completions','');
-      const cap=await AI.resolveModelCapabilities({provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',apiKey:'',force:true});
-      assert(calls,0,'Detect must not contact a remote catalogue for configured-model-only providers');
-      assert(listed.skipped,true,'shared model-list step is normalized as skipped');
-      assert(listed.models,[],'no synthetic catalogue substitutions');
+      const listed=await AI.listModels('zai','https://api.z.ai/api/paas/v4/chat/completions','zai-test-key');
+      const cap=await AI.resolveModelCapabilities({provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',apiKey:'zai-test-key',force:true});
+      assert(calls,0,'Detect must not contact an undocumented remote catalogue');
+      assert(listed.skipped,false,'documented static catalogue is exposed after credential validation');
+      assert(listed.models,['glm-4.7-flash'],'documented catalogue remains deterministic');
       assert(cap.contextWindow,200000,'built-in capability still resolves through shared capability path');
       assert(cap.reasoningStatus,'optional','thinking capability preserved');
     }finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Detect catalogue fails closed when a required API key is missing']=async function(){
+    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://integrate.api.nvidia.com/v1',model:'x'};},getApiKey:function(){return'';}};
+    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true}};
+    let error=null;try{await AI.listModels('nvidia','https://integrate.api.nvidia.com/v1','');}catch(e){error=e;}
+    assert(!!error,true,'missing key must fail');assert(/requires an API key/.test(error.message),true,'clear credential error');delete LF.Storage;delete LF.AIProviders;
+  };
+
+
+  t['all built-in cloud catalogue providers reject missing required credentials before fetch']=async function(){
+    const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('must not fetch without required key');};
+    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://unused.example/v1',model:'x'};},getApiKey:function(){return'';}};
+    LF.AIProviders={
+      zai:{id:'zai',name:'Z.AI',keyRequired:true,remoteModelMetadata:false,staticModelCatalogue:true,knownModels:['glm-test']},
+      openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,modelCatalogueRequired:true},
+      nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true},
+      openai:{id:'openai',name:'OpenAI',keyRequired:true,modelCatalogueRequired:true},
+      gemini:{id:'gemini',name:'Google Gemini',keyRequired:true,modelCatalogueRequired:true}
+    };
+    try{
+      for(const id of Object.keys(LF.AIProviders)){let err=null;try{await AI.listModels(id,'https://catalog.example/v1','');}catch(e){err=e;}assert(!!err,true,id+' missing key fails');assert(/API key/i.test(err.message),true,id+' names credential problem');}
+      assert(calls,0,'credential validation happens before catalogue fetch');
+    }finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['model catalogue URL is always derived from the exact configured endpoint']=function(){
+    assert(AI.resolveModelsUrl('https://integrate.api.nvidia.com/v1/chat/completions'),'https://integrate.api.nvidia.com/v1/models','NVIDIA hosted models');
+    assert(AI.resolveModelsUrl('https://api.openai.com/v1/chat/completions'),'https://api.openai.com/v1/models','OpenAI models');
+    assert(AI.resolveModelsUrl('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'),'https://generativelanguage.googleapis.com/v1beta/openai/models','Gemini OpenAI-compatible models');
+    assert(AI.resolveModelsUrl('https://openrouter.ai/api/v1/chat/completions'),'https://openrouter.ai/api/v1/models','OpenRouter models');
+    assert(AI.resolveModelsUrl('http://fedora.local:8080/v1'),'http://fedora.local:8080/v1/models','LAN llama.cpp models');
+  };
+
+  t['network errors retain the provider from the current request rather than saved Settings']=async function(){
+    const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'https:',origin:'https://labflow.test'};global.fetch=async function(){throw new TypeError('Failed to fetch');};
+    LF.PromptRegistry={promptText:function(){return'Reply only with OK.';}};
+    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://saved.invalid/v1',model:'saved',inactivityTimeoutMs:15000,streaming:false};},getApiKey:function(){return'saved-key';}};
+    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:5000}};
+    try{let err=null;try{await AI.testConnection({provider:'nvidia',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});}catch(e){err=e;}assert(!!err,true,'network error returned');assert(err.providerId,'nvidia','current provider retained on error');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
+  };
+
+  t['Connection test uses the exact supplied endpoint model and key instead of saved values']=async function(){
+    const oldFetch=global.fetch;let seen=null;
+    global.fetch=async function(url,opts){seen={url:String(url),opts:opts};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'probe',model:'current-model',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
+    LF.PromptRegistry={promptText:function(){return'Reply OK';}};
+    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://saved.example/v1',model:'saved-model',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'saved-key';}};
+    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:10000}};
+    try{const result=await AI.testConnection({provider:'nvidia',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});assert(result.ok,true,'probe succeeds');assert(seen.url,'https://current.example/v1/chat/completions','uses current endpoint');assert(seen.opts.headers.Authorization,'Bearer current-key','uses current key');assert(JSON.parse(seen.opts.body).model,'current-model','uses current model');}
+    finally{global.fetch=oldFetch;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
@@ -416,11 +467,11 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['NVIDIA discovery uses its declared authenticated catalogue and deduplicates model IDs'] = async function () {
-    const oldFetch=global.fetch;let seen=null;
-    global.fetch=async function(url,options){seen={url:url,authorization:options.headers.Authorization};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({data:[{id:'nvidia/zeta'},{id:'meta/alpha'},{id:'meta/alpha'}]});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://wrong.example/v1',model:'meta/alpha'};},getApiKey:function(){return'nvapi-test';}};LF.AIProviders={nvidia:{keyRequired:true,modelsEndpoint:'https://integrate.api.nvidia.com/v1/models'}};
-    try{const result=await AI.listModels('nvidia','https://wrong.example/v1','nvapi-test');assert(seen.url,'https://integrate.api.nvidia.com/v1/models','declared catalogue URL');assert(seen.authorization,'Bearer nvapi-test','bearer auth');assert(result.models,['nvidia/zeta','meta/alpha'],'unique IDs');}
+  t['NVIDIA discovery uses the exact configured endpoint, authenticated catalogue and deduplicates model IDs'] = async function () {
+    const oldFetch=global.fetch;let seen={};
+    global.fetch=async function(url,opts){seen={url:String(url),authorization:opts&&opts.headers&&opts.headers.Authorization};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({object:'list',data:[{id:'nvidia/zeta'},{id:'meta/alpha'},{id:'nvidia/zeta'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://saved.example/v1',model:'meta/alpha'};},getApiKey:function(){return'nvapi-saved';}};LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true}};
+    try{const result=await AI.listModels('nvidia','https://configured.example/v1','nvapi-current');assert(seen.url,'https://configured.example/v1/models','catalogue follows exact visible endpoint');assert(seen.authorization,'Bearer nvapi-current','current bearer auth');assert(result.models,['nvidia/zeta','meta/alpha'],'unique IDs');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 

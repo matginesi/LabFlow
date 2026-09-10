@@ -156,6 +156,10 @@ python -m http.server 8000
 LabFlow is a static browser application. A generic static server is sufficient; Z.AI and other hosted providers are called directly from the browser using the configured endpoint. You may also open the page directly when your browser permits local-file module/script access.
 
 
+## llama.cpp on the local network
+
+`labflow_engine.sh` launches `llama-server` on `0.0.0.0:8080` by default so another device on the same trusted LAN can reach it. The launcher also passes browser CORS origins when supported and prints the machine LAN/mDNS endpoints. Use `LABFLOW_CORS_ORIGINS` (or `--cors-origins`) to restrict access to the LabFlow page origin; on Fedora, allow the selected TCP port through `firewalld` if the launcher reports it blocked. In LabFlow Settings use the host/private IP that the **browser device** can actually resolve (for example `http://fedora.local:8080/v1` or `http://192.168.x.x:8080/v1`), not `127.0.0.1`.
+
 ## AI provider console
 
 Open browser DevTools and run `LabFlow.AIConsole.help()` for provider/model diagnostics. See `docs/guides/AI_PROVIDER_CONSOLE.md`.

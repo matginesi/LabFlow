@@ -60,7 +60,7 @@ async function main(){
   ok(mergedOptions&&mergedOptions.merged===true,'merged mode is explicit');
 
   LF.State.setRoute('experiment-import');
-  ok(LF.State.state.route==='experiment-import','Review stays on the merged Upload & Review route');
+  ok(LF.State.state.ui.route==='experiment-import','Review stays on the merged Upload & Review route');
   console.log('merged Upload & Review regression: OK');
 }
 main().then(function(){process.exit(0);}).catch(function(err){console.error(err&&err.stack||err);process.exit(1);});

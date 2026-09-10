@@ -72,7 +72,7 @@ AUDIT_JS = r"""() => {
   const pageNavButtons = pageNav ? [...pageNav.querySelectorAll('.page-nav-button')].map(node => { const r=node.getBoundingClientRect(); return {width:Math.round(r.width),height:Math.round(r.height),disabled:node.disabled}; }) : [];
   const tabs = [...document.querySelectorAll('.tabs')].filter(visible).map(node => ({clientWidth:node.clientWidth,scrollWidth:node.scrollWidth,display:getComputedStyle(node).display,columns:getComputedStyle(node).gridTemplateColumns}));
   return {
-    route: window.LabFlow.State.state.route,
+    route: window.LabFlow.State.state.ui.route,
     viewport: {width:innerWidth,height:innerHeight},
     documentOverflow: document.documentElement.scrollWidth > innerWidth,
     documentWidth: document.documentElement.scrollWidth,
@@ -122,7 +122,7 @@ def main() -> int:
         # Audit the upload-first state before adding experiment data.
         findings.append(page.evaluate(AUDIT_JS))
         page.locator("#datasetInput").set_input_files(str(ZIP_PATH))
-        page.wait_for_function("window.LabFlow.State.state.route === 'experiment-import'")
+        page.wait_for_function("window.LabFlow.State.state.ui.route === 'experiment-import'")
         page.wait_for_timeout(200)
         page.evaluate("window.LabFlow.UI.activityHide()")
         if page.locator("#assistantClose").is_visible():

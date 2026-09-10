@@ -29,7 +29,7 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 
 ## State/persistence
 
-- `state.js` — single LabFlow Data lifecycle, revision and autosave plus the canonical `state.ui` namespace for route/selection/filter/tab state; feature invalidation delegates to `DerivedState`. `state.route` is only a proxy to `state.ui.route`.
+- `state.js` — single LabFlow Data lifecycle, revision and autosave plus the canonical `state.ui` namespace for route/selection/filter/tab state; feature invalidation delegates to `DerivedState`. `state.ui.route` is the only route state.
 - `storage.js` — browser persistence/preferences, AI provider keys and the separate local NOMAD upload-stub settings/token.
 
 ## Actions/AI

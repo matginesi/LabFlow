@@ -7,7 +7,7 @@
   let inFlight=false;
   let activeRequest=null;
   let injectedController=null;
-  const METADATA_TIMEOUT_MS=5000;
+  const METADATA_TIMEOUT_MS=15000;
   const STREAM_DIAGNOSTIC_CHARS=131072;
 
   /** The ActionRunner hands over the single shared AbortController for a run. */
@@ -124,11 +124,11 @@
     }
     return{limited:false,retryable:false,kind:'',label:''};
   }
-  function parseProviderError(text,status,requestId,headers){
+  function parseProviderError(text,status,requestId,headers,providerId){
     let code='',message='',providerType='';
     try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
     catch(_){message=String(text||'').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,420);}
-    const providerId=LF.Storage&&LF.Storage.getAiSettings?(LF.Storage.getAiSettings()||{}).provider:'';
+    providerId=String(providerId||'');
     const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
     if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
     const limit=overflow?{limited:false,retryable:false,kind:'',label:''}:limitInfo(effectiveStatus,code,message);
@@ -200,7 +200,7 @@
   }
 
   /** Consume one OpenAI-compatible SSE response in the active request. */
-  async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens,onReasoning){
+  async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens,onReasoning,providerId){
     const reader=response.body&&response.body.getReader?response.body.getReader():null;
     if(!reader)throw new Error('The provider declared streaming but the browser exposed no readable response body.');
     const decoder=new TextDecoder(),state={content:'',reasoning:'',finishReason:'',usage:null,model:'',requestId:'',events:0,meaningfulEvents:0,bytes:0,ttftMs:null,budgetTokens:budgetTokens||null,done:false},started=startedAt||performance.now();
@@ -209,7 +209,7 @@
       if(!data)return false;
       if(data==='[DONE]'){state.done=true;return true;}
       let obj;try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returned an invalid SSE JSON event.');invalid.cause=error;invalid.providerResponse=data;throw invalid;}
-      if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'',null);
+      if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'',null,providerId);
       const choice=obj.choices&&obj.choices[0]||{},delta=choice.delta||choice.message||{};
       const content=streamPart(delta.content||delta.text||choice.text||obj.output_text||obj.response),reasoning=streamPart(delta.reasoning_content||delta.reasoning||delta.reasoning_details||choice.reasoning_content||obj.reasoning_content||obj.reasoning);
       state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;
@@ -243,7 +243,7 @@
     }catch(err){try{await reader.cancel();}catch(_){}throw err;}
   }
 
-  async function request(url,headers,body,label,timeoutMs,onProgress,hardTimeoutMs){
+  async function request(url,headers,body,label,timeoutMs,onProgress,hardTimeoutMs,providerId){
     if(inFlight)throw new Error('Another AI request is already running.');
     inFlight=true;
     const parentController=injectedController||null,controller=new AbortController();
@@ -277,13 +277,13 @@
         Log.warn('thinking.observed-while-off',{requestId:info.requestId,model:info.model||body.model,reasoningChars:String(info.totalReasoning||'').length,control:'reasoning_end'});
         reasoningControlPromise=sendReasoningEnd(url,headers,info.requestId,info.model||body.model,controller.signal).then(function(result){reasoningControlResult=result;return result;});
       }
-      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens),stopReasoning);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;if(reasoningControlPromise)await reasoningControlPromise;}
+      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens),stopReasoning,providerId);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;if(reasoningControlPromise)await reasoningControlPromise;}
       else{text=await response.text();resetInactivity();}
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
       responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason,reasoningControlRequests:reasoningControlRequests,reasoningControlOk:reasoningControlResult&&reasoningControlResult.ok===true}:null};
       Log.info('request.end',{requestLogId:requestLogId,label:label,status:response.status,ok:response.ok,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,bodyChars:text.length,requestId:responseRequestId,stream:responseMeta.stream});Log.debug('response.payload',{requestLogId:requestLogId,status:response.status,body:text.length>12000?text.slice(0,12000)+'…':text});
-      if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers);
+      if(!response.ok)throw parseProviderError(text,response.status,responseRequestId,response.headers,providerId);
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
       Log.debug('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
       return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta,reasoningControlRequests:reasoningControlRequests,reasoningControlResult:reasoningControlResult};
@@ -295,7 +295,7 @@
         failure=new Error(wasCancelled?'AI request cancelled by the user.':(requestState.timeoutReason==='deadline'?label+' reached its '+Math.round(hardLimit/1000)+' second work-unit deadline.':label+' stopped after '+Math.round(limit/1000)+' seconds without provider bytes.'));
         failure.isNetwork=!wasCancelled;failure.cancelled=wasCancelled;failure.timedOut=!wasCancelled&&requestState.timedOut;failure.timeoutReason=requestState.timeoutReason;failure.timeoutMs=requestState.timeoutReason==='deadline'?hardLimit:limit;failure.elapsedMs=elapsed;failure.cause=err;
       }else if(!(err&&err.status)&&!(err&&err.code)&&!(err&&err.isProvider)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
-        const providerId=(LF.Storage.getAiSettings()||{}).provider||'';
+        providerId=String(providerId||'');
         const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId,url):(providerId==='zai'?label+' could not reach Z.AI from the browser. Check the API key and endpoint; if the same request works outside the browser, inspect CORS/origin policy.':label+' could not reach the AI service. Check the endpoint and provider status.');
         failure=new Error(message);failure.isNetwork=true;failure.providerId=providerId;failure.elapsedMs=elapsed;failure.cause=err;
       }
@@ -337,7 +337,7 @@
   function diagnosticRequestConfig(providerId,endpoint,model,apiKey){
     const saved=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(providerId);
-    const settings=Object.assign({},saved,{provider:providerId,endpoint:String(endpoint||saved.endpoint||''),model:String(model||saved.model||''),streaming:true,thinkingMode:'off'});
+    const settings=Object.assign({},saved,{provider:providerId,endpoint:endpoint!=null?String(endpoint):String(saved.endpoint||''),model:model!=null?String(model):String(saved.model||''),streaming:true,thinkingMode:'off'});
     if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
     const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
@@ -412,7 +412,6 @@
     u.search='';u.hash='';
     return u.toString();
   }
-  function providerModelsUrl(provider,endpoint){return provider&&provider.modelsEndpoint?validateHttpUrl(provider.modelsEndpoint):resolveModelsUrl(endpoint);}
 
 
   function positiveInt(value){const n=Math.floor(Number(value));return Number.isFinite(n)&&n>0?n:null;}
@@ -484,7 +483,7 @@
     catch(error){if(controller.signal.aborted){const timeout=new Error('Provider metadata request timed out after '+METADATA_TIMEOUT_MS+' ms.');timeout.timedOut=true;timeout.metadataOnly=true;timeout.cause=error;throw timeout;}throw error;}
     finally{clearTimeout(timer);}
   }
-  async function fetchJson(url,options){const response=await metadataFetch(url,options),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers);try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
+  async function fetchJson(url,options,providerId){const response=await metadataFetch(url,options),text=await response.text();if(!response.ok)throw parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers,providerId);try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;throw e;}}
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
   function modelId(row){return String(row&&row.id||row&&row.model||row&&row.name||row&&row.key||'').trim();}
   function numericPrice(value){const n=Number(value);return Number.isFinite(n)?n:null;}
@@ -496,7 +495,7 @@
   function catalogueEntries(obj,providerId){return modelRows(obj).map(function(row){return modelCatalogueEntry(row,providerId);}).filter(function(row){return row.id;});}
   function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
-    const url=providerModelsUrl(provider,endpoint),obj=await fetchJson(url,{method:'GET',headers:providerAuthHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,providerId==='openrouter'?'OpenRouter model metadata':'provider model metadata');
+    const url=resolveModelsUrl(endpoint),obj=await fetchJson(url,{method:'GET',headers:providerAuthHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,providerId==='openrouter'?'OpenRouter model metadata':'provider model metadata');
   }
   async function geminiCapability(model,key){
     if(!key)return null;const name=String(model||'').replace(/^models\//,'');if(!name)return null;
@@ -564,8 +563,10 @@
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint||settings.endpoint,headers=providerAuthHeaders(provider,key);
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint!=null?String(endpoint):String(settings.endpoint||''),headers=providerAuthHeaders(provider,key);
     const started=performance.now();
+    if(provider.keyRequired&&!String(key||'').trim())throw new Error((provider.name||activeProviderId)+' requires an API key before model detection.');
+    if(!base)throw new Error((provider.name||activeProviderId)+' endpoint is empty.');
     if(provider.remoteModelMetadata===false&&provider.staticModelCatalogue===true&&Array.isArray(provider.knownModels)){
       const models=Array.from(new Set(provider.knownModels.map(String).filter(Boolean)));
       Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:0,skipped:false,reason:'documented-static-catalogue'});
@@ -577,7 +578,7 @@
     }
     const chat=new URL(validateHttpUrl(resolveChatUrl(base))),origin=chat.origin;
 
-    async function read(url){return{obj:await fetchJson(url,{method:'GET',headers:headers}),url:url};}
+    async function read(url){return{obj:await fetchJson(url,{method:'GET',headers:headers},activeProviderId),url:url};}
 
     if(activeProviderId==='lmstudio'){
       const nativeUrl=origin+'/api/v1/models';
@@ -605,7 +606,8 @@
       return{models:models,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:source};
     }
 
-    const url=providerModelsUrl(provider,base),result=await read(url),entries=catalogueEntries(result.obj,activeProviderId),models=Array.from(new Set(entries.map(function(row){return row.id;}))),loadedModels=activeProviderId==='llamacpp'?models.slice():[];
+    const url=resolveModelsUrl(base),result=await read(url),entries=catalogueEntries(result.obj,activeProviderId),models=Array.from(new Set(entries.map(function(row){return row.id;}))),loadedModels=activeProviderId==='llamacpp'?models.slice():[];
+    if(provider.modelCatalogueRequired===true&&!models.length)throw new Error((provider.name||activeProviderId)+' returned an empty model catalogue.');
     Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:loadedModels.length,free:entries.filter(function(row){return row.free;}).length,url:url});
     return{models:models,entries:entries,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:'provider model catalogue'};
   }
@@ -648,17 +650,15 @@
   }
 
   async function testConnection(options){
-    options=options||{};const started=performance.now(),cfg=requestConfig(),hard=Math.max(5000,Math.min(120000,Number(cfg.provider.connectionTestTimeoutMs)||30000));
+    options=options||{};
+    const saved=LF.Storage.getAiSettings(),providerId=options.provider!=null?String(options.provider):String(saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
+    const endpoint=options.endpoint!=null?String(options.endpoint):String(saved.endpoint||''),model=options.model!=null?String(options.model):String(saved.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
+    const started=performance.now(),cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),hard=Math.max(5000,Math.min(120000,Number(provider.connectionTestTimeoutMs)||30000));
     const probe=connectionProbePolicy(cfg.provider);
     const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,guardThinking:probe.thinkingMode==='off',connectionTest:true});
     let r;
     try{r=await send(spec,{label:'AI connection test',connectionTest:true,onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});}
     catch(err){
-      /* A reasoning model may legitimately consume the deliberately tiny probe
-         budget before emitting final text. For providers that opt in to this
-         policy, HTTP 200 + a valid Chat Completions envelope still proves that
-         endpoint, model selection and request parsing are working. Keep normal
-         Actions strict: only the Settings connection probe gets this soft-pass. */
       if(err&&err.isContract&&Number(err.status)===200&&cfg.provider.connectionTestAcceptReasoningOnly===true){
         const elapsed=Math.round(performance.now()-started),raw=String(err.rawProviderResponse||''),reasoning=String(err.reasoning||'');
         Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-reasoning-only',prepareMs:spec.prepareMs||0,requestMs:Number(err.elapsedMs)||elapsed,totalMs:elapsed,httpRequests:1,finishReason:err.finishReason||'',reasoningChars:reasoning.length});
@@ -712,7 +712,7 @@
     opts=opts||{};const overallStarted=performance.now();
     let r;
     try{
-      r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0));
+      r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'');
     }catch(err){
       if(isRateLimitError(err)){
         const retryMs=Math.max(0,Number(err.retryAfterMs)||0);
@@ -747,8 +747,8 @@
 
   async function probe(options){
     options=options||{};
-    const saved=LF.Storage.getAiSettings(),providerId=String(options.provider||saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
-    const endpoint=String(options.endpoint||provider.endpoint||saved.endpoint||''),model=String(options.model||provider.model||saved.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
+    const saved=LF.Storage.getAiSettings(),providerId=options.provider!=null?String(options.provider):String(saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
+    const endpoint=options.endpoint!=null?String(options.endpoint):String(saved.endpoint||provider.endpoint||''),model=options.model!=null?String(options.model):String(saved.model||provider.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
     const cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),timeout=Math.max(5000,Math.min(120000,Number(options.timeoutMs)||Number(provider.connectionTestTimeoutMs)||30000));
     const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,thinkingMode:options.thinkingMode||'off',guardThinking:true,connectionTest:true});
     return send(spec,{label:String(options.label||'Provider console probe')});

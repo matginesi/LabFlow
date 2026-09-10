@@ -146,7 +146,7 @@ with sync_playwright() as p:
     check(page.locator("#chatJumpLatest").is_hidden(), "near-bottom completion should follow the response")
 
     SHOT_DIR.mkdir(parents=True, exist_ok=True)
-    page.evaluate("document.querySelectorAll('.message-totem-compact').forEach(node => node.remove())")
+    page.evaluate("document.querySelectorAll('.message-totem').forEach(node => node.remove())")
     for name, viewport in (("desktop", {"width": 1440, "height": 900}), ("narrow", {"width": 390, "height": 800}), ("low", {"width": 1024, "height": 480})):
         page.set_viewport_size(viewport)
         page.screenshot(path=str(SHOT_DIR / f"{name}.png"), full_page=False)

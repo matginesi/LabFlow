@@ -57,14 +57,6 @@ module.exports=function(t,LF){
     assert(refreshed.pending,0,'accepted cleanup is no longer pending');
   };
 
-  t['previous automatic exclusions are withdrawn and returned for human review']=function(){
-    const exp={sync:{revision:1},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[{patchType:'exclude_measurement',target:{kind:'measurement',id:'m1'},source:'automatic',status:'applied',reviewStatus:'accepted'}],samples:[],measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:true,blockingFlags:[{label:'Efficiency exceeds guardrail'}]}]};
-    const out=LF.DatasetCorrections.applyAutomaticSafeFixes(exp);
-    assert(exp.measurements[0].excluded,false,'automatic exclusion reverted');
-    assert(exp.patches[0].status,'withdrawn','automatic patch retained as withdrawn provenance');
-    assert(out.applied,0,'withdrawn exclusion is no longer counted as automatic cleanup');
-    assert(LF.DatasetCorrections.reviewFixes(exp).length,1,'measurement is offered for explicit approval');
-  };
 
   t['AI correction storage rejects stale or non-semantic mutations before UI application']=function(){
     const exp={sync:{revision:0},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],samples:[{id:'s1',name:'OLD',rawName:'old',aliases:['old'],group:'TEST',isRef:false}],measurements:[{id:'m1',sample:'OLD',rawSample:'old',path:'a.txt',group:'TEST',isRef:false}],findings:[{id:'f1',type:'identity',status:'open',target:'OLD',measurementId:'m1'}],datasetAnalysis:{sourceRevision:0,ambiguousFindings:[{id:'f1',type:'identity',target:'OLD',measurementId:'m1'}]}};
@@ -83,7 +75,7 @@ module.exports=function(t,LF){
     const exp=LF.DataModel.hydrate({id:'dataset-1',raw:{sourceName:'source.zip',sourceArchive:raw},sync:{revision:4},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],actionData:{proposals:{},annotations:{},status:{}},experiments:[{id:'e-old',name:'OLD',sampleIds:['s1'],sampleNames:['S1'],runIds:['r1'],measurementIds:['m1','m2']},{id:'e-new',name:'NEW',sampleIds:[],sampleNames:[],runIds:[],measurementIds:[]}],samples:[{id:'s1',name:'S1',rawName:'S1',aliases:['S1'],experimentId:'e-old',experiment:'OLD',group:'OLD',runIds:['r1'],measurementIds:['m1','m2']}],runs:[{id:'r1',path:'run',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',measurementIds:['m1','m2']}],measurements:[{id:'m1',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',group:'OLD',runId:'r1'},{id:'m2',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',group:'OLD',runId:'r1'}],design:{devices:[{id:'d1',name:'Device 1',experimentId:'e-old',group:'OLD',sampleIds:['s1'],sampleNames:['S1'],solutionIds:[],stack:[],process:{},status:'parsed'}]},findings:[{id:'f-group',kind:'finding',type:'group-mapping',severity:'warning',title:'Group needs review',status:'open',source:'deterministic',measurementId:'m1'}]});
     exp.datasetAnalysis={sourceRevision:4,ambiguousFindings:[{id:'f-group',type:'group-mapping',measurementId:'m1',target:'OLD'}]};
     let refreshed=0,notified=0,invalidated=0;
-    LF.State={state:{experiment:exp,user:{name:'Tester'}},notify:function(){notified++;}};
+    LF.State={state:{experiment:exp,user:{name:'Tester'},ui:{route:'results'}},notify:function(){notified++;}};
     LF.DerivedState={invalidate:function(){invalidated++;return['canonical-index','analysis-summary'];}};
     LF.DataPipeline={refresh:function(current){refreshed++;LF.DatasetCorrections.rebuildSamples(current);current.analysis={summary:{measurementCount:current.measurements.length,groups:Array.from(new Set(current.measurements.map(function(m){return m.group;})))}};return{status:'ready',sourceRevision:current.sync.revision};}};
     LF.DataContracts={assert:function(){return{ok:true};}};

@@ -162,7 +162,7 @@
       level: level.toUpperCase(),
       scope: scopeName || 'app',
       event: event || '',
-      route: LF.State && LF.State.state ? LF.State.state.route || '' : '',
+      route: LF.State && LF.State.state ? LF.State.state.ui.route || '' : '',
       experimentId: LF.State && LF.State.state && LF.State.state.experiment && LF.State.state.experiment.meta ? LF.State.state.experiment.meta.id || '' : '',
       data: sanitize(data)
     };
@@ -241,7 +241,7 @@
   function environmentSnapshot() {
     return sanitize({
       sessionId:sessionId, startedAt:sessionStartedAt, generatedAt:nowIso(),
-      app:{route:LF.State&&LF.State.state&&LF.State.state.route||'', experimentId:LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment.meta&&LF.State.state.experiment.meta.id||''},
+      app:{route:LF.State&&LF.State.state&&LF.State.state.ui.route||'', experimentId:LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment.meta&&LF.State.state.experiment.meta.id||''},
       browser:{userAgent:navigator.userAgent, language:navigator.language, online:navigator.onLine, storage:'localStorage'},
       page:{protocol:location.protocol, host:location.host, pathname:location.pathname},
       viewport:{width:window.innerWidth, height:window.innerHeight, devicePixelRatio:window.devicePixelRatio||1},

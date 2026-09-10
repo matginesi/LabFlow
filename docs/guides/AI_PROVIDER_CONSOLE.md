@@ -14,7 +14,7 @@ await LabFlow.AIConsole.doctor("nvidia", {model: "nvidia/nemotron-3.5-lightning-
 
 `probe()` sends one bounded Chat Completions request and returns a structured result. It never retries automatically. A browser status of 0 means the browser did not expose an HTTP response; use the reported category to distinguish timeout/network/CORS from HTTP authentication, quota or model errors.
 
-`doctor()` runs catalogue discovery and one model probe and returns both results.
+`doctor()` runs catalogue discovery and one model probe and returns both results. The Settings **Detect** operation is stricter: it uses the visible provider/endpoint/key and the visible model when one is already selected. For catalogue-backed providers it may start with no model selected, but it must first populate a real model from the catalogue returned by that exact endpoint and then pass a live Chat Completions probe before reporting success. Required missing credentials, catalogue failures/empty required catalogues, and probe failures are errors.
 
 The API key is read from LabFlow provider storage unless `apiKey` is passed explicitly. The console never prints the key.
 

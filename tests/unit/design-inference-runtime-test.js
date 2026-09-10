@@ -18,7 +18,7 @@ module.exports=function(t,LF){
     let built=null;
     LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'small-model',streaming:false,maxOutputTokensCap:0,thinkingMode:'auto'};}};
     LF.ActionContext={build:function(){return{context:{},messageList:[{role:'user',content:'Infer only missing solution chemistry.'}]};}};
-    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{};e.derived.actions=e.derived.actions||{};e.derived.chat=e.derived.chat||{conversation:[]};},startActionRun:function(){},endActionRun:function(){},touch:function(){},notify:function(){}};
+    LF.State={state:{experiment:exp,ui:{route:'design'}},ensureDerived:function(e){e.derived=e.derived||{};e.derived.actions=e.derived.actions||{};e.derived.chat=e.derived.chat||{conversation:[]};},startActionRun:function(){},endActionRun:function(){},touch:function(){},notify:function(){}};
     LF.AI={
       acceptController:function(){},
       estimatePromptTokens:function(){return 40;},

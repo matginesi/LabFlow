@@ -13,7 +13,7 @@
   function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
   function getAiSettings(){
     const defaults={provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',temperature:0.7,thinkingMode:'auto',streaming:true,inactivityTimeoutMs:90000,maxOutputTokensCap:0};
-    const out=Object.assign({},defaults,read('labflow.ai.settings',{}));out.endpoint=String(out.endpoint||'').replace(/\/chat\/completions(?:\/chat\/completions)+\/?$/i,'/chat/completions');if(out.provider==='zai'){out.endpoint=defaults.endpoint;out.model=String(out.model||defaults.model).trim()||defaults.model;}out.thinkingMode=['auto','off','on'].includes(out.thinkingMode)?out.thinkingMode:'auto';out.streaming=out.streaming!==false;out.inactivityTimeoutMs=Math.max(15000,Math.min(600000,Number(out.inactivityTimeoutMs)||90000));out.maxOutputTokensCap=Math.max(0,Math.min(1048576,Number(out.maxOutputTokensCap)||0));return out;
+    const out=Object.assign({},defaults,read('labflow.ai.settings',{}));out.endpoint=String(out.endpoint||'').replace(/\/chat\/completions(?:\/chat\/completions)+\/?$/i,'/chat/completions');out.model=String(out.model||'').trim();out.thinkingMode=['auto','off','on'].includes(out.thinkingMode)?out.thinkingMode:'auto';out.streaming=out.streaming!==false;out.inactivityTimeoutMs=Math.max(15000,Math.min(600000,Number(out.inactivityTimeoutMs)||90000));out.maxOutputTokensCap=Math.max(0,Math.min(1048576,Number(out.maxOutputTokensCap)||0));return out;
   }
   function saveAiSettings(v){write('labflow.ai.settings',v);Log.info('ai-settings.saved',{provider:v&&v.provider,model:v&&v.model});}
   function getAssistantSettings(){const d={memoryEnabled:true,memoryTurns:6,memoryChars:6000,messageChars:1800,contextChars:12000,maxOutputTokens:0,temperature:0.4},raw=read('labflow.assistant.settings',{}),o=Object.assign({},d,raw);o.memoryEnabled=o.memoryEnabled!==false;o.memoryTurns=Math.max(0,Math.min(20,Number(o.memoryTurns)||0));o.memoryChars=Math.max(500,Math.min(32000,Number(o.memoryChars)||d.memoryChars));o.messageChars=Math.max(250,Math.min(8000,Number(o.messageChars)||d.messageChars));o.contextChars=Math.max(2000,Math.min(48000,Number(o.contextChars)||d.contextChars));o.maxOutputTokens=Math.max(0,Math.min(1048576,Number(o.maxOutputTokens)||0));o.temperature=Math.max(0,Math.min(2,Number(o.temperature)));if(!Number.isFinite(o.temperature))o.temperature=d.temperature;return o;}
@@ -55,23 +55,18 @@
 
   function parseKnowledgeJsonl(raw){
     const text=String(raw||'').trim();
-    if(!text)return{entries:[],migrated:false};
-    try{
-      const legacy=JSON.parse(text);
-      if(legacy&&typeof legacy==='object'&&!Array.isArray(legacy)&&Array.isArray(legacy.entries))return{entries:legacy.entries,migrated:true};
-    }catch(_){}
+    if(!text)return{entries:[]};
     const entries=[];
     text.split(/\r?\n/).forEach(function(line,index){
       const value=line.trim();if(!value)return;
       try{const item=JSON.parse(value);if(!item||typeof item!=='object'||Array.isArray(item))throw new Error('line must be a JSON object');entries.push(item);}catch(err){throw new Error('Invalid Knowledge Base JSONL at line '+(index+1)+': '+(err.message||String(err)));}
     });
-    return{entries:entries,migrated:false};
+    return{entries:entries};
   }
   function knowledgeJsonl(entries){return(Array.isArray(entries)?entries:[]).map(function(item){return JSON.stringify(item);}).join('\n');}
   function getKnowledgeState(){
     try{
       const raw=localStorage.getItem(KNOWLEDGE_STORE),parsed=parseKnowledgeJsonl(raw);
-      if(parsed.migrated){localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(parsed.entries));Log.info('knowledge.storage-migrated',{entries:parsed.entries.length,format:'jsonl'});}
       return{schemaVersion:1,entries:clone(parsed.entries),format:'jsonl'};
     }catch(err){Log.warn('knowledge.read-failed',{key:KNOWLEDGE_STORE,error:err});return{schemaVersion:1,entries:[],format:'jsonl'};}
   }
@@ -80,12 +75,12 @@
     try{localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(entries));Log.info('knowledge.saved',{entries:entries.length,format:'jsonl'});return true;}catch(err){Log.warn('knowledge.write-failed',{key:KNOWLEDGE_STORE,error:err});return false;}
   }
 
-  function getExportSettings(){return Object.assign({instance:'NOMAD Central',endpoint:'https://nomad-lab.eu/prod/v1/api/v1',includeRaw:true,includeDerived:true},read('labflow.export.settings',{}));}
+  function getExportSettings(){const raw=read('labflow.export.settings',{});return{includeRaw:raw.includeRaw!==false,includeDerived:raw.includeDerived!==false};}
   function saveExportSettings(v){write('labflow.export.settings',v);}
 
   function getNomadSettings(){
-    const legacy=getExportSettings(),defaults={instance:'NOMAD Central',webUrl:'https://nomad-lab.eu/prod/v1/gui/',apiEndpoint:'https://nomad-lab.eu/prod/v1/api/v1',username:''};
-    const out=Object.assign({},defaults,{instance:legacy.instance||defaults.instance,apiEndpoint:legacy.endpoint||defaults.apiEndpoint},read(NOMAD_SETTINGS_STORE,{}));
+    const defaults={instance:'NOMAD Central',webUrl:'https://nomad-lab.eu/prod/v1/gui/',apiEndpoint:'https://nomad-lab.eu/prod/v1/api/v1',username:''};
+    const out=Object.assign({},defaults,read(NOMAD_SETTINGS_STORE,{}));
     ['instance','webUrl','apiEndpoint','username'].forEach(function(k){out[k]=String(out[k]||'').trim();});
     return out;
   }

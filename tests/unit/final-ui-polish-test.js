@@ -51,16 +51,20 @@ module.exports=function(t){
     assert(uiCss.includes('overflow: visible'),true,'no command-strip scrolling');
   };
 
-  t['Message feedback uses only canonical dialog and compact Totem variants']=function(){
-    assert(html.includes('message-totem message-totem-dialog'),true,'canonical Message Totem dialog');
-    assert(feedback.includes("message-totem message-totem-compact"),true,'canonical transient Message Totem');
+  t['Message feedback uses one canonical Message Totem implementation']=function(){
+    assert(html.includes('class="message-totem info" id="messageTotem"'),true,'canonical confirmation Message Totem');
+    assert(feedback.includes("element.className = 'message-totem ' + semantic"),true,'canonical transient Message Totem');
+    assert(feedback.includes('message-totem-compact'),false,'no compact clone');
+    assert(feedback.includes('message-totem-dialog'),false,'no dialog clone');
     assert(feedback.includes('totem-toast'),false,'retired custom Totem clone');
   };
 
-  t['Detect provider metadata uses the Action totem lifecycle']=function(){
-    assert(settings.includes("title:'Detect model capabilities'"),true,'detect totem title');
-    assert(settings.includes("stepId:'capability'"),true,'capability checkpoint');
-    assert(settings.includes('activity.activityFinish({message:')&&settings.includes('Provider metadata detection completed.')&&settings.includes('runtime differs from the LabFlow profile'),true,'detect terminal totem supports normal and llama.cpp profile-mismatch completion');
+  t['Detect and Save & test use the canonical Message Totem']=function(){
+    assert(settings.includes("notify(error.message||String(error),'error','Detect failed')"),true,'Detect failure Message Totem');
+    assert(settings.includes("'success','Detect completed'"),true,'Detect success Message Totem');
+    assert(settings.includes("'success','Save & test completed'"),true,'Save & test success Message Totem');
+    assert(settings.includes("'error','Save & test failed'"),true,'Save & test failure Message Totem');
+    assert(settings.includes('activityStart('),false,'provider checks do not misuse Action Totem');
   };
 
   t['Console logs expose a readable summary before structured details']=function(){
@@ -73,7 +77,7 @@ module.exports=function(t){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
     assert(settings.includes('await detectModel({silent:true})'),false,'connection test must not trigger model detection');
-    assert(settingsPage.includes('Detect reads model identity and capability when the provider exposes them.'),true,'shared Detect policy is visible');
+    assert(settingsPage.includes('Detect validates this connection and refreshes the provider model list.'),true,'shared Detect policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
   };
@@ -81,9 +85,9 @@ module.exports=function(t){
   t['Provider settings expose portable thinking policy and rich connection diagnostics']=function(){
     assert(settingsPage.includes('id="aiThinkingMode"'),true,'thinking policy selector');
     assert(settingsPage.includes('Follow each Action'),true,'Action-owned default');
-    assert(settings.includes('## Connection diagnostics'),true,'rich connection diagnostics');
-    assert(settings.includes('Successful provider round trip'),true,'round-trip metric');
-    assert(settings.includes('Thinking request'),true,'applied thinking mode is reported');
+    assert(settingsPage.includes('id="aiConnectivitySummary"'),true,'compact connection diagnostics');
+    assert(settings.includes('connection verified with'),true,'round-trip success message');
+    assert(settingsPage.includes('Global override only; each Action keeps its own thinking contract.'),true,'thinking policy is explained');
   };
 
   t['Action totem displays a readable llama.cpp model name without changing the request model id']=function(){

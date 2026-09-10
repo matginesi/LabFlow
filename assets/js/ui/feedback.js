@@ -50,10 +50,13 @@
     const region = byId('messageRegion');
     if (!region) return;
     const element = document.createElement('div');
-    element.className = 'message-totem message-totem-compact ' + semantic;
+    element.className = 'message-totem ' + semantic;
+    const head=document.createElement('div');head.className='message-totem-head';
     const marker=document.createElement('span');marker.className='message-totem-marker';marker.setAttribute('aria-hidden','true');
-    const body=document.createElement('div');body.className='message-totem-body';const title=document.createElement('strong'),copy=document.createElement('span');
-    title.textContent=text(titleText||titles[semantic]||'LabFlow');copy.textContent=text(message);body.appendChild(title);body.appendChild(copy);element.appendChild(marker);element.appendChild(body);
+    const titleWrap=document.createElement('div'),title=document.createElement('strong');
+    title.textContent=text(titleText||titles[semantic]||'LabFlow');titleWrap.appendChild(title);head.appendChild(marker);head.appendChild(titleWrap);
+    const body=document.createElement('div');body.className='message-totem-body';body.textContent=text(message);
+    element.appendChild(head);element.appendChild(body);
     region.appendChild(element);
     window.setTimeout(function () { element.classList.add('leaving');window.setTimeout(function(){element.remove();},180); }, 4200);
   }
@@ -72,7 +75,7 @@
     options=options||{};if(confirmPending)closeConfirmation(false);
     const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
     if(!shade||!title||!body||!confirm||!cancel)return Promise.resolve(false);
-    const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem message-totem-dialog '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
+    const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
     confirm.className='button '+(options.danger?'danger':'primary');shade.hidden=false;
     return new Promise(function(resolve){
       const keyHandler=function(event){if(event.key==='Escape'){event.preventDefault();closeConfirmation(false);}else if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeConfirmation(true);}};

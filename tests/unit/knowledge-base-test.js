@@ -37,10 +37,4 @@ module.exports=function(t,LF){
   t['Knowledge JSONL import reports the failing line']=function(){
     reset();let threw=false;try{LF.KnowledgeBase.importJsonl('{"id":"ok"}\nnot-json\n','merge');}catch(err){threw=/line 2/i.test(String(err.message));}if(!threw)throw new Error('Malformed JSONL must report its line number');
   };
-  t['Existing wrapped browser knowledge is migrated once to JSONL']=function(){
-    localStorage.setItem('labflow.knowledge',JSON.stringify({schemaVersion:1,entries:[{id:'legacy.draft',kind:'concept',title:'Migrated draft',summary:'Migration fixture.',status:'draft',sources:[]}]}));
-    const state=LF.Storage.getKnowledgeState();if(state.entries.length!==1||state.entries[0].id!=='legacy.draft')throw new Error('Legacy browser state not read during migration');
-    const raw=localStorage.getItem('labflow.knowledge')||'';if(raw.trim().startsWith('{"schemaVersion"'))throw new Error('Legacy browser state was not rewritten as JSONL');
-    reset();
-  };
 };

@@ -195,32 +195,27 @@ input[type="file"]::file-selector-button { min-height: var(--control-h-compact);
 .progress { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
 .progress > span { display: block; height: 100%; background: var(--accent); }
 
-/* Canonical Message Totem: modal dialog plus compact transient variant. */
+/* Canonical Message Totem: one component used for transient feedback and confirmations. */
 .message-shade { position: fixed; inset: 0; z-index: 1450; display: grid; place-items: center; padding: max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left)); background: var(--overlay-shade); overscroll-behavior: contain; }
 .message-shade[hidden] { display: none !important; }
-.message-totem { --message-tone: var(--accent); min-width: 0; overflow: hidden; border: 1px solid var(--border-strong); border-top: 3px solid var(--message-tone); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-float); color: var(--text); }
+.message-totem { --message-tone: var(--accent); width: 100%; min-width: 0; overflow: hidden; border: 1px solid var(--border-strong); border-top: 3px solid var(--message-tone); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-float); color: var(--text); }
 .message-totem.info { --message-tone: var(--info); }
 .message-totem.success { --message-tone: var(--success); }
 .message-totem.warning { --message-tone: var(--warning); }
 .message-totem.error, .message-totem.danger { --message-tone: var(--danger); }
-.message-totem-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: 11px 12px 9px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.message-totem-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: 9px 11px 8px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
 .message-totem-marker { width: 3px; align-self: stretch; flex: 0 0 3px; border-radius: 2px; background: var(--message-tone); }
 .message-totem-head > div { min-width: 0; }
-.message-totem-head strong { display: block; margin-top: 2px; overflow-wrap: anywhere; font-size: var(--font-md); }
-.message-totem-body { padding: 11px 12px; color: var(--text); font-size: var(--font-sm); line-height: 1.5; overflow-wrap: anywhere; }
-.message-totem-actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding: 9px 12px 11px; border-top: 1px solid var(--border); }
-.message-totem-dialog { width: min(460px,calc(100vw - 28px)); }
-.message-totem-compact { display: grid; grid-template-columns: 3px minmax(0,1fr); gap: 9px; align-items: stretch; width: min(390px,calc(100vw - 28px)); border-top-width: 1px; }
-.message-totem-compact.info { background: var(--info-soft); border-color: var(--info-border); }
-.message-totem-compact.success { background: var(--success-soft); border-color: var(--success-border); }
-.message-totem-compact.warning { background: var(--warning-soft); border-color: var(--warning-border); }
-.message-totem-compact.error, .message-totem-compact.danger { background: var(--danger-soft); border-color: var(--danger-border); }
-.message-totem-compact .message-totem-marker { grid-row: 1; }
-.message-totem-compact .message-totem-body { grid-column: 2; padding: 8px 10px 9px 0; }
-.message-totem-compact .message-totem-body strong, .message-totem-compact .message-totem-body span { display: block; }
-.message-totem-compact .message-totem-body strong { margin-bottom: 2px; font-size: var(--font-xs); }
-.message-totem-compact .message-totem-body span { color: var(--text-muted); font-size: var(--font-xs); line-height: 1.4; }
-.message-totem-compact.leaving { opacity: 0; transform: translateY(-4px); transition: opacity .18s ease, transform .18s ease; }
+.message-totem-head strong { display: block; overflow-wrap: anywhere; font-size: var(--font-sm); line-height: 1.3; }
+.message-totem-head .eyebrow { display: block; margin-bottom: 2px; }
+.message-totem-body { padding: 9px 11px 10px; color: var(--text-muted); font-size: var(--font-xs); line-height: 1.45; overflow-wrap: anywhere; }
+.message-totem-actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding: 9px 11px 10px; border-top: 1px solid var(--border); }
+.message-shade .message-totem { width: min(460px,calc(100vw - 28px)); }
+.message-region .message-totem.info { background: var(--info-soft); border-color: var(--info-border); }
+.message-region .message-totem.success { background: var(--success-soft); border-color: var(--success-border); }
+.message-region .message-totem.warning { background: var(--warning-soft); border-color: var(--warning-border); }
+.message-region .message-totem.error, .message-region .message-totem.danger { background: var(--danger-soft); border-color: var(--danger-border); }
+.message-region .message-totem.leaving { opacity: 0; transform: translateY(-4px); transition: opacity .18s ease, transform .18s ease; }
 
 /* Global Action totem: presentation only, never a job/queue abstraction. */
 body.activity-open { overflow: hidden; }
@@ -407,7 +402,7 @@ body:has(.app-shell:not(.assistant-closed)) .message-region { right: calc(var(--
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .button, .input, .select, .textarea, .switch-row input, .switch-row input::before, .message-totem-compact, .activity-progress > span, .activity-disclosure > summary::before { transition: none; }
+  .button, .input, .select, .textarea, .switch-row input, .switch-row input::before, .message-region .message-totem, .activity-progress > span, .activity-disclosure > summary::before { transition: none; }
   .activity-progress.indeterminate > span { animation: none; }
 }
 

@@ -154,7 +154,7 @@ Scientific data changes occur only after an explicit apply/accept path owned by 
 
 ## 8. State and invalidation
 
-`State` keeps scientific truth and transient interface state deliberately separate. The canonical UI namespace is `LF.State.state.ui`; route, selected record, tab, filter, zoom and page-local workbench state belong there. `state.route` remains only a non-enumerable proxy to `state.ui.route`, not a second stored value. Action manifest bindings that consume a UI selection use `ui.*` paths.
+`State` keeps scientific truth and transient interface state deliberately separate. The canonical UI namespace is `LF.State.state.ui`; route, selected record, tab, filter, zoom and page-local workbench state belong there. There is no parallel `state.route`; `state.ui.route` is the only route state. Action manifest bindings that consume a UI selection use `ui.*` paths.
 
 Route changes reset the main workspace to its beginning. On the four primary workflow routes, the shared Previous/Next navigation is the first page card and remains sticky at the top of the main scroller. Content-defining switches inside Results, Documentation and Cabinet preserve their shared tab/filter anchor whenever geometry permits; a Settings rail selection deliberately starts the selected utility context at the workspace beginning. Shorter views clamp and never call `scrollIntoView()`. Ordinary same-context rerenders preserve the main workspace position; explicitly bounded local scroll regions are restored only within the same context.
 

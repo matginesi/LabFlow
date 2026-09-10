@@ -22,7 +22,7 @@
   function knowledgeFormEntry(){const kb=LF.KnowledgeBase,id=S.state.ui&&S.state.ui.settingsKnowledgeId,existing=id&&id!=='__new__'?kb.get(id):null;return{id:existing&&existing.origin==='custom'?existing.id:undefined,kind:document.getElementById('kbKind').value,status:document.getElementById('kbStatus').value,title:document.getElementById('kbTitle').value,aliases:document.getElementById('kbAliases').value,tags:document.getElementById('kbTags').value,summary:document.getElementById('kbSummary').value,facts:document.getElementById('kbFacts').value,cautions:document.getElementById('kbCautions').value,related_ids:document.getElementById('kbRelatedIds').value,sources:kb.parseSourceLines(document.getElementById('kbSources').value),created_at:existing&&existing.created_at};}
   async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
   function scheduleWorkspaceSave(reason){if(!hasExperiment())return;window.clearTimeout(workspaceSaveTimer);workspaceSaveTimer=window.setTimeout(function(){persistWorkspace(reason||'state');},700);}
-  function restoreSavedUi(saved){const ui=saved&&saved.ui||{};if(ui.route)S.state.route=S.normalizeRoute?S.normalizeRoute(ui.route):ui.route;if(ui.resultsTab)S.state.ui.resultsTab=ui.resultsTab;if(ui.selectedMeasurementId)S.state.ui.selectedMeasurementId=ui.selectedMeasurementId;if(ui.selectedDesignDeviceId)S.state.ui.selectedDesignDeviceId=ui.selectedDesignDeviceId;}
+  function restoreSavedUi(saved){const ui=saved&&saved.ui||{};if(ui.route)S.state.ui.route=S.normalizeRoute?S.normalizeRoute(ui.route):ui.route;if(ui.resultsTab)S.state.ui.resultsTab=ui.resultsTab;if(ui.selectedMeasurementId)S.state.ui.selectedMeasurementId=ui.selectedMeasurementId;if(ui.selectedDesignDeviceId)S.state.ui.selectedDesignDeviceId=ui.selectedDesignDeviceId;}
 
   function scrollContext(route){
     const ui=S.state.ui||{},id=String(route||ui.route||'');
@@ -48,13 +48,13 @@
   }
 
   function renderWithStableAnchor(selector){
-    const generation=++stableAnchorGeneration,route=S.state.route;
+    const generation=++stableAnchorGeneration,route=S.state.ui.route;
     const main=document.getElementById('main');
     const before=main&&main.querySelector(selector),beforeTop=before&&before.getBoundingClientRect?before.getBoundingClientRect().top:null;
     render();
     if(!main)return;
     const align=function(){
-      if(generation!==stableAnchorGeneration||S.state.route!==route)return;
+      if(generation!==stableAnchorGeneration||S.state.ui.route!==route)return;
       const anchor=main.querySelector(selector);
       if(anchor&&anchor.getBoundingClientRect&&Number.isFinite(beforeTop))main.scrollTop+=anchor.getBoundingClientRect().top-beforeTop;
     };
@@ -114,7 +114,7 @@
 
   function renderTopbarContext(){
     const host=document.getElementById('topbarContext');if(!host)return;
-    if(S.state.route!=='ui-kit'){host.hidden=true;host.innerHTML='';return;}
+    if(S.state.ui.route!=='ui-kit'){host.hidden=true;host.innerHTML='';return;}
     host.hidden=false;
     host.innerHTML='<div class="topbar-search"><label class="sr-only" for="uiKitGlobalSearch">Search UI patterns</label><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" placeholder="Search patterns…" value="'+C.escapeHtml(S.state.ui.uiKitQuery||'')+'"></div><label class="sr-only" for="uiKitGlobalFilter">Pattern family</label><select class="select topbar-filter" id="uiKitGlobalFilter"><option value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option><option value="data">Scientific data</option><option value="ai">AI & actions</option><option value="system">System pages</option></select><span class="topbar-result-count" id="uiKitGlobalCount" aria-live="polite">Loading…</span>';
     document.getElementById('uiKitGlobalFilter').value=S.state.ui.uiKitFilter||'all';
@@ -135,32 +135,32 @@
 
   function render() {
     if (hasExperiment()) ensureExperimentShape(S.state.experiment);
-    const end=Log.timer('render',{route:S.state.route,experimentId:S.state.experiment&&S.state.experiment.id,resultsTab:S.state.ui.resultsTab});
+    const end=Log.timer('render',{route:S.state.ui.route,experimentId:S.state.experiment&&S.state.experiment.id,resultsTab:S.state.ui.resultsTab});
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
-    const previousRoute=renderedRoute||S.state.route,currentContext=scrollContext(S.state.route),routeChanged=!!renderedRoute&&renderedRoute!==S.state.route,contextChanged=!!renderedScrollContext&&renderedScrollContext!==currentContext,mainScrollTop=main.scrollTop;
+    const previousRoute=renderedRoute||S.state.ui.route,currentContext=scrollContext(S.state.ui.route),routeChanged=!!renderedRoute&&renderedRoute!==S.state.ui.route,contextChanged=!!renderedScrollContext&&renderedScrollContext!==currentContext,mainScrollTop=main.scrollTop;
     try{captureScrollableState(main,renderedScrollContext||scrollContext(previousRoute));}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
-    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.route;a.classList.toggle('active',active);});
-    document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
+    document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.ui.route;a.classList.toggle('active',active);});
+    document.getElementById('topbarTitle').textContent=routeTitle(S.state.ui.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderTopbarContext();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.ui.assistantOpen);if(assistant)assistant.hidden=!S.state.ui.assistantOpen;if(toggle){const assistantLabel=S.state.ui.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.ui.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';try{if(S.state.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.route==='experiment-design')html=renderDesign();else if(S.state.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.route==='logs')html=LF.LogsPage.render();else if(S.state.route==='documentation')html=LF.DocsPage.render();else if(S.state.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.route,error:err});html=pageFailureHtml(S.state.route,err);}
+    let html='';try{if(S.state.ui.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.ui.route==='experiment-design')html=renderDesign();else if(S.state.ui.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.ui.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.ui.route==='logs')html=LF.LogsPage.render();else if(S.state.ui.route==='documentation')html=LF.DocsPage.render();else if(S.state.ui.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.ui.route,error:err});html=pageFailureHtml(S.state.ui.route,err);}
     main.innerHTML=html;
-    try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.route,error:err});}
-    try{C.bindFieldLabels(main);}catch(err){Log.warn('render.labels-skipped',{route:S.state.route,error:err});}
-    if(S.state.route==='ui-kit')try{applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
-    if(S.state.route==='documentation'&&LF.DocsPage)try{LF.DocsPage.apply(main);}catch(err){Log.warn('render.documentation-filter-skipped',{error:err});}
-    if(S.state.route==='logs'&&LF.LogsPage&&LF.LogsPage.bind)try{LF.LogsPage.bind(main);}catch(err){Log.warn('render.logs-bind-skipped',{error:err});}
+    try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.ui.route,error:err});}
+    try{C.bindFieldLabels(main);}catch(err){Log.warn('render.labels-skipped',{route:S.state.ui.route,error:err});}
+    if(S.state.ui.route==='ui-kit')try{applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
+    if(S.state.ui.route==='documentation'&&LF.DocsPage)try{LF.DocsPage.apply(main);}catch(err){Log.warn('render.documentation-filter-skipped',{error:err});}
+    if(S.state.ui.route==='logs'&&LF.LogsPage&&LF.LogsPage.bind)try{LF.LogsPage.bind(main);}catch(err){Log.warn('render.logs-bind-skipped',{error:err});}
     if(!renderedRoute||routeChanged)main.scrollTop=0;else main.scrollTop=mainScrollTop;
-    renderedRoute=S.state.route;renderedScrollContext=currentContext;
-    if(!routeChanged&&!contextChanged)try{restoreScrollableState(main,currentContext);}catch(err){Log.warn('render.scroll-restore-skipped',{route:S.state.route,error:err});}
+    renderedRoute=S.state.ui.route;renderedScrollContext=currentContext;
+    if(!routeChanged&&!contextChanged)try{restoreScrollableState(main,currentContext);}catch(err){Log.warn('render.scroll-restore-skipped',{route:S.state.ui.route,error:err});}
     main.querySelectorAll('button:not([type])').forEach(function(b){b.type='button';});
-    try{LF.AISettings.decorate();}catch(err){Log.warn('render.decorate-skipped',{route:S.state.route,error:err});}
-    try{LF.Theme.syncControls(LF.Theme.current());}catch(err){Log.warn('render.theme-sync-skipped',{route:S.state.route,error:err});}
-    Log.trace('render.html',{route:S.state.route,chars:html.length});
-    try{LF.Assistant.render();}catch(err){Log.warn('render.assistant-skipped',{route:S.state.route,error:err});}
-    try{if(LF.Icons)LF.Icons.hydrate(document);}catch(err){Log.warn('render.icons-skipped',{route:S.state.route,error:err});}
-    try{LF.ResultsPage.renderResultInspector();}catch(err){Log.warn('render.inspector-skipped',{route:S.state.route,error:err});}
+    try{LF.AISettings.decorate();}catch(err){Log.warn('render.decorate-skipped',{route:S.state.ui.route,error:err});}
+    try{LF.Theme.syncControls(LF.Theme.current());}catch(err){Log.warn('render.theme-sync-skipped',{route:S.state.ui.route,error:err});}
+    Log.trace('render.html',{route:S.state.ui.route,chars:html.length});
+    try{LF.Assistant.render();}catch(err){Log.warn('render.assistant-skipped',{route:S.state.ui.route,error:err});}
+    try{if(LF.Icons)LF.Icons.hydrate(document);}catch(err){Log.warn('render.icons-skipped',{route:S.state.ui.route,error:err});}
+    try{LF.ResultsPage.renderResultInspector();}catch(err){Log.warn('render.inspector-skipped',{route:S.state.ui.route,error:err});}
     if(LF.Math&&LF.Math.queueTypeset&&main.querySelector&&main.querySelector('.math-display,.math-inline'))LF.Math.queueTypeset(main,70);end({htmlChars:html.length});
   }
 
@@ -257,7 +257,7 @@
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
-        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.message('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
+        if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.ui.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.message('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
         const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.ui.docsSlug=docLink.dataset.docSlug;renderWithStableAnchor('.docs-workbench');return;}
         const seriesToggle=e.target.closest('[data-chart-series-toggle]');if(seriesToggle){const wrap=seriesToggle.closest('.svg-chart-wrap')||seriesToggle.closest('.panel')||document,series=seriesToggle.dataset.chartSeriesToggle,next=!seriesToggle.classList.contains('active');seriesToggle.classList.toggle('active',next);seriesToggle.setAttribute('aria-pressed',String(next));wrap.querySelectorAll('[data-chart-series="'+series+'"]') .forEach(function(node){node.classList.toggle('chart-series-hidden',!next);});return;}
         const seriesAction=e.target.closest('[data-chart-series-action]');if(seriesAction){const wrap=seriesAction.closest('.panel')||document,show=seriesAction.dataset.chartSeriesAction!=='hide-all';wrap.querySelectorAll('[data-chart-series-toggle]').forEach(function(button){button.classList.toggle('active',show);button.setAttribute('aria-pressed',String(show));});wrap.querySelectorAll('[data-chart-series]').forEach(function(node){node.classList.toggle('chart-series-hidden',!show);});return;}
@@ -266,7 +266,7 @@
         const copyDoc=e.target.closest('[data-copy-doc]');if(copyDoc){const ok=C.copyText(LF.DocsPage.markdownFor(copyDoc.dataset.copyDoc));LF.UI.message(ok?'Markdown copied.':'Could not copy Markdown.',ok?'success':'warning');return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
         if(e.target.closest('[data-retry-page]')){render();return;}
-        if(e.target.closest('[data-rebuild-derived]')){try{if(!hasExperiment())throw new Error('No experiment is loaded.');refreshPipeline(S.state.experiment,'page-recovery:'+S.state.route);render();LF.UI.message('Derived data rebuilt from the current LabFlow Data.','success');}catch(err){Log.error('render.recovery-failed',{route:S.state.route,error:err});LF.UI.message(err.message||String(err),'error');}return;}
+        if(e.target.closest('[data-rebuild-derived]')){try{if(!hasExperiment())throw new Error('No experiment is loaded.');refreshPipeline(S.state.experiment,'page-recovery:'+S.state.ui.route);render();LF.UI.message('Derived data rebuilt from the current LabFlow Data.','success');}catch(err){Log.error('render.recovery-failed',{route:S.state.ui.route,error:err});LF.UI.message(err.message||String(err),'error');}return;}
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.ui.pceDistributionZoom)||1));S.state.ui.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         const curveZoom=e.target.closest('[data-curve-zoom]');if(curveZoom){const mode=curveZoom.dataset.curveZoom,current=Math.max(1,Math.min(4,Number(S.state.ui.curveZoom)||1));S.state.ui.curveZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#resetAll')){if(!await LF.UI.confirmAction('The persisted LabFlow session, action history, chat, Design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',{title:'Reset current session',confirmLabel:'Reset session',danger:true}))return;S.resetSession();S.state.ui.pceDistributionZoom=1;if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();if(LF.PageContext)LF.PageContext.clear();render();LF.UI.message('Session reset. Ready for a new ZIP.','info');return;}
@@ -478,7 +478,7 @@
 
     document.addEventListener('change',async function(e){if(e.target&&e.target.id==='kbImportFile'){const file=e.target.files&&e.target.files[0];if(!file)return;try{const text=await file.text(),out=LF.KnowledgeBase.importJsonl(text,'merge');S.state.ui.settingsKnowledgeId='';render();LF.UI.message('Imported '+out.imported+' Knowledge Base entr'+(out.imported===1?'y':'ies')+' from JSONL.','success');}catch(err){LF.UI.message('Knowledge Base import failed: '+(err.message||String(err)),'error');}finally{e.target.value='';}return;}if(e.target&&e.target.id==='cabinetImportFile'){const file=e.target.files&&e.target.files[0];if(!file)return;try{const text=await file.text(),out=LF.Cabinet.importState(text,'merge');S.state.ui.cabinetSelectedId=null;S.state.ui.cabinetKind='all';render();LF.UI.message('Imported '+out.imported+' Cabinet resource'+(out.imported===1?'':'s')+'.','success');}catch(err){LF.UI.message('Cabinet import failed: '+(err.message||String(err)),'error');}finally{e.target.value='';}}});
 
-    document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}if(e.target&&e.target.closest&&e.target.closest('[data-cabinet-field],[data-cabinet-layer-field]')&&S.state.route==='cabinet')render();});
+    document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}if(e.target&&e.target.closest&&e.target.closest('[data-cabinet-field],[data-cabinet-layer-field]')&&S.state.ui.route==='cabinet')render();});
 
     function markSettingsDirty(e){const content=e.target&&e.target.closest&&e.target.closest('.settings-content[data-settings-persist="explicit"]'),status=document.getElementById('settingsSaveState');if(!content||!status||e.target.closest('[data-theme-choice]'))return;status.className='badge warning';status.textContent='Unsaved changes';}
     document.addEventListener('input',markSettingsDirty);
@@ -514,13 +514,13 @@
   async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
-      S.state.route='experiment-import';S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      S.state.ui.route='experiment-import';S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
       /* ExperimentData is autosaved in IndexedDB for browser recovery. Reset session is the explicit clear boundary; provider/key/theme remain independent. */
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
-      if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);try{refreshPipeline(S.state.experiment,'workspace-restore');}catch(err){Log.warn('workspace.restore-pipeline-failed',{experimentId:S.state.experiment.id,error:err});}Log.info('workspace.restored',{route:S.state.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
-      else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
+      if(saved&&saved.experiment&&saved.experiment.id){S.setExperiment(saved.experiment,saved.experiment.raw&&saved.experiment.raw.sourceArchive);restoreSavedUi(saved);try{refreshPipeline(S.state.experiment,'workspace-restore');}catch(err){Log.warn('workspace.restore-pipeline-failed',{experimentId:S.state.experiment.id,error:err});}Log.info('workspace.restored',{route:S.state.ui.route,experimentId:S.state.experiment.id,savedAt:saved.savedAt||''});}
+      else{const aiSettings=LF.Storage.getAiSettings();S.resetSession();Log.info('workspace.empty-session',{route:S.state.ui.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});}
       S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      bindEvents();setMobileNav(false);window.addEventListener('resize',syncMobileNav,{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun'&&reason!=='assistant')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
+      bindEvents();setMobileNav(false);window.addEventListener('resize',syncMobileNav,{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun'&&reason!=='assistant')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();end({route:S.state.ui.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

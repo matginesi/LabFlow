@@ -28,7 +28,7 @@
   function routeTitle(route) { const meta=routeMeta(route); return meta ? meta.label : 'LabFlow'; }
 
   function experimentStepper() {
-    const ready=hasExperiment(),currentRoute=LF.State.state.route,current=Math.max(0,WORKFLOW_IDS.indexOf(currentRoute));
+    const ready=hasExperiment(),currentRoute=LF.State.state.ui.route,current=Math.max(0,WORKFLOW_IDS.indexOf(currentRoute));
     return '<nav class="stepper experiment-strip no-print" aria-label="Experiment workflow">'+ROUTES.slice(0,4).map(function(item,i){const active=item.id===currentRoute,done=ready&&i<current,disabled=item.requiresExperiment&&!ready;return '<button type="button" class="step '+(active?'active ':'')+(done?'done ':'')+'" data-route="'+item.id+'" '+(active?'aria-current="step" ':'')+(disabled?'disabled aria-disabled="true"':'')+'><span class="step-index">'+(i+1)+'</span><strong>'+C.escapeHtml(item.label)+'</strong></button>';}).join('')+'</nav>';
   }
 
@@ -36,7 +36,7 @@
     return '<div class="page-head"><div><h1 class="h1">'+C.escapeHtml(title)+'</h1><div class="meta">'+C.escapeHtml(subtitle||'')+'</div></div><div class="spacer"></div><div class="toolbar no-print">'+(actions||'')+'</div></div>';
   }
   function workflowHead(title, subtitle, actions) {
-    const route=LF.State&&LF.State.state&&LF.State.state.route||'';
+    const route=LF.State&&LF.State.state&&LF.State.state.ui.route||'';
     return pageNavigation(route)+pageHead(title,subtitle,actions)+experimentStepper();
   }
 

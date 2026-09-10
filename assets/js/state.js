@@ -79,13 +79,6 @@
     ui: defaultUiState()
   };
 
-  Object.defineProperty(state, 'route', {
-    configurable: true,
-    enumerable: false,
-    get: function () { return state.ui.route; },
-    set: function (v) { state.ui.route = v; }
-  });
-
   const listeners = [];
 
   function ensureDerived(exp) {

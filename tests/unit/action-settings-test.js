@@ -39,9 +39,11 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
     assert(LF.AIProviders.nvidia.endpoint==='https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA NIM endpoint');
-    assert(LF.AIProviders.nvidia.modelsEndpoint==='https://integrate.api.nvidia.com/v1/models','NVIDIA models endpoint');
+    assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.nvidia,'modelsEndpoint'),'NVIDIA catalogue follows the configured endpoint rather than a hidden fixed URL');
     assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
     assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
+    assert(LF.AIProviders.openai.modelSelect===true&&LF.AIProviders.openai.modelCatalogueRequired===true,'OpenAI Detect uses the official model catalogue');
+    assert(LF.AIProviders.gemini.modelSelect===true&&LF.AIProviders.gemini.modelCatalogueRequired===true,'Gemini Detect uses the OpenAI-compatible model catalogue');
     assert(LF.AIProviders.zai.modelSelect===true,'Z.AI Detect exposes the documented model snapshot');
     assert(LF.AIProviders.ollama.modelSelect===true,'Ollama Detect exposes discovered local models');
     assert(LF.AIProviders.lmstudio.modelSelect===true,'LM Studio Detect exposes discovered local models');
@@ -80,12 +82,29 @@ module.exports=function(t,LF){
     assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'retired Coding Plan endpoint switch absent');
   };
 
-  t['Z.AI settings use the same Detect control and result semantics as other providers']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('Detect checks the configured model capability.')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Minimal probe only; no experiment data.')>=0,'shared connection test semantics explained');localStorage.removeItem('labflow.ai.settings');
+  t['Z.AI settings use the shared fail-closed Detect and Message Totem semantics']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('API key required. Detect will validate')>=0,'missing key is explicit before Detect');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
   };
 
-  t['NVIDIA settings expose key-gated model loading and a real select']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
+  t['NVIDIA Detect stays actionable without a key so the Message Totem can report the real error']=function(){
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel"')>=0&&html.indexOf('id="detectProviderModel" disabled')<0,'Detect remains clickable');assert(html.indexOf('API key required. Detect will validate')>=0,'key requirement is explicit');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');localStorage.removeItem('labflow.ai.settings');
+  };
+
+
+  t['Detect and Save & test use only the canonical Message Totem for operation feedback']=function(){
+    const detectSource=String(LF.AISettings.detectModel),testSource=String(LF.AISettings.testConnection);
+    assert(detectSource.indexOf('notify(')>=0,'Detect must report through Message Totem');
+    assert(testSource.indexOf('notify(')>=0,'Save & test must report through Message Totem');
+    assert(detectSource.indexOf('providerFeedback')<0&&testSource.indexOf('providerFeedback')<0,'provider operations must not use an inline feedback clone');
+  };
+
+  t['Z.AI saved endpoint and model are not silently rewritten to provider defaults']=function(){
+    localStorage.removeItem('labflow.ai.settings');
+    LF.Storage.saveAiSettings({provider:'zai',endpoint:'https://proxy.example/v1/chat/completions',model:'glm-custom',temperature:0.3,thinkingMode:'off',streaming:false,inactivityTimeoutMs:45000,maxOutputTokensCap:2048});
+    const saved=LF.Storage.getAiSettings();
+    assert(saved.endpoint==='https://proxy.example/v1/chat/completions','custom Z.AI endpoint must survive storage');
+    assert(saved.model==='glm-custom','custom Z.AI model must survive storage');
+    localStorage.removeItem('labflow.ai.settings');
   };
 
 

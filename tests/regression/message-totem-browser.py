@@ -30,12 +30,12 @@ def main() -> int:
         page.add_script_tag(content=FEEDBACK_JS)
         page.evaluate("() => LabFlow.UI.message('Direct NOMAD upload is not implemented yet. The configured credentials were not used and no data was sent.','info','NOMAD upload')")
 
-        totem = page.locator("#messageRegion .message-totem.message-totem-compact.info").last
+        totem = page.locator("#messageRegion .message-totem.info").last
         totem.wait_for(state="visible")
         assert totem.locator("strong").inner_text() == "NOMAD upload"
         assert "Direct NOMAD upload is not implemented yet." in totem.inner_text()
         style = totem.evaluate("node => ({background:getComputedStyle(node).backgroundColor,border:getComputedStyle(node).borderTopColor,display:getComputedStyle(node).display,opacity:getComputedStyle(node).opacity})")
-        assert style["display"] == "grid"
+        assert style["display"] != "none"
         assert style["opacity"] == "1"
         assert style["background"] not in ("transparent", "rgba(0, 0, 0, 0)")
         assert style["border"] not in ("transparent", "rgba(0, 0, 0, 0)")

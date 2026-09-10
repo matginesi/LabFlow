@@ -6,8 +6,9 @@ PROG="$(basename "$0")"
 # Machine defaults can be overridden without editing this file.
 MODEL="${LABFLOW_MODEL:-$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotron-3-Nano-4B-GGUF/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf}"
 SERVER="${LABFLOW_LLAMA_SERVER:-$HOME/llama.cpp/build/bin/llama-server}"
-HOST="${LABFLOW_HOST:-127.0.0.1}"
+HOST="${LABFLOW_HOST:-0.0.0.0}"
 PORT="${LABFLOW_PORT:-8080}"
+CORS_ORIGINS="${LABFLOW_CORS_ORIGINS:-*}"
 
 CTX=65536
 PARALLEL=1
@@ -68,8 +69,9 @@ Core:
       --gpu-layers N           GPU layers (default: 99)
 
 Server:
-  -H, --host HOST              bind host (default: 127.0.0.1)
+  -H, --host HOST              bind host (default: 0.0.0.0, LAN reachable)
   -p, --port PORT              bind port (default: 8080)
+      --cors-origins ORIGINS   allowed browser origins (default: *)
       --timeout SEC            request timeout (default: 600)
       --sse-ping SEC           SSE ping interval (default: 15)
       --[no-]metrics
@@ -105,7 +107,7 @@ Utility:
   -h, --help
 
 Raw llama-server options must follow '--'.
-Environment: LABFLOW_MODEL, LABFLOW_LLAMA_SERVER, LABFLOW_HOST, LABFLOW_PORT, NO_COLOR
+Environment: LABFLOW_MODEL, LABFLOW_LLAMA_SERVER, LABFLOW_HOST, LABFLOW_PORT, LABFLOW_CORS_ORIGINS, NO_COLOR
 
 Examples:
   $PROG -m ~/models/model.gguf
@@ -135,6 +137,7 @@ parse_args() {
             -ngl|--gpu-layers) need "$@"; GPU_LAYERS="$2"; shift 2 ;;
             -H|--host) need "$@"; HOST="$2"; shift 2 ;;
             -p|--port) need "$@"; PORT="$2"; shift 2 ;;
+            --cors-origins) need "$@"; CORS_ORIGINS="$2"; shift 2 ;;
             --timeout) need "$@"; TIMEOUT="$2"; shift 2 ;;
             --sse-ping|--sse-ping-interval) need "$@"; SSE_PING="$2"; shift 2 ;;
             --flash-attn) need "$@"; FLASH_ATTN="$2"; shift 2 ;;
@@ -253,6 +256,10 @@ validate() {
     resolve_template
     auto_reasoning_format
     [[ -z "$REASONING_FORMAT" ]] || supports --reasoning-format || die "llama-server does not support --reasoning-format"
+    if [[ -n "$CORS_ORIGINS" ]] && ! supports --cors-origins; then
+        warn "this llama-server build does not expose --cors-origins; browser CORS will use the server default"
+        CORS_ORIGINS=""
+    fi
 }
 
 build_command() {
@@ -262,6 +269,8 @@ build_command() {
         --cache-type-k "$CACHE_K" --cache-type-v "$CACHE_V"
         --host "$HOST" --port "$PORT" --timeout "$TIMEOUT"
         --sse-ping-interval "$SSE_PING")
+
+    [[ -n "$CORS_ORIGINS" ]] && CMD+=(--cors-origins "$CORS_ORIGINS")
 
     [[ "$JINJA" == true ]] && CMD+=(--jinja)
     [[ -n "$TEMPLATE" ]] && CMD+=(--chat-template "$TEMPLATE")
@@ -279,14 +288,34 @@ build_command() {
 
 summary() {
     [[ "$QUIET" == true ]] && return 0
+    local local_host lan_ip
+    local_host="$(hostname 2>/dev/null || true)"
+    lan_ip="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' | head -n1 || true)"
     printf '%sLabFlow engine%s\n' "$B" "$R"
     printf '  model      %s\n' "$(basename "$MODEL")"
     printf '  runtime    ctx=%s  parallel=%s  gpu=%s  flash=%s\n' "$CTX" "$PARALLEL" "$GPU_LAYERS" "$FLASH_ATTN"
     printf '  template   %s\n' "$TEMPLATE_SOURCE"
     printf '  reasoning  %s  budget=%s  format=%s\n' "${REASONING:-default}" "${REASONING_BUDGET:-default}" "${REASONING_FORMAT:-auto}"
-    printf '  endpoint   http://%s:%s\n' "$HOST" "$PORT"
+    printf '  bind       %s:%s\n' "$HOST" "$PORT"
+    printf '  CORS       %s\n' "${CORS_ORIGINS:-server default}"
+    if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
+        [[ -n "$local_host" ]] && printf '  hostname   http://%s:%s/v1\n' "$local_host" "$PORT"
+        [[ -n "$local_host" ]] && printf '  mDNS       http://%s.local:%s/v1\n' "${local_host%%.*}" "$PORT"
+        [[ -n "$lan_ip" ]] && printf '  LAN IP     http://%s:%s/v1\n' "$lan_ip" "$PORT"
+        warn "llama-server is exposed to the local network; keep the network trusted"
+        if command -v firewall-cmd >/dev/null 2>&1 && firewall-cmd --state >/dev/null 2>&1; then
+            if ! firewall-cmd --quiet --query-port="${PORT}/tcp" >/dev/null 2>&1; then
+                warn "firewalld is active and TCP port $PORT is not open in the current zone"
+                warn "Fedora LAN fix: sudo firewall-cmd --add-port=${PORT}/tcp && sudo firewall-cmd --permanent --add-port=${PORT}/tcp"
+            fi
+        else
+            warn "if another device cannot connect, ensure the host firewall allows TCP port $PORT"
+        fi
+        [[ -n "$lan_ip" ]] && warn "from phones/tablets prefer the LAN IP or a working .local hostname; bare hostnames such as 'fedora' depend on your router/DNS"
+    else
+        printf '  endpoint   http://%s:%s/v1\n' "$HOST" "$PORT"
+    fi
 }
-
 print_command() { printf '%scommand:%s ' "$DIM" "$R"; printf '%q ' "${CMD[@]}"; printf '\n'; }
 
 main() {

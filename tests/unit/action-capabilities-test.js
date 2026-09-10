@@ -13,7 +13,7 @@ module.exports=function(t,LF,ctx){
   t['public catalog is global while route only changes recommendation']=function(){
     const e=exp(false);LF.State={state:{experiment:e,route:'experiment-export',ui:{route:'experiment-export',selectedDesignDeviceId:'d1',boxPlot:{groups:['G1']}}}};
     const exportIds=LF.ActionCapabilities.catalog().map(function(x){return x.id;}).sort();
-    LF.State.state.route='experiment-design';LF.State.state.ui.route='experiment-design';
+    LF.State.state.ui.route='experiment-design';
     const designIds=LF.ActionCapabilities.catalog().map(function(x){return x.id;}).sort();
     assert(exportIds,designIds,'page does not add or remove public Actions');
     assert(LF.ActionCapabilities.evaluate('design.infer').recommended,true,'Design is recommended on Design route');
