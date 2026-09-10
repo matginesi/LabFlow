@@ -97,11 +97,11 @@
     </section>
   </div>
 
-  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="false"></div>
 
   <div class="message-shade" id="messageShade" hidden>
-    <section class="message-totem" role="dialog" aria-modal="true" aria-labelledby="messageTotemTitle" aria-describedby="messageTotemBody">
-      <div class="message-totem-head"><span class="message-totem-marker" aria-hidden="true"></span><div><span class="eyebrow" id="messageTotemEyebrow">LABFLOW</span><strong id="messageTotemTitle">Confirm action</strong></div></div>
+    <section class="message-totem message-totem-dialog info" id="messageTotem" role="dialog" aria-modal="true" aria-labelledby="messageTotemTitle" aria-describedby="messageTotemBody">
+      <div class="message-totem-head"><span class="message-totem-marker" aria-hidden="true"></span><div><span class="eyebrow" id="messageTotemEyebrow">LabFlow</span><strong id="messageTotemTitle">Confirm action</strong></div></div>
       <div class="message-totem-body" id="messageTotemBody"></div>
       <div class="message-totem-actions"><button class="button ghost" type="button" id="messageTotemCancel">Cancel</button><button class="button primary" type="button" id="messageTotemConfirm">Confirm</button></div>
     </section>

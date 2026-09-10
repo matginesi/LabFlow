@@ -22,7 +22,7 @@
   function exportOptionsSignature(settings){return JSON.stringify({includeRaw:!!(settings&&settings.includeRaw),includeDerived:!!(settings&&settings.includeDerived)});}
 
   function buildMapping(exp){
-    const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=A.measurementsOf(exp)||[],samples=A.samplesOf(exp)||[];
+    const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=(A.measurementsOf(exp)||[]).filter(function(m){return!m.excluded;}),samples=A.samplesOf(exp)||[];
     const exported=measurements.filter(function(m){return Number.isFinite(Number(m.bestEff));});
     function row(nomadPath,labflowPath,value,required,note){
       const disabled=value&&value.__disabled===true,actual=disabled?'':value,missing=!disabled&&(actual==null||actual===''||(Array.isArray(actual)&&!actual.length));
@@ -247,7 +247,7 @@
     zip.file('metadata/provenance.json',C.safeJson(provenanceSnapshot(exp),2));
     if(LF.Export&&LF.Export.canonicalSnapshot)zip.file('metadata/canonical.json',C.safeJson(LF.Export.canonicalSnapshot(exp),2));
     if(plan)zip.file('metadata/mapping_plan.json',C.safeJson(plan,2));
-    if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp));zip.file('derived/analysis.json',C.safeJson({analysis:A.analysisOf(exp),analysisSummary:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):null},2));}
+    if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp,{excludeExcluded:true}));zip.file('derived/analysis.json',C.safeJson({analysis:A.analysisOf(exp),analysisSummary:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):null},2));}
     if(settings.includeRaw&&rawArchive)zip.file('raw/source.zip',rawArchive);
     const packageFiles=Object.keys(zip.files).concat(['manifest.json']);
     zip.file('manifest.json',C.safeJson(packageManifest(exp,settings,validation,packageFiles),2));

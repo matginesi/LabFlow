@@ -17,9 +17,9 @@ TARGET = ROOT / "assets/js/pages/ui-kit-inline.js"
 
 
 def extract_main(source: str) -> str:
-    opening = re.search(r'<main class="main-area">', source)
+    opening = re.search(r'<main\b(?=[^>]*\bclass="[^"]*\bmain-area\b[^"]*")[^>]*>', source, re.I)
     if not opening:
-        raise SystemExit("Could not find <main class=\"main-area\"> in ui-kit.html")
+        raise SystemExit('Could not find the main-area element in ui-kit.html')
     depth = 1
     for tag in re.finditer(r'</?main\b[^>]*>', source[opening.end():], re.I):
         depth += -1 if tag.group(0).startswith('</') else 1

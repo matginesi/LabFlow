@@ -44,13 +44,14 @@ module.exports=function(t,LF,ctx){
   };
 
 
-  t['route and tab navigation start the selected workspace predictably']=function(){
+  t['route navigation resets while local content switches follow their contracts']=function(){
     const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
-    if(!app.includes("renderAtWorkspaceStart('.results-main-tabs')"))throw new Error('Results tab and mode switches must align the selected workspace to its start');
-    if(!app.includes("renderAtWorkspaceStart('.settings-tabs')"))throw new Error('Settings section switches must align the selected workspace to its start');
-    if(!app.includes("renderAtWorkspaceStart('.docs-workbench')"))throw new Error('Documentation topic switches must align the selected document workspace to its start');
-    if(!app.includes("renderAtWorkspaceStart('.cabinet-filter-tabs')"))throw new Error('Cabinet kind switches must align the selected shelf workspace to its start');
+    if(!app.includes("renderWithStableAnchor('.results-main-tabs')"))throw new Error('Results tab and mode switches must preserve their visible anchor');
+    if(!app.includes("settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0"))throw new Error('Settings section switches must start the new utility context at the top');
+    if(!app.includes("renderWithStableAnchor('.docs-workbench')"))throw new Error('Documentation topic switches must preserve their visible anchor');
+    if(!app.includes("renderWithStableAnchor('.cabinet-filter-tabs')"))throw new Error('Cabinet kind switches must preserve their visible anchor');
     if(!app.includes("if(!renderedRoute||routeChanged)main.scrollTop=0"))throw new Error('route changes must start the destination page at the top');
+    if(!app.includes('main.scrollTop=mainScrollTop'))throw new Error('same-context rerenders must preserve the main workspace scroll');
     if(app.includes('nodes=[root]'))throw new Error('main document scroll must not be restored as local scroll memory');
     if(!app.includes("if(id==='experiment-results')return id+':'+String(ui.resultsTab||'overview')"))throw new Error('Results local scroll memory must be view-scoped');
     if(!app.includes("if(id==='documentation')return id+':'+String(ui.docsSlug||'')"))throw new Error('Documentation local scroll memory must be document-scoped');

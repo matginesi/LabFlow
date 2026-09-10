@@ -39,9 +39,14 @@ LabFlow is a compact scientific workbench, not an oversized card dashboard and n
 - `--font-micro` is reserved for genuinely secondary technical metadata, never primary actions, Action names, warnings, scientific values or explanatory copy.
 - Do not use 7–9 px text for user-facing controls/content.
 - Shared controls follow the tokenized normal/compact control heights. Prefer tighter grouping and less decorative padding before shrinking type.
-- A heading, eyebrow and supporting meta line need visible vertical rhythm (roughly 2–4 px between related lines); never concatenate visually into one dense line.
+- Normal fields/buttons are `36px`; the single compact variant is `32px`. Use `.button.compact`, `.input.compact`, `.select.compact` or `.textarea.compact` only in dense toolbars and inspectors, and keep controls in one row vertically aligned. Do not add feature-local control heights.
+- Form rows use `.field`; supporting copy uses `.help`; validation copy uses `.field-error` next to an `aria-invalid` control. Use `.checkbox-row` for choices and `.switch-row` only for immediate boolean settings.
+- A heading, eyebrow and supporting meta line need visible vertical rhythm (roughly 2–4 px between related lines); never concatenate visually into one dense line. Eyebrows use sentence case, normal tracking and restrained weight. Reserve all-caps for scientific abbreviations such as JV, PCE and RAW, not decorative section titles.
+- Compact summaries use the shared `fact-strip` / `fact-item` / `fact-label` / `fact-value` rhythm. Labels and values are separate block rows; never rely on adjacent inline text that can render as `Label**Value**`.
 - Long names, paths and evidence must wrap or truncate deliberately. Never let text collide with buttons/badges or escape a card.
 - Panels stay flat, radii modest, borders meaningful, and whitespace concentrated between scientific tasks rather than inside every tiny element.
+- Page/task spacing comes from `--page-gap`, `--task-gap`, `--panel-head-*` and `--panel-body-pad`. Use the existing spacing scale/utilities before adding a margin or padding literal.
+- The canonical panel structure is `.panel > .panel-head + .panel-body`; title/meta sit together and actions sit at the opposite edge or wrap below on narrow screens.
 
 ## Layout rules
 
@@ -57,7 +62,7 @@ LabFlow is a compact scientific workbench, not an oversized card dashboard and n
 ### Navigation and scroll contract
 
 - Opening a different route starts that page at the top; do not restore the previous route's main-document scroll position.
-- Switching a content-defining tab/filter (Results workspace, Settings section, Documentation topic, Cabinet kind) aligns that workspace's tab/filter anchor to the top and starts the new content at its beginning.
+- Switching a content-defining tab/filter in Results, Documentation or Cabinet keeps the shared tab/filter anchor at the same visible position whenever geometry permits. A Settings rail selection establishes a new utility context at the workspace beginning. Do not move focus or call `scrollIntoView()` merely to reveal new content.
 - Preserve scroll only for explicitly bounded local regions within the **same** view context (for example a long selector list), keyed by that view identity. Never reuse local scroll memory across different tabs/documents.
 - Do not work around navigation jumps with delayed arbitrary pixel offsets or page-specific scroll hacks.
 
@@ -124,9 +129,22 @@ Action results shown in chat should be readable at normal compact UI sizes. Full
 
 AI surfaces must state responsibility: deterministic analysis is authoritative; AI suggests, interprets or drafts. Never style an AI enrichment as if it recalculated a metric.
 
+## Canonical Totems
+
+Keep exactly two Totem families, both owned by `assets/css/ui.css` and `assets/js/ui/feedback.js`:
+
+- **Message Totem** (`.message-totem`): application feedback and decisions. Use `.message-totem-dialog` for confirmations and `.message-totem-compact` for transient info/success/warning/error feedback. Inline `.notice` content is part of a page and is not a Totem.
+- **Action Totem** (`.activity-totem`): one foreground Action or substantive bounded workflow operation with progress, checkpoints, cancellation, result and technical disclosure. Routine Settings checks use inline status plus a Message Totem for completion/error. Pages never create their own progress Totem markup.
+
+Do not introduce page-specific Totems, “totem-toast” clones or a generic mode framework. Add a small documented semantic variant to one of these two owners only when neither existing shape fits.
+
+## Implementation discipline
+
+Reuse the production classes demonstrated by `ui-kit.html`, ordinary semantic HTML and the current vanilla-JavaScript/CSS stack. The repository does not currently load a Bootstrap runtime; keep markup Bootstrap-compatible where practical, but do not add Bootstrap, a CDN, trackers, a frontend framework or a component abstraction merely for visual cleanup. Remove a retired selector when migrating its markup.
+
 ## Results workspace stability
 
-Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. A route change opens the destination page at its beginning. Changing a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and shows the new view from its beginning; never transplant an absolute scroll offset from another tab. Ordinary rerenders inside the same view may preserve explicitly bounded local scroll regions. The main Results tabs may be sticky within the page scroll container; on small screens they reflow into the shared compact tab grid and must not create document-level horizontal overflow.
+Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. A route change opens the destination page at its beginning. Changing a main Results tab or subordinate Data/JV mode preserves the visible position of the Results tab strip whenever geometry permits; a shorter view clamps only to the nearest valid scroll position. Never force-focus the new panel, call `scrollIntoView()` or transplant an unrelated document offset. Ordinary rerenders preserve the main workspace position and explicitly bounded local scroll regions. The main Results tabs may be sticky within the page scroll container; on small screens they reflow into the shared compact tab grid and must not create document-level horizontal overflow.
 
 ## Design and Cabinet
 
@@ -137,7 +155,9 @@ Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomp
 
 ## Settings and Scientific Knowledge Base
 
-Settings uses the shared LabFlow tab pattern and renders exactly one active section. Switching Connection / Actions / Assistant / Knowledge Base / NOMAD / Workspace / Data contract establishes a new view context: align the Settings tab strip to the workspace start and do not reuse document scroll from the previous section. NOMAD settings are browser-local preparation for the future uploader; saving them must not make a network request, and any token must remain separate from exported manifests/options.
+Settings uses a compact intent-grouped rail and renders exactly one active section: AI contains Connection, Assistant, Actions and Knowledge Base; Integrations contains NOMAD; Local contains Workspace. At narrow widths the rail reflows into a compact grid. Data and Action contract information is advanced progressive disclosure inside Workspace rather than a peer destination. Selecting a section establishes a new view context at the workspace beginning.
+
+Connection keeps provider/model/endpoint/credential state prominent and places thinking, streaming, timeouts and global caps under progressive disclosure. Detection and connection tests are explicit, send no experiment data, show bounded inline state and complete through the Message Totem. Explicit-save sections visibly distinguish saved and unsaved state; field validation is local. NOMAD settings are browser-local preparation for the future uploader; saving them must not make a network request, and any token must remain separate from exported manifests/options.
 
 The Knowledge Base management surface uses one search/filter toolbar, one bounded entry catalogue and one detail editor built from the standard panel/field/button/badge/notice primitives. The baseline, browser-local custom store and portable backup format are JSONL (one knowledge object per line). Bundled entries are visibly read-only; custom entries are editable. Draft entries may be incomplete but must be visually distinguished from AI-eligible active entries, and active entries must surface source/provenance readiness. Do not turn the KB into a dashboard, graph browser, RAG console, inventory UI or separate design system. Source citations use normal readable UI sizes and progressive disclosure where needed.
 

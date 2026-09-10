@@ -43,4 +43,12 @@ module.exports = function (t, LF) {
     assert(exp.measurements[0].bestEff,10,'scaled best efficiency');
     assert(Number(exp.measurements[0].hysteresis.toFixed(4)),0.1,'unscaled hysteresis');
   };
+  t['CSV makes exclusions explicit and can emit only active scientific rows'] = function () {
+    const exp=experiment(1);exp.measurements[1].excluded=true;LF.Analysis.analyze(exp);
+    const audit=LF.Analysis.toCSV(exp),active=LF.Analysis.toCSV(exp,{excludeExcluded:true});
+    assert(audit.split('\n')[0].split(',').includes('excluded'),true,'audit CSV has explicit exclusion column');
+    assert(audit.split('\n').length,3,'audit CSV retains excluded provenance row');
+    assert(active.split('\n').length,2,'scientific CSV omits excluded row');
+    assert(active.includes('ref.txt'),false,'excluded source cannot leak into active CSV');
+  };
 };

@@ -8,7 +8,12 @@ module.exports=function(t,LF){
   function reset(){localStorage.removeItem('labflow.knowledge');LF.KnowledgeBase.resetCustom();}
   t['Bundled Knowledge Base is populated from the JSONL source bundle']=function(){
     const stats=LF.KnowledgeBase.stats();
-    if(stats.bundled!==57)throw new Error('Expected 57 bundled KB records, got '+stats.bundled);
+    if(stats.bundled!==64)throw new Error('Expected 57 scientific and 7 documentation KB records, got '+stats.bundled);
+    const guide=LF.KnowledgeBase.search('getting started LabFlow upload ZIP',{kinds:['guide'],limit:8});
+    if(!guide.some(function(x){return x.id==='guide.getting-started';}))throw new Error('Generated application guide is not retrievable');
+    const tokenGuide=LF.KnowledgeBase.get('guide.ai-tokens-and-rate-limits'),facts=(tokenGuide&&tokenGuide.facts||[]).join(' ');
+    if(facts.includes('-->'))throw new Error('Markdown diagrams must not leak into application-guide facts');
+    if(!facts.includes('actions/*/action.json'))throw new Error('Documentation code paths must remain intact in application-guide facts');
   };
   t['Knowledge drafts persist as browser-local JSONL but are excluded from AI retrieval']=function(){
     reset();const item=LF.KnowledgeBase.save({kind:'material',title:'Tin oxide',summary:'Electron-selective material.',status:'draft',tags:'SnO2, ETL'});

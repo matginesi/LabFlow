@@ -1,6 +1,21 @@
 # UI contract
 
-`ui-kit.html` demonstrates the visual system. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application/page composition in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit.
+`ui-kit.html` demonstrates the visual system. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application/page composition in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit. The frontend remains semantic HTML, vanilla JavaScript and ordinary local CSS. Its class conventions are Bootstrap-compatible where useful, but this repository currently loads no separate Bootstrap runtime; do not add a framework/CDN dependency merely for UI cleanup.
+
+## Shared typography, controls and spacing
+
+The small type hierarchy is token-owned: page title, panel title, body/control text, label/helper text and technical micro metadata. Do not add arbitrary page-local sizes. Normal controls are 36 px high; the one compact variant is 32 px and uses `.compact` on the shared button/input/select/textarea classes. Use `.field`, `.help`, `.field-error`, `.checkbox-row` and `.switch-row` consistently. Shared page/task gaps and panel padding come from tokens; feature CSS should reflow layout rather than redefine global density.
+
+Panels use `.panel > .panel-head + .panel-body`. Keep title and metadata together, align nearby controls by shared size, and wrap action groups rather than shrinking their type. Tables remain locally scrollable when their scientific columns cannot reflow.
+
+## Canonical Totems
+
+There are exactly two Totem families:
+
+- **Message Totem**: application feedback and decisions. `.message-totem-dialog` is the modal confirmation shape; `.message-totem-compact` is transient info/success/warning/error feedback. Inline `.notice` blocks remain page content.
+- **Action Totem**: one explicit foreground Action or substantive bounded workflow operation with progress, checkpoints, cancellation, result and optional technical disclosure. Routine Settings checks remain inline and finish with a Message Totem. Callers use `LF.UI.activity*`; pages do not implement local progress Totems.
+
+Both live in `assets/css/ui.css` and are driven by `assets/js/ui/feedback.js`. Do not introduce page-specific Totems or merge both roles into a generic mode system.
 
 ## Workflow and shell
 
@@ -11,7 +26,8 @@ The primary workflow is **Upload & Review → Results → Design → Export**. C
 - The Assistant is closed by default and opens only after explicit user action.
 - Page content must not create document-level horizontal scrolling. Tables, tabs, diagrams and wide charts may scroll inside a clearly bounded local region.
 - Normal workflow content uses readable shared type/control tokens. Micro type is reserved for secondary technical metadata; primary labels/actions must not fall into 7–9 px text.
-- Heading, eyebrow and supporting metadata require explicit vertical rhythm and must not visually collide.
+- Heading, eyebrow and supporting metadata require explicit vertical rhythm and must not visually collide. Eyebrows use sentence case without decorative tracking; all-caps are reserved for scientific abbreviations.
+- Compact label/value summaries use the shared fact-strip pattern so labels, values and supporting metadata remain separate readable rows.
 - Motion respects `prefers-reduced-motion`.
 
 ## Upload & Review
@@ -22,7 +38,7 @@ Upload copy, source metadata and actions reflow into one column on narrow screen
 
 Results visualize the canonical deterministic measurement model. Interactive behavior must not become a second calculation path.
 
-The researcher-facing structure is **Overview / Data / JV / Compare**. Overview is a triage surface, not a gallery: surface best sample, best group, eligible coverage, warnings and a robust group-distribution view before detailed tables. Data owns All/Best/Warnings/Top subsets. JV owns single-scan diagnostics and multi-scan overlay. Compare owns group statistics. Prefer median + IQR + min–max for group summaries, with mean available as an explicit alternative. Route changes start the destination page at its beginning. Switching a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and starts the new view at its beginning; scroll from another tab is never restored into the new content. Only bounded local scroll regions may be preserved within the same view context.
+The researcher-facing structure is **Overview / Data / JV / Compare**. Overview is a triage surface, not a gallery: surface best sample, best group, eligible coverage, warnings and a robust group-distribution view before detailed tables. Data shows active records by default and owns Active/Best/Warnings/Excluded/Top subsets; Excluded is an explicit provenance-audit view, never an accidental reappearance in active Results. JV and Compare always omit excluded records. JV owns single-scan diagnostics and multi-scan overlay. Compare owns group statistics. Prefer median + IQR + min–max for group summaries, with mean available as an explicit alternative. Route changes start the destination page at its beginning. Switching a main Results tab or subordinate Data/JV mode keeps the tab strip at the same visible position whenever the new view has enough scroll range; shorter views clamp only to the nearest valid position and never call `scrollIntoView()`. Ordinary rerenders preserve the main workspace position; bounded local regions retain only same-context scroll memory.
 
 Primary charts support the interactions appropriate to their data: metric/scan/group controls, hover/focus value inspection, series toggles for overlays and local scrolling for many categories. Chart exports are first-class: PNG and SVG export the visual, while CSV exports the canonical rows underlying the plotted view. The local SVG renderer is preferred so Results remains self-contained offline and in static deployment.
 
@@ -40,14 +56,16 @@ Export is artifact-first. The portable **LabFlow ZIP** is the primary save artif
 
 User-facing capabilities use `button[data-action]`. Provider output/telemetry is progressively disclosed. A running Action exposes cancel and all Action execution still passes through guards/contracts.
 
-The Assistant may launch public Actions and may display bounded Action results inline so a follow-up question can reference them. It exposes one compact **Actions** launcher/menu, with page-recommended Actions first and unavailable reasons visible; do not duplicate this with a persistent recommended-actions strip. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
+The Assistant may launch public Actions and displays bounded Action outcomes inline regardless of whether they were launched from a page or from chat, so a follow-up question can reference them. Current persisted proposals/annotations/status enter context only through the bounded `ActionData` owner projection; conversation events remain interaction history, not a second scientific store. It exposes one compact **Actions** launcher/menu, with page-recommended Actions first and unavailable reasons visible; do not duplicate this with a persistent recommended-actions strip. It never mutates scientific state directly through free-form chat and never receives full RAW curves by default.
 
 Global destructive `Reset session` is intentionally visible in the topbar. It uses danger styling and remains reachable as an icon on phone layouts; do not move it back into navigation utilities.
 
 
 ## Settings and Knowledge Base
 
-Settings uses one shared tab strip and one active section at a time: Connection, Actions, Assistant, Knowledge Base, NOMAD, Workspace and Data contract. Changing Settings section starts the selected section at the workspace beginning rather than inheriting scroll from the previous section. The NOMAD section stores only future uploader configuration locally; saving it does not perform a network request.
+Settings uses one compact navigation rail and one active section at a time. The rail groups Connection, Assistant, Actions and Knowledge Base under AI; NOMAD under Integrations; and Workspace under Local. On narrow canvases it becomes a readable grid rather than a horizontal scroller. Changing section starts the new Settings context at the workspace beginning. The Data and Action contract is advanced progressive disclosure inside Workspace, not a peer destination.
+
+Connection keeps provider, exact model, endpoint and credential status visible; request timeouts, output caps, streaming and thinking overrides stay under progressive disclosure. Detect and Save & test are explicit, never run on page load, send no experiment data, report progress/result inline and use the Message Totem for completion or error rather than impersonating a LabFlow Action. Explicit-save sections show saved versus unsaved state, validation sits beside the relevant field, and credentials remain masked and browser-local. NOMAD remains configuration-only: saving performs no request and cannot imply upload or publication.
 
 The Scientific Knowledge Base is managed inside **Settings → Knowledge Base** with the standard LabFlow surfaces: one search/filter toolbar, one bounded entry catalogue and one detail editor. Bundled records are read-only; custom records are browser-local and editable. Drafts may be incomplete but are excluded from AI context; active records require a traceable source. Import/export is backup/transfer, not a second scientific datastore. KB statements remain reference knowledge and never acquire ExperimentData/evidence styling.
 

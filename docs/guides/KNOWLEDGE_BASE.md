@@ -44,7 +44,7 @@ A KB entry never proves that the current experiment used a material, process or 
 
 Custom KB entries are stored directly as JSON Lines (JSONL) in browser `localStorage` under the LabFlow origin: one normalized knowledge entry per line. They survive reloads and normal workspace resets, but clearing browser site data removes them. Use **Settings → Knowledge Base → Export custom JSONL** for backup/transfer.
 
-The source-controlled `knowledge/kb.jsonl` also uses one knowledge object per line and is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow continues to work when opened directly from `file://`. Bundled entries are read-only at runtime; copy one to create an editable custom entry.
+The source-controlled `knowledge/kb.jsonl` also uses one knowledge object per line and is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow continues to work when opened directly from `file://`. During that build, a small allowlist of canonical user guides under `docs/guides/` is projected into read-only `guide.*` entries. Markdown remains the source of truth: rebuilding refreshes those entries, so app-help answers and their citations stay connected to the Documentation route. Bundled entries are read-only at runtime; copy one to create an editable custom entry.
 
 ### JSONL format
 

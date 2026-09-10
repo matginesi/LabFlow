@@ -81,7 +81,7 @@ module.exports=function(t,LF){
   };
 
   t['Z.AI settings use the same Detect control and result semantics as other providers']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Provider guardrails.</strong> Detect always uses one shared capability pipeline.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel" >Detect</button>')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('built-in capability metadata')>=0,'Detect capability guidance');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');assert(html.indexOf('Detect uses provider metadata when available.')>=0,'shared Detect pipeline explained');localStorage.removeItem('labflow.ai.settings');
   };
 
   t['NVIDIA settings expose key-gated model loading and a real select']=function(){
@@ -93,7 +93,7 @@ module.exports=function(t,LF){
     localStorage.removeItem('labflow.nomad.settings');localStorage.removeItem('labflow.nomad.token');
     LF.State={state:{ui:{settingsSection:'nomad'},experiment:{meta:{sourceName:''}}}};
     const html=LF.SettingsPage.render();
-    assert(html.indexOf('>NOMAD<')>=0,'NOMAD Settings tab missing');
+    assert(html.indexOf('<strong>NOMAD</strong>')>=0,'NOMAD Settings navigation item missing');
     assert(html.indexOf('Upload not implemented')>=0,'stub status missing');
     assert(html.indexOf('Saving these values performs no network request')>=0,'local-only warning missing');
     LF.Storage.saveNomadSettings({instance:'Test NOMAD',apiEndpoint:'https://nomad.example/api/v1',username:'researcher'});

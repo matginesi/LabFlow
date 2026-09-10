@@ -5,6 +5,7 @@ module.exports=function(t){
   const root=path.resolve(__dirname,'../..');
   const results=fs.readFileSync(path.join(root,'assets/js/pages/results-page.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+  const uiCss=fs.readFileSync(path.join(root,'assets/css/ui.css'),'utf8');
   const tokensCss=fs.readFileSync(path.join(root,'assets/css/tokens.css'),'utf8');
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
   const settingsPage=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
@@ -45,9 +46,15 @@ module.exports=function(t){
 
   t['Action Totem commands remain tappable without horizontal overflow on phones']=function(){
     assert(html.includes('id="activityHeadActions" data-status="running"'),true,'lifecycle state hook');
-    assert(css.includes('.activity-totem .activity-head-actions[data-status="error"] #activityRetry'),true,'error retry occupies primary row');
-    assert(css.includes('min-height:36px!important'),true,'mobile touch target');
-    assert(css.includes('overflow:visible!important'),true,'no command-strip scrolling');
+    assert(uiCss.includes('.activity-head-actions[data-status="error"] #activityRetry'),true,'error retry occupies primary row');
+    assert(uiCss.includes('min-height: var(--control-h)'),true,'mobile touch target');
+    assert(uiCss.includes('overflow: visible'),true,'no command-strip scrolling');
+  };
+
+  t['Message feedback uses only canonical dialog and compact Totem variants']=function(){
+    assert(html.includes('message-totem message-totem-dialog'),true,'canonical Message Totem dialog');
+    assert(feedback.includes("message-totem message-totem-compact"),true,'canonical transient Message Totem');
+    assert(feedback.includes('totem-toast'),false,'retired custom Totem clone');
   };
 
   t['Detect provider metadata uses the Action totem lifecycle']=function(){

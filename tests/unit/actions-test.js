@@ -291,6 +291,21 @@ module.exports=function(t,LF){
     assert(exp.sync.revision,5,'one revision advance');
   };
 
+  t['write checkpoint rejects stale Action output before committing it'] = async function(){
+    const exp={id:'exp_stale',sync:{revision:7},derived:{actions:{},chat:{conversation:[]}}};
+    const def={id:'test.stale',type:'DETERMINISTIC',steps:[{id:'concurrent',type:'DETERMINISTIC',fn:'concurrent'},{id:'store',type:'DETERMINISTIC',fn:'store'}]};
+    const previousTools=LF.ActionStepTools;let writes=0;
+    LF.Storage={getEffectiveAction:function(){return current(def);}};
+    LF.ActionSteps={concurrent:function(){exp.sync.revision++;return{observedRevision:exp.sync.revision};},store:function(){writes++;return{stored:true};}};
+    LF.ActionStepTools={'store':{access:'write'}};
+    LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){}};
+    try{
+      const out=await LF.ActionRunner.run('test.stale');
+      assert(out.status,'error','stale run status');assert(out.code,'ACTION_STATE_STALE','stale run code');assert(out.failedStep,'store','blocked checkpoint');assert(writes,0,'stale write never executed');
+    }finally{LF.ActionStepTools=previousTools;}
+  };
+
   t['Action guards block execution before the first checkpoint'] = async function(){
     const exp={id:'exp_gate',sync:{revision:3},derived:{actions:{},chat:{conversation:[]}}},def={id:'test.consumer',contract:{context:{profile:'test',scope:'experiment'},result:{format:'text',kind:'test'},effect:{mode:'read_only',writes:[]},guards:['test.blocked']},execution:{mode:'deterministic',result_step:'consume',steps:[{id:'consume',type:'DETERMINISTIC',fn:'consume'}]}},previousGuards=LF.ActionGuards;let calls=0;
     LF.Storage={getEffectiveAction:function(){return def;}};LF.ActionSteps={consume:function(){calls++;return'ok';}};LF.State={state:{experiment:exp},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};LF.AI={acceptController:function(){}};

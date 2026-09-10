@@ -46,6 +46,25 @@
     return lines.join('\n');
   }
 
+  /** Render Settings operation state inline; completion/error uses the canonical Message Totem. */
+  function providerFeedback(kind,title,message,details){
+    const host=field('providerFeedback');
+    if(!host)return;
+    host.className='settings-provider-feedback notice '+(kind||'info')+' compact-notice';
+    host.replaceChildren();
+    const strong=document.createElement('strong');strong.textContent=title||'Provider status';host.appendChild(strong);
+    if(message){const span=document.createElement('span');span.textContent=' '+String(message).replace(/^#+\s*/,'');host.appendChild(span);}
+    if(details&&Object.keys(details).length){const disclosure=document.createElement('details');disclosure.className='settings-test-details';const summary=document.createElement('summary');summary.textContent='Technical details';disclosure.appendChild(summary);const dl=document.createElement('dl');dl.className='settings-test-facts';Object.keys(details).forEach(function(key){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=key;dd.textContent=String(details[key]==null?'—':details[key]);dl.append(dt,dd);});disclosure.appendChild(dl);host.appendChild(disclosure);}
+  }
+  function settingsActivity(title){let details={};return{
+    activityStart:function(info){details=info&&info.details||{};providerFeedback('info',title,(info&&info.stage)||'Starting…',details);},
+    activityUpdate:function(info){if(info&&info.details)details=info.details;providerFeedback('info',title,(info&&info.message)||(info&&info.stage)||'Working…',details);},
+    activityFinish:function(info){const message=(info&&info.message)||title,kind=/rate limit|inconclusive|differs/i.test(message)?'warning':'success';providerFeedback(kind,message,'Completed.',(info&&info.details)||details);LF.UI.toast(message,kind);},
+    activityError:function(error,info){providerFeedback('error',title+' failed',(error&&error.message)||String(error),(info&&info.details)||details);LF.UI.toast((error&&error.message)||String(error),'error');}
+  };}
+  function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
+  function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
+
   /**
    * Add runtime-specific connectivity guidance after the Settings view is rendered.
    * DOM APIs keep endpoint diagnostics escaped without growing the HTML template.
@@ -110,6 +129,7 @@
   function saveFromForm(options) {
     const providerField = field('aiProvider');
     if (!providerField) throw new Error('AI provider settings are not visible.');
+    clearFieldErrors();
     const previous = LF.Storage.getAiSettings();
     const settings = {
       provider: providerField.value,
@@ -121,10 +141,15 @@
       inactivityTimeoutMs: field('aiInactivityTimeout') ? Math.max(15000,Number(field('aiInactivityTimeout').value||90)*1000) : previous.inactivityTimeoutMs,
       maxOutputTokensCap: field('aiMaxOutputTokensCap') ? Math.max(0,Number(field('aiMaxOutputTokensCap').value)||0) : previous.maxOutputTokensCap||0
     };
-    LF.Storage.saveAiSettings(settings);
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom;
+    if(!settings.endpoint)invalidField('aiEndpoint','Enter the provider endpoint.');
+    try{new URL(settings.endpoint);}catch(_){invalidField('aiEndpoint','Enter a complete http(s) endpoint URL.');}
+    if(!settings.model)invalidField(provider.modelSelect?'aiModelSelect':'aiModel','Choose or enter an exact model ID.');
+    if(provider.keyRequired&&!String(field('aiKey')&&field('aiKey').value||'').trim())invalidField('aiKey','Enter the '+(provider.name||settings.provider)+' API key.');
+    LF.Storage.saveAiSettings(settings);
     if(provider.keyRequired||provider.optionalKey){const key=field('aiKey').value.trim(),stored=LF.Storage.saveApiKey(key,settings.provider);if(stored===false)throw new Error('The '+(provider.name||settings.provider)+' API key could not be saved in this browser. Check site-storage permissions, then try again.');if(provider.keyRequired&&key&&!LF.Storage.getApiKey(settings.provider))throw new Error('The '+(provider.name||settings.provider)+' API key was not retained by this browser. Check site-storage permissions, then try again.');}
     Log.info('saved', {provider:settings.provider, endpoint:settings.endpoint, model:settings.model});
+    if(LF.SettingsPage&&LF.SettingsPage.markSaved)LF.SettingsPage.markSaved();
     if (!options || options.toast !== false) LF.UI.toast('AI provider saved.', 'success');
     return settings;
   }
@@ -142,7 +167,7 @@
 
   async function detectModel(options) {
     options=options||{};
-    const activity=options.silent?{activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(){}}:LF.UI;
+    const activity=options.silent?{activityStart:function(){},activityUpdate:function(){},activityFinish:function(){},activityError:function(){}}:settingsActivity('Detect model capabilities');
     const providerId=providerIdFromForm();
     const endpoint=(field('aiEndpoint')&&field('aiEndpoint').value.trim())||LF.Storage.getAiSettings().endpoint;
     const apiKey=(field('aiKey')&&field('aiKey').value.trim())||LF.Storage.getApiKey(providerId);
@@ -236,20 +261,18 @@
     }
   }
 
-  /**
-   * Send the provider's minimal connection probe. No experiment context is included.
-   * Keep the completed/error totem open so provider or credential failures can be read.
-  */
+  /** Send a minimal probe and keep its diagnostics in the Connection section. */
   async function testConnection(button) {
     const oldText = button.textContent;
     button.textContent = 'Saving…';
     button.disabled = true;
     let settings;
     try{settings=saveFromForm({toast:false});}
-    catch(error){button.textContent=oldText;button.disabled=false;LF.UI.activityError(error,{response:'What happened\n'+(error.message||String(error))+'\n\nWhat to do next\nAllow site storage for LabFlow and save the provider again.',holdMs:0});return;}
+    catch(error){button.textContent=oldText;button.disabled=false;providerFeedback('error','Provider settings were not saved',error.message||String(error));LF.UI.toast(error.message||String(error),'error');return;}
     const provider = LF.AIProviders[settings.provider] || LF.AIProviders.custom;
+    const activity=settingsActivity('Test AI connection');
     button.textContent = 'Testing…';
-    LF.UI.activityStart({
+    activity.activityStart({
       title: 'Test AI connection',
       subtitle: 'Minimal request · no experiment data',
       kind: 'API',
@@ -263,28 +286,22 @@
       steps: [{id:'request', label:'Send minimal provider request', status:'active'}, {id:'response', label:'Read provider response', status:'pending'}]
     });
     try {
-      LF.UI.activityUpdate({stage:'Waiting for provider', indeterminate:true, message:settings.provider==='zai'?'Direct request to the official Z.AI endpoint.':'The provider request is in progress.'});
+      activity.activityUpdate({stage:'Waiting for provider', indeterminate:true, message:settings.provider==='zai'?'Direct request to the official Z.AI endpoint.':'The provider request is in progress.'});
       const result = await LF.AI.testConnection();
       if(result.rateLimited){
         const retryS=Number(result.retryAfterMs||result.retryInMs||0)>0?Math.max(1,Math.ceil(Number(result.retryAfterMs||result.retryInMs)/1000)):0;
-        LF.UI.activityUpdate({stepId:'request',stepStatus:'done',stepNote:result.elapsedMs+' ms'});
-        LF.UI.activityUpdate({stepId:'response',stepStatus:'done',stepNote:'rate limited'});
-        LF.UI.activityFinish({message:'Provider reachable, but rate limited.',response:'The configured endpoint answered with a provider rate-limit response. LabFlow sent exactly one request, did not retry it, and did not create a local cooldown.'+(retryS?' The provider asked to retry after about '+retryS+' s.':''),details:{Provider:provider.name||settings.provider,Model:modelLabel(settings.provider,settings.model),'Total elapsed':result.elapsedMs+' ms','HTTP status':result.status||429,'Provider code':result.providerCode||'not returned','Provider message':result.providerMessage||'not returned','HTTP requests':1,'Automatic retries':0,'Retry-After':retryS?retryS+' s':'not returned'},holdMs:0});
-        LF.UI.toast('Provider reachable, but rate limited. No local cooldown was created.','warning');return;
+        activity.activityFinish({message:'Provider reachable, but rate limited.',details:{Provider:provider.name||settings.provider,Model:modelLabel(settings.provider,settings.model),'Total elapsed':result.elapsedMs+' ms','HTTP status':result.status||429,'Provider code':result.providerCode||'not returned','Provider message':result.providerMessage||'not returned','HTTP requests':1,'Automatic retries':0,'Retry-After':retryS?retryS+' s':'not returned'}});return;
       }
-      LF.UI.activityUpdate({stepId:'request', stepStatus:'done', stepNote:result.elapsedMs + ' ms'});
-      LF.UI.activityUpdate({stepId:'response', stepStatus:'done', stepNote:result.probeLimited?'reasoning-only · reachable':'final text received'});
-      LF.UI.activityFinish({
+      activity.activityFinish({
         message: result.probeLimited?'Provider reachable · final-text probe inconclusive.':'Provider responded successfully.',
         response: connectionReport(result),
         details: {Provider:provider.name || settings.provider, Model:modelLabel(result.provider||settings.provider,result.model), 'Total elapsed':result.elapsedMs + ' ms', 'Provider round trip':Number.isFinite(Number(result.requestElapsedMs))?result.requestElapsedMs+' ms':'not measured', Tokens:result.usage&&Number.isFinite(Number(result.usage.totalTokens))?result.usage.totalTokens+(result.usage.estimated?' estimated':''):'not returned', 'Finish reason':result.finishReason||'not returned', 'Final text':result.probeLimited?'not verified by tiny probe':'verified', 'Reasoning observed':result.reasoningObserved?'yes':'no', 'HTTP requests':result.httpRequests||1, Retries:0, 'Request ID':result.requestId || 'not returned'},
         holdMs: 0
       });
-      LF.UI.toast((result.probeLimited?'AI endpoint reachable · ':'AI connection OK · ') + modelLabel(result.provider||settings.provider,result.model) + ' · ' + result.elapsedMs + ' ms', result.probeLimited?'warning':'success');
     } catch (error) {
       Log.error('connection-test.failed',{provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),error:error});
       const summary = LF.AIDiagnostics ? LF.AIDiagnostics.errorSummary(error) : {category:'Error', next:'Review provider settings.'};
-      LF.UI.activityError(error, {
+      activity.activityError(error, {
         response: 'What happened\n' + (error.message || String(error)) + (error.providerResponse ? '\n\nProvider response\n' + error.providerResponse : '') + '\n\nWhat to do next\n' + summary.next + (settings.provider==='zai'?'\n\nZ.AI endpoint\nLabFlow calls the official General API endpoint https://api.z.ai/api/paas/v4/chat/completions directly from the browser. No LabFlow relay is required. If curl succeeds but the browser reports no HTTP response, inspect browser CORS/origin policy.':'') ,
         details: {Provider:provider.name || settings.provider, Model:modelLabel(settings.provider,settings.model), Category:summary.category, Timeout:error.timeoutMs?Math.round(error.timeoutMs/1000)+' s':Math.round((provider.connectionTestTimeoutMs||15000)/1000)+' s', Elapsed:error.elapsedMs?error.elapsedMs+' ms':'', 'HTTP status':summary.status || (error.timedOut?'no response':'network'), 'Provider code':summary.providerCode || 'not returned', 'Request ID':error.requestId || 'not returned', Endpoint:endpointHost(settings.endpoint)},
         holdMs: 0

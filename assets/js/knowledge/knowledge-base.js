@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Log=LF.Logger?LF.Logger.scope('knowledge'):null;
-const KINDS={material:'Material',architecture:'Architecture',formulation:'Formulation',process:'Process',diagnostic:'Diagnostic',concept:'Concept'};
+const KINDS={material:'Material',architecture:'Architecture',formulation:'Formulation',process:'Process',diagnostic:'Diagnostic',concept:'Concept',guide:'App guide'};
 const STATUSES={draft:'Draft',active:'Active'};
 const MAX={title:180,summary:1200,fact:700,caution:500,tag:80,alias:120,sourceTitle:260,sourceCitation:600,authors:300,note:500};
 function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}

@@ -11,18 +11,28 @@ for marker,label in [('id="reanalyzeDataset"','Deterministic re-analysis'),('dat
     if marker not in pages:errors.append(label+' UI missing')
 for cls in ('.operation-workshop','.operation-catalog','.operation-inspector','.operation-step-flow','.review-workbench'):
     if cls not in css:errors.append('Required responsive style missing '+cls)
-if "['actions','Actions']" not in settings:errors.append('single Actions Settings tab missing')
+if "['actions','Actions'" not in settings:errors.append('Actions Settings navigation item missing')
 if 'AI Helpers' in settings or 'Operations Workshop' in settings:errors.append('split Operations/AI Helpers Settings UI remains')
 if 'Actions are capabilities, not pipeline stages.' not in settings or 'Capability contract' not in settings:errors.append('Action execution contract copy missing')
 if 'aria-label="Current action"' not in index:errors.append('Action totem not named consistently')
+if 'message-totem message-totem-dialog' not in index:errors.append('canonical Message Totem dialog missing')
+if 'message-totem message-totem-compact' not in feedback:errors.append('transient feedback does not use compact Message Totem')
+if 'totem-toast' in feedback or 'totem-toast' in css or 'totem-toast' in ui_css:errors.append('retired custom Totem clone remains')
+if '.message-totem-dialog' not in ui_css or '.message-totem-compact' not in ui_css:errors.append('Message Totem variants are not owned by shared UI CSS')
+if re.search(r'(?m)^\.message-(?:totem|shade)',css):errors.append('Message Totem leaked into page-composition CSS')
+if '.input.compact' not in ui_css or '.select.compact' not in ui_css:errors.append('shared compact control sizing missing')
 
 # UI Kit and the local UI skill are executable contracts, not stale examples.
-if "['knowledge','Knowledge Base']" not in settings:errors.append('Knowledge Base Settings tab missing')
-if "['nomad','NOMAD']" not in settings:errors.append('NOMAD Settings tab missing')
+if "['knowledge','Knowledge Base'" not in settings:errors.append('Knowledge Base Settings navigation item missing')
+if "['nomad','NOMAD'" not in settings:errors.append('NOMAD Settings navigation item missing')
+if 'class="settings-rail"' not in settings or 'class="settings-nav"' not in settings:errors.append('intent-grouped Settings rail missing')
+if 'settings-data-contract' not in settings:errors.append('Data contract is not progressive disclosure inside Workspace')
 if 'Upload not implemented' not in settings or 'id="saveNomadSettings"' not in settings:errors.append('NOMAD Settings stub/configuration surface missing')
 if 'id="uploadNomadStub"' not in pages or 'Stub only.' not in pages:errors.append('Export NOMAD upload stub missing or not explicit')
 if "closest('#uploadNomadStub')" not in app or 'no data was sent' not in app:errors.append('NOMAD upload stub must remain non-networking and explicit')
 if 'Knowledge Base' not in kit:errors.append('UI Kit does not expose current Knowledge Base Settings pattern')
+if 'Message Totem · confirmation' not in kit or 'Message Totem · compact status' not in kit:errors.append('UI Kit missing canonical Message Totem variants')
+if 'Action totem' not in kit:errors.append('UI Kit missing canonical Action Totem')
 if 'chat-quick-actions' in kit:errors.append('UI Kit still shows retired Assistant quick-action strip')
 if 'chat-action-launcher' not in kit:errors.append('UI Kit missing single Assistant Actions launcher')
 if not re.search(r'exactly one compact \*\*Actions\*\* launcher',skill,re.I):errors.append('UI skill missing current single Actions launcher contract')
@@ -51,12 +61,14 @@ if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.settings-workspace
 pipeline=(ROOT/'assets/js/data/pipeline.js').read_text(); review=(ROOT/'assets/js/pages/review-panel.js').read_text(); corrections=(ROOT/'assets/js/ai/action-steps.js').read_text()
 if 'prepareAutomaticSafeFixes' not in pipeline or 'applyAutomaticSafeFixes(exp)' in pipeline:errors.append('pipeline must detect safe cleanup without silently applying new corrections')
 if 'id="applyAutomaticCleanup"' not in review or 'Accept safe cleanup' not in review:errors.append('Review missing explicit safe-cleanup acceptance')
-if "closest('#applyAutomaticCleanup')" not in app or "markModified('dataset')" not in app:errors.append('safe-cleanup acceptance does not commit/refresh LabFlow Data')
+if "closest('#applyAutomaticCleanup')" not in app or 'commitAutomaticSafeFixes(exp)' not in app or 'function commitAutomaticSafeFixes(exp)' not in corrections:errors.append('safe-cleanup acceptance does not use the canonical dataset commit service')
 
-# New routes and content-defining tabs start from their own workspace beginning.
-for marker,label in [("renderAtWorkspaceStart('.results-main-tabs')",'Results'),("renderAtWorkspaceStart('.settings-tabs')",'Settings'),("renderAtWorkspaceStart('.docs-workbench')",'Documentation'),("renderAtWorkspaceStart('.cabinet-filter-tabs')",'Cabinet')]:
-    if marker not in app:errors.append(label+' workspace-start navigation missing')
+# Routes start at the top; content switches preserve the visible shared anchor.
+for marker,label in [("renderWithStableAnchor('.results-main-tabs')",'Results'),("renderWithStableAnchor('.docs-workbench')",'Documentation'),("renderWithStableAnchor('.cabinet-filter-tabs')",'Cabinet')]:
+    if marker not in app:errors.append(label+' stable-anchor navigation missing')
+if "settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0" not in app:errors.append('Settings navigation does not start the new context at the workspace beginning')
 if 'if(!renderedRoute||routeChanged)main.scrollTop=0' not in app.replace(' ',''):errors.append('route change does not reset main workspace scroll')
+if 'main.scrollTop=mainScrollTop' not in app:errors.append('same-context rerender does not preserve main workspace scroll')
 if 'scrollMemoryNodes(root)' not in app or 'root.querySelectorAll(SCROLL_MEMORY_SELECTOR)' not in app:errors.append('bounded local scroll memory contract missing')
 # Known retired layouts must not survive as compatibility CSS.
 retired=('.repair-proposal','.repair-proposal-head','.nomad-flow','.results-layout','.changes-table','.changes-patch-table','.design-edit-table','.design-head-actions','.design-proposal-stats','.review-ai-results','.chat-applied','.chat-action-context','.ground-truth-grid','.result-inspector-grid','.result-inspector-lower','.inspector-kpis','.inspector-provenance','.compare-page','.ai-complete')

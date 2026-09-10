@@ -113,6 +113,8 @@ Do not add a parallel `entities[]` collection.
 
 An exact `measurement` target is measurement-scoped; it must not expand to sibling measurements of the same sample.
 
+A `group_mapping` changes the owning physical sample/experiment relation, so its applied provenance target is the `sample`, not one incidental measurement. The owner service updates that sample’s linked measurements and runs together, rebuilds backlinks and validates the graph before commit success.
+
 RAW bytes and original source records are never rewritten.
 
 ## 7. ActionData contract
@@ -130,6 +132,8 @@ actionData: {
 `LF.ActionData` is the only API for this state. Action IDs are literal keys and may contain dots; code must not interpret them as property paths.
 
 ActionData is persisted because proposals/status must survive a browser reload, but it is not scientific source truth.
+
+Accepted dataset proposals are committed through `LF.DatasetCorrections.commitProposals()`. The service rejects non-canonical targets and no-ops, then performs revision/invalidation, deterministic recomputation and final contract validation before emitting the state notification used by rendering and autosave.
 
 ## 8. Root ownership and persistence
 

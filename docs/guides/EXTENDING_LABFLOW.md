@@ -107,6 +107,12 @@ Pages must not:
 - recreate domain defaults;
 - mutate ActionData/scientific records with ad-hoc assignment when an owner API exists.
 
+### UI implementation
+
+Read `.agent/skills/labflow-ui/SKILL.md` and reuse the production patterns in `ui-kit.html`. Put tokens in `assets/css/tokens.css`, reusable controls/panels/Totems in `assets/css/ui.css`, and only page composition in `assets/css/app.css`. Use the shared 36 px normal or 32 px compact controls, token spacing and responsive reflow; do not create page-local density systems.
+
+Use the Message Totem for application feedback/confirmation and the Action Totem for foreground execution progress/results. Inline notices are page content, not another Totem. Do not add custom Totem clones, CDN assets, trackers, frameworks or frontend infrastructure. The current runtime is vanilla JavaScript and local CSS; no separate Bootstrap runtime is loaded.
+
 ## 7. Add an export
 
 An export reads one validated LabFlow Data and builds a deterministic external representation. It never becomes a second editable data model and never marks itself as source truth.

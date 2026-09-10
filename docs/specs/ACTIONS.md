@@ -47,7 +47,13 @@ Import, analysis, deterministic safe-cleanup detection/application and NOMAD pre
 
 Actions must use `LF.ActionData` for persistent proposal/annotation/status output. Do not add Action-specific fields elsewhere on `ExperimentData`.
 
-An Action proposal is not scientific truth. A deterministic apply/accept service validates target identity, current revision and mutation rules before LabFlow Data changes.
+An Action proposal is not scientific truth. `dataset.resolve-ambiguities` completing means that a validated proposal was stored, not that scientific data was silently changed. On explicit acceptance, `LF.DatasetCorrections.commitProposals()` validates the current canonical target, applies the proposal, propagates relations, advances revision, invalidates derived state, refreshes the deterministic pipeline and validates the result before the UI may say **committed**. It returns explicit `executed`, `committed`, `changed`, `failed`, revision and pipeline metadata; no-op or lost mutations fail instead of masquerading as success.
+
+Every deterministic Action write checkpoint is also revision-gated. If LabFlow Data changes after an Action starts, the checkpoint fails with `ACTION_STATE_STALE` before writing proposal, annotation or status data. The researcher must rerun the Action against the current canonical revision; stale model output is never presented as committed state.
+
+Every later Action builds its Context Pack from the current `LF.State.state.experiment`, so Action composition is `state[n + 1] = action(state[n])`. The immutable uploaded archive is provenance only and is never an Action input substitute for current LabFlow Data unless a future manifest explicitly declares raw-source access.
+
+`ActionData.assistantContext()` is the bounded owner projection used for Assistant follow-ups. Action completion, unavailability and failure also create compact Assistant conversation events, including page-launched Actions and the Design complete-all sequence. These events are interaction history; they neither replace `actionData` nor mutate scientific records.
 
 ## Availability and guards
 

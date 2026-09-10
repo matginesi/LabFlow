@@ -4,8 +4,8 @@
   /**
    * Global feedback service.
    *
-   * This is the only module allowed to own toast notifications and the single
-   * Action totem. It does not start work, call providers, navigate the app,
+   * This is the only module allowed to own Message Totems and the single
+   * Action Totem. It does not start work, call providers, navigate the app,
    * or maintain experiment state; callers report lifecycle changes through the
    * public `LabFlow.UI` methods exported at the bottom of the file.
    */
@@ -40,19 +40,19 @@
   }
 
   /**
-   * Show a short, non-blocking notification in the shared live region.
+   * Show a short, non-blocking Message Totem in the shared live region.
    * @param {string} message Human-readable notification text.
    * @param {string} [type] Optional semantic class such as `success` or `danger`.
    */
   function toast(message, type) {
-    const semantic=type || 'info',titles={success:'Completed',error:'Action failed',danger:'Action failed',warning:'Attention',info:'LabFlow'};
+    const semantic=type==='error'?'danger':(type || 'info'),titles={success:'Completed',danger:'Action failed',warning:'Attention',info:'LabFlow'};
     Log.debug('toast', {type:semantic, message:text(message).slice(0, 300)});
     const region = byId('toastRegion');
     if (!region) return;
     const element = document.createElement('div');
-    element.className = 'toast totem-toast ' + semantic;
-    const marker=document.createElement('span');marker.className='totem-toast-marker';marker.setAttribute('aria-hidden','true');
-    const body=document.createElement('div'),title=document.createElement('strong'),copy=document.createElement('span');
+    element.className = 'message-totem message-totem-compact ' + semantic;
+    const marker=document.createElement('span');marker.className='message-totem-marker';marker.setAttribute('aria-hidden','true');
+    const body=document.createElement('div');body.className='message-totem-body';const title=document.createElement('strong'),copy=document.createElement('span');
     title.textContent=titles[semantic]||'LabFlow';copy.textContent=text(message);body.appendChild(title);body.appendChild(copy);element.appendChild(marker);element.appendChild(body);
     region.appendChild(element);
     window.setTimeout(function () { element.classList.add('leaving');window.setTimeout(function(){element.remove();},180); }, 4200);
@@ -63,19 +63,20 @@
     if(!confirmPending)return;const pending=confirmPending;confirmPending=null;
     const shade=byId('messageShade');if(shade)shade.hidden=true;
     document.removeEventListener('keydown',pending.keyHandler,true);
+    if(pending.previousFocus&&pending.previousFocus.isConnected&&pending.previousFocus.focus)pending.previousFocus.focus();
     Log.info('confirm', {message:pending.message.slice(0,300),result:!!result});pending.resolve(!!result);
   }
 
   /** Render confirmation as a LabFlow totem rather than a browser-owned modal. */
   function confirmAction(message, options) {
     options=options||{};if(confirmPending)closeConfirmation(false);
-    const shade=byId('messageShade'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
+    const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
     if(!shade||!title||!body||!confirm||!cancel)return Promise.resolve(false);
-    title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LABFLOW CONFIRMATION');confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
+    const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem message-totem-dialog '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
     confirm.className='button '+(options.danger?'danger':'primary');shade.hidden=false;
     return new Promise(function(resolve){
       const keyHandler=function(event){if(event.key==='Escape'){event.preventDefault();closeConfirmation(false);}else if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeConfirmation(true);}};
-      confirmPending={resolve:resolve,message:text(message),keyHandler:keyHandler};document.addEventListener('keydown',keyHandler,true);
+      confirmPending={resolve:resolve,message:text(message),keyHandler:keyHandler,previousFocus:document.activeElement};document.addEventListener('keydown',keyHandler,true);
       confirm.onclick=function(){closeConfirmation(true);};cancel.onclick=function(){closeConfirmation(false);};shade.onclick=function(event){if(event.target===shade)closeConfirmation(false);};
       window.setTimeout(function(){confirm.focus();},0);
     });

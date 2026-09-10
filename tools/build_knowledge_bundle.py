@@ -8,11 +8,21 @@ bundle exposes the same records synchronously as window.LabFlowKnowledgeBundle.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "knowledge" / "kb.jsonl"
 TARGET = ROOT / "assets" / "js" / "knowledge" / "kb-bundle.js"
+APP_GUIDES = (
+    "docs/guides/GETTING_STARTED.md",
+    "docs/guides/RESEARCH_WORKFLOW.md",
+    "docs/guides/AI_ASSISTANCE.md",
+    "docs/guides/AI_TOKENS_AND_RATE_LIMITS.md",
+    "docs/guides/KNOWLEDGE_BASE.md",
+    "docs/guides/LAB_CABINET.md",
+    "docs/guides/TROUBLESHOOTING.md",
+)
 
 
 def load_jsonl(path: Path) -> list[dict]:
@@ -31,8 +41,62 @@ def load_jsonl(path: Path) -> list[dict]:
     return entries
 
 
+def app_guide_entry(relative_path: str) -> dict:
+    """Project selected user guides into read-only KB records.
+
+    Markdown remains the source of truth; the bundle receives a compact lexical
+    projection so Assistant answers about LabFlow usage can cite the same docs.
+    """
+    path = ROOT / relative_path
+    text = path.read_text(encoding="utf-8")
+    front = {}
+    match = re.match(r"^---\s*\n(.*?)\n---\s*\n", text, re.S)
+    body = text
+    if match:
+        body = text[match.end():]
+        for raw in match.group(1).splitlines():
+            key, sep, value = raw.partition(":")
+            if sep:
+                front[key.strip()] = value.strip()
+    title = front.get("title") or path.stem.replace("_", " ").title()
+    summary = front.get("summary") or f"LabFlow guide: {title}."
+    facts = []
+    in_fence = False
+    for raw in body.splitlines():
+        line = raw.strip()
+        if line.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence or not line or line.startswith("#") or line.startswith("|"):
+            continue
+        line = re.sub(r"^[-*]\s+", "", line)
+        line = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", line)
+        line = line.replace("**", "").replace("`", "")
+        line = re.sub(r"\s+", " ", line).strip()
+        if len(line) >= 35 and line not in facts:
+            facts.append(line[:700])
+        if len(facts) == 7:
+            break
+    slug = path.stem.lower().replace("_", "-")
+    return {
+        "id": f"guide.{slug}",
+        "kind": "guide",
+        "title": title,
+        "aliases": [title, slug.replace("-", " ")],
+        "tags": ["LabFlow", "app", "help", "workflow", slug],
+        "summary": summary,
+        "facts": facts,
+        "cautions": ["This entry describes LabFlow operation; it is not scientific evidence about the current experiment."],
+        "related_ids": [],
+        "sources": [{"title": title, "authors": "LabFlow documentation", "year": None, "citation": relative_path, "doi": "", "url": "", "note": "Canonical local documentation"}],
+        "status": "active",
+        "created_at": "2026-09-10T00:00:00.000Z",
+        "updated_at": "2026-09-10T00:00:00.000Z",
+    }
+
+
 def main() -> None:
-    entries = load_jsonl(SOURCE)
+    entries = load_jsonl(SOURCE) + [app_guide_entry(path) for path in APP_GUIDES]
     payload = {"schema_version": 1, "entries": entries}
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

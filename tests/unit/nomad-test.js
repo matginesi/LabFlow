@@ -59,6 +59,13 @@ module.exports=function(t,LF){
     const e=exp();e.measurements[0].excluded=true;e.findings=[{id:'f1',severity:'danger',status:'open',measurementId:'m1',target:'m1'}];
     const v=LF.NomadExport.validate(e,null);assert(v.checks.unresolvedDanger,0,'excluded measurement danger ignored for staging blocker');
   };
+  t['NOMAD scientific mapping omits accepted exclusions']=function(){
+    const e=exp();e.measurements.push({id:'m2',sample:'S1',bestEff:99,rankingEligible:false,qualityStatus:'blocked',excluded:true});
+    const plan=LF.NomadExport.buildMapping(e),ids=plan.mappings.find(function(x){return x.nomad_path==='data.measurement_ids';}).value;
+    assert(ids,['m1'],'excluded measurement omitted from scientific IDs');
+    assert(plan.mappings.find(function(x){return x.nomad_path==='data.best_efficiency';}).value,20.5,'excluded value cannot become exported best');
+    assert(plan.mappings.find(function(x){return x.nomad_path==='data.measurement_count';}).value,1,'measurement count reflects active scientific rows');
+  };
 
   return t;
 };

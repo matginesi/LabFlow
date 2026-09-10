@@ -17,7 +17,7 @@
   const scrollMemory=new Map();
   let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false;
   let kbSettingsSearchTimer=0,logSearchTimer=0,curveSearchTimer=0,cabinetSearchTimer=0;
-  let renderedScrollContext='';
+  let renderedScrollContext='',stableAnchorGeneration=0;
   function workspaceUiSnapshot(){const ui=S.state.ui||{};return{route:ui.route||'experiment-import',resultsTab:ui.resultsTab||'overview',selectedMeasurementId:ui.selectedMeasurementId||null,selectedDesignDeviceId:ui.selectedDesignDeviceId||null};}
   function knowledgeFormEntry(){const kb=LF.KnowledgeBase,id=S.state.ui&&S.state.ui.settingsKnowledgeId,existing=id&&id!=='__new__'?kb.get(id):null;return{id:existing&&existing.origin==='custom'?existing.id:undefined,kind:document.getElementById('kbKind').value,status:document.getElementById('kbStatus').value,title:document.getElementById('kbTitle').value,aliases:document.getElementById('kbAliases').value,tags:document.getElementById('kbTags').value,summary:document.getElementById('kbSummary').value,facts:document.getElementById('kbFacts').value,cautions:document.getElementById('kbCautions').value,related_ids:document.getElementById('kbRelatedIds').value,sources:kb.parseSourceLines(document.getElementById('kbSources').value),created_at:existing&&existing.created_at};}
   async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
@@ -47,11 +47,20 @@
     if(!root)return;const apply=function(){scrollMemoryNodes(root).forEach(function(el){const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;if(el.scrollTop!==undefined)el.scrollTop=Math.min(state.top,Math.max(0,el.scrollHeight-el.clientHeight));if(el.scrollLeft!==undefined)el.scrollLeft=Math.min(state.left,Math.max(0,el.scrollWidth-el.clientWidth));});};apply();if(window.requestAnimationFrame)window.requestAnimationFrame(apply);
   }
 
-  function renderAtWorkspaceStart(selector){
+  function renderWithStableAnchor(selector){
+    const generation=++stableAnchorGeneration,route=S.state.route;
+    const main=document.getElementById('main');
+    const before=main&&main.querySelector(selector),beforeTop=before&&before.getBoundingClientRect?before.getBoundingClientRect().top:null;
     render();
-    const main=document.getElementById('main');if(!main)return;
-    const align=function(){const anchor=main.querySelector(selector);if(anchor&&anchor.scrollIntoView)anchor.scrollIntoView({behavior:'auto',block:'start',inline:'nearest'});};
-    if(window.requestAnimationFrame)window.requestAnimationFrame(align);else align();
+    if(!main)return;
+    const align=function(){
+      if(generation!==stableAnchorGeneration||S.state.route!==route)return;
+      const anchor=main.querySelector(selector);
+      if(anchor&&anchor.getBoundingClientRect&&Number.isFinite(beforeTop))main.scrollTop+=anchor.getBoundingClientRect().top-beforeTop;
+    };
+    align();
+    if(window.requestAnimationFrame)window.requestAnimationFrame(align);
+    window.setTimeout(align,0);
   }
 
   function activateDesignProposal(deviceId){const exp=S.state.experiment;if(!exp||!LF.ActionData)return null;return LF.ActionData.proposal(exp,'design.infer',String(deviceId||''));}
@@ -121,14 +130,14 @@
     const title=PS.routeTitle?PS.routeTitle(route):'Current page';
     const message=C.escapeHtml(error&&error.message||String(error||'Unknown rendering error'));
     const canRebuild=hasExperiment()&&['experiment-results','experiment-design','experiment-export'].includes(route);
-    return '<section class="page page-error-recovery"><div class="notice danger"><strong>'+C.escapeHtml(title)+' could not be rendered.</strong><span>'+message+'</span></div><section class="panel"><div class="panel-head"><div><span class="eyebrow">RECOVERY</span><h2 class="h2">Fix this page here</h2><div class="meta">LabFlow will not send you back to Upload unless the source ZIP itself is missing.</div></div></div><div class="panel-body"><div class="row-wrap"><button type="button" class="button primary" data-retry-page>Retry page</button>'+(canRebuild?'<button type="button" class="button" data-rebuild-derived>Rebuild derived data</button>':'')+'<button type="button" class="button" data-route="logs">Open logs</button></div></div></section></section>';
+    return '<section class="page page-error-recovery"><div class="notice danger"><strong>'+C.escapeHtml(title)+' could not be rendered.</strong><span>'+message+'</span></div><section class="panel"><div class="panel-head"><div><span class="eyebrow">Recovery</span><h2 class="h2">Fix this page here</h2><div class="meta">LabFlow will not send you back to Upload unless the source ZIP itself is missing.</div></div></div><div class="panel-body"><div class="row-wrap"><button type="button" class="button primary" data-retry-page>Retry page</button>'+(canRebuild?'<button type="button" class="button" data-rebuild-derived>Rebuild derived data</button>':'')+'<button type="button" class="button" data-route="logs">Open logs</button></div></div></section></section>';
   }
 
   function render() {
     if (hasExperiment()) ensureExperimentShape(S.state.experiment);
     const end=Log.timer('render',{route:S.state.route,experimentId:S.state.experiment&&S.state.experiment.id,resultsTab:S.state.ui.resultsTab});
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
-    const previousRoute=renderedRoute||S.state.route,currentContext=scrollContext(S.state.route),routeChanged=!!renderedRoute&&renderedRoute!==S.state.route,contextChanged=!!renderedScrollContext&&renderedScrollContext!==currentContext;
+    const previousRoute=renderedRoute||S.state.route,currentContext=scrollContext(S.state.route),routeChanged=!!renderedRoute&&renderedRoute!==S.state.route,contextChanged=!!renderedScrollContext&&renderedScrollContext!==currentContext,mainScrollTop=main.scrollTop;
     try{captureScrollableState(main,renderedScrollContext||scrollContext(previousRoute));}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.route;a.classList.toggle('active',active);});
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
@@ -142,7 +151,7 @@
     if(S.state.route==='ui-kit')try{applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
     if(S.state.route==='documentation'&&LF.DocsPage)try{LF.DocsPage.apply(main);}catch(err){Log.warn('render.documentation-filter-skipped',{error:err});}
     if(S.state.route==='logs'&&LF.LogsPage&&LF.LogsPage.bind)try{LF.LogsPage.bind(main);}catch(err){Log.warn('render.logs-bind-skipped',{error:err});}
-    if(!renderedRoute||routeChanged)main.scrollTop=0;
+    if(!renderedRoute||routeChanged)main.scrollTop=0;else main.scrollTop=mainScrollTop;
     renderedRoute=S.state.route;renderedScrollContext=currentContext;
     if(!routeChanged&&!contextChanged)try{restoreScrollableState(main,currentContext);}catch(err){Log.warn('render.scroll-restore-skipped',{route:S.state.route,error:err});}
     main.querySelectorAll('button:not([type])').forEach(function(b){b.type='button';});
@@ -249,7 +258,7 @@
       try {
         const route=e.target.closest('[data-route]');
         if(route){e.preventDefault();if(route.matches&&route.matches(':disabled')||route.getAttribute('aria-disabled')==='true')return;closeMobileNav();if(S.state.route==='experiment-design')commitDraft('design');const target=route.dataset.route;if(S.routeRequiresExperiment&&S.routeRequiresExperiment(target)&&!hasExperiment()){S.setRoute('experiment-import');LF.UI.toast('Upload the original ZIP to open this workflow step.','info');return;}S.setRoute(target);return;}
-        const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.ui.docsSlug=docLink.dataset.docSlug;renderAtWorkspaceStart('.docs-workbench');return;}
+        const docLink=e.target.closest('[data-doc-slug]');if(docLink){e.preventDefault();S.state.ui.docsSlug=docLink.dataset.docSlug;renderWithStableAnchor('.docs-workbench');return;}
         const seriesToggle=e.target.closest('[data-chart-series-toggle]');if(seriesToggle){const wrap=seriesToggle.closest('.svg-chart-wrap')||seriesToggle.closest('.panel')||document,series=seriesToggle.dataset.chartSeriesToggle,next=!seriesToggle.classList.contains('active');seriesToggle.classList.toggle('active',next);seriesToggle.setAttribute('aria-pressed',String(next));wrap.querySelectorAll('[data-chart-series="'+series+'"]') .forEach(function(node){node.classList.toggle('chart-series-hidden',!next);});return;}
         const seriesAction=e.target.closest('[data-chart-series-action]');if(seriesAction){const wrap=seriesAction.closest('.panel')||document,show=seriesAction.dataset.chartSeriesAction!=='hide-all';wrap.querySelectorAll('[data-chart-series-toggle]').forEach(function(button){button.classList.toggle('active',show);button.setAttribute('aria-pressed',String(show));});wrap.querySelectorAll('[data-chart-series]').forEach(function(node){node.classList.toggle('chart-series-hidden',!show);});return;}
         const chartExport=e.target.closest('[data-chart-export]');if(chartExport){const format=chartExport.dataset.chartExport,id=chartExport.dataset.chartId,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(id||'chart');if(format==='svg')LF.ResultsPage.exportSvg(id,base+'.svg');else LF.ResultsPage.exportCanvas(id,base+'.png');return;}
@@ -277,45 +286,43 @@
         const themeChoice=e.target.closest('[data-theme-choice]');if(themeChoice){LF.Theme.apply(themeChoice.dataset.themeChoice);return;}
         if(e.target.closest('#resultInspectorClose')){LF.ResultsPage.closeResultInspector();return;}
 
-        const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.ui.resultsTab=resultTab.dataset.resultTab;renderAtWorkspaceStart('.results-main-tabs');return;}
-        const dataMode=e.target.closest('[data-results-data-mode]');if(dataMode){S.state.ui.resultsDataMode=dataMode.dataset.resultsDataMode||'all';S.state.ui.resultsTab='all';renderAtWorkspaceStart('.results-main-tabs');return;}
-        const jvMode=e.target.closest('[data-results-jv-mode]');if(jvMode){S.state.ui.resultsJvMode=jvMode.dataset.resultsJvMode||'single';S.state.ui.curveView=S.state.ui.resultsJvMode==='overlay'?'overlay':'single';S.state.ui.resultsTab='curves';renderAtWorkspaceStart('.results-main-tabs');return;}
-        const quick=e.target.closest('[data-results-quick]');if(quick){const q=quick.dataset.resultsQuick;if(q==='jv'){S.state.ui.resultsJvMode='single';S.state.ui.curveView='single';S.state.ui.resultsTab='curves';}else if(q==='compare'){S.state.ui.resultsTab='boxplots';}else if(q==='warnings'){S.state.ui.resultsDataMode='warnings';S.state.ui.resultsTab='all';}else if(q==='top'){S.state.ui.resultsDataMode='top';S.state.ui.resultsTab='all';}else{S.state.ui.resultsDataMode='all';S.state.ui.resultsTab='all';}renderAtWorkspaceStart('.results-main-tabs');return;}
+        const resultTab=e.target.closest('[data-result-tab]');if(resultTab){S.state.ui.resultsTab=resultTab.dataset.resultTab;renderWithStableAnchor('.results-main-tabs');return;}
+        const dataMode=e.target.closest('[data-results-data-mode]');if(dataMode){S.state.ui.resultsDataMode=dataMode.dataset.resultsDataMode||'all';S.state.ui.resultsTab='all';renderWithStableAnchor('.results-main-tabs');return;}
+        const jvMode=e.target.closest('[data-results-jv-mode]');if(jvMode){S.state.ui.resultsJvMode=jvMode.dataset.resultsJvMode||'single';S.state.ui.curveView=S.state.ui.resultsJvMode==='overlay'?'overlay':'single';S.state.ui.resultsTab='curves';renderWithStableAnchor('.results-main-tabs');return;}
+        const quick=e.target.closest('[data-results-quick]');if(quick){const q=quick.dataset.resultsQuick;if(q==='jv'){S.state.ui.resultsJvMode='single';S.state.ui.curveView='single';S.state.ui.resultsTab='curves';}else if(q==='compare'){S.state.ui.resultsTab='boxplots';}else if(q==='warnings'){S.state.ui.resultsDataMode='warnings';S.state.ui.resultsTab='all';}else if(q==='top'){S.state.ui.resultsDataMode='top';S.state.ui.resultsTab='all';}else{S.state.ui.resultsDataMode='all';S.state.ui.resultsTab='all';}renderWithStableAnchor('.results-main-tabs');return;}
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.ui.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.ui.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.ui.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.ui.selectedDesignDeviceId);render();return;}
-        const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.ui.settingsSection=settingsSection.dataset.settingsSection;renderAtWorkspaceStart('.settings-tabs');return;}
-        if(e.target.closest('#openNomadSettings')){S.state.ui.settingsSection='nomad';S.setRoute('settings');renderAtWorkspaceStart('.settings-tabs');return;}
+        const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.ui.settingsSection=settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0;return;}
+        if(e.target.closest('#openNomadSettings')){S.state.ui.settingsSection='nomad';S.setRoute('settings');return;}
         if(e.target.closest('#uploadNomadStub')){LF.UI.toast('Direct NOMAD upload is not implemented yet. The configured credentials were not used and no data was sent.','info');return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
         const applyReview=e.target.closest('[data-apply-review-proposal]');if(applyReview){
           const idx=Number(applyReview.dataset.applyReviewProposal),plan=ambiguityPlan(),p=plan&&plan.proposals&&plan.proposals[idx];
-          if(p){try{const changed=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast('AI correction applied to the LabFlow Data ('+changed+' target'+(changed===1?'':'s')+').','success');}catch(err){p.applyError=err.message||String(err);Log.warn('review.proposal-apply-failed',{index:idx,error:err});render();LF.UI.toast(p.applyError,'error');}}return;
+          if(p){try{const out=LF.DatasetCorrections.commitProposals(S.state.experiment,p,'ai',{actionId:'dataset.resolve-ambiguities',reason:'review-correction'});render();LF.UI.toast('AI correction committed to the LabFlow Data ('+out.changed+' target'+(out.changed===1?'':'s')+', revision '+out.revisionAfter+').','success');}catch(err){p.applyError=err.message||String(err);Log.warn('review.proposal-apply-failed',{index:idx,error:err});render();LF.UI.toast(p.applyError,'error');}}return;
         }
         if(e.target.closest('#applyAllAiCorrections')){
-          const plan=ambiguityPlan(),items=plan&&plan.proposals||[];let applied=0,targets=0,errors=0;
-          items.forEach(function(p){if(p.applied||p.decision==='rejected')return;try{targets+=LF.DatasetCorrections.applyProposal(S.state.experiment,p,'ai');applied++;delete p.applyError;}catch(err){p.applyError=err.message||String(err);errors++;}});
-          if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');}
-          render();LF.UI.toast(applied+' AI proposal'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' could not be mapped':''),errors?'warning':'success');return;
+          const plan=ambiguityPlan(),items=plan&&plan.proposals||[],pending=items.filter(function(p){return !p.applied&&p.decision!=='rejected';});if(!pending.length){LF.UI.toast('No accepted correction is waiting to be applied.','info');return;}
+          try{const out=LF.DatasetCorrections.commitProposals(S.state.experiment,pending,'ai',{actionId:'dataset.resolve-ambiguities',reason:'review-corrections'});render();LF.UI.toast((out.requested-out.failed)+' AI proposal'+((out.requested-out.failed)===1?'':'s')+' committed to '+out.changed+' target'+(out.changed===1?'':'s')+(out.failed?' · '+out.failed+' could not be mapped':''),out.failed?'warning':'success');}catch(err){render();LF.UI.toast(err.message||String(err),'error');}return;
         }
         const reviewProposal=e.target.closest('[data-review-proposal]');if(reviewProposal){updateProposalDecision(Number(reviewProposal.dataset.reviewProposal),reviewProposal.dataset.decision||'pending');render();return;}
         if(e.target.closest('#applyAutomaticCleanup')){
           const exp=S.state.experiment,pending=LF.DatasetCorrections.safeFixes(exp);
           if(!pending.length){refreshPipeline(exp,'automatic-cleanup-refresh');render();LF.UI.toast('No safe cleanup correction is waiting.','info');return;}
           const ok=await LF.UI.confirmAction('Apply '+pending.length+' mechanically provable cleanup correction'+(pending.length===1?'':'s')+' to the LabFlow Data? RAW files remain unchanged and each accepted correction is recorded in provenance.',{title:'Accept safe cleanup',confirmLabel:'Accept & apply',cancelLabel:'Cancel'});if(!ok)return;
-          try{const out=LF.DatasetCorrections.applyAutomaticSafeFixes(exp);if(!Number(out.lastApplied||0))throw new Error('No pending safe cleanup correction could be applied.');LF.DatasetCorrections.rebuildSamples(exp);markModified('dataset');render();LF.UI.toast('Applied '+Number(out.lastApplied||0)+' safe cleanup correction'+(Number(out.lastApplied||0)===1?'':'s')+' across '+Number(out.targets||0)+' target'+(Number(out.targets||0)===1?'':'s')+'.','success');}catch(err){Log.warn('review.automatic-cleanup-apply-failed',{error:err});refreshPipeline(exp,'automatic-cleanup-recovery');render();LF.UI.toast(err.message||String(err),'error');}return;
+          try{const out=LF.DatasetCorrections.commitAutomaticSafeFixes(exp);render();LF.UI.toast('Committed '+Number(out.lastApplied||0)+' safe cleanup correction'+(Number(out.lastApplied||0)===1?'':'s')+' across '+Number(out.targets||0)+' target'+(Number(out.targets||0)===1?'':'s')+' at revision '+out.revisionAfter+'.','success');}catch(err){Log.warn('review.automatic-cleanup-apply-failed',{error:err});refreshPipeline(exp,'automatic-cleanup-recovery');render();LF.UI.toast(err.message||String(err),'error');}return;
         }
         const reviewFix=e.target.closest('[data-apply-review-fix]');if(reviewFix){
           const items=S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.reviewFixes||[],fix=items[Number(reviewFix.dataset.applyReviewFix)];
-          if(fix){try{LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'user');LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-exclusion');render();LF.UI.toast('Measurement excluded after review.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
+          if(fix){try{const out=LF.DatasetCorrections.commitProposals(S.state.experiment,Object.assign({},fix),'user',{actionId:'review.exclude-measurement',reason:'review-exclusion'});render();LF.UI.toast('Measurement exclusion committed at revision '+out.revisionAfter+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
         }
         if(e.target.closest('#applyAllReviewFixes')){
           const items=(S.state.experiment.datasetAnalysis&&S.state.experiment.datasetAnalysis.reviewFixes||[]).slice();if(!items.length)return;
           if(!await LF.UI.confirmAction('Exclude '+items.length+' blocked measurement'+(items.length===1?'':'s')+' from scientific analysis and rankings? The source data remains unchanged and every exclusion is recorded.',{title:'Apply suggested exclusions',confirmLabel:'Apply exclusions',cancelLabel:'Cancel'}))return;
-          let applied=0,errors=0;items.forEach(function(fix){try{LF.DatasetCorrections.applyProposal(S.state.experiment,Object.assign({},fix),'user');applied++;}catch(_){errors++;}});if(applied){LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-exclusions');}render();LF.UI.toast(applied+' exclusion'+(applied===1?'':'s')+' applied'+(errors?' · '+errors+' failed':''),errors?'warning':'success');return;
+          try{const out=LF.DatasetCorrections.commitProposals(S.state.experiment,items.map(function(fix){return Object.assign({},fix);}), 'user',{actionId:'review.exclude-measurements',reason:'review-exclusions'});render();LF.UI.toast((out.requested-out.failed)+' exclusion'+((out.requested-out.failed)===1?'':'s')+' committed'+(out.failed?' · '+out.failed+' failed':''),out.failed?'warning':'success');}catch(err){render();LF.UI.toast(err.message||String(err),'error');}return;
         }
         const localFix=e.target.closest('[data-local-fix]');if(localFix){
-          const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude';m.excluded=exclude;LF.DataModel.addPatch(S.state.experiment,{patchType:exclude?'exclude_measurement':'restore_measurement',target:{kind:'measurement',id:m.id},operation:'set',field:'excluded',from:!exclude,to:exclude,source:'user',reason:'Review data local correction',status:'applied',reviewStatus:'accepted',appliedAt:new Date().toISOString()},{touch:false});markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast(exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.','success');}return;
+          const m=S.state.experiment.measurements.find(function(x){return x.id===localFix.dataset.measurementId;});if(m){const exclude=localFix.dataset.localFix==='exclude',proposal={patch_type:exclude?'exclude_measurement':'restore_measurement',target:m.id,before:!!m.excluded,after:exclude,reason:'Review data local correction',evidence:['Researcher-confirmed local correction']};try{const out=LF.DatasetCorrections.commitProposals(S.state.experiment,proposal,'user',{actionId:'review.measurement-eligibility',reason:'review-correction'});render();LF.UI.toast((exclude?'Measurement excluded from rankings.':'Measurement restored to rankings.')+' Revision '+out.revisionAfter+'.','success');}catch(err){LF.UI.toast(err.message||String(err),'error');}}return;
         }
 
         if(e.target.closest('#discardRepairPlan')){discardRepairPlan();return;}
@@ -343,7 +350,7 @@
         if(e.target.closest('#saveStackCabinet')){try{const item=LF.Cabinet.saveDesignStack(S.state.experiment,S.state.ui.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.toast('Stack saved to Lab Cabinet.','success');}catch(err){LF.UI.toast(err&&err.message||String(err),'error');}return;}
         if(e.target.closest('#saveProtocolCabinet')){try{const item=LF.Cabinet.saveDesignProtocol(S.state.experiment,S.state.ui.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.toast('Process protocol saved to Lab Cabinet.','success');}catch(err){LF.UI.toast(err&&err.message||String(err),'error');}return;}
 
-        const cabinetKind=e.target.closest('[data-cabinet-kind]');if(cabinetKind){S.state.ui.cabinetKind=cabinetKind.dataset.cabinetKind||'all';renderAtWorkspaceStart('.cabinet-filter-tabs');return;}
+        const cabinetKind=e.target.closest('[data-cabinet-kind]');if(cabinetKind){S.state.ui.cabinetKind=cabinetKind.dataset.cabinetKind||'all';renderWithStableAnchor('.cabinet-filter-tabs');return;}
         const cabinetSelect=e.target.closest('[data-cabinet-select]');if(cabinetSelect){S.state.ui.cabinetSelectedId=cabinetSelect.dataset.cabinetSelect;render();return;}
         if(e.target.closest('#cabinetAddItem')){const select=document.getElementById('cabinetNewKind'),kind=select&&select.value||'material',item=LF.Cabinet.create(kind,{});S.state.ui.cabinetKind=kind;S.state.ui.cabinetSelectedId=item.id;render();return;}
         const cabinetDuplicate=e.target.closest('[data-cabinet-duplicate]');if(cabinetDuplicate){const item=LF.Cabinet.duplicate(cabinetDuplicate.dataset.cabinetDuplicate);S.state.ui.cabinetKind=item.kind;S.state.ui.cabinetSelectedId=item.id;render();LF.UI.toast('Cabinet resource duplicated.','success');return;}
@@ -355,7 +362,7 @@
         const cabinetUseDesign=e.target.closest('[data-cabinet-use-design]');if(cabinetUseDesign){try{if(!hasExperiment()){LF.UI.toast('Upload an experiment before using Cabinet resources in Design.','info');return;}const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.ui.selectedDesignDeviceId);})||(exp.design.devices||[])[0],item=LF.Cabinet.get(cabinetUseDesign.dataset.cabinetUseDesign);if(!dev||!item){LF.UI.toast('No Design experiment is available.','warning');return;}if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with “'+item.name+'”?',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}const out=LF.Cabinet.applyToDesign(exp,dev.id,item.id,{replace:true});if(out.changed){S.state.ui.selectedDesignDeviceId=dev.id;markModified('design');S.setRoute('experiment-design');LF.UI.toast('Cabinet snapshot applied to '+(dev.name||'Design')+'.','success');}else LF.UI.toast('The selected Cabinet resource adds no new Design values.','info');}catch(err){LF.UI.toast('Cabinet resource could not be applied: '+(err&&err.message||String(err)),'error');}return;}
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.toast('NOMAD validation refreshed.','success');return;}
 
-        const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.ui.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.ui.curveSelection=[openCurve.dataset.openSingleCurve];S.state.ui.curveView='single';S.state.ui.resultsTab='curves';renderAtWorkspaceStart('.results-main-tabs');return;}
+        const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.ui.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.ui.curveSelection=[openCurve.dataset.openSingleCurve];S.state.ui.curveView='single';S.state.ui.resultsTab='curves';renderWithStableAnchor('.results-main-tabs');return;}
         const curveSelect=e.target.closest('[data-curve-select]');if(curveSelect){e.preventDefault();S.state.ui.selectedMeasurementId=curveSelect.dataset.curveSelect;S.state.ui.curveSelection=[curveSelect.dataset.curveSelect];render();return;}
         const row=e.target.closest('[data-measurement-row]');if(row){S.state.ui.selectedMeasurementId=row.dataset.measurementRow;const inlineDesktop=!!row.closest('.results-master-detail')&&window.matchMedia&&window.matchMedia('(min-width: 1181px)').matches;if(inlineDesktop){S.state.ui.resultInspectorId=null;render();}else{S.state.ui.resultInspectorId=row.dataset.measurementRow;LF.ResultsPage.renderResultInspector();}return;}
         const resolve=e.target.closest('[data-resolve-finding]');if(resolve){const f=S.state.experiment.findings.find(function(x){return x.id===resolve.dataset.resolveFinding;});if(f){f.status='resolved';Log.info('validation.finding-resolved',{id:f.id,code:f.code});markModified('validation');render();}return;}
@@ -472,6 +479,10 @@
 
     document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field],[data-process-field],[data-layer-field]')){commitDraft('design');}if(e.target&&e.target.closest&&e.target.closest('[data-cabinet-field],[data-cabinet-layer-field]')&&S.state.route==='cabinet')render();});
 
+    function markSettingsDirty(e){const content=e.target&&e.target.closest&&e.target.closest('.settings-content[data-settings-persist="explicit"]'),status=document.getElementById('settingsSaveState');if(!content||!status||e.target.closest('[data-theme-choice]'))return;status.className='badge warning';status.textContent='Unsaved changes';}
+    document.addEventListener('input',markSettingsDirty);
+    document.addEventListener('change',markSettingsDirty);
+
     document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.ui.resultInspectorId){LF.ResultsPage.closeResultInspector();}});
 
     document.addEventListener('submit',async function(e){
@@ -479,10 +490,9 @@
         e.preventDefault();
         try {
           const fd=new FormData(e.target),from=String(fd.get('from')||'').trim(),to=LF.Parser.canonicalSample(fd.get('to')),reason=String(fd.get('reason')||'').trim();if(!from||!to||!reason)return;
-          let changed=0;S.state.experiment.measurements.forEach(function(m){if(m.sample===from){m.sample=to;m.group=LF.Parser.groupFromSample(to);m.isRef=LF.Parser.isReference(to);changed++;}});
-          if(!changed)throw new Error('No measurement uses the selected current sample identity.');
-          LF.DataModel.addPatch(S.state.experiment,{patchType:'sample_mapping',target:{kind:'dataset',id:S.state.experiment.id},operation:'set',field:'sample_mapping',from:from,to:to,source:'user',reason:reason,evidence:['Researcher-confirmed manual correction'],reviewStatus:'accepted',status:'applied',appliedAt:new Date().toISOString()},{touch:false});
-          LF.DatasetCorrections.rebuildSamples(S.state.experiment);markModified('dataset');refreshPipeline(S.state.experiment,'review-correction');render();LF.UI.toast('Canonical sample mapping applied to '+changed+' measurement'+(changed===1?'':'s')+'.','success');
+          const proposals=S.state.experiment.measurements.filter(function(m){return m.sample===from;}).map(function(m){return{patch_type:'sample_mapping',target:m.id,before:from,after:to,reason:reason,evidence:['Researcher-confirmed manual correction']};});
+          if(!proposals.length)throw new Error('No measurement uses the selected current sample identity.');
+          const out=LF.DatasetCorrections.commitProposals(S.state.experiment,proposals,'user',{actionId:'review.manual-sample-mapping',reason:'review-correction'});render();LF.UI.toast('Canonical sample mapping committed to '+out.changed+' measurement'+(out.changed===1?'':'s')+' at revision '+out.revisionAfter+'.','success');
         } catch(err){Log.error('validation.manual-mapping-failed',{error:err});LF.UI.toast(err.message||String(err),'error');}
       }
     });

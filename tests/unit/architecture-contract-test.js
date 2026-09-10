@@ -52,6 +52,11 @@ module.exports = function (t, LF) {
     const snap = LF.DomainSchema.snapshot(e);
     snap.actionData.proposals['design.infer'].d1.summary = 'changed snapshot';
     assert(LF.ActionData.proposal(e, 'design.infer', 'd1').summary, 'proposal', 'snapshot cannot mutate live aggregate');
+    const assistant = LF.ActionData.assistantContext(e, { limit: 4 });
+    truthy(assistant.items.some(function (item) { return item.action_id === 'design.infer' && item.kind === 'proposal'; }), 'Assistant reads Action outputs through a bounded owner projection');
+    truthy(assistant.note.indexOf('not authoritative') >= 0, 'Assistant projection preserves proposal responsibility');
+    const blank = {}; LF.ActionData.assistantContext(blank);
+    truthy(!Object.prototype.hasOwnProperty.call(blank, 'actionData'), 'Assistant Action projection is a pure read');
     e.actionData.annotations = [];
     const invalid = LF.DataContracts.validate(e);
     truthy(invalid.errors.some(function (x) { return x.code === 'ACTION_DATA_BUCKET_INVALID'; }), 'malformed ActionData buckets fail the domain contract');

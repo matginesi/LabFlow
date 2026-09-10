@@ -76,5 +76,35 @@ module.exports=function(t,LF){
     assert(plan.proposals[0].target,'m1','canonical measurement target forced');
     assert(plan.unresolved.length,1,'rejected proposal retained as unresolved diagnostic');
   };
+
+  t['accepted group correction survives canonical refresh, chaining and persistence']=function(){
+    const previous={state:LF.State,derived:LF.DerivedState,pipeline:LF.DataPipeline,contracts:LF.DataContracts,store:LF.CanonicalStore};
+    const raw=new Uint8Array([80,75,3,4,17,29]).buffer;
+    const exp=LF.DataModel.hydrate({id:'dataset-1',raw:{sourceName:'source.zip',sourceArchive:raw},sync:{revision:4},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],actionData:{proposals:{},annotations:{},status:{}},experiments:[{id:'e-old',name:'OLD',sampleIds:['s1'],sampleNames:['S1'],runIds:['r1'],measurementIds:['m1','m2']},{id:'e-new',name:'NEW',sampleIds:[],sampleNames:[],runIds:[],measurementIds:[]}],samples:[{id:'s1',name:'S1',rawName:'S1',aliases:['S1'],experimentId:'e-old',experiment:'OLD',group:'OLD',runIds:['r1'],measurementIds:['m1','m2']}],runs:[{id:'r1',path:'run',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',measurementIds:['m1','m2']}],measurements:[{id:'m1',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',group:'OLD',runId:'r1'},{id:'m2',sampleId:'s1',sample:'S1',experimentId:'e-old',experiment:'OLD',group:'OLD',runId:'r1'}],design:{devices:[{id:'d1',name:'Device 1',experimentId:'e-old',group:'OLD',sampleIds:['s1'],sampleNames:['S1'],solutionIds:[],stack:[],process:{},status:'parsed'}]},findings:[{id:'f-group',kind:'finding',type:'group-mapping',severity:'warning',title:'Group needs review',status:'open',source:'deterministic',measurementId:'m1'}]});
+    exp.datasetAnalysis={sourceRevision:4,ambiguousFindings:[{id:'f-group',type:'group-mapping',measurementId:'m1',target:'OLD'}]};
+    let refreshed=0,notified=0,invalidated=0;
+    LF.State={state:{experiment:exp,user:{name:'Tester'}},notify:function(){notified++;}};
+    LF.DerivedState={invalidate:function(){invalidated++;return['canonical-index','analysis-summary'];}};
+    LF.DataPipeline={refresh:function(current){refreshed++;LF.DatasetCorrections.rebuildSamples(current);current.analysis={summary:{measurementCount:current.measurements.length,groups:Array.from(new Set(current.measurements.map(function(m){return m.group;})))}};return{status:'ready',sourceRevision:current.sync.revision};}};
+    LF.DataContracts={assert:function(){return{ok:true};}};
+    const beforeIdentity=LF.State.state.experiment,sourceBefore=Array.from(new Uint8Array(exp.raw.sourceArchive));
+    const proposal={finding_id:'f-group',patch_type:'group_mapping',target:'m1',before:'OLD',after:'NEW',reason:'Confirmed group',evidence:['finding:f-group']};
+    const out=LF.DatasetCorrections.commitProposals(exp,proposal,'ai',{actionId:'dataset.resolve-ambiguities',reason:'regression'});
+    assert(out.committed,true,'commit acknowledged only after refresh');
+    assert(out.changed,2,'the sample-level mapping updates both sibling measurements');
+    assert(out.revisionBefore,4,'input revision');assert(out.revisionAfter,5,'committed revision');
+    assert(LF.State.state.experiment===beforeIdentity,true,'one canonical object identity');
+    assert(exp.measurements.map(function(m){return m.group;}),['NEW','NEW'],'Results inputs keep corrected group');
+    assert(exp.measurements.map(function(m){return m.experimentId;}),['e-new','e-new'],'stable experiment relation propagated');
+    assert(exp.samples[0].experimentId,'e-new','sample relation propagated');assert(exp.runs[0].experimentId,'e-new','run relation propagated');
+    assert(exp.design.devices[0].experimentId,'e-new','Design relation propagated');assert(exp.design.devices[0].group,'NEW','Design group propagated');
+    assert(exp.analysis.summary.groups,['NEW'],'derived Results recomputed from corrected state');
+    assert(exp.patches.length,1,'one sample-scoped provenance patch');assert(exp.patches[0].target,{kind:'sample',id:'s1'},'patch targets the corrected physical sample');
+    const chainedInput=LF.State.state.experiment.measurements.map(function(m){return m.group;});assert(chainedInput,['NEW','NEW'],'next Action reads state after Action A');
+    const saved=LF.DomainSchema.snapshot(exp),restored=LF.DataModel.hydrate(saved);assert(restored.measurements.map(function(m){return m.group;}),['NEW','NEW'],'saved/exported state retains correction');
+    assert(Array.from(new Uint8Array(exp.raw.sourceArchive)),sourceBefore,'source ZIP bytes unchanged');
+    assert(refreshed,1,'pipeline refreshed once');assert(invalidated,1,'derived state invalidated once');assert(notified,1,'UI/storage notified after validation');
+    LF.State=previous.state;LF.DerivedState=previous.derived;LF.DataPipeline=previous.pipeline;LF.DataContracts=previous.contracts;LF.CanonicalStore=previous.store;
+  };
   return t;
 };

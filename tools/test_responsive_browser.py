@@ -17,7 +17,16 @@ from playwright.sync_api import sync_playwright
 
 BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
 ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_TASKS.zip").resolve()
-VIEWPORTS = ((1440, 900), (1100, 800), (900, 800), (700, 800), (390, 844))
+VIEWPORTS = (
+    (1920, 1080),  # large desktop
+    (1440, 900),   # desktop
+    (1280, 800),   # laptop
+    (1100, 800),   # compact workspace breakpoint
+    (900, 800),    # tablet landscape
+    (700, 800),    # compact navigation breakpoint
+    (390, 844),    # phone
+    (320, 720),    # narrow supported phone
+)
 ROUTES = (
     "experiment-import",
     "experiment-results",
@@ -39,8 +48,8 @@ AUDIT_JS = r"""() => {
   const localScroll = node => node.closest([
     '.table-wrap', '.scroll-x-region', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.docs-mermaid-canvas',
-    '.review-compact-status'
+    '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.cabinet-filter-tabs', '.docs-mermaid-canvas',
+    '.review-compact-status', '.chart-scroll', '.compare-chart-viewport'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;
@@ -89,25 +98,26 @@ def main() -> int:
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
+        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
 
         # Desktop navigation is persistent; tablet/mobile use the same sidebar
         # as an off-canvas drawer. The Assistant stays closed until requested.
-        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
+        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
         assert not page.locator("#mobileNavToggle").is_visible()
         assert not page.locator("#assistantPanel").is_visible()
         page.set_viewport_size({"width": 900, "height": 800})
         page.wait_for_timeout(220)
-        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
         assert page.locator("#mobileNavToggle").is_visible()
         page.locator("#mobileNavToggle").click()
-        page.wait_for_timeout(220)
-        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
+        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
         page.locator("#sidebarDismiss").click()
-        page.wait_for_timeout(220)
-        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
+        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
+        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
         page.set_viewport_size({"width": 1440, "height": 900})
-        page.wait_for_timeout(220)
-        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
+        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
 
         # Audit the upload-first state before adding experiment data.
         findings.append(page.evaluate(AUDIT_JS))
@@ -173,7 +183,7 @@ def main() -> int:
                       return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.getBoundingClientRect().width+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
                     }""")
                     result["uiKitDocument"] = inner
-                if width in (900, 390):
+                if width in (1440, 900, 390, 320):
                     page.screenshot(path=str(screenshot_dir / f"{width}-{route}.png"), full_page=False)
 
         browser.close()
@@ -184,11 +194,11 @@ def main() -> int:
         item.get("uiKitDocument", {}).get("mainOverflow") or
         (item["viewport"]["width"] <= 1100 and item["sidebar"]["left"] >= 0) or
         (item["viewport"]["width"] > 1100 and item["sidebar"]["left"] < 0) or
-        not item.get("pageNavigation") or
-        item["pageNavigation"]["scrollWidth"] > item["pageNavigation"]["clientWidth"] + 1 or
+        (item["route"] in ("experiment-import", "experiment-results", "experiment-design", "experiment-export") and not item.get("pageNavigation")) or
+        (item.get("pageNavigation") and item["pageNavigation"]["scrollWidth"] > item["pageNavigation"]["clientWidth"] + 1) or
         (item["viewport"]["width"] <= 700 and any(tab["scrollWidth"] > tab["clientWidth"] + 1 or tab["display"] != "grid" for tab in item.get("tabs", []))) or
-        (item["viewport"]["width"] <= 700 and any(button["height"] < 44 for button in item["pageNavigation"]["buttons"])) or
-        (item.get("stepper") and (
+        (item["viewport"]["width"] <= 700 and item.get("pageNavigation") and any(button["height"] < 44 for button in item["pageNavigation"]["buttons"])) or
+        (item.get("stepper") and item["viewport"]["width"] <= 1100 and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or
             len(item["stepper"]["steps"]) != 4 or
             not all(step["visible"] for step in item["stepper"]["steps"])

@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;
+  const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Log=LF.Logger?LF.Logger.scope('dataset-corrections'):null;
   function compact(v){return LF.CanonicalStore&&LF.CanonicalStore.compact?LF.CanonicalStore.compact(v,420):v;}
   function clip(v,n){const s=String(v==null?'':v);return s.length>(n||500)?s.slice(0,n||500)+'…':s;}
   function rebuildSamples(exp){
@@ -63,8 +63,36 @@
     if(type==='field_mapping')return'interpretationOverrides.fields.'+field;if(type==='unit_mapping')return'interpretationOverrides.units.'+field;
     if(type==='scale_factor')return'interpretationOverrides.scales.'+field;if(type==='derived_metric_recovery')return field;return field||'';
   }
+  function ensureExperimentGroup(exp,label){
+    const name=String(label||'').trim();if(!name)throw new Error('The proposed experiment group is empty.');
+    let target=(exp.experiments||[]).find(function(item){return norm(item.name)===norm(name);});
+    if(!target)target=LF.DataModel.addRecord(exp,'experiment',{name:name,isRef:LF.Parser.isReference(name),sampleIds:[],sampleNames:[],runIds:[],measurementIds:[]});
+    return target;
+  }
+  function applyGroupMapping(exp,matches,after){
+    const target=ensureExperimentGroup(exp,after),sampleIds=new Set(),measurementIds=new Set();let changed=0,relationChanged=false;
+    matches.forEach(function(match){if(match.sampleId)sampleIds.add(String(match.sampleId));else{const sample=(exp.samples||[]).find(function(item){return norm(item.name)===norm(match.sample);});if(sample)sampleIds.add(String(sample.id));}});
+    (exp.measurements||[]).forEach(function(m){if(sampleIds.has(String(m.sampleId||''))||matches.includes(m))measurementIds.add(String(m.id));});
+    (exp.samples||[]).forEach(function(sample){if(!sampleIds.has(String(sample.id)))return;if(String(sample.experimentId)!==String(target.id)||sample.experiment!==target.name||sample.group!==target.name||!!sample.isRef!==!!target.isRef)relationChanged=true;sample.experimentId=target.id;sample.experiment=target.name;sample.group=target.name;sample.isRef=!!target.isRef;});
+    (exp.runs||[]).forEach(function(run){if(!sampleIds.has(String(run.sampleId||'')))return;if(String(run.experimentId)!==String(target.id)||run.experiment!==target.name)relationChanged=true;run.experimentId=target.id;run.experiment=target.name;});
+    (exp.measurements||[]).forEach(function(m){if(!measurementIds.has(String(m.id)))return;if(String(m.experimentId)!==String(target.id)||m.experiment!==target.name||m.group!==target.name||!!m.isRef!==!!target.isRef)changed++;m.experimentId=target.id;m.experiment=target.name;m.group=target.name;m.isRef=!!target.isRef;});
+    (exp.auxiliaryEvidence||[]).forEach(function(item){if(!sampleIds.has(String(item.sampleId||'')))return;item.experimentId=target.id;item.experiment=target.name;item.group=target.name;item.isRef=!!target.isRef;});
+    (exp.design&&exp.design.devices||[]).forEach(function(device){
+      const linked=(device.sampleIds||[]).map(String).filter(function(id){return sampleIds.has(id);});if(!linked.length)return;
+      const allLinked=(device.sampleIds||[]).map(String).filter(Boolean),allInTarget=allLinked.length&&allLinked.every(function(id){const sample=(exp.samples||[]).find(function(item){return String(item.id)===id;});return sample&&String(sample.experimentId)===String(target.id);});
+      if(!allInTarget)return;
+      if(String(device.experimentId)!==String(target.id)||device.group!==target.name||!!device.isRef!==!!target.isRef)relationChanged=true;
+      device.experimentId=target.id;device.group=target.name;device.isRef=!!target.isRef;
+    });
+    return{changed:changed||(relationChanged?1:0),target:target,sampleIds:Array.from(sampleIds)};
+  }
   function recordProposalPatches(exp,p,source,matches,field){
     const targets=matches&&matches.length?matches:[null],type=String(p.patch_type||''),reviewedBy=LF.State&&LF.State.state.user&&LF.State.state.user.name||'';
+    if(type==='group_mapping'){
+      const sampleIds=Array.from(new Set(targets.map(function(match){return match&&match.sampleId||'';}).filter(Boolean)));
+      (sampleIds.length?sampleIds:[null]).forEach(function(sampleId){LF.DataModel.addPatch(exp,{patchType:type,target:sampleId?{kind:'sample',id:sampleId}:{kind:'dataset',id:exp.id},operation:'set',field:'group',from:p.before,to:p.after,source:source||'ai',findingId:p.finding_id||'',reason:p.reason||'',evidence:p.evidence||[],confidence:p.confidence,reviewedBy:reviewedBy,reviewStatus:'accepted',status:'applied',appliedAt:new Date().toISOString()},{touch:false});});
+      return;
+    }
     targets.forEach(function(match){
       const before=match?(type==='exclude_measurement'||type==='restore_measurement'?!!p.before:p.before):p.before;
       LF.DataModel.addPatch(exp,{patchType:type,target:patchTargetFor(exp,type,match),operation:'set',field:patchField(type,field||String(p.target||'')),from:before,to:p.after,source:source||'ai',findingId:p.finding_id||'',reason:p.reason||'',evidence:p.evidence||[],confidence:p.confidence,reviewedBy:reviewedBy,reviewStatus:'accepted',status:'applied',appliedAt:new Date().toISOString()},{touch:false});
@@ -75,18 +103,47 @@
     const type=String(p.patch_type||''),raw=p.after,after=raw&&typeof raw==='object'&&!Array.isArray(raw)&&raw.value!=null?raw.value:raw,matches=proposalMeasurements(exp,p),field=String(p.field||'').trim();let changed=0;
     if(type==='sample_mapping'){
       const canonical=LF.Parser.canonicalSample(after);if(!canonical)throw new Error('The proposed sample name is empty.');
-      matches.forEach(function(m){m.sample=canonical;m.group=LF.Parser.groupFromSample(canonical);m.isRef=LF.Parser.isReference(canonical);changed++;});
-    }else if(type==='group_mapping')matches.forEach(function(m){m.group=String(after||'').trim();changed++;});
-    else if(type==='reference_classification'){const val=after===true||String(after).toLowerCase()==='true'||LF.Parser.isReference(String(after||''));matches.forEach(function(m){m.isRef=val;changed++;});}
-    else if(type==='exclude_measurement'||type==='restore_measurement')matches.forEach(function(m){m.excluded=type==='exclude_measurement';changed++;});
-    else if(type==='metadata_value'&&field)matches.forEach(function(m){m.meta=m.meta||{};m.meta[field]=after;changed++;});
-    else if(type==='field_mapping'){const key=String(p.target||field||'field');exp.interpretationOverrides.fields[key]=after;changed=1;}
-    else if(type==='unit_mapping'){const key=String(field||p.target||'field');exp.interpretationOverrides.units[key]=after;changed=1;}
+      matches.forEach(function(m){const group=LF.Parser.groupFromSample(canonical),isRef=LF.Parser.isReference(canonical);if(m.sample===canonical&&m.group===group&&!!m.isRef===!!isRef)return;m.sample=canonical;m.group=group;m.isRef=isRef;changed++;});
+    }else if(type==='group_mapping'){changed=applyGroupMapping(exp,matches,after).changed;}
+    else if(type==='reference_classification'){const val=after===true||String(after).toLowerCase()==='true'||LF.Parser.isReference(String(after||''));matches.forEach(function(m){if(!!m.isRef===val)return;m.isRef=val;changed++;});}
+    else if(type==='exclude_measurement'||type==='restore_measurement')matches.forEach(function(m){const value=type==='exclude_measurement';if(!!m.excluded===value)return;m.excluded=value;changed++;});
+    else if(type==='metadata_value'&&field)matches.forEach(function(m){m.meta=m.meta||{};if(JSON.stringify(m.meta[field])===JSON.stringify(after))return;m.meta[field]=after;changed++;});
+    else if(type==='field_mapping'){const key=String(p.target||field||'field');if(JSON.stringify(exp.interpretationOverrides.fields[key])!==JSON.stringify(after)){exp.interpretationOverrides.fields[key]=after;changed=1;}}
+    else if(type==='unit_mapping'){const key=String(field||p.target||'field');if(JSON.stringify(exp.interpretationOverrides.units[key])!==JSON.stringify(after)){exp.interpretationOverrides.units[key]=after;changed=1;}}
     else if(type==='scale_factor'){const factor=Number(after),parts=field.split('.');if(Number.isFinite(factor)&&factor!==0){matches.forEach(function(m){const dirs=parts.length===2?[parts[0]]:['fw','rv'],key=parts.length===2?parts[1]:parts[0];dirs.forEach(function(d){if(m[d]&&Number.isFinite(Number(m[d][key])))m[d][key]=Number(m[d][key])*factor;});changed++;});if(field)exp.interpretationOverrides.scales[field]=factor;}}
     else if(type==='derived_metric_recovery'){const val=Number(after),parts=field.split('.');if(Number.isFinite(val)&&field)matches.forEach(function(m){const d=parts.length===2?parts[0]:'fw',key=parts.length===2?parts[1]:parts[0];m[d]=m[d]||{};m[d][key]=val;changed++;});}
     if(!changed)throw new Error('No unambiguous target matched this proposal.');
     recordProposalPatches(exp,p,source,matches,field);
     if(source==='ai')markFindingResolved(exp,p,source);p.applied=true;p.decision='accepted';p.appliedAt=new Date().toISOString();return changed;
+  }
+  function mutationFingerprint(exp){
+    return JSON.stringify({
+      experiments:(exp.experiments||[]).map(function(x){return[x.id,x.name,x.isRef,x.sampleIds,x.runIds,x.measurementIds];}),
+      samples:(exp.samples||[]).map(function(x){return[x.id,x.name,x.experimentId,x.experiment,x.group,x.isRef,x.runIds,x.measurementIds,x.meta];}),
+      runs:(exp.runs||[]).map(function(x){return[x.id,x.sampleId,x.experimentId,x.experiment,x.measurementIds];}),
+      measurements:(exp.measurements||[]).map(function(x){return[x.id,x.sample,x.sampleId,x.experiment,x.experimentId,x.group,x.isRef,x.excluded,x.meta,x.fw,x.rv];}),
+      designDevices:(exp.design&&exp.design.devices||[]).map(function(x){return[x.id,x.experimentId,x.group,x.isRef,x.sampleIds];}),
+      interpretationOverrides:exp.interpretationOverrides||{}
+    });
+  }
+  function finishDatasetCommit(exp,before,meta){
+    rebuildSamples(exp);
+    const beforeRevision=Number(exp.sync&&exp.sync.revision||0);
+    if(LF.DataModel&&LF.DataModel.touch)LF.DataModel.touch(exp,'dataset');
+    if(LF.DerivedState&&LF.DerivedState.invalidate)LF.DerivedState.invalidate(exp,'dataset');
+    const pipeline=pipelineRefresh(exp,meta.reason||'dataset-correction-commit'),validation=LF.DataContracts&&LF.DataContracts.assert?LF.DataContracts.assert(exp):{ok:true};
+    if(mutationFingerprint(exp)===before){const error=new Error('The correction did not survive canonical refresh. No successful mutation was committed.');error.code='DATA_MUTATION_NOT_COMMITTED';throw error;}
+    const out=Object.assign({executed:true,committed:true,changed:0,failed:0,revisionBefore:beforeRevision,revisionAfter:Number(exp.sync&&exp.sync.revision||0),pipelineStatus:pipeline&&pipeline.status||'',validationOk:validation.ok!==false},meta);
+    if(Log)Log.info('dataset.commit',out);
+    if(LF.State&&LF.State.state&&LF.State.state.experiment===exp&&LF.State.notify)LF.State.notify('touch');
+    return out;
+  }
+  function commitProposals(exp,proposals,source,options){
+    if(LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment!==exp)throw new Error('Dataset corrections must target the canonical ExperimentData.');
+    const list=Array.isArray(proposals)?proposals:[proposals],before=mutationFingerprint(exp),patchesBefore=(exp.patches||[]).length;let changed=0,failed=0;const errors=[];
+    list.filter(Boolean).forEach(function(proposal){try{changed+=applyProposal(exp,proposal,source);delete proposal.applyError;}catch(error){failed++;proposal.applyError=error&&error.message||String(error);errors.push(proposal.applyError);}});
+    if(!changed){const error=new Error(errors[0]||'No correction changed the current LabFlow Data.');error.code='DATA_MUTATION_NOOP';error.failures=errors;throw error;}
+    return finishDatasetCommit(exp,before,{actionId:options&&options.actionId||'',source:source||'user',reason:options&&options.reason||'dataset-correction-commit',requested:list.filter(Boolean).length,changed:changed,failed:failed,patchesAdded:(exp.patches||[]).length-patchesBefore,errors:errors.slice(0,6)});
   }
   function safeFixes(exp){const fixes=[],seen=new Set();function add(p){const k=[p.patch_type,p.target,p.field||'',JSON.stringify(p.after)].join('|');if(seen.has(k))return;seen.add(k);p.safe=true;p.requires_human_review=false;p.confidence=1;fixes.push(p);}(exp.measurements||[]).forEach(function(m){const group=LF.Parser.groupFromSample(m.sample||'');if(!String(m.group||'').trim()&&String(group||'').trim())add({patch_type:'group_mapping',target:m.id,before:m.group||'',after:group,reason:'Group is deterministically derivable from the canonical sample identifier.',evidence:[m.sample]});});return fixes;}
   function reviewFixes(exp){return(exp.measurements||[]).filter(function(m){return m.qualityStatus==='blocked'&&!m.excluded;}).map(function(m){return{patch_type:'exclude_measurement',target:m.id,before:false,after:true,reason:'Exclude this blocked measurement from scientific analysis and rankings.',evidence:(m.blockingFlags||[]).map(function(x){return x.evidence||x.label;}).filter(Boolean).slice(0,3),safe:false,requires_human_review:true,confidence:1};});}
@@ -101,6 +158,12 @@
     const withdrawn=withdrawAutomaticExclusions(exp),fixes=safeFixes(exp),applied=[];let targets=0;
     fixes.forEach(function(fix){try{const copy=Object.assign({},fix);targets+=applyProposal(exp,copy,'automatic');applied.push(copy);}catch(err){/* Leave any unmappable item pending instead of forcing it. */}});
     return automaticCleanupState(exp,{lastApplied:applied.length,withdrawn:withdrawn,targets:targets});
+  }
+  function commitAutomaticSafeFixes(exp){
+    if(LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment!==exp)throw new Error('Safe cleanup must target the canonical ExperimentData.');
+    const before=mutationFingerprint(exp),patchesBefore=(exp.patches||[]).length,out=applyAutomaticSafeFixes(exp);
+    if(!Number(out.lastApplied||0)){const error=new Error('No pending safe cleanup correction changed the current LabFlow Data.');error.code='DATA_MUTATION_NOOP';throw error;}
+    return Object.assign(out,finishDatasetCommit(exp,before,{actionId:'review.safe-cleanup',source:'automatic',reason:'automatic-cleanup-commit',requested:Number(out.lastApplied||0),changed:Number(out.targets||0),failed:0,patchesAdded:(exp.patches||[]).length-patchesBefore}));
   }
 
   function findingRecord(f){return{id:String(f.id||''),type:f.type||'',severity:f.severity||'info',title:f.title||'',detail:clip(f.detail||'',600),target:f.target||'',measurementId:f.measurementId||'',evidence:(f.evidence||[]).slice(0,3),status:f.status||'open',source:f.source||'deterministic'};}
@@ -300,6 +363,6 @@
       return id;
     }
   };
-  LF.DatasetCorrections={applyProposal:applyProposal,rebuildSamples:rebuildSamples,proposalMeasurements:proposalMeasurements,safeFixes:safeFixes,reviewFixes:reviewFixes,prepareAutomaticSafeFixes:prepareAutomaticSafeFixes,applyAutomaticSafeFixes:applyAutomaticSafeFixes,analysis:datasetAnalysis};
+  LF.DatasetCorrections={applyProposal:applyProposal,commitProposals:commitProposals,rebuildSamples:rebuildSamples,proposalMeasurements:proposalMeasurements,safeFixes:safeFixes,reviewFixes:reviewFixes,prepareAutomaticSafeFixes:prepareAutomaticSafeFixes,applyAutomaticSafeFixes:applyAutomaticSafeFixes,commitAutomaticSafeFixes:commitAutomaticSafeFixes,analysis:datasetAnalysis};
   LF.DesignAnalysis={build:designAnalysis,applyAccepted:applyAcceptedDesign,applyOne:applyOneDesign,applyAll:applyAllDesign,applyAllProposals:applyAllDesignProposals,acceptProposal:acceptDesignProposal,acceptAllProposals:acceptAllDesignProposals,applySelectedDevice:applySelectedDevice,isQuantitative:looksQuantitative,sanitizeProposal:sanitizeDesignProposal,summarizeProposal:designApplicationSummary};
 }());

@@ -199,13 +199,13 @@
     return { id:m.id, file:m.file, sample:m.sample, sampleId:m.sampleId||'', experiment:m.experiment||m.group||'', experimentId:m.experimentId||'', group:m.group, position:m.position||'', cell:m.cell||'', runId:m.runId||null, sequence:m.sequence==null?null:m.sequence, isRef:m.isRef, bestEff:m.bestEff, hysteresis:m.hysteresis, qualityStatus:m.qualityStatus, flags:(m.flags||[]).map(function(f){return f.label;}) };
   }
 
-  function toCSV(exp) {
-    const measurements=measurementsOf(exp);
-    Log.debug('csv.export.prepare',{experimentId:exp&&exp.id,measurements:measurements.length});
+  function toCSV(exp,opts) {
+    opts=opts||{};const all=measurementsOf(exp),measurements=opts.excludeExcluded?all.filter(function(m){return!m.excluded;}):all;
+    Log.debug('csv.export.prepare',{experimentId:exp&&exp.id,measurements:measurements.length,excludedOmitted:all.length-measurements.length});
     const factor = settingsOf(exp);
-    const h = ['file','experiment','sample','position','cell','run_id','sequence','group','reference','quality','ranking_eligible','voc_fw','jsc_fw','vmpp_fw','jmpp_fw','pmpp_fw','rs_fw','rsh_fw','ff_fw','eff_fw','voc_rv','jsc_rv','vmpp_rv','jmpp_rv','pmpp_rv','rs_rv','rsh_rv','ff_rv','eff_rv','hysteresis','mismatch_factor','flags'];
+    const h = ['file','experiment','sample','position','cell','run_id','sequence','group','reference','quality','excluded','ranking_eligible','voc_fw','jsc_fw','vmpp_fw','jmpp_fw','pmpp_fw','rs_fw','rsh_fw','ff_fw','eff_fw','voc_rv','jsc_rv','vmpp_rv','jmpp_rv','pmpp_rv','rs_rv','rsh_rv','ff_rv','eff_rv','hysteresis','mismatch_factor','flags'];
     const rows = measurements.map(function (m) {
-      return [m.file,m.experiment||m.group||'',m.sample,m.position||'',m.cell||'',m.runId||'',m.sequence==null?'':m.sequence,m.group,m.isRef,m.qualityStatus,m.rankingEligible,(m.fw||{}).voc,(m.fw||{}).jsc,(m.fw||{}).vmpp,(m.fw||{}).jmpp,(m.fw||{}).pmpp,(m.fw||{}).rs,(m.fw||{}).rsh,(m.fw||{}).ff,Number.isFinite((m.fw||{}).eff)?(m.fw||{}).eff/factor:'',(m.rv||{}).voc,(m.rv||{}).jsc,(m.rv||{}).vmpp,(m.rv||{}).jmpp,(m.rv||{}).pmpp,(m.rv||{}).rs,(m.rv||{}).rsh,(m.rv||{}).ff,Number.isFinite((m.rv||{}).eff)?(m.rv||{}).eff/factor:'',m.hysteresis,factor,(m.flags||[]).map(function(f){return f.label;}).join('; ')].map(C.csvEscape).join(',');
+      return [m.file,m.experiment||m.group||'',m.sample,m.position||'',m.cell||'',m.runId||'',m.sequence==null?'':m.sequence,m.group,m.isRef,m.qualityStatus,!!m.excluded,m.rankingEligible,(m.fw||{}).voc,(m.fw||{}).jsc,(m.fw||{}).vmpp,(m.fw||{}).jmpp,(m.fw||{}).pmpp,(m.fw||{}).rs,(m.fw||{}).rsh,(m.fw||{}).ff,Number.isFinite((m.fw||{}).eff)?(m.fw||{}).eff/factor:'',(m.rv||{}).voc,(m.rv||{}).jsc,(m.rv||{}).vmpp,(m.rv||{}).jmpp,(m.rv||{}).pmpp,(m.rv||{}).rs,(m.rv||{}).rsh,(m.rv||{}).ff,Number.isFinite((m.rv||{}).eff)?(m.rv||{}).eff/factor:'',m.hysteresis,factor,(m.flags||[]).map(function(f){return f.label;}).join('; ')].map(C.csvEscape).join(',');
     });
     return h.join(',') + '\n' + rows.join('\n');
   }

@@ -148,7 +148,7 @@ experiment.actionData = {
 
 Use `LF.ActionData` as the single persistent boundary for Action proposals, annotations and per-target status. Canonical scientific projections remain deterministic and do not embed AI annotations.
 
-Scientific data changes occur only after an explicit apply/accept path owned by deterministic code.
+Scientific data changes occur only after an explicit apply/accept path owned by deterministic code. Dataset proposal acceptance goes through `LF.DatasetCorrections.commitProposals()`: it targets the current `LF.State.state.experiment`, propagates stable relations, advances the revision, invalidates derived projections, runs the deterministic pipeline, validates the final contract and only then notifies the UI/persistence layer. A no-op or a change lost during refresh is not reported as a successful mutation.
 
 `ActionCapabilities` is the single availability/preflight service. Public Actions are globally discoverable from manifests. A route may mark an Action as recommended, but cannot add/remove it. Manifest `ui.bindings` resolve current selections/filters into Action parameters; guards, Context Packs, validators and storage checkpoints consume those resolved parameters instead of reading page UI state independently.
 
@@ -156,9 +156,11 @@ Scientific data changes occur only after an explicit apply/accept path owned by 
 
 `State` keeps scientific truth and transient interface state deliberately separate. The canonical UI namespace is `LF.State.state.ui`; route, selected record, tab, filter, zoom and page-local workbench state belong there. `state.route` remains only a non-enumerable proxy to `state.ui.route`, not a second stored value. Action manifest bindings that consume a UI selection use `ui.*` paths.
 
-Route changes reset the main workspace to its beginning. On the four primary workflow routes, the shared Previous/Next navigation is the first page card and remains sticky at the top of the main scroller. Content-defining switches inside Results, Settings, Documentation and Cabinet establish a new scroll context; only explicitly bounded local scroll regions may be restored within the same context. This prevents one page/tab from inheriting an unrelated document position.
+Route changes reset the main workspace to its beginning. On the four primary workflow routes, the shared Previous/Next navigation is the first page card and remains sticky at the top of the main scroller. Content-defining switches inside Results, Documentation and Cabinet preserve their shared tab/filter anchor whenever geometry permits; a Settings rail selection deliberately starts the selected utility context at the workspace beginning. Shorter views clamp and never call `scrollIntoView()`. Ordinary same-context rerenders preserve the main workspace position; explicitly bounded local scroll regions are restored only within the same context.
 
 `State.touch(scope)` advances the LabFlow Data revision and delegates feature invalidation to `DerivedState`.
+
+The commit invariant is `state[n + 1] = acceptedMutation(state[n])`. Subsequent Actions, Results, Design, Assistant context, persistence and exports all read that same aggregate. Route changes and rerenders never reconstruct it from `raw.sourceArchive`; only explicit reset/reimport replaces the aggregate.
 
 Typical scopes are:
 
@@ -184,7 +186,7 @@ ContextBuilder
    └─ design.infer
 ```
 
-The source baseline, browser-local custom store and portable Settings backup all use JSONL: one normalized knowledge object per line. Portable Settings backup uses the same JSONL record format, while the generated browser bundle remains an implementation artifact for `file://` support.
+The scientific source baseline, browser-local custom store and portable Settings backup all use JSONL: one normalized knowledge object per line. The generated browser bundle also projects a small allowlisted set of canonical user guides into read-only `guide.*` records, so app-help answers cite the same Markdown rendered by Documentation without copying it into a database. Portable Settings backup uses the same JSONL record format, while the generated browser bundle remains an implementation artifact for `file://` support.
 
 Only validated `active` entries are retrievable. `draft` entries persist but never enter AI context. Every active entry requires a traceable source. KB-supported Design proposals use `knowledge_reference` provenance and remain review-only; they do not become experiment evidence.
 

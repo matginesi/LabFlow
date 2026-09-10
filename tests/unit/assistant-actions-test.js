@@ -35,6 +35,7 @@ module.exports=function(t){
   };
   t['Assistant model receives the Action catalog and Design uses the denser workbench layout']=function(){
     assert(context.includes('action_catalog=actionCatalog(exp)'),'Action catalog is part of Assistant context');
+    assert(context.includes('action_outputs=LF.ActionData'),'persisted Action outputs use the owner API in Assistant context');
     assert(context.includes('recent_actions=recentActionEvents(exp)'),'recent Action outcomes are separately available to later Assistant turns');
     assert(prompt.includes('Treat `action_catalog` as the authoritative Action catalog'),'prompt uses Action catalog');
     assert(design.includes('design-experiment-workbench'),'Design selector and active experiment share one compact workbench');
