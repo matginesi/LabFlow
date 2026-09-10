@@ -18,10 +18,10 @@ The browser autosaves the current LabFlow session. This is crash/reload convenie
 
 ## Export page
 
-The Export page exposes three explicit artifacts:
+The Export page exposes three implemented local artifacts:
 
 1. **Export ZIP** — portable, re-importable LabFlow save containing current LabFlow Data, patch/provenance records and the original RAW ZIP byte-for-byte when available.
 2. **Export NOMAD** — deterministic NOMAD entry YAML.
 3. **Export NOMAD ZIP** — deterministic NOMAD staging package, optionally including RAW source and derived tables.
 
-Export never mutates the source archive or scientific data. NOMAD readiness is deterministic and is not an AI Action.
+Export never mutates the source archive or scientific data. NOMAD readiness is deterministic and is not an AI Action. A separate **Upload to NOMAD** panel is intentionally a stub: it reports that remote upload is not implemented and performs no network request. Settings can persist future instance/API/account/token values locally and separately from export-package options.

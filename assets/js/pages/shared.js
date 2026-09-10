@@ -37,7 +37,7 @@
   }
   function workflowHead(title, subtitle, actions) {
     const route=LF.State&&LF.State.state&&LF.State.state.route||'';
-    return pageHead(title,subtitle,actions)+pageNavigation(route)+experimentStepper();
+    return pageNavigation(route)+pageHead(title,subtitle,actions)+experimentStepper();
   }
 
   function navigationButton(direction,item,disabled){
@@ -59,7 +59,7 @@
 
   function needExperiment() {
     return '<section class="page start-page">'+workflowHead('Upload experiment','Load the original laboratory ZIP to begin the Upload & Review → Results → Design → Export workflow.')+
-      '<section class="panel upload-panel"><div class="panel-head"><div><h2 class="h2">RAW experiment source</h2><div class="meta">The ZIP is the only experiment entry point.</div></div><div class="spacer"></div>'+badge('local import','info')+'</div><div class="upload-workbench"><div class="upload-ingest"><div class="upload-source-mark" aria-hidden="true"><span>RAW</span><strong>ZIP</strong></div><div class="upload-copy"><h2>Choose the original experiment ZIP</h2><p>LabFlow preserves the uploaded bytes, inventories every path, and builds the LabFlow data representation used by the application.</p><div class="row-wrap"><button type="button" class="button primary upload-primary" data-open-dataset>Choose ZIP file</button><span class="help">Parsing, naming normalization, safe cleanup and scientific analysis are local and deterministic. AI is only requested explicitly when you choose an AI-assisted action.</span></div></div></div><dl class="upload-contract"><div><dt>Source</dt><dd>Byte-for-byte RAW snapshot · never rewritten</dd></div><div><dt>Processing</dt><dd>Local deterministic parsing and validation</dd></div><div><dt>Next decision</dt><dd>Review evidence and proposed corrections</dd></div></dl></div></section>'+
+      '<section class="panel upload-panel"><div class="panel-head"><div><h2 class="h2">RAW experiment source</h2><div class="meta">The ZIP is the only experiment entry point.</div></div><div class="spacer"></div>'+badge('local import','info')+'</div><div class="upload-workbench"><div class="upload-ingest"><div class="upload-source-mark" aria-hidden="true"><span>RAW</span><strong>ZIP</strong></div><div class="upload-copy"><h2>Choose the original experiment ZIP</h2><p>LabFlow preserves the uploaded bytes, inventories every path, and builds the LabFlow data representation used by the application.</p><div class="row-wrap"><button type="button" class="button primary upload-primary" data-open-dataset>Choose ZIP file</button><span class="help">Parsing, naming normalization, safe-cleanup detection and scientific analysis are local and deterministic. Detected cleanup changes LabFlow Data only after you accept it; AI is requested only when you choose an AI-assisted action.</span></div></div></div><dl class="upload-contract"><div><dt>Source</dt><dd>Byte-for-byte RAW snapshot · never rewritten</dd></div><div><dt>Processing</dt><dd>Local deterministic parsing and validation</dd></div><div><dt>Next decision</dt><dd>Review evidence and proposed corrections</dd></div></dl></div></section>'+
       '<div class="notice info upload-notice"><strong>Non-destructive workflow.</strong> RAW bytes are snapshotted at import and never renamed, rewritten or autosaved. LabFlow never rewrites the uploaded archive. The application works on its own structured representation, autosaves the session locally, and creates portable artifacts only from Export.</div></section>';
   }
 

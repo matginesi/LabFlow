@@ -11,7 +11,9 @@ ZIP
  ↓
 automatic import + canonical naming
  ↓
-automatic safe LabFlow Data cleanup
+deterministic safe-cleanup detection
+ ↓
+explicit acceptance when a safe correction is pending
  ↓
 Review only genuine semantic ambiguities
  ↓
@@ -61,7 +63,7 @@ Import runs one deterministic pipeline:
 9. `summarize`
 10. `validate-final`
 
-Canonical naming and mechanically provable corrections are automatic. The pipeline never calls an AI provider.
+Canonical naming is automatic. Mechanically provable cleanup is detected deterministically by the pipeline, but changes LabFlow Data only after explicit researcher acceptance. The pipeline never calls an AI provider.
 
 ## Actions
 
@@ -75,7 +77,7 @@ Only user-facing capabilities are Actions. The current catalog is intentionally 
 | `results.compare` | Explain differences between selected result groups | stores derived annotation |
 | `assistant.chat` | Answer questions about current data/page | read-only |
 
-There is no “analyze dataset” Action: analysis is pipeline work. There is no “apply safe fixes” Action: safe mechanical cleanup is automatic. NOMAD preparation is a deterministic service, not an Action.
+There is no “analyze dataset” Action: analysis is pipeline work. Safe mechanical cleanup is detected by the pipeline and accepted directly in Review; it is not an AI Action. NOMAD preparation is a deterministic service, not an Action.
 
 ## Action contract
 
@@ -110,7 +112,7 @@ See `docs/guides/DATA_CONSOLE.md` for the complete API.
 
 ## Privacy and storage
 
-LabFlow is local-first. API keys/provider preferences remain local to the browser. RAW archives are kept as source evidence and are not modified by automatic cleanup. Scientific LabFlow Data changes carry revision/provenance metadata.
+LabFlow is local-first. AI provider keys/preferences and optional NOMAD upload-stub settings remain local to the browser. RAW archives are kept as source evidence and are never modified by cleanup. Accepted scientific LabFlow Data changes carry revision/provenance metadata; the current NOMAD upload control is a non-networking stub.
 
 ## Build and verify
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Build the static-browser Knowledge Base bundle from knowledge/kb.json.
+"""Build the static-browser Knowledge Base bundle from knowledge/kb.jsonl.
 
-LabFlow can run from file://, so runtime code cannot rely on fetch(). The JSON file
-is the human/source-controlled representation; this generated bundle exposes the
-same payload synchronously as window.LabFlowKnowledgeBundle.
+LabFlow can run from file://, so runtime code cannot rely on fetch(). JSONL is the
+source-controlled representation: one knowledge entry per line. The generated
+bundle exposes the same records synchronously as window.LabFlowKnowledgeBundle.
 """
 from __future__ import annotations
 
@@ -11,14 +11,29 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "knowledge" / "kb.json"
+SOURCE = ROOT / "knowledge" / "kb.jsonl"
 TARGET = ROOT / "assets" / "js" / "knowledge" / "kb-bundle.js"
 
 
+def load_jsonl(path: Path) -> list[dict]:
+    entries: list[dict] = []
+    for line_no, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"{path.relative_to(ROOT)}:{line_no}: invalid JSON: {exc.msg}") from exc
+        if not isinstance(item, dict):
+            raise SystemExit(f"{path.relative_to(ROOT)}:{line_no}: each JSONL line must be an object")
+        entries.append(item)
+    return entries
+
+
 def main() -> None:
-    payload = json.loads(SOURCE.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or not isinstance(payload.get("entries"), list):
-        raise SystemExit("knowledge/kb.json must contain an entries array")
+    entries = load_jsonl(SOURCE)
+    payload = {"schema_version": 1, "entries": entries}
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     TARGET.write_text(
@@ -26,7 +41,7 @@ def main() -> None:
         "window.LabFlowKnowledgeBundle=" + encoded + ";\n",
         encoding="utf-8",
     )
-    print(f"Built {TARGET.relative_to(ROOT)} · {len(payload['entries'])} entries")
+    print(f"Built {TARGET.relative_to(ROOT)} · {len(entries)} entries")
 
 
 if __name__ == "__main__":

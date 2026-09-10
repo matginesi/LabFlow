@@ -50,6 +50,9 @@ LabFlow is a compact scientific workbench, not an oversized card dashboard and n
 - Put primary action(s) near the title/task they affect; secondary metadata belongs below or alongside, not between label and value.
 - Avoid card nesting for decoration. A surface should represent a real task, state or grouping.
 - On mobile, reflow before compressing typography. Buttons may stack/full-width; essential labels remain readable.
+- On small screens (`<=700px`), shared tab sets reflow into a compact grid. Never turn tabs into a horizontally scrollable single row; labels may wrap inside their grid cell.
+- Design experiment selectors follow the same small-screen contract: compact grid, never a horizontal card carousel.
+- Responsive decisions follow the actual workspace width, not only the browser viewport. Split workbenches collapse when sidebar/Assistant chrome leaves insufficient content width; do not leave a lone or cramped half-width panel beside empty space.
 
 ### Navigation and scroll contract
 
@@ -70,7 +73,15 @@ Export is artifact-first, not a settings form.
 6. Every blocking NOMAD readiness issue must expose a concrete next step in the UI. Never leave the researcher with only an error string.
 7. Use existing domain Actions only when the blocker is genuinely semantic (for example unresolved dataset ambiguity). Package/mapping generation remains deterministic; do not create an AI “NOMAD preparation” Action.
 8. Package-option blockers should offer a safe local resolution such as disabling optional RAW/derived payloads. Mapping/data blockers should route to the owning workflow page.
-9. Never imply remote upload: export is local unless a future explicit connector says otherwise.
+9. Keep implemented export local. A remote NOMAD upload surface may exist only as an explicit **Not implemented** stub: it must perform no network request, must not imply that data was transferred, and must route configuration to the dedicated Settings section. Future credentials/settings remain separate from export manifests.
+
+## Upload & Review safe-cleanup contract
+
+- Mechanically provable cleanup is **detected automatically** by deterministic code, but a newly detected correction must remain pending until the researcher explicitly accepts it.
+- `Accept safe cleanup` must produce an observable LabFlow Data mutation, record patch/provenance, rebuild affected links/samples as needed, and rerun the deterministic pipeline immediately.
+- Never present a change as awaiting acceptance if the same mutation has already been silently applied. Canonical parser normalization (for example naming normalization done while parsing) is a separate provenance category and may remain automatic when it does not rewrite RAW.
+- Re-running the pipeline is idempotent: an accepted safe correction must not reappear as pending, and repeated refreshes must not accumulate duplicate automatic patches.
+- RAW/source bytes remain immutable throughout detection and acceptance.
 
 ## Results and chart contract
 
@@ -115,7 +126,7 @@ AI surfaces must state responsibility: deterministic analysis is authoritative; 
 
 ## Results workspace stability
 
-Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. A route change opens the destination page at its beginning. Changing a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and shows the new view from its beginning; never transplant an absolute scroll offset from another tab. Ordinary rerenders inside the same view may preserve explicitly bounded local scroll regions. The main Results tabs may be sticky within the page scroll container; they must remain responsive, locally scrollable if needed and must not create document-level horizontal overflow.
+Results uses one stable researcher workspace: **Overview / Data / JV / Compare**. A route change opens the destination page at its beginning. Changing a main Results tab or subordinate Data/JV mode aligns the Results tab strip to the top of the workspace and shows the new view from its beginning; never transplant an absolute scroll offset from another tab. Ordinary rerenders inside the same view may preserve explicitly bounded local scroll regions. The main Results tabs may be sticky within the page scroll container; on small screens they reflow into the shared compact tab grid and must not create document-level horizontal overflow.
 
 ## Design and Cabinet
 
@@ -126,9 +137,9 @@ Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomp
 
 ## Settings and Scientific Knowledge Base
 
-Settings uses the shared LabFlow tab pattern and renders exactly one active section. Switching Connection / Actions / Assistant / Knowledge Base / Workspace / Data contract establishes a new view context: align the Settings tab strip to the workspace start and do not reuse document scroll from the previous section.
+Settings uses the shared LabFlow tab pattern and renders exactly one active section. Switching Connection / Actions / Assistant / Knowledge Base / NOMAD / Workspace / Data contract establishes a new view context: align the Settings tab strip to the workspace start and do not reuse document scroll from the previous section. NOMAD settings are browser-local preparation for the future uploader; saving them must not make a network request, and any token must remain separate from exported manifests/options.
 
-The Knowledge Base management surface uses one search/filter toolbar, one bounded entry catalogue and one detail editor built from the standard panel/field/button/badge/notice primitives. Bundled entries are visibly read-only; custom entries are editable. Draft entries may be incomplete but must be visually distinguished from AI-eligible active entries, and active entries must surface source/provenance readiness. Do not turn the KB into a dashboard, graph browser, RAG console, inventory UI or separate design system. Source citations use normal readable UI sizes and progressive disclosure where needed.
+The Knowledge Base management surface uses one search/filter toolbar, one bounded entry catalogue and one detail editor built from the standard panel/field/button/badge/notice primitives. The baseline, browser-local custom store and portable backup format are JSONL (one knowledge object per line). Bundled entries are visibly read-only; custom entries are editable. Draft entries may be incomplete but must be visually distinguished from AI-eligible active entries, and active entries must surface source/provenance readiness. Do not turn the KB into a dashboard, graph browser, RAG console, inventory UI or separate design system. Source citations use normal readable UI sizes and progressive disclosure where needed.
 
 ## Sidebar and themes
 
@@ -138,7 +149,7 @@ The primary workflow destinations are visible directly in navigation: **Upload &
 
 - At desktop widths (`>1100px`) the sidebar is persistent and occupies its own shell column. Do not turn desktop navigation into a drawer.
 - At tablet/mobile widths (`<=1100px`) the same sidebar becomes an off-canvas drawer with menu button, backdrop, close control and `Escape` support. Resize transitions must resynchronize `aria-hidden`/drawer state; never leave desktop navigation accessibility state behind after crossing the breakpoint.
-- Only **Upload & Review, Results, Design and Export** receive shared in-page **Previous / Next** navigation from `PageShell`. It sits near the top immediately after the page heading; utility pages do not show it. The route order is declared once. Make the controls visually obvious without leaving the theme: surface-backed buttons, a stronger accent treatment for **Next**, readable destination labels and approximately 48 px touch height. On phones show the two destinations side by side and hide the nonessential central position pill rather than wrapping it onto a new row.
+- Only **Upload & Review, Results, Design and Export** receive shared in-page **Previous / Next** navigation from `PageShell`. It is the **first workflow card** and remains sticky at the top of the main page scroller while page content moves underneath; utility pages do not show it. The route order is declared once. Make the controls visually obvious without leaving the theme: surface-backed buttons, a stronger accent treatment for **Next**, readable destination labels and approximately 48 px touch height. On phones show the two destinations side by side and hide the nonessential central position pill rather than wrapping it onto a new row.
 - Do not duplicate the desktop workflow with a second large stepper; the compact workflow strip is primarily a narrow-screen orientation aid.
 
 ### Responsive ownership
@@ -174,5 +185,5 @@ Hosted providers use their configured official endpoint directly from the browse
 - Export blockers are resolved in Export whenever the affected data can be inspected there. Never use Upload & Review as a generic error destination.
 - `Recheck` operations use the activity totem and rebuild deterministic projections from the current ExperimentData.
 - Before route changes, Actions, or Assistant turns, pending drafts must be committed so every surface reads the same revision.
-- Previous/Next belongs only to Upload & Review, Results, Design and Export, at the top of those pages.
+- Previous/Next belongs only to Upload & Review, Results, Design and Export, as the first sticky card at the top of those pages.
 - On phones, primary workflow controls become full-width/two-column touch targets without horizontal page overflow.

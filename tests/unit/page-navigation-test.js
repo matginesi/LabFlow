@@ -31,6 +31,7 @@ module.exports=function(t,LF,ctx){
     if(!/\.app-shell\s*\{[\s\S]*?grid-template-columns:\s*var\(--sidebar-w\)\s+minmax\(0,\s*1fr\)/.test(css))throw new Error('Desktop shell must reserve a sidebar column');
     if(!/@media\s*\(max-width:\s*1100px\)[\s\S]*?\.sidebar\s*\{[\s\S]*?position:\s*fixed!important/.test(css))throw new Error('<=1100 sidebar must become off-canvas');
     if(!/\.page-nav-next\{[^}]*background:var\(--accent-soft\)/.test(css))throw new Error('Next navigation must receive a visible themed accent treatment');
+    if(!/\.workflow-page-nav\{[^}]*position:sticky[^}]*top:0/.test(css))throw new Error('Workflow navigation must stay visible at the top of the main scroller');
     if(!/@media\s*\(max-width:\s*700px\)[\s\S]*?\.workflow-page-nav \.page-nav-position\{display:none\}[\s\S]*?\.workflow-page-nav \.page-nav-button\{[^}]*min-height:\s*48px/.test(css))throw new Error('Phone navigation must hide the center pill and keep touch-sized Previous/Next buttons');
   };
 
@@ -56,17 +57,24 @@ module.exports=function(t,LF,ctx){
     if(!/\.results-main-tabs\s*\{[^}]*position:\s*sticky[^}]*top:\s*0/.test(css))throw new Error('Results main tabs must remain a stable sticky workspace anchor');
   };
 
+  t['split workbenches respond to real workspace width instead of viewport only']=function(){
+    const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+    if(!/\.main-area\{[\s\S]*?container-type:\s*inline-size/.test(css))throw new Error('main area must expose its real content width to responsive layouts');
+    if(!/@container\s*\(max-width:1100px\)[\s\S]*?\.kb-workbench[\s\S]*?grid-template-columns:1fr!important/.test(css))throw new Error('KB catalogue/editor must stack when the actual workspace becomes narrow');
+    if(!/@container\s*\(max-width:1100px\)[\s\S]*?\.settings-workspace-grid/.test(css))throw new Error('settings split panels must stack by actual workspace width');
+  };
+
   t['Design reflows the workbench before shrinking scientific controls']=function(){
     const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
     if(!/@media\(max-width:980px\)[\s\S]*?\.design-active-strip\{grid-template-columns:minmax\(0,1fr\) auto/.test(css))throw new Error('Design active strip must simplify before phone widths');
-    if(!/@media\(max-width:700px\)[\s\S]*?\.design-variant-cards\{display:flex;overflow-x:auto/.test(css))throw new Error('Design experiment cards must become a local horizontal scroller on phone');
+    if(!/@media\(max-width:700px\)[\s\S]*?\.design-variant-cards\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(css))throw new Error('Design experiment cards must become a compact two-column grid on phone');
     if(!/@media\(max-width:700px\)[\s\S]*?\.design-active-strip\{grid-template-columns:1fr/.test(css))throw new Error('Design active strip must become one column on phone');
     if(!/@media\(max-width:430px\)[\s\S]*?\.design-page \.design-chem-grid\{grid-template-columns:1fr/.test(css))throw new Error('Design chemistry must become one column on narrow phones');
   };
 
   t['workflow navigation is rendered at the top only for the four primary pages']=function(){
     const shared=fs.readFileSync(path.join(root,'assets/js/pages/shared.js'),'utf8'),app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
-    if(!shared.includes('return pageHead(title,subtitle,actions)+pageNavigation(route)+experimentStepper()'))throw new Error('workflow navigation must be part of the top workflow header');
+    if(!shared.includes('return pageNavigation(route)+pageHead(title,subtitle,actions)+experimentStepper()'))throw new Error('workflow navigation must be the first workflow card');
     if(LF.PageShell.pageNavigation('settings')!=='')throw new Error('utility pages must not receive Previous/Next');
     if(app.includes('mountPageNavigation'))throw new Error('navigation must not be appended after page render');
     if(!app.includes("window.addEventListener('resize',syncMobileNav"))throw new Error('responsive navigation state must resync on resize');

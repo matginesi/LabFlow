@@ -11,6 +11,7 @@ def need(path):
     return p
 
 for path in [
+    'knowledge/kb.jsonl',
     'assets/js/experiment/domain-schema.js',
     'assets/js/experiment/data-model.js',
     'assets/js/experiment/data-contracts.js',

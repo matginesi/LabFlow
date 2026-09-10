@@ -156,7 +156,7 @@ Scientific data changes occur only after an explicit apply/accept path owned by 
 
 `State` keeps scientific truth and transient interface state deliberately separate. The canonical UI namespace is `LF.State.state.ui`; route, selected record, tab, filter, zoom and page-local workbench state belong there. `state.route` remains only a non-enumerable proxy to `state.ui.route`, not a second stored value. Action manifest bindings that consume a UI selection use `ui.*` paths.
 
-Route changes reset the main workspace to its beginning. Content-defining switches inside Results, Settings, Documentation and Cabinet establish a new scroll context; only explicitly bounded local scroll regions may be restored within the same context. This prevents one page/tab from inheriting an unrelated document position.
+Route changes reset the main workspace to its beginning. On the four primary workflow routes, the shared Previous/Next navigation is the first page card and remains sticky at the top of the main scroller. Content-defining switches inside Results, Settings, Documentation and Cabinet establish a new scroll context; only explicitly bounded local scroll regions may be restored within the same context. This prevents one page/tab from inheriting an unrelated document position.
 
 `State.touch(scope)` advances the LabFlow Data revision and delegates feature invalidation to `DerivedState`.
 
@@ -173,9 +173,9 @@ A new derived feature registers its dependency instead of modifying `State.touch
 The Scientific Knowledge Base is a global browser/workspace reference service, not part of `ExperimentData`. It lives outside the single mutable scientific aggregate because KB statements are reusable background knowledge rather than facts about the current experiment.
 
 ```text
-knowledge/kb.json (source-controlled baseline)
+knowledge/kb.jsonl (source-controlled baseline)
         +
-browser-local custom entries
+browser-local custom JSONL entries (`localStorage`)
         ↓
 KnowledgeBase deterministic lexical retrieval
         ↓
@@ -183,6 +183,8 @@ ContextBuilder
    ├─ assistant.chat
    └─ design.infer
 ```
+
+The source baseline, browser-local custom store and portable Settings backup all use JSONL: one normalized knowledge object per line. Portable Settings backup uses the same JSONL record format, while the generated browser bundle remains an implementation artifact for `file://` support.
 
 Only validated `active` entries are retrievable. `draft` entries persist but never enter AI context. Every active entry requires a traceable source. KB-supported Design proposals use `knowledge_reference` provenance and remain review-only; they do not become experiment evidence.
 
@@ -199,7 +201,7 @@ Service   = reusable deterministic implementation detail
 Page      = render/interact with the above; never own scientific truth
 ```
 
-Import, naming normalization, hierarchy rebuild, analysis, safe mechanical cleanup and final validation are pipeline work. They are not Actions.
+Import, naming normalization, hierarchy rebuild, analysis, safe-cleanup detection and final validation are pipeline work. They are not Actions. Applying a pending mechanically safe correction is an explicit Review mutation that records provenance and refreshes the pipeline.
 
 ## 11. Persistence
 

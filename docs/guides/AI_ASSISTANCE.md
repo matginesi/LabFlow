@@ -9,7 +9,7 @@ order: 30
 
 ## AI is never required for import
 
-ZIP parsing, naming normalization, safe automatic cleanup, hierarchy validation and Results are deterministic.
+ZIP parsing, naming normalization, safe-cleanup detection, hierarchy validation and Results are deterministic. Applying a detected safe cleanup is an explicit researcher decision and does not require AI.
 
 ## Where AI is useful
 

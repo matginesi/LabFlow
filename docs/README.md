@@ -37,7 +37,7 @@ LabFlow turns an immutable laboratory ZIP into one reviewed data model, determin
 
 - The uploaded ZIP is immutable evidence.
 - `ExperimentData` is the only mutable scientific aggregate.
-- Calculations and mechanically safe cleanup are deterministic.
+- Calculations and mechanically safe-cleanup detection are deterministic; cleanup mutates LabFlow Data only after explicit acceptance.
 - AI proposes or interprets; it does not silently change scientific data.
 
 The executable Action definitions, schemas and validators must agree with the specifications. Generated bundles are build artifacts, not editing sources.

@@ -30,7 +30,7 @@ LabFlow is a local-first browser application. Modules attach bounded APIs to `wi
 ## State/persistence
 
 - `state.js` — single LabFlow Data lifecycle, revision and autosave plus the canonical `state.ui` namespace for route/selection/filter/tab state; feature invalidation delegates to `DerivedState`. `state.route` is only a proxy to `state.ui.route`.
-- `storage.js` — browser persistence/preferences/provider keys.
+- `storage.js` — browser persistence/preferences, AI provider keys and the separate local NOMAD upload-stub settings/token.
 
 ## Actions/AI
 
@@ -50,7 +50,7 @@ Generated files (`action-registry.js`, `prompt-bundle.js`) must be rebuilt from 
 
 ## Feature projections/exports
 
-- `export/nomad.js` — deterministic NOMAD projection/validation/export.
+- `export/nomad.js` — deterministic local NOMAD projection/validation/export; remote upload remains a page/settings stub and does not live in this service yet.
 - `export/export.js` — original/LabFlow Data package export.
 - `page-context.js` — bounded page context for Assistant/Actions.
 - `experiment/data-console.js` — live introspection facade.

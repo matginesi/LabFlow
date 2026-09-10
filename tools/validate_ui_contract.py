@@ -18,11 +18,41 @@ if 'aria-label="Current action"' not in index:errors.append('Action totem not na
 
 # UI Kit and the local UI skill are executable contracts, not stale examples.
 if "['knowledge','Knowledge Base']" not in settings:errors.append('Knowledge Base Settings tab missing')
+if "['nomad','NOMAD']" not in settings:errors.append('NOMAD Settings tab missing')
+if 'Upload not implemented' not in settings or 'id="saveNomadSettings"' not in settings:errors.append('NOMAD Settings stub/configuration surface missing')
+if 'id="uploadNomadStub"' not in pages or 'Stub only.' not in pages:errors.append('Export NOMAD upload stub missing or not explicit')
+if "closest('#uploadNomadStub')" not in app or 'no data was sent' not in app:errors.append('NOMAD upload stub must remain non-networking and explicit')
 if 'Knowledge Base' not in kit:errors.append('UI Kit does not expose current Knowledge Base Settings pattern')
 if 'chat-quick-actions' in kit:errors.append('UI Kit still shows retired Assistant quick-action strip')
 if 'chat-action-launcher' not in kit:errors.append('UI Kit missing single Assistant Actions launcher')
 if not re.search(r'exactly one compact \*\*Actions\*\* launcher',skill,re.I):errors.append('UI skill missing current single Actions launcher contract')
 if 'Navigation and scroll contract' not in skill:errors.append('UI skill missing navigation/scroll contract')
+# Workflow navigation is the first workflow card and remains visible in the page scroller.
+shared=(ROOT/'assets/js/pages/shared.js').read_text()
+if 'returnpageNavigation(route)+pageHead(title,subtitle,actions)+experimentStepper();' not in shared.replace(' ',''):errors.append('workflow Previous/Next is not the first workflow surface')
+if not re.search(r'\.workflow-page-nav\{[^}]*position:sticky[^}]*top:0',css):errors.append('workflow Previous/Next card is not sticky at the top of the main scroller')
+if not re.search(r'first (?:workflow )?card.*sticky|first sticky card',skill,re.I|re.S):errors.append('UI skill missing sticky first-card workflow navigation contract')
+
+
+# Knowledge Base persistence/backup is JSONL end-to-end.
+kb=(ROOT/'assets/js/knowledge/knowledge-base.js').read_text(); storage=(ROOT/'assets/js/storage.js').read_text()
+if not (ROOT/'knowledge/kb.jsonl').exists():errors.append('source-controlled Knowledge Base JSONL missing')
+if (ROOT/'knowledge/kb.json').exists():errors.append('retired Knowledge Base JSON wrapper still present')
+if 'Export custom JSONL' not in settings or 'Import JSONL' not in settings:errors.append('Knowledge Base Settings does not expose JSONL backup/restore')
+if 'exportJsonl' not in kb or 'importJsonl' not in kb:errors.append('Knowledge Base JSONL import/export API missing')
+if "localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(entries))" not in storage:errors.append('Knowledge Base localStorage is not persisted as JSONL')
+
+# Split layouts respond to the actual workspace width, not just the browser viewport.
+if 'container-type: inline-size' not in css:errors.append('main workspace is not a responsive size container')
+if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.kb-workbench[^}]*grid-template-columns:1fr',css):errors.append('KB workbench does not collapse by real workspace width')
+if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.settings-workspace-grid',css):errors.append('shared settings split does not respond to real workspace width')
+
+# Safe cleanup is deterministic detection plus explicit researcher acceptance.
+pipeline=(ROOT/'assets/js/data/pipeline.js').read_text(); review=(ROOT/'assets/js/pages/review-panel.js').read_text(); corrections=(ROOT/'assets/js/ai/action-steps.js').read_text()
+if 'prepareAutomaticSafeFixes' not in pipeline or 'applyAutomaticSafeFixes(exp)' in pipeline:errors.append('pipeline must detect safe cleanup without silently applying new corrections')
+if 'id="applyAutomaticCleanup"' not in review or 'Accept safe cleanup' not in review:errors.append('Review missing explicit safe-cleanup acceptance')
+if "closest('#applyAutomaticCleanup')" not in app or "markModified('dataset')" not in app:errors.append('safe-cleanup acceptance does not commit/refresh LabFlow Data')
+
 # New routes and content-defining tabs start from their own workspace beginning.
 for marker,label in [("renderAtWorkspaceStart('.results-main-tabs')",'Results'),("renderAtWorkspaceStart('.settings-tabs')",'Settings'),("renderAtWorkspaceStart('.docs-workbench')",'Documentation'),("renderAtWorkspaceStart('.cabinet-filter-tabs')",'Cabinet')]:
     if marker not in app:errors.append(label+' workspace-start navigation missing')
@@ -34,6 +64,16 @@ all_css=css+'\n'+ui_css
 for cls in retired:
     if cls in all_css:errors.append('retired compatibility selector remains '+cls)
 if re.search(r'font(?:-size)?:\s*(?:7|7\.5|8|8\.5|9|9\.5)px',all_css):errors.append('literal sub-10px UI font remains; use shared tokens')
+
+# Small-screen tabs/selectors reflow as grids, never horizontal carousels.
+if not re.search(r'@media\s*\(max-width:700px\)[\s\S]*?\.tabs\{[^}]*display:grid[^}]*grid-template-columns:',css):
+    errors.append('small-screen shared tabs are not a compact grid')
+if re.search(r'@media\s*\(max-width:700px\)[\s\S]*?\.tabs\{[^}]*overflow-x:auto',css):
+    errors.append('small-screen shared tabs reverted to horizontal scrolling')
+if not re.search(r'@media\(max-width:700px\)\{[^}]*.*?\.design-variant-cards\{[^}]*display:grid[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)',css,re.S):
+    errors.append('small-screen Design experiment selector is not a compact two-column grid')
+if re.search(r'\.design-variant-cards\{display:flex;overflow-x:auto',css):
+    errors.append('Design experiment selector still contains the retired mobile carousel')
 
 if errors:print('UI contract: FAILED');[print(' - '+e) for e in errors];raise SystemExit(1)
 print('UI contract: OK')

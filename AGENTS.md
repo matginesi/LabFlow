@@ -32,7 +32,7 @@ Read before structural changes:
 ```text
 Upload ZIP
 → deterministic naming/hierarchy/analysis
-→ automatic mechanically-safe cleanup
+→ deterministic safe-cleanup detection + explicit acceptance
 → researcher sees only genuine semantic ambiguity
 → Results / Design / Export
 ```
@@ -53,7 +53,7 @@ Current Actions:
 - `results.compare`
 - `assistant.chat`
 
-Do not reintroduce analysis, safe cleanup or NOMAD preparation as Actions. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
+Do not reintroduce analysis, safe cleanup or NOMAD preparation as Actions. Safe cleanup is a deterministic Review operation: detect automatically, mutate only after explicit acceptance, then rerun the pipeline. The NOMAD direct-upload surface remains a labelled non-networking stub until a real connector exists. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
 
 ## Mutations
 

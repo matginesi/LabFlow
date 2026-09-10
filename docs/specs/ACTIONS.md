@@ -41,7 +41,7 @@ An AI step may declare `validate_with`. If semantic validation rejects generated
 | `results.compare` | 2+ selected result groups | structured comparison | `actionData.annotations['results.compare']` |
 | `assistant.chat` | current experiment/page + question | text answer | read-only |
 
-Import, analysis, safe automatic corrections and NOMAD preparation are not Actions.
+Import, analysis, deterministic safe-cleanup detection/application and NOMAD preparation are not Actions. Cleanup application requires explicit Review acceptance but does not become an AI capability.
 
 ## ActionData boundary
 

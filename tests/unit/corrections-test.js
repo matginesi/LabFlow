@@ -40,6 +40,23 @@ module.exports=function(t,LF){
     LF.CanonicalStore=oldStore;
   };
 
+
+  t['safe cleanup stays pending until explicit acceptance and then mutates LabFlow Data']=function(){
+    const exp={sync:{revision:1},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],samples:[],measurements:[{id:'m1',sample:'A_1',group:'',isRef:false}],findings:[]};
+    const preview=LF.DatasetCorrections.prepareAutomaticSafeFixes(exp);
+    assert(preview.pending,1,'one safe cleanup is detected');
+    assert(exp.measurements[0].group,'','preview must not mutate data');
+    assert((exp.patches||[]).length,0,'preview must not create applied provenance');
+    const applied=LF.DatasetCorrections.applyAutomaticSafeFixes(exp);
+    assert(applied.lastApplied,1,'accept applies the pending correction');
+    assert(exp.measurements[0].group,'TEST','accepted cleanup changes LabFlow Data');
+    assert(exp.patches.length,1,'accepted cleanup creates provenance');
+    assert(exp.patches[0].source,'automatic','cleanup provenance source');
+    assert(exp.patches[0].status,'applied','cleanup patch status');
+    const refreshed=LF.DatasetCorrections.prepareAutomaticSafeFixes(exp);
+    assert(refreshed.pending,0,'accepted cleanup is no longer pending');
+  };
+
   t['previous automatic exclusions are withdrawn and returned for human review']=function(){
     const exp={sync:{revision:1},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[{patchType:'exclude_measurement',target:{kind:'measurement',id:'m1'},source:'automatic',status:'applied',reviewStatus:'accepted'}],samples:[],measurements:[{id:'m1',sample:'A',group:'A',isRef:false,qualityStatus:'blocked',excluded:true,blockingFlags:[{label:'Efficiency exceeds guardrail'}]}]};
     const out=LF.DatasetCorrections.applyAutomaticSafeFixes(exp);

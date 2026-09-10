@@ -53,7 +53,7 @@ Requirements:
 - canonical naming is automatic;
 - hierarchy/backlinks are rebuilt deterministically;
 - JV metrics/results are deterministic;
-- mechanically provable corrections are automatically applied only to the LabFlow Data;
+- mechanically provable corrections are detected automatically, shown as pending, and applied only to LabFlow Data after explicit researcher acceptance;
 - every automatic correction has provenance;
 - semantic ambiguity is never guessed deterministically;
 - pipeline validation fails closed on an inconsistent domain graph;
@@ -168,7 +168,7 @@ A new deterministic transformation should normally be a `DataPipeline.register(.
 
 ## 11. NOMAD
 
-NOMAD export is deterministic and built from the current validated LabFlow Data. It is not an AI Action.
+NOMAD export is deterministic and built from the current validated LabFlow Data. It is not an AI Action. Export also exposes an explicitly labelled direct-upload stub; Settings may retain the future endpoint/account/token locally, but the stub performs no network request and no upload.
 
 ## 12. Console API
 

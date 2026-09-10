@@ -11,7 +11,7 @@ order: 1
 
 1. Open **Upload & Review**.
 2. Drop/select the experiment ZIP.
-3. Let LabFlow normalize names, rebuild hierarchy, analyze data and perform safe automatic cleanup.
+3. Let LabFlow normalize names, rebuild hierarchy and analyze data; review any mechanically safe cleanup it detects and accept it explicitly before LabFlow Data is changed.
 4. If Review says **Scientific decisions: Clear**, go directly to **Results**.
 5. If ambiguities remain, click **Resolve with AI**, inspect the suggestions and optionally **Apply all suggestions**.
 6. Use **Design** or **Export** when needed. NOMAD artifacts live inside Export.
@@ -24,7 +24,7 @@ That is the intended normal workflow. Researchers should not have to understand 
 flowchart LR
     A[ZIP] --> B[Canonical naming]
     B --> C[Hierarchy + JV analysis]
-    C --> D[Automatic safe cleanup]
+    C --> D[Safe cleanup review]
     D --> E{Semantic ambiguity?}
     E -->|No| F[Results]
     E -->|Yes| G[Review / Resolve with AI]
@@ -40,8 +40,8 @@ LabFlow performs no AI request. It automatically:
 - creates Experiment/Sample/Run/Measurement relationships;
 - parses and pairs FW/RV JV data;
 - calculates deterministic metrics/results;
-- excludes only mechanically proven invalid ranking records in the LabFlow Data;
-- records automatic corrections in provenance;
+- marks deterministic ranking eligibility/validation status without silently applying pending cleanup;
+- records accepted safe-cleanup corrections in provenance;
 - checks structural invariants.
 
 ## AI is optional

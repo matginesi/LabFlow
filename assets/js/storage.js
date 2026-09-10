@@ -6,6 +6,8 @@
   const API_KEY_STORE='labflow.ai.keys';
   const CABINET_STORE='labflow.cabinet';
   const KNOWLEDGE_STORE='labflow.knowledge';
+  const NOMAD_SETTINGS_STORE='labflow.nomad.settings';
+  const NOMAD_TOKEN_STORE='labflow.nomad.token';
   function read(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(err){Log.warn('local.read-failed',{key:key,error:err});return fallback;}}
   function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(err){Log.warn('local.write-failed',{key:key,error:err});return false;}}
   function clone(v){return v==null?v:JSON.parse(JSON.stringify(v));}
@@ -51,27 +53,50 @@
   }
 
 
+  function parseKnowledgeJsonl(raw){
+    const text=String(raw||'').trim();
+    if(!text)return{entries:[],migrated:false};
+    try{
+      const legacy=JSON.parse(text);
+      if(legacy&&typeof legacy==='object'&&!Array.isArray(legacy)&&Array.isArray(legacy.entries))return{entries:legacy.entries,migrated:true};
+    }catch(_){}
+    const entries=[];
+    text.split(/\r?\n/).forEach(function(line,index){
+      const value=line.trim();if(!value)return;
+      try{const item=JSON.parse(value);if(!item||typeof item!=='object'||Array.isArray(item))throw new Error('line must be a JSON object');entries.push(item);}catch(err){throw new Error('Invalid Knowledge Base JSONL at line '+(index+1)+': '+(err.message||String(err)));}
+    });
+    return{entries:entries,migrated:false};
+  }
+  function knowledgeJsonl(entries){return(Array.isArray(entries)?entries:[]).map(function(item){return JSON.stringify(item);}).join('\n');}
   function getKnowledgeState(){
-    const raw=read(KNOWLEDGE_STORE,{schemaVersion:1,entries:[],updatedAt:null});
-    return raw&&typeof raw==='object'&&!Array.isArray(raw)?clone(raw):{schemaVersion:1,entries:[],updatedAt:null};
+    try{
+      const raw=localStorage.getItem(KNOWLEDGE_STORE),parsed=parseKnowledgeJsonl(raw);
+      if(parsed.migrated){localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(parsed.entries));Log.info('knowledge.storage-migrated',{entries:parsed.entries.length,format:'jsonl'});}
+      return{schemaVersion:1,entries:clone(parsed.entries),format:'jsonl'};
+    }catch(err){Log.warn('knowledge.read-failed',{key:KNOWLEDGE_STORE,error:err});return{schemaVersion:1,entries:[],format:'jsonl'};}
   }
   function saveKnowledgeState(value){
-    const payload=clone(value&&typeof value==='object'?value:{entries:[]})||{entries:[]};
-    payload.schemaVersion=1;
-    payload.entries=Array.isArray(payload.entries)?payload.entries:[];
-    payload.updatedAt=new Date().toISOString();
-    const ok=write(KNOWLEDGE_STORE,payload);
-    if(ok)Log.info('knowledge.saved',{entries:payload.entries.length});
-    return ok;
+    const payload=clone(value&&typeof value==='object'?value:{entries:[]})||{entries:[]},entries=Array.isArray(payload.entries)?payload.entries:[];
+    try{localStorage.setItem(KNOWLEDGE_STORE,knowledgeJsonl(entries));Log.info('knowledge.saved',{entries:entries.length,format:'jsonl'});return true;}catch(err){Log.warn('knowledge.write-failed',{key:KNOWLEDGE_STORE,error:err});return false;}
   }
 
   function getExportSettings(){return Object.assign({instance:'NOMAD Central',endpoint:'https://nomad-lab.eu/prod/v1/api/v1',includeRaw:true,includeDerived:true},read('labflow.export.settings',{}));}
   function saveExportSettings(v){write('labflow.export.settings',v);}
+
+  function getNomadSettings(){
+    const legacy=getExportSettings(),defaults={instance:'NOMAD Central',webUrl:'https://nomad-lab.eu/prod/v1/gui/',apiEndpoint:'https://nomad-lab.eu/prod/v1/api/v1',username:''};
+    const out=Object.assign({},defaults,{instance:legacy.instance||defaults.instance,apiEndpoint:legacy.endpoint||defaults.apiEndpoint},read(NOMAD_SETTINGS_STORE,{}));
+    ['instance','webUrl','apiEndpoint','username'].forEach(function(k){out[k]=String(out[k]||'').trim();});
+    return out;
+  }
+  function saveNomadSettings(v){const next=Object.assign({},getNomadSettings(),v||{});write(NOMAD_SETTINGS_STORE,next);Log.info('nomad-settings.saved',{instance:next.instance,apiEndpoint:next.apiEndpoint,hasUsername:!!next.username});return getNomadSettings();}
+  function getNomadToken(){return String(read(NOMAD_TOKEN_STORE,'')||'');}
+  function saveNomadToken(token){const value=String(token||'');const ok=write(NOMAD_TOKEN_STORE,value);if(ok)Log.info('nomad-token.saved',{configured:!!value});return ok;}
 
   function db(){return new Promise(function(resolve,reject){if(!window.indexedDB){reject(new Error('IndexedDB is unavailable in this browser.'));return;}const req=indexedDB.open(DB_NAME);req.onupgradeneeded=function(){const d=req.result;if(!d.objectStoreNames.contains(EXP_STORE))d.createObjectStore(EXP_STORE);};req.onsuccess=function(){resolve(req.result);};req.onerror=function(){reject(req.error||new Error('Could not open LabFlow workspace storage.'));};});}
   async function saveExperiment(exp,ui){const d=await db();return new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite'),store=tx.objectStore(EXP_STORE),payload={savedAt:new Date().toISOString(),experiment:(LF.DataModel&&LF.DataModel.serialize?LF.DataModel.serialize(exp):exp),ui:{route:ui&&ui.route||'experiment-import',resultsTab:ui&&ui.resultsTab||'overview',selectedMeasurementId:ui&&ui.selectedMeasurementId||null,selectedDesignDeviceId:ui&&ui.selectedDesignDeviceId||null}};store.put(payload,'current');tx.oncomplete=function(){d.close();resolve(payload);};tx.onerror=function(){const err=tx.error||new Error('Could not save the LabFlow workspace.');d.close();reject(err);};});}
   async function loadExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readonly'),req=tx.objectStore(EXP_STORE).get('current');req.onsuccess=function(){const v=req.result||null;d.close();resolve(v);};req.onerror=function(){const err=req.error||new Error('Could not read saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.load-failed',{error:err});return null;}}
   async function clearSavedExperiment(){try{const d=await db();return await new Promise(function(resolve,reject){const tx=d.transaction(EXP_STORE,'readwrite');tx.objectStore(EXP_STORE).delete('current');tx.oncomplete=function(){d.close();resolve(true);};tx.onerror=function(){const err=tx.error||new Error('Could not clear saved LabFlow workspace.');d.close();reject(err);};});}catch(err){Log.warn('workspace.clear-failed',{error:err});return false;}}
 
-  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getExportSettings:getExportSettings,saveExportSettings:saveExportSettings,getCabinetState:getCabinetState,saveCabinetState:saveCabinetState,getKnowledgeState:getKnowledgeState,saveKnowledgeState:saveKnowledgeState,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
+  LF.Storage={getAiSettings:getAiSettings,saveAiSettings:saveAiSettings,getAssistantSettings:getAssistantSettings,saveAssistantSettings:saveAssistantSettings,getApiKey:getApiKey,saveApiKey:saveApiKey,getActionOverride:getActionOverride,saveActionOverride:saveActionOverride,resetActionOverride:resetActionOverride,getEffectiveAction:getEffectiveAction,getEffectivePrompt:getEffectivePrompt,getUserProfile:getUserProfile,saveUserProfile:saveUserProfile,getUiSettings:getUiSettings,saveUiSettings:saveUiSettings,getExportSettings:getExportSettings,saveExportSettings:saveExportSettings,getNomadSettings:getNomadSettings,saveNomadSettings:saveNomadSettings,getNomadToken:getNomadToken,saveNomadToken:saveNomadToken,getCabinetState:getCabinetState,saveCabinetState:saveCabinetState,getKnowledgeState:getKnowledgeState,saveKnowledgeState:saveKnowledgeState,saveExperiment:saveExperiment,loadExperiment:loadExperiment,clearSavedExperiment:clearSavedExperiment};
 }());

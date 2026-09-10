@@ -88,6 +88,22 @@ module.exports=function(t,LF){
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel" disabled>Detect</button>')>=0,'NVIDIA uses the shared Detect control');assert(html.indexOf('Enter the NVIDIA NIM API key to enable Detect.')>=0,'key-first guidance');localStorage.removeItem('labflow.ai.settings');
   };
 
+
+  t['NOMAD settings are explicit local-only preparation for the upload stub']=function(){
+    localStorage.removeItem('labflow.nomad.settings');localStorage.removeItem('labflow.nomad.token');
+    LF.State={state:{ui:{settingsSection:'nomad'},experiment:{meta:{sourceName:''}}}};
+    const html=LF.SettingsPage.render();
+    assert(html.indexOf('>NOMAD<')>=0,'NOMAD Settings tab missing');
+    assert(html.indexOf('Upload not implemented')>=0,'stub status missing');
+    assert(html.indexOf('Saving these values performs no network request')>=0,'local-only warning missing');
+    LF.Storage.saveNomadSettings({instance:'Test NOMAD',apiEndpoint:'https://nomad.example/api/v1',username:'researcher'});
+    LF.Storage.saveNomadToken('secret-token');
+    assert(LF.Storage.getNomadSettings().instance==='Test NOMAD','NOMAD instance persisted');
+    assert(LF.Storage.getNomadToken()==='secret-token','NOMAD token persisted separately');
+    assert(JSON.stringify(LF.Storage.getExportSettings()).indexOf('secret-token')<0,'token must not leak into export settings');
+    localStorage.removeItem('labflow.nomad.settings');localStorage.removeItem('labflow.nomad.token');
+  };
+
   t['Action runtime override changes effective definition and prompt and resets cleanly']=function(){
     const id='results.interpret',base=LF.ActionRegistry.action(id),sourcePrompt=LF.ActionRegistry.prompt(id);
     LF.Storage.saveActionOverride(id,{definition:Object.assign({},base,{title:'Runtime title'}),prompt:'Runtime prompt'});

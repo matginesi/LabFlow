@@ -34,7 +34,7 @@ Pages do not own separate scientific copies. A reviewed change to the LabFlow Da
 
 The first step establishes provenance and current data quality. Import is deterministic-first and remains usable without AI.
 
-Review distinguishes safe deterministic corrections from ambiguous interpretations. Apply only changes whose evidence and target you understand.
+Review distinguishes mechanically safe deterministic corrections from ambiguous interpretations. Safe corrections are detected automatically but remain pending until **Accept safe cleanup**; acceptance changes only LabFlow Data, writes provenance, and immediately reruns the deterministic pipeline. Apply only changes whose evidence and target you understand.
 
 ## Results
 
@@ -48,7 +48,7 @@ Bulk suggestion is sequential/bounded. A provider throttle stops the sequence im
 
 ## Export / NOMAD
 
-Export keeps the LabFlow ZIP as the primary portable save. The current Canonical Store is mapped deterministically to NOMAD for secondary entry/staging artifacts. Required missing mappings block readiness, and every blocker must expose a concrete remediation path. Changes to relevant scientific data or package options invalidate stale staging.
+Export keeps the LabFlow ZIP as the primary portable save. The current Canonical Store is mapped deterministically to NOMAD for secondary entry/staging artifacts. Required missing mappings block readiness, and every blocker must expose a concrete remediation path. Changes to relevant scientific data or package options invalidate stale staging. A direct **Upload to NOMAD** surface is present only as a clearly labelled stub: it sends nothing. Future endpoint/account/token values are configured separately in Settings and retained locally.
 
 ## Save, autosave and export
 

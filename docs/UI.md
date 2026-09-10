@@ -7,7 +7,7 @@
 The primary workflow is **Upload & Review → Results → Design → Export**. Cabinet, Documentation and Settings are utility destinations, not extra workflow steps.
 
 - The left navigation is fixed/persistent on desktop widths above 1100 px and becomes an off-canvas drawer at tablet/mobile widths. Menu, close, backdrop, route selection and `Escape` operate the drawer only where appropriate; crossing the breakpoint resynchronizes drawer/ARIA state.
-- Only the four primary workflow routes — **Upload & Review, Results, Design and Export** — receive shared in-page **Previous / Next** controls. They sit directly under the page heading, use the one route order declared in `PageShell`, emphasize **Next** with the accent treatment, and remain roughly 48 px touch targets. Utility pages do not show them. On narrow phones the center position indicator is hidden so Previous and Next stay on one row.
+- Only the four primary workflow routes — **Upload & Review, Results, Design and Export** — receive shared in-page **Previous / Next** controls. This navigation card is the first workflow surface and stays sticky at the top of the main page scroller while the researcher scrolls. It uses the one route order declared in `PageShell`, emphasizes **Next** with the accent treatment, and remains roughly 48 px touch targets. Utility pages do not show it. On narrow phones the center position indicator is hidden so Previous and Next stay on one row.
 - The Assistant is closed by default and opens only after explicit user action.
 - Page content must not create document-level horizontal scrolling. Tables, tabs, diagrams and wide charts may scroll inside a clearly bounded local region.
 - Normal workflow content uses readable shared type/control tokens. Micro type is reserved for secondary technical metadata; primary labels/actions must not fall into 7–9 px text.
@@ -34,7 +34,7 @@ Lab Cabinet is a reusable browser-local scientific shelf, not inventory or LIMS.
 
 ## Export
 
-Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD readiness is an actionable repair surface: every blocker exposes a route, safe package-option change, or an existing semantic Action where appropriate. Mapping details remain progressively disclosed. Export never implies network upload or an AI-owned packaging step.
+Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD readiness is an actionable repair surface: every blocker exposes a route, safe package-option change, or an existing semantic Action where appropriate. Mapping details remain progressively disclosed. A direct NOMAD upload panel may be shown only as an unmistakable **Not implemented** stub until a real connector exists; it performs no network request and packaging remains deterministic/non-AI.
 
 ## Actions and Assistant
 
@@ -47,11 +47,13 @@ Global destructive `Reset session` is intentionally visible in the topbar. It us
 
 ## Settings and Knowledge Base
 
-Settings uses one shared horizontally scrollable tab strip and one active section at a time. Changing Settings section starts the selected section at the workspace beginning rather than inheriting scroll from the previous section.
+Settings uses one shared tab strip and one active section at a time: Connection, Actions, Assistant, Knowledge Base, NOMAD, Workspace and Data contract. Changing Settings section starts the selected section at the workspace beginning rather than inheriting scroll from the previous section. The NOMAD section stores only future uploader configuration locally; saving it does not perform a network request.
 
 The Scientific Knowledge Base is managed inside **Settings → Knowledge Base** with the standard LabFlow surfaces: one search/filter toolbar, one bounded entry catalogue and one detail editor. Bundled records are read-only; custom records are browser-local and editable. Drafts may be incomplete but are excluded from AI context; active records require a traceable source. Import/export is backup/transfer, not a second scientific datastore. KB statements remain reference knowledge and never acquire ExperimentData/evidence styling.
 
 ## Responsive/readability rules
+
+On phone/small-screen layouts, every shared `.tabs` set reflows into a compact grid with readable wrapping labels; tab navigation must never require horizontal scrolling. Design experiment selectors follow the same rule and use a compact grid rather than a horizontal carousel.
 
 Reflow content before shrinking it. The shell has three responsive ownership levels only: desktop `>1100px`, drawer/tablet `<=1100px`, and phone `<=700px`. Global phone rules for page/panel/topbar/sidebar spacing are defined once; feature media queries may reflow only their own surfaces. Flex/grid children with scientific text use `min-width:0`; long paths/names wrap or truncate deliberately. Local scrolling is acceptable for data surfaces but not for the whole document. Buttons remain usable on touch layouts; Previous/Next controls stay at least touch-sized; essential text remains at shared readable sizes. Retired markup loses its CSS instead of keeping compatibility selectors.
 

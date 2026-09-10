@@ -3,7 +3,7 @@
 
 The test intentionally measures the rendered application instead of inferring
 layout safety from media queries. Horizontal scrolling is allowed only inside
-explicit local regions such as tables, tab rows, toolbars and stack editors.
+explicit local regions such as tables, toolbars and stack editors. Tabs are never horizontal-scroll regions on compact workspaces.
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ AUDIT_JS = r"""() => {
     return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
   };
   const localScroll = node => node.closest([
-    '.table-wrap', '.scroll-x-region', '.tabs', '.toolbar', '.topbar', '.sidebar',
+    '.table-wrap', '.scroll-x-region', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
     '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.docs-mermaid-canvas',
     '.review-compact-status'
@@ -61,6 +61,7 @@ AUDIT_JS = r"""() => {
   const mainRect = main.getBoundingClientRect();
   const pageNav = document.querySelector('.page-nav');
   const pageNavButtons = pageNav ? [...pageNav.querySelectorAll('.page-nav-button')].map(node => { const r=node.getBoundingClientRect(); return {width:Math.round(r.width),height:Math.round(r.height),disabled:node.disabled}; }) : [];
+  const tabs = [...document.querySelectorAll('.tabs')].filter(visible).map(node => ({clientWidth:node.clientWidth,scrollWidth:node.scrollWidth,display:getComputedStyle(node).display,columns:getComputedStyle(node).gridTemplateColumns}));
   return {
     route: window.LabFlow.State.state.route,
     viewport: {width:innerWidth,height:innerHeight},
@@ -71,6 +72,7 @@ AUDIT_JS = r"""() => {
     sidebar: {top:Math.round(sidebarRect.top),left:Math.round(sidebarRect.left),width:Math.round(sidebarRect.width),height:Math.round(sidebarRect.height)},
     stepper: strip ? {clientWidth:strip.clientWidth,scrollWidth:strip.scrollWidth,steps} : null,
     pageNavigation: pageNav ? {clientWidth:pageNav.clientWidth,scrollWidth:pageNav.scrollWidth,buttons:pageNavButtons} : null,
+    tabs,
     offenders
   };
 }"""
@@ -163,7 +165,7 @@ def main() -> int:
                 elif route == "ui-kit":
                     inner = page.evaluate("""() => {
                       const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
-                      const allowed='.table-wrap,.scroll-x-region,.tabs,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap';
+                      const allowed='.table-wrap,.scroll-x-region,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap';
                       const offenders=[...root.querySelectorAll('*')].filter(node => {
                         const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
                         return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
@@ -184,6 +186,7 @@ def main() -> int:
         (item["viewport"]["width"] > 1100 and item["sidebar"]["left"] < 0) or
         not item.get("pageNavigation") or
         item["pageNavigation"]["scrollWidth"] > item["pageNavigation"]["clientWidth"] + 1 or
+        (item["viewport"]["width"] <= 700 and any(tab["scrollWidth"] > tab["clientWidth"] + 1 or tab["display"] != "grid" for tab in item.get("tabs", []))) or
         (item["viewport"]["width"] <= 700 and any(button["height"] < 44 for button in item["pageNavigation"]["buttons"])) or
         (item.get("stepper") and (
             (item["viewport"]["width"] > 700 and item["stepper"]["scrollWidth"] > item["stepper"]["clientWidth"] + 1) or

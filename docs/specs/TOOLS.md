@@ -34,7 +34,7 @@ They are **not** separate Actions and should not appear as researcher workflow b
 
 ## Deterministic data services
 
-Naming normalization, safe cleanup, hierarchy rebuild, JV analysis, canonical indexing, review analysis, Design projection and NOMAD preparation are local services/pipeline logic. They should not be wrapped in fake Actions merely to make them callable.
+Naming normalization, safe-cleanup detection/application, hierarchy rebuild, JV analysis, canonical indexing, review analysis, Design projection and NOMAD preparation are local services/pipeline logic. Safe cleanup is accepted through Review, not wrapped in a fake Action.
 
 ## Extension
 

@@ -42,9 +42,19 @@ A KB entry never proves that the current experiment used a material, process or 
 
 ## Persistence
 
-Custom KB entries are stored in browser-local persistent storage under the LabFlow origin. They survive reloads and normal workspace resets, but clearing browser site data removes them. Use **Settings → Knowledge Base → Export custom KB** for backup/transfer.
+Custom KB entries are stored directly as JSON Lines (JSONL) in browser `localStorage` under the LabFlow origin: one normalized knowledge entry per line. They survive reloads and normal workspace resets, but clearing browser site data removes them. Use **Settings → Knowledge Base → Export custom JSONL** for backup/transfer.
 
-The source-controlled `knowledge/kb.json` is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow continues to work when opened directly from `file://`. Bundled entries are read-only at runtime; copy one to create an editable custom entry.
+The source-controlled `knowledge/kb.jsonl` also uses one knowledge object per line and is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow continues to work when opened directly from `file://`. Bundled entries are read-only at runtime; copy one to create an editable custom entry.
+
+### JSONL format
+
+The baseline file, browser-local custom store and Settings backup all use the same record shape: **one complete knowledge entry per line**. There is no outer `entries` array or metadata wrapper. Blank lines are ignored; malformed lines fail with their line number instead of partially importing ambiguous data.
+
+```json
+{"id":"material.sno2","kind":"material","title":"SnO2","status":"active","summary":"…","sources":[{"title":"…","doi":"10.…"}]}
+```
+
+`localStorage` contains custom entries only; bundled records continue to come from the source-controlled JSONL/bundle. LabFlow transparently migrates the immediately previous wrapped browser format to JSONL on first read so an application update does not discard researcher-created entries.
 
 ## Safe activation
 
@@ -74,7 +84,7 @@ Retrieval is deterministic lexical ranking over title, aliases, tags, summary, f
 
 ## Adding source-controlled entries
 
-Edit `knowledge/kb.json`, keep stable IDs, then run:
+Edit `knowledge/kb.jsonl`, keep stable IDs, then run:
 
 ```bash
 python tools/build_knowledge_bundle.py
