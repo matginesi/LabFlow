@@ -59,8 +59,8 @@
   function settingsActivity(title){let details={};return{
     activityStart:function(info){details=info&&info.details||{};providerFeedback('info',title,(info&&info.stage)||'Starting…',details);},
     activityUpdate:function(info){if(info&&info.details)details=info.details;providerFeedback('info',title,(info&&info.message)||(info&&info.stage)||'Working…',details);},
-    activityFinish:function(info){const message=(info&&info.message)||title,kind=/rate limit|inconclusive|differs/i.test(message)?'warning':'success';providerFeedback(kind,message,'Completed.',(info&&info.details)||details);LF.UI.toast(message,kind);},
-    activityError:function(error,info){providerFeedback('error',title+' failed',(error&&error.message)||String(error),(info&&info.details)||details);LF.UI.toast((error&&error.message)||String(error),'error');}
+    activityFinish:function(info){const message=(info&&info.message)||title,kind=/rate limit|inconclusive|differs/i.test(message)?'warning':'success';providerFeedback(kind,message,'Completed.',(info&&info.details)||details);LF.UI.message(message,kind);},
+    activityError:function(error,info){providerFeedback('error',title+' failed',(error&&error.message)||String(error),(info&&info.details)||details);LF.UI.message((error&&error.message)||String(error),'error');}
   };}
   function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
@@ -150,7 +150,7 @@
     if(provider.keyRequired||provider.optionalKey){const key=field('aiKey').value.trim(),stored=LF.Storage.saveApiKey(key,settings.provider);if(stored===false)throw new Error('The '+(provider.name||settings.provider)+' API key could not be saved in this browser. Check site-storage permissions, then try again.');if(provider.keyRequired&&key&&!LF.Storage.getApiKey(settings.provider))throw new Error('The '+(provider.name||settings.provider)+' API key was not retained by this browser. Check site-storage permissions, then try again.');}
     Log.info('saved', {provider:settings.provider, endpoint:settings.endpoint, model:settings.model});
     if(LF.SettingsPage&&LF.SettingsPage.markSaved)LF.SettingsPage.markSaved();
-    if (!options || options.toast !== false) LF.UI.toast('AI provider saved.', 'success');
+    if (!options || options.toast !== false) LF.UI.message('AI provider saved.', 'success');
     return settings;
   }
 
@@ -177,7 +177,7 @@
     if(detectNeedsKey){
       if(hint)hint.textContent='Enter the '+provider.name+' API key before running Detect.';
       if(field('aiKey'))field('aiKey').focus();
-      if(!options.silent)LF.UI.toast('Enter the API key before running Detect.','warning');
+      if(!options.silent)LF.UI.message('Enter the API key before running Detect.','warning');
       syncModelControls();
       return[];
     }
@@ -247,13 +247,13 @@
       activity.activityUpdate({stepId:'apply',stepStatus:'done',stage:'Provider metadata ready',progress:.97,details:details});
       Log.info('models.loaded',{provider:providerId,count:models.length,model:selected,catalogueSkipped:catalogueSkipped,capability:cap,throughput:benchmark});
       activity.activityFinish({message:cap&&cap.runtimeProfileStatus==='mismatch'?'Provider metadata detected · llama.cpp runtime differs from the LabFlow profile.':'Provider metadata detection completed.',response:(catalogueSkipped?'Configured model retained; no provider-wide catalogue was queried. ':(models.length?models.length+' models detected. ':''))+capText+'.'+(benchmark?' Local generation throughput: '+Number(benchmark.averageTokensPerSecond).toFixed(2)+' tok/s average'+(benchmark.estimated?' using estimated token counts':'')+' ('+benchmark.samples.map(function(item){return Number(item.tokensPerSecond).toFixed(1);}).join(', ')+' tok/s).':'')+(runtimeProfileText?' '+runtimeProfileText+'.':'')+' LabFlow Action requests remain much smaller and use explicit per-Action input/output caps.'+(cap&&cap.runtimeProfileStatus==='mismatch'?'\n\nRecommended llama.cpp runtime for this LabFlow profile: --parallel 1 --ctx-size 65536. Detect never divides the n_ctx reported by /props a second time.':'')+(listError?'\n\nThe model catalogue itself was unavailable, but the configured model was still probed.':'')+(benchmarkError?'\n\nThe optional local throughput benchmark was unavailable: '+(benchmarkError.message||String(benchmarkError)):''),details:details,holdMs:0});
-      if(cap&&cap.runtimeProfileStatus==='mismatch'&&!options.silent)LF.UI.toast('llama.cpp runtime differs from LabFlow profile: use --parallel 1 --ctx-size 65536 for the full 65K Action context.','warning');
+      if(cap&&cap.runtimeProfileStatus==='mismatch'&&!options.silent)LF.UI.message('llama.cpp runtime differs from LabFlow profile: use --parallel 1 --ctx-size 65536 for the full 65K Action context.','warning');
       return models;
     }catch(error){
       if(hint)hint.textContent='Could not read provider capability: '+(error.message||String(error));
       Log.warn('models.load-failed',{provider:providerId,error:error});
       activity.activityError(error,{message:'Provider metadata detection did not complete.',response:(error.message||String(error))+'\n\nYou can still type the model name manually; LabFlow will keep Action budgets bounded by their own contracts.',details:{Provider:provider.name||providerId,Endpoint:endpointHost(endpoint)},holdMs:0});
-      if(!options.silent)LF.UI.toast('Could not read provider capability. The request will use the Action budget unless you force a lower cap.','warning');
+      if(!options.silent)LF.UI.message('Could not read provider capability. The request will use the Action budget unless you force a lower cap.','warning');
       return models;
     }finally{
       if(button){delete button.dataset.loading;button.disabled=false;}
@@ -268,7 +268,7 @@
     button.disabled = true;
     let settings;
     try{settings=saveFromForm({toast:false});}
-    catch(error){button.textContent=oldText;button.disabled=false;providerFeedback('error','Provider settings were not saved',error.message||String(error));LF.UI.toast(error.message||String(error),'error');return;}
+    catch(error){button.textContent=oldText;button.disabled=false;providerFeedback('error','Provider settings were not saved',error.message||String(error));LF.UI.message(error.message||String(error),'error');return;}
     const provider = LF.AIProviders[settings.provider] || LF.AIProviders.custom;
     const activity=settingsActivity('Test AI connection');
     button.textContent = 'Testing…';

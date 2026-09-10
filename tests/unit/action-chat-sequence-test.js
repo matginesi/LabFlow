@@ -17,7 +17,7 @@ module.exports=function(t,LF){
     LF.AIProviders={lmstudio:{keyRequired:false}};
     LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;},touch:function(){}};
     LF.PageContext={summary:function(){return'Results · Design';}};
-    LF.UI={activityStart:function(){},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},toast:function(){}};
+    LF.UI={activityStart:function(){},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},message:function(){}};
     LF.Assistant={addActionMessage:function(m){messages.push(m);return m;},render:function(){}};
     LF.ActionRunner={
       effective:function(id){if(id==='results.interpret')return{id:id,title:'Interpret results',short_title:'Interpret results',contract:{result:{format:'text'}},execution:{mode:'ai',steps:[{id:'interpret',type:'AI'}]}};return{id:id,title:id,contract:{result:{format:id==='design.infer'?'json':'text'}},execution:{mode:id==='design.infer'?'hybrid':'deterministic',steps:id==='design.infer'?[{id:'infer',type:'AI'}]:[]}};},

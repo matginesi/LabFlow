@@ -211,6 +211,10 @@ input[type="file"]::file-selector-button { min-height: var(--control-h-compact);
 .message-totem-actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding: 9px 12px 11px; border-top: 1px solid var(--border); }
 .message-totem-dialog { width: min(460px,calc(100vw - 28px)); }
 .message-totem-compact { display: grid; grid-template-columns: 3px minmax(0,1fr); gap: 9px; align-items: stretch; width: min(390px,calc(100vw - 28px)); border-top-width: 1px; }
+.message-totem-compact.info { background: var(--info-soft); border-color: var(--info-border); }
+.message-totem-compact.success { background: var(--success-soft); border-color: var(--success-border); }
+.message-totem-compact.warning { background: var(--warning-soft); border-color: var(--warning-border); }
+.message-totem-compact.error, .message-totem-compact.danger { background: var(--danger-soft); border-color: var(--danger-border); }
 .message-totem-compact .message-totem-marker { grid-row: 1; }
 .message-totem-compact .message-totem-body { grid-column: 2; padding: 8px 10px 9px 0; }
 .message-totem-compact .message-totem-body strong, .message-totem-compact .message-totem-body span { display: block; }
@@ -283,15 +287,15 @@ body.activity-open { overflow: hidden; }
 .activity-demo { width: 100%; max-width: 520px; box-shadow: none; }
 .activity-demo .activity-progress > span { width: 64%; }
 
-.toast-region { position: fixed; right: 14px; bottom: 14px; z-index: 1500; display: grid; gap: 8px; width: min(390px,calc(100vw - 28px)); max-width: 390px; }
-body:has(.app-shell:not(.assistant-closed)) .toast-region { right: calc(var(--assistant-w) + 14px); }
+.message-region { position: fixed; right: 14px; bottom: 14px; z-index: 1500; display: grid; gap: 8px; width: min(390px,calc(100vw - 28px)); max-width: 390px; }
+body:has(.app-shell:not(.assistant-closed)) .message-region { right: calc(var(--assistant-w) + 14px); }
 
 @media (max-width: 760px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .stepper { display: flex; overflow-x: auto; scrollbar-gutter: stable; }
   .step { flex: 0 0 116px; border-bottom: 0; }
-  .toast-region,
-  body:has(.app-shell:not(.assistant-closed)) .toast-region { top: auto; right: 8px; bottom: 8px; left: 8px; max-width: none; }
+  .message-region,
+  body:has(.app-shell:not(.assistant-closed)) .message-region { top: auto; right: 8px; bottom: 8px; left: 8px; max-width: none; }
 }
 .mt-1 { margin-top: var(--space-1); }
 .mt-2 { margin-top: var(--space-2); }

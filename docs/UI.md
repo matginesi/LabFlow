@@ -52,6 +52,10 @@ Lab Cabinet is a reusable browser-local scientific shelf, not inventory or LIMS.
 
 Export is artifact-first. The portable **LabFlow ZIP** is the primary save artifact. NOMAD entry YAML and staging ZIP are deterministic secondary outputs. NOMAD readiness is an actionable repair surface: every blocker exposes a route, safe package-option change, or an existing semantic Action where appropriate. Mapping details remain progressively disclosed. A direct NOMAD upload panel may be shown only as an unmistakable **Not implemented** stub until a real connector exists; it performs no network request and packaging remains deterministic/non-AI.
 
+## Feedback and Totems
+
+LabFlow has exactly two runtime feedback families. Transient application feedback uses the shared compact Message Totem through `LF.UI.message(...)`; confirmations use `LF.UI.confirmAction(...)`. Foreground Action execution uses the single shared Action Totem through `LF.UI.activity*`. Pages do not own toast regions, custom Totem markup or local success/error message components. Static `.notice` elements are explanatory page content only, not transient feedback. The NOMAD upload stub follows this rule and reports its non-networking state through the Message Totem.
+
 ## Actions and Assistant
 
 User-facing capabilities use `button[data-action]`. Provider output/telemetry is progressively disclosed. A running Action exposes cancel and all Action execution still passes through guards/contracts.

@@ -16,10 +16,16 @@ if 'AI Helpers' in settings or 'Operations Workshop' in settings:errors.append('
 if 'Actions are capabilities, not pipeline stages.' not in settings or 'Capability contract' not in settings:errors.append('Action execution contract copy missing')
 if 'aria-label="Current action"' not in index:errors.append('Action totem not named consistently')
 if 'message-totem message-totem-dialog' not in index:errors.append('canonical Message Totem dialog missing')
-if 'message-totem message-totem-compact' not in feedback:errors.append('transient feedback does not use compact Message Totem')
+if 'id="messageRegion"' not in index or 'class="message-region"' not in index:errors.append('canonical shared Message Totem live region missing')
+if 'message-totem message-totem-compact' not in feedback or 'function message(message, type, titleText)' not in feedback:errors.append('transient feedback does not use the canonical Message Totem service')
+if 'message:message' not in feedback:errors.append('canonical LF.UI.message API is not exported')
+all_runtime_js='\n'.join([action_ui,feedback,pages,settings,app]+[p.read_text() for p in (ROOT/'assets/js/ai').glob('*.js')])
+if 'LF.UI.toast' in all_runtime_js or 'toastRegion' in all_runtime_js or 'toast-region' in index or 'toast-region' in ui_css:errors.append('legacy toast API/host remains; transient feedback must use Message Totem')
 if 'totem-toast' in feedback or 'totem-toast' in css or 'totem-toast' in ui_css:errors.append('retired custom Totem clone remains')
 if '.message-totem-dialog' not in ui_css or '.message-totem-compact' not in ui_css:errors.append('Message Totem variants are not owned by shared UI CSS')
-if re.search(r'(?m)^\.message-(?:totem|shade)',css):errors.append('Message Totem leaked into page-composition CSS')
+if re.search(r'(?m)^\.message-(?:totem|shade|region)',css):errors.append('Message Totem leaked into page-composition CSS')
+page_runtime='\n'.join(p.read_text() for p in (ROOT/'assets/js/pages').glob('*.js') if p.name!='ui-kit-inline.js')
+if 'message-totem' in page_runtime or 'activity-totem' in page_runtime:errors.append('page-owned Totem markup remains outside the shared feedback service/UI Kit')
 if '.input.compact' not in ui_css or '.select.compact' not in ui_css:errors.append('shared compact control sizing missing')
 
 # UI Kit and the local UI skill are executable contracts, not stale examples.

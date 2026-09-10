@@ -44,16 +44,16 @@
    * @param {string} message Human-readable notification text.
    * @param {string} [type] Optional semantic class such as `success` or `danger`.
    */
-  function toast(message, type) {
-    const semantic=type==='error'?'danger':(type || 'info'),titles={success:'Completed',danger:'Action failed',warning:'Attention',info:'LabFlow'};
-    Log.debug('toast', {type:semantic, message:text(message).slice(0, 300)});
-    const region = byId('toastRegion');
+  function message(message, type, titleText) {
+    const semantic=type==='error'?'danger':(type || 'info'),titles={success:'Completed',danger:'Could not complete',warning:'Attention',info:'LabFlow'};
+    Log.debug('message', {type:semantic, message:text(message).slice(0, 300)});
+    const region = byId('messageRegion');
     if (!region) return;
     const element = document.createElement('div');
     element.className = 'message-totem message-totem-compact ' + semantic;
     const marker=document.createElement('span');marker.className='message-totem-marker';marker.setAttribute('aria-hidden','true');
     const body=document.createElement('div');body.className='message-totem-body';const title=document.createElement('strong'),copy=document.createElement('span');
-    title.textContent=titles[semantic]||'LabFlow';copy.textContent=text(message);body.appendChild(title);body.appendChild(copy);element.appendChild(marker);element.appendChild(body);
+    title.textContent=text(titleText||titles[semantic]||'LabFlow');copy.textContent=text(message);body.appendChild(title);body.appendChild(copy);element.appendChild(marker);element.appendChild(body);
     region.appendChild(element);
     window.setTimeout(function () { element.classList.add('leaving');window.setTimeout(function(){element.remove();},180); }, 4200);
   }
@@ -768,7 +768,7 @@
   // Keep this stable public surface small. Callers should not reach into
   // the private activity object or manipulate totem DOM directly.
   LF.UI = {
-    toast:toast,
+    message:message,
     confirmAction:confirmAction,
     activityStart:activityStart,
     activityUpdate:activityUpdate,

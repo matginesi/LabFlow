@@ -136,7 +136,9 @@ Keep exactly two Totem families, both owned by `assets/css/ui.css` and `assets/j
 - **Message Totem** (`.message-totem`): application feedback and decisions. Use `.message-totem-dialog` for confirmations and `.message-totem-compact` for transient info/success/warning/error feedback. Inline `.notice` content is part of a page and is not a Totem.
 - **Action Totem** (`.activity-totem`): one foreground Action or substantive bounded workflow operation with progress, checkpoints, cancellation, result and technical disclosure. Routine Settings checks use inline status plus a Message Totem for completion/error. Pages never create their own progress Totem markup.
 
-Do not introduce page-specific Totems, “totem-toast” clones or a generic mode framework. Add a small documented semantic variant to one of these two owners only when neither existing shape fits.
+All transient application feedback must go through `LF.UI.message(...)`, which renders the canonical compact Message Totem in the shared `#messageRegion`. Confirmations go through `LF.UI.confirmAction(...)`; Action execution goes through the existing `LF.UI.activity*` surface. Never render a transient success/warning/error/info string directly into a page, and never add a page-owned toast/message/Totem host. Static explanatory `.notice` blocks remain valid page content. The NOMAD direct-upload stub is application feedback and therefore uses a Message Totem.
+
+Do not introduce page-specific Totems, “totem-toast” clones, legacy toast APIs or a generic mode framework. Add a small documented semantic variant to one of these two owners only when neither existing shape fits.
 
 ## Implementation discipline
 
