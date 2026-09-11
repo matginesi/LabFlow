@@ -35,7 +35,16 @@ ROUTES = (
     "cabinet",
     "documentation",
     "settings",
-    "logs",
+)
+
+SETTINGS_SECTIONS = (
+    "provider",
+    "assistant",
+    "actions",
+    "knowledge",
+    "nomad",
+    "workspace",
+    "diagnostics",
     "ui-kit",
 )
 
@@ -149,9 +158,6 @@ def main() -> int:
             for route in ROUTES:
                 page.evaluate("route => window.LabFlow.State.setRoute(route)", route)
                 page.wait_for_timeout(120)
-                if route == "ui-kit":
-                    page.locator(".ui-kit-inline-host").wait_for()
-                    page.locator(".ui-kit-inline-host h1").first.wait_for()
                 result = page.evaluate(AUDIT_JS)
                 result["surface"] = "default"
                 findings.append(result)
@@ -166,23 +172,23 @@ def main() -> int:
                         nested["surface"] = f"results:{tab}"
                         findings.append(nested)
                 elif route == "settings":
-                    for section in ("provider", "assistant", "workspace", "advanced"):
+                    for section in SETTINGS_SECTIONS:
                         page.locator(f'[data-settings-section="{section}"]').click()
                         page.wait_for_timeout(60)
                         nested = page.evaluate(AUDIT_JS)
                         nested["surface"] = f"settings:{section}"
+                        if section == "ui-kit":
+                            nested["uiKitDocument"] = page.evaluate("""() => {
+                              const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
+                              if(!root) return {documentOverflow:false,mainOverflow:false,offenders:[]};
+                              const allowed='.table-wrap,.scroll-x-region,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap';
+                              const offenders=[...root.querySelectorAll('*')].filter(node => {
+                                const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
+                                return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
+                              }).slice(0,12).map(node => ({tag:node.tagName.toLowerCase(),cls:String(node.className).slice(0,100),right:Math.round(node.getBoundingClientRect().right),width:Math.round(node.getBoundingClientRect().width)}));
+                              return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.getBoundingClientRect().width+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
+                            }""")
                         findings.append(nested)
-                elif route == "ui-kit":
-                    inner = page.evaluate("""() => {
-                      const root=document.querySelector('.ui-kit-inline-host'), main=document.querySelector('#main'), edge=main.getBoundingClientRect().left+main.clientWidth;
-                      const allowed='.table-wrap,.scroll-x-region,.toolbar,.topbar,.sidebar,.design-variant-rail .panel-body,.code-block,.md-table-wrap';
-                      const offenders=[...root.querySelectorAll('*')].filter(node => {
-                        const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
-                        return style.display!=='none' && rect.width>0 && rect.right>edge+1 && !node.closest(allowed);
-                      }).slice(0,12).map(node => ({tag:node.tagName.toLowerCase(),cls:String(node.className).slice(0,100),right:Math.round(node.getBoundingClientRect().right),width:Math.round(node.getBoundingClientRect().width)}));
-                      return {documentOverflow:document.documentElement.scrollWidth>innerWidth,mainOverflow:main.scrollWidth>main.getBoundingClientRect().width+1,clientWidth:main.clientWidth,scrollWidth:main.scrollWidth,offenders};
-                    }""")
-                    result["uiKitDocument"] = inner
                 if width in (1440, 900, 390, 320):
                     page.screenshot(path=str(screenshot_dir / f"{width}-{route}.png"), full_page=False)
 

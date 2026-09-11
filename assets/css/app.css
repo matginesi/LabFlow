@@ -431,11 +431,6 @@ body.ui-kit-page{ overflow: hidden; }
 
 
 .settings-page-head{ min-height:34px; }
-.settings-context{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); margin:0; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); overflow:hidden; }
-.settings-context > div{ min-width:0; padding:7px 9px; border-right:1px solid var(--border); }
-.settings-context > div:last-child{ border-right:0; }
-.settings-context dt{ color:var(--text-muted); font-size:var(--font-micro); font-weight:800; letter-spacing:.05em; text-transform:uppercase; }
-.settings-context dd{ margin:2px 0 0; overflow:hidden; color:var(--text); font:var(--font-micro)/1.35 var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
 
 .settings-workspace-grid{ display:grid; grid-template-columns:minmax(260px,.7fr) minmax(0,1.3fr); gap:10px; align-items:start; }
 .settings-workspace-grid>:only-child,.two-col>:only-child,.three-col>:only-child,.logs-dashboard-grid>:only-child{grid-column:1/-1}
@@ -979,11 +974,9 @@ body.ui-kit-page{ overflow: hidden; }
 .settings-provider-panel .panel-body{gap:10px}
 .settings-connection-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
 .settings-connection-summary>div{display:grid;gap:1px;min-width:0}.settings-connection-summary strong{font-size:var(--font-sm);line-height:1.25}.settings-connection-summary span:not(.badge){min-width:0;color:var(--text-muted);font-size:var(--font-xs);line-height:1.35;overflow-wrap:anywhere}.settings-connection-summary>.badge{flex:none}
-.settings-provider-help{overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface)}.settings-provider-help>summary{padding:7px 9px;color:var(--text-muted);font-size:var(--font-xs);font-weight:700;cursor:pointer}.settings-provider-help-body{display:grid;gap:5px;padding:8px 9px;border-top:1px solid var(--border);background:var(--surface-2)}.settings-provider-help-body p{margin:0;color:var(--text-muted);font-size:var(--font-xs);line-height:1.4;overflow-wrap:anywhere}
 
 .settings-key-unused{opacity:.72}
 .settings-advanced{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);overflow:hidden}.settings-advanced>summary{padding:9px 11px;color:var(--text);font-size:var(--font-sm);font-weight:680;cursor:pointer}.settings-advanced-body{padding:10px;border-top:1px solid var(--border);background:var(--surface)}
-.settings-test-details{margin-top:7px}.settings-test-details>summary{cursor:pointer;font-size:var(--font-xs);font-weight:700}.settings-test-facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:3px 10px;margin:7px 0 0;font-size:var(--font-xs)}.settings-test-facts dt{color:var(--text-muted)}.settings-test-facts dd{min-width:0;margin:0;color:var(--text);font-family:var(--font-mono);overflow-wrap:anywhere}
 .field-error{margin-top:4px;color:var(--danger);font-size:var(--font-xs);line-height:1.35}.settings-page [aria-invalid="true"]{border-color:var(--danger)}
 .settings-page .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
 .settings-page .field{min-width:0;align-content:start}
@@ -1803,7 +1796,6 @@ body.ui-kit-page{ overflow: hidden; }
   .cabinet-commandbar{grid-template-columns:1fr}
   .cabinet-shelf-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .export-summary-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .settings-context{grid-template-columns:repeat(3,minmax(0,1fr))}
   .logs-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}
   .log-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .import-family-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -1812,7 +1804,6 @@ body.ui-kit-page{ overflow: hidden; }
   .settings-status-list{grid-template-columns:1fr}
   .settings-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.settings-nav-item span{white-space:normal}.settings-section-head,.settings-savebar{display:grid}.settings-section-head>.badge{justify-self:start}.settings-savebar .row-wrap,.settings-savebar .button{width:100%}
   .cabinet-shelf-list{grid-template-columns:1fr}
-  .settings-context{grid-template-columns:repeat(2,minmax(0,1fr))}
   .logs-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .results-pulse-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .import-family-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1823,7 +1814,7 @@ body.ui-kit-page{ overflow: hidden; }
   .tabs .tab{width:100%;min-width:0;max-width:none;white-space:normal;overflow-wrap:anywhere;text-align:center;justify-content:center;scroll-snap-align:none}
 }
 @container (max-width:480px){
-  .settings-context,.logs-metrics,.results-pulse-grid,.import-family-grid,.compare-summary-compact{grid-template-columns:1fr!important}
+  .logs-metrics,.results-pulse-grid,.import-family-grid,.compare-summary-compact{grid-template-columns:1fr!important}
   .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
@@ -1989,3 +1980,197 @@ body.ui-kit-page{ overflow: hidden; }
 .settings-page-advanced .ui-kit-inline-host{min-width:0}
 @container (max-width:900px){.settings-uikit-toolbar{grid-template-columns:1fr 1fr}.settings-uikit-count{grid-column:1/-1;padding-bottom:0}}
 @container (max-width:620px){.settings-uikit-toolbar{grid-template-columns:1fr}.settings-uikit-count{grid-column:auto}.settings-embedded-actions,.logs-settings-toolbar{justify-content:stretch}.logs-settings-toolbar>.button{flex:1 1 auto}}
+
+/* ---------- Settings · robust responsive shell ----------
+   Settings is a utility surface, so every section must reflow inside the
+   actual workspace width (sidebar/Assistant included) without page overflow. */
+.settings-page,
+.settings-layout,
+.settings-rail,
+.settings-nav,
+.settings-nav-group,
+.settings-content,
+.settings-content > *,
+.settings-page .panel,
+.settings-page .panel-head,
+.settings-page .panel-body,
+.settings-page .toolbar,
+.settings-page .row-wrap,
+.settings-page .form-grid,
+.settings-page .field,
+.settings-page .input-action,
+.settings-page details,
+.settings-page summary{min-width:0;max-width:100%}
+
+.settings-page .panel{width:100%}
+.settings-page .panel-head>div:first-child{min-width:0}
+.settings-page .panel-head .meta,
+.settings-page .panel-head .help,
+.settings-page .settings-section-head p,
+.settings-page .settings-nav-item strong,
+.settings-page .settings-nav-item span{overflow-wrap:anywhere}
+.settings-page .textarea,
+.settings-page textarea,
+.settings-page input,
+.settings-page select{max-width:100%;box-sizing:border-box}
+.settings-page code,.settings-page pre,.settings-page .mono{overflow-wrap:anywhere;word-break:break-word}
+
+/* The left rail stays compact on wide workspaces, then becomes a true grid.
+   auto-fit avoids the awkward 4-column intermediate state that used to push
+   labels outside cards at some widths. */
+.settings-layout{grid-template-columns:minmax(188px,220px) minmax(0,1fr)}
+.settings-rail{overflow:hidden}
+.settings-nav-item{width:100%;max-width:100%}
+.settings-content{width:100%;max-width:100%}
+.settings-content-provider .settings-primary-panel,
+.settings-content-assistant .assistant-settings-simple,
+.settings-content-nomad .nomad-settings-simple,
+.settings-content-workspace .workspace-settings-simple{width:100%;max-width:1120px}
+
+/* Form controls must never become the source of horizontal page overflow. */
+.settings-page .settings-provider-grid,
+.settings-page .settings-advanced-body .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings-page .ai-model-control{grid-template-columns:minmax(0,1fr) auto}
+.settings-page .settings-savebar>.row-wrap{min-width:0;flex-wrap:wrap;justify-content:flex-end}
+.settings-page .settings-savebar>.row-wrap>.button{flex:0 1 auto}
+.settings-page .switch-row{min-width:0;overflow-wrap:anywhere}
+
+/* Workspace cards use equal tracks only when there is enough real content
+   width; otherwise they become one clean column. */
+.settings-content-workspace .settings-workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings-theme-choice{min-width:0}
+.settings-theme-choice>div{min-width:0}
+.settings-theme-choice .button{flex:0 0 auto}
+
+/* Knowledge Base: keep the catalogue bounded and the editor fluid. */
+.settings-content-knowledge .kb-toolbar,
+.settings-content-knowledge .kb-workbench,
+.settings-content-knowledge .kb-editor,
+.settings-content-knowledge .kb-catalog{min-width:0;max-width:100%}
+.settings-content-knowledge .kb-toolbar>.input-action{min-width:0;flex:1 1 440px}
+.settings-content-knowledge .kb-editor>.panel-body{min-width:0;overflow:hidden}
+.settings-content-knowledge .kb-list-item>span:first-child{min-width:0}
+.settings-content-knowledge .kb-text-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings-content-knowledge .kb-source-editor{width:100%;max-width:100%;resize:vertical}
+.settings-content-knowledge .kb-editor>.panel-body>.row-wrap{flex-wrap:wrap}
+
+/* AI tools: one catalogue + one inspector. No nested surface is allowed to
+   dictate the page width. */
+.settings-content-actions .settings-tools-workshop,
+.settings-content-actions .operation-catalog,
+.settings-content-actions .operation-inspector,
+.settings-content-actions .settings-developer-details,
+.settings-content-actions .workshop-editor{min-width:0;max-width:100%}
+.settings-content-actions .operation-inspector>.panel-head>div:first-child{min-width:0;flex:1 1 360px}
+.settings-content-actions .action-settings-run{min-width:180px;max-width:100%}
+.settings-content-actions .operation-contract-grid strong{white-space:normal;overflow-wrap:anywhere}
+.settings-content-actions .operation-definition-editor,
+.settings-content-actions .operation-prompt-editor{width:100%;max-width:100%;resize:vertical}
+
+/* Embedded Diagnostics: tables may scroll locally, but controls and cards
+   always reflow inside Settings. */
+.settings-content-diagnostics .settings-embedded-page,
+.settings-content-diagnostics .logs-dashboard-grid,
+.settings-content-diagnostics .logs-workbench,
+.settings-content-diagnostics .logs-table-wrap{min-width:0;max-width:100%}
+.settings-content-diagnostics .settings-embedded-actions{width:100%}
+.settings-content-diagnostics .logs-settings-toolbar{max-width:100%;flex-wrap:wrap}
+.settings-content-diagnostics .logs-filter-head>*{min-width:0}
+.settings-content-diagnostics .logs-filter-row{min-width:0;flex-wrap:wrap}
+.settings-content-diagnostics .logs-levels{min-width:0;max-width:100%}
+.settings-content-diagnostics .log-payload-grid{min-width:0}
+.settings-content-diagnostics .logs-table-wrap{overflow:auto}
+
+/* Embedded UI Kit is documentation, not another page shell. Remove nested
+   page padding and force examples to respect the Settings content boundary. */
+.settings-content-ui-kit .ui-kit-inline-host{width:100%;max-width:100%;overflow-x:clip}
+.settings-content-ui-kit .ui-kit-inline-host>.page{width:100%;max-width:100%;padding-inline:0;padding-bottom:16px}
+.settings-content-ui-kit .ui-kit-inline-host .panel,
+.settings-content-ui-kit .ui-kit-inline-host .panel-body,
+.settings-content-ui-kit .ui-kit-inline-host .panel-head,
+.settings-content-ui-kit .ui-kit-inline-host .two-col,
+.settings-content-ui-kit .ui-kit-inline-host .three-col,
+.settings-content-ui-kit .ui-kit-inline-host .form-grid{min-width:0;max-width:100%}
+
+@container (max-width:1100px){
+  .settings-layout{grid-template-columns:1fr}
+  .settings-rail{position:static;padding:7px}
+  .settings-nav{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px}
+  .settings-nav-group{display:contents}
+  .settings-nav-label{display:none}
+  .settings-nav-item span{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+  .settings-content-actions .settings-tools-workshop,
+  .settings-content-knowledge .kb-workbench,
+  .settings-content-workspace .settings-workspace-grid,
+  .settings-content-diagnostics .logs-dashboard-grid{grid-template-columns:1fr!important}
+  .settings-content-actions .operation-catalog{position:static;max-height:none}
+  .settings-content-actions .operation-catalog .panel-body{max-height:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+  .settings-content-knowledge .kb-catalog>.panel-body{max-height:min(30vh,260px)}
+}
+
+@container (max-width:820px){
+  .settings-page .settings-provider-grid,
+  .settings-page .settings-advanced-body .form-grid,
+  .settings-content-knowledge .kb-text-grid{grid-template-columns:1fr!important}
+  .settings-page .field-wide{grid-column:auto}
+  .settings-content-knowledge .kb-toolbar{display:grid;grid-template-columns:1fr;gap:7px}
+  .settings-content-knowledge .kb-toolbar>.input-action{width:100%;grid-template-columns:minmax(0,1fr) minmax(130px,.42fr)}
+  .settings-content-diagnostics .logs-dashboard-grid,
+  .settings-content-diagnostics .log-payload-grid{grid-template-columns:1fr!important}
+  .settings-content-diagnostics .log-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settings-uikit-toolbar{grid-template-columns:1fr 1fr}
+  .settings-uikit-count{grid-column:1/-1;padding-bottom:0}
+}
+
+@container (max-width:680px){
+  .settings-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settings-section-head{display:grid}
+  .settings-section-head>.badge{justify-self:start}
+  .settings-page .input-action,
+  .settings-page .ai-model-control,
+  .settings-content-knowledge .kb-toolbar>.input-action{grid-template-columns:1fr!important}
+  .settings-page .input-action>.button,
+  .settings-page .ai-model-control>.button{width:100%}
+  .settings-savebar{display:grid;align-items:stretch}
+  .settings-savebar>.row-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));width:100%;gap:6px}
+  .settings-savebar>.row-wrap>.button,
+  .settings-savebar>.button{width:100%}
+  .settings-theme-choice{align-items:flex-start;flex-wrap:wrap}
+  .settings-theme-choice .button{width:100%}
+  .settings-content-actions .operation-catalog .panel-body{grid-template-columns:1fr}
+  .settings-content-actions .operation-inspector>.panel-head>.spacer{display:none}
+  .settings-content-actions .action-settings-run{width:100%;min-width:0}
+  .settings-content-actions .action-settings-run .button{width:100%}
+  .settings-content-actions .operation-contract-grid{grid-template-columns:1fr!important}
+  .settings-content-actions .operation-step-flow{display:grid;overflow:visible}
+  .settings-content-actions .operation-step{width:100%;max-width:100%;flex:none}
+  .settings-content-actions .operation-step-arrow{justify-self:center;transform:rotate(90deg)}
+  .settings-content-diagnostics .settings-embedded-actions,
+  .settings-content-diagnostics .logs-settings-toolbar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;justify-content:stretch}
+  .settings-content-diagnostics .logs-settings-toolbar>.button{width:100%}
+  .settings-content-diagnostics .logs-filter-head{display:grid;grid-template-columns:1fr;align-items:stretch}
+  .settings-content-diagnostics .logs-filter-head>.spacer{display:none}
+  .settings-content-diagnostics .logs-filter-head .select,
+  .settings-content-diagnostics .logs-filter-head .log-search{width:100%;max-width:none}
+  .settings-content-diagnostics .logs-filter-row{display:grid;grid-template-columns:1fr;gap:6px}
+  .settings-content-diagnostics .log-facts{grid-template-columns:1fr}
+  .settings-content-diagnostics .api-transaction>summary,
+  .settings-content-diagnostics .log-error-card>summary{align-items:flex-start;flex-wrap:wrap}
+  .settings-content-diagnostics .api-transaction-stats,
+  .settings-content-diagnostics .log-error-card time{width:100%;margin-left:0}
+  .settings-uikit-toolbar{grid-template-columns:1fr}
+  .settings-uikit-count{grid-column:auto}
+}
+
+@container (max-width:430px){
+  .settings-page-head .meta{display:none}
+  .settings-rail{padding:5px}
+  .settings-nav{gap:5px}
+  .settings-nav-item{padding:8px 7px;align-content:center}
+  .settings-nav-item span{display:none}
+  .settings-savebar>.row-wrap{grid-template-columns:1fr}
+  .settings-content-diagnostics .settings-embedded-actions,
+  .settings-content-diagnostics .logs-settings-toolbar{grid-template-columns:1fr}
+  .settings-content-knowledge .kb-editor>.panel-body>.row-wrap{display:grid;grid-template-columns:1fr;width:100%}
+  .settings-content-knowledge .kb-editor>.panel-body>.row-wrap>.button{width:100%}
+}
