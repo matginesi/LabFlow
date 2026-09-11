@@ -17,7 +17,7 @@ module.exports=function(t,LF,ctx){
     if(!html.includes('data-route="experiment-export"')||!html.includes('<strong>Export</strong>'))throw new Error('Design next route must be Export');
     const index=fs.readFileSync(path.join(root,'index.html'),'utf8'),settings=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
     if(index.includes('data-route="logs"')||index.includes('data-route="ui-kit"'))throw new Error('Logs and UI Kit must not occupy primary navigation');
-    if(!settings.includes("['diagnostics','Diagnostics','Troubleshooting']")||!settings.includes("['ui-kit','UI Kit','Interface guide']"))throw new Error('Diagnostics and UI Kit must live under Settings → Advanced');
+    if(!settings.includes("['diagnostics','Diagnostics','Support tools']")||!settings.includes("['ui-kit','UI Kit','Design reference']"))throw new Error('Diagnostics and UI Kit must live under Settings → Advanced');
   };
 
   t['navigation blocks experiment-only routes until a dataset exists']=function(){

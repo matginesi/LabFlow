@@ -38,7 +38,7 @@ if "['knowledge','Knowledge Base'" not in settings:errors.append('Knowledge Base
 if "['nomad','NOMAD'" not in settings:errors.append('NOMAD Settings navigation item missing')
 if 'class="settings-rail"' not in settings or 'class="settings-nav"' not in settings:errors.append('intent-grouped Settings rail missing')
 if 'settings-data-contract' in settings or 'ExperimentData is the aggregate root' in settings:errors.append('developer data-contract internals leaked into researcher Workspace settings')
-if 'Direct upload' not in settings or 'Not connected in this POC' not in settings or 'id="saveNomadSettings"' not in settings:errors.append('NOMAD Settings status/configuration surface missing')
+if 'Local export ready' not in settings or 'Online upload is not enabled in this build.' not in settings or 'id="saveNomadSettings"' not in settings:errors.append('NOMAD Settings status/configuration surface missing')
 if 'id="uploadNomadStub"' not in pages or 'Stub only.' not in pages:errors.append('Export NOMAD upload stub missing or not explicit')
 if "closest('#uploadNomadStub')" not in app or 'no data was sent' not in app:errors.append('NOMAD upload stub must remain non-networking and explicit')
 if 'Knowledge Base' not in kit:errors.append('UI Kit does not expose current Knowledge Base Settings pattern')

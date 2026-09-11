@@ -12,7 +12,7 @@ LabFlow POC keeps structured browser diagnostics enabled while the data model, r
 - UI interaction tracing: disabled by default.
 - network request tracing: enabled.
 
-Change these under **Settings → Logging configuration**. Inspect events on the dedicated **Logs** page, filter by level/scope/text, expand bounded sanitized payload previews on demand, or download the buffered JSONL diagnostic trace. Oversized strings are clipped before they enter the in-memory logger so a long AI session cannot make Logs itself exhaust the browser.
+Inspect events under **Settings → Diagnostics**, filter by level/scope/text, expand bounded sanitized payload previews on demand, or download the buffered JSONL diagnostic trace. Oversized strings are clipped before they enter the in-memory logger so a long AI session cannot make Diagnostics itself exhaust the browser.
 
 ## Format
 
@@ -22,7 +22,7 @@ Console messages use a readable one-line summary followed by the expandable stru
 [LabFlow][15:11:34.221][+8253ms][LEVEL][scope] event · diagnosticId=... · provider=... · phase=... · transport=... · endpoint=... · status=... · elapsedMs=... · error=...
 ```
 
-Only scalar diagnostic fields are promoted into the summary; the sanitized structured payload remains available as the second console argument and in the Logs page.
+Only scalar diagnostic fields are promoted into the summary; the sanitized structured payload remains available as the second console argument and in Settings → Diagnostics.
 
 Each buffered entry contains:
 
@@ -104,9 +104,9 @@ It does **not** intentionally dump API keys. Common secret fields are redacted b
 
 ### Provider diagnostics
 
-**Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. The Logs page intentionally has one diagnostic surface: provider catalogue requests, chat requests, failures and the rest of LabFlow events all appear in the unified **Event stream**, with **Recent errors** kept above it for quick triage. A successful provider result still requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
+**Detect** and **Save & test** use one diagnostic ID per operation and the canonical **Action Totem** for the full visible lifecycle. Settings → Diagnostics intentionally has one diagnostic surface: provider catalogue requests, chat requests, failures and the rest of LabFlow events all appear in the unified **Event stream**, with **Recent errors** kept above it for quick triage. A successful provider result still requires a completed live chat probe; catalogue metadata by itself is never reported as connectivity success.
 
-Network routing is explicit in both console and Logs. `network.route` identifies the browser request to the endpoint configured in Settings and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. Hosted and local providers use that configured endpoint directly. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
+Network routing is explicit in both the console and Settings → Diagnostics. `network.route` identifies the browser request to the endpoint configured in Settings and `network.direct-failed` records a browser/network failure before any HTTP response is exposed. Hosted and local providers use that configured endpoint directly. HTTP authentication/quota/server statuses remain provider failures and are not relabeled as CORS.
 
 The Runtime snapshot includes `LABFLOW_BUILD`, which helps detect a stale GitHub/browser copy during debugging. The browser logger redacts credential-like keys and Bearer/query tokens before buffering or printing them.
 

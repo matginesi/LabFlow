@@ -101,6 +101,12 @@
     detail.textContent=ready?displayModel:'Not configured';host.title=ready?'AI model available: '+displayModel:'Configure the AI provider in Settings';
   }
 
+  function renderAppRelease(){
+    const host=document.getElementById('appRelease'),label=document.getElementById('appReleaseLabel');if(!host||!label)return;
+    label.textContent=String(window.LABFLOW_VERSION||'POC');
+    host.title='LabFlow build '+String(window.LABFLOW_BUILD||'dev');
+  }
+
   function applyUiKitFilter(){
     if(!LF.UIKitInline||!LF.UIKitInline.apply)return 0;
     return LF.UIKitInline.apply(S.state);
@@ -123,6 +129,7 @@
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.ui.route;a.classList.toggle('active',active);});
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.ui.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderModelStatus();
+    renderAppRelease();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.ui.assistantOpen);if(assistant)assistant.hidden=!S.state.ui.assistantOpen;if(toggle){const assistantLabel=S.state.ui.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.ui.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
     let html='';try{if(S.state.ui.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.ui.route==='experiment-design')html=renderDesign();else if(S.state.ui.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.ui.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.ui.route==='documentation')html=LF.DocsPage.render();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.ui.route,error:err});html=pageFailureHtml(S.state.ui.route,err);}
     main.innerHTML=html;

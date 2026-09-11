@@ -118,7 +118,7 @@ For Upload & Review specifically, keep the Experiment Brief as a shallow summary
 
 ## Error recovery
 
-Page failures are recovered where they happen. Results, Design and Export offer Retry, a deterministic derived-data rebuild when safe, and Logs. Never use Upload & Review as a generic error destination. Route to source review only when the actual blocker is missing or ambiguous source evidence, and say why. A guard/precondition is `unavailable`, not a failed provider request.
+Page failures are recovered where they happen. Results, Design and Export offer Retry, a deterministic derived-data rebuild when safe, and Diagnostics when troubleshooting is needed. Never use Upload & Review as a generic error destination. Route to source review only when the actual blocker is missing or ambiguous source evidence, and say why. A guard/precondition is `unavailable`, not a failed provider request.
 
 ## Actions and Assistant
 
@@ -158,7 +158,7 @@ Cabinet is a browser-local reusable scientific shelf, not inventory/LIMS. Incomp
 
 ## Settings and Scientific Knowledge Base
 
-Settings uses a compact intent-grouped rail and renders exactly one active section: AI contains AI connection, Assistant, AI tools and Knowledge Base; Integrations contains NOMAD; Workspace contains profile/appearance; Advanced contains Diagnostics and UI Kit. At narrow widths the rail reflows into a compact grid. Researcher-facing Settings must not expose internal data-model, pipeline or Action-contract architecture as ordinary workspace content; developer-only details belong in Advanced surfaces or inside an explicitly opened AI-tool detail. Selecting a section establishes a new view context at the workspace beginning.
+Settings uses a compact intent-grouped rail and renders exactly one active section: AI contains AI connection, Assistant, AI tools and Knowledge Base; Export contains NOMAD; Workspace contains profile/appearance; Advanced contains Diagnostics and UI Kit. At narrow widths the rail reflows into a compact grid. Researcher-facing Settings must not expose internal data-model, pipeline or Action-contract architecture as ordinary workspace content; developer-only details belong in Advanced surfaces or inside an explicitly opened AI-tool detail. Selecting a section establishes a new view context at the workspace beginning.
 
 Connection keeps the AI service, model and required credential prominent; endpoint, reasoning, streaming, timeouts and global caps stay under progressive disclosure. Check and Save & test are explicit, send no experiment data, and use the canonical Action Totem for the entire operation; do not add a parallel Message Totem or a second status workflow. Explicit-save sections visibly distinguish saved and unsaved state; field validation is local. NOMAD settings are browser-local preparation for a future uploader; saving them must not make a network request, and any token must remain separate from exported manifests/options. Service display names must not add `(local)` suffixes. For local-capable services, show a compact human-readable Local/Online connection summary in the main form; detailed endpoint, browser/CORS/bind guidance belongs in progressive disclosure. Do not fill Settings with long permanent explanatory text. `localhost`/`127.0.0.1` is same-device; LAN hostname/mDNS/private-IP endpoints are valid when the remote device can resolve/reach them and the provider/browser security policy permits the request. Thinking off/on are preferences: provider/model-required reasoning wins, and unknown/dynamic router capability stays on provider default rather than forcing an incompatible off flag. Detect must use the exact provider, endpoint and API key currently visible in the form, plus the visible model when already selected. A catalogue-backed provider may start Detect with no model selected only so the live catalogue from that same endpoint can populate one; Detect must then probe the selected returned model. It must fail when a required credential/catalogue/probe is unavailable and must never turn static capability metadata into a connectivity success.
 
@@ -166,7 +166,7 @@ The Knowledge Base management surface uses one search/filter toolbar, one bounde
 
 ## Sidebar and themes
 
-The primary workflow destinations are visible directly in navigation: **Upload & Review → Results → Design → Export**. Cabinet and Documentation are workspace utilities; Logs and UI Kit are advanced utilities; Settings stays in the bottom utility region.
+The primary workflow destinations are visible directly in navigation: **Upload & Review → Results → Design → Export**. Cabinet and Documentation are workspace utilities; Diagnostics and UI Kit live under Settings → Advanced; Settings stays in the bottom utility region.
 
 `Reset session` is a global destructive operation and belongs in the **topbar**, not in the sidebar or a page footer. Keep it visibly distinct from routine actions with the danger token; on phone the icon remains visible even when its text label collapses.
 

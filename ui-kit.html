@@ -6,17 +6,17 @@
   <meta name="theme-color" content="#0b141d">
   <meta name="referrer" content="no-referrer">
   <title>LabFlow UI Kit</title>
-  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.11-poc-r5" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.11-poc-r5">
-  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.11-poc-r5">
-  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.11-poc-r5">
+  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.11-poc-r6" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.11-poc-r6">
+  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.11-poc-r6">
+  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.11-poc-r6">
 </head>
 <body class="ui-kit-page">
   <a class="skip-link" href="#uiKitMain">Skip to UI Kit content</a>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.11-poc-r5" alt=""></span>
+        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.11-poc-r6" alt=""></span>
         <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
       </div>
       <div class="nav-label">Workflow</div>
@@ -27,12 +27,10 @@
       <div class="nav-label">Workspace</div>
       <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="file-text" aria-hidden="true"></span><span class="nav-copy"><strong>Lab Cabinet</strong><small>Reusable lab resources</small></span></a>
       <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="notebook-text" aria-hidden="true"></span><span class="nav-copy"><strong>Documentation</strong><small>Guides &amp; reference</small></span></a>
-      <div class="nav-label">Advanced</div>
-      <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="scroll-text" aria-hidden="true"></span><span class="nav-copy"><strong>Logs</strong><small>Runtime diagnostics</small></span></a>
-      <a class="nav-link active" href="ui-kit.html" aria-current="page"><span class="nav-glyph" data-icon="panels-top-left" aria-hidden="true"></span><span class="nav-copy"><strong>UI Kit</strong><small>Visual contract</small></span></a>
       <div class="sidebar-bottom">
-        <a class="nav-link" href="index.html"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>Provider &amp; Actions</small></span></a>
+        <a class="nav-link active" href="index.html" aria-current="page"><span class="nav-glyph" data-icon="settings-2" aria-hidden="true"></span><span class="nav-copy"><strong>Settings</strong><small>AI &amp; workspace</small></span></a>
         <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span>Local-first workspace</div>
+        <div class="sidebar-release" title="LabFlow build 2026.09.11-poc-r6"><span>LabFlow</span><strong>Prototype r6</strong></div>
       </div>
     </aside>
 
@@ -51,14 +49,14 @@
       <main class="main-area" id="uiKitMain">
         <div class="page ui-kit-layout">
           <header class="page-head ui-kit-section" id="principles" data-ui-kit-group="core">
-            <div><h1 class="h1">UI Kit</h1><div class="meta">Executable visual ground truth for the complete LabFlow scientific workbench.</div></div><div class="spacer"></div><div class="toolbar"><span class="badge success">Ground truth</span><span class="meta mono">current</span></div>
+            <div><h1 class="h1">UI Kit</h1><div class="meta">Executable visual ground truth for the complete LabFlow scientific workbench.</div></div><div class="spacer"></div><div class="toolbar"><span class="badge success">Ground truth</span><span class="meta mono">Prototype r6</span></div>
           </header>
           <dl class="ui-kit-facts ui-kit-section" data-ui-kit-group="core"><div><dt>Visual character</dt><dd>Scientific instrument</dd></div><div><dt>Themes</dt><dd>Instrument + Light</dd></div><div><dt>Shell breakpoint</dt><dd>1100 px</dd></div><div><dt>Runtime</dt><dd>file:// safe</dd></div></dl>
 
           <section class="panel ui-kit-section" id="rules" data-ui-kit-group="core">
             <div class="panel-head"><h2 class="h2">Non-negotiable rules</h2><div class="spacer"></div><span class="badge success">Required</span></div>
             <div class="panel-body three-col">
-              <div class="notice info"><strong>One shared frame.</strong><br>Upload, every workflow step, Settings, Logs and UI Kit use the same fluid page anatomy. New reusable variants are documented here before use.</div>
+              <div class="notice info"><strong>One shared frame.</strong><br>Upload, every workflow step and Settings use the same fluid page anatomy; Diagnostics and UI Kit live inside Settings. New reusable variants are documented here before use.</div>
               <div class="notice info"><strong>Every button works.</strong><br>Visible non-disabled controls must have a real handler. Decorative examples in this page are disabled.</div>
               <div class="notice info"><strong>Overflow is visible.</strong><br>The main workspace always has a reachable vertical scrollbar. Bounded panels expose their own styled scrollbar; critical content is never hover-only.</div>
             </div>
@@ -92,14 +90,14 @@
                 <div class="activity-history"><div><span>0.0 s</span><strong>Checking Action capability</strong></div><div><span>0.2 s</span><strong>Selecting canonical Results</strong></div><div><span>0.4 s</span><strong>Building bounded context</strong></div><div><span>0.7 s</span><strong>Comparing selected groups</strong></div></div>
               </section>
               <div class="notice success"><strong>Terminal timer contract.</strong> Elapsed time advances only while the Action is running. Completion and final failure freeze one duration. Successful checkpoints continue automatically. Retryable AI failures retry the same checkpoint/work unit after 5 s and 10 s; a normal final failure exposes Retry checkpoint. Design inference is the deliberate exception: its single persistent Retry inference control lives in the selected experiment strip. Stop remains available while work is running.</div>
-              <div class="notice info"><strong>Fresh-session contract.</strong> Opening an Action clears every title, fact, checkpoint, payload, progress class and disclosure inherited from the preceding Action. Provider and Action-contract errors stay in this totem; the Logs page retains their durable diagnostic history without duplicating an error card on the workflow page. An HTTP 200 with empty, truncated, malformed, or contract-invalid model output is shown there as a correlated <strong>Rejected response</strong>, never as a completed call.</div>
+              <div class="notice info"><strong>Fresh-session contract.</strong> Opening an Action clears every title, fact, checkpoint, payload, progress class and disclosure inherited from the preceding Action. Provider and Action-contract errors stay in this totem; Settings → Diagnostics retains their durable diagnostic history without duplicating an error card on the workflow page. An HTTP 200 with empty, truncated, malformed, or contract-invalid model output is shown there as a correlated <strong>Rejected response</strong>, never as a completed call.</div>
             </div>
           </section>
 
           <section class="panel ui-kit-section" id="settings-pattern" data-ui-kit-group="system">
             <div class="panel-head"><h2 class="h2">Settings navigation and forms</h2><div class="spacer"></div><span class="badge success">One section at a time</span></div>
             <div class="panel-body stack">
-              <div class="settings-layout"><aside class="settings-rail"><nav class="settings-nav" aria-label="Settings pattern"><div class="settings-nav-group"><div class="settings-nav-label">AI</div><button class="settings-nav-item active" disabled><strong>Connection</strong><span>OpenRouter</span></button><button class="settings-nav-item" disabled><strong>Assistant</strong><span>Memory on</span></button><button class="settings-nav-item" disabled><strong>AI tools</strong><span>4 available</span></button><button class="settings-nav-item" disabled><strong>Knowledge Base</strong><span>12 references ready</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Integrations</div><button class="settings-nav-item" disabled><strong>NOMAD</strong><span>Export setup</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Workspace</div><button class="settings-nav-item" disabled><strong>Workspace</strong><span>Profile and appearance</span></button></div></nav></aside><main class="settings-content"><header class="settings-section-head"><div><h2>AI connection</h2><p>Choose the AI service and model LabFlow should use.</p></div><span class="badge warning">Unsaved changes</span></header><section class="panel"><div class="panel-body stack"><div class="form-grid"><label class="field"><span>AI service</span><select class="select" disabled><option>OpenRouter</option></select></label><label class="field"><span>Model</span><div class="input-action ai-model-control" data-model-select="true"><select class="select mono" disabled><option>openrouter/free</option></select><button class="button compact" disabled>Check</button></div><small class="help">Check verifies the connection and refreshes the available models when the service provides them.</small></label></div><details class="settings-advanced"><summary>Advanced connection settings</summary><div class="settings-advanced-body help">Advanced timeouts, output caps, streaming and thinking overrides live here.</div></details><div class="settings-savebar"><span class="help">Check the connection first, then save it when it works.</span><div class="row-wrap"><button class="button" disabled>Save changes</button><button class="button primary" disabled>Save &amp; test</button></div></div></div></section></main></div>
+              <div class="settings-layout"><aside class="settings-rail"><nav class="settings-nav" aria-label="Settings pattern"><div class="settings-nav-group"><div class="settings-nav-label">AI</div><button class="settings-nav-item active" disabled><strong>AI connection</strong><span>Service &amp; model</span></button><button class="settings-nav-item" disabled><strong>Assistant</strong><span>Memory on</span></button><button class="settings-nav-item" disabled><strong>AI tools</strong><span>4 available</span></button><button class="settings-nav-item" disabled><strong>Knowledge Base</strong><span>12 references ready</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Export</div><button class="settings-nav-item" disabled><strong>NOMAD</strong><span>Export &amp; connection</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Workspace</div><button class="settings-nav-item" disabled><strong>Workspace</strong><span>Appearance &amp; profile</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Advanced</div><button class="settings-nav-item" disabled><strong>Diagnostics</strong><span>Support tools</span></button><button class="settings-nav-item" disabled><strong>UI Kit</strong><span>Design reference</span></button></div></nav></aside><main class="settings-content"><header class="settings-section-head"><div><h2>AI connection</h2><p>Choose the AI service and model LabFlow should use.</p></div><span class="badge warning">Unsaved changes</span></header><div class="settings-section-body"><section class="panel"><div class="panel-body stack"><div class="form-grid"><label class="field"><span>AI service</span><select class="select" disabled><option>OpenRouter</option></select></label><label class="field"><span>Model</span><div class="input-action ai-model-control" data-model-select="true"><select class="select mono" disabled><option>openrouter/free</option></select><button class="button compact" disabled>Check</button></div><small class="help">Check verifies the connection and refreshes the available models when the service provides them.</small></label></div><details class="settings-advanced"><summary>Advanced connection settings</summary><div class="settings-advanced-body help">Advanced timeouts, output caps, streaming and thinking overrides live here.</div></details><div class="settings-savebar"><span class="help">Check the connection first, then save it when it works.</span><div class="row-wrap"><button class="button" disabled>Save changes</button><button class="button primary" disabled>Save &amp; test</button></div></div></div></section></div></main></div>
               <div class="notice info"><strong>Settings contract.</strong> The rail groups user intent without flattening every screen into tabs. It becomes a compact grid on smaller canvases. Field validation stays beside fields; Check and Save &amp; test report their operation through the Action Totem. Technical details stay behind progressive disclosure.</div>
               <div class="operation-workshop settings-tools-workshop">
                 <aside class="panel operation-catalog"><div class="panel-head"><div><h2 class="h2">AI tools</h2><div class="meta">Choose a tool to review or test.</div></div></div><div class="panel-body">
@@ -108,15 +106,15 @@
                   <button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Interpret results</strong><small>Results · AI-assisted</small></span></button>
                   <button class="operation-catalog-item" type="button" disabled><span class="operation-catalog-icon">AI</span><span><strong>Compare groups</strong><small>Results · AI-assisted</small></span></button>
                 </div></aside>
-                <section class="panel operation-inspector"><div class="panel-head"><div><div class="row-wrap"><span class="badge ai">AI-assisted</span><span class="badge info">Upload &amp; Review</span></div><h2 class="h2 operation-inspector-title">Resolve ambiguities</h2></div><div class="spacer"></div><button class="button primary compact" disabled>Run tool</button></div><div class="panel-body stack"><p class="operation-purpose">Suggest possible resolutions only when imported data leaves a scientific ambiguity that needs review.</p><details class="settings-advanced"><summary>Advanced tool details</summary><div class="settings-advanced-body help">Tool ID, execution steps, contract, prompt and output schema live here for development and maintenance.</div></details></div></section>
+                <section class="panel operation-inspector"><div class="panel-head"><div><div class="row-wrap"><span class="badge ai">AI-assisted</span><span class="badge info">Upload &amp; Review</span></div><h2 class="h2 operation-inspector-title">Resolve ambiguities</h2></div><div class="spacer"></div><button class="button primary compact" disabled>Run tool</button></div><div class="panel-body stack"><p class="operation-purpose">Suggest possible resolutions only when imported data leaves a scientific ambiguity that needs review.</p><details class="settings-advanced"><summary>Advanced tool details</summary><div class="settings-advanced-body help">Implementation details, execution steps, prompt and output format live here for development and maintenance.</div></details></div></section>
               </div>
               <div class="help">AI tools pattern: researchers see purpose, availability and the Run control first. Developer configuration remains under Advanced tool details.</div>
-              <div class="notice info"><strong>Assistant tools.</strong> Keep memory, bounded bootstrap context, optional answer cap and temperature together in Assistant. Output cap 0 means automatic model/provider maximum. The Assistant may select only allowlisted read Tools over the Canonical Data Model, one bounded planning round at a time; write Tools and mutating Actions are unavailable. Never send the full experiment by default.</div>
+              <div class="notice info"><strong>Assistant tools.</strong> Keep everyday Assistant choices simple; technical context and generation limits stay under Advanced. Output cap 0 means automatic model/provider maximum. The Assistant may select only allowlisted read Tools over the Canonical Data Model, one bounded planning round at a time; write Tools and mutating Actions are unavailable. Never send the full experiment by default.</div>
             </div>
           </section>
 
           <section class="panel ui-kit-section" id="logs-pattern" data-ui-kit-group="system">
-            <div class="panel-head"><div><h2 class="h2">Logs & diagnostics pattern</h2><div class="meta">Metrics → recent errors → one filterable event stream</div></div><div class="spacer"></div><span class="badge danger">Errors inspectable</span></div>
+            <div class="panel-head"><div><h2 class="h2">Diagnostics pattern</h2><div class="meta">Metrics → recent errors → one filterable event stream</div></div><div class="spacer"></div><span class="badge danger">Errors inspectable</span></div>
             <div class="panel-body stack"><div class="metric-grid logs-metrics"><div class="metric"><div class="metric-label">Events</div><div class="metric-value">128</div><div class="metric-sub">this session</div></div><div class="metric"><div class="metric-label">Errors</div><div class="metric-value">2</div><div class="metric-sub">stack retained</div></div><div class="metric"><div class="metric-label">API calls</div><div class="metric-value">6</div><div class="metric-sub">included in stream</div></div></div><div class="notice info"><strong>One diagnostic stream.</strong> Provider/API events are ordinary correlated log entries, not a second provider-specific log. Filter by API, scope, level or search text when needed.</div><div class="help">Secrets are redacted at collection time. Each expandable event may retain the sanitized request, raw response, request ID, duration, token and finish metadata, validation error, stack and cause under one correlation ID.</div></div>
           </section>
 
@@ -322,12 +320,12 @@
       </main>
     </section>
   </div>
-  <script src="assets/js/ui/icons.js?v=2026.09.11-poc-r5"></script>
-  <script src="assets/js/logger.js?v=2026.09.11-poc-r5"></script>
-  <script src="assets/js/core.js?v=2026.09.11-poc-r5"></script>
-  <script src="assets/js/storage.js?v=2026.09.11-poc-r5"></script>
-  <script src="assets/js/ui/theme.js?v=2026.09.11-poc-r5"></script>
-  <script src="assets/js/pages/ui-kit-page.js?v=2026.09.11-poc-r5"></script>
+  <script src="assets/js/ui/icons.js?v=2026.09.11-poc-r6"></script>
+  <script src="assets/js/logger.js?v=2026.09.11-poc-r6"></script>
+  <script src="assets/js/core.js?v=2026.09.11-poc-r6"></script>
+  <script src="assets/js/storage.js?v=2026.09.11-poc-r6"></script>
+  <script src="assets/js/ui/theme.js?v=2026.09.11-poc-r6"></script>
+  <script src="assets/js/pages/ui-kit-page.js?v=2026.09.11-poc-r6"></script>
 
 <section class="panel ui-kit-footer-contract"><div class="panel-head"><div><span class="eyebrow">ACTION PROGRESS CONTRACT</span><h2 class="h2">Long work stays legible</h2><div class="meta">Reference behavior for long Actions.</div></div></div><div class="panel-body"><p class="help">Progress is monotonic: checkpoint → work unit → semantic phase → bounded SSE/token refinement. Streaming never occupies the final validation/store band. Sequential Design helpers keep one parent progress bar.</p></div></section>
 </body>

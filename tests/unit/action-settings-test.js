@@ -127,7 +127,7 @@ module.exports=function(t,LF){
     const html=LF.SettingsPage.render();
     assert(html.indexOf('<strong>NOMAD</strong>')>=0,'NOMAD Settings navigation item missing');
     assert(html.indexOf('Local export ready')>=0,'local NOMAD export status missing');
-    assert(html.indexOf('Saving these values does not upload anything.')>=0,'local-only warning missing');
+    assert(html.indexOf('Online upload is not enabled in this build.')>=0&&html.indexOf('do not upload anything')>=0,'local-only warning missing');
     LF.Storage.saveNomadSettings({instance:'Test NOMAD',apiEndpoint:'https://nomad.example/api/v1',username:'researcher'});
     LF.Storage.saveNomadToken('secret-token');
     assert(LF.Storage.getNomadSettings().instance==='Test NOMAD','NOMAD instance persisted');
