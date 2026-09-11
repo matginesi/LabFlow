@@ -229,20 +229,19 @@ module.exports = function (t, LF) {
   };
 
   t['Detect catalogue fails closed when a required API key is missing']=async function(){
-    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://integrate.api.nvidia.com/v1',model:'x'};},getApiKey:function(){return'';}};
-    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true}};
-    let error=null;try{await AI.listModels('nvidia','https://integrate.api.nvidia.com/v1','');}catch(e){error=e;}
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'x'};},getApiKey:function(){return'';}};
+    LF.AIProviders={openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,modelCatalogueRequired:true}};
+    let error=null;try{await AI.listModels('openrouter','https://openrouter.ai/api/v1','');}catch(e){error=e;}
     assert(!!error,true,'missing key must fail');assert(/requires an API key/.test(error.message),true,'clear credential error');delete LF.Storage;delete LF.AIProviders;
   };
 
 
   t['all built-in cloud catalogue providers reject missing required credentials before fetch']=async function(){
     const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('must not fetch without required key');};
-    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://unused.example/v1',model:'x'};},getApiKey:function(){return'';}};
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://unused.example/v1',model:'x'};},getApiKey:function(){return'';}};
     LF.AIProviders={
       zai:{id:'zai',name:'Z.AI',keyRequired:true,remoteModelMetadata:false,staticModelCatalogue:true,knownModels:['glm-test']},
       openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,modelCatalogueRequired:true},
-      nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true},
       openai:{id:'openai',name:'OpenAI',keyRequired:true,modelCatalogueRequired:true},
       gemini:{id:'gemini',name:'Google Gemini',keyRequired:true,modelCatalogueRequired:true}
     };
@@ -253,8 +252,8 @@ module.exports = function (t, LF) {
   };
 
   t['model catalogue URL is always derived from the exact configured endpoint']=function(){
-    assert(AI.resolveModelsUrl('https://integrate.api.nvidia.com/v1'),'https://integrate.api.nvidia.com/v1/models','NVIDIA hosted models from base URL');
-    assert(AI.resolveChatUrl('https://integrate.api.nvidia.com/v1'),'https://integrate.api.nvidia.com/v1/chat/completions','NVIDIA hosted chat from base URL');
+    assert(AI.resolveModelsUrl('https://provider.example/v1'),'https://provider.example/v1/models','generic models from base URL');
+    assert(AI.resolveChatUrl('https://provider.example/v1'),'https://provider.example/v1/chat/completions','generic chat from base URL');
     assert(AI.resolveModelsUrl('https://api.openai.com/v1/chat/completions'),'https://api.openai.com/v1/models','OpenAI models');
     assert(AI.resolveModelsUrl('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'),'https://generativelanguage.googleapis.com/v1beta/openai/models','Gemini OpenAI-compatible models');
     assert(AI.resolveModelsUrl('https://openrouter.ai/api/v1/chat/completions'),'https://openrouter.ai/api/v1/models','OpenRouter models');
@@ -265,8 +264,8 @@ module.exports = function (t, LF) {
     const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'https:',origin:'https://labflow.test'};global.fetch=async function(){throw new TypeError('Failed to fetch');};
     LF.PromptRegistry={promptText:function(){return'Reply only with OK.';}};
     LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://saved.invalid/v1',model:'saved',inactivityTimeoutMs:15000,streaming:false};},getApiKey:function(){return'saved-key';}};
-    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:5000}};
-    try{let err=null;try{await AI.testConnection({provider:'nvidia',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});}catch(e){err=e;}assert(!!err,true,'network error returned');assert(err.providerId,'nvidia','current provider retained on error');}
+    LF.AIProviders={openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:5000}};
+    try{let err=null;try{await AI.testConnection({provider:'openrouter',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});}catch(e){err=e;}assert(!!err,true,'network error returned');assert(err.providerId,'openrouter','current provider retained on error');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -274,17 +273,15 @@ module.exports = function (t, LF) {
     const oldFetch=global.fetch;let seen=null;
     global.fetch=async function(url,opts){seen={url:String(url),opts:opts};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'probe',model:'current-model',choices:[{message:{content:'OK'},finish_reason:'stop'}]});}};};
     LF.PromptRegistry={promptText:function(){return'Reply OK';}};
-    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://saved.example/v1',model:'saved-model',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'saved-key';}};
-    LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:10000}};
-    try{const result=await AI.testConnection({provider:'nvidia',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});assert(result.ok,true,'probe succeeds');assert(seen.url,'https://current.example/v1/chat/completions','uses current endpoint');assert(seen.opts.headers.Authorization,'Bearer current-key','uses current key');assert(JSON.parse(seen.opts.body).model,'current-model','uses current model');}
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://saved.example/v1',model:'saved-model',inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'saved-key';}};
+    LF.AIProviders={openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:10000}};
+    try{const result=await AI.testConnection({provider:'openrouter',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});assert(result.ok,true,'probe succeeds');assert(seen.url,'https://current.example/v1/chat/completions','uses current endpoint');assert(seen.opts.headers.Authorization,'Bearer current-key','uses current key');assert(JSON.parse(seen.opts.body).model,'current-model','uses current model');}
     finally{global.fetch=oldFetch;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
     assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
     assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'GLM-4.7-Flash documented maximum output');
-    assert(AI.knownCapability('nvidia','nvidia/nemotron-3.5-lightning-30b-a3b').maxOutputTokens,32768,'Nemotron 3.5 Lightning documented maximum output');
-    assert(AI.knownCapability('nvidia','nvidia/nemotron-3.5-lightning-30b-a3b').contextWindow,1000000,'Nemotron 3.5 Lightning documented context window');
     assert(AI.knownCapability('zai','glm-5.3').contextWindow,1000000,'GLM-5.3 documented context window');
     assert(AI.knownCapability('zai','glm-5.3').reasoningStatus,'required','GLM-5.3 reasoning cannot be disabled');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
@@ -470,11 +467,11 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['NVIDIA discovery uses the exact configured endpoint, authenticated catalogue and deduplicates model IDs'] = async function () {
+  t['catalogue discovery uses the exact configured endpoint, authentication and deduplicates model IDs'] = async function () {
     const oldFetch=global.fetch;let seen={};
-    global.fetch=async function(url,opts){seen={url:String(url),authorization:opts&&opts.headers&&opts.headers.Authorization};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({object:'list',data:[{id:'nvidia/zeta'},{id:'meta/alpha'},{id:'nvidia/zeta'}]});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'nvidia',endpoint:'https://saved.example/v1',model:'meta/alpha'};},getApiKey:function(){return'nvapi-saved';}};LF.AIProviders={nvidia:{id:'nvidia',name:'NVIDIA NIM',keyRequired:true,modelCatalogueRequired:true}};
-    try{const result=await AI.listModels('nvidia','https://configured.example/v1','nvapi-current');assert(seen.url,'https://configured.example/v1/models','catalogue follows exact visible endpoint');assert(seen.authorization,'Bearer nvapi-current','current bearer auth');assert(result.models,['nvidia/zeta','meta/alpha'],'unique IDs');}
+    global.fetch=async function(url,opts){seen={url:String(url),authorization:opts&&opts.headers&&opts.headers.Authorization};return{ok:true,status:200,headers:{get:function(){return null;}},text:async function(){return JSON.stringify({object:'list',data:[{id:'router/zeta'},{id:'meta/alpha'},{id:'router/zeta'}]});}};};
+    LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://saved.example/v1',model:'meta/alpha'};},getApiKey:function(){return'or-saved';}};LF.AIProviders={openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,modelCatalogueRequired:true}};
+    try{const result=await AI.listModels('openrouter','https://configured.example/v1','or-current');assert(seen.url,'https://configured.example/v1/models','catalogue follows exact visible endpoint');assert(seen.authorization,'Bearer or-current','current bearer auth');assert(result.models,['router/zeta','meta/alpha'],'unique IDs');}
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
@@ -593,7 +590,7 @@ module.exports = function (t, LF) {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=[];
     global.location={protocol:'https:',origin:'https://example.github.io'};
     global.fetch=async function(url,opts){calls.push({url:String(url),opts:opts||{}});return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return'{"data":[]}';}};};
-    try{const response=await AI.providerFetch('https://integrate.api.nvidia.com/v1/models',{method:'GET',headers:{Authorization:'Bearer secret'}},'nvidia','models');assert(response.labflowTransport,'direct','direct transport marker');assert(calls.length,1,'exactly one direct request');assert(calls[0].url,'https://integrate.api.nvidia.com/v1/models','configured provider target');}
+    try{const response=await AI.providerFetch('https://openrouter.ai/api/v1/models',{method:'GET',headers:{Authorization:'Bearer secret'}},'openrouter','models');assert(response.labflowTransport,'direct','direct transport marker');assert(calls.length,1,'exactly one direct request');assert(calls[0].url,'https://openrouter.ai/api/v1/models','configured provider target');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;}
   };
 

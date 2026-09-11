@@ -14,10 +14,6 @@
       id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
       note:'OpenRouter OpenAI-compatible endpoint. Dynamic router aliases keep provider-default reasoning.'
     },
-    nvidia: {
-      id:'nvidia', name:'NVIDIA NIM', catalogueFallbackToConfiguredModel:true, endpoint:'https://integrate.api.nvidia.com/v1', model:'nvidia/nemotron-3.5-lightning-30b-a3b', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'NVIDIA NIM model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{chat_template_kwargs:{enable_thinking:false}},on:{chat_template_kwargs:{enable_thinking:true}}}, connectionTestTimeoutMs:60000, connectionTestMaxTokens:128, connectionTestThinkingMode:'off',
-      note:'NVIDIA NIM OpenAI-compatible base URL. Hosted browser access depends on NVIDIA CORS policy; self-hosted NIMs can enable CORS explicitly.'
-    },
     openai: {
       id:'openai', name:'OpenAI', catalogueFallbackToConfiguredModel:true, endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
       note:'OpenAI Chat Completions endpoint.'
@@ -44,5 +40,5 @@
     }
   };
   LF.AIProviderList = Object.keys(LF.AIProviders).map(function(id){return LF.AIProviders[id];});
-  if(LF.Logger) LF.Logger.info('providers','registry.ready',{defaultProvider:'zai',defaultModel:'glm-4.7-flash',providers:LF.AIProviderList.map(function(p){return{id:p.id,name:p.name,model:p.model,endpoint:p.endpoint,keyRequired:p.keyRequired};})});
+  if(LF.Logger) LF.Logger.info('providers','registry.ready',{defaultProvider:'openrouter',defaultModel:'openrouter/free',providers:LF.AIProviderList.map(function(p){return{id:p.id,name:p.name,model:p.model,endpoint:p.endpoint,keyRequired:p.keyRequired};})});
 }());

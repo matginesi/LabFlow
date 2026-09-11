@@ -21,7 +21,7 @@ function lastEvent(events,kind){return events.slice().reverse().find(function(ev
 function installForm(LF,values){
   values=values||{};
   const elements={
-    aiProvider:makeElement(values.provider||'nvidia'),
+    aiProvider:makeElement(values.provider||'openrouter'),
     aiEndpoint:makeElement(values.endpoint||'https://visible.example/v1/chat/completions'),
     aiKey:makeElement(values.apiKey||''),
     aiModel:makeElement(values.model||''),
@@ -48,27 +48,27 @@ function installForm(LF,values){
 }
 
 module.exports=function(t,LF){
-  t['Detect uses the visible unsaved NVIDIA endpoint/key, discovers a model, then requires a real chat probe']=async function(){
+  t['Detect uses the visible unsaved OpenRouter endpoint/key, discovers a model, then requires a real chat probe']=async function(){
     localStorage.clear();localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:'https://saved.invalid/v1',model:'saved-model'}));
-    const form=installForm(LF,{provider:'nvidia',endpoint:'https://visible.example/v1/chat/completions',apiKey:'visible-key',model:''});
+    const form=installForm(LF,{provider:'openrouter',endpoint:'https://visible.example/v1/chat/completions',apiKey:'visible-key',model:''});
     const oldAI=LF.AI,oldUI=LF.UI;let listArgs=null,probeArgs=null,events=[];
     LF.AI={
-      listModels:async function(provider,endpoint,key){listArgs={provider:provider,endpoint:endpoint,key:key};return{models:[LF.AIProviders.nvidia.model,'meta/other'],entries:[],loadedModels:[]};},
+      listModels:async function(provider,endpoint,key){listArgs={provider:provider,endpoint:endpoint,key:key};return{models:[LF.AIProviders.openrouter.model,'meta/other'],entries:[],loadedModels:[]};},
       testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model};},
       resolveModelCapabilities:async function(){return{source:'test'};}
     };
     LF.UI=activityUI(events);
     try{
       const models=await LF.AISettings.detectModel();
-      assert(models,[LF.AIProviders.nvidia.model,'meta/other'],'discovered models');
-      assert(listArgs,{provider:'nvidia',endpoint:'https://visible.example/v1/chat/completions',key:'visible-key'},'catalogue uses visible unsaved values');
-      assert(probeArgs.provider,'nvidia','probe provider');assert(probeArgs.endpoint,'https://visible.example/v1/chat/completions','probe endpoint');assert(probeArgs.apiKey,'visible-key','probe key');assert(probeArgs.model,LF.AIProviders.nvidia.model,'discovered model is really probed');
+      assert(models,[LF.AIProviders.openrouter.model,'meta/other'],'discovered models');
+      assert(listArgs,{provider:'openrouter',endpoint:'https://visible.example/v1/chat/completions',key:'visible-key'},'catalogue uses visible unsaved values');
+      assert(probeArgs.provider,'openrouter','probe provider');assert(probeArgs.endpoint,'https://visible.example/v1/chat/completions','probe endpoint');assert(probeArgs.apiKey,'visible-key','probe key');assert(probeArgs.model,LF.AIProviders.openrouter.model,'discovered model is really probed');
       assert(!!lastEvent(events,'start'),true,'Detect opens Action Totem');assert(!!lastEvent(events,'finish'),true,'Detect finishes Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Detect does not use Message Totem');
     }finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
   t['Detect fails closed before network access when a required provider key is missing']=async function(){
-    localStorage.clear();const form=installForm(LF,{provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,apiKey:'',model:''});
+    localStorage.clear();const form=installForm(LF,{provider:'openrouter',endpoint:LF.AIProviders.openrouter.endpoint,apiKey:'',model:''});
     const oldAI=LF.AI,oldUI=LF.UI;let networkCalls=0,events=[];
     LF.AI={listModels:async function(){networkCalls++;return{models:['x']};},testConnection:async function(){networkCalls++;return{ok:true};}};
     LF.UI=activityUI(events);
@@ -76,19 +76,19 @@ module.exports=function(t,LF){
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
-  t['NVIDIA Detect can verify the configured model when catalogue access alone is unavailable']=async function(){
-    localStorage.clear();const configured=LF.AIProviders.nvidia.model,form=installForm(LF,{provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,apiKey:'nv-key',model:configured});
+  t['OpenRouter Detect can verify the configured model when catalogue access alone is unavailable']=async function(){
+    localStorage.clear();const configured=LF.AIProviders.openrouter.model,form=installForm(LF,{provider:'openrouter',endpoint:LF.AIProviders.openrouter.endpoint,apiKey:'or-key',model:configured});
     const oldAI=LF.AI,oldUI=LF.UI;let probeArgs=null,events=[];
-    LF.AI={listModels:async function(){const error=new TypeError('Failed to fetch');error.providerId='nvidia';error.phase='models';throw error;},testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model,elapsedMs:12,transport:'direct'};},resolveModelCapabilities:async function(){return{reasoningStatus:'unknown',source:'provider default'};}};
+    LF.AI={listModels:async function(){const error=new TypeError('Failed to fetch');error.providerId='openrouter';error.phase='models';throw error;},testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model,elapsedMs:12,transport:'direct'};},resolveModelCapabilities:async function(){return{reasoningStatus:'unknown',source:'provider default'};}};
     LF.UI=activityUI(events);
-    try{const models=await LF.AISettings.detectModel();assert(models,[configured],'verified configured model remains available after catalogue fallback');assert(probeArgs.model,configured,'configured NVIDIA model receives the authoritative chat probe');assert(!!lastEvent(events,'finish'),true,'successful live probe finishes Detect');assert(/catalogue could not be read/i.test(lastEvent(events,'finish').payload.response),true,'fallback is disclosed rather than hidden');}
+    try{const models=await LF.AISettings.detectModel();assert(models,[configured],'verified configured model remains available after catalogue fallback');assert(probeArgs.model,configured,'configured OpenRouter model receives the authoritative chat probe');assert(!!lastEvent(events,'finish'),true,'successful live probe finishes Detect');assert(/catalogue could not be read/i.test(lastEvent(events,'finish').payload.response),true,'fallback is disclosed rather than hidden');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
   t['Detect cannot report success when the real provider probe fails even after catalogue discovery']=async function(){
-    localStorage.clear();const form=installForm(LF,{provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,apiKey:'nv-key',model:LF.AIProviders.nvidia.model});
+    localStorage.clear();const form=installForm(LF,{provider:'openrouter',endpoint:LF.AIProviders.openrouter.endpoint,apiKey:'or-key',model:LF.AIProviders.openrouter.model});
     const oldAI=LF.AI,oldUI=LF.UI;let events=[];
-    LF.AI={listModels:async function(){return{models:[LF.AIProviders.nvidia.model],entries:[],loadedModels:[]};},testConnection:async function(){throw new Error('network unreachable');},resolveModelCapabilities:async function(){throw new Error('must not reach capabilities');}};
+    LF.AI={listModels:async function(){return{models:[LF.AIProviders.openrouter.model],entries:[],loadedModels:[]};},testConnection:async function(){throw new Error('network unreachable');},resolveModelCapabilities:async function(){throw new Error('must not reach capabilities');}};
     LF.UI=activityUI(events);
     try{const result=await LF.AISettings.detectModel();assert(result,[],'probe failure is failed Detect');assert(!!lastEvent(events,'error'),true,'probe failure uses Action Totem error');assert(!!lastEvent(events,'finish'),false,'no false successful Action Totem');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
@@ -117,20 +117,20 @@ module.exports=function(t,LF){
 
   t['Save & test does not persist visible settings when the live probe fails']=async function(){
     localStorage.clear();LF.Storage.saveAiSettings({provider:'zai',endpoint:'https://saved.example/v1/chat/completions',model:'saved-model'});LF.Storage.saveApiKey('saved-key','zai');
-    const form=installForm(LF,{provider:'nvidia',endpoint:'https://broken.example/v1/chat/completions',apiKey:'bad-key',model:'broken-model'}),button=makeElement('');button.textContent='Save & test';
+    const form=installForm(LF,{provider:'openrouter',endpoint:'https://broken.example/v1/chat/completions',apiKey:'bad-key',model:'broken-model'}),button=makeElement('');button.textContent='Save & test';
     const oldAI=LF.AI,oldUI=LF.UI;let events=[];
-    LF.AI={testConnection:async function(){const error=new Error('Failed to fetch');error.isNetwork=true;error.providerId='nvidia';error.phase='chat';throw error;}};
+    LF.AI={testConnection:async function(){const error=new Error('Failed to fetch');error.isNetwork=true;error.providerId='openrouter';error.phase='chat';throw error;}};
     LF.UI=activityUI(events);
     try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'zai','previous provider retained');assert(saved.endpoint,'https://saved.example/v1/chat/completions','previous endpoint retained');assert(saved.model,'saved-model','previous model retained');assert(LF.Storage.getApiKey('zai'),'saved-key','previous key retained');assert(!!lastEvent(events,'error'),true,'failure uses Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
   t['Save & test stores and probes the exact visible configuration through the Action Totem']=async function(){
-    localStorage.clear();const form=installForm(LF,{provider:'nvidia',endpoint:'https://visible-save.example/v1/chat/completions',apiKey:'save-key',model:'meta/model'}),button=makeElement('');button.textContent='Save & test';
+    localStorage.clear();const form=installForm(LF,{provider:'openrouter',endpoint:'https://visible-save.example/v1/chat/completions',apiKey:'save-key',model:'meta/model'}),button=makeElement('');button.textContent='Save & test';
     const oldAI=LF.AI,oldUI=LF.UI;let probeArgs=null,events=[];
     LF.AI={testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model};}};
     LF.UI=activityUI(events);
-    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'nvidia','saved provider');assert(saved.endpoint,'https://visible-save.example/v1/chat/completions','saved endpoint');assert(saved.model,'meta/model','saved model');assert(probeArgs.provider,'nvidia','probe provider');assert(probeArgs.endpoint,saved.endpoint,'probe exact endpoint');assert(probeArgs.model,saved.model,'probe exact model');assert(probeArgs.apiKey,'save-key','probe exact current key');assert(!!lastEvent(events,'start'),true,'Save & test opens Action Totem');assert(!!lastEvent(events,'finish'),true,'Save & test finishes Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
+    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'openrouter','saved provider');assert(saved.endpoint,'https://visible-save.example/v1/chat/completions','saved endpoint');assert(saved.model,'meta/model','saved model');assert(probeArgs.provider,'openrouter','probe provider');assert(probeArgs.endpoint,saved.endpoint,'probe exact endpoint');assert(probeArgs.model,saved.model,'probe exact model');assert(probeArgs.apiKey,'save-key','probe exact current key');assert(!!lastEvent(events,'start'),true,'Save & test opens Action Totem');assert(!!lastEvent(events,'finish'),true,'Save & test finishes Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 };

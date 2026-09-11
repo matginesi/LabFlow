@@ -57,9 +57,9 @@
 
   function getAiSettings() {
     const defaults = {
-      provider: 'zai',
-      endpoint: 'https://api.z.ai/api/paas/v4/chat/completions',
-      model: 'glm-4.7-flash',
+      provider: 'openrouter',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      model: 'openrouter/free',
       temperature: 0.7,
       thinkingMode: 'auto',
       streaming: true,
@@ -67,6 +67,11 @@
       maxOutputTokensCap: 0
     };
     const out = Object.assign({}, defaults, read(LOCAL_KEYS.AI_SETTINGS, {}));
+    if (LF.AIProviders && !LF.AIProviders[out.provider]) {
+      out.provider = defaults.provider;
+      out.endpoint = defaults.endpoint;
+      out.model = defaults.model;
+    }
     out.endpoint = String(out.endpoint || '').replace(
       /\/chat\/completions(?:\/chat\/completions)+\/?$/i,
       '/chat/completions'
@@ -146,7 +151,7 @@
 
   function getApiKey(providerId) {
     try {
-      const provider = String(providerId || getAiSettings().provider || 'zai');
+      const provider = String(providerId || getAiSettings().provider || 'openrouter');
       return String(apiKeys()[provider] || '');
     } catch (_error) {
       return '';
@@ -155,7 +160,7 @@
 
   function saveApiKey(key, providerId) {
     try {
-      const provider = String(providerId || getAiSettings().provider || 'zai');
+      const provider = String(providerId || getAiSettings().provider || 'openrouter');
       const keys = apiKeys();
       if (key) keys[provider] = String(key);
       else delete keys[provider];

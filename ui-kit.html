@@ -6,17 +6,17 @@
   <meta name="theme-color" content="#0b141d">
   <meta name="referrer" content="no-referrer">
   <title>LabFlow UI Kit</title>
-  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.10-provider-direct-r5" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.10-provider-direct-r5">
-  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.10-provider-direct-r5">
-  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.10-provider-direct-r5">
+  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.11-poc-r1" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.11-poc-r1">
+  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.11-poc-r1">
+  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.11-poc-r1">
 </head>
 <body class="ui-kit-page">
   <a class="skip-link" href="#uiKitMain">Skip to UI Kit content</a>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Primary navigation">
       <div class="brand">
-        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.10-provider-direct-r5" alt=""></span>
+        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.11-poc-r1" alt=""></span>
         <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
       </div>
       <div class="nav-label">Workflow</div>
@@ -99,7 +99,7 @@
           <section class="panel ui-kit-section" id="settings-pattern" data-ui-kit-group="system">
             <div class="panel-head"><h2 class="h2">Settings navigation and forms</h2><div class="spacer"></div><span class="badge success">One section at a time</span></div>
             <div class="panel-body stack">
-              <div class="settings-layout"><aside class="settings-rail"><nav class="settings-nav" aria-label="Settings pattern"><div class="settings-nav-group"><div class="settings-nav-label">AI</div><button class="settings-nav-item active" disabled><strong>Connection</strong><span>NVIDIA NIM</span></button><button class="settings-nav-item" disabled><strong>Assistant</strong><span>Memory on</span></button><button class="settings-nav-item" disabled><strong>Actions</strong><span>5 capabilities</span></button><button class="settings-nav-item" disabled><strong>Knowledge Base</strong><span>12 active entries</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Integrations</div><button class="settings-nav-item" disabled><strong>NOMAD</strong><span>Configuration only</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Local</div><button class="settings-nav-item" disabled><strong>Workspace</strong><span>Appearance, profile, advanced</span></button></div></nav></aside><main class="settings-content"><header class="settings-section-head"><div><h2>AI connection</h2><p>Choose the provider and exact model used by AI-enabled Actions.</p></div><span class="badge warning">Unsaved changes</span></header><section class="panel"><div class="panel-body stack"><div class="form-grid"><label class="field"><span>Provider</span><select class="select" disabled><option>NVIDIA NIM</option></select></label><label class="field"><span>Model</span><div class="input-action ai-model-control" data-model-select="true"><select class="select mono" disabled><option>meta/llama-3.3-70b-instruct</option></select><button class="button compact" disabled>Detect</button></div><small class="help">Detect uses the visible endpoint and key; if no model is selected, it fills one from the live catalogue before the real probe. Failure is reported through the Message Totem.</small></label></div><details class="settings-advanced"><summary>Request behavior and provider details</summary><div class="settings-advanced-body help">Advanced timeouts, output caps, streaming and thinking overrides live here.</div></details><div class="settings-savebar"><span class="help">Changes apply locally after Save.</span><div class="row-wrap"><button class="button" disabled>Save changes</button><button class="button primary" disabled>Save &amp; test</button></div></div></div></section></main></div>
+              <div class="settings-layout"><aside class="settings-rail"><nav class="settings-nav" aria-label="Settings pattern"><div class="settings-nav-group"><div class="settings-nav-label">AI</div><button class="settings-nav-item active" disabled><strong>Connection</strong><span>OpenRouter</span></button><button class="settings-nav-item" disabled><strong>Assistant</strong><span>Memory on</span></button><button class="settings-nav-item" disabled><strong>Actions</strong><span>5 capabilities</span></button><button class="settings-nav-item" disabled><strong>Knowledge Base</strong><span>12 active entries</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Integrations</div><button class="settings-nav-item" disabled><strong>NOMAD</strong><span>Configuration only</span></button></div><div class="settings-nav-group"><div class="settings-nav-label">Local</div><button class="settings-nav-item" disabled><strong>Workspace</strong><span>Appearance, profile, advanced</span></button></div></nav></aside><main class="settings-content"><header class="settings-section-head"><div><h2>AI connection</h2><p>Choose the provider and exact model used by AI-enabled Actions.</p></div><span class="badge warning">Unsaved changes</span></header><section class="panel"><div class="panel-body stack"><div class="form-grid"><label class="field"><span>Provider</span><select class="select" disabled><option>OpenRouter</option></select></label><label class="field"><span>Model</span><div class="input-action ai-model-control" data-model-select="true"><select class="select mono" disabled><option>openrouter/free</option></select><button class="button compact" disabled>Detect</button></div><small class="help">Detect uses the visible endpoint and key; if no model is selected, it fills one from the live catalogue before the real probe. Failure is reported through the Message Totem.</small></label></div><details class="settings-advanced"><summary>Request behavior and provider details</summary><div class="settings-advanced-body help">Advanced timeouts, output caps, streaming and thinking overrides live here.</div></details><div class="settings-savebar"><span class="help">Changes apply locally after Save.</span><div class="row-wrap"><button class="button" disabled>Save changes</button><button class="button primary" disabled>Save &amp; test</button></div></div></div></section></main></div>
               <div class="notice info"><strong>Settings contract.</strong> The rail groups user intent without flattening every screen into tabs. It becomes a compact grid on smaller canvases. Field validation stays beside fields; Detect and Save &amp; test report their operation result only through the canonical Message Totem. Data contract content is progressive disclosure inside Workspace.</div>
               <div class="operation-workshop">
                 <aside class="panel operation-catalog"><div class="panel-head"><div><h2 class="h2">Action catalog</h2><div class="meta">5 Actions · one registry</div></div></div><div class="panel-body">
@@ -336,12 +336,12 @@
       </main>
     </section>
   </div>
-  <script src="assets/js/ui/icons.js?v=2026.09.10-provider-direct-r5"></script>
-  <script src="assets/js/logger.js?v=2026.09.10-provider-direct-r5"></script>
-  <script src="assets/js/core.js?v=2026.09.10-provider-direct-r5"></script>
-  <script src="assets/js/storage.js?v=2026.09.10-provider-direct-r5"></script>
-  <script src="assets/js/ui/theme.js?v=2026.09.10-provider-direct-r5"></script>
-  <script src="assets/js/pages/ui-kit-page.js?v=2026.09.10-provider-direct-r5"></script>
+  <script src="assets/js/ui/icons.js?v=2026.09.11-poc-r1"></script>
+  <script src="assets/js/logger.js?v=2026.09.11-poc-r1"></script>
+  <script src="assets/js/core.js?v=2026.09.11-poc-r1"></script>
+  <script src="assets/js/storage.js?v=2026.09.11-poc-r1"></script>
+  <script src="assets/js/ui/theme.js?v=2026.09.11-poc-r1"></script>
+  <script src="assets/js/pages/ui-kit-page.js?v=2026.09.11-poc-r1"></script>
 
 <section class="panel ui-kit-footer-contract"><div class="panel-head"><div><span class="eyebrow">ACTION PROGRESS CONTRACT</span><h2 class="h2">Long work stays legible</h2><div class="meta">Reference behavior for long Actions.</div></div></div><div class="panel-body"><p class="help">Progress is monotonic: checkpoint → work unit → semantic phase → bounded SSE/token refinement. Streaming never occupies the final validation/store band. Sequential Design helpers keep one parent progress bar.</p></div></section>
 </body>

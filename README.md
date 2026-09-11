@@ -153,7 +153,7 @@ LabFlow remains a static vanilla-JS application. Serve it with any ordinary stat
 python3 -m http.server 8000 --bind 0.0.0.0
 ```
 
-Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
+Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. The browser POC defaults to OpenRouter (`openrouter/free`) because it works with the static GitHub Pages deployment; local model servers remain available through their dedicated adapters. AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
 
 
 ## llama.cpp on the local network

@@ -4,7 +4,6 @@
   function localProvider(providerId){const provider=LF.AIProviders&&LF.AIProviders[providerId];return provider?provider.local===true:['ollama','lmstudio','llamacpp'].includes(String(providerId||''));}
 
   function browserCorsHint(providerId){
-    if(providerId==='nvidia')return'The hosted NVIDIA endpoint did not expose an HTTP response to this browser origin. If the browser console reports a CORS/preflight block, LabFlow cannot bypass that policy from a static page; use an endpoint that permits your origin or a self-hosted NIM configured for CORS.';
     if(['zai','openai','gemini'].includes(providerId))return'The browser did not expose an HTTP response. Check the provider browser/CORS policy for this origin; LabFlow intentionally uses direct browser requests and has no relay/backend fallback.';
     if(providerId==='openrouter')return'If no HTTP status reached LabFlow, inspect browser network/CORS policy. If an HTTP 401/403 is present, fix the API key instead.';
     return'The browser did not expose an HTTP response. Check the endpoint, network path and CORS/origin policy.';
@@ -56,7 +55,7 @@
     else if(status===400&&/reasoning[^.\n]{0,100}(?:mandatory|required|cannot be disabled)|(?:mandatory|required)[^.\n]{0,80}reasoning/i.test(String(e.providerMessage||e.message||''))){category='Thinking compatibility';next=e.reasoningCompatibilityRetry?'The provider still rejected its own default reasoning mode after LabFlow removed the explicit override. Choose another model/provider or inspect provider-specific reasoning requirements.':'LabFlow will normally retry once without a disable-reasoning override; if this persists, use Auto thinking or another model.';}
     else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load/select a valid model in the provider, then Detect or Save & test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
-    else if(status===404){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');category=providerId==='nvidia'?'Model unavailable':'Endpoint / model';next=providerId==='nvidia'?'Choose a currently served NVIDIA model and retry.':'Check the endpoint path and configured model.';}
+    else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
     else if(['1304','1308','1310'].includes(code)||(e.rateLimited&&e.rateLimitRetryable===false)){category='Provider quota';next='The provider quota/window is exhausted. Check its reset status or use another provider.';}
     else if(status===429||['1302','1303','1305','1312'].includes(code)||e.rateLimited){category=code==='1312'?'Model capacity':'Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=retryMs?'Retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'Retry later or use another provider.';}
     else if(status>=500){category='Provider server';next='Check provider status/logs and retry.';}

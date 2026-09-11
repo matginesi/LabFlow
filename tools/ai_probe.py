@@ -10,7 +10,6 @@ import argparse, json, os, sys, time, urllib.error, urllib.request
 PROVIDERS = {
     'zai': {'chat':'https://api.z.ai/api/paas/v4/chat/completions','models':None,'model':'glm-4.7-flash','env':'ZAI_API_KEY'},
     'openrouter': {'chat':'https://openrouter.ai/api/v1/chat/completions','models':'https://openrouter.ai/api/v1/models','model':'openrouter/free','env':'OPENROUTER_API_KEY'},
-    'nvidia': {'chat':'https://integrate.api.nvidia.com/v1/chat/completions','models':'https://integrate.api.nvidia.com/v1/models','model':'nvidia/nemotron-3.5-lightning-30b-a3b','env':'NVIDIA_API_KEY'},
 }
 
 def request(url, key, method='GET', payload=None, timeout=60):
@@ -84,9 +83,6 @@ def main():
     model=args.model or cfg['model']; url=args.endpoint or cfg['chat']
     payload={'model':model,'messages':[{'role':'user','content':'Reply with exactly: OK'}],'max_tokens':128,'stream':False}
     if args.provider=='zai': payload['thinking']={'type':'disabled'}
-    if args.provider=='nvidia':
-        payload['chat_template_kwargs']={'enable_thinking':False}
-        payload['temperature']=0
     status,ms,obj,raw=request(url,key,'POST',payload,args.timeout)
     print(f'{args.provider} · {model} · HTTP {status} · {ms} ms')
     if status>=400:

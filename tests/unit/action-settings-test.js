@@ -35,16 +35,9 @@ module.exports=function(t,LF){
     assert(step.thinking==='off','Design should not spend latency on hidden reasoning by default');
   };
 
-  t['provider registry includes OpenRouter and NVIDIA NIM presets']=function(){
+  t['provider registry includes browser and local presets']=function(){
     assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
-    assert(LF.AIProviders.nvidia.endpoint==='https://integrate.api.nvidia.com/v1','NVIDIA NIM base endpoint');
-    assert(LF.AIProviders.nvidia.thinkingModes.off.chat_template_kwargs.enable_thinking===false,'NVIDIA thinking off mapping');
-    assert(LF.AIProviders.nvidia.thinkingModes.on.chat_template_kwargs.enable_thinking===true,'NVIDIA thinking on mapping');
-    assert(LF.AIProviders.nvidia.connectionTestThinkingMode==='off','NVIDIA connection probe uses documented non-thinking mode');
-    assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.nvidia,'modelsEndpoint'),'NVIDIA catalogue follows the configured endpoint rather than a hidden fixed URL');
-    assert(LF.AIProviders.nvidia.keyRequired===true,'NVIDIA key required');
-    assert(LF.AIProviders.nvidia.modelSelect===true,'NVIDIA uses loaded model select');
     assert(LF.AIProviders.openai.modelSelect===true&&LF.AIProviders.openai.modelCatalogueRequired===true,'OpenAI Detect uses the official model catalogue');
     assert(LF.AIProviders.gemini.modelSelect===true&&LF.AIProviders.gemini.modelCatalogueRequired===true,'Gemini Detect uses the OpenAI-compatible model catalogue');
     assert(LF.AIProviders.zai.modelSelect===true,'Z.AI Detect exposes the documented model snapshot');
@@ -71,6 +64,24 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.zai.connectionTestMaxTokens===128,'Z.AI connection probe has enough output room for reasoning-capable GLM models');
   };
 
+  t['fresh browser settings default to OpenRouter for the static POC']=function(){
+    localStorage.clear();
+    const settings=LF.Storage.getAiSettings();
+    assert(settings.provider==='openrouter','fresh default provider');
+    assert(settings.endpoint==='https://openrouter.ai/api/v1/chat/completions','fresh default endpoint');
+    assert(settings.model==='openrouter/free','fresh default model');
+  };
+
+  t['settings discard a persisted provider that is no longer in the registry']=function(){
+    localStorage.clear();
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'removed-provider',endpoint:'https://removed.example/v1',model:'old-model'}));
+    const settings=LF.Storage.getAiSettings();
+    assert(settings.provider==='openrouter','removed provider falls back to POC default');
+    assert(settings.endpoint==='https://openrouter.ai/api/v1/chat/completions','removed provider endpoint is discarded');
+    assert(settings.model==='openrouter/free','removed provider model is discarded');
+    localStorage.clear();
+  };
+
   t['Z.AI is one provider with the official General API, default Flash model and Detect catalogue']=function(){
     const provider=LF.AIProviders.zai;
     assert(provider.name==='Z.AI','provider display name');
@@ -88,9 +99,6 @@ module.exports=function(t,LF){
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('API key required. Detect will validate')>=0,'missing key is explicit before Detect');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
   };
 
-  t['NVIDIA Detect stays actionable without a key so the Action Totem can report the real error']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'nvidia',endpoint:LF.AIProviders.nvidia.endpoint,model:LF.AIProviders.nvidia.model}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModelSelect"')>=0,'NVIDIA select rendered');assert(html.indexOf('aria-label="NVIDIA NIM model"')>=0,'select labelled');assert(html.indexOf('id="detectProviderModel"')>=0&&html.indexOf('id="detectProviderModel" disabled')<0,'Detect remains clickable');assert(html.indexOf('API key required. Detect will validate')>=0,'key requirement is explicit');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');localStorage.removeItem('labflow.ai.settings');
-  };
 
 
   t['Detect and Save & test use the canonical Action Totem for the full provider operation']=function(){

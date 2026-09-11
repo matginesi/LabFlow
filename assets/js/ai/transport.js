@@ -504,9 +504,6 @@
       if(/^gpt-4(?:[.-]|$)/.test(m))return{maxOutputTokens:8192,contextWindow:null,exactOutput:true,reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',source:'OpenAI model specification'};
       if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
-    if(id==='nvidia'){
-      if(/^nvidia\/nemotron-3\.5-lightning-30b-a3b(?:[.-]|$)/.test(m))return{maxOutputTokens:32768,contextWindow:1000000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'NVIDIA NIM model specification'};
-    }
     if(id==='zai'){
       if(/^glm-5\.3(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','high','max'],reasoningDefault:'max',source:'Z.AI model specification'};
       if(/^glm-5\.2(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
