@@ -49,7 +49,7 @@ AUDIT_JS = r"""() => {
     '.table-wrap', '.scroll-x-region', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
     '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.cabinet-filter-tabs', '.docs-mermaid-canvas',
-    '.review-compact-status', '.chart-scroll', '.compare-chart-viewport'
+    '.chart-scroll', '.compare-chart-viewport'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
     if (!visible(node) || localScroll(node)) return false;

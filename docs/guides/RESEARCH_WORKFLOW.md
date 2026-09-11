@@ -34,7 +34,7 @@ Pages do not own separate scientific copies. A reviewed change to the LabFlow Da
 
 The first step establishes provenance and current data quality. Import is deterministic-first and remains usable without AI.
 
-Review distinguishes mechanically safe deterministic corrections from ambiguous interpretations. Safe corrections are detected automatically but remain pending until **Accept safe cleanup**; acceptance changes only LabFlow Data, writes provenance, and immediately reruns the deterministic pipeline. Apply only changes whose evidence and target you understand.
+Review distinguishes mechanically safe deterministic corrections from ambiguous interpretations. Safe corrections are detected automatically but remain pending until **Apply safe corrections**; acceptance changes only LabFlow Data, writes provenance, and immediately reruns the deterministic pipeline. Apply only changes whose evidence and target you understand.
 
 ## Results
 

@@ -83,7 +83,7 @@ Export is artifact-first, not a settings form.
 ## Upload & Review safe-cleanup contract
 
 - Mechanically provable cleanup is **detected automatically** by deterministic code, but a newly detected correction must remain pending until the researcher explicitly accepts it.
-- `Accept safe cleanup` must produce an observable LabFlow Data mutation, record patch/provenance, rebuild affected links/samples as needed, and rerun the deterministic pipeline immediately.
+- `Apply safe corrections` must produce an observable LabFlow Data mutation, record patch/provenance, rebuild affected links/samples as needed, and rerun the deterministic pipeline immediately.
 - Never present a change as awaiting acceptance if the same mutation has already been silently applied. Canonical parser normalization (for example naming normalization done while parsing) is a separate provenance category and may remain automatic when it does not rewrite RAW.
 - Re-running the pipeline is idempotent: an accepted safe correction must not reappear as pending, and repeated refreshes must not accumulate duplicate automatic patches.
 - RAW/source bytes remain immutable throughout detection and acceptance.

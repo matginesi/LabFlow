@@ -1,7 +1,10 @@
 # UI contract
 
 `ui-kit.html` demonstrates the visual system. Tokens live in `assets/css/tokens.css`, reusable controls in `assets/css/ui.css`, and application/page composition in `assets/css/app.css`. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit. The frontend remains semantic HTML, vanilla JavaScript and ordinary local CSS. Its class conventions are Bootstrap-compatible where useful, but this repository currently loads no separate Bootstrap runtime; do not add a framework/CDN dependency merely for UI cleanup.
-Upload & Review keeps sidebar summaries intentionally shallow: the Experiment Brief uses a compact fact/count strip, while Manual & Diagnostics is closed by default. Its Researcher override and Diagnostics disclosures are mutually exclusive, and long diagnostic tables scroll inside a bounded local region instead of stretching the page.
+
+Researcher-facing workflow pages use progressive disclosure. The first view answers: what happened, what needs attention, and what can I do next. Internal revision counters, schema/build labels, pipeline vocabulary, provenance mechanics and diagnostics are not primary UI concepts; expose them only where they are necessary for an advanced inspection task. Do not display `v1`/`v2`/`rev N` style labels for the normal LabFlow data model.
+
+Upload & Review is the reference pattern: one source receipt, one clear data-review state, attention panels only when action is required, then collapsed **Review changes**, **Experiment information** and **Import details** sections. Do not restore the former permanent review sidebar or KPI strip. Long technical tables remain inside bounded local disclosures.
 
 ## Shared typography, controls and spacing
 
@@ -33,7 +36,7 @@ The primary workflow is **Upload & Review → Results → Design → Export**. C
 
 ## Upload & Review
 
-Upload copy, source metadata and actions reflow into one column on narrow screens. Deterministic naming and mechanical transformations happen automatically and remain visible with provenance. Excluding a measurement or resolving semantic ambiguity is suggestion/researcher-controlled: the researcher chooses the mutation.
+Upload copy, source metadata and actions reflow into one column on narrow screens. The primary state is plain-language and action-oriented: **Everything looks ready** or **N items need your attention**. Show Samples, Measurements, Files and Status as the compact first-level summary; detailed name normalization, applied corrections, experiment brief and diagnostics stay collapsed. Excluding a measurement or resolving semantic ambiguity remains researcher-controlled: the researcher chooses the mutation.
 
 ## Results and charts
 

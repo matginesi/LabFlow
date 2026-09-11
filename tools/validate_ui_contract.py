@@ -9,7 +9,7 @@ for tag in re.findall(r'<([a-zA-Z0-9]+)\b[^>]*data-action=',pages):
 if 'id="activityRetry"' not in index or 'Retry checkpoint' not in index:errors.append('Retry control missing')
 for marker,label in [('id="reanalyzeDataset"','Deterministic re-analysis'),('data-action="dataset.resolve-ambiguities"','Resolve ambiguities'),('data-action="design.infer"','Infer missing design'),('data-action="results.interpret"','Interpret results'),('exportLabFlowZip','Export LabFlow ZIP'),('exportNomadEntry','Export NOMAD entry'),('exportNomadZip','Export NOMAD ZIP'),('data-action-editor','Actions manager')]:
     if marker not in pages:errors.append(label+' UI missing')
-for cls in ('.operation-workshop','.operation-catalog','.operation-inspector','.operation-step-flow','.review-workbench'):
+for cls in ('.operation-workshop','.operation-catalog','.operation-inspector','.operation-step-flow','.review-overview','.review-secondary'):
     if cls not in css:errors.append('Required responsive style missing '+cls)
 if "['actions','Actions'" not in settings:errors.append('Actions Settings navigation item missing')
 if 'AI Helpers' in settings or 'Operations Workshop' in settings:errors.append('split Operations/AI Helpers Settings UI remains')
@@ -71,7 +71,7 @@ if not re.search(r'@container\s*\(max-width:1100px\)[\s\S]*?\.settings-workspace
 # Safe cleanup is deterministic detection plus explicit researcher acceptance.
 pipeline=(ROOT/'assets/js/data/pipeline.js').read_text(); review=(ROOT/'assets/js/pages/review-panel.js').read_text(); corrections=(ROOT/'assets/js/data/dataset-corrections.js').read_text()
 if 'prepareAutomaticSafeFixes' not in pipeline or 'applyAutomaticSafeFixes(exp)' in pipeline:errors.append('pipeline must detect safe cleanup without silently applying new corrections')
-if 'id="applyAutomaticCleanup"' not in review or 'Accept safe cleanup' not in review:errors.append('Review missing explicit safe-cleanup acceptance')
+if 'id="applyAutomaticCleanup"' not in review or 'Apply safe corrections' not in review:errors.append('Review missing explicit safe-cleanup acceptance')
 if "closest('#applyAutomaticCleanup')" not in app or 'commitAutomaticSafeFixes(exp)' not in app or 'function commitAutomaticSafeFixes(exp)' not in corrections:errors.append('safe-cleanup acceptance does not use the canonical dataset commit service')
 
 # Routes start at the top; content switches preserve the visible shared anchor.
