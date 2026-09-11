@@ -13,8 +13,6 @@
     {id:'experiment-export', label:'Export', short:'Export', requiresExperiment:true},
     {id:'cabinet', label:'Lab Cabinet', short:'Cabinet', requiresExperiment:false},
     {id:'documentation', label:'Documentation', short:'Docs', requiresExperiment:false},
-    {id:'logs', label:'Logs', short:'Logs', requiresExperiment:false},
-    {id:'ui-kit', label:'UI Kit', short:'UI Kit', requiresExperiment:false},
     {id:'settings', label:'Settings', short:'Settings', requiresExperiment:false}
   ];
   const WORKFLOW_IDS = ROUTES.slice(0,4).map(function(route){ return route.id; });

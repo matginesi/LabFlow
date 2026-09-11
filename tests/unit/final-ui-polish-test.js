@@ -133,8 +133,9 @@ module.exports=function(t){
     assert(state.includes('delete compact.outputs'),true,'old duplicated Action output history is compacted');
   };
 
-  t['UI Kit renders inline in the host shell and is safe under file protocol']=function(){
-    assert(app.includes('LF.UIKitInline.render'),true,'UI Kit uses inline renderer');
+  t['UI Kit renders inside Settings and is safe under file protocol']=function(){
+    assert(settingsPage.includes('LF.UIKitInline.render'),true,'UI Kit uses inline renderer inside Settings');
+    assert(html.includes('data-route="ui-kit"'),false,'UI Kit is not a primary navigation route');
     assert(app.includes("document.querySelector('.ui-kit-frame')"),false,'no iframe dependency in app shell');
     assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
     assert(uiKitInline.includes('id="documentation-pattern"'),true,'full catalog includes patterns after nested main elements');

@@ -750,7 +750,7 @@
   if (activityLogsButton) {
     activityLogsButton.addEventListener('click', function () {
       activityHide();
-      if (LF.State) LF.State.setRoute('logs');
+      if (LF.State) { LF.State.state.ui.settingsSection='diagnostics'; LF.State.setRoute('settings'); }
     });
   }
 

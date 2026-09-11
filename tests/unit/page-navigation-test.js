@@ -10,11 +10,14 @@ module.exports=function(t,LF,ctx){
 
   t['page route order is one shared source for workflow and in-page navigation']=function(){
     assert(LF.PageShell.routes.map(function(x){return x.id;}),[
-      'experiment-import','experiment-results','experiment-design','experiment-export','cabinet','documentation','logs','ui-kit','settings'
+      'experiment-import','experiment-results','experiment-design','experiment-export','cabinet','documentation','settings'
     ],'route order');
     const html=LF.PageShell.pageNavigation('experiment-design');
     if(!html.includes('data-route="experiment-results"')||!html.includes('<strong>Results</strong>'))throw new Error('Design previous route must be Results');
     if(!html.includes('data-route="experiment-export"')||!html.includes('<strong>Export</strong>'))throw new Error('Design next route must be Export');
+    const index=fs.readFileSync(path.join(root,'index.html'),'utf8'),settings=fs.readFileSync(path.join(root,'assets/js/pages/settings-page.js'),'utf8');
+    if(index.includes('data-route="logs"')||index.includes('data-route="ui-kit"'))throw new Error('Logs and UI Kit must not occupy primary navigation');
+    if(!settings.includes("['diagnostics','Diagnostics','Logs and support bundle']")||!settings.includes("['ui-kit','UI Kit','Interface reference']"))throw new Error('Logs and UI Kit must live under Settings → Advanced');
   };
 
   t['navigation blocks experiment-only routes until a dataset exists']=function(){

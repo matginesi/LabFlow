@@ -115,7 +115,10 @@
   }
 
   function subscribe(fn) { listeners.push(fn); Log.debug('state.subscribe', { listeners: listeners.length }); return function () { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; }
-  function normalizeRoute(route) { return String(route || ''); }
+  function normalizeRoute(route) {
+    const value=String(route || '');
+    return value==='logs'||value==='ui-kit'?'settings':value;
+  }
 
   function routeRequiresExperiment(route) {
     const normalized = normalizeRoute(route);
@@ -124,7 +127,10 @@
 
   function setRoute(route) {
     const previous = state.ui.route;
-    route = normalizeRoute(route);
+    const requested=String(route||'');
+    if(requested==='logs')state.ui.settingsSection='diagnostics';
+    else if(requested==='ui-kit')state.ui.settingsSection='ui-kit';
+    route = normalizeRoute(requested);
     if (previous !== route) commitAllDrafts();
     ensureExperiment('route:' + route);
     state.ui.route = route;

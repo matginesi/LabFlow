@@ -981,7 +981,6 @@ body.ui-kit-page{ overflow: hidden; }
 .settings-nav-item{display:grid;gap:2px;min-width:0;padding:8px 9px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);font:inherit;text-align:left;cursor:pointer}
 .settings-nav-item strong{font-size:var(--font-sm);font-weight:680;line-height:1.25}.settings-nav-item span{overflow:hidden;color:var(--text-muted);font-size:var(--font-xs);line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
 .settings-nav-item:hover{border-color:var(--border);background:var(--surface-2)}.settings-nav-item.active{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
-.settings-logs-link{width:100%;justify-content:center;border-top:1px solid var(--border)}
 .settings-content{display:grid;gap:10px;min-width:0}.settings-content>.panel,.settings-content>.stack,.settings-content>.operation-workshop,.settings-content>.notice{min-width:0}
 .settings-section-head{display:flex;align-items:flex-start;gap:10px;min-width:0;padding:2px 1px 4px}.settings-section-head>div{min-width:0;flex:1}
 .settings-section-head h2{margin:0;color:var(--text);font-size:var(--font-xl);line-height:1.2}.settings-section-head p{margin:3px 0 0;color:var(--text-muted);font-size:var(--font-sm);line-height:1.4}.settings-section-head>.badge{flex:none;margin-top:2px}
@@ -1022,7 +1021,7 @@ body.ui-kit-page{ overflow: hidden; }
   .results-overview-grid .overview-chart .results-svg{max-height:230px}
   .compare-chart-panel.compact-chart .compare-svg{min-height:200px;max-height:260px}
   .settings-page .settings-workspace-grid{grid-template-columns:1fr}
-  .settings-layout{grid-template-columns:1fr}.settings-rail{position:static}.settings-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.settings-nav-group{display:contents}.settings-nav-label{display:none}.settings-logs-link{width:auto;justify-self:start}
+  .settings-layout{grid-template-columns:1fr}.settings-rail{position:static}.settings-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.settings-nav-group{display:contents}.settings-nav-label{display:none}
 }
 @media (max-width:620px){
   .settings-connection-summary{align-items:flex-start}
@@ -1779,7 +1778,7 @@ body.ui-kit-page{ overflow: hidden; }
    The main workspace is the responsive boundary: sidebar and Assistant can
    reduce usable width even when the browser viewport itself is wide. */
 @container (max-width:1100px){
-  .settings-layout{grid-template-columns:1fr}.settings-rail{position:static}.settings-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.settings-nav-group{display:contents}.settings-nav-label{display:none}.settings-logs-link{width:auto;justify-self:start}
+  .settings-layout{grid-template-columns:1fr}.settings-rail{position:static}.settings-nav{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.settings-nav-group{display:contents}.settings-nav-label{display:none}
   .two-col,.settings-workspace-grid,.operation-workshop,.kb-workbench,.design-two-column,.design-suggestion-grid,.jv-analyzer-layout,.curve-overlay-layout,.compare-workbench,.jv-diagnostics-grid,.logs-dashboard-grid,.results-overview-grid,.results-master-detail,.docs-workbench{grid-template-columns:1fr!important}
   .results-overview-grid>.overview-focus-chart,.results-overview-grid>.overview-primary-chart{grid-column:auto!important}
   .operation-catalog,.jv-analyzer-selector,.curve-overlay-selector,.compare-control-panel{position:static;max-height:none}
@@ -1967,3 +1966,18 @@ body.ui-kit-page{ overflow: hidden; }
   .review-overview-copy{flex-basis:calc(100% - 46px)}
   .review-recheck{margin-left:46px;width:calc(100% - 46px)}
 }
+
+
+/* Settings advanced tools: diagnostics and UI Kit live here instead of primary navigation. */
+.settings-page-advanced .settings-content{min-width:0}
+.settings-embedded-page{display:grid;gap:10px;min-width:0}
+.settings-embedded-actions{display:flex;justify-content:flex-end;min-width:0}
+.logs-settings-toolbar{flex-wrap:wrap;justify-content:flex-end}
+.settings-uikit-tools{min-width:0}
+.settings-uikit-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,280px) auto;gap:10px;align-items:end}
+.settings-uikit-toolbar .field{margin:0}
+.settings-uikit-count{display:grid;gap:2px;align-content:end;min-width:86px;padding:0 2px 7px;color:var(--text-muted);font-size:var(--font-xs)}
+.settings-uikit-count strong{color:var(--text);font-size:var(--font-sm)}
+.settings-page-advanced .ui-kit-inline-host{min-width:0}
+@container (max-width:900px){.settings-uikit-toolbar{grid-template-columns:1fr 1fr}.settings-uikit-count{grid-column:1/-1;padding-bottom:0}}
+@container (max-width:620px){.settings-uikit-toolbar{grid-template-columns:1fr}.settings-uikit-count{grid-column:auto}.settings-embedded-actions,.logs-settings-toolbar{justify-content:stretch}.logs-settings-toolbar>.button{flex:1 1 auto}}

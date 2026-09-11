@@ -22,7 +22,7 @@
   function knowledgeFormEntry(){const kb=LF.KnowledgeBase,id=S.state.ui&&S.state.ui.settingsKnowledgeId,existing=id&&id!=='__new__'?kb.get(id):null;return{id:existing&&existing.origin==='custom'?existing.id:undefined,kind:document.getElementById('kbKind').value,status:document.getElementById('kbStatus').value,title:document.getElementById('kbTitle').value,aliases:document.getElementById('kbAliases').value,tags:document.getElementById('kbTags').value,summary:document.getElementById('kbSummary').value,facts:document.getElementById('kbFacts').value,cautions:document.getElementById('kbCautions').value,related_ids:document.getElementById('kbRelatedIds').value,sources:kb.parseSourceLines(document.getElementById('kbSources').value),created_at:existing&&existing.created_at};}
   async function persistWorkspace(reason){if(!hasExperiment()||!LF.Storage||!LF.Storage.saveExperiment)return false;if(workspaceSaveBusy){workspaceSavePending=true;return false;}workspaceSaveBusy=true;try{await LF.Storage.saveExperiment(S.state.experiment,workspaceUiSnapshot());Log.debug('workspace.autosaved',{reason:reason||'state',revision:S.state.experiment.sync&&S.state.experiment.sync.revision||0});return true;}catch(err){Log.warn('workspace.autosave-failed',{reason:reason||'state',error:err});return false;}finally{workspaceSaveBusy=false;if(workspaceSavePending){workspaceSavePending=false;scheduleWorkspaceSave('pending');}}}
   function scheduleWorkspaceSave(reason){if(!hasExperiment())return;window.clearTimeout(workspaceSaveTimer);workspaceSaveTimer=window.setTimeout(function(){persistWorkspace(reason||'state');},700);}
-  function restoreSavedUi(saved){const ui=saved&&saved.ui||{};if(ui.route)S.state.ui.route=S.normalizeRoute?S.normalizeRoute(ui.route):ui.route;if(ui.resultsTab)S.state.ui.resultsTab=ui.resultsTab;if(ui.selectedMeasurementId)S.state.ui.selectedMeasurementId=ui.selectedMeasurementId;if(ui.selectedDesignDeviceId)S.state.ui.selectedDesignDeviceId=ui.selectedDesignDeviceId;}
+  function restoreSavedUi(saved){const ui=saved&&saved.ui||{};if(ui.route==='logs')S.state.ui.settingsSection='diagnostics';else if(ui.route==='ui-kit')S.state.ui.settingsSection='ui-kit';if(ui.route)S.state.ui.route=S.normalizeRoute?S.normalizeRoute(ui.route):ui.route;if(ui.resultsTab)S.state.ui.resultsTab=ui.resultsTab;if(ui.selectedMeasurementId)S.state.ui.selectedMeasurementId=ui.selectedMeasurementId;if(ui.selectedDesignDeviceId)S.state.ui.selectedDesignDeviceId=ui.selectedDesignDeviceId;}
 
   function scrollContext(route){
     const ui=S.state.ui||{},id=String(route||ui.route||'');
@@ -92,17 +92,6 @@
 
 
   /* Render is intentionally synchronous: state changes produce one complete DOM view. */
-  /**
-   * Render the executable UI contract inside the application shell.
-   * Never iframe ui-kit.html: browsers give sibling file:// documents opaque
-   * origins, which prevents their CSS/JS assets from loading when framed.
-   */
-  function renderUiKit() {
-    if(!LF.UIKitInline||!LF.UIKitInline.render)throw new Error('Inline UI Kit renderer is unavailable.');
-    return LF.UIKitInline.render();
-  }
-
-
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
   function renderModelStatus(){
@@ -110,14 +99,6 @@
     const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider))),displayModel=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(settings.provider,settings.model):settings.model;
     host.classList.toggle('available',ready);host.classList.toggle('unavailable',!ready);
     detail.textContent=ready?displayModel:'Not configured';host.title=ready?'AI model available: '+displayModel:'Configure the AI provider in Settings';
-  }
-
-  function renderTopbarContext(){
-    const host=document.getElementById('topbarContext');if(!host)return;
-    if(S.state.ui.route!=='ui-kit'){host.hidden=true;host.innerHTML='';return;}
-    host.hidden=false;
-    host.innerHTML='<div class="topbar-search"><label class="sr-only" for="uiKitGlobalSearch">Search UI patterns</label><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" placeholder="Search patterns…" value="'+C.escapeHtml(S.state.ui.uiKitQuery||'')+'"></div><label class="sr-only" for="uiKitGlobalFilter">Pattern family</label><select class="select topbar-filter" id="uiKitGlobalFilter"><option value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option><option value="data">Scientific data</option><option value="ai">AI & actions</option><option value="system">System pages</option></select><span class="topbar-result-count" id="uiKitGlobalCount" aria-live="polite">Loading…</span>';
-    document.getElementById('uiKitGlobalFilter').value=S.state.ui.uiKitFilter||'all';
   }
 
   function applyUiKitFilter(){
@@ -141,16 +122,15 @@
     try{captureScrollableState(main,renderedScrollContext||scrollContext(previousRoute));}catch(err){Log.warn('render.scroll-capture-skipped',{route:previousRoute,error:err});}
     document.querySelectorAll('.nav-link[data-route]').forEach(function(a){const navRoute=a.dataset.route;const active=navRoute===S.state.ui.route;a.classList.toggle('active',active);});
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.ui.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
-    renderTopbarContext();
     renderModelStatus();
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),toggle=document.getElementById('assistantToggle');if(shell)shell.classList.toggle('assistant-closed',!S.state.ui.assistantOpen);if(assistant)assistant.hidden=!S.state.ui.assistantOpen;if(toggle){const assistantLabel=S.state.ui.assistantOpen?'Hide assistant':'Assistant';toggle.setAttribute('aria-pressed',S.state.ui.assistantOpen?'true':'false');toggle.innerHTML=(LF.Icons?LF.Icons.icon('message-square'):'')+'<span>'+assistantLabel+'</span>';}
-    let html='';try{if(S.state.ui.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.ui.route==='experiment-design')html=renderDesign();else if(S.state.ui.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.ui.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.ui.route==='logs')html=LF.LogsPage.render();else if(S.state.ui.route==='documentation')html=LF.DocsPage.render();else if(S.state.ui.route==='ui-kit')html=renderUiKit();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.ui.route,error:err});html=pageFailureHtml(S.state.ui.route,err);}
+    let html='';try{if(S.state.ui.route==='experiment-import')html=LF.ImportPage.render(S.state);else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.state);else if(S.state.ui.route==='experiment-design')html=renderDesign();else if(S.state.ui.route==='cabinet')html=LF.CabinetPage.render();else if(S.state.ui.route==='experiment-export')html=LF.ExportPage.render(S.state);else if(S.state.ui.route==='documentation')html=LF.DocsPage.render();else html=LF.SettingsPage.render();}catch(err){Log.error('render.page-failed',{route:S.state.ui.route,error:err});html=pageFailureHtml(S.state.ui.route,err);}
     main.innerHTML=html;
     try{renderPageContext();}catch(err){Log.warn('render.page-context-skipped',{route:S.state.ui.route,error:err});}
     try{C.bindFieldLabels(main);}catch(err){Log.warn('render.labels-skipped',{route:S.state.ui.route,error:err});}
-    if(S.state.ui.route==='ui-kit')try{applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
+    if(S.state.ui.route==='settings'&&S.state.ui.settingsSection==='ui-kit')try{const filter=document.getElementById('uiKitGlobalFilter');if(filter)filter.value=S.state.ui.uiKitFilter||'all';applyUiKitFilter();}catch(err){Log.warn('render.ui-kit-filter-skipped',{error:err});}
     if(S.state.ui.route==='documentation'&&LF.DocsPage)try{LF.DocsPage.apply(main);}catch(err){Log.warn('render.documentation-filter-skipped',{error:err});}
-    if(S.state.ui.route==='logs'&&LF.LogsPage&&LF.LogsPage.bind)try{LF.LogsPage.bind(main);}catch(err){Log.warn('render.logs-bind-skipped',{error:err});}
+    if(S.state.ui.route==='settings'&&S.state.ui.settingsSection==='diagnostics'&&LF.LogsPage&&LF.LogsPage.bind)try{LF.LogsPage.bind(main);}catch(err){Log.warn('render.logs-bind-skipped',{error:err});}
     if(!renderedRoute||routeChanged)main.scrollTop=0;else main.scrollTop=mainScrollTop;
     renderedRoute=S.state.ui.route;renderedScrollContext=currentContext;
     if(!routeChanged&&!contextChanged)try{restoreScrollableState(main,currentContext);}catch(err){Log.warn('render.scroll-restore-skipped',{route:S.state.ui.route,error:err});}
