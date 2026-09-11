@@ -111,7 +111,7 @@
     const title=PS.routeTitle?PS.routeTitle(route):'Current page';
     const message=C.escapeHtml(error&&error.message||String(error||'Unknown rendering error'));
     const canRebuild=hasExperiment()&&['experiment-results','experiment-design','experiment-export'].includes(route);
-    return '<section class="page page-error-recovery"><div class="notice danger"><strong>'+C.escapeHtml(title)+' could not be rendered.</strong><span>'+message+'</span></div><section class="panel"><div class="panel-head"><div><span class="eyebrow">Recovery</span><h2 class="h2">Fix this page here</h2><div class="meta">LabFlow will not send you back to Upload unless the source ZIP itself is missing.</div></div></div><div class="panel-body"><div class="row-wrap"><button type="button" class="button primary" data-retry-page>Retry page</button>'+(canRebuild?'<button type="button" class="button" data-rebuild-derived>Rebuild derived data</button>':'')+'<button type="button" class="button" data-route="logs">Open logs</button></div></div></section></section>';
+    return '<section class="page page-error-recovery"><div class="notice danger"><strong>'+C.escapeHtml(title)+' could not be rendered.</strong><span>'+message+'</span></div><section class="panel"><div class="panel-head"><div><span class="eyebrow">Recovery</span><h2 class="h2">Fix this page here</h2><div class="meta">LabFlow will not send you back to Upload unless the source ZIP itself is missing.</div></div></div><div class="panel-body"><div class="row-wrap"><button type="button" class="button primary" data-retry-page>Retry page</button>'+(canRebuild?'<button type="button" class="button" data-rebuild-derived>Rebuild derived data</button>':'')+'<button type="button" class="button" data-open-diagnostics>Open diagnostics</button></div></div></section></section>';
   }
 
   function render() {
@@ -273,9 +273,10 @@
         const openDesignExperiment=e.target.closest('[data-open-design-experiment]');if(openDesignExperiment){S.state.ui.selectedDesignDeviceId=openDesignExperiment.dataset.openDesignExperiment;activateDesignProposal(S.state.ui.selectedDesignDeviceId);S.setRoute('experiment-design');return;}
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.ui.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.ui.selectedDesignDeviceId);render();return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.ui.settingsSection=settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0;return;}
+        if(e.target.closest('[data-open-diagnostics]')){S.state.ui.settingsSection='diagnostics';S.setRoute('settings');return;}
         if(e.target.closest('#openNomadSettings')){S.state.ui.settingsSection='nomad';S.setRoute('settings');return;}
         if(e.target.closest('#uploadNomadStub')){LF.UI.message('Direct NOMAD upload is not implemented yet. The configured credentials were not used and no data was sent.','info','NOMAD upload');return;}
-        const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
+        const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}
         const findingFilter=e.target.closest('[data-finding-filter]');if(findingFilter){setFindingFilter(findingFilter.dataset.findingFilter,findingFilter);return;}
         const applyReview=e.target.closest('[data-apply-review-proposal]');if(applyReview){
           const idx=Number(applyReview.dataset.applyReviewProposal),plan=ambiguityPlan(),p=plan&&plan.proposals&&plan.proposals[idx];

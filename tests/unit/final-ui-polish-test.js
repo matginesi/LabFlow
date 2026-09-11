@@ -59,9 +59,9 @@ module.exports=function(t){
     assert(feedback.includes('totem-toast'),false,'retired custom Totem clone');
   };
 
-  t['Detect and Save & test use the canonical Action Totem']=function(){
-    assert(settings.includes("startProviderActivity('Detect AI provider'"),true,'Detect opens Action Totem');
-    assert(settings.includes("startProviderActivity('Save & test AI provider'"),true,'Save & test opens Action Totem');
+  t['Check and Save & test use the canonical Action Totem']=function(){
+    assert(settings.includes("startProviderActivity('Check AI connection'"),true,'Check opens Action Totem');
+    assert(settings.includes("startProviderActivity('Save & test AI connection'"),true,'Save & test opens Action Totem');
     assert(settings.includes('finishProviderActivity({'),true,'provider checks finish in Action Totem');
     assert(settings.includes('failProviderActivity(error'),true,'provider checks fail in Action Totem');
   };
@@ -72,21 +72,21 @@ module.exports=function(t){
     assert(logger.includes("parts.push('error=' + message)"),true,'error message is visible without expanding Object');
   };
 
-  t['Provider detection runs only from explicit Detect; connection test stays minimal']=function(){
+  t['Provider discovery runs only from explicit Check; connection test stays minimal']=function(){
     assert(settings.includes('function scheduleModelDetection(options)'),false,'no settings-open scheduler');
     assert(app.includes("e.target.id==='aiModel'||e.target.id==='aiEndpoint'"),false,'field changes do not contact provider');
     assert(settings.includes('await detectModel({silent:true})'),false,'connection test must not trigger model detection');
-    assert(settingsPage.includes('Detect validates this connection and refreshes the provider model list.'),true,'shared Detect policy is visible');
+    assert(settingsPage.includes('Check the connection to refresh the available models.'),true,'shared connection-check policy is visible');
     assert(settings.includes("Log.error('connection-test.failed'"),true,'connection failures are always logged');
     assert(settings.includes('python tools/serve_static.py'),false,'no Python server requirement in runtime guidance');
   };
 
   t['Provider settings expose portable thinking policy and rich connection diagnostics']=function(){
     assert(settingsPage.includes('id="aiThinkingMode"'),true,'thinking policy selector');
-    assert(settingsPage.includes('Follow each Action'),true,'Action-owned default');
+    assert(settingsPage.includes('Automatic is recommended.'),true,'automatic reasoning policy is explained simply');
     assert(settingsPage.includes('id="aiConnectivitySummary"'),true,'compact connection diagnostics');
-    assert(settings.includes('connection verified with'),true,'round-trip success message');
-    assert(settingsPage.includes('Action/global off/on are preferences: LabFlow never forces reasoning off when the selected model or routed endpoint requires it.'),true,'thinking policy is explained');
+    assert(settings.toLowerCase().includes('connection verified with'),true,'round-trip success message');
+    assert(settingsPage.includes('selected model may still require its own reasoning mode'),true,'reasoning caveat remains available without developer jargon');
   };
 
   t['Action totem displays a readable llama.cpp model name without changing the request model id']=function(){

@@ -154,6 +154,7 @@ AI is explicit and optional. It may:
 
 - resolve semantic ambiguity by proposal;
 - complete missing qualitative Design content by reviewable proposal;
+- bulk Design completion reuses the same per-experiment inference Action, verifies persistence for each target, and preserves pending/error states truthfully when a run stops or fails;
 - interpret deterministic Results;
 - compare selected Results groups;
 - answer read-only questions.

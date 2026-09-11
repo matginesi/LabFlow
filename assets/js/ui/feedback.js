@@ -373,7 +373,7 @@
     if (outputState) {
       outputState.textContent = activity.status === 'error'
         ? 'Full diagnostic detail'
-        : activity.status === 'complete' ? 'Complete response'
+        : activity.status === 'complete' ? 'Final response'
           : activity.stream && activity.stream.active ? 'Streaming · ' + Math.round(Number(activity.stream.tokens)||0) + ' output tok'
             : 'Waiting for response';
     }
@@ -422,7 +422,7 @@
     const progressLabel = activity.status === 'error'
       ? progressPercent + '% · Failed'
       : activity.status === 'complete'
-        ? '100% · Complete'
+        ? progressPercent + '% · ' + (activity.progressLabel || 'Complete')
         : progressPercent + '%' + (activity.progressLabel ? ' · ' + activity.progressLabel : activity.indeterminate ? ' · Waiting' : '');
 
     shade.hidden = false;
@@ -655,13 +655,16 @@
     activity.status = 'complete';
     if(activity.stream)activity.stream=Object.assign({},activity.stream,{active:false,status:'complete'});
     stopActivityClock();
-    activity.steps.forEach(function (step) {
-      if (step.status === 'active' || step.status === 'pending') step.status = 'done';
-    });
+    if (input.preserveStepStates !== true) {
+      activity.steps.forEach(function (step) {
+        if (step.status === 'active' || step.status === 'pending') step.status = 'done';
+      });
+    }
     activityUpdate({
       stage:input.stage || 'Complete',
       message:input.message || 'Action completed.',
-      progress:1,
+      progress:input.progress != null ? input.progress : 1,
+      progressLabel:input.progressLabel != null ? input.progressLabel : 'Complete',
       indeterminate:false,
       cancellable:false,
       details:input.details || {},

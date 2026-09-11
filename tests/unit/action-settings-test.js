@@ -96,7 +96,7 @@ module.exports=function(t,LF){
   };
 
   t['Z.AI settings use the shared fail-closed Detect and Action Totem semantics']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('API key required. Detect will validate')>=0,'missing key is explicit before Detect');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
+    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('Add the API key, then check the connection.')>=0,'missing key is explained before the connection check');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
   };
 
 
@@ -126,8 +126,8 @@ module.exports=function(t,LF){
     LF.State={state:{ui:{settingsSection:'nomad'},experiment:{meta:{sourceName:''}}}};
     const html=LF.SettingsPage.render();
     assert(html.indexOf('<strong>NOMAD</strong>')>=0,'NOMAD Settings navigation item missing');
-    assert(html.indexOf('Upload not implemented')>=0,'stub status missing');
-    assert(html.indexOf('Saving these values performs no network request')>=0,'local-only warning missing');
+    assert(html.indexOf('Local export ready')>=0,'local NOMAD export status missing');
+    assert(html.indexOf('Saving these values does not upload anything.')>=0,'local-only warning missing');
     LF.Storage.saveNomadSettings({instance:'Test NOMAD',apiEndpoint:'https://nomad.example/api/v1',username:'researcher'});
     LF.Storage.saveNomadToken('secret-token');
     assert(LF.Storage.getNomadSettings().instance==='Test NOMAD','NOMAD instance persisted');
@@ -152,7 +152,7 @@ module.exports=function(t,LF){
   t['Settings exposes one Actions manager and no split AI helper surface']=function(){
     actionSettingsState('results.compare');
     const html=LF.SettingsPage.render();
-    assert(html.indexOf('>Actions<')>=0,'Actions tab missing');
+    assert(html.indexOf('>AI tools<')>=0,'AI tools tab missing');
     assert(html.indexOf('AI Helpers')<0,'AI Helpers surface must not exist');
     assert(html.indexOf('Operations Workshop')<0,'Operations Workshop surface must not exist');
     assert(html.indexOf('Compare selected result groups')>=0||html.indexOf('Compare with AI')>=0,'Results compare Action missing from manager');

@@ -90,6 +90,16 @@ module.exports=function(t,LF){
     assert(env.finishes[0].message==='Action completed.','totem should report a normal completed suggestion');
   };
 
+  t['Design inference cannot report success unless the target suggestion was actually stored']=async function(){
+    const env=loadUi(function(id){return Promise.resolve({status:'done',actionId:id,aiOutput:{summary:'Unstored suggestion'},result:{stored:true},requestMeta:{}});});
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
+    LF.ActionData.clear(exp,'design.infer');
+    const out=await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
+    assert(out.status==='error'&&out.code==='DESIGN_PROPOSAL_NOT_STORED','a done runner result without a stored target proposal must become an Action error');
+    assert(LF.ActionData.status(exp,'design.infer','d1').state==='error','missing stored proposal must leave the target experiment retryable');
+    assert(env.finishes.length===0&&env.errors.length===1,'totem must not report completion when persistence did not happen');
+  };
+
   t['Design inference failure becomes a retryable per-experiment state']=async function(){
     const env=loadUi(function(){return Promise.resolve({status:'error',actionId:'design.infer',message:'provider failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});});
     const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
@@ -119,6 +129,25 @@ module.exports=function(t,LF){
     assert(calls[0].deviceId==='d1'&&calls[1].deviceId==='d2','each experiment gets its own Action context');
     assert(LF.ActionData.status(exp,'design.infer','d1').state==='error'&&LF.ActionData.status(exp,'design.infer','d2').state==='error','failures are isolated per experiment');
     assert(env.finishes.length===1,'sequence completes its own totem');
+    assert(env.finishes[0].preserveStepStates===true,'sequence totem must preserve per-experiment success/error states');
+    assert(env.finishes[0].progressLabel==='2 need retry','mixed/failed completion must not be labelled as universally complete');
+  };
+
+  t['Design complete-all retries incomplete experiments previously marked as error']=async function(){
+    const calls=[];
+    loadUi(function(id,cb){
+      calls.push(cb.params.deviceId);
+      return Promise.resolve({status:'error',actionId:id,message:'still failed',failedStep:'infer',code:'NETWORK_ERROR',requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[
+      {id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}},
+      {id:'d2',name:'D2',sampleNames:[],solutionIds:[],stack:[],process:{}}
+    ]};
+    LF.ActionData.clear(exp,'design.infer');
+    LF.ActionData.setStatus(exp,'design.infer','d1',{state:'error',message:'previous failure'});
+    const out=await LF.ActionUI.runSequence('design-all',{dataset:{}});
+    assert(out&&out.failed===2,'previous errors remain part of the complete-all queue');
+    assert(calls.length===2&&calls[0]==='d1'&&calls[1]==='d2','complete-all must retry an errored incomplete experiment instead of forcing manual retry');
   };
 
   t['Design complete-all preserves earlier successes and stops after first provider rate limit']=async function(){
@@ -142,6 +171,7 @@ module.exports=function(t,LF){
     assert(LF.ActionData.status(exp,'design.infer','d2').state==='idle','throttled experiment returns to pending state');
     assert(!LF.ActionData.status(exp,'design.infer','d3')&&!LF.ActionData.status(exp,'design.infer','d4'),'future experiments remain untouched');
     assert(env.finishes.length===1&&/No further requests were sent/.test(String(env.finishes[0].response||'')),'totem explains stop');
+    assert(env.finishes[0].preserveStepStates===true&&env.finishes[0].progress<1&&/pending/.test(env.finishes[0].progressLabel),'paused totem must keep pending experiments visibly pending');
   };
 
   t['Design complete-all continues after an exhausted malformed output and stores later successes']=async function(){

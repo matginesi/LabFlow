@@ -131,7 +131,8 @@ module.exports = function (t, LF) {
     const seen = [];
     const unsub = S.subscribe(function () { seen.push(1); });
     S.setRoute('logs');
-    assert(S.state.ui.route, 'logs', 'route routed');
+    assert(S.state.ui.route, 'settings', 'removed Logs route resolves to Settings');
+    assert(S.state.ui.settingsSection, 'diagnostics', 'removed Logs route opens Diagnostics');
     assert(seen.length >= 1, true, 'notify fired');
     unsub();
     const n = seen.length;

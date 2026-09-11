@@ -94,6 +94,8 @@ execution         → how it runs and which step is the semantic result
 
 AI structured output is validated before any proposal/annotation is stored. `design.infer` must cover every Design domain that is currently missing; stack coverage uses the same completeness predicate as the Design page, so a partial architecture stays inside the bounded retry flow instead of being stored as a successful suggestion. Accept/Accept all re-check the resulting Design state before labelling an experiment accepted.
 
+`Complete all missing with AI` is only a queue over that same `design.infer` Action. Each experiment is executed and persisted independently, previous failures remain retryable from the same bulk control, and the Action Totem mirrors the real per-experiment state. A run cannot be reported as successful unless a proposal exists for that exact experiment; rate limits stop further requests and leave untouched experiments pending for the next run.
+
 ## Data Console
 
 Open DevTools and run:
