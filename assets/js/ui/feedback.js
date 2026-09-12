@@ -17,6 +17,58 @@
   let hideTimer = null;
   let activityFrame = 0;
   let activityTimer = null;
+  let modalSession = null;
+
+  function modalFocusable(dialog) {
+    if (!dialog) return [];
+    return Array.from(dialog.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter(function (el) {
+      return !el.hidden && el.getAttribute('aria-hidden') !== 'true' && (el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+    });
+  }
+
+  function closeModalSurface(shade, options) {
+    if (!shade) return;
+    const session = modalSession && modalSession.shade === shade ? modalSession : null;
+    if (session) {
+      document.removeEventListener('keydown', session.keyHandler, true);
+      modalSession = null;
+    }
+    shade.hidden = true;
+    shade.removeAttribute('data-modal-open');
+    if (!(options && options.restoreFocus === false) && session && session.previousFocus && session.previousFocus.isConnected && session.previousFocus.focus) {
+      window.setTimeout(function () { session.previousFocus.focus(); }, 0);
+    }
+  }
+
+  function openModalSurface(shade, options) {
+    options = options || {};
+    if (!shade) return;
+    if (modalSession && modalSession.shade !== shade) closeModalSurface(modalSession.shade);
+    const dialog = options.dialog || shade.querySelector('[role="dialog"]') || shade.firstElementChild;
+    const previousFocus = options.previousFocus || document.activeElement;
+    const keyHandler = function (event) {
+      if (event.key === 'Escape' && options.escape !== false) {
+        event.preventDefault();
+        if (typeof options.onEscape === 'function') options.onEscape();
+        else closeModalSurface(shade);
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const focusable = modalFocusable(dialog);
+      if (!focusable.length) { event.preventDefault(); if (dialog.focus) dialog.focus(); return; }
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    shade.hidden = false;
+    shade.setAttribute('data-modal-open', 'true');
+    modalSession = { shade: shade, dialog: dialog, previousFocus: previousFocus, keyHandler: keyHandler };
+    document.addEventListener('keydown', keyHandler, true);
+    window.setTimeout(function () {
+      const preferred = options.focus || modalFocusable(dialog)[0] || dialog;
+      if (preferred && preferred.focus) { if (preferred === dialog && !preferred.hasAttribute('tabindex')) preferred.setAttribute('tabindex', '-1'); preferred.focus(); }
+    }, 0);
+  }
 
   // Timer refreshes must not rebuild disclosures: doing so closes <details>,
   // loses selection and causes flicker. The last rendered payload is remembered
@@ -64,9 +116,7 @@
   let confirmPending=null;
   function closeConfirmation(result){
     if(!confirmPending)return;const pending=confirmPending;confirmPending=null;
-    const shade=byId('messageShade');if(shade)shade.hidden=true;
-    document.removeEventListener('keydown',pending.keyHandler,true);
-    if(pending.previousFocus&&pending.previousFocus.isConnected&&pending.previousFocus.focus)pending.previousFocus.focus();
+    const shade=byId('messageShade');if(shade)closeModalSurface(shade);
     Log.info('confirm', {message:pending.message.slice(0,300),result:!!result});pending.resolve(!!result);
   }
 
@@ -76,12 +126,12 @@
     const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
     if(!shade||!title||!body||!confirm||!cancel)return Promise.resolve(false);
     const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
-    confirm.className='button '+(options.danger?'danger':'primary');shade.hidden=false;
+    confirm.className='button '+(options.danger?'danger':'primary');
     return new Promise(function(resolve){
-      const keyHandler=function(event){if(event.key==='Escape'){event.preventDefault();closeConfirmation(false);}else if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();closeConfirmation(true);}};
-      confirmPending={resolve:resolve,message:text(message),keyHandler:keyHandler,previousFocus:document.activeElement};document.addEventListener('keydown',keyHandler,true);
+      const previousFocus=document.activeElement;
+      confirmPending={resolve:resolve,message:text(message),previousFocus:previousFocus};
       confirm.onclick=function(){closeConfirmation(true);};cancel.onclick=function(){closeConfirmation(false);};shade.onclick=function(event){if(event.target===shade)closeConfirmation(false);};
-      window.setTimeout(function(){confirm.focus();},0);
+      openModalSurface(shade,{focus:confirm,previousFocus:previousFocus,onEscape:function(){closeConfirmation(false);}});
     });
   }
 
@@ -425,7 +475,7 @@
         ? progressPercent + '% · ' + (activity.progressLabel || 'Complete')
         : progressPercent + '%' + (activity.progressLabel ? ' · ' + activity.progressLabel : activity.indeterminate ? ' · Waiting' : '');
 
-    shade.hidden = false;
+    if (shade.hidden) openModalSurface(shade,{escape:false});
     shade.setAttribute('aria-busy', activity.status === 'running' ? 'true' : 'false');
     document.body.classList.add('activity-open');
     byId('activityTitle').textContent = activity.title || 'Working';
@@ -487,7 +537,7 @@
 
     const shade = byId('activityShade');
     if (shade) {
-      shade.hidden = true;
+      closeModalSurface(shade);
       shade.setAttribute('aria-busy', 'false');
     }
     document.body.classList.remove('activity-open');
@@ -776,6 +826,8 @@
   LF.UI = {
     message:message,
     confirmAction:confirmAction,
+    openModal:openModalSurface,
+    closeModal:closeModalSurface,
     activityStart:activityStart,
     activityUpdate:activityUpdate,
     activityFinish:activityFinish,

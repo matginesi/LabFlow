@@ -152,7 +152,7 @@ Start with:
 LabFlow remains a static vanilla-JS application. Serve it with any ordinary static web server when developing locally, for example:
 
 ```bash
-python3 -m http.server 8000 --bind 0.0.0.0
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. The browser POC defaults to OpenRouter (`openrouter/free`) because it works with the static GitHub Pages deployment; local model servers remain available through their dedicated adapters. AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
@@ -160,7 +160,7 @@ Reasoning preferences are capability-aware: LabFlow does not force reasoning off
 
 ## llama.cpp on the local network
 
-`labflow_engine.sh` launches `llama-server` on `0.0.0.0:8080` by default so another device on the same trusted LAN can reach it. The launcher also passes browser CORS origins when supported and prints the machine LAN/mDNS endpoints. Use `LABFLOW_CORS_ORIGINS` (or `--cors-origins`) to restrict access to the LabFlow page origin; on Fedora, allow the selected TCP port through `firewalld` if the launcher reports it blocked. In LabFlow Settings use the host/private IP that the **browser device** can actually resolve (for example `http://fedora.local:8080/v1` or `http://192.168.x.x:8080/v1`), not `127.0.0.1`.
+`labflow_engine.sh` launches `llama-server` on `127.0.0.1:8080` by default; use `--lan` explicitly when another device must connect so another device on the same trusted LAN can reach it. The launcher also passes browser CORS origins when supported and prints the machine LAN/mDNS endpoints. Use `LABFLOW_CORS_ORIGINS` (or `--cors-origin`) for one exact LabFlow page origin, or `--github-pages` for the public POC; on Fedora, allow the selected TCP port through `firewalld` if the launcher reports it blocked. On the same machine use `http://127.0.0.1:8080/v1` and open the local LabFlow page as `http://127.0.0.1:<port>` or `http://localhost:<port>` — never browse to `0.0.0.0`. On another device use the host/private IP that the **browser device** can resolve (for example `http://fedora.local:8080/v1` or `http://192.168.x.x:8080/v1`).
 
 ## AI provider console
 

@@ -18,7 +18,7 @@ module.exports=function(t){
     assert(feedback.includes("LF.ActionRunner.isRunning()"),true,'running ActionRunner exposes Stop even if caller omitted cancellable flag');
     assert(feedback.includes("cancel.textContent = activity.cancelling ? 'Stopping…' : 'Stop';"),true,'running Action uses explicit Stop label');
     assert(feedback.includes('else activityHide();'),true,'Escape closes terminal Action');
-    assert(feedback.includes("event.key==='Escape'"),true,'confirmation Escape handler');
+    assert(feedback.includes("event.key === 'Escape'")&&feedback.includes('openModalSurface'),true,'shared modal Escape handler');
     assert(app.includes("ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.ui.resultInspectorId"),true,'inspector Escape handler');
   };
   return t;

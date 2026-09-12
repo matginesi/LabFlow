@@ -2,13 +2,13 @@
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Log=LF.Logger?LF.Logger.scope('cabinet'):null;
 const KINDS={
-  material:{label:'Material',plural:'Materials',description:'Reusable device/material definition. No stock or quantity tracking.',fields:['materialClass','formula','purity','supplier','catalogNumber']},
-  chemical:{label:'Chemical',plural:'Chemicals',description:'Reusable solute, solvent, additive or reagent definition. No stock or quantity tracking.',fields:['chemicalRole','formula','purity','supplier','catalogNumber']},
-  solution:{label:'Solution',plural:'Solutions',description:'Reusable formulation snapshot for Design.',fields:['role','solutes','solvents','concentration','additives','preparation']},
-  substrate:{label:'Substrate',plural:'Substrates',description:'Reusable substrate definition and preparation notes.',fields:['material','treatment','dimensions']},
-  stack:{label:'Stack',plural:'Stacks',description:'Reusable ordered device-layer stack.',fields:['layers']},
-  protocol:{label:'Protocol',plural:'Protocols',description:'Reusable fabrication/process preset.',fields:['coating','annealing','atmosphere','notes']},
-  instrument:{label:'Instrument / Device',plural:'Instruments / Devices',description:'Reusable instrument/device reference, not an inventory record.',fields:['instrumentType','manufacturer','model','settings']}
+  material:{label:'Material',plural:'Materials',description:'A material you want to reuse by name, formula or supplier reference.',fields:['materialClass','formula','purity','supplier','catalogNumber']},
+  chemical:{label:'Chemical',plural:'Chemicals',description:'A reusable solute, solvent, additive or reagent reference.',fields:['chemicalRole','formula','purity','supplier','catalogNumber']},
+  solution:{label:'Formulation',plural:'Formulations',description:'A solution or precursor recipe you can apply to another Design.',fields:['role','solutes','solvents','concentration','additives','preparation']},
+  substrate:{label:'Substrate',plural:'Substrates',description:'A substrate and its reusable preparation or treatment.',fields:['material','treatment','dimensions']},
+  stack:{label:'Device stack',plural:'Device stacks',description:'An ordered layer stack you can reuse in another device Design.',fields:['layers']},
+  protocol:{label:'Process recipe',plural:'Process recipes',description:'A reusable coating, annealing and atmosphere recipe.',fields:['coating','annealing','atmosphere','notes']},
+  instrument:{label:'Instrument',plural:'Instruments',description:'A reusable instrument or device reference and its usual settings.',fields:['instrumentType','manufacturer','model','settings']}
 };
 function clean(v){return String(v==null?'':v).trim();}
 function arr(v){return Array.isArray(v)?v:[];}

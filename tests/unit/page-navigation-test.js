@@ -52,7 +52,7 @@ module.exports=function(t,LF,ctx){
     if(!app.includes("renderWithStableAnchor('.results-main-tabs')"))throw new Error('Results tab and mode switches must preserve their visible anchor');
     if(!app.includes("settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0"))throw new Error('Settings section switches must start the new utility context at the top');
     if(!app.includes("renderWithStableAnchor('.docs-workbench')"))throw new Error('Documentation topic switches must preserve their visible anchor');
-    if(!app.includes("renderWithStableAnchor('.cabinet-filter-tabs')"))throw new Error('Cabinet kind switches must preserve their visible anchor');
+    if(!app.includes("renderWithStableAnchor('.cabinet-library-tools')"))throw new Error('Cabinet library filter switches must preserve their visible anchor');
     if(!app.includes("if(!renderedRoute||routeChanged)main.scrollTop=0"))throw new Error('route changes must start the destination page at the top');
     if(!app.includes('main.scrollTop=mainScrollTop'))throw new Error('same-context rerenders must preserve the main workspace scroll');
     if(app.includes('nodes=[root]'))throw new Error('main document scroll must not be restored as local scroll memory');

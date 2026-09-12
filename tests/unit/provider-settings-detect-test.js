@@ -49,7 +49,7 @@ function installForm(LF,values){
 
 module.exports=function(t,LF){
   t['Detect uses the visible unsaved OpenRouter endpoint/key, discovers a model, then requires a real chat probe']=async function(){
-    localStorage.clear();localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:'https://saved.invalid/v1',model:'saved-model'}));
+    localStorage.clear();localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'removed-provider',endpoint:'https://saved.invalid/v1',model:'saved-model'}));
     const form=installForm(LF,{provider:'openrouter',endpoint:'https://visible.example/v1/chat/completions',apiKey:'visible-key',model:''});
     const oldAI=LF.AI,oldUI=LF.UI;let listArgs=null,probeArgs=null,events=[];
     LF.AI={
@@ -116,12 +116,12 @@ module.exports=function(t,LF){
   };
 
   t['Save & test does not persist visible settings when the live probe fails']=async function(){
-    localStorage.clear();LF.Storage.saveAiSettings({provider:'zai',endpoint:'https://saved.example/v1/chat/completions',model:'saved-model'});LF.Storage.saveApiKey('saved-key','zai');
+    localStorage.clear();LF.Storage.saveAiSettings({provider:'openai',endpoint:'https://saved.example/v1/chat/completions',model:'saved-model'});LF.Storage.saveApiKey('saved-key','openai',{endpoint:'https://saved.example/v1/chat/completions',remember:true});
     const form=installForm(LF,{provider:'openrouter',endpoint:'https://broken.example/v1/chat/completions',apiKey:'bad-key',model:'broken-model'}),button=makeElement('');button.textContent='Save & test';
     const oldAI=LF.AI,oldUI=LF.UI;let events=[];
     LF.AI={testConnection:async function(){const error=new Error('Failed to fetch');error.isNetwork=true;error.providerId='openrouter';error.phase='chat';throw error;}};
     LF.UI=activityUI(events);
-    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'zai','previous provider retained');assert(saved.endpoint,'https://saved.example/v1/chat/completions','previous endpoint retained');assert(saved.model,'saved-model','previous model retained');assert(LF.Storage.getApiKey('zai'),'saved-key','previous key retained');assert(!!lastEvent(events,'error'),true,'failure uses Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
+    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'openai','previous provider retained');assert(saved.endpoint,'https://saved.example/v1/chat/completions','previous endpoint retained');assert(saved.model,'saved-model','previous model retained');assert(LF.Storage.getApiKey('openai','https://saved.example/v1/chat/completions'),'saved-key','previous key retained');assert(!!lastEvent(events,'error'),true,'failure uses Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 

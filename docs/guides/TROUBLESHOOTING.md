@@ -52,7 +52,7 @@ LabFlow surfaces provider throttling and does not create hidden automatic reques
 
 `127.0.0.1` and `localhost` point to the device running the browser. From a phone, they point to the phone, not to the workstation. In **Settings → Connection**, use a LAN-resolvable host such as `http://fedora:8080/v1`, `http://fedora.local:8080/v1`, or the workstation private IP. The server must listen on a LAN interface and allow the LabFlow origin with CORS.
 
-For llama.cpp, bind `llama-server` with `--host 0.0.0.0` (or the intended interface) and configure `--cors-origins`. LM Studio must enable **Serve on Local Network** and CORS. Ollama must be exposed with `OLLAMA_HOST` and allow the LabFlow origin through `OLLAMA_ORIGINS`. If LabFlow is opened from an HTTPS host such as GitHub Pages, the browser may additionally require Local Network permission; if that browser cannot/does not allow HTTPS → HTTP LAN access, use an HTTPS model endpoint or a compatible local LabFlow origin.
+For llama.cpp on the same machine, keep the default `--host 127.0.0.1` with `--cors-origin localhost`. Use `--lan --cors-origin <exact LabFlow origin>` only when the browser runs on another device. Do not browse to `0.0.0.0`; it is a bind address, not a stable browser hostname. LM Studio must enable **Serve on Local Network** and CORS. Ollama must be exposed with `OLLAMA_HOST` and allow the LabFlow origin through `OLLAMA_ORIGINS`. If LabFlow is opened from an HTTPS host such as GitHub Pages, the browser may additionally require Local Network permission; if that browser cannot/does not allow HTTPS → HTTP LAN access, use an HTTPS model endpoint or a compatible local LabFlow origin.
 
 ## Local provider works but model name shows a path
 

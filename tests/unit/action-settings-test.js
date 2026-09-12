@@ -40,7 +40,6 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
     assert(LF.AIProviders.openai.modelSelect===true&&LF.AIProviders.openai.modelCatalogueRequired===true,'OpenAI Detect uses the official model catalogue');
     assert(LF.AIProviders.gemini.modelSelect===true&&LF.AIProviders.gemini.modelCatalogueRequired===true,'Gemini Detect uses the OpenAI-compatible model catalogue');
-    assert(LF.AIProviders.zai.modelSelect===true,'Z.AI Detect exposes the documented model snapshot');
     assert(LF.AIProviders.ollama.modelSelect===true,'Ollama Detect exposes discovered local models');
     assert(LF.AIProviders.lmstudio.modelSelect===true,'LM Studio Detect exposes discovered local models');
     assert(LF.AIProviders.llamacpp.modelSelect===true,'llama.cpp Detect exposes served local models');
@@ -51,17 +50,11 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.llamacpp.recommendedRuntime.parallelSlots===1,'llama.cpp LabFlow profile uses one server slot');
     assert(LF.AIProviders.llamacpp.recommendedRuntime.contextWindow===65536,'llama.cpp LabFlow profile uses a 65K runtime context');
     assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_effort==='none','llama.cpp reasoning-off mode disables reasoning effort');assert(LF.AIProviders.llamacpp.thinkingModes.off.chat_template_kwargs.enable_thinking===false,'llama.cpp reasoning-off mode disables template thinking when supported');assert(LF.AIProviders.llamacpp.supportsReasoningControl===true,'llama.cpp can stop ignored reasoning at runtime');
-    assert(LF.AIProviders.zai.remoteModelMetadata===false,'Z.AI Detect uses built-in metadata without remote catalogue probing');
     assert(LF.AIProviders.ollama.local===true&&LF.AIProviders.lmstudio.local===true&&LF.AIProviders.llamacpp.local===true,'local provider behavior is declared in the registry');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
-    assert(LF.AIProviders.zai.supportsStreamUsage!==true,'Z.AI must not receive undocumented stream_options');
-    assert(LF.AIProviders.zai.model==='glm-4.7-flash','Z.AI default model');
-    assert(!Object.prototype.hasOwnProperty.call(LF.AIProviders.zai,'rateLimit'),'Z.AI has no obsolete transport retry policy');
     assert(LF.AIProviders.lmstudio.optionalKey===true,'LM Studio can use its own optional API token');
     assert(LF.AIProviders.llamacpp.optionalKey===true,'llama.cpp can use an optional server API key');
     assert(LF.AIProviders.gemini.model==='gemini-3.7-flash','Gemini preset tracks the current OpenAI-compatible example model');
-    assert(LF.AIProviders.zai.requestDeadlineMs===180000,'Z.AI has a defensive provider-level request deadline');
-    assert(LF.AIProviders.zai.connectionTestMaxTokens===128,'Z.AI connection probe has enough output room for reasoning-capable GLM models');
   };
 
   t['fresh browser settings default to OpenRouter for the static POC']=function(){
@@ -82,22 +75,7 @@ module.exports=function(t,LF){
     localStorage.clear();
   };
 
-  t['Z.AI is one provider with the official General API, default Flash model and Detect catalogue']=function(){
-    const provider=LF.AIProviders.zai;
-    assert(provider.name==='Z.AI','provider display name');
-    assert(provider.endpoint==='https://api.z.ai/api/paas/v4/chat/completions','official General API endpoint');
-    assert(provider.model==='glm-4.7-flash','default remains free Flash');
-    assert(provider.modelSelect===true,'Detect-backed model select');
-    assert(provider.staticModelCatalogue===true,'documented static catalogue declared');
-    assert(provider.knownModels.includes('glm-4.7-flash'),'default model present in Detect catalogue');
-    assert(provider.supportsStreaming===false,'Z.AI uses the conservative direct non-streaming browser path');
-    assert(provider.remoteModelMetadata===false,'no undocumented remote model-list endpoint is probed');
-    assert(!Object.prototype.hasOwnProperty.call(provider,'endpointPresets'),'retired Coding Plan endpoint switch absent');
-  };
 
-  t['Z.AI settings use the shared fail-closed Detect and Action Totem semantics']=function(){
-    localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'zai',endpoint:LF.AIProviders.zai.endpoint,model:'glm-4.7-flash'}));localStorage.removeItem('labflow.ai.keys');localStorage.removeItem('labflow.ai.key');LF.State={state:{ui:{settingsSection:'provider'},experiment:{meta:{sourceName:''}}}};const html=LF.SettingsPage.render();assert(html.indexOf('id="aiModel"')>=0,'Z.AI model input rendered');assert(html.indexOf('id="aiModelSelect"')>=0&&html.indexOf('aria-label="Z.AI model"')>=0,'Z.AI Detect model select rendered');assert(html.indexOf('id="detectProviderModel"')>=0,'Z.AI uses the shared Detect control');assert(html.indexOf('Add the API key, then check the connection.')>=0,'missing key is explained before the connection check');assert(html.indexOf('settings-provider-feedback')<0,'no inline provider feedback clone');assert(html.indexOf('GLM Coding Plan')<0,'retired access mode absent');localStorage.removeItem('labflow.ai.settings');
-  };
 
 
 
@@ -111,14 +89,6 @@ module.exports=function(t,LF){
     assert(detectSource.indexOf('providerFeedback')<0&&testSource.indexOf('providerFeedback')<0,'provider operations must not use an inline feedback clone');
   };
 
-  t['Z.AI saved endpoint and model are not silently rewritten to provider defaults']=function(){
-    localStorage.removeItem('labflow.ai.settings');
-    LF.Storage.saveAiSettings({provider:'zai',endpoint:'https://proxy.example/v1/chat/completions',model:'glm-custom',temperature:0.3,thinkingMode:'off',streaming:false,inactivityTimeoutMs:45000,maxOutputTokensCap:2048});
-    const saved=LF.Storage.getAiSettings();
-    assert(saved.endpoint==='https://proxy.example/v1/chat/completions','custom Z.AI endpoint must survive storage');
-    assert(saved.model==='glm-custom','custom Z.AI model must survive storage');
-    localStorage.removeItem('labflow.ai.settings');
-  };
 
 
   t['NOMAD settings are explicit local-only preparation for the upload stub']=function(){
@@ -126,10 +96,10 @@ module.exports=function(t,LF){
     LF.State={state:{ui:{settingsSection:'nomad'},experiment:{meta:{sourceName:''}}}};
     const html=LF.SettingsPage.render();
     assert(html.indexOf('<strong>NOMAD</strong>')>=0,'NOMAD Settings navigation item missing');
-    assert(html.indexOf('Local export ready')>=0,'local NOMAD export status missing');
-    assert(html.indexOf('Online upload is not enabled in this build.')>=0&&html.indexOf('do not upload anything')>=0,'local-only warning missing');
+    assert(html.indexOf('Export ready')>=0,'local NOMAD export status missing');
+    assert(html.indexOf('this prototype does not upload data yet')>=0&&html.indexOf('No network')<0,'future NOMAD profile copy missing');
     LF.Storage.saveNomadSettings({instance:'Test NOMAD',apiEndpoint:'https://nomad.example/api/v1',username:'researcher'});
-    LF.Storage.saveNomadToken('secret-token');
+    LF.Storage.saveNomadToken('secret-token',{remember:true,endpoint:'https://nomad.example/api/v1'});
     assert(LF.Storage.getNomadSettings().instance==='Test NOMAD','NOMAD instance persisted');
     assert(LF.Storage.getNomadToken()==='secret-token','NOMAD token persisted separately');
     assert(JSON.stringify(LF.Storage.getExportSettings()).indexOf('secret-token')<0,'token must not leak into export settings');

@@ -1,19 +1,23 @@
 ---
 title: Scientific Knowledge Base
 section: User guides
-summary: Manage sourced reference knowledge used by the Assistant and Design inference without turning it into experiment evidence.
+summary: Sourced scientific reference knowledge stored as portable JSONL, without a separate database service.
 order: 32
 ---
-
 # Scientific Knowledge Base
 
-LabFlow has a deliberately small reference Knowledge Base (KB). It provides sourced scientific background to `assistant.chat` and `design.infer` without adding a backend, vector database, embeddings or a second scientific data model.
+LabFlow's Knowledge Base (KB) provides sourced scientific background to the Assistant and Design inference without adding a backend, vector database, embeddings service or a second scientific data model.
 
-## Bundled starter corpus
+The researcher-facing model is intentionally simple:
 
-The default distribution ships with a curated starter corpus focused on perovskite photovoltaics and JV interpretation. It covers materials and selective contacts, n-i-p / p-i-n architectures, formulation and process families, photovoltaic concepts, and common diagnostic patterns.
+- **Built-in library** — curated, read-only scientific references shipped with LabFlow.
+- **My JSONL library** — references added or imported by the researcher and stored as plain JSON Lines.
 
-The bundled corpus intentionally avoids presenting recipe-specific spin speeds, concentrations, annealing temperatures, layer thicknesses or treatment times as universal recommendations. Such values depend strongly on material system, precursor chemistry, substrate, equipment and literature protocol. Entries therefore emphasize reusable relationships, qualitative constraints and cautions, with traceable literature sources.
+## Bundled scientific library
+
+The default distribution contains a curated starter corpus focused on perovskite photovoltaics and JV interpretation. It covers device architectures, materials and precursor chemistry, formulations, process families, photovoltaic measurements, stability concepts and common diagnostic patterns.
+
+The bundled corpus avoids presenting recipe-specific spin speeds, concentrations, annealing temperatures, layer thicknesses or treatment times as universal recommendations. Such values depend on chemistry, substrate, equipment and literature protocol. Entries emphasize reusable relationships and cautions with traceable literature sources.
 
 ## What belongs in the KB
 
@@ -21,12 +25,44 @@ Use it for reusable reference knowledge such as:
 
 - materials and their qualitative roles;
 - device architectures and layer-order conventions;
-- formulation families and qualitative chemistry;
-- fabrication process families;
-- diagnostic relationships (for example plausible causes of a low fill factor);
+- formulation and solvent families;
+- fabrication and measurement process families;
+- diagnostic relationships;
 - scientific concepts, terminology and cautions.
 
 Do **not** use the KB to record what a particular experiment actually used or measured. Those facts belong to ExperimentData/source evidence or, for reusable laboratory resources, the Lab Cabinet.
+
+## My JSONL library
+
+Custom entries are persisted as JSON Lines (JSONL) under the LabFlow browser origin: **one complete knowledge reference per line**. There is no database server and no outer JSON wrapper.
+
+Settings → Knowledge Base exposes the file workflow directly:
+
+- **Open JSONL** validates the complete file before merging it into the editable library;
+- **Save my JSONL** uses the browser's native save-file dialog when available and otherwise downloads the same JSONL;
+- **Download full library** exports built-in and custom records together for inspection or archival use.
+
+Import is fail-closed: malformed JSON reports the exact failing line, duplicate IDs in one file are rejected, input size and entry count are bounded, and built-in IDs are ignored instead of being silently duplicated into the custom library.
+
+The source-controlled `knowledge/kb.jsonl` uses exactly the same one-object-per-line format and is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow also works without a runtime fetch. A selected set of canonical user guides under `docs/guides/` is projected into read-only `guide.*` records during the build.
+
+### JSONL example
+
+```json
+{"id":"material.sno2","kind":"material","title":"SnO2","status":"active","summary":"…","sources":[{"title":"…","doi":"10.…"}]}
+```
+
+## Safe activation
+
+Entries may be saved as **Draft** without a source. Drafts are never sent to AI.
+
+A **Ready** entry requires:
+
+- a title;
+- a summary or at least one fact;
+- at least one source with a title and a traceable citation, DOI or `http(s)` URL.
+
+URLs are normalized to `http(s)` only. Text lengths, file size and collection sizes are bounded before persistence and before AI context construction.
 
 ## Provenance boundary
 
@@ -38,35 +74,7 @@ The priority is:
 4. sourced KB reference knowledge;
 5. general model inference.
 
-A KB entry never proves that the current experiment used a material, process or architecture. `design.infer` marks KB-supported proposals as `knowledge_reference`; they remain review-only until the researcher explicitly accepts them.
-
-## Persistence
-
-Custom KB entries are stored directly as JSON Lines (JSONL) in browser `localStorage` under the LabFlow origin: one normalized knowledge entry per line. They survive reloads and normal workspace resets, but clearing browser site data removes them. Use **Settings → Knowledge Base → Export custom JSONL** for backup/transfer.
-
-The source-controlled `knowledge/kb.jsonl` also uses one knowledge object per line and is compiled to `assets/js/knowledge/kb-bundle.js` so LabFlow continues to work when opened directly from `file://`. During that build, a small allowlist of canonical user guides under `docs/guides/` is projected into read-only `guide.*` entries. Markdown remains the source of truth: rebuilding refreshes those entries, so app-help answers and their citations stay connected to the Documentation route. Bundled entries are read-only at runtime; copy one to create an editable custom entry.
-
-### JSONL format
-
-The baseline file, browser-local custom store and Settings backup all use the same record shape: **one complete knowledge entry per line**. There is no outer `entries` array or metadata wrapper. Blank lines are ignored; malformed lines fail with their line number instead of partially importing ambiguous data.
-
-```json
-{"id":"material.sno2","kind":"material","title":"SnO2","status":"active","summary":"…","sources":[{"title":"…","doi":"10.…"}]}
-```
-
-`localStorage` contains custom entries only; bundled records continue to come from the source-controlled JSONL/bundle. The current contract is JSONL only: wrapper objects and alternate schema versions are rejected instead of migrated implicitly.
-
-## Safe activation
-
-Entries may be saved as `draft` without a source. Drafts are never sent to AI.
-
-An `active` entry must have:
-
-- a title;
-- a summary or at least one fact;
-- at least one source with a title and a traceable citation, DOI or `http(s)` URL.
-
-URLs are normalized to `http(s)` only. Text lengths and collection sizes are bounded before persistence and before AI context construction.
+A KB entry never proves that the current experiment used a material, process or architecture. `design.infer` marks KB-supported proposals as reference knowledge; they remain review-only until the researcher explicitly accepts them.
 
 ## Assistant citations
 
@@ -80,7 +88,7 @@ LabFlow resolves only IDs that actually exist in the current KB and renders the 
 
 ## Retrieval
 
-Retrieval is deterministic lexical ranking over title, aliases, tags, summary, facts and cautions. Only validated active entries are eligible. The context builder sends a small bounded set of relevant entries to AI; the full KB is never injected into every request.
+Retrieval is deterministic lexical ranking over title, aliases, tags, summary, facts and cautions. Only validated Ready entries are eligible. The context builder sends a small bounded set of relevant entries to AI; the full KB is never injected into every request.
 
 ## Adding source-controlled entries
 
@@ -90,4 +98,4 @@ Edit `knowledge/kb.jsonl`, keep stable IDs, then run:
 python tools/build_knowledge_bundle.py
 ```
 
-For ordinary researcher-managed entries, use the Settings page instead.
+For ordinary researcher-managed references, use the Settings page and My JSONL instead.

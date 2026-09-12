@@ -8,7 +8,7 @@ module.exports=function(t,LF){
   function reset(){localStorage.removeItem('labflow.knowledge');LF.KnowledgeBase.resetCustom();}
   t['Bundled Knowledge Base is populated from the JSONL source bundle']=function(){
     const stats=LF.KnowledgeBase.stats();
-    if(stats.bundled!==64)throw new Error('Expected 57 scientific and 7 documentation KB records, got '+stats.bundled);
+    if(stats.bundled!==95)throw new Error('Expected 88 scientific and 7 documentation KB records, got '+stats.bundled);
     const guide=LF.KnowledgeBase.search('getting started LabFlow upload ZIP',{kinds:['guide'],limit:8});
     if(!guide.some(function(x){return x.id==='guide.getting-started';}))throw new Error('Generated application guide is not retrievable');
     const tokenGuide=LF.KnowledgeBase.get('guide.ai-tokens-and-rate-limits'),facts=(tokenGuide&&tokenGuide.facts||[]).join(' ');
@@ -36,5 +36,19 @@ module.exports=function(t,LF){
   };
   t['Knowledge JSONL import reports the failing line']=function(){
     reset();let threw=false;try{LF.KnowledgeBase.importJsonl('{"id":"ok"}\nnot-json\n','merge');}catch(err){threw=/line 2/i.test(String(err.message));}if(!threw)throw new Error('Malformed JSONL must report its line number');
+  };
+
+  t['Knowledge JSONL import is bounded and skips bundled ids instead of shadowing them']=function(){
+    reset();
+    const bundled=LF.KnowledgeBase.get('concept.pce');if(!bundled)throw new Error('Bundled reference missing');
+    const row=JSON.stringify({id:'concept.pce',kind:'concept',title:'Attempted replacement',summary:'Must not shadow built-in.',status:'draft'});
+    const out=LF.KnowledgeBase.importJsonl(row,'merge');
+    if(out.imported!==0||out.skippedBuiltIn!==1)throw new Error('Bundled id must be skipped');
+    if(LF.KnowledgeBase.get('concept.pce').title!=='Power conversion efficiency')throw new Error('Bundled reference was shadowed');
+  };
+  t['Knowledge JSONL rejects duplicate explicit ids in one file']=function(){
+    reset();const row=JSON.stringify({id:'concept.dupe',kind:'concept',title:'Duplicate',summary:'Draft.',status:'draft'});let threw=false;
+    try{LF.KnowledgeBase.importJsonl(row+'\n'+row+'\n','merge');}catch(err){threw=/duplicate/i.test(String(err.message));}
+    if(!threw)throw new Error('Duplicate explicit JSONL ids must fail closed');
   };
 };

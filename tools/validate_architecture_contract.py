@@ -30,9 +30,10 @@ pos=[index.find(x) for x in order]
 if any(x < 0 for x in pos) or pos != sorted(pos):
     errors.append('architecture kernel script load order is invalid')
 
-build_match=re.search(r"window\.LABFLOW_BUILD='([^']+)'", index)
+build_info=(ROOT/'assets/js/build-info.js').read_text(encoding='utf-8') if (ROOT/'assets/js/build-info.js').exists() else ''
+build_match=re.search(r'window\.LABFLOW_BUILD=[\"\']([^\"\']+)[\"\']', build_info)
 if not build_match:
-    errors.append('index.html must declare LABFLOW_BUILD')
+    errors.append('assets/js/build-info.js must declare LABFLOW_BUILD')
 else:
     build=build_match.group(1)
     first_party_refs=re.findall(r'(?:src|href)="(assets/[^"]+)"', index)

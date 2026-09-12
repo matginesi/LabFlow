@@ -2,9 +2,23 @@
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
   function localProvider(providerId){const provider=LF.AIProviders&&LF.AIProviders[providerId];return provider?provider.local===true:['ollama','lmstudio','llamacpp'].includes(String(providerId||''));}
+  function pageHost(){try{return typeof location!=='undefined'?String(location.hostname||''):'';}catch(_){return'';}}
+  function pageOrigin(){try{return typeof location!=='undefined'?String(location.origin||''):'';}catch(_){return'';}}
+  function pagePort(){try{return typeof location!=='undefined'?String(location.port||''):'';}catch(_){return'';}}
+  function localPageHost(host){host=String(host||'').toLowerCase();return host==='localhost'||host==='0.0.0.0'||host==='::1'||/^127\./.test(host);}
+  function bindAddressOrigin(){return pageHost()==='0.0.0.0';}
+  function canonicalLocalPage(){const port=pagePort();return 'http://127.0.0.1'+(port?':'+port:'');}
+  function llamaCppGuidance(endpoint){
+    const target=String(endpoint||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().endpoint:'')||''),space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(target):'';
+    if(bindAddressOrigin())return 'Open LabFlow as '+canonicalLocalPage()+' (or localhost) instead of '+pageOrigin()+'. 0.0.0.0 is a server bind address and creates a different browser origin. On the same machine keep llama-server on 127.0.0.1 and use --cors-origin localhost.';
+    if(space==='loopback'&&localPageHost(pageHost()))return 'Confirm llama-server is running at the configured loopback endpoint. On the same machine keep --host 127.0.0.1 and use --cors-origin localhost; --lan is not required.';
+    if(space==='loopback'&&/^https:\/\/matginesi\.github\.io$/i.test(pageOrigin()))return 'The endpoint is on this browser device. Start the LabFlow launcher with --github-pages (or --cors-origin https://matginesi.github.io) and allow Local Network access if the browser asks.';
+    if(space==='loopback')return "127.0.0.1 points to the device running this browser. If llama-server runs on another computer, use that computer's .local name or private IP and start it with --lan plus --cors-origin "+(pageOrigin()||'<LabFlow origin>')+'.';
+    return 'Confirm llama-server is reachable at the configured address and allows exactly this LabFlow origin with CORS. Use --lan only when the browser is on another device.';
+  }
 
   function browserCorsHint(providerId){
-    if(['zai','openai','gemini'].includes(providerId))return'The browser did not expose an HTTP response. Check the provider browser/CORS policy for this origin; LabFlow intentionally uses direct browser requests and has no relay/backend fallback.';
+    if(['openai','gemini'].includes(providerId))return'The browser did not expose an HTTP response. Check the provider browser/CORS policy for this origin; LabFlow intentionally uses direct browser requests and has no relay/backend fallback.';
     if(providerId==='openrouter')return'If no HTTP status reached LabFlow, inspect browser network/CORS policy. If an HTTP 401/403 is present, fix the API key instead.';
     return'The browser did not expose an HTTP response. Check the endpoint, network path and CORS/origin policy.';
   }
@@ -13,7 +27,7 @@
     const provider=(LF.AIProviders&&LF.AIProviders[providerId])||null,name=provider&&provider.name?provider.name:'AI provider';
     if(localProvider(providerId)){
       const target=String(endpoint||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().endpoint:'')||''),space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(target):'',securePage=typeof location!=='undefined'&&location.protocol==='https:';
-      const providerHint=providerId==='lmstudio'?' Enable Serve on Local Network and CORS when LabFlow runs on another device.':providerId==='llamacpp'?' Start llama-server on a LAN interface (for example --host 0.0.0.0) and allow the LabFlow origin with CORS.':' Expose Ollama on the LAN with OLLAMA_HOST and allow the LabFlow origin with OLLAMA_ORIGINS.';
+      const providerHint=providerId==='lmstudio'?' Enable Serve on Local Network and CORS when LabFlow runs on another device.':providerId==='llamacpp'?' '+llamaCppGuidance(target):' Expose Ollama on the LAN with OLLAMA_HOST and allow the LabFlow origin with OLLAMA_ORIGINS.';
       const browserHint=securePage&&space==='local'?' If the browser asks for Local Network access, allow it; some browsers may still require an HTTPS endpoint or a compatible local origin.':'';
       const loopbackHint=space==='loopback'?' A loopback endpoint points to the device running this browser, not to another computer on the Wi-Fi/LAN.':'';
       return label+' ended before LabFlow could read an HTTP response from '+name+'. Check network reachability, bind address and browser-origin policy.'+loopbackHint+providerHint+browserHint;
@@ -25,13 +39,12 @@
     const c=String(code||'');
     if(status===401||status===403)return' Check provider credentials and permissions.';
     if(status===404)return' Check the endpoint path and model name.';
-    if(c==='1304')return' The provider daily quota is exhausted; retrying the same request cannot fix it.';
     if(c==='1308')return' The provider usage window is exhausted until its reset time; LabFlow will not loop on retries.';
     if(c==='1310')return' The provider weekly/monthly plan quota is exhausted; LabFlow will not retry automatically.';
     if(c==='1312')return' The selected model is temporarily under high traffic. Retry later.';
     if(c==='1302')return' Provider concurrency is saturated. Retry later.';
     if(c==='1303')return' Provider request frequency is too high. Retry later.';
-    if(status===429||c==='1305')return' The provider rate limit was reached. LabFlow does not retry automatically.';
+    if(status===429)return' The provider rate limit was reached. LabFlow does not retry automatically.';
     if(status>=500)return' The provider reported a server-side error.';
     if(c==='1261'||c==='MODEL_CONTEXT_LENGTH')return' The loaded model context window was exceeded.';
     return'';
@@ -44,10 +57,10 @@
     else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:''),provider=LF.AIProviders&&LF.AIProviders[providerId];category='Timeout';next=provider&&provider.local===true?'Retry or increase the inactivity timeout if the local model is still loading.':'The provider did not expose a response before the deadline. Retry once; if curl succeeds while the browser does not, inspect browser CORS/network policy.';}
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
-      category=localProvider(providerId)?'Local endpoint unreachable':'Browser / network';
+      category=localProvider(providerId)?(providerId==='llamacpp'&&bindAddressOrigin()?'Local origin mismatch':'Local endpoint unreachable'):'Browser / network';
       if(providerId==='lmstudio')next='Confirm LM Studio Serve on Local Network/CORS and use the LAN host or IP when LabFlow runs on another device.';
       else if(providerId==='ollama')next='Confirm Ollama is exposed with OLLAMA_HOST and OLLAMA_ORIGINS allows the LabFlow page origin.';
-      else if(providerId==='llamacpp')next='Confirm llama-server listens on a LAN-reachable address (for example --host 0.0.0.0), serves /v1/chat/completions, and allows the LabFlow origin with CORS. On another device use fedora.local or a private IP rather than localhost.';
+      else if(providerId==='llamacpp')next=llamaCppGuidance(e.url||'');
       else next=browserCorsHint(providerId);
     }
     else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. Increase the loaded context or narrow the task.';}
@@ -56,8 +69,8 @@
     else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load/select a valid model in the provider, then Detect or Save & test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
-    else if(['1304','1308','1310'].includes(code)||(e.rateLimited&&e.rateLimitRetryable===false)){category='Provider quota';next='The provider quota/window is exhausted. Check its reset status or use another provider.';}
-    else if(status===429||['1302','1303','1305','1312'].includes(code)||e.rateLimited){category=code==='1312'?'Model capacity':'Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=retryMs?'Retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'Retry later or use another provider.';}
+    else if(e.rateLimited&&e.rateLimitRetryable===false){category='Provider quota';next='The provider quota/window is exhausted. Check its reset status or use another provider.';}
+    else if(status===429||e.rateLimited){category='Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=retryMs?'Retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'Retry later or use another provider.';}
     else if(status>=500){category='Provider server';next='Check provider status/logs and retry.';}
     return{category:category,next:next,status:status||'',providerCode:code};
   }

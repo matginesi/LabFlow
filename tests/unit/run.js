@@ -16,6 +16,17 @@ global.localStorage = (function () {
     get length() { return Object.keys(store).length; }
   };
 })();
+global.sessionStorage = (function () {
+  let store = {};
+  return {
+    getItem: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+    setItem: function (k, v) { store[k] = String(v); },
+    removeItem: function (k) { delete store[k]; },
+    clear: function () { store = {}; },
+    key: function (i) { return Object.keys(store)[i] || null; },
+    get length() { return Object.keys(store).length; }
+  };
+})();
 global.LabFlow = globalThis.LabFlow = globalThis.LabFlow || {};
 global.LabFlow.Core = global.LabFlow.Core || {
   uid: (function () {

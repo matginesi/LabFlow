@@ -27,7 +27,9 @@
 
   const WORKSPACE_DB = Object.freeze({
     name: 'labflow.workspace.current',
+    version: 2,
     store: 'workspace',
+    rawStore: 'rawArchives',
     key: 'current'
   });
 
@@ -53,6 +55,43 @@
       Log.warn('local.write-failed', { key: key, error: error });
       return false;
     }
+  }
+
+  function sessionRead(key, fallback) {
+    try {
+      if (!window.sessionStorage) return fallback;
+      const raw = sessionStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (error) {
+      Log.warn('session.read-failed', { key: key, error: error });
+      return fallback;
+    }
+  }
+
+  function sessionWrite(key, value) {
+    try {
+      if (!window.sessionStorage) return false;
+      sessionStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      Log.warn('session.write-failed', { key: key, error: error });
+      return false;
+    }
+  }
+
+  function endpointOrigin(value) {
+    try { return new URL(String(value || ''), window.location && window.location.href || 'https://labflow.invalid/').origin; }
+    catch (_error) { return ''; }
+  }
+
+  function providerEndpoint(providerId) {
+    const provider = LF.AIProviders && LF.AIProviders[String(providerId || '')];
+    return provider && provider.endpoint || '';
+  }
+
+  function credentialMap(key, persistent) {
+    const value = persistent ? read(key, {}) : sessionRead(key, {});
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
   function getAiSettings() {
@@ -144,34 +183,60 @@
     return getAssistantSettings();
   }
 
-  function apiKeys() {
-    const keys = read(LOCAL_KEYS.API_KEYS, {});
-    return keys && typeof keys === 'object' && !Array.isArray(keys) ? keys : {};
+  function apiKeys(persistent) {
+    return credentialMap(LOCAL_KEYS.API_KEYS, persistent !== false);
   }
 
-  function getApiKey(providerId) {
+  function apiCredentialId(providerId, endpoint) {
+    const provider = String(providerId || getAiSettings().provider || 'openrouter');
+    const origin = endpointOrigin(endpoint || getAiSettings().endpoint || providerEndpoint(provider));
+    return provider + '|' + (origin || 'no-origin');
+  }
+
+  function getApiKey(providerId, endpoint) {
     try {
       const provider = String(providerId || getAiSettings().provider || 'openrouter');
-      return String(apiKeys()[provider] || '');
-    } catch (_error) {
+      const target = endpoint || getAiSettings().endpoint || providerEndpoint(provider);
+      const id = apiCredentialId(provider, target);
+      const session = apiKeys(false), persistent = apiKeys(true);
+      if (session[id]) return String(session[id]);
+      if (persistent[id]) return String(persistent[id]);
+      /* One-time compatibility for pre-r7 provider-only keys, but never reuse
+         one against a custom host. */
+      const legacy = persistent[provider];
+      if (legacy && endpointOrigin(target) && endpointOrigin(target) === endpointOrigin(providerEndpoint(provider))) return String(legacy);
       return '';
-    }
+    } catch (_error) { return ''; }
   }
 
-  function saveApiKey(key, providerId) {
+  function isApiKeyRemembered(providerId, endpoint) {
+    const provider = String(providerId || getAiSettings().provider || 'openrouter');
+    const target = endpoint || getAiSettings().endpoint || providerEndpoint(provider);
+    const persistent = apiKeys(true), id = apiCredentialId(provider, target);
+    return !!(persistent[id] || (persistent[provider] && endpointOrigin(target) === endpointOrigin(providerEndpoint(provider))));
+  }
+
+  function saveApiKey(key, providerId, options) {
     try {
+      options = options || {};
       const provider = String(providerId || getAiSettings().provider || 'openrouter');
-      const keys = apiKeys();
-      if (key) keys[provider] = String(key);
-      else delete keys[provider];
-      const stored = write(LOCAL_KEYS.API_KEYS, keys);
-      if (!stored) Log.warn('api-key.save-failed', { provider: provider });
-      return stored;
+      const endpoint = options.endpoint || getAiSettings().endpoint || providerEndpoint(provider);
+      const id = apiCredentialId(provider, endpoint), value = String(key || ''), remember = options.remember === true;
+      const persistent = apiKeys(true), session = apiKeys(false);
+      delete persistent[provider];
+      if (!value) { delete persistent[id]; delete session[id]; }
+      else if (remember) { persistent[id] = value; delete session[id]; }
+      else { session[id] = value; delete persistent[id]; }
+      const localOk = write(LOCAL_KEYS.API_KEYS, persistent);
+      const sessionOk = sessionWrite(LOCAL_KEYS.API_KEYS, session);
+      if (localOk && (!value || remember || sessionOk)) Log.info('api-key.saved', { provider: provider, remember: remember, origin: endpointOrigin(endpoint) });
+      return localOk && (!value || remember || sessionOk);
     } catch (error) {
       Log.warn('api-key.save-failed', { error: error });
       return false;
     }
   }
+
 
   /*
    * Browser-local Action overrides are valid only for the source contract they
@@ -203,63 +268,94 @@
     return hashText(JSON.stringify(base) + '\n' + String(prompt || ''));
   }
 
+  const ACTION_EDITABLE_TOP = ['title', 'short_title', 'purpose', 'strategy'];
+  const ACTION_EDITABLE_STEP = ['weight', 'thinking', 'timeout_ms', 'deadline_ms', 'max_retries', 'min_output_tokens', 'target_output_tokens', 'max_output_tokens', 'max_input_tokens'];
+  const ACTION_LOCKED_STEP = ['id', 'type', 'tool', 'fn', 'prompt', 'output', 'schema', 'foreach', 'validate_with', 'provider_schema', 'capture_result'];
+
+  function sameJson(a, b) { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); }
+  function actionValidationError(message) { const error = new Error(message); error.code = 'ACTION_OVERRIDE_INVALID'; return error; }
+
+  function validateActionOverride(id, override) {
+    const base = LF.ActionRegistry && LF.ActionRegistry.action ? LF.ActionRegistry.action(id) : null;
+    if (!base) throw actionValidationError('Unknown Action: ' + id);
+    const payload = override && typeof override === 'object' ? override : {};
+    const def = payload.definition && typeof payload.definition === 'object' ? payload.definition : {};
+    if (def.id != null && String(def.id) !== String(id)) throw actionValidationError('The Action ID is locked.');
+    ['category','role','visibility','contract'].forEach(function (key) {
+      if (Object.prototype.hasOwnProperty.call(def, key) && !sameJson(def[key], base[key])) throw actionValidationError(key + ' is part of the locked scientific contract.');
+    });
+    if (def.execution) {
+      const baseExecution = base.execution || {}, customExecution = def.execution || {};
+      if (Object.prototype.hasOwnProperty.call(customExecution, 'mode') && !sameJson(customExecution.mode, baseExecution.mode)) throw actionValidationError('Execution mode is locked.');
+      const baseSteps = Array.isArray(baseExecution.steps) ? baseExecution.steps : [];
+      const customSteps = Array.isArray(customExecution.steps) ? customExecution.steps : [];
+      if (customSteps.length && customSteps.length !== baseSteps.length) throw actionValidationError('Execution steps cannot be added or removed.');
+      customSteps.forEach(function (step, index) {
+        const source = baseSteps[index] || {};
+        ACTION_LOCKED_STEP.forEach(function (key) {
+          if (Object.prototype.hasOwnProperty.call(step || {}, key) && !sameJson(step[key], source[key])) throw actionValidationError('Step ' + (source.id || index + 1) + ': ' + key + ' is locked.');
+        });
+        if (step && step.thinking != null && !['auto','on','off'].includes(String(step.thinking))) throw actionValidationError('Thinking must be auto, on or off.');
+        ['max_retries','min_output_tokens','target_output_tokens','max_output_tokens','max_input_tokens','timeout_ms','deadline_ms'].forEach(function (key) {
+          if (step && step[key] != null && (!Number.isFinite(Number(step[key])) || Number(step[key]) < 0)) throw actionValidationError('Step ' + (source.id || index + 1) + ': ' + key + ' must be a non-negative number.');
+        });
+        if (step && step.max_retries != null && Number(step.max_retries) > 8) throw actionValidationError('Retries are capped at 8.');
+        if (step && step.max_output_tokens != null && step.target_output_tokens != null && Number(step.target_output_tokens) > Number(step.max_output_tokens)) throw actionValidationError('Target output cannot exceed the maximum output.');
+        if (step && step.min_output_tokens != null && step.target_output_tokens != null && Number(step.min_output_tokens) > Number(step.target_output_tokens)) throw actionValidationError('Minimum output cannot exceed the target output.');
+      });
+    }
+    if (payload.prompt != null && typeof payload.prompt !== 'string') throw actionValidationError('Prompt must be text.');
+    if (typeof payload.prompt === 'string' && payload.prompt.length > 120000) throw actionValidationError('Prompt is too large.');
+    return { ok: true, actionId: id };
+  }
+
+  function safeActionDefinition(id, definition) {
+    const base = LF.ActionRegistry && LF.ActionRegistry.action ? LF.ActionRegistry.action(id) : null;
+    if (!base) return null;
+    const custom = definition && typeof definition === 'object' ? definition : {};
+    const out = clone(base);
+    ACTION_EDITABLE_TOP.forEach(function (key) { if (Object.prototype.hasOwnProperty.call(custom, key)) out[key] = clone(custom[key]); });
+    const baseSteps = out.execution && Array.isArray(out.execution.steps) ? out.execution.steps : [];
+    const customSteps = custom.execution && Array.isArray(custom.execution.steps) ? custom.execution.steps : [];
+    customSteps.forEach(function (step, index) {
+      if (!baseSteps[index] || !step || typeof step !== 'object') return;
+      ACTION_EDITABLE_STEP.forEach(function (key) { if (Object.prototype.hasOwnProperty.call(step, key)) baseSteps[index][key] = clone(step[key]); });
+    });
+    return out;
+  }
+
   function getActionOverride(id) {
     const raw = actionOverrides()[id];
     if (!raw) return null;
     const current = actionSourceSignature(id);
     if (current && raw.sourceSignature !== current) return null;
+    try { validateActionOverride(id, raw); }
+    catch (error) { Log.warn('action.override-rejected', { actionId: id, error: error }); return null; }
     return clone(raw);
   }
 
   function saveActionOverride(id, override) {
+    validateActionOverride(id, override || {});
+    const clean = clone(override || {});
+    if (clean.definition) clean.definition = safeActionDefinition(id, clean.definition);
     const all = actionOverrides();
-    all[id] = Object.assign({}, all[id] || {}, clone(override || {}), {
-      sourceSignature: actionSourceSignature(id),
-      updatedAt: new Date().toISOString()
-    });
+    all[id] = Object.assign({}, clean, { sourceSignature: actionSourceSignature(id), updatedAt: new Date().toISOString() });
     write(LOCAL_KEYS.ACTION_OVERRIDES, all);
-    Log.info('action.override-saved', {
-      actionId: id,
-      hasDefinition: !!(override && override.definition),
-      hasPrompt: override && typeof override.prompt === 'string'
-    });
+    Log.info('action.override-saved', { actionId: id, hasDefinition: !!clean.definition, hasPrompt: typeof clean.prompt === 'string' });
     return getActionOverride(id);
   }
 
   function resetActionOverride(id) {
-    const all = actionOverrides();
-    delete all[id];
-    write(LOCAL_KEYS.ACTION_OVERRIDES, all);
-    Log.info('action.override-reset', { actionId: id });
+    const all = actionOverrides(); delete all[id]; write(LOCAL_KEYS.ACTION_OVERRIDES, all); Log.info('action.override-reset', { actionId: id });
   }
 
   function getEffectiveAction(id) {
-    const base = LF.ActionRegistry && LF.ActionRegistry.action
-      ? LF.ActionRegistry.action(id)
-      : null;
+    const base = LF.ActionRegistry && LF.ActionRegistry.action ? LF.ActionRegistry.action(id) : null;
     const override = getActionOverride(id);
     if (!base) return null;
-    if (!override || !override.definition) return base;
-
-    const custom = clone(override.definition);
-    const merged = Object.assign({}, base, custom, { id: base.id });
-    merged.contract = Object.assign({}, base.contract || {}, custom.contract || {});
-    merged.execution = Object.assign({}, base.execution || {}, custom.execution || {});
-
-    const customSteps = custom.execution && custom.execution.steps;
-    const baseSteps = base.execution && base.execution.steps || [];
-    if (Array.isArray(customSteps)) {
-      const baseById = {};
-      baseSteps.forEach(function (step) {
-        if (step && step.id) baseById[step.id] = step;
-      });
-      merged.execution.steps = customSteps.map(function (step) {
-        const source = step && step.id && baseById[step.id] || {};
-        return Object.assign({}, source, step || {});
-      });
-    }
-    return merged;
+    return override && override.definition ? safeActionDefinition(id, override.definition) : base;
   }
+
 
   function getEffectivePrompt(id) {
     const override = getActionOverride(id);
@@ -414,65 +510,81 @@
     return getNomadSettings();
   }
 
-  function getNomadToken() {
-    return String(read(LOCAL_KEYS.NOMAD_TOKEN, '') || '');
+  function nomadCredentialId(endpoint) {
+    return 'nomad|' + (endpointOrigin(endpoint || getNomadSettings().apiEndpoint) || 'no-origin');
   }
 
-  function saveNomadToken(token) {
-    const value = String(token || '');
-    const ok = write(LOCAL_KEYS.NOMAD_TOKEN, value);
-    if (ok) Log.info('nomad-token.saved', { configured: !!value });
-    return ok;
+  function nomadTokens(persistent) {
+    const value = persistent !== false ? read(LOCAL_KEYS.NOMAD_TOKEN, {}) : sessionRead(LOCAL_KEYS.NOMAD_TOKEN, {});
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+    if (persistent !== false && typeof value === 'string' && value) return { __legacy: value };
+    return {};
   }
+
+  function getNomadToken(endpoint) {
+    const target = endpoint || getNomadSettings().apiEndpoint, id = nomadCredentialId(target);
+    const session = nomadTokens(false), persistent = nomadTokens(true);
+    if (session[id]) return String(session[id]);
+    if (persistent[id]) return String(persistent[id]);
+    /* Legacy token is used only for the exact saved destination. */
+    const legacy = typeof persistent === 'object' ? persistent.__legacy : '';
+    const savedOrigin = endpointOrigin(getNomadSettings().apiEndpoint);
+    return legacy && savedOrigin && savedOrigin === endpointOrigin(target) ? String(legacy) : '';
+  }
+
+  function isNomadTokenRemembered(endpoint) {
+    const id = nomadCredentialId(endpoint || getNomadSettings().apiEndpoint);
+    return !!nomadTokens(true)[id];
+  }
+
+  function saveNomadToken(token, options) {
+    options = options || {};
+    const endpoint = options.endpoint || getNomadSettings().apiEndpoint, id = nomadCredentialId(endpoint);
+    const value = String(token || ''), remember = options.remember === true;
+    const persistent = nomadTokens(true), session = nomadTokens(false);
+    delete persistent.__legacy;
+    if (!value) { delete persistent[id]; delete session[id]; }
+    else if (remember) { persistent[id] = value; delete session[id]; }
+    else { session[id] = value; delete persistent[id]; }
+    const localOk = write(LOCAL_KEYS.NOMAD_TOKEN, persistent), sessionOk = sessionWrite(LOCAL_KEYS.NOMAD_TOKEN, session);
+    if (localOk && (!value || remember || sessionOk)) Log.info('nomad-token.saved', { configured: !!value, remember: remember, origin: endpointOrigin(endpoint) });
+    return localOk && (!value || remember || sessionOk);
+  }
+
 
   function db() {
     return new Promise(function (resolve, reject) {
-      if (!window.indexedDB) {
-        reject(new Error('IndexedDB is unavailable in this browser.'));
-        return;
-      }
-      const request = indexedDB.open(WORKSPACE_DB.name);
+      if (!window.indexedDB) { reject(new Error('IndexedDB is unavailable in this browser.')); return; }
+      const request = indexedDB.open(WORKSPACE_DB.name, WORKSPACE_DB.version);
       request.onupgradeneeded = function () {
         const database = request.result;
-        if (!database.objectStoreNames.contains(WORKSPACE_DB.store)) {
-          database.createObjectStore(WORKSPACE_DB.store);
-        }
+        if (!database.objectStoreNames.contains(WORKSPACE_DB.store)) database.createObjectStore(WORKSPACE_DB.store);
+        if (!database.objectStoreNames.contains(WORKSPACE_DB.rawStore)) database.createObjectStore(WORKSPACE_DB.rawStore);
       };
       request.onsuccess = function () { resolve(request.result); };
-      request.onerror = function () {
-        reject(request.error || new Error('Could not open LabFlow workspace storage.'));
-      };
+      request.onerror = function () { reject(request.error || new Error('Could not open LabFlow workspace storage.')); };
     });
   }
 
+  function rawReference(exp) {
+    const raw = exp && exp.raw || {};
+    return String(raw.sha256 || (exp && exp.id ? 'experiment:' + exp.id : '') || raw.sourceName || 'source');
+  }
+
   async function saveExperiment(exp, ui) {
-    if (!LF.DataModel || !LF.DataModel.serialize) {
-      throw new Error('LabFlow.DataModel must be loaded before saving a workspace.');
-    }
-    const database = await db();
+    if (!LF.DataModel || !LF.DataModel.serialize) throw new Error('LabFlow.DataModel must be loaded before saving a workspace.');
+    const database = await db(), raw = exp && exp.raw || {}, rawRef = raw.sourceArchive instanceof ArrayBuffer && raw.sourceArchive.byteLength ? rawReference(exp) : '';
     return new Promise(function (resolve, reject) {
-      const transaction = database.transaction(WORKSPACE_DB.store, 'readwrite');
-      const store = transaction.objectStore(WORKSPACE_DB.store);
-      const payload = {
-        savedAt: new Date().toISOString(),
-        experiment: LF.DataModel.serialize(exp),
-        ui: {
-          route: ui && ui.route || 'experiment-import',
-          resultsTab: ui && ui.resultsTab || 'overview',
-          selectedMeasurementId: ui && ui.selectedMeasurementId || null,
-          selectedDesignDeviceId: ui && ui.selectedDesignDeviceId || null
-        }
-      };
-      store.put(payload, WORKSPACE_DB.key);
-      transaction.oncomplete = function () {
-        database.close();
-        resolve(payload);
-      };
-      transaction.onerror = function () {
-        const error = transaction.error || new Error('Could not save the LabFlow workspace.');
-        database.close();
-        reject(error);
-      };
+      const transaction = database.transaction([WORKSPACE_DB.store, WORKSPACE_DB.rawStore], 'readwrite');
+      const workspace = transaction.objectStore(WORKSPACE_DB.store), rawStore = transaction.objectStore(WORKSPACE_DB.rawStore);
+      const payload = { savedAt: new Date().toISOString(), rawRef: rawRef, experiment: LF.DataModel.serialize(exp, { includeSourceArchive: false }), ui: { route: ui && ui.route || 'experiment-import', resultsTab: ui && ui.resultsTab || 'overview', selectedMeasurementId: ui && ui.selectedMeasurementId || null, selectedDesignDeviceId: ui && ui.selectedDesignDeviceId || null } };
+      workspace.put(payload, WORKSPACE_DB.key);
+      if (rawRef) {
+        const existing = rawStore.get(rawRef);
+        existing.onsuccess = function () { if (!existing.result) rawStore.put(raw.sourceArchive, rawRef); };
+      }
+      transaction.oncomplete = function () { database.close(); resolve(payload); };
+      transaction.onerror = function () { const error = transaction.error || new Error('Could not save the LabFlow workspace.'); database.close(); reject(error); };
     });
   }
 
@@ -480,76 +592,64 @@
     try {
       const database = await db();
       return await new Promise(function (resolve, reject) {
-        const transaction = database.transaction(WORKSPACE_DB.store, 'readonly');
-        const request = transaction.objectStore(WORKSPACE_DB.store).get(WORKSPACE_DB.key);
+        const transaction = database.transaction([WORKSPACE_DB.store, WORKSPACE_DB.rawStore], 'readonly');
+        const workspace = transaction.objectStore(WORKSPACE_DB.store), rawStore = transaction.objectStore(WORKSPACE_DB.rawStore);
+        const request = workspace.get(WORKSPACE_DB.key); let value = null;
         request.onsuccess = function () {
-          const value = request.result || null;
-          database.close();
-          resolve(value);
+          value = request.result || null;
+          if (!value || !value.rawRef || !value.experiment) return;
+          const rawRequest = rawStore.get(value.rawRef);
+          rawRequest.onsuccess = function () { value.experiment.raw = value.experiment.raw || {}; value.experiment.raw.sourceArchive = rawRequest.result || null; };
         };
-        request.onerror = function () {
-          const error = request.error || new Error('Could not read saved LabFlow workspace.');
-          database.close();
-          reject(error);
-        };
+        transaction.oncomplete = function () { database.close(); resolve(value); };
+        transaction.onerror = function () { const error = transaction.error || new Error('Could not read saved LabFlow workspace.'); database.close(); reject(error); };
       });
-    } catch (error) {
-      Log.warn('workspace.load-failed', { error: error });
-      return null;
-    }
+    } catch (error) { Log.warn('workspace.load-failed', { error: error }); return null; }
   }
 
   async function clearSavedExperiment() {
     try {
       const database = await db();
       return await new Promise(function (resolve, reject) {
-        const transaction = database.transaction(WORKSPACE_DB.store, 'readwrite');
-        transaction.objectStore(WORKSPACE_DB.store).delete(WORKSPACE_DB.key);
-        transaction.oncomplete = function () {
-          database.close();
-          resolve(true);
-        };
-        transaction.onerror = function () {
-          const error = transaction.error || new Error('Could not clear saved LabFlow workspace.');
-          database.close();
-          reject(error);
-        };
+        const transaction = database.transaction([WORKSPACE_DB.store, WORKSPACE_DB.rawStore], 'readwrite');
+        transaction.objectStore(WORKSPACE_DB.store).clear();
+        transaction.objectStore(WORKSPACE_DB.rawStore).clear();
+        transaction.oncomplete = function () { database.close(); resolve(true); };
+        transaction.onerror = function () { const error = transaction.error || new Error('Could not clear saved LabFlow workspace.'); database.close(); reject(error); };
       });
-    } catch (error) {
-      Log.warn('workspace.clear-failed', { error: error });
-      return false;
-    }
+    } catch (error) { Log.warn('workspace.clear-failed', { error: error }); return false; }
   }
+
+  function clearPrefixedStorage(storage) {
+    if (!storage) return;
+    const remove = [];
+    for (let i = 0; i < storage.length; i++) { const key = storage.key(i); if (key && /^labflow\./.test(key)) remove.push(key); }
+    remove.forEach(function (key) { storage.removeItem(key); });
+  }
+
+  async function clearAllLocalData() {
+    const workspaceCleared = await clearSavedExperiment();
+    try { clearPrefixedStorage(window.localStorage); clearPrefixedStorage(window.sessionStorage); }
+    catch (error) { Log.warn('storage.clear-local-failed', { error: error }); }
+    Log.info('storage.cleared', { workspace: workspaceCleared });
+    return workspaceCleared;
+  }
+
 
   LF.Storage = {
     keys: LOCAL_KEYS,
-    getAiSettings: getAiSettings,
-    saveAiSettings: saveAiSettings,
-    getAssistantSettings: getAssistantSettings,
-    saveAssistantSettings: saveAssistantSettings,
-    getApiKey: getApiKey,
-    saveApiKey: saveApiKey,
-    getActionOverride: getActionOverride,
-    saveActionOverride: saveActionOverride,
-    resetActionOverride: resetActionOverride,
-    getEffectiveAction: getEffectiveAction,
-    getEffectivePrompt: getEffectivePrompt,
-    getUserProfile: getUserProfile,
-    saveUserProfile: saveUserProfile,
-    getUiSettings: getUiSettings,
-    saveUiSettings: saveUiSettings,
-    getExportSettings: getExportSettings,
-    saveExportSettings: saveExportSettings,
-    getNomadSettings: getNomadSettings,
-    saveNomadSettings: saveNomadSettings,
-    getNomadToken: getNomadToken,
-    saveNomadToken: saveNomadToken,
-    getCabinetState: getCabinetState,
-    saveCabinetState: saveCabinetState,
-    getKnowledgeState: getKnowledgeState,
-    saveKnowledgeState: saveKnowledgeState,
-    saveExperiment: saveExperiment,
-    loadExperiment: loadExperiment,
-    clearSavedExperiment: clearSavedExperiment
+    getAiSettings: getAiSettings, saveAiSettings: saveAiSettings,
+    getAssistantSettings: getAssistantSettings, saveAssistantSettings: saveAssistantSettings,
+    getApiKey: getApiKey, isApiKeyRemembered: isApiKeyRemembered, saveApiKey: saveApiKey,
+    getActionOverride: getActionOverride, validateActionOverride: validateActionOverride, saveActionOverride: saveActionOverride, resetActionOverride: resetActionOverride,
+    getEffectiveAction: getEffectiveAction, getEffectivePrompt: getEffectivePrompt,
+    getUserProfile: getUserProfile, saveUserProfile: saveUserProfile,
+    getUiSettings: getUiSettings, saveUiSettings: saveUiSettings,
+    getExportSettings: getExportSettings, saveExportSettings: saveExportSettings,
+    getNomadSettings: getNomadSettings, saveNomadSettings: saveNomadSettings,
+    getNomadToken: getNomadToken, isNomadTokenRemembered: isNomadTokenRemembered, saveNomadToken: saveNomadToken,
+    getCabinetState: getCabinetState, saveCabinetState: saveCabinetState,
+    getKnowledgeState: getKnowledgeState, saveKnowledgeState: saveKnowledgeState,
+    saveExperiment: saveExperiment, loadExperiment: loadExperiment, clearSavedExperiment: clearSavedExperiment, clearAllLocalData: clearAllLocalData
   };
 }());

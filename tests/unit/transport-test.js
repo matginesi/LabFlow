@@ -12,8 +12,8 @@ module.exports = function (t, LF) {
   const AI = LF.AI;
 
   t['resolveChatUrl normalizes bare and double-suffixed endpoints'] = function () {
-    assert(AI.resolveChatUrl('https://api.z.ai/api/paas/v4'), 'https://api.z.ai/api/paas/v4/chat/completions', 'append');
-    assert(AI.resolveChatUrl('https://api.z.ai/api/paas/v4/chat/completions'), 'https://api.z.ai/api/paas/v4/chat/completions', 'already complete');
+    assert(AI.resolveChatUrl('https://provider.example/v1'), 'https://provider.example/v1/chat/completions', 'append');
+    assert(AI.resolveChatUrl('https://provider.example/v1/chat/completions'), 'https://provider.example/v1/chat/completions', 'already complete');
     assert(AI.resolveChatUrl('https://x/v1/chat/completions/chat/completions'), 'https://x/v1/chat/completions', 'dedupe');
     assert(AI.resolveChatUrl(''), '', 'empty');
   };
@@ -58,9 +58,9 @@ module.exports = function (t, LF) {
   t['SSE DONE terminates immediately even when provider keeps the HTTP stream open'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let streamCancelled=false,producerClosed=false,closeTimer=null;
     global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(){const body=new ReadableStream({start:function(controller){controller.enqueue(encoder.encode('data: {\"id\":\"done-test\",\"model\":\"glm-4.7-flash\",\"choices\":[{\"delta\":{\"content\":\"ready\"}}]}\n\ndata: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n'));closeTimer=setTimeout(function(){producerClosed=true;try{controller.close();}catch(_){ }},500);},cancel:function(){streamCancelled=true;if(closeTimer)clearTimeout(closeTimer);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    global.fetch=async function(){const body=new ReadableStream({start:function(controller){controller.enqueue(encoder.encode('data: {\"id\":\"done-test\",\"model\":\"test-model\",\"choices\":[{\"delta\":{\"content\":\"ready\"}}]}\n\ndata: {\"choices\":[{\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n'));closeTimer=setTimeout(function(){producerClosed=true;try{controller.close();}catch(_){ }},500);},cancel:function(){streamCancelled=true;if(closeTimer)clearTimeout(closeTimer);}});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://provider.example/v1',model:'test-model',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'key';}};
+    LF.AIProviders={custom:{id:'custom',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
     try{const spec=AI.buildRequest({messages:[{role:'user',content:'done'}],stream:true,maxTokens:64,hardTimeoutMs:5000}),result=await AI.send(spec,{label:'done-test'});assert(result.content,'ready','content returned at DONE');assert(streamCancelled,true,'reader cancelled after terminal marker');assert(producerClosed,false,'did not wait for server-side socket close');}
     finally{if(closeTimer)clearTimeout(closeTimer);global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
@@ -86,14 +86,14 @@ module.exports = function (t, LF) {
 
   t['buildRequest produces a valid Chat Completions body'] = function () {
     LF.Storage = {
-      getAiSettings: function () { return { provider: 'zai', endpoint: 'https://api.z.ai/api/paas/v4', model: 'glm-4.7-flash', temperature: 0.4, maxTokens: 2200, inactivityTimeoutMs: 90000, streaming: true }; },
+      getAiSettings: function () { return { provider: 'custom', endpoint: 'https://provider.example/v1', model: 'test-model', temperature: 0.4, maxTokens: 2200, inactivityTimeoutMs: 90000, streaming: true }; },
       getApiKey: function () { return 'test-key'; }
     };
-    LF.AIProviders = { zai: { keyRequired: true, tokenParam: 'max_tokens', supportsStreaming: true, supportsTemperature: true } };
-    const spec = AI.buildRequest({ provider: 'zai', messages: [{ role: 'user', content: 'hi' }], stream: true, maxTokens: 512 });
-    assert(spec.url, 'https://api.z.ai/api/paas/v4/chat/completions', 'url');
+    LF.AIProviders = { custom: { keyRequired: true, tokenParam: 'max_tokens', supportsStreaming: true, supportsTemperature: true } };
+    const spec = AI.buildRequest({ provider: 'custom', messages: [{ role: 'user', content: 'hi' }], stream: true, maxTokens: 512 });
+    assert(spec.url, 'https://provider.example/v1/chat/completions', 'url');
     assert(spec.headers.Authorization, 'Bearer test-key', 'auth header');
-    assert(spec.body.model, 'glm-4.7-flash', 'model');
+    assert(spec.body.model, 'test-model', 'model');
     assert(spec.body.stream, true, 'stream');
     assert(spec.body.max_tokens, 512, 'max tokens');
     delete LF.Storage; delete LF.AIProviders;
@@ -125,19 +125,6 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['provider-declared headers are applied and Z.AI omits unsupported stream options'] = function () {
-    let requestedProvider='';
-    LF.Storage = {
-      getAiSettings: function () { return { provider: 'zai', endpoint: 'https://api.z.ai/api/paas/v4', model: 'glm-4.7-flash', inactivityTimeoutMs: 90000, streaming: true }; },
-      getApiKey: function (providerId) { requestedProvider=providerId;return 'zai-key'; }
-    };
-    LF.AIProviders = { zai: { keyRequired:true, supportsStreaming:true, tokenParam:'max_tokens', headers:{'Accept-Language':'en-US,en'} } };
-    const spec=AI.buildRequest({messages:[{role:'user',content:'hi'}],stream:true,maxTokens:128});
-    assert(requestedProvider,'zai','provider-scoped credential lookup');
-    assert(spec.headers['Accept-Language'],'en-US,en','documented Z.AI header');
-    assert(Object.prototype.hasOwnProperty.call(spec.body,'stream_options'),false,'undocumented extension omitted');
-    delete LF.Storage;delete LF.AIProviders;
-  };
 
   t['OpenRouter nested model metadata exposes output and context limits'] = function () {
     const cap=AI.capabilityFromRow({context_length:131072,top_provider:{max_completion_tokens:32768}},'OpenRouter model metadata');
@@ -147,8 +134,8 @@ module.exports = function (t, LF) {
   };
 
   t['provider default deadline prevents unbounded requests when an Action omits one'] = function () {
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',inactivityTimeoutMs:90000,streaming:true};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,requestDeadlineMs:180000}};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://provider.example/v1',model:'test-model',inactivityTimeoutMs:90000,streaming:true};},getApiKey:function(){return'key';}};
+    LF.AIProviders={custom:{id:'custom',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,requestDeadlineMs:180000}};
     const spec=AI.buildRequest({messages:[{role:'user',content:'bounded'}],stream:true,maxTokens:64});
     assert(spec.hardTimeoutMs,180000,'provider safety deadline');
     delete LF.Storage;delete LF.AIProviders;
@@ -213,20 +200,6 @@ module.exports = function (t, LF) {
     assert(Object.prototype.hasOwnProperty.call(spec.body,'max_tokens'),false,'no invented 8K limit');delete LF.Storage;delete LF.AIProviders;
   };
 
-  t['configured-model-only providers require credentials but do not fetch a remote catalogue']=async function(){
-    const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('remote metadata should not be queried');};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash'};},getApiKey:function(){return'';}};
-    LF.AIProviders={zai:{id:'zai',name:'Z.AI',keyRequired:true,remoteModelMetadata:false,staticModelCatalogue:true,knownModels:['glm-4.7-flash']}};
-    try{
-      const listed=await AI.listModels('zai','https://api.z.ai/api/paas/v4/chat/completions','zai-test-key');
-      const cap=await AI.resolveModelCapabilities({provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',apiKey:'zai-test-key',force:true});
-      assert(calls,0,'Detect must not contact an undocumented remote catalogue');
-      assert(listed.skipped,false,'documented static catalogue is exposed after credential validation');
-      assert(listed.models,['glm-4.7-flash'],'documented catalogue remains deterministic');
-      assert(cap.contextWindow,200000,'built-in capability still resolves through shared capability path');
-      assert(cap.reasoningStatus,'optional','thinking capability preserved');
-    }finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
-  };
 
   t['Detect catalogue fails closed when a required API key is missing']=async function(){
     LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'x'};},getApiKey:function(){return'';}};
@@ -240,7 +213,6 @@ module.exports = function (t, LF) {
     const oldFetch=global.fetch;let calls=0;global.fetch=async function(){calls++;throw new Error('must not fetch without required key');};
     LF.Storage={getAiSettings:function(){return{provider:'openrouter',endpoint:'https://unused.example/v1',model:'x'};},getApiKey:function(){return'';}};
     LF.AIProviders={
-      zai:{id:'zai',name:'Z.AI',keyRequired:true,remoteModelMetadata:false,staticModelCatalogue:true,knownModels:['glm-test']},
       openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,modelCatalogueRequired:true},
       openai:{id:'openai',name:'OpenAI',keyRequired:true,modelCatalogueRequired:true},
       gemini:{id:'gemini',name:'Google Gemini',keyRequired:true,modelCatalogueRequired:true}
@@ -263,7 +235,7 @@ module.exports = function (t, LF) {
   t['network errors retain the provider from the current request rather than saved Settings']=async function(){
     const oldFetch=global.fetch,oldLocation=global.location;global.location={protocol:'https:',origin:'https://labflow.test'};global.fetch=async function(){throw new TypeError('Failed to fetch');};
     LF.PromptRegistry={promptText:function(){return'Reply only with OK.';}};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://saved.invalid/v1',model:'saved',inactivityTimeoutMs:15000,streaming:false};},getApiKey:function(){return'saved-key';}};
+    LF.Storage={getAiSettings:function(){return{provider:'openai',endpoint:'https://saved.invalid/v1',model:'saved',inactivityTimeoutMs:15000,streaming:false};},getApiKey:function(){return'saved-key';}};
     LF.AIProviders={openrouter:{id:'openrouter',name:'OpenRouter',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,connectionTestTimeoutMs:5000}};
     try{let err=null;try{await AI.testConnection({provider:'openrouter',endpoint:'https://current.example/v1',model:'current-model',apiKey:'current-key'});}catch(e){err=e;}assert(!!err,true,'network error returned');assert(err.providerId,'openrouter','current provider retained on error');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
@@ -281,9 +253,6 @@ module.exports = function (t, LF) {
 
   t['provider capability and user caps resolve to the tightest valid budget'] = function () {
     assert(AI.knownCapability('openai','gpt-5-mini').maxOutputTokens,128000,'known OpenAI limit');
-    assert(AI.knownCapability('zai','glm-4.7-flash').maxOutputTokens,131072,'GLM-4.7-Flash documented maximum output');
-    assert(AI.knownCapability('zai','glm-5.3').contextWindow,1000000,'GLM-5.3 documented context window');
-    assert(AI.knownCapability('zai','glm-5.3').reasoningStatus,'required','GLM-5.3 reasoning cannot be disabled');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},0,64000,1000),64000,'global cap');
     assert(AI.resolveOutputBudget({maxOutputTokens:128000},32000,64000,1000),32000,'action/assistant cap');
     assert(AI.resolveOutputBudget({contextWindow:8192},0,0,2000),5680,'context ceiling subtracts input and reserve');
@@ -493,7 +462,7 @@ module.exports = function (t, LF) {
   t['local providers never inherit a stored cloud API key'] = function () {
     LF.Storage = {
       getAiSettings: function () { return { provider: 'ollama', endpoint: 'http://127.0.0.1:11434/v1', model: 'gemma3', maxTokens: 512, inactivityTimeoutMs: 60000, streaming: false }; },
-      getApiKey: function () { return 'stale-zai-key'; }
+      getApiKey: function () { return 'stale-cloud-key'; }
     };
     LF.AIProviders = { ollama: { keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true, supportsTemperature: true } };
     const spec = AI.buildRequest({ messages: [{ role: 'user', content: 'hi' }], stream: false });
@@ -529,8 +498,8 @@ module.exports = function (t, LF) {
   };
 
   t['buildRequest guards required provider config'] = function () {
-    LF.Storage = { getAiSettings: function () { return { provider: 'zai', endpoint: '', model: '' }; }, getApiKey: function () { return ''; } };
-    LF.AIProviders = { zai: { keyRequired: true } };
+    LF.Storage = { getAiSettings: function () { return { provider: 'openai', endpoint: '', model: '' }; }, getApiKey: function () { return ''; } };
+    LF.AIProviders = { openai: { keyRequired: true } };
     let threw = false;
     try { AI.buildRequest({ messages: [] }); } catch (err) { threw = /not configured/.test(err.message); }
     assert(threw, true, 'missing config throws');
@@ -571,11 +540,8 @@ module.exports = function (t, LF) {
   };
 
   t['provider rate-limit classification remains explicit without transport retry state'] = function () {
-    assert(AI.isRateLimitError({providerCode:'1305'}),true,'provider code 1305');
     assert(AI.isRateLimitError({status:429}),true,'HTTP 429');
-    assert(AI.isRateLimitError({providerCode:'1310'}),true,'quota exhaustion is still a provider limit');
-    assert(AI.limitInfo(429,'1310','quota').retryable,false,'quota exhaustion classified non-retryable');
-    assert(AI.limitInfo(429,'1312','busy').retryable,true,'temporary model capacity remains identifiable');
+    assert(AI.limitInfo(429,'','rate limit').retryable,true,'generic HTTP rate limit remains identifiable');
   };
 
   t['Retry-After parsing supports seconds and HTTP dates'] = function () {
@@ -602,66 +568,11 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;}
   };
 
-  t['Z.AI sends exactly one direct request to the official endpoint'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenUrl='',seenBody=null;
-    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
-    global.fetch=async function(url,opts){calls++;seenUrl=String(url);seenBody=JSON.parse(opts.body);return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'direct-ok',model:'glm-4.7-flash',choices:[{message:{content:'working'},finish_reason:'stop'}]});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',inactivityTimeoutMs:60000,streaming:true,thinkingMode:'off'};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}}}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'direct'}],stream:true,maxTokens:32}),result=await AI.send(spec,{label:'zai-direct'});assert(result.content,'working','direct provider response returned');assert(calls,1,'no hidden fallback request');assert(seenUrl,'https://api.z.ai/api/paas/v4/chat/completions','official endpoint used directly');assert(seenBody.stream,false,'provider capability disables streaming even when global setting asks for it');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
 
-  t['Z.AI HTTP errors stay provider errors and never trigger localhost fallback'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
-    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
-    global.fetch=async function(){calls++;return{ok:false,status:501,statusText:'Not Implemented',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{message:'upstream rejected request'}});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false}};
-    try{let err=null;try{await AI.send(AI.buildRequest({messages:[{role:'user',content:'x'}],stream:false,maxTokens:32}),{label:'zai-http'});}catch(e){err=e;}assert(!!err,true,'provider error returned');assert(err.status,501,'HTTP status retained');assert(calls,1,'no localhost retry');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
 
-  t['Z.AI browser fetch failure becomes one direct network or CORS diagnostic'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
-    global.location={protocol:'http:',origin:'http://127.0.0.1:8765'};
-    global.fetch=async function(){calls++;throw new TypeError('Failed to fetch');};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4/chat/completions',model:'glm-4.7-flash',streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:false}};
-    try{let err=null;try{await AI.send(AI.buildRequest({messages:[{role:'user',content:'x'}],stream:false,maxTokens:32}),{label:'zai-network'});}catch(e){err=e;}assert(!!err,true,'network diagnostic returned');assert(err.isNetwork,true,'classified as network/browser failure');assert(/Z\.AI|CORS|browser/i.test(err.message),true,'diagnostic names browser/provider boundary');assert(calls,1,'single direct attempt only');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
 
-  t['Z.AI 1305 does not create local cooldown state or block a later user request'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;global.location={protocol:'https:',origin:'https://labflow.test'};
-    LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000}};
-    global.fetch=async function(){calls++;if(calls===1)return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};return{ok:true,status:200,statusText:'OK',headers:{get:function(){return null;},forEach:function(){}},text:async function(){return JSON.stringify({id:'ok',model:'glm-4.7-flash',choices:[{message:{content:'done'},finish_reason:'stop'}]});}};};
-    try{const first=await AI.testConnection();assert(first.rateLimited,true,'probe rate limited');assert(calls,1,'probe made one HTTP request');const spec=AI.buildRequest({messages:[{role:'user',content:'send after user retry'}],stream:false,maxTokens:64});const out=await AI.send(spec,{label:'post-probe-action'});assert(out.content,'done','later request is allowed');assert(calls,2,'later user request reaches provider');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
-  };
 
-  t['connection test reports Z.AI rate limiting immediately without retry or pacing'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,seenBody=null,progress=[];
-    global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(url,opts){calls++;seenBody=JSON.parse(opts.body);return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'15':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'slow down'}});}};};
-    LF.PromptRegistry={promptText:function(){return'Reply only OK';}};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash',temperature:0,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{off:{thinking:{type:'disabled'}}},connectionTestTimeoutMs:15000}};
-    try{const out=await AI.testConnection({onProgress:function(p){progress.push(p);}});assert(out.ok,false,'rate limit is not connection OK');assert(out.reachable,true,'provider reachability reported');assert(out.rateLimited,true,'rate limit result');assert(calls,1,'single HTTP request');assert(progress.some(function(p){return p.transportState==='rate_limit';}),true,'rate-limit progress is surfaced once');assert(seenBody.max_tokens,16,'tiny token budget');assert(Object.prototype.hasOwnProperty.call(seenBody,'thinking'),false,'Z.AI probe keeps provider-default reasoning');assert(seenBody.model,'glm-4.7-flash','selected model unchanged');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.PromptRegistry;delete LF.Storage;delete LF.AIProviders;}
-  };
 
-  t['transport surfaces transient Z.AI 1305 after one HTTP attempt'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0,progress=[];
-    global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return name==='retry-after'?'1':null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1305,message:'The API has triggered a rate limit.'}});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'rate-test',onProgress:function(p){progress.push(p);}});}catch(e){err=e;}assert(!!err,true,'rate limit returned');assert(err.providerCode,'1305','provider code preserved');assert(err.retryAfterMs,1000,'Retry-After preserved');assert(calls,1,'transport performs one HTTP attempt');assert(progress.some(function(p){return p.transportState==='rate_limit'&&p.willRetry===false;}),true,'rate limit is surfaced without hidden retry');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
 
   t['local Detect throughput benchmark averages three measured samples after an excluded warm-up'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0,bodies=[];
@@ -674,20 +585,11 @@ module.exports = function (t, LF) {
   };
 
   t['cloud providers are not benchmarked by Detect throughput helper'] = async function () {
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-4.7-flash'};},getApiKey:function(){return'key';}};LF.AIProviders={zai:{id:'zai',keyRequired:true}};
-    try{const out=await AI.benchmarkTokensPerSecond({provider:'zai'});assert(out.supported,false,'cloud benchmark skipped');assert(out.reason,'local-providers-only','cloud skip reason');assert(out.samples,[],'no generated samples');}
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://provider.example/v1',model:'test-model'};},getApiKey:function(){return'key';}};LF.AIProviders={custom:{id:'custom',keyRequired:true}};
+    try{const out=await AI.benchmarkTokensPerSecond({provider:'custom'});assert(out.supported,false,'cloud benchmark skipped');assert(out.reason,'local-providers-only','cloud skip reason');assert(out.samples,[],'no generated samples');}
     finally{delete LF.Storage;delete LF.AIProviders;}
   };
 
-  t['transport never retries quota exhaustion 1304'] = async function () {
-    const oldFetch=global.fetch,oldLocation=global.location;let calls=0;
-    global.location={protocol:'https:',origin:'https://labflow.test'};
-    global.fetch=async function(){calls++;return{ok:false,status:429,statusText:'Too Many Requests',headers:{get:function(name){return null;},forEach:function(){}},text:async function(){return JSON.stringify({error:{code:1304,message:'daily quota exhausted'}});}};};
-    LF.Storage={getAiSettings:function(){return{provider:'zai',endpoint:'https://api.z.ai/api/paas/v4',model:'glm-test',temperature:0.2,inactivityTimeoutMs:60000,streaming:false};},getApiKey:function(){return'key';}};
-    LF.AIProviders={zai:{id:'zai',keyRequired:true,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
-    try{const spec=AI.buildRequest({messages:[{role:'user',content:'same request'}],stream:false,maxTokens:128,hardTimeoutMs:5000});let err=null;try{await AI.send(spec,{label:'quota-test'});}catch(e){err=e;}assert(!!err,true,'quota error returned');assert(err.providerCode,'1304','quota code preserved');assert(calls,1,'quota never retried');}
-    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
-  };
 
   return t;
 };

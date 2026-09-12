@@ -191,7 +191,7 @@ function normalizeRoot(exp){
   return exp;
 }
 function cloneValue(value){if(value==null||typeof value!=='object')return value;if(value instanceof ArrayBuffer)return value.slice(0);if(typeof ArrayBuffer!=='undefined'&&ArrayBuffer.isView&&ArrayBuffer.isView(value)){const copy=value.buffer.slice(value.byteOffset,value.byteOffset+value.byteLength);return new value.constructor(copy);}if(Array.isArray(value))return value.map(cloneValue);const out={};Object.keys(value).forEach(function(k){out[k]=cloneValue(value[k]);});return out;}
-function snapshot(exp){exp=normalizeRoot(exp);const out={};persistentKeys().forEach(function(key){if(exp[key]!==undefined)out[key]=cloneValue(exp[key]);});return out;}
+function snapshot(exp,options){exp=normalizeRoot(exp);options=options||{};const out={};persistentKeys().forEach(function(key){if(exp[key]===undefined)return;if(key==='raw'&&options.includeSourceArchive===false){const raw=cloneValue(exp.raw||{});raw.sourceArchive=null;out.raw=raw;return;}out[key]=cloneValue(exp[key]);});return out;}
 
 LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootField:rootField,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,values:VALUES,scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};
 }());

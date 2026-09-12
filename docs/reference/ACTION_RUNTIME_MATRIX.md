@@ -32,6 +32,6 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 - `dataset.resolve-ambiguities` is the only dataset AI Action. It runs only when deterministic naming/linking cannot establish one semantic interpretation and stores proposals for review.
 - `design.infer` is always one experiment per Action run. **Suggest all** sequences the same Action across incomplete experiments; a provider throttle stops further requests while preserving completed suggestions.
 - `results.compare` uses only the selected groups and deterministic statistics already visible in Results; it never recalculates measurements.
-- Z.AI `glm-4.7-flash` is never replaced automatically. A provider 429/`1305` is surfaced once with `Retry-After` when available and creates no local cooldown.
+- Provider rate limits are surfaced without silently switching models or creating a hidden retry loop.
 
 See [AI runtime and limits](../guides/AI_TOKENS_AND_RATE_LIMITS.md), [AI provider specification](../specs/AI_PROVIDERS.md), and [Action specification](../specs/ACTIONS.md).

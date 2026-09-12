@@ -13,7 +13,7 @@ for cls in ('.operation-workshop','.operation-catalog','.operation-inspector','.
     if cls not in css:errors.append('Required responsive style missing '+cls)
 if "['actions','AI tools'" not in settings:errors.append('AI tools Settings navigation item missing')
 if 'AI Helpers' in settings or 'Operations Workshop' in settings:errors.append('split Operations/AI Helpers Settings UI remains')
-if 'Advanced tool details' not in settings or 'operation-contract-grid' not in settings or '>Run tool<' not in settings:errors.append('AI tools progressive-disclosure contract missing')
+if 'Tool details &amp; customization' not in settings or 'operation-contract-grid' not in settings or '>Run tool<' not in settings or 'Safety boundary enforced.' not in settings:errors.append('AI tools progressive-disclosure contract missing')
 if 'aria-label="Current action"' not in index:errors.append('Action totem not named consistently')
 if "startProviderActivity('Check AI connection'" not in ai_settings or "startProviderActivity('Save & test AI connection'" not in ai_settings:errors.append('Check/Save & test do not open the canonical Action Totem')
 if 'finishProviderActivity({' not in ai_settings or 'failProviderActivity(error' not in ai_settings:errors.append('provider checks do not complete/fail through the canonical Action Totem')
@@ -38,7 +38,7 @@ if "['knowledge','Knowledge Base'" not in settings:errors.append('Knowledge Base
 if "['nomad','NOMAD'" not in settings:errors.append('NOMAD Settings navigation item missing')
 if 'class="settings-rail"' not in settings or 'class="settings-nav"' not in settings:errors.append('intent-grouped Settings rail missing')
 if 'settings-data-contract' in settings or 'ExperimentData is the aggregate root' in settings:errors.append('developer data-contract internals leaked into researcher Workspace settings')
-if 'Local export ready' not in settings or 'Online upload is not enabled in this build.' not in settings or 'id="saveNomadSettings"' not in settings:errors.append('NOMAD Settings status/configuration surface missing')
+if 'Export ready' not in settings or 'this prototype does not upload data yet' not in settings or 'id="saveNomadSettings"' not in settings or 'id="validateNomadProfile"' not in settings:errors.append('NOMAD Settings status/configuration surface missing')
 if 'id="uploadNomadStub"' not in pages or 'Stub only.' not in pages:errors.append('Export NOMAD upload stub missing or not explicit')
 if "closest('#uploadNomadStub')" not in app or 'no data was sent' not in app:errors.append('NOMAD upload stub must remain non-networking and explicit')
 if 'Knowledge Base' not in kit:errors.append('UI Kit does not expose current Knowledge Base Settings pattern')
@@ -75,7 +75,7 @@ if 'id="applyAutomaticCleanup"' not in review or 'Apply safe corrections' not in
 if "closest('#applyAutomaticCleanup')" not in app or 'commitAutomaticSafeFixes(exp)' not in app or 'function commitAutomaticSafeFixes(exp)' not in corrections:errors.append('safe-cleanup acceptance does not use the canonical dataset commit service')
 
 # Routes start at the top; content switches preserve the visible shared anchor.
-for marker,label in [("renderWithStableAnchor('.results-main-tabs')",'Results'),("renderWithStableAnchor('.docs-workbench')",'Documentation'),("renderWithStableAnchor('.cabinet-filter-tabs')",'Cabinet')]:
+for marker,label in [("renderWithStableAnchor('.results-main-tabs')",'Results'),("renderWithStableAnchor('.docs-workbench')",'Documentation'),("renderWithStableAnchor('.cabinet-library-tools')",'Cabinet')]:
     if marker not in app:errors.append(label+' stable-anchor navigation missing')
 if "settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0" not in app:errors.append('Settings navigation does not start the new context at the workspace beginning')
 if 'if(!renderedRoute||routeChanged)main.scrollTop=0' not in app.replace(' ',''):errors.append('route change does not reset main workspace scroll')

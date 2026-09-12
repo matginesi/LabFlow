@@ -26,5 +26,16 @@ module.exports=function(t,LF){
     assert(/Serve on Local Network/.test(out.next),true,'server LAN guidance');
     assert(/CORS/.test(out.next),true,'CORS guidance');
   };
+  t['llama.cpp diagnoses 0.0.0.0 as a browser-origin mismatch, not a LAN bind failure']=function(){
+    const previous=global.location;
+    global.location={hostname:'0.0.0.0',origin:'http://0.0.0.0:8000',port:'8000',protocol:'http:'};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1'};}};
+    LF.AI=LF.AI||{};LF.AI.targetAddressSpace=function(){return'loopback';};
+    const out=LF.AIDiagnostics.errorSummary({isNetwork:true,providerId:'llamacpp',url:'http://127.0.0.1:8080/v1/models',message:'Failed to fetch'});
+    assert(out.category,'Local origin mismatch','category');
+    assert(/127\.0\.0\.1:8000/.test(out.next),true,'canonical browser URL');
+    assert(/not.*0\.0\.0\.0|instead of http:\/\/0\.0\.0\.0/i.test(out.next),true,'bind-address explanation');
+    if(previous===undefined)delete global.location;else global.location=previous;
+  };
   return t;
 };

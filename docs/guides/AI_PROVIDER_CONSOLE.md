@@ -6,7 +6,6 @@ LabFlow exposes a small diagnostic API in browser DevTools. It uses the same pro
 LabFlow.AIConsole.help()
 LabFlow.AIConsole.providers()
 await LabFlow.AIConsole.models("openrouter")
-await LabFlow.AIConsole.probe("zai", "glm-4.7-flash")
 await LabFlow.AIConsole.doctor("openrouter", {model: "openrouter/free"})
 ```
 
@@ -24,7 +23,6 @@ This bypasses browser CORS completely and uses only the Python standard library.
 
 ```bash
 export ZAI_API_KEY='...'
-python tools/ai_probe.py zai --model glm-4.7-flash
 
 
 export OPENROUTER_API_KEY='...'

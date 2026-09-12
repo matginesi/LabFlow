@@ -199,7 +199,7 @@ ContextBuilder
    └─ design.infer
 ```
 
-The scientific source baseline, browser-local custom store and portable Settings backup all use JSONL: one normalized knowledge object per line. The generated browser bundle also projects a small allowlisted set of canonical user guides into read-only `guide.*` records, so app-help answers cite the same Markdown rendered by Documentation without copying it into a database. Portable Settings backup uses the same JSONL record format, while the generated browser bundle remains an implementation artifact for `file://` support.
+The scientific source baseline and browser-local custom store both use JSONL: one normalized knowledge object per line. Settings exposes the editable overlay as **My JSONL**: researchers can open and save the same plain-text format directly where the browser supports the File System Access API, with file-input/download fallback elsewhere. The generated browser bundle also projects a small allowlisted set of canonical user guides into read-only `guide.*` records, so app-help answers cite the same Markdown rendered by Documentation without copying it into a database. The generated browser bundle remains an implementation artifact for `file://` support.
 
 Only validated `active` entries are retrievable. `draft` entries persist but never enter AI context. Every active entry requires a traceable source. KB-supported Design proposals use `knowledge_reference` provenance and remain review-only; they do not become experiment evidence.
 

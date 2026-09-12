@@ -470,13 +470,13 @@
 
   const actionStepTools = {
     'dataset.collect-ambiguities': { domain: 'dataset', access: 'read' },
-    'dataset.store-corrections': { domain: 'dataset', access: 'write' },
+    'dataset.store-corrections': { domain: 'dataset', access: 'write', writes: ['experiment.actionData.proposals.dataset.resolve-ambiguities'] },
     'design.collect-selected': { domain: 'design', access: 'read' },
     'design.validate-coverage': { domain: 'design', access: 'read' },
-    'design.store-proposal': { domain: 'design', access: 'write' },
-    'results.store-interpretation': { domain: 'results', access: 'write' },
+    'design.store-proposal': { domain: 'design', access: 'write', writes: ['experiment.actionData.proposals.design.infer','experiment.actionData.status.design.infer'] },
+    'results.store-interpretation': { domain: 'results', access: 'write', writes: ['experiment.actionData.annotations.results.interpret'] },
     'results.validate-comparison': { domain: 'results', access: 'read' },
-    'results.store-comparison': { domain: 'results', access: 'write' }
+    'results.store-comparison': { domain: 'results', access: 'write', writes: ['experiment.actionData.annotations.results.compare'] }
   };
   LF.ActionStepTools = actionStepTools;
 

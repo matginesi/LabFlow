@@ -33,21 +33,22 @@ module.exports=function(t){
   };
 
   t['Cabinet is canvas-native with restrained kind accents']=function(){
-    ok(cabinet.includes('Reusable scientific shelf'),'compact Cabinet browser');
+    ok(cabinet.includes('Build once. Reuse in future experiments.'),'Cabinet purpose must be obvious');
     ok(cabinet.includes('cabinet-shelf-viewport')&&cabinet.includes('cabinet-shelf-list')&&cabinet.includes('cabinet-resource-editor'),'Cabinet uses one responsive shelf above one editor');
-    ok(cabinet.includes('class=\"tabs cabinet-filter-tabs\"')&&cabinet.includes('class=\"tab '),'Cabinet reuses shared LabFlow tabs for filtering');
-    ok(!cabinet.includes('filter-chip')&&!cabinet.includes('cabinet-catalog-head')&&!cabinet.includes('cabinet-catalog-row'),'retired native-looking/table Cabinet controls removed');
+    ok(cabinet.includes('cabinet-library-tools')&&cabinet.includes('cabinetKindFilter'),'Cabinet uses one simple search/type/create toolbar');
+    ok(!cabinet.includes('filter-chip')&&!cabinet.includes('cabinet-filter-tabs')&&!cabinet.includes('cabinet-catalog-row'),'retired Cabinet filters/table controls removed');
     ok(!cabinet.includes('cabinet-workbench')&&!cabinet.includes('cabinet-shelf-panel'),'retired Cabinet workbench markup removed');
     ['kind-material','kind-chemical','kind-solution','kind-substrate','kind-stack','kind-protocol','kind-instrument'].forEach(function(x){ok(app.includes('.cabinet-resource-tile.'+x),'missing Cabinet kind accent '+x);});
     ok(app.includes('grid-template-columns:repeat(3,minmax(0,1fr))')&&app.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),'responsive shelf columns are explicit');
     ok(app.includes('background:color-mix(in srgb,var(--surface) 90%,var(--cabinet-kind) 10%)'),'kind preview uses theme canvas');
   };
 
-  t['UI Kit and skill teach the Assistant and Cabinet theme contracts']=function(){
+  t['UI Kit and skill teach the Assistant, Cabinet and JSONL knowledge contracts']=function(){
     ok(kit.includes('id="cabinet-pattern"'),'Cabinet pattern in UI Kit');
     ok(kit.includes('Assistant theme contract'),'Assistant theme rule in UI Kit');
     ok(skill.includes('Assistant is a local themed surface'),'Assistant rule in skill');
-    ok(skill.includes('Cabinet belongs to the scientific canvas'),'Cabinet rule in skill');
+    ok(skill.includes('Save → Reuse → the experiment keeps its own copy'),'Cabinet mental model in skill');
+    ok(kit.includes('My JSONL library')&&skill.includes('Built-in library + My JSONL'),'JSONL knowledge model must be documented');
   };
   return t;
 };

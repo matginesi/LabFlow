@@ -129,13 +129,6 @@
   function limitInfo(status,code,message){
     const c=String(code||''),m=String(message||'').toLowerCase(),http=Number(status)||0;
     const known={
-      '1302':{limited:true,retryable:true,kind:'concurrency',label:'Provider concurrency limit reached'},
-      '1303':{limited:true,retryable:true,kind:'frequency',label:'Provider request frequency limit reached'},
-      '1304':{limited:true,retryable:false,kind:'daily_quota',label:'Provider daily quota exhausted'},
-      '1305':{limited:true,retryable:true,kind:'rate_limit',label:'API rate limit reached'},
-      '1308':{limited:true,retryable:false,kind:'usage_window',label:'Provider usage window exhausted'},
-      '1310':{limited:true,retryable:false,kind:'plan_quota',label:'Provider plan quota exhausted'},
-      '1312':{limited:true,retryable:true,kind:'model_capacity',label:'Provider model is temporarily busy'}
     };
     if(known[c])return known[c];
     if(http===429){
@@ -344,7 +337,7 @@
         failure.isNetwork=!wasCancelled;failure.cancelled=wasCancelled;failure.timedOut=!wasCancelled&&requestState.timedOut;failure.timeoutReason=requestState.timeoutReason;failure.timeoutMs=requestState.timeoutReason==='deadline'?hardLimit:limit;failure.elapsedMs=elapsed;failure.cause=err;
       }else if(!(err&&err.status)&&!(err&&err.code)&&!(err&&err.isProvider)&&!/^Provider returned|^The model returned/.test(String(err&&err.message||''))){
         providerId=String(providerId||'');
-        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId,url):(providerId==='zai'?label+' could not reach Z.AI from the browser. Check the API key and endpoint; if the same request works outside the browser, inspect CORS/origin policy.':label+' could not reach the AI service. Check the endpoint and provider status.');
+        const message=LF.AIDiagnostics?LF.AIDiagnostics.networkMessage(label,providerId,url):(label+' could not reach the AI service. Check the endpoint and provider status.');
         failure=new Error(message);failure.isNetwork=true;failure.providerId=providerId;failure.elapsedMs=elapsed;failure.cause=err;
       }
       const responseDetail=responseMeta||{received:false,body:null,bodyChars:0,note:failure.timedOut?'No provider bytes before the inactivity timeout.':failure.cancelled?'Request cancelled before an HTTP response.':'No HTTP response received.'};
@@ -504,13 +497,6 @@
       if(/^gpt-4(?:[.-]|$)/.test(m))return{maxOutputTokens:8192,contextWindow:null,exactOutput:true,reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',source:'OpenAI model specification'};
       if(/^(?:o1|o3|o4-mini)(?:[.-]|$)/.test(m))return{maxOutputTokens:100000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','medium','high'],reasoningDefault:'medium',source:'OpenAI model specification'};
     }
-    if(id==='zai'){
-      if(/^glm-5\.3(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['low','high','max'],reasoningDefault:'max',source:'Z.AI model specification'};
-      if(/^glm-5\.2(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:1000000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
-      if(/^glm-4\.7-flash(?:x)?(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
-      if(/^glm-4\.5(?:[.-]|$)/.test(m))return{maxOutputTokens:98304,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
-      if(/^glm-(?:4\.[6-9]|5)(?:[.-]|$)/.test(m))return{maxOutputTokens:131072,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Z.AI model specification'};
-    }
     return null;
   }
   function resolveThinkingPolicy(capability,actionMode,globalMode,provider){
@@ -589,13 +575,13 @@
     return cap;
   }
   async function resolveModelCapabilities(options){
-    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId),cacheKey=capabilityKey(providerId,endpoint,model);
+    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId,endpoint),cacheKey=capabilityKey(providerId,endpoint,model);
     if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
     const known=knownCapability(providerId,model);
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     if(!options.force){const fallback={provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'conservative fallback; run Detect for provider metadata',probeError:'',resolvedAt:Date.now()};capabilityCache.set(cacheKey,fallback);return fallback;}
     let detected=null,error=null;
-    try{if(provider.remoteModelMetadata===false)detected=null;else if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else if(providerId==='llamacpp')detected=await llamaCppCapability(endpoint,model,provider);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
+    try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else if(providerId==='llamacpp')detected=await llamaCppCapability(endpoint,model,provider);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
     const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
     capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{model:cap.loadedModel}));Log.info('capability.resolved',{provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,reasoningStatus:cap.reasoningStatus,reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
   }
@@ -614,20 +600,11 @@
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
-    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId),base=endpoint!=null?String(endpoint):String(settings.endpoint||''),headers=providerAuthHeaders(provider,key);
+    const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId,endpoint!=null?String(endpoint):settings.endpoint),base=endpoint!=null?String(endpoint):String(settings.endpoint||''),headers=providerAuthHeaders(provider,key);
     const started=performance.now();
     if(provider.keyRequired&&!String(key||'').trim()){const error=new Error((provider.name||activeProviderId)+' requires an API key before model detection.');error.providerId=activeProviderId;error.phase='models';Log.error('models.list-failed',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:false,error:error});throw error;}
     if(!base){const error=new Error((provider.name||activeProviderId)+' endpoint is empty.');error.providerId=activeProviderId;error.phase='models';Log.error('models.list-failed',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:!!key,error:error});throw error;}
     Log.info('models.list-start',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:!!String(key||'').trim(),origin:pageOrigin()});
-    if(provider.remoteModelMetadata===false&&provider.staticModelCatalogue===true&&Array.isArray(provider.knownModels)){
-      const models=Array.from(new Set(provider.knownModels.map(String).filter(Boolean)));
-      Log.info('models.list',{provider:activeProviderId,count:models.length,loaded:0,skipped:false,reason:'documented-static-catalogue'});
-      return{models:models,entries:models.map(function(id){return{id:id,free:false,pricing:{prompt:null,completion:null,request:null},provider:activeProviderId};}),loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'documented provider catalogue snapshot',static:true,skipped:false};
-    }
-    if(provider.remoteModelMetadata===false){
-      Log.info('models.list',{provider:activeProviderId,count:0,loaded:0,skipped:true,reason:'configured-model-only'});
-      return{models:[],loadedModels:[],elapsedMs:Math.round(performance.now()-started),url:'',source:'configured model · built-in capability metadata',skipped:true};
-    }
     const chat=new URL(validateHttpUrl(resolveChatUrl(base))),origin=chat.origin;
 
     async function read(url,phase){return{obj:await fetchJson(url,{method:'GET',headers:headers},activeProviderId,phase||'models'),url:url};}

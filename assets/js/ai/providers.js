@@ -6,10 +6,6 @@
      reconciled with model capability; `auto` deliberately sends no override. */
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
-    zai: {
-      id:'zai', name:'Z.AI', endpoint:'https://api.z.ai/api/paas/v4/chat/completions', model:'glm-4.7-flash', keyRequired:true, modelSelect:true, remoteModelMetadata:false, staticModelCatalogue:true, modelCatalogueRequired:true, modelSelectLabel:'Z.AI model', supportsJsonMode:true, supportsStreaming:false, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}, connectionTestTimeoutMs:90000, connectionTestMaxTokens:128, requestDeadlineMs:180000, knownModels:['glm-4.7-flash','glm-5.3','glm-5.2','glm-5.1','glm-5','glm-4.7','glm-4.7-flashx','glm-4.6','glm-4.5','glm-4.5-air','glm-4.5-x','glm-4.5-airx','glm-4.5-flash','glm-4-32b-0414-128k'],
-      note:'Z.AI General API via direct browser Chat Completions.'
-    },
     openrouter: {
       id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
       note:'OpenRouter OpenAI-compatible endpoint. Dynamic router aliases keep provider-default reasoning.'

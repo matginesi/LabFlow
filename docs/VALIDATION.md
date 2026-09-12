@@ -42,7 +42,7 @@ The unit suite includes architecture regressions for `DomainSchema`, persistence
 Serve locally with any ordinary static server, for example:
 
 ```bash
-python3 -m http.server 8000 --bind 0.0.0.0
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 Live provider checks remain separate because they require user credentials, provider availability and browser/network permission. They call the exact endpoint visible in Settings and never participate in scientific validation. Hosted providers that do not permit browser CORS cannot be made reachable by the static LabFlow frontend.

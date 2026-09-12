@@ -241,7 +241,7 @@
     return hydrate(snapshot);
   }
 
-  function serialize(exp) { return Schema.snapshot(hydrate(exp)); }
+  function serialize(exp, options) { return Schema.snapshot(hydrate(exp), options || {}); }
   function create(opts) {
     opts = opts || {}; const exp = new ExperimentData();
     exp.meta.name = String(opts.sourceName || '').replace(/\.zip$/i, '') || 'Untitled experiment';

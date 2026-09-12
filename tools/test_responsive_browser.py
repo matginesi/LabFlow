@@ -57,7 +57,7 @@ AUDIT_JS = r"""() => {
   const localScroll = node => node.closest([
     '.table-wrap', '.scroll-x-region', '.toolbar', '.topbar', '.sidebar',
     '.stack-editor-scroll', '.design-variant-rail .panel-body', '.activity-request-body', '.activity-disclosure',
-    '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-tabs', '.cabinet-filter-tabs', '.docs-mermaid-canvas',
+    '.code-block', '.md-table-wrap', '.experiment-strip', '.cabinet-library-tools', '.docs-mermaid-canvas',
     '.chart-scroll', '.compare-chart-viewport'
   ].join(','));
   const offenders = [...document.body.querySelectorAll('*')].filter(node => {
