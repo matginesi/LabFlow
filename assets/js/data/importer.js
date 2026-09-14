@@ -23,11 +23,26 @@
   const P = LF.Parser;
   const DM = LF.DataModel;
   const DS = LF.DomainSchema;
-  const DEFAULT_IMPORT_LIMITS = Object.freeze({maxCompressedBytes:256*1024*1024,maxUncompressedBytes:1024*1024*1024,maxEntryBytes:256*1024*1024,maxTextEntryBytes:32*1024*1024,maxFiles:10000,maxCompressionRatio:200});
+  const DEFAULT_IMPORT_LIMITS = Object.freeze({maxCompressedBytes:128*1024*1024,maxUncompressedBytes:512*1024*1024,maxEntryBytes:128*1024*1024,maxTextEntryBytes:16*1024*1024,maxFiles:5000,maxCompressionRatio:100});
   function importLimits(){const custom=window.LABFLOW_IMPORT_LIMITS&&typeof window.LABFLOW_IMPORT_LIMITS==='object'?window.LABFLOW_IMPORT_LIMITS:{};return Object.assign({},DEFAULT_IMPORT_LIMITS,custom);}
   function limitError(message,details){const error=new Error(message);error.code='IMPORT_RESOURCE_LIMIT';error.details=details||{};return error;}
-  function entrySizes(file){const data=file&&file._data||{};return{uncompressed:Number(data.uncompressedSize||0),compressed:Number(data.compressedSize||0)};}
-  function preflightArchive(zip,compressedBytes){const limits=importLimits(),entries=Object.values(zip.files||{}).filter(function(file){return file&&!file.dir;});if(entries.length>limits.maxFiles)throw limitError('This ZIP contains too many files for a browser import.',{files:entries.length,limit:limits.maxFiles});let total=0;entries.forEach(function(file){const sizes=entrySizes(file),name=String(file.name||'file');total+=sizes.uncompressed;if(sizes.uncompressed>limits.maxEntryBytes)throw limitError('A file inside the ZIP is too large to import safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxEntryBytes});if(/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(name)&&sizes.uncompressed>limits.maxTextEntryBytes)throw limitError('A text file inside the ZIP is too large to parse safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxTextEntryBytes});if(sizes.compressed>0&&sizes.uncompressed/sizes.compressed>limits.maxCompressionRatio)throw limitError('This ZIP contains an unusually compressed file and was stopped before extraction: '+name,{path:name,ratio:sizes.uncompressed/sizes.compressed,limit:limits.maxCompressionRatio});});if(total>limits.maxUncompressedBytes)throw limitError('The uncompressed ZIP is too large for a browser import.',{bytes:total,limit:limits.maxUncompressedBytes});Log.info('dataset.import-budget',{compressedBytes:compressedBytes,uncompressedBytes:total,files:entries.length,limits:limits});return{files:entries.length,uncompressedBytes:total};}
+
+  /* JSZip exposes archive sizes only through private metadata in the bundled
+     version. Keep that dependency isolated here and fail closed if an upgrade
+     stops exposing trustworthy sizes. Actual extraction bytes are accounted
+     separately below, so this is a preflight rather than the only guard. */
+  const ZipMetadataAdapter={
+    sizes:function(file){
+      const data=file&&file._data||{},u=Number(data.uncompressedSize),c=Number(data.compressedSize);
+      return{known:Number.isFinite(u)&&u>=0&&Number.isFinite(c)&&c>=0,uncompressed:Number.isFinite(u)&&u>=0?u:0,compressed:Number.isFinite(c)&&c>=0?c:0};
+    }
+  };
+  function preflightArchive(zip,compressedBytes){const limits=importLimits(),entries=Object.values(zip.files||{}).filter(function(file){return file&&!file.dir;});if(entries.length>limits.maxFiles)throw limitError('This ZIP contains too many files for a browser import.',{files:entries.length,limit:limits.maxFiles});let total=0;entries.forEach(function(file){const sizes=ZipMetadataAdapter.sizes(file),name=String(file.name||'file');if(!sizes.known)throw limitError('ZIP size metadata is unavailable for '+name+'. Import stopped because LabFlow cannot verify the archive safely.',{path:name,metadata:'unavailable'});total+=sizes.uncompressed;if(sizes.uncompressed>limits.maxEntryBytes)throw limitError('A file inside the ZIP is too large to import safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxEntryBytes});if(/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(name)&&sizes.uncompressed>limits.maxTextEntryBytes)throw limitError('A text file inside the ZIP is too large to parse safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxTextEntryBytes});if(sizes.compressed>0&&sizes.uncompressed/sizes.compressed>limits.maxCompressionRatio)throw limitError('This ZIP contains an unusually compressed file and was stopped before extraction: '+name,{path:name,ratio:sizes.uncompressed/sizes.compressed,limit:limits.maxCompressionRatio});});if(total>limits.maxUncompressedBytes)throw limitError('The uncompressed ZIP is too large for a browser import.',{bytes:total,limit:limits.maxUncompressedBytes});Log.info('dataset.import-budget',{compressedBytes:compressedBytes,uncompressedBytes:total,files:entries.length,limits:limits});return{files:entries.length,uncompressedBytes:total};}
+  function extractionBudget(limits){let total=0;return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);if(n>limits.maxEntryBytes)throw limitError('A file expanded beyond the safe per-file limit: '+path,{path:path,bytes:n,limit:limits.maxEntryBytes});if(isText&&n>limits.maxTextEntryBytes)throw limitError('A text file expanded beyond the safe parsing limit: '+path,{path:path,bytes:n,limit:limits.maxTextEntryBytes});total+=n;if(total>limits.maxUncompressedBytes)throw limitError('ZIP extraction exceeded the safe browser memory budget.',{path:path,bytes:total,limit:limits.maxUncompressedBytes});return n;},total:function(){return total;}};}
+  async function extractBytes(zip,path,budget,isText){const file=zip.file(path);if(!file)throw new Error('ZIP entry not found: '+path);const bytes=await file.async('uint8array');budget.account(path,bytes.byteLength,!!isText);return bytes;}
+  function bytesToText(bytes){return typeof TextDecoder!=='undefined'?new TextDecoder('utf-8').decode(bytes):Array.from(bytes||[]).map(function(b){return String.fromCharCode(b);}).join('');}
+  async function extractText(zip,path,budget){return bytesToText(await extractBytes(zip,path,budget,true));}
+  function exactArrayBuffer(bytes){return bytes.byteOffset===0&&bytes.byteLength===bytes.buffer.byteLength?bytes.buffer:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);}
 
   function basenamePath(path) { return String(path || '').split('/').filter(Boolean).pop() || ''; }
 
@@ -178,20 +193,28 @@
   }
 
 
-  async function restoreLabFlowSave(zip, sourceName, onProgress) {
-    const marker=zip.file('labflow.json'), dataFile=zip.file('experiment.json');
+  async function restoreLabFlowSave(zip, sourceName, onProgress, budget) {
+    const marker=zip.file('labflow.json'),dataFile=zip.file('experiment.json');
     if(!marker||!dataFile)return null;
-    let info=null;try{info=JSON.parse(await marker.async('string'));}catch(_err){return null;}
+    let info=null;try{info=JSON.parse(await extractText(zip,'labflow.json',budget));}catch(_err){return null;}
     if(!info||info.format!=='labflow-save')return null;
     if(onProgress)onProgress({stage:'Restoring LabFlow ZIP',progress:0.2});
-    const data=JSON.parse(await dataFile.async('string'));
-    const exp=DM.restore(data);
-    const rawFile=zip.file('raw/source.zip');
+    const data=JSON.parse(await extractText(zip,'experiment.json',budget));
+    if(String(info.experimentId||'')!==String(data.id||'')){
+      const error=new Error('LabFlow save integrity check failed: experiment identity does not match the manifest.');error.code='LABFLOW_SAVE_INTEGRITY';throw error;
+    }
+    const exp=DM.restore(data),rawFile=zip.file('raw/source.zip'),declaredIncluded=!!(info.source&&info.source.included);
+    if(declaredIncluded&&!rawFile){const error=new Error('LabFlow save integrity check failed: the manifest declares RAW data but raw/source.zip is missing.');error.code='LABFLOW_SAVE_INTEGRITY';throw error;}
+    if(!declaredIncluded&&rawFile){const error=new Error('LabFlow save integrity check failed: raw/source.zip is present but not declared by the manifest.');error.code='LABFLOW_SAVE_INTEGRITY';throw error;}
     exp.raw=exp.raw||{};
-    exp.raw.sourceArchive=rawFile?await rawFile.async('arraybuffer'):null;
+    if(rawFile){
+      const rawBytes=await extractBytes(zip,'raw/source.zip',budget,false),rawBuffer=exactArrayBuffer(rawBytes),actualSha=await sha256Hex(rawBuffer),manifestSha=String(info.source&&info.source.sha256||'').toLowerCase(),experimentSha=String(exp.raw.sha256||'').toLowerCase();
+      if(!manifestSha||!experimentSha||!actualSha||actualSha!==manifestSha||actualSha!==experimentSha){const error=new Error('LabFlow save integrity check failed: RAW SHA-256 does not match the manifest and experiment provenance.');error.code='LABFLOW_SAVE_INTEGRITY';error.details={actual:actualSha,manifest:manifestSha,experiment:experimentSha};throw error;}
+      exp.raw.sourceArchive=rawBuffer;
+    }else exp.raw.sourceArchive=null;
     exp.meta=exp.meta||{};exp.meta.importMethod='labflow-save';
     if(onProgress)onProgress({stage:'LabFlow ZIP restored',progress:1});
-    Log.info('dataset.labflow-save-restored',{sourceName:sourceName,experimentId:exp.id,revision:exp.sync&&exp.sync.revision||0,measurements:(exp.measurements||[]).length,rawIncluded:!!rawFile});
+    Log.info('dataset.labflow-save-restored',{sourceName:sourceName,experimentId:exp.id,revision:exp.sync&&exp.sync.revision||0,measurements:(exp.measurements||[]).length,rawIncluded:!!rawFile,integrityVerified:!!rawFile});
     return exp;
   }
 
@@ -214,7 +237,8 @@
     if (onProgress) onProgress({ stage: 'Opening ZIP', progress: 0.03 });
     const zip = await JSZip.loadAsync(arrayBuffer);
     preflightArchive(zip,compressedBytes);
-    const restored=await restoreLabFlowSave(zip,sourceName,onProgress);
+    const budget=extractionBudget(limits);
+    const restored=await restoreLabFlowSave(zip,sourceName,onProgress,budget);
     if(restored){end({datasetId:restored.id,name:restored.meta&&restored.meta.name,restored:true,measurements:(restored.measurements||[]).length},'info');return restored;}
     const entries = Object.values(zip.files);
     const manifest = entries.map(function (f) {
@@ -235,7 +259,7 @@
     for (let i = 0; i < fileEntries.length; i++) {
       const entry = fileEntries[i];
       let bytes = null;
-      try { bytes = await zip.file(entry.path).async('uint8array'); }
+      try { bytes = await extractBytes(zip,entry.path,budget,/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(entry.name)); }
       catch (err) {
         Log.warn('dataset.read-failed', { path: entry.path, error: err });
         findings.push(finding('warning', 'parse', 'Could not read file', String(err.message || err), entry.path, [entry.path]));
@@ -258,7 +282,7 @@
         record = file;
       }
       if (/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(entry.name) && bytes) {
-        try { const text=typeof TextDecoder!=='undefined'?new TextDecoder('utf-8').decode(bytes):await zip.file(entry.path).async('string');textByPath.set(entry.path,text); }
+        try { const text=bytesToText(bytes);textByPath.set(entry.path,text); }
         catch (err) { Log.warn('dataset.text-read-failed', { path: entry.path, error: err }); }
       }
     }
@@ -552,5 +576,5 @@
     return exp;
   }
 
-  LF.Importer = { parseDataset: parseDataset, importLimits: importLimits };
+  LF.Importer = { parseDataset: parseDataset, importLimits: importLimits, zipEntrySizes: function(file){return ZipMetadataAdapter.sizes(file);} };
 }());

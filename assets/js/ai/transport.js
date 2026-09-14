@@ -47,64 +47,8 @@
     return{thinkingMode:mode,maxTokens:configured};
   }
 
-  function resolveChatUrl(endpoint){
-    let url=String(endpoint||'').trim();
-    if(!url)return '';
-    url=url.replace(/\/+$/,'').replace(/\/chat\/completions(?:\/chat\/completions)+$/i,'/chat/completions');
-    if(/\/chat\/completions$/i.test(url))return url;
-    /* Provider settings store an OpenAI-compatible base URL. Keeping /v1 as the
-       preset avoids accidental double suffixes and makes LM Studio/Ollama use
-       exactly the same Chat Completions contract. */
-    return url+'/chat/completions';
-  }
-  function validateHttpUrl(url){
-    let parsed;
-    try{parsed=new URL(String(url||''));}catch(_){throw new Error('AI endpoint is not a valid URL.');}
-    if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')throw new Error('AI endpoint must use http:// or https://.');
-    return parsed.toString();
-  }
-  function targetAddressSpace(url){
-    let host='';
-    try{host=new URL(String(url||'')).hostname.toLowerCase().replace(/^\[|\]$/g,'');}catch(_){return '';}
-    if(host==='localhost'||host==='127.0.0.1'||host==='::1')return 'loopback';
-    if(host.endsWith('.local')||(!host.includes('.')&&!host.includes(':')))return 'local';
-    const parts=host.split('.').map(Number);
-    if(parts.length===4&&parts.every(Number.isFinite)){
-      if(parts[0]===127)return 'loopback';
-      if(parts[0]===10||(parts[0]===192&&parts[1]===168)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||(parts[0]===169&&parts[1]===254))return 'local';
-    }
-    if(/^f[cd][0-9a-f]{2}:/i.test(host)||/^fe[89ab][0-9a-f]:/i.test(host))return 'local';
-    return '';
-  }
-  function isLocalAddress(url){return !!targetAddressSpace(url);}
-  function supportsLocalNetworkAccess(){
-    try{return typeof Request!=='undefined'&&Request.prototype&&('targetAddressSpace' in Request.prototype);}
-    catch(_){return false;}
-  }
-  function networkFetchOptions(url,base){
-    const options=Object.assign({},base||{}),space=targetAddressSpace(url);
-    if(space){options.mode='cors';options.targetAddressSpace=space;}
-    return options;
-  }
-  function fetchOptions(url,headers,requestBody,controller){
-    return networkFetchOptions(url,{method:'POST',headers:headers,body:requestBody,signal:controller.signal,cache:'no-store',credentials:'omit'});
-  }
-
-  function pageOrigin(){try{return typeof location!=='undefined'&&location.origin?String(location.origin):'';}catch(_){return'';}}
-  /** Send one browser request to the exact provider endpoint visible in Settings. No hidden relay or fallback routing is applied. */
-  async function providerFetch(url,options,providerId,phase){
-    options=options||{};providerId=String(providerId||'');phase=String(phase||'request');
-    Log.info('network.route',{provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote'});
-    try{
-      const response=await fetch(url,networkFetchOptions(url,options));
-      try{response.labflowTransport='direct';response.labflowTargetUrl=String(url||'');}catch(_){}
-      return response;
-    }catch(error){
-      Log.warn('network.direct-failed',{provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote',error:error});
-      if(error&&typeof error==='object'){error.providerId=error.providerId||providerId;error.phase=error.phase||phase;error.url=error.url||String(url||'');error.directBrowser=true;error.transport='direct';}
-      throw error;
-    }
-  }
+  const Http=LF.AIHttp;if(!Http)throw new Error('AI HTTP module is not loaded.');
+  const resolveChatUrl=Http.resolveChatUrl,validateHttpUrl=Http.validateHttpUrl,targetAddressSpace=Http.targetAddressSpace,isLocalAddress=Http.isLocalAddress,supportsLocalNetworkAccess=Http.supportsLocalNetworkAccess,networkFetchOptions=Http.networkFetchOptions,fetchOptions=Http.fetchOptions,pageOrigin=Http.pageOrigin,providerFetch=Http.providerFetch;
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
   function estimatePromptTokens(value){
     const text=Array.isArray(value)?value.map(function(m){return String(m&&m.content||'');}).join('\n'):String(value||'');
@@ -114,45 +58,8 @@
     return Math.max(0,Math.ceil(text.length/2.7)+(Array.isArray(value)?value.length*8:0));
   }
 
-  function retryAfterMs(headers){
-    if(!headers||typeof headers.get!=='function')return 0;
-    const raw=String(headers.get('retry-after')||'').trim();if(!raw)return 0;
-    const seconds=Number(raw);if(Number.isFinite(seconds)&&seconds>=0)return Math.round(seconds*1000);
-    const when=Date.parse(raw);return Number.isFinite(when)?Math.max(0,when-Date.now()):0;
-  }
-  function contextOverflowDetails(text,message){
-    const raw=String(text||'')+' '+String(message||''),lower=raw.toLowerCase();
-    if(lower.indexOf('exceed_context_size_error')<0&&lower.indexOf('exceeds the available context size')<0&&lower.indexOf('context length exceeded')<0)return null;
-    const prompt=raw.match(/(?:n_prompt_tokens[\"']?\s*[:=]\s*|request \()([0-9]{2,})\s*(?:tokens)?/i),ctx=raw.match(/(?:n_ctx[\"']?\s*[:=]\s*|context size \()([0-9]{2,})/i),http=raw.match(/returned\s+(4\d\d)\s*:/i);
-    return{promptTokens:prompt?Number(prompt[1]):null,contextWindow:ctx?Number(ctx[1]):null,httpStatus:http?Number(http[1]):null};
-  }
-  function limitInfo(status,code,message){
-    const c=String(code||''),m=String(message||'').toLowerCase(),http=Number(status)||0;
-    const known={
-    };
-    if(known[c])return known[c];
-    if(http===429){
-      if(/(?:quota|balance|credit|billing|daily|weekly|monthly|usage limit|plan limit|exhausted)/i.test(m))return{limited:true,retryable:false,kind:'quota',label:'Provider quota exhausted'};
-      return{limited:true,retryable:true,kind:'rate_limit',label:'API rate limit reached'};
-    }
-    return{limited:false,retryable:false,kind:'',label:''};
-  }
-  function parseProviderError(text,status,requestId,headers,providerId){
-    let code='',message='',providerType='';
-    try{const obj=JSON.parse(text||'{}'),e=obj.error||obj;code=String(e.code||obj.code||'');message=String(e.message||obj.message||'');providerType=String(e.type||obj.type||'');}
-    catch(_){message=String(text||'').replace(/<style[\s\S]*?<\/style>/gi,' ').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,420);}
-    providerId=String(providerId||'');
-    const overflow=contextOverflowDetails(text,message),effectiveStatus=Number(status)||overflow&&overflow.httpStatus||0;
-    if(overflow){code='MODEL_CONTEXT_LENGTH';providerType=providerType||'exceed_context_size_error';}
-    const limit=overflow?{limited:false,retryable:false,kind:'',label:''}:limitInfo(effectiveStatus,code,message);
-    const label=overflow?'Model context exceeded':limit.limited?limit.label:effectiveStatus?'AI request failed ('+effectiveStatus+')':'AI request failed';
-    const hint=LF.AIDiagnostics?LF.AIDiagnostics.statusHint(effectiveStatus,code,message):'';
-    const err=new Error(label+(overflow&&overflow.promptTokens&&overflow.contextWindow?' · '+overflow.promptTokens+' input tokens > '+overflow.contextWindow+' context tokens':'')+(!overflow&&code?' · '+code:'')+(message?' · '+message:'')+hint);
-    err.status=effectiveStatus;err.providerId=String(providerId||'');err.code=overflow?'MODEL_CONTEXT_LENGTH':'';err.providerCode=code;err.providerType=providerType;err.providerMessage=message;err.providerResponse=String(text||'').slice(0,12000);err.requestId=requestId||'';err.retryAfterMs=retryAfterMs(headers);err.isProvider=true;err.isNetwork=false;err.rateLimited=limit.limited;err.rateLimitKind=limit.kind;err.rateLimitRetryable=limit.retryable;
-    if(overflow){err.promptTokens=overflow.promptTokens;err.contextWindow=overflow.contextWindow;err.isContextOverflow=true;}
-    return err;
-  }
-  function isRateLimitError(err){if(!err)return false;if(err.rateLimited===true)return true;return limitInfo(err.status,err.providerCode,err.providerMessage||err.message).limited;}
+  const TransportErrors=LF.AITransportErrors;if(!TransportErrors)throw new Error('AI transport error module is not loaded.');
+  const retryAfterMs=TransportErrors.retryAfterMs,contextOverflowDetails=TransportErrors.contextOverflowDetails,limitInfo=TransportErrors.limitInfo,parseProviderError=TransportErrors.parseProviderError,isRateLimitError=TransportErrors.isRateLimitError;
 
   function reasoningDisablePresent(body){
     body=body||{};const reasoning=body.reasoning&&typeof body.reasoning==='object'?body.reasoning:{},thinking=body.thinking&&typeof body.thinking==='object'?body.thinking:{},kwargs=body.chat_template_kwargs&&typeof body.chat_template_kwargs==='object'?body.chat_template_kwargs:{};
@@ -205,27 +112,8 @@
     return h;
   }
 
-  function streamPart(value){
-    if(value==null)return'';
-    if(typeof value==='string')return value;
-    if(Array.isArray(value))return value.map(streamPart).join('');
-    if(typeof value==='object')return streamPart(value.text||value.content||value.value||'');
-    return String(value);
-  }
-
-  /* Some OpenAI-compatible endpoints occasionally emit cumulative or overlapping
-     content chunks. Merge defensively so one provider quirk cannot duplicate the
-     whole answer, corrupt structured JSON, or make the analysis appear to loop. */
-  function mergeStreamContent(current,incoming){
-    current=String(current||'');incoming=String(incoming||'');
-    if(!incoming)return current;if(!current)return incoming;if(incoming===current)return current;
-    if(incoming.length>current.length&&incoming.indexOf(current)===0)return incoming;
-    if(incoming.length>=24&&current.endsWith(incoming))return current;
-    const max=Math.min(current.length,incoming.length,4096);
-    for(let n=max;n>=16;n--){if(current.slice(-n)===incoming.slice(0,n))return current+incoming.slice(n);}
-    return current+incoming;
-  }
-  function outputLoopDetected(value){const s=String(value||'').replace(/\s+/g,' ').trim();for(const n of [512,1024,2048]){if(s.length<n*3)continue;const a=s.slice(-n),b=s.slice(-2*n,-n),c=s.slice(-3*n,-2*n);if(a===b&&b===c)return true;}return false;}
+  const Stream=LF.AIStream;if(!Stream)throw new Error('AI stream module is not loaded.');
+  const mergeStreamContent=Stream.mergeStreamContent,outputLoopDetected=Stream.outputLoopDetected,readEventStream=Stream.readEventStream;
 
   function reasoningControlUrl(chatUrl){return String(chatUrl||'').replace(/\/chat\/completions\/?$/i,'/chat/completions/control');}
   async function sendReasoningEnd(chatUrl,headers,requestId,model,signal){
@@ -238,50 +126,6 @@
       Log[ok?'info':'warn']('thinking.control',{requestId:body.id,model:model||'',action:'reasoning_end',status:response.status,ok:ok,message:String(parsed.message||'')});
       return{ok:ok,status:response.status,message:String(parsed.message||'')};
     }catch(error){Log.warn('thinking.control-failed',{requestId:body.id,model:model||'',error:error});return{ok:false,status:0,message:String(error&&error.message||error)};}
-  }
-
-  /** Consume one OpenAI-compatible SSE response in the active request. */
-  async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens,onReasoning,providerId){
-    const reader=response.body&&response.body.getReader?response.body.getReader():null;
-    if(!reader)throw new Error('The provider declared streaming but the browser exposed no readable response body.');
-    const decoder=new TextDecoder(),state={content:'',reasoning:'',finishReason:'',usage:null,model:'',requestId:'',events:0,meaningfulEvents:0,bytes:0,ttftMs:null,budgetTokens:budgetTokens||null,done:false},started=startedAt||performance.now();
-    let raw='',buffer='';
-    function event(data){
-      if(!data)return false;
-      if(data==='[DONE]'){state.done=true;return true;}
-      let obj;try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returned an invalid SSE JSON event.');invalid.cause=error;invalid.providerResponse=data;throw invalid;}
-      if(obj.error)throw parseProviderError(JSON.stringify(obj),Number(obj.error.status||0),obj.request_id||'',null,providerId);
-      const choice=obj.choices&&obj.choices[0]||{},delta=choice.delta||choice.message||{};
-      const content=streamPart(delta.content||delta.text||choice.text||obj.output_text||obj.response),reasoning=streamPart(delta.reasoning_content||delta.reasoning||delta.reasoning_details||choice.reasoning_content||obj.reasoning_content||obj.reasoning);
-      state.model=obj.model||state.model;state.requestId=obj.request_id||obj.id||state.requestId;
-      const meaningful=!!(content||reasoning||choice.finish_reason||obj.usage);
-      if((content||reasoning)&&state.ttftMs==null)state.ttftMs=Math.round(performance.now()-started);
-      state.content=mergeStreamContent(state.content,content);state.reasoning=mergeStreamContent(state.reasoning,reasoning);state.finishReason=choice.finish_reason||state.finishReason;
-      if(reasoning&&onReasoning)onReasoning({requestId:state.requestId,model:state.model,reasoning:reasoning,totalReasoning:state.reasoning});
-      if(meaningful){state.meaningfulEvents++;if(onMeaningful)onMeaningful();}
-      if(outputLoopDetected(state.content)||outputLoopDetected(state.reasoning)){const repeated=outputLoopDetected(state.content)?state.content:state.reasoning,loop=new Error('The model entered a repeated-output loop. The checkpoint was stopped before storing duplicated content.');loop.code='MODEL_OUTPUT_LOOP';loop.providerResponse=repeated.slice(-12000);throw loop;}
-      const charGuard=budgetTokens?Math.max(24000,Number(budgetTokens)*8):4000000;if(state.content.length+state.reasoning.length>charGuard){const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;}
-      state.usage=obj.usage||state.usage;state.events++;
-      if(onProgress){const elapsedMs=Math.round(performance.now()-started),reported=state.usage&&Number.isFinite(Number(state.usage.completion_tokens))?Number(state.usage.completion_tokens):null,tokens=reported==null?estimateTokens(state.content+state.reasoning):reported,generationMs=state.ttftMs==null?0:Math.max(0,elapsedMs-state.ttftMs),rate=generationMs>=100?tokens/(generationMs/1000):null;onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs:elapsedMs,generationMs:generationMs,tokens:tokens,rate:Number.isFinite(rate)?rate:null,estimated:reported==null,budgetTokens:budgetTokens||null});}
-      return false;
-    }
-    function consume(final){
-      const blocks=buffer.split(/\r?\n\r?\n/);if(final)buffer='';else buffer=blocks.pop()||'';
-      let terminal=false;
-      for(const block of blocks){const data=block.split(/\r?\n/).filter(function(line){return line.indexOf('data:')===0;}).map(function(line){return line.slice(5).trimStart();}).join('\n');if(data&&event(data))terminal=true;}
-      return terminal;
-    }
-    try{
-      while(true){
-        const part=await reader.read();
-        if(part.done)break;
-        state.bytes+=part.value.byteLength;
-        const text=decoder.decode(part.value,{stream:true});onBytes(text);raw=(raw+text).slice(-STREAM_DIAGNOSTIC_CHARS);buffer+=text;
-        if(consume(false)){try{Promise.resolve(reader.cancel()).catch(function(){});}catch(_){}break;}
-      }
-      const tail=decoder.decode();if(tail){raw=(raw+tail).slice(-STREAM_DIAGNOSTIC_CHARS);buffer+=tail;}if(!state.done)consume(true);
-      return{rawText:raw,json:{id:state.requestId,request_id:state.requestId,model:state.model,choices:[{message:{role:'assistant',content:state.content,reasoning_content:state.reasoning},finish_reason:state.finishReason}],usage:state.usage||null},stream:state};
-    }catch(err){try{await reader.cancel();}catch(_){}throw err;}
   }
 
   async function request(url,headers,body,label,timeoutMs,onProgress,hardTimeoutMs,providerId){

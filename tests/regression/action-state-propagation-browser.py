@@ -11,7 +11,7 @@ from playwright.sync_api import sync_playwright
 
 
 BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
-FIXTURE = Path("TEST_DATA/02_ROVINATO_SPORCO_TASKS.zip").resolve()
+FIXTURE = Path("TEST_DATA/02_ROVINATO_SPORCO_OPERATIONS.zip").resolve()
 
 
 def main() -> int:

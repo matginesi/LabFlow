@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 ROOT=Path(__file__).resolve().parents[1]
-index=(ROOT/'index.html').read_text(); action_ui=(ROOT/'assets/js/ai/action-ui.js').read_text(); ai_settings=(ROOT/'assets/js/ai/settings.js').read_text(); feedback=(ROOT/'assets/js/ui/feedback.js').read_text(); pages='\n'.join(p.read_text() for p in (ROOT/'assets/js/pages').glob('*.js')); css=(ROOT/'assets/css/app.css').read_text(); ui_css=(ROOT/'assets/css/ui.css').read_text(); settings=(ROOT/'assets/js/pages/settings-page.js').read_text(); app=(ROOT/'assets/js/app.js').read_text(); kit=(ROOT/'ui-kit.html').read_text(); skill=(ROOT/'.agent/skills/labflow-ui/SKILL.md').read_text(); errors=[]
+index=(ROOT/'index.html').read_text(); action_ui=(ROOT/'assets/js/ai/action-ui.js').read_text(); ai_settings=(ROOT/'assets/js/ai/settings.js').read_text(); feedback=(ROOT/'assets/js/ui/feedback.js').read_text(); pages='\n'.join(p.read_text() for p in (ROOT/'assets/js/pages').glob('*.js')); css=(ROOT/'assets/css/app.css').read_text(); ui_css=(ROOT/'assets/css/ui.css').read_text(); settings=(ROOT/'assets/js/pages/settings-page.js').read_text(); app=(ROOT/'assets/js/app.js').read_text(); controllers='\n'.join(p.read_text() for p in (ROOT/'assets/js/controllers').glob('*.js')); kit=(ROOT/'ui-kit.html').read_text(); skill=(ROOT/'.agent/skills/labflow-ui/SKILL.md').read_text(); errors=[]
 if "closest('button[data-action]')" not in action_ui and 'closest("button[data-action]")' not in action_ui:errors.append('Action delegation not button-only')
 for tag in re.findall(r'<([a-zA-Z0-9]+)\b[^>]*data-action=',pages):
     if tag.lower()!='button':errors.append('data-action on non-button '+tag)
@@ -61,7 +61,7 @@ if not (ROOT/'knowledge/kb.jsonl').exists():errors.append('source-controlled Kno
 if (ROOT/'knowledge/kb.json').exists():errors.append('retired Knowledge Base JSON wrapper still present')
 if 'id="exportKb"' not in settings or 'id="importKb"' not in settings or '.jsonl' not in settings:errors.append('Knowledge Base Settings does not expose JSONL-backed backup/restore')
 if 'exportJsonl' not in kb or 'importJsonl' not in kb:errors.append('Knowledge Base JSONL import/export API missing')
-if "localStorage.setItem(LOCAL_KEYS.KNOWLEDGE, knowledgeJsonl(entries))" not in storage:errors.append('Knowledge Base localStorage is not persisted as JSONL')
+if 'function saveKnowledgeJsonl(text)' not in storage or "localStorage.setItem(LOCAL_KEYS.KNOWLEDGE, String(text || ''))" not in storage:errors.append('Knowledge Base storage is not opaque JSONL text')
 
 # Split layouts respond to the actual workspace width, not just the browser viewport.
 if 'container-type: inline-size' not in css:errors.append('main workspace is not a responsive size container')
@@ -75,8 +75,8 @@ if 'id="applyAutomaticCleanup"' not in review or 'Apply safe corrections' not in
 if "closest('#applyAutomaticCleanup')" not in app or 'commitAutomaticSafeFixes(exp)' not in app or 'function commitAutomaticSafeFixes(exp)' not in corrections:errors.append('safe-cleanup acceptance does not use the canonical dataset commit service')
 
 # Routes start at the top; content switches preserve the visible shared anchor.
-for marker,label in [("renderWithStableAnchor('.results-main-tabs')",'Results'),("renderWithStableAnchor('.docs-workbench')",'Documentation'),("renderWithStableAnchor('.cabinet-library-tools')",'Cabinet')]:
-    if marker not in app:errors.append(label+' stable-anchor navigation missing')
+for marker,label,source in [("renderWithStableAnchor('.results-main-tabs')",'Results',app),("renderWithStableAnchor('.docs-workbench')",'Documentation',app),("renderStable('.cabinet-library-tools')",'Cabinet',controllers)]:
+    if marker not in source:errors.append(label+' stable-anchor navigation missing')
 if "settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0" not in app:errors.append('Settings navigation does not start the new context at the workspace beginning')
 if 'if(!renderedRoute||routeChanged)main.scrollTop=0' not in app.replace(' ',''):errors.append('route change does not reset main workspace scroll')
 if 'main.scrollTop=mainScrollTop' not in app:errors.append('same-context rerender does not preserve main workspace scroll')

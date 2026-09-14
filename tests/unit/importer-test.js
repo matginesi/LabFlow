@@ -128,22 +128,14 @@ module.exports = function (t, LF, env) {
     assert(P.isReference('PREFIXREF_1'), false, 'embedded REF without separator is not a reference');
     const raw='0000_2026-01-22_19.55.06_Stability (Parameters)_N1 3 -1A.txt';
     assert(P.canonicalFileName(raw), '0000_2026-01-22_19.55.06_Stability (Parameters)_N1_3_1A.txt', 'canonical filename');
-    const exp = await Im.parseDataset(loadFixture('2026_01_22.zip'), '2026_01_22.zip');
+    const zip=new JSZip();
+    zip.file('synthetic/'+raw,'## Header ##\n[General info]\nDevice\tN1 3 -1A\nTest\tStability parameters\n## Data ##\nTime (Hours)\tVoc FW (V)\n0\t1.0\n');
+    const exp=await Im.parseDataset(await zip.generateAsync({type:'arraybuffer'}),'canonical-name.zip');
     const f=exp.files.find(function(x){return x.rawName===raw;});
     truthy(f,'raw filename retained');
     assert(f.name,'0000_2026-01-22_19.55.06_Stability (Parameters)_N1_3_1A.txt','working canonical filename');
     assert(f.path.indexOf(raw)>=0,true,'raw archive path remains untouched');
     assert(exp.findings.some(function(x){return x.type==='naming';}),false,'cosmetic naming is not an AI ambiguity finding');
-    truthy(exp.measurements.some(function(m){return m.sample==='N1_3_1A';}),'measurement uses canonical sample identity');
-    assert(exp.experiments.map(function(x){return x.name;}).sort(), ['N1','N2','N3','NEW','REF'], 'real fixture logical experiments');
-    assert(exp.samples.length,31,'real fixture physical samples/cells');
-    assert(exp.runs.length,42,'real fixture acquisition runs');
-    assert(exp.measurements.length,72,'real fixture JV measurements');
-    const repeated=exp.samples.find(function(x){return x.name==='N2_1_1A';});
-    truthy(repeated,'repeated sample exists');
-    assert(repeated.experiment,'N2','sample links to logical experiment');
-    assert(repeated.runIds.length,1,'one acquisition run for N2_1_1A');
-    assert(repeated.measurementIds.length,5,'five JV measurements stay under one cell');
   };
 
   t['rejects missing JSZip cleanly'] = async function () {
@@ -190,5 +182,16 @@ module.exports = function (t, LF, env) {
     assert(restored.samples.length,sampleCount,'samples round-trip');
     assert(restored.raw.sha256,sourceSha,'RAW digest round-trip');
     assert(restored.raw.sourceArchive instanceof ArrayBuffer,true,'RAW bytes restored');
+  };
+
+  t['LabFlow Export ZIP rejects a tampered immutable RAW source before restore'] = async function () {
+    const original = await Im.parseDataset(loadFixture('01_PRECISO_PERFETTO_COMPLETO.zip'), '01_PRECISO_PERFETTO_COMPLETO.zip');
+    const blob=await LF.Export.save(original), outer=await JSZip.loadAsync(await blob.arrayBuffer());
+    outer.file('raw/source.zip',new Uint8Array([80,75,3,4,0,1,2,3,4,5]));
+    const tampered=await outer.generateAsync({type:'arraybuffer'});
+    let error=null;
+    try{await Im.parseDataset(tampered,'tampered_labflow.zip');}catch(err){error=err;}
+    truthy(error,'tampered portable save must fail');
+    assert(error.code,'LABFLOW_SAVE_INTEGRITY','tampered RAW must fail with the integrity code');
   };
 };

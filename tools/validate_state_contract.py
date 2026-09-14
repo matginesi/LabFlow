@@ -13,7 +13,7 @@ if "derived:{actions:{},chat:{conversation:[]}}" not in schema.replace(' ',''): 
 if "['derived',{owner:'runtime',layer:'interaction_history',persistence:'persistent'}]" not in schema.replace(' ',''): errors.append('DomainSchema must own persistent interaction history under derived')
 if 'exp.manifest = manifest' not in importer: errors.append('importer does not write canonical manifest')
 if 'LF.DataModel.getExperiment()' not in ctx: errors.append('Action context does not resolve canonical experiment')
-if 'rawArchive.slice(0)' not in state: errors.append('RAW archive fallback is not cloned before retention')
+if 'state.experiment.raw.sourceArchive=rawArchive' not in state.replace(' ',''): errors.append('RAW archive fallback must retain the immutable upload buffer without cloning')
 
 
 # UI/transient state has one canonical home under state.ui. Keep route's existing
@@ -35,7 +35,7 @@ for action_file in (ROOT/'actions').glob('*/action.json'):
             errors.append(f'{action_file.parent.name} UI binding {name} must use canonical ui.* path')
 
 data_model=(ROOT/'assets/js/experiment/data-model.js').read_text()
-if 'opts.bytes.slice(0)' not in data_model: errors.append('DataModel does not clone uploaded RAW bytes')
+if 'sourceArchive=opts.bytes' not in data_model.replace(' ',''): errors.append('DataModel must retain uploaded RAW bytes without an eager full-buffer clone')
 if errors:
  print('State contract: FAILED',file=sys.stderr); [print(' - '+e,file=sys.stderr) for e in errors]; raise SystemExit(1)
 print('State contract: OK')

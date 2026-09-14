@@ -122,7 +122,12 @@
   }
   function render() {
     const docs = documents(), doc = selectedDocument();
-    if (!doc) return '<section class="page"><div class="notice warning"><strong>Documentation bundle is empty.</strong><span>Run the documentation bundle builder.</span></div></section>';
+    if (!doc) {
+      const lazy = LF.LazyAssets && LF.LazyAssets.status ? LF.LazyAssets.status('docs') : null;
+      const failed = lazy && lazy.error;
+      return '<section class="page">' + LF.PageShell.pageHead('Documentation','Researcher guidance and technical reference.') +
+        '<div class="notice ' + (failed ? 'danger' : 'info') + '"><strong>' + (failed ? 'Documentation could not be loaded.' : 'Loading documentation…') + '</strong><span>' + (failed ? C.escapeHtml(failed.message || String(failed)) : 'LabFlow loads the reference library only when you open this page.') + '</span></div></section>';
+    }
     const sections = Array.from(new Set(docs.map(function (item) { return item.section; })));
     const query = LF.State.state.ui.docsQuery || '', section = LF.State.state.ui.docsSection || 'all';
     return '<section class="page docs-page">' + LF.PageShell.pageHead('Documentation','Researcher guidance and technical reference, rendered locally from the current Markdown sources.') +

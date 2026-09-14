@@ -1,5 +1,8 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/ai/http.js');
+require('../../assets/js/ai/errors.js');
+require('../../assets/js/ai/stream.js');
 require('../../assets/js/ai/transport.js');
 
 function assert(actual, expected, label) {

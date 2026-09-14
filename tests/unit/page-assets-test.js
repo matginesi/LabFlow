@@ -11,6 +11,12 @@ module.exports=function(t,LF,ctx){
     assert(scripts.includes('assets/js/pages/export-page.js'),'Export page module must use the current path');
     assert(!scripts.includes('assets/js/nomad/nomad.js'),'obsolete NOMAD module path must not remain');
     assert(!scripts.includes('assets/js/pages/nomad-page.js'),'obsolete NOMAD page path must not remain');
+    assert(scripts.includes('assets/js/pages/lazy-assets.js'),'optional maintenance/documentation payloads must use the shared lazy loader');
+    assert(!scripts.includes('assets/js/pages/docs-bundle.js'),'documentation bundle must not load on every LabFlow boot');
+    assert(!scripts.includes('assets/js/pages/ui-kit-inline.js'),'UI Kit bundle must not load on every LabFlow boot');
+    const lazy=fs.readFileSync(path.join(root,'assets/js/pages/lazy-assets.js'),'utf8');
+    assert(lazy.includes('assets/js/pages/docs-bundle.js'),'lazy loader must own the documentation bundle');
+    assert(lazy.includes('assets/js/pages/ui-kit-inline.js'),'lazy loader must own the UI Kit bundle');
   };
   t['Export page registers the render API expected by app.js']=function(){
     const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');

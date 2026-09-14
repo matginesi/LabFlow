@@ -140,7 +140,9 @@ module.exports=function(t){
     assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
     assert(uiKitInline.includes('id="documentation-pattern"'),true,'full catalog includes patterns after nested main elements');
     assert(uiKitInline.includes("root.querySelectorAll('[data-ui-kit-group]')"),true,'inline filters operate in host document');
-    assert(html.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog module is loaded');
+    assert(html.includes('assets/js/pages/ui-kit-inline.js'),false,'inline catalog is not part of the startup payload');
+    const lazyAssets=fs.readFileSync(path.join(root,'assets/js/pages/lazy-assets.js'),'utf8');
+    assert(lazyAssets.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog is loaded only when Settings opens UI Kit');
     const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
     assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
   };
@@ -159,8 +161,8 @@ module.exports=function(t){
   };
 
   t['Action lifecycle updates do not rebuild the active page editor']=function(){
-    assert(app.includes("if(reason!=='actionRun'&&reason!=='assistant')render()"),true,'actionRun and Assistant lifecycle must not trigger a full page render');
-    assert(app.includes("if(reason!=='actionRun')scheduleWorkspaceSave"),true,'transient action lifecycle must not autosave the LabFlow Data');
+    assert(app.includes("const renderNeeded=reason!=='actionRun'&&reason!=='assistant'"),true,'actionRun and Assistant lifecycle must not trigger a full page render');
+    assert(app.includes("const persistNeeded=reason!=='actionRun'&&reason!=='route'"),true,'transient action lifecycle and route-only changes must not autosave the LabFlow Data');
   };
 
   t['LabFlow Data restores from IndexedDB and Reset is the explicit clear boundary']=function(){

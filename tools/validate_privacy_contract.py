@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML_FILES = (ROOT / "index.html", ROOT / "ui-kit.html")
-FETCH_OWNER = Path("assets/js/ai/transport.js")
+FETCH_OWNERS = [Path("assets/js/ai/http.js"), Path("assets/js/ai/transport.js")]
 FORBIDDEN_APIS = {
     "document.cookie": re.compile(r"document\s*\.\s*cookie"),
     "cookie capability probe": re.compile(r"navigator\s*\.\s*cookieEnabled"),
@@ -60,13 +60,13 @@ def validate_javascript(errors: list[str]) -> None:
             if marker in lowered:
                 fail(errors, f"{relative} contains tracker marker {marker!r}")
 
-    if fetch_files != [FETCH_OWNER]:
-        fail(errors, f"fetch owners must be [{FETCH_OWNER}], found {fetch_files}")
+    if fetch_files != FETCH_OWNERS:
+        fail(errors, f"fetch owners must be {FETCH_OWNERS}, found {fetch_files}")
 
-    transport = (ROOT / FETCH_OWNER).read_text(encoding="utf-8")
+    transport = '\n'.join((ROOT / owner).read_text(encoding='utf-8') for owner in FETCH_OWNERS)
     for contract in ("credentials:'omit'", "cache:'no-store'"):
         if contract not in transport:
-            fail(errors, f"AI transport is missing {contract}")
+            fail(errors, f"AI transport boundary is missing {contract}")
 
 
 def validate_local_assets(errors: list[str]) -> None:
@@ -100,7 +100,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Privacy contract OK: local assets, one explicit provider transport, no tracker APIs.")
+    print("Privacy contract OK: local assets, explicit provider transport modules, no tracker APIs.")
     return 0
 
 

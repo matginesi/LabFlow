@@ -52,13 +52,14 @@ async function main(){
   LF.State.setExperiment(exp,ab);LF.DataPipeline.refresh(exp,{reason:'regression-import'});LF.State.setRoute('experiment-import');
   const receipt=LF.ImportPage.receipt(exp);
   ok(/Source archive/i.test(receipt),'source receipt exists after import');
-  ok(receipt.includes('RAW preserved'),'receipt states immutable RAW source');
-  ok(receipt.includes('Replace ZIP'),'same first step can replace ZIP');
+  ok(receipt.includes('Original preserved'),'receipt states immutable RAW source');
 
   let mergedOptions=null;
   LF.ReviewPanel={render:function(options){mergedOptions=options;return '<section id="merged-review">merged</section>';}};
   const rendered=LF.ImportPage.render(LF.State.state);
   ok(rendered.includes('merged-review'),'import route renders merged review workbench');
+  const reviewPanelSource=fs.readFileSync(path.join(root,'assets/js/pages/review-panel.js'),'utf8');
+  ok(reviewPanelSource.includes('Replace ZIP'),'same first step can replace ZIP');
   ok(mergedOptions&&mergedOptions.merged===true,'merged mode is explicit');
 
   LF.State.setRoute('experiment-import');

@@ -140,10 +140,13 @@
   }
   function commitProposals(exp,proposals,source,options){
     if(LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment!==exp)throw new Error('Dataset corrections must target the canonical ExperimentData.');
-    const list=Array.isArray(proposals)?proposals:[proposals],before=mutationFingerprint(exp),patchesBefore=(exp.patches||[]).length;let changed=0,failed=0;const errors=[];
-    list.filter(Boolean).forEach(function(proposal){try{changed+=applyProposal(exp,proposal,source);delete proposal.applyError;}catch(error){failed++;proposal.applyError=error&&error.message||String(error);errors.push(proposal.applyError);}});
+    const list=Array.isArray(proposals)?proposals:[proposals],staged=LF.DataModel.stage(exp),before=mutationFingerprint(staged),patchesBefore=(staged.patches||[]).length;let changed=0,failed=0;const errors=[];
+    list.filter(Boolean).forEach(function(proposal){try{changed+=applyProposal(staged,proposal,source);delete proposal.applyError;}catch(error){failed++;proposal.applyError=error&&error.message||String(error);errors.push(proposal.applyError);}});
     if(!changed){const error=new Error(errors[0]||'No correction changed the current LabFlow Data.');error.code='DATA_MUTATION_NOOP';error.failures=errors;throw error;}
-    return finishDatasetCommit(exp,before,{actionId:options&&options.actionId||'',source:source||'user',reason:options&&options.reason||'dataset-correction-commit',requested:list.filter(Boolean).length,changed:changed,failed:failed,patchesAdded:(exp.patches||[]).length-patchesBefore,errors:errors.slice(0,6)});
+    const out=finishDatasetCommit(staged,before,{actionId:options&&options.actionId||'',source:source||'user',reason:options&&options.reason||'dataset-correction-commit',requested:list.filter(Boolean).length,changed:changed,failed:failed,patchesAdded:(staged.patches||[]).length-patchesBefore,errors:errors.slice(0,6)});
+    LF.DataModel.commitStage(exp,staged);
+    if(LF.State&&LF.State.state&&LF.State.state.experiment===exp&&LF.State.notify)LF.State.notify('touch');
+    return out;
   }
   function safeFixes(exp){const fixes=[],seen=new Set();function add(p){const k=[p.patch_type,p.target,p.field||'',JSON.stringify(p.after)].join('|');if(seen.has(k))return;seen.add(k);p.safe=true;p.requires_human_review=false;p.confidence=1;fixes.push(p);}(exp.measurements||[]).forEach(function(m){const group=LF.Parser.groupFromSample(m.sample||'');if(!String(m.group||'').trim()&&String(group||'').trim())add({patch_type:'group_mapping',target:m.id,before:m.group||'',after:group,reason:'Group is deterministically derivable from the canonical sample identifier.',evidence:[m.sample]});});return fixes;}
   function reviewFixes(exp){return(exp.measurements||[]).filter(function(m){return m.qualityStatus==='blocked'&&!m.excluded;}).map(function(m){return{patch_type:'exclude_measurement',target:m.id,before:false,after:true,reason:'Exclude this blocked measurement from scientific analysis and rankings.',evidence:(m.blockingFlags||[]).map(function(x){return x.evidence||x.label;}).filter(Boolean).slice(0,3),safe:false,requires_human_review:true,confidence:1};});}
@@ -160,9 +163,12 @@
   }
   function commitAutomaticSafeFixes(exp){
     if(LF.State&&LF.State.state&&LF.State.state.experiment&&LF.State.state.experiment!==exp)throw new Error('Safe cleanup must target the canonical ExperimentData.');
-    const before=mutationFingerprint(exp),patchesBefore=(exp.patches||[]).length,out=applyAutomaticSafeFixes(exp);
+    const staged=LF.DataModel.stage(exp),before=mutationFingerprint(staged),patchesBefore=(staged.patches||[]).length,out=applyAutomaticSafeFixes(staged);
     if(!Number(out.lastApplied||0)){const error=new Error('No pending safe cleanup correction changed the current LabFlow Data.');error.code='DATA_MUTATION_NOOP';throw error;}
-    return Object.assign(out,finishDatasetCommit(exp,before,{actionId:'review.safe-cleanup',source:'automatic',reason:'automatic-cleanup-commit',requested:Number(out.lastApplied||0),changed:Number(out.targets||0),failed:0,patchesAdded:(exp.patches||[]).length-patchesBefore}));
+    const commit=finishDatasetCommit(staged,before,{actionId:'review.safe-cleanup',source:'automatic',reason:'automatic-cleanup-commit',requested:Number(out.lastApplied||0),changed:Number(out.targets||0),failed:0,patchesAdded:(staged.patches||[]).length-patchesBefore});
+    LF.DataModel.commitStage(exp,staged);
+    if(LF.State&&LF.State.state&&LF.State.state.experiment===exp&&LF.State.notify)LF.State.notify('touch');
+    return Object.assign(out,commit);
   }
 
   function findingRecord(f){return{id:String(f.id||''),type:f.type||'',severity:f.severity||'info',title:f.title||'',detail:clip(f.detail||'',600),target:f.target||'',measurementId:f.measurementId||'',evidence:(f.evidence||[]).slice(0,3),status:f.status||'open',source:f.source||'deterministic'};}

@@ -201,10 +201,6 @@
       const session = apiKeys(false), persistent = apiKeys(true);
       if (session[id]) return String(session[id]);
       if (persistent[id]) return String(persistent[id]);
-      /* One-time compatibility for pre-r7 provider-only keys, but never reuse
-         one against a custom host. */
-      const legacy = persistent[provider];
-      if (legacy && endpointOrigin(target) && endpointOrigin(target) === endpointOrigin(providerEndpoint(provider))) return String(legacy);
       return '';
     } catch (_error) { return ''; }
   }
@@ -213,7 +209,7 @@
     const provider = String(providerId || getAiSettings().provider || 'openrouter');
     const target = endpoint || getAiSettings().endpoint || providerEndpoint(provider);
     const persistent = apiKeys(true), id = apiCredentialId(provider, target);
-    return !!(persistent[id] || (persistent[provider] && endpointOrigin(target) === endpointOrigin(providerEndpoint(provider))));
+    return !!persistent[id];
   }
 
   function saveApiKey(key, providerId, options) {
@@ -223,7 +219,6 @@
       const endpoint = options.endpoint || getAiSettings().endpoint || providerEndpoint(provider);
       const id = apiCredentialId(provider, endpoint), value = String(key || ''), remember = options.remember === true;
       const persistent = apiKeys(true), session = apiKeys(false);
-      delete persistent[provider];
       if (!value) { delete persistent[id]; delete session[id]; }
       else if (remember) { persistent[id] = value; delete session[id]; }
       else { session[id] = value; delete persistent[id]; }
@@ -403,68 +398,20 @@
     return ok;
   }
 
-  /* Custom Knowledge Base persistence is exactly JSONL: one object per line. */
-  function parseKnowledgeJsonl(raw) {
-    const text = String(raw || '').trim();
-    if (!text) return { entries: [] };
-
-    const entries = [];
-    text.split(/\r?\n/).forEach(function (line, index) {
-      const value = line.trim();
-      if (!value) return;
-      try {
-        const item = JSON.parse(value);
-        if (!item || typeof item !== 'object' || Array.isArray(item)) {
-          throw new Error('line must be a JSON object');
-        }
-        entries.push(item);
-      } catch (error) {
-        throw new Error(
-          'Invalid Knowledge Base JSONL at line ' +
-          (index + 1) + ': ' +
-          (error.message || String(error))
-        );
-      }
-    });
-    return { entries: entries };
+  /* Knowledge Base format belongs to knowledge-base.js. Storage persists the
+     user's JSONL as opaque text so there is exactly one parser/validator. */
+  function getKnowledgeJsonl() {
+    try { return String(localStorage.getItem(LOCAL_KEYS.KNOWLEDGE) || ''); }
+    catch (error) { Log.warn('knowledge.read-failed', { key: LOCAL_KEYS.KNOWLEDGE, error: error }); return ''; }
   }
 
-  function knowledgeJsonl(entries) {
-    return (Array.isArray(entries) ? entries : [])
-      .map(function (item) { return JSON.stringify(item); })
-      .join('\n');
-  }
-
-  function getKnowledgeState() {
+  function saveKnowledgeJsonl(text) {
     try {
-      const raw = localStorage.getItem(LOCAL_KEYS.KNOWLEDGE);
-      return {
-        entries: clone(parseKnowledgeJsonl(raw).entries),
-        format: 'jsonl'
-      };
-    } catch (error) {
-      Log.warn('knowledge.read-failed', {
-        key: LOCAL_KEYS.KNOWLEDGE,
-        error: error
-      });
-      return { entries: [], format: 'jsonl' };
-    }
-  }
-
-  function saveKnowledgeState(value) {
-    const payload = clone(
-      value && typeof value === 'object' ? value : { entries: [] }
-    ) || { entries: [] };
-    const entries = Array.isArray(payload.entries) ? payload.entries : [];
-    try {
-      localStorage.setItem(LOCAL_KEYS.KNOWLEDGE, knowledgeJsonl(entries));
-      Log.info('knowledge.saved', { entries: entries.length, format: 'jsonl' });
+      localStorage.setItem(LOCAL_KEYS.KNOWLEDGE, String(text || ''));
+      Log.info('knowledge.saved', { format: 'jsonl', chars: String(text || '').length });
       return true;
     } catch (error) {
-      Log.warn('knowledge.write-failed', {
-        key: LOCAL_KEYS.KNOWLEDGE,
-        error: error
-      });
+      Log.warn('knowledge.write-failed', { key: LOCAL_KEYS.KNOWLEDGE, error: error });
       return false;
     }
   }
@@ -516,9 +463,7 @@
 
   function nomadTokens(persistent) {
     const value = persistent !== false ? read(LOCAL_KEYS.NOMAD_TOKEN, {}) : sessionRead(LOCAL_KEYS.NOMAD_TOKEN, {});
-    if (value && typeof value === 'object' && !Array.isArray(value)) return value;
-    if (persistent !== false && typeof value === 'string' && value) return { __legacy: value };
-    return {};
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
   function getNomadToken(endpoint) {
@@ -526,10 +471,7 @@
     const session = nomadTokens(false), persistent = nomadTokens(true);
     if (session[id]) return String(session[id]);
     if (persistent[id]) return String(persistent[id]);
-    /* Legacy token is used only for the exact saved destination. */
-    const legacy = typeof persistent === 'object' ? persistent.__legacy : '';
-    const savedOrigin = endpointOrigin(getNomadSettings().apiEndpoint);
-    return legacy && savedOrigin && savedOrigin === endpointOrigin(target) ? String(legacy) : '';
+    return '';
   }
 
   function isNomadTokenRemembered(endpoint) {
@@ -542,7 +484,6 @@
     const endpoint = options.endpoint || getNomadSettings().apiEndpoint, id = nomadCredentialId(endpoint);
     const value = String(token || ''), remember = options.remember === true;
     const persistent = nomadTokens(true), session = nomadTokens(false);
-    delete persistent.__legacy;
     if (!value) { delete persistent[id]; delete session[id]; }
     else if (remember) { persistent[id] = value; delete session[id]; }
     else { session[id] = value; delete persistent[id]; }
@@ -578,13 +519,38 @@
       const transaction = database.transaction([WORKSPACE_DB.store, WORKSPACE_DB.rawStore], 'readwrite');
       const workspace = transaction.objectStore(WORKSPACE_DB.store), rawStore = transaction.objectStore(WORKSPACE_DB.rawStore);
       const payload = { savedAt: new Date().toISOString(), rawRef: rawRef, experiment: LF.DataModel.serialize(exp, { includeSourceArchive: false }), ui: { route: ui && ui.route || 'experiment-import', resultsTab: ui && ui.resultsTab || 'overview', selectedMeasurementId: ui && ui.selectedMeasurementId || null, selectedDesignDeviceId: ui && ui.selectedDesignDeviceId || null } };
-      workspace.put(payload, WORKSPACE_DB.key);
-      if (rawRef) {
-        const existing = rawStore.get(rawRef);
-        existing.onsuccess = function () { if (!existing.result) rawStore.put(raw.sourceArchive, rawRef); };
-      }
+      const previous = workspace.get(WORKSPACE_DB.key);
+      previous.onsuccess = function () {
+        const previousRef = previous.result && previous.result.rawRef ? String(previous.result.rawRef) : '';
+        workspace.put(payload, WORKSPACE_DB.key);
+        if (rawRef) {
+          const existing = rawStore.get(rawRef);
+          existing.onsuccess = function () { if (!existing.result) rawStore.put(raw.sourceArchive, rawRef); };
+        }
+        /* One current workspace owns at most one RAW archive. Delete the old
+           archive in the same IndexedDB transaction so a failed save rolls the
+           deletion back together with the workspace update. */
+        if (previousRef && previousRef !== rawRef) rawStore.delete(previousRef);
+      };
       transaction.oncomplete = function () { database.close(); resolve(payload); };
       transaction.onerror = function () { const error = transaction.error || new Error('Could not save the LabFlow workspace.'); database.close(); reject(error); };
+    });
+  }
+
+  async function gcRawArchives(keepRef) {
+    const database = await db();
+    return new Promise(function (resolve, reject) {
+      const transaction = database.transaction([WORKSPACE_DB.rawStore], 'readwrite');
+      const store = transaction.objectStore(WORKSPACE_DB.rawStore), request = store.openCursor();
+      let removed = 0;
+      request.onsuccess = function () {
+        const cursor = request.result;
+        if (!cursor) return;
+        if (!keepRef || String(cursor.key) !== String(keepRef)) { cursor.delete(); removed++; }
+        cursor.continue();
+      };
+      transaction.oncomplete = function () { database.close(); if (removed) Log.info('workspace.raw-gc', { kept: keepRef || '', removed: removed }); resolve(removed); };
+      transaction.onerror = function () { const error = transaction.error || new Error('Could not clean LabFlow RAW storage.'); database.close(); reject(error); };
     });
   }
 
@@ -601,10 +567,67 @@
           const rawRequest = rawStore.get(value.rawRef);
           rawRequest.onsuccess = function () { value.experiment.raw = value.experiment.raw || {}; value.experiment.raw.sourceArchive = rawRequest.result || null; };
         };
-        transaction.oncomplete = function () { database.close(); resolve(value); };
+        transaction.oncomplete = function () { database.close(); resolve(value); if (value) gcRawArchives(value.rawRef || '').catch(function (error) { Log.warn('workspace.raw-gc-failed', { error: error }); }); };
         transaction.onerror = function () { const error = transaction.error || new Error('Could not read saved LabFlow workspace.'); database.close(); reject(error); };
       });
     } catch (error) { Log.warn('workspace.load-failed', { error: error }); return null; }
+  }
+
+  function approximateWebStorageBytes(storage) {
+    if (!storage) return 0;
+    let bytes = 0;
+    try {
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (!key || !/^labflow\./.test(key)) continue;
+        const value = storage.getItem(key) || '';
+        bytes += (key.length + value.length) * 2;
+      }
+    } catch (_) { return 0; }
+    return bytes;
+  }
+
+  async function storageStatus() {
+    const status = {
+      browserUsage: null, browserQuota: null, persistent: null,
+      workspaceBytes: 0, rawBytes: 0, rawItems: 0,
+      localBytes: approximateWebStorageBytes(window.localStorage),
+      sessionBytes: approximateWebStorageBytes(window.sessionStorage)
+    };
+    try {
+      if (navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        status.browserUsage = Number.isFinite(Number(estimate.usage)) ? Number(estimate.usage) : null;
+        status.browserQuota = Number.isFinite(Number(estimate.quota)) ? Number(estimate.quota) : null;
+      }
+      if (navigator.storage && navigator.storage.persisted) status.persistent = await navigator.storage.persisted();
+    } catch (error) { Log.debug('storage.estimate-unavailable', { error: error }); }
+    try {
+      const database = await db();
+      await new Promise(function (resolve, reject) {
+        const transaction = database.transaction([WORKSPACE_DB.store, WORKSPACE_DB.rawStore], 'readonly');
+        const workspace = transaction.objectStore(WORKSPACE_DB.store), rawStore = transaction.objectStore(WORKSPACE_DB.rawStore);
+        const workspaceRequest = workspace.get(WORKSPACE_DB.key);
+        workspaceRequest.onsuccess = function () {
+          if (!workspaceRequest.result) return;
+          try { status.workspaceBytes = new Blob([JSON.stringify(workspaceRequest.result)]).size; }
+          catch (_) { status.workspaceBytes = JSON.stringify(workspaceRequest.result).length * 2; }
+        };
+        const rawRequest = rawStore.openCursor();
+        rawRequest.onsuccess = function () {
+          const cursor = rawRequest.result;
+          if (!cursor) return;
+          status.rawItems += 1;
+          const value = cursor.value;
+          if (value instanceof ArrayBuffer) status.rawBytes += value.byteLength;
+          else if (ArrayBuffer.isView(value)) status.rawBytes += value.byteLength;
+          cursor.continue();
+        };
+        transaction.oncomplete = function () { database.close(); resolve(); };
+        transaction.onerror = function () { const error = transaction.error || new Error('Could not inspect LabFlow storage.'); database.close(); reject(error); };
+      });
+    } catch (error) { Log.warn('storage.status-failed', { error: error }); }
+    return status;
   }
 
   async function clearSavedExperiment() {
@@ -649,7 +672,7 @@
     getNomadSettings: getNomadSettings, saveNomadSettings: saveNomadSettings,
     getNomadToken: getNomadToken, isNomadTokenRemembered: isNomadTokenRemembered, saveNomadToken: saveNomadToken,
     getCabinetState: getCabinetState, saveCabinetState: saveCabinetState,
-    getKnowledgeState: getKnowledgeState, saveKnowledgeState: saveKnowledgeState,
-    saveExperiment: saveExperiment, loadExperiment: loadExperiment, clearSavedExperiment: clearSavedExperiment, clearAllLocalData: clearAllLocalData
+    getKnowledgeJsonl: getKnowledgeJsonl, saveKnowledgeJsonl: saveKnowledgeJsonl,
+    saveExperiment: saveExperiment, loadExperiment: loadExperiment, gcRawArchives: gcRawArchives, storageStatus: storageStatus, clearSavedExperiment: clearSavedExperiment, clearAllLocalData: clearAllLocalData
   };
 }());

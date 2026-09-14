@@ -81,6 +81,23 @@ module.exports=function(t,LF){
     assert(plan.unresolved.length,1,'rejected proposal retained as unresolved diagnostic');
   };
 
+  t['failed correction validation leaves the live scientific aggregate unchanged']=function(){
+    const previous={state:LF.State,derived:LF.DerivedState,pipeline:LF.DataPipeline,contracts:LF.DataContracts};
+    const exp=LF.DataModel.hydrate({id:'tx-rollback',sync:{revision:7},interpretationOverrides:{fields:{},units:{},scales:{}},patches:[],actionData:{proposals:{},annotations:{},status:{}},samples:[{id:'s1',name:'S1',rawName:'S1',aliases:['S1'],group:'OLD',isRef:false,runIds:[],measurementIds:['m1']}],runs:[],measurements:[{id:'m1',sampleId:'s1',sample:'S1',group:'OLD',isRef:false}],findings:[{id:'f1',type:'group-mapping',status:'open',measurementId:'m1'}]});
+    LF.State={state:{experiment:exp,user:{name:'Tester'}},notify:function(){throw new Error('notify must not run for a failed transaction');}};
+    LF.DerivedState={invalidate:function(){return['analysis-summary'];}};
+    LF.DataContracts={assert:function(){return{ok:true};}};
+    LF.DataPipeline={refresh:function(){throw new Error('synthetic pipeline failure');}};
+    const before=LF.DomainSchema.snapshot(exp),identity=exp;
+    let error=null;
+    try{LF.DatasetCorrections.commitProposals(exp,{finding_id:'f1',patch_type:'group_mapping',target:'m1',before:'OLD',after:'NEW',reason:'test'},'user',{reason:'rollback-test'});}catch(err){error=err;}
+    if(!error||!/synthetic pipeline failure/.test(error.message))throw new Error('pipeline failure must escape the staged transaction');
+    assert(exp===identity,true,'live aggregate identity retained');
+    assert(LF.DomainSchema.snapshot(exp),before,'live scientific state is unchanged after failed staged commit');
+    assert(exp.sync.revision,7,'revision is unchanged after rollback');
+    LF.State=previous.state;LF.DerivedState=previous.derived;LF.DataPipeline=previous.pipeline;LF.DataContracts=previous.contracts;
+  };
+
   t['accepted group correction survives canonical refresh, chaining and persistence']=function(){
     const previous={state:LF.State,derived:LF.DerivedState,pipeline:LF.DataPipeline,contracts:LF.DataContracts,store:LF.CanonicalStore};
     const raw=new Uint8Array([80,75,3,4,17,29]).buffer;

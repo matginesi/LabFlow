@@ -26,7 +26,8 @@
   let renderedRoute = '';
   const scrollMemory=new Map();
   let workspaceSaveTimer=0,workspaceSaveBusy=false,workspaceSavePending=false;
-  let kbSettingsSearchTimer=0,logSearchTimer=0,curveSearchTimer=0,cabinetSearchTimer=0;
+  let curveSearchTimer=0;
+  const lazyAssetRefresh = new Set();
   let renderedScrollContext='',stableAnchorGeneration=0;
   function workspaceUiSnapshot(){const ui=S.state.ui||{};return{route:ui.route||'experiment-import',resultsTab:ui.resultsTab||'overview',selectedMeasurementId:ui.selectedMeasurementId||null,selectedDesignDeviceId:ui.selectedDesignDeviceId||null};}
   function knowledgeFormEntry(){const kb=LF.KnowledgeBase,id=S.state.ui&&S.state.ui.settingsKnowledgeId,existing=id&&id!=='__new__'?kb.get(id):null;return{id:existing&&existing.origin==='custom'?existing.id:undefined,kind:document.getElementById('kbKind').value,status:document.getElementById('kbStatus').value,title:document.getElementById('kbTitle').value,aliases:document.getElementById('kbAliases').value,tags:document.getElementById('kbTags').value,summary:document.getElementById('kbSummary').value,facts:document.getElementById('kbFacts').value,cautions:document.getElementById('kbCautions').value,related_ids:document.getElementById('kbRelatedIds').value,sources:kb.parseSourceLines(document.getElementById('kbSources').value),created_at:existing&&existing.created_at};}
@@ -122,6 +123,33 @@
     return LF.UIKitInline.apply(S.state);
   }
 
+  function ensureLazyAsset(name, load, stillRelevant) {
+    if (!LF.LazyAssets || lazyAssetRefresh.has(name)) return;
+    lazyAssetRefresh.add(name);
+    load().then(function () {
+      lazyAssetRefresh.delete(name);
+      if (stillRelevant()) render();
+    }).catch(function (error) {
+      lazyAssetRefresh.delete(name);
+      Log.warn('asset.lazy-load-failed', { asset: name, error: error });
+      if (stillRelevant()) render();
+    });
+  }
+
+  function ensureRouteAssets() {
+    const route = S.state.ui.route;
+    if (route === 'documentation' && !LF.DocsBundle) {
+      ensureLazyAsset('docs', LF.LazyAssets.ensureDocs, function () {
+        return S.state.ui.route === 'documentation';
+      });
+    }
+    if (route === 'settings' && S.state.ui.settingsSection === 'ui-kit' && !LF.UIKitInline) {
+      ensureLazyAsset('ui-kit', LF.LazyAssets.ensureUiKit, function () {
+        return S.state.ui.route === 'settings' && S.state.ui.settingsSection === 'ui-kit';
+      });
+    }
+  }
+
 
   function pageFailureHtml(route,error){
     const title=PS.routeTitle?PS.routeTitle(route):'Current page';
@@ -132,6 +160,7 @@
 
   function render() {
     if (hasExperiment()) ensureExperimentShape(S.state.experiment);
+    ensureRouteAssets();
     const end=Log.timer('render',{route:S.state.ui.route,experimentId:S.state.experiment&&S.state.experiment.id,resultsTab:S.state.ui.resultsTab});
     const main=document.getElementById('main'); if(!main){end({skipped:'main-missing'},'warn');return;}
     const previousRoute=renderedRoute||S.state.ui.route,currentContext=scrollContext(S.state.ui.route),routeChanged=!!renderedRoute&&renderedRoute!==S.state.ui.route,contextChanged=!!renderedScrollContext&&renderedScrollContext!==currentContext,mainScrollTop=main.scrollTop;
@@ -348,18 +377,10 @@
         if(e.target.closest('#saveStackCabinet')){try{const item=LF.Cabinet.saveDesignStack(S.state.experiment,S.state.ui.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.message('Stack saved to Lab Cabinet.','success');}catch(err){LF.UI.message(err&&err.message||String(err),'error');}return;}
         if(e.target.closest('#saveProtocolCabinet')){try{const item=LF.Cabinet.saveDesignProtocol(S.state.experiment,S.state.ui.selectedDesignDeviceId);S.state.ui.cabinetSelectedId=item.id;LF.UI.message('Process protocol saved to Lab Cabinet.','success');}catch(err){LF.UI.message(err&&err.message||String(err),'error');}return;}
 
-        const cabinetSelect=e.target.closest('[data-cabinet-select]');if(cabinetSelect){S.state.ui.cabinetSelectedId=cabinetSelect.dataset.cabinetSelect;render();return;}
-        if(e.target.closest('#cabinetAddItem')){const select=document.getElementById('cabinetNewKind'),kind=select&&select.value||'solution',item=LF.Cabinet.create(kind,{});S.state.ui.cabinetKind=kind;S.state.ui.cabinetSelectedId=item.id;render();return;}
-        if(e.target.closest('#cabinetSaveCurrentSolution')){try{if(!hasExperiment())throw new Error('Open an experiment first.');const select=document.getElementById('cabinetCaptureSolution'),id=select&&select.value;if(!id)throw new Error('Choose a formulation to save.');const item=LF.Cabinet.saveDesignSolution(S.state.experiment,id);S.state.ui.cabinetKind='solution';S.state.ui.cabinetSelectedId=item.id;render();LF.UI.message('Formulation saved to Lab Cabinet.','success');}catch(err){LF.UI.message(err&&err.message||String(err),'error');}return;}
-        if(e.target.closest('#cabinetSaveCurrentStack')){try{if(!hasExperiment())throw new Error('Open an experiment first.');const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.ui.selectedDesignDeviceId);})||(exp.design.devices||[])[0];if(!dev)throw new Error('No Design experiment is available.');const item=LF.Cabinet.saveDesignStack(exp,dev.id);S.state.ui.cabinetKind='stack';S.state.ui.cabinetSelectedId=item.id;render();LF.UI.message('Device stack saved to Lab Cabinet.','success');}catch(err){LF.UI.message(err&&err.message||String(err),'error');}return;}
-        if(e.target.closest('#cabinetSaveCurrentProtocol')){try{if(!hasExperiment())throw new Error('Open an experiment first.');const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.ui.selectedDesignDeviceId);})||(exp.design.devices||[])[0];if(!dev)throw new Error('No Design experiment is available.');const item=LF.Cabinet.saveDesignProtocol(exp,dev.id);S.state.ui.cabinetKind='protocol';S.state.ui.cabinetSelectedId=item.id;render();LF.UI.message('Process recipe saved to Lab Cabinet.','success');}catch(err){LF.UI.message(err&&err.message||String(err),'error');}return;}
-        const cabinetDuplicate=e.target.closest('[data-cabinet-duplicate]');if(cabinetDuplicate){const item=LF.Cabinet.duplicate(cabinetDuplicate.dataset.cabinetDuplicate);S.state.ui.cabinetKind=item.kind;S.state.ui.cabinetSelectedId=item.id;render();LF.UI.message('Cabinet resource duplicated.','success');return;}
-        if(e.target.closest('#cabinetExport')){const payload=LF.Cabinet.exportState(),blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='labflow-cabinet.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},0);LF.UI.message('Cabinet backup exported.','success');return;}
-        if(e.target.closest('#cabinetImport')){const input=document.getElementById('cabinetImportFile');if(input)input.click();return;}
-        const cabinetDelete=e.target.closest('[data-cabinet-delete]');if(cabinetDelete){const item=LF.Cabinet.get(cabinetDelete.dataset.cabinetDelete);if(!item)return;const ok=await LF.UI.confirmAction('Delete “'+item.name+'” from Lab Cabinet? Existing experiments that used it keep their copied snapshots.',{title:'Delete Cabinet resource',confirmLabel:'Delete',cancelLabel:'Cancel',danger:true});if(!ok)return;LF.Cabinet.remove(item.id);S.state.ui.cabinetSelectedId=null;render();LF.UI.message('Cabinet resource deleted. Existing experiment snapshots are unchanged.','success');return;}
-        if(e.target.closest('#cabinetAddLayer')){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).slice();layers.push({role:'',material:'',thickness:'',process:''});LF.Cabinet.update(item.id,{layers:layers});render();}return;}
-        const cabinetRemoveLayer=e.target.closest('[data-cabinet-remove-layer]');if(cabinetRemoveLayer){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).slice();layers.splice(Number(cabinetRemoveLayer.dataset.cabinetRemoveLayer),1);LF.Cabinet.update(item.id,{layers:layers});render();}return;}
-        const cabinetUseDesign=e.target.closest('[data-cabinet-use-design]');if(cabinetUseDesign){try{if(!hasExperiment()){LF.UI.message('Upload an experiment before using Cabinet resources in Design.','info');return;}const exp=ensureExperimentShape(S.state.experiment),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.ui.selectedDesignDeviceId);})||(exp.design.devices||[])[0],item=LF.Cabinet.get(cabinetUseDesign.dataset.cabinetUseDesign);if(!dev||!item){LF.UI.message('No Design experiment is available.','warning');return;}if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with “'+item.name+'”?',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}const out=LF.Cabinet.applyToDesign(exp,dev.id,item.id,{replace:true});if(out.changed){S.state.ui.selectedDesignDeviceId=dev.id;markModified('design');S.setRoute('experiment-design');LF.UI.message('Cabinet snapshot applied to '+(dev.name||'Design')+'.','success');}else LF.UI.message('The selected Cabinet resource adds no new Design values.','info');}catch(err){LF.UI.message('Cabinet resource could not be applied: '+(err&&err.message||String(err)),'error');}return;}
+        if(LF.CabinetController&&await LF.CabinetController.handleClick(e,{state:S,render:render,renderStable:renderWithStableAnchor,hasExperiment:hasExperiment,ensureExperimentShape:ensureExperimentShape,markModified:markModified}))return;
+        if(LF.KnowledgeController&&await LF.KnowledgeController.handleClick(e,{state:S,render:render,core:C,readForm:knowledgeFormEntry}))return;
+        if(LF.SettingsController&&await LF.SettingsController.handleClick(e,{state:S,render:render,hasExperiment:hasExperiment,markModified:markModified,refreshPipeline:refreshPipeline}))return;
+
         if(e.target.closest('#runNomadValidation')){LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.message('NOMAD validation refreshed.','success');return;}
 
         const openCurve=e.target.closest('[data-open-single-curve]');if(openCurve){e.preventDefault();e.stopPropagation();S.state.ui.selectedMeasurementId=openCurve.dataset.openSingleCurve;S.state.ui.curveSelection=[openCurve.dataset.openSingleCurve];S.state.ui.curveView='single';S.state.ui.resultsTab='curves';renderWithStableAnchor('.results-main-tabs');return;}
@@ -408,36 +429,7 @@
         if(e.target.closest('#acceptAllDesignProposal')){const proposal=selectedDesignProposal();if(proposal){(proposal.solutions||[]).concat(proposal.devices||[]).forEach(function(item){if(!item.applied&&(item.decision||'pending')==='pending')item.decision='accepted';});proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');render();}return;}
         if(e.target.closest('#discardDesignProposal')){const exp=S.state.experiment,id=S.state.ui.selectedDesignDeviceId;if(LF.ActionData&&id)LF.ActionData.removeProposal(exp,'design.infer',id);Log.info('design.proposal-discarded',{deviceId:id||''});markModified('ai');render();LF.UI.message('AI design proposal discarded.','info');return;}
 
-        const kbPick=e.target.closest('[data-kb-entry]');if(kbPick){S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeId=kbPick.dataset.kbEntry;render();return;}
-        if(e.target.closest('#kbAddEntry')){S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeId='__new__';render();return;}
-        if(e.target.closest('#saveKbEntry')){const item=LF.KnowledgeBase.save(knowledgeFormEntry());S.state.ui.settingsKnowledgeId=item.id;LF.UI.message(item.status==='active'?'Knowledge saved and available to AI.':'Knowledge draft saved.','success');render();return;}
-        if(e.target.closest('#duplicateKbEntry')){const btn=e.target.closest('#duplicateKbEntry'),id=btn.dataset.kbId||S.state.ui.settingsKnowledgeId,item=LF.KnowledgeBase.duplicate(id);S.state.ui.settingsKnowledgeId=item.id;LF.UI.message('Knowledge copied as a draft.','success');render();return;}
-        if(e.target.closest('#deleteKbEntry')){const btn=e.target.closest('#deleteKbEntry'),id=btn.dataset.kbId||S.state.ui.settingsKnowledgeId,item=LF.KnowledgeBase.get(id);if(item&&await LF.UI.confirmAction('Delete “'+item.title+'” from the custom Knowledge Base?',{title:'Delete knowledge entry',confirmLabel:'Delete',danger:true})){LF.KnowledgeBase.remove(id);S.state.ui.settingsKnowledgeId='';LF.UI.message('Knowledge entry deleted.','success');render();}return;}
-        if(e.target.closest('#exportKb')){try{const out=await LF.KnowledgeBase.saveJsonlFile('custom');if(out&&!out.cancelled)LF.UI.message((out.mode==='file'?'Saved ':'Downloaded ')+(out.fileName||'LabFlow JSONL')+' · '+out.entries+' reference'+(out.entries===1?'':'s')+'.','success');}catch(err){LF.UI.message('JSONL could not be saved: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#downloadFullKb')){try{const payload=LF.KnowledgeBase.exportJsonl('all');C.downloadBlob(C.textBlob(payload,'application/x-ndjson;charset=utf-8'),'labflow-knowledge-library.jsonl');LF.UI.message('Full Knowledge Base downloaded as JSONL.','success');}catch(err){LF.UI.message('Knowledge Base download failed: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#importKb')){try{if(LF.KnowledgeBase.openJsonlFile){const out=await LF.KnowledgeBase.openJsonlFile('merge');if(out&&!out.fallback){if(out.cancelled)return;S.state.ui.settingsKnowledgeId='';render();LF.UI.message('Opened '+(out.fileName||'JSONL')+' · '+out.imported+' editable reference'+(out.imported===1?'':'s')+' loaded'+(out.skippedBuiltIn?' · '+out.skippedBuiltIn+' built-in duplicate'+(out.skippedBuiltIn===1?'':'s')+' ignored':'')+'.','success');return;}}const input=document.getElementById('kbImportFile');if(input)input.click();}catch(err){LF.UI.message('Knowledge Base import failed: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#resetKbCustom')){if(await LF.UI.confirmAction('Clear every editable Knowledge Base reference from this browser? Save your JSONL first if you want to keep them.',{title:'Clear my Knowledge Base',confirmLabel:'Clear my references',danger:true})){LF.KnowledgeBase.resetCustom();S.state.ui.settingsKnowledgeId='';LF.UI.message('Your editable Knowledge Base is now empty.','success');render();}return;}
 
-        if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:document.getElementById('userName').value.trim(),organization:document.getElementById('userOrganization').value.trim(),email:document.getElementById('userEmail').value.trim()});LF.UI.message('Profile saved.','success');render();return;}
-        if(e.target.closest('#clearLocalLabFlowData')){if(!await LF.UI.confirmAction('Remove the current experiment, saved preferences, AI/NOMAD credentials, custom Knowledge Base entries and AI tool customizations from this browser?',{title:'Clear LabFlow data on this browser',confirmLabel:'Clear local data',danger:true}))return;await LF.Storage.clearAllLocalData();S.resetSession();if(LF.PageContext)LF.PageContext.clear();window.location.reload();return;}
-        if(e.target.closest('#validateNomadProfile')){try{const webUrl=document.getElementById('nomadWebUrl').value.trim(),apiEndpoint=document.getElementById('nomadApiEndpoint').value.trim(),web=new URL(webUrl),api=new URL(apiEndpoint),local=function(u){return ['localhost','127.0.0.1','::1','[::1]'].includes(u.hostname);};if(!['http:','https:'].includes(web.protocol)||!['http:','https:'].includes(api.protocol))throw new Error('NOMAD addresses must use HTTP or HTTPS.');if(web.username||web.password||api.username||api.password)throw new Error('Do not put credentials inside NOMAD URLs.');if(web.protocol!=='https:'&&!local(web))throw new Error('Use HTTPS for the NOMAD website unless it is local.');if(api.protocol!=='https:'&&!local(api))throw new Error('Use HTTPS for the NOMAD API unless it is local.');LF.UI.message('NOMAD profile is valid. No network request was made.','success');}catch(err){LF.UI.message('NOMAD profile needs attention: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#saveNomadSettings')){const instance=document.getElementById('nomadInstance').value.trim(),webUrl=document.getElementById('nomadWebUrl').value.trim(),apiEndpoint=document.getElementById('nomadApiEndpoint').value.trim(),username=document.getElementById('nomadUsername').value.trim(),token=document.getElementById('nomadToken').value,remember=!!(document.getElementById('nomadRememberToken')&&document.getElementById('nomadRememberToken').checked);try{const web=new URL(webUrl),api=new URL(apiEndpoint);const local=function(u){return ['localhost','127.0.0.1','::1','[::1]'].includes(u.hostname);};if(!['http:','https:'].includes(web.protocol)||!['http:','https:'].includes(api.protocol))throw new Error('NOMAD addresses must use HTTP or HTTPS.');if(web.protocol!=='https:'&&!local(web))throw new Error('Use HTTPS for the NOMAD website unless it is local.');if(api.protocol!=='https:'&&!local(api))throw new Error('Use HTTPS for the NOMAD API unless it is local.');if(api.username||api.password||web.username||web.password)throw new Error('Do not put credentials inside NOMAD URLs.');LF.Storage.saveNomadSettings({instance:instance||'NOMAD',webUrl:webUrl,apiEndpoint:apiEndpoint.replace(/\/$/,''),username:username});LF.Storage.saveNomadToken(token,{remember:remember,endpoint:apiEndpoint});LF.UI.message('NOMAD connection details saved locally. No data was uploaded.','success');render();}catch(err){LF.UI.message('NOMAD settings not saved: '+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#clearNomadToken')){LF.Storage.saveNomadToken('',{remember:false,endpoint:LF.Storage.getNomadSettings().apiEndpoint});LF.UI.message('NOMAD token cleared from this browser.','success');render();return;}
-        if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,memoryTurns:Number(document.getElementById('assistantMemoryTurns').value),memoryChars:Number(document.getElementById('assistantMemoryChars').value),messageChars:Number(document.getElementById('assistantMessageChars').value),maxOutputTokens:Number(document.getElementById('assistantMaxOutputTokens').value),temperature:Number(document.getElementById('assistantTemperature').value),contextChars:Number(document.getElementById('assistantContextChars').value)});LF.UI.message('Assistant settings saved.','success');render();return;}
-        if(e.target.closest('#validateActionEditor')||e.target.closest('#saveActionEditor')){const save=!!e.target.closest('#saveActionEditor'),btn=e.target.closest(save?'#saveActionEditor':'#validateActionEditor'),id=btn.dataset.actionId,defText=document.getElementById('actionDefinitionEditor').value,promptText=document.getElementById('actionPromptEditor').value;try{const def=JSON.parse(defText);if(!def||def.id!==id)throw new Error('Action id must remain '+id+'.');if(!def.contract||!def.execution||!Array.isArray(def.execution.steps)||!def.execution.steps.length)throw new Error('Action definition requires contract and execution.steps.');const value=function(id){const el=document.getElementById(id);return el?el.value:null;};def.title=value('actionTitleEditor')||def.title;def.short_title=value('actionShortTitleEditor')||def.short_title;def.purpose=value('actionPurposeEditor')||def.purpose;def.strategy=value('actionStrategyEditor')||def.strategy;const aiStep=def.execution.steps.find(function(step){return step&&step.type==='AI';});if(aiStep){const thinking=value('actionStepThinking');if(thinking)aiStep.thinking=thinking;[['actionStepMaxInput','max_input_tokens'],['actionStepTargetOutput','target_output_tokens'],['actionStepMaxOutput','max_output_tokens'],['actionStepRetries','max_retries']].forEach(function(pair){const raw=value(pair[0]);if(raw!==null&&raw!=='')aiStep[pair[1]]=Math.max(0,Number(raw)||0);});const deadline=value('actionStepDeadline');if(deadline!==null&&deadline!=='')aiStep.deadline_ms=Math.max(0,Number(deadline)||0)*1000;}if(LF.Storage.validateActionOverride)LF.Storage.validateActionOverride(id,{definition:def,prompt:promptText});if(save){LF.Storage.saveActionOverride(id,{definition:def,prompt:promptText});LF.UI.message('Action customization saved.','success');render();}else{LF.UI.message('Action customization is valid and stays inside the protected contract.','success');}}catch(err){LF.UI.message((save?'Action not saved: ':'Action validation failed: ')+(err.message||String(err)),'error');}return;}
-        if(e.target.closest('#resetActionEditor')){const btn=e.target.closest('#resetActionEditor'),id=btn.dataset.actionId;if(await LF.UI.confirmAction('Reset '+id+' to its source action.json and prompt.md?',{title:'Reset Action configuration',confirmLabel:'Reset Action'})){LF.Storage.resetActionOverride(id);LF.UI.message('Action reset to source definition.','success');render();}return;}
-        if(e.target.closest('#clearAssistantConversation')){if(hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation and its memory?',{title:'Clear Assistant memory',confirmLabel:'Clear conversation',danger:true})){const d=LF.State.ensureDerived(S.state.experiment);d.chat=d.chat||{conversation:[]};d.chat.conversation=[];markModified('ai');LF.UI.message('Assistant conversation cleared.','success');render();}return;}
-        if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({enabled:document.getElementById('logEnabled').checked,level:document.getElementById('logLevel').value,maxEntries:Number(document.getElementById('logMaxEntries').value)||2500,interactions:document.getElementById('logInteractions').checked,network:document.getElementById('logNetwork').checked});LF.UI.message('Logging settings applied. Reload only if you changed network instrumentation.','success');render();return;}
-        const logLevel=e.target.closest('[data-log-level]');if(logLevel){LF.LogsPage.setLevel(logLevel.dataset.logLevel);render();return;}
-        const logCategory=e.target.closest('[data-log-category]');if(logCategory){LF.LogsPage.setCategory(logCategory.dataset.logCategory);render();return;}
-        if(e.target.closest('#refreshLogs')){render();return;}
-        if(e.target.closest('#downloadDiagnostics')){LF.Logger.downloadDiagnostics();return;}
-        if(e.target.closest('#downloadLogs')){LF.Logger.download();return;}
-        if(e.target.closest('#clearLogs')){if(await LF.UI.confirmAction('Clear all buffered LabFlow logs? Download them first if you need to keep this diagnostic history.',{title:'Clear runtime logs',confirmLabel:'Clear logs',danger:true})){LF.Logger.clear();render();}return;}
-        if(e.target.closest('#saveAiSettings')){LF.AISettings.saveFromForm();return;}
-        if(e.target.closest('#detectProviderModel')){LF.AISettings.detectModel();return;}
-        if(e.target.closest('#testAiConnection')){await LF.AISettings.testConnection(e.target.closest('#testAiConnection'));return;}
-        if(e.target.closest('#reanalyzeDataset')){refreshPipeline(S.state.experiment,'manual-review');render();LF.UI.message('Data checks refreshed.','success');return;}
         if(e.target.closest('#refreshNomadMapping')||e.target.closest('#rebuildNomadMapping')){LF.Nomad.buildMapping(S.state.experiment);LF.Nomad.validate(S.state.experiment,S.state.experiment.raw&&S.state.experiment.raw.sourceArchive);render();LF.UI.message('NOMAD mapping and local validation refreshed.','success');return;}
         if(e.target.closest('#exportMeasurementsCsv')){C.downloadBlob(C.textBlob(LF.Analysis.toCSV(S.state.experiment),'text/csv;charset=utf-8'),C.safeName(S.state.experiment.meta.name)+'_measurements.csv');return;}
         const canvasExport=e.target.closest('[data-export-canvas]');if(canvasExport){LF.ResultsPage.exportCanvas(canvasExport.dataset.exportCanvas,canvasExport.dataset.exportName||'labflow-chart.png');return;}
@@ -451,13 +443,11 @@
 
     document.addEventListener('change',function(e){
       try {
-        if(e.target.id==='kbSettingsKind'){S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeKind=e.target.value||'all';render();return;}
-        if(e.target.id==='cabinetKindFilter'){S.state.ui.cabinetKind=e.target.value||'all';renderWithStableAnchor('.cabinet-library-tools');return;}
+        if(LF.KnowledgeController&&LF.KnowledgeController.handleChange(e,{state:S,render:render}))return;
+        if(LF.CabinetController&&LF.CabinetController.handleChange(e,{state:S,renderStable:renderWithStableAnchor}))return;
+        if(LF.SettingsController&&LF.SettingsController.handleChange(e,{state:S,render:render}))return;{S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeKind=e.target.value||'all';render();return;}
         if(e.target.id==='uiKitGlobalFilter'){S.state.ui.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.ui.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
-        if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return;}
-        if(e.target.id==='aiModelSelect'){const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return;}
-        if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);render();return;}
         if(e.target.id==='designDeviceSelect'){S.state.ui.selectedDesignDeviceId=e.target.value;activateDesignProposal(S.state.ui.selectedDesignDeviceId);render();return;}
         if(e.target.id==='curveView'){S.state.ui.curveView=e.target.value;render();return;}
         if(e.target.id==='curveGroup'){S.state.ui.curveGroup=e.target.value;render();return;}
@@ -482,17 +472,12 @@
 
     document.addEventListener('input',function(e){
       try {
-        if(e.target.id==='aiEndpoint'){if(LF.AISettings&&LF.AISettings.decorate)LF.AISettings.decorate();return;}
-        if(e.target.id==='aiKey'){if(LF.AISettings&&LF.AISettings.syncModelControls)LF.AISettings.syncModelControls();return;}
-        if(e.target.id==='kbSettingsSearch'){S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeQuery=e.target.value;clearTimeout(kbSettingsSearchTimer);kbSettingsSearchTimer=setTimeout(function(){render();const input=document.getElementById('kbSettingsSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},150);return;}
-        if(e.target.id==='uiKitGlobalSearch'){S.state.ui.uiKitQuery=e.target.value;applyUiKitFilter();return;}
+        if(LF.KnowledgeController&&LF.KnowledgeController.handleInput(e,{state:S,render:render}))return;
+        if(LF.CabinetController&&LF.CabinetController.handleInput(e,{state:S,render:render}))return;
+        if(LF.SettingsController&&LF.SettingsController.handleInput(e,{state:S,render:render}))return;        if(e.target.id==='uiKitGlobalSearch'){S.state.ui.uiKitQuery=e.target.value;applyUiKitFilter();return;}
         if(e.target.id==='docsSearch'){S.state.ui.docsQuery=e.target.value;LF.DocsPage.apply(document.getElementById('main'));return;}
-        if(e.target.id==='logSearch'){LF.LogsPage.setQuery(e.target.value);clearTimeout(logSearchTimer);logSearchTimer=setTimeout(function(){render();const search=document.getElementById('logSearch');if(search){search.focus();search.setSelectionRange(search.value.length,search.value.length);}},180);return;}
         if(e.target.id==='curveSearch'){S.state.ui.curveSearch=e.target.value;clearTimeout(curveSearchTimer);curveSearchTimer=setTimeout(function(){render();},140);return;}
         if(e.target.id==='measurementSearch'){const q=e.target.value.trim().toLowerCase();document.querySelectorAll('#measurementTable tbody tr').forEach(function(tr){tr.hidden=q&&!tr.dataset.search.includes(q);});return;}
-        if(e.target.id==='cabinetSearch'){S.state.ui.cabinetQuery=e.target.value;clearTimeout(cabinetSearchTimer);cabinetSearchTimer=setTimeout(function(){render();const input=document.getElementById('cabinetSearch');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},160);return;}
-        const cabinetField=e.target.closest('[data-cabinet-field]');if(cabinetField){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item){const key=cabinetField.dataset.cabinetField,value=key==='tags'?cabinetField.value.split(',').map(function(x){return x.trim();}).filter(Boolean):cabinetField.value;const patch={};patch[key]=value;LF.Cabinet.update(item.id,patch);}return;}
-        const cabinetLayerField=e.target.closest('[data-cabinet-layer-field]');if(cabinetLayerField){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);if(item&&item.kind==='stack'){const layers=(item.layers||[]).map(function(x){return Object.assign({},x);}),layer=layers[Number(cabinetLayerField.dataset.cabinetLayerIndex)];if(layer){layer[cabinetLayerField.dataset.cabinetLayerField]=cabinetLayerField.value;LF.Cabinet.update(item.id,{layers:layers});}}return;}
         const solField=e.target.closest('[data-solution-field]');if(solField){if(LF.DesignModel.updateSolutionField(S.state.experiment,Number(solField.dataset.solutionIndex),solField.dataset.solutionField,solField.value)){markDraft('design');refreshDesignProjection();}return;}
         const proposalSolutionField=e.target.closest('[data-proposal-solution-index]');if(proposalSolutionField){const proposal=selectedDesignProposal(),item=proposal&&proposal.solutions&&proposal.solutions[Number(proposalSolutionField.dataset.proposalSolutionIndex)];if(item){const field=proposalSolutionField.dataset.proposalField,previous=item[field];item[field]=proposalSolutionField.value;if(field==='name'&&String(previous)!==item.name)(proposal.devices||[]).forEach(function(device){device.solution_names=(device.solution_names||[]).map(function(name){return String(name)===String(previous)?item.name:name;});});if(item.applied){item.applied=false;item.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
         const proposalLayerField=e.target.closest('[data-proposal-layer-field]');if(proposalLayerField){const proposal=selectedDesignProposal(),device=proposal&&proposal.devices&&proposal.devices[Number(proposalLayerField.dataset.proposalDeviceIndex)],layer=device&&device.stack&&device.stack[Number(proposalLayerField.dataset.proposalLayerIndex)];if(layer){layer[proposalLayerField.dataset.proposalLayerField]=proposalLayerField.value;if(device.applied){device.applied=false;device.decision='pending';}proposal.userEdited=true;proposal.updatedAt=new Date().toISOString();markModified('ai');}return;}
@@ -504,7 +489,10 @@
       } catch(err){Log.error('ui.input-handler-failed',{target:e.target&&e.target.id||'',error:err});}
     });
 
-    document.addEventListener('change',async function(e){if(e.target&&e.target.id==='kbImportFile'){const file=e.target.files&&e.target.files[0];if(!file)return;try{const limits=LF.KnowledgeBase.limits?LF.KnowledgeBase.limits():{},max=Number(limits.jsonlChars)||5*1024*1024;if(file.size>max)throw new Error('JSONL file exceeds the 5 MB browser limit.');const text=await file.text(),out=LF.KnowledgeBase.importJsonl(text,'merge');S.state.ui.settingsKnowledgeId='';render();LF.UI.message('Opened '+file.name+' · '+out.imported+' editable reference'+(out.imported===1?'':'s')+' loaded'+(out.skippedBuiltIn?' · '+out.skippedBuiltIn+' built-in duplicate'+(out.skippedBuiltIn===1?'':'s')+' ignored':'')+'.','success');}catch(err){LF.UI.message('Knowledge Base import failed: '+(err.message||String(err)),'error');}finally{e.target.value='';}return;}if(e.target&&e.target.id==='cabinetImportFile'){const file=e.target.files&&e.target.files[0];if(!file)return;try{const text=await file.text(),out=LF.Cabinet.importState(text,'merge');S.state.ui.cabinetSelectedId=null;S.state.ui.cabinetKind='all';render();LF.UI.message('Imported '+out.imported+' Cabinet resource'+(out.imported===1?'':'s')+'.','success');}catch(err){LF.UI.message('Cabinet import failed: '+(err.message||String(err)),'error');}finally{e.target.value='';}}});
+    document.addEventListener('change',async function(e){
+      if(LF.KnowledgeController&&await LF.KnowledgeController.handleFileChange(e,{state:S,render:render}))return;
+      if(LF.CabinetController&&await LF.CabinetController.handleFileChange(e,{state:S,render:render}))return;
+    });
 
     document.addEventListener('focusout',function(e){if(e.target&&e.target.closest&&e.target.closest('[data-solution-field],[data-device-field],[data-device-layer-field],[data-device-process-field]')){commitDraft('design');}if(e.target&&e.target.closest&&e.target.closest('[data-cabinet-field],[data-cabinet-layer-field]')&&S.state.ui.route==='cabinet')render();});
 
@@ -564,7 +552,16 @@
         Log.info('workspace.empty-session',{route:S.state.ui.route,persistentProvider:true,persistentApiKey:!!LF.Storage.getApiKey(aiSettings.provider)});
       }
       S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      bindEvents();setMobileNav(false);window.addEventListener('resize',syncMobileNav,{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){if(reason!=='actionRun'&&reason!=='assistant')render();if(reason!=='actionRun')scheduleWorkspaceSave(reason||'state');});window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();if(workspaceRestoreError)LF.UI.message('The saved workspace could not be loaded. The stored copy was left untouched.','warning');end({route:S.state.ui.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
+      bindEvents();setMobileNav(false);window.addEventListener('resize',syncMobileNav,{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){
+        reason=String(reason||'state');
+        /* Route/view changes should not serialize the entire scientific workspace.
+           Assistant messages are persistent but render themselves. Action-run
+           progress is runtime-only. Scientific/data changes still render+persist. */
+        const renderNeeded=reason!=='actionRun'&&reason!=='assistant';
+        const persistNeeded=reason!=='actionRun'&&reason!=='route';
+        if(renderNeeded)render();
+        if(persistNeeded)scheduleWorkspaceSave(reason);
+      });window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();if(workspaceRestoreError)LF.UI.message('The saved workspace could not be loaded. The stored copy was left untouched.','warning');end({route:S.state.ui.route,experimentId:hasExperiment()?S.state.experiment.id:'',logEntries:LF.Logger.entries().length},'info');
     }
     catch(err){Log.error('init.failed',{error:err});end({error:err},'error');throw err;}
   }

@@ -115,7 +115,7 @@
   }
 
   function subscribe(fn) { listeners.push(fn); Log.debug('state.subscribe', { listeners: listeners.length }); return function () { const i = listeners.indexOf(fn); if (i >= 0) listeners.splice(i, 1); }; }
-  function normalizeRoute(route) { route=String(route||''); if(route==='logs'){state.ui.settingsSection='diagnostics';return'settings';} if(route==='ui-kit'){state.ui.settingsSection='ui-kit';return'settings';} return route; }
+  function normalizeRoute(route) { return String(route || ''); }
 
   function routeRequiresExperiment(route) {
     const normalized = normalizeRoute(route);
@@ -141,7 +141,7 @@
     /* Preserve the uploaded source bytes as immutable evidence. The application
        works on ExperimentData and never rewrites this ArrayBuffer. */
     if (rawArchive && state.experiment.raw && !(state.experiment.raw.sourceArchive instanceof ArrayBuffer && state.experiment.raw.sourceArchive.byteLength)) {
-      state.experiment.raw.sourceArchive = rawArchive instanceof ArrayBuffer ? rawArchive.slice(0) : rawArchive;
+      state.experiment.raw.sourceArchive = rawArchive;
     }
     state.experiment.sync = state.experiment.sync || { revision: 0, lastChange: null, pendingScopes: [] };
     const first = Array.isArray(state.experiment.measurements) ? state.experiment.measurements[0] : null;
@@ -164,14 +164,6 @@
     ensureExperiment('after-touch:' + String(changeScope));
     notify(changeScope === 'route' ? 'route' : 'touch');
     return exp;
-  }
-
-  /** Run a pure mutation, then commit it as one atomic edit. */
-  function mutate(fn, reason) {
-    const before = { route: state.ui.route, experimentId: state.experiment.id, revision: state.experiment.sync && state.experiment.sync.revision };
-    fn(state);
-    touch(reason || 'metadata');
-    Log.debug('state.mutate', { scope: reason || 'metadata', before: before, after: { revision: state.experiment.sync && state.experiment.sync.revision } });
   }
 
   /** The one active Action run examined by every execution path. */
@@ -235,7 +227,6 @@
     setRoute: setRoute,
     setExperiment: setExperiment,
     touch: touch,
-    mutate: mutate,
     startActionRun: startActionRun,
     endActionRun: endActionRun,
     markDraft: markDraft,

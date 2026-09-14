@@ -191,6 +191,55 @@
     exp.meta.modifiedAt = nowIso();
   }
 
+
+  /*
+   * Stage/commit the same ExperimentData aggregate without mutating the live
+   * scientific state until the entire operation has succeeded. RAW source
+   * bytes are immutable evidence, so a staged aggregate shares that one
+   * ArrayBuffer reference instead of cloning hundreds of MB.
+   */
+  function stage(exp) {
+    exp = normalize(exp);
+    const staged = new ExperimentData(Schema.snapshot(exp, { includeSourceArchive: false }));
+    staged.raw = staged.raw || {};
+    staged.raw.sourceArchive = exp.raw && exp.raw.sourceArchive instanceof ArrayBuffer
+      ? exp.raw.sourceArchive
+      : null;
+    return staged;
+  }
+
+  function commitStage(target, staged) {
+    target = normalize(target);
+    staged = normalize(staged);
+    const rawArchive = target.raw && target.raw.sourceArchive instanceof ArrayBuffer
+      ? target.raw.sourceArchive
+      : (staged.raw && staged.raw.sourceArchive instanceof ArrayBuffer ? staged.raw.sourceArchive : null);
+    Schema.rootFields().forEach(function (meta) {
+      const key = meta.key;
+      if (key === 'raw') {
+        const raw = clone(Object.assign({}, staged.raw || {}, { sourceArchive: null })) || {};
+        raw.sourceArchive = rawArchive;
+        target.raw = raw;
+        return;
+      }
+      target[key] = clone(staged[key]);
+    });
+    return normalize(target);
+  }
+
+  function transact(exp, mutator, options) {
+    if (typeof mutator !== 'function') throw new Error('DataModel.transact requires a mutation function.');
+    options = options || {};
+    const staged = stage(exp);
+    const result = mutator(staged);
+    if (result && typeof result.then === 'function') {
+      throw new Error('DataModel.transact is synchronous. Stage async work before committing scientific state.');
+    }
+    if (options.validate !== false && LF.DataContracts && LF.DataContracts.assert) LF.DataContracts.assert(staged);
+    commitStage(exp, staged);
+    return { experiment: exp, staged: staged, result: result };
+  }
+
   class ExperimentData {
     constructor(seed) { Object.assign(this, Schema.createRoot(seed || {})); normalize(this); }
     normalize() { normalize(this); return this; }
@@ -247,7 +296,7 @@
     exp.meta.name = String(opts.sourceName || '').replace(/\.zip$/i, '') || 'Untitled experiment';
     exp.meta.sourceName = String(opts.sourceName || ''); exp.meta.sourceSize = Number(opts.bytes ? opts.bytes.byteLength : 0);
     exp.meta.sourceModifiedAt = opts.sourceModifiedAt || null; exp.meta.sourceType = opts.sourceType || 'application/zip';
-    exp.raw.sourceArchive = opts.bytes instanceof ArrayBuffer ? opts.bytes.slice(0) : null; exp.raw.sourceName = exp.meta.sourceName;
+    exp.raw.sourceArchive = opts.bytes instanceof ArrayBuffer ? opts.bytes : null; exp.raw.sourceName = exp.meta.sourceName;
     return exp;
   }
   function addFile(exp, seed) { return addRecord(exp, 'file', seed); }
@@ -265,5 +314,5 @@
   }
 
   LF.ExperimentData = ExperimentData;
-  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, restore: restore, serialize: serialize, normalize: normalize, touch: touch, getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock, getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch, toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
+  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, restore: restore, serialize: serialize, normalize: normalize, touch: touch, stage: stage, commitStage: commitStage, transact: transact, getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock, getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch, toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
 }());

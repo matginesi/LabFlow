@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 
 
 BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
-ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_TASKS.zip").resolve()
+ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_OPERATIONS.zip").resolve()
 VIEWPORTS = (
     (1920, 1080),  # large desktop
     (1440, 900),   # desktop

@@ -30,7 +30,7 @@ module.exports=function(t,LF,ctx){
   };
 
   t['responsive contract keeps desktop sidebar persistent and phone navigation touch sized']=function(){
-    const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+    const css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8'),cabinetController=fs.readFileSync(path.join(root,'assets/js/controllers/cabinet-controller.js'),'utf8');
     if(!/\.app-shell\s*\{[\s\S]*?grid-template-columns:\s*var\(--sidebar-w\)\s+minmax\(0,\s*1fr\)/.test(css))throw new Error('Desktop shell must reserve a sidebar column');
     if(!/@media\s*\(max-width:\s*1100px\)[\s\S]*?\.sidebar\s*\{[\s\S]*?position:\s*fixed!important/.test(css))throw new Error('<=1100 sidebar must become off-canvas');
     if(!/\.page-nav-next\{[^}]*background:var\(--accent-soft\)/.test(css))throw new Error('Next navigation must receive a visible themed accent treatment');
@@ -48,11 +48,11 @@ module.exports=function(t,LF,ctx){
 
 
   t['route navigation resets while local content switches follow their contracts']=function(){
-    const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+    const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),css=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8'),cabinetController=fs.readFileSync(path.join(root,'assets/js/controllers/cabinet-controller.js'),'utf8');
     if(!app.includes("renderWithStableAnchor('.results-main-tabs')"))throw new Error('Results tab and mode switches must preserve their visible anchor');
     if(!app.includes("settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0"))throw new Error('Settings section switches must start the new utility context at the top');
     if(!app.includes("renderWithStableAnchor('.docs-workbench')"))throw new Error('Documentation topic switches must preserve their visible anchor');
-    if(!app.includes("renderWithStableAnchor('.cabinet-library-tools')"))throw new Error('Cabinet library filter switches must preserve their visible anchor');
+    if(!cabinetController.includes("renderStable('.cabinet-library-tools')"))throw new Error('Cabinet library filter switches must preserve their visible anchor');
     if(!app.includes("if(!renderedRoute||routeChanged)main.scrollTop=0"))throw new Error('route changes must start the destination page at the top');
     if(!app.includes('main.scrollTop=mainScrollTop'))throw new Error('same-context rerenders must preserve the main workspace scroll');
     if(app.includes('nodes=[root]'))throw new Error('main document scroll must not be restored as local scroll memory');

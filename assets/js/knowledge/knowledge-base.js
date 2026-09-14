@@ -40,16 +40,19 @@ function bundled(){
   return raw.map(function(x){return normalize(Object.assign({},x,{status:x.status||'active'}),'bundled');}).filter(function(x){return issues(x,true).length===0;});
 }
 function custom(){
-  const state=LF.Storage&&LF.Storage.getKnowledgeState?LF.Storage.getKnowledgeState():{entries:[]};
-  return(Array.isArray(state.entries)?state.entries:[]).map(function(x){return normalize(x,'custom');});
+  const raw=LF.Storage&&LF.Storage.getKnowledgeJsonl?LF.Storage.getKnowledgeJsonl():'';
+  if(!String(raw||'').trim())return[];
+  try{return parseJsonl(raw).map(function(x){return normalize(x,'custom');});}
+  catch(error){if(Log)Log.warn('custom.invalid-jsonl',{error:error});return[];}
 }
 function all(){return bundled().concat(custom());}
 function get(id){id=String(id||'');return all().find(function(x){return String(x.id)===id;})||null;}
 function customIndex(id){const items=custom();return items.findIndex(function(x){return String(x.id)===String(id);});}
 function persist(items){
-  if(!LF.Storage||!LF.Storage.saveKnowledgeState)throw new Error('Knowledge storage is unavailable.');
+  if(!LF.Storage||!LF.Storage.saveKnowledgeJsonl)throw new Error('Knowledge storage is unavailable.');
   if(items.length>MAX.customEntries)throw new Error('The custom Knowledge Base is too large for this browser ('+items.length+' entries; limit '+MAX.customEntries+'). Split the JSONL library before importing more.');
-  const ok=LF.Storage.saveKnowledgeState({entries:items.map(function(x){return normalize(x,'custom');})});
+  const normalized=items.map(function(x){return normalize(x,'custom');}),text=toJsonl(normalized);
+  const ok=LF.Storage.saveKnowledgeJsonl(text);
   if(!ok)throw new Error('Knowledge Base could not be saved in browser storage. Save your JSONL file and check browser storage permissions/quota.');
   return true;
 }
