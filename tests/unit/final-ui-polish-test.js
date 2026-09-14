@@ -94,11 +94,11 @@ module.exports=function(t){
     assert(actionUi.includes('Model:settings.model'),false,'Action totem never exposes the raw llama.cpp path');
     assert(feedback.includes('C.modelDisplayName(providerId, body.model)'),true,'request activity uses the shared display-model helper');
     assert(feedback.includes('body:safeBody'),true,'request preview uses a display-only request clone');
-    assert(transport.includes("request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model)"),true,'AI timing logs hide local filesystem paths');
+    assert(/request\.timing'\s*,\s*\{\s*provider:spec\.settings\.provider\s*,\s*model:logModel\(spec\.settings\.provider\s*,\s*obj\.model\|\|spec\.settings\.model\)/.test(transport),true,'AI timing logs hide local filesystem paths');
   };
 
   t['Design is a simple visual chemistry-stack-process workbench with explicit AI acceptance']=function(){
-    assert(designPage.includes('Solutions · solvents · solutes'),true,'solution chemistry editor');
+    assert(designPage.includes('Solution chemistry')&&designPage.includes('solvents · solutes'),true,'solution chemistry editor');
     assert(designPage.includes('Layer stack'),true,'device stack editor');
     assert(designPage.includes('Fabrication process'),true,'fabrication process editor');
     assert(designPage.includes('design-chem-card'),true,'graphical chemistry representation');

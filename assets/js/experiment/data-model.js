@@ -266,9 +266,28 @@
     applyPatch(patch) { return applyPatch(this, patch); }
     addPatch(patch, opts) { return addPatch(this, patch, opts); }
     validate() { if (!LF.DataContracts) throw new Error('LabFlow.DataContracts is not loaded.'); return LF.DataContracts.validate(this); }
-    summary() { const a = this.analysis && this.analysis.summary || {}; return { id: this.id || '', name: this.meta && this.meta.name || '', source: this.meta && this.meta.sourceName || '', revision: Number(this.sync && this.sync.revision || 0), files: this.files.length, experiments: this.experiments.length, samples: this.samples.length, runs: this.runs.length, measurements: this.measurements.length, eligible: Number(a.eligibleCount || 0), findings: this.findings.filter(function (f) { return f.status !== 'resolved'; }).length, bestExperiment: a.bestExperiment || '', bestSample: a.bestSample || '', bestEfficiency: a.bestEfficiency == null ? null : a.bestEfficiency }; }
-    tree() { const self = this; return this.experiments.map(function (e) { return { id: e.id, experiment: e.name, reference: !!e.isRef, samples: self.samplesForExperiment(e.id).map(function (s) { return { id: s.id, sample: s.name, position: s.position || '', cell: s.cell || '', runs: self.runsForSample(s.id).map(function (r) { return { id: r.id, run: r.label || r.path || '', measurements: self.selectMeasurements({ run: r.id }).map(function (m) { return { id: m.id, sequence: m.sequence, file: m.file, bestEff: m.bestEff, quality: m.qualityStatus }; }) }; }) }; }) }; }); }
-    inspect(ref) { if (ref == null || ref === '') return this.summary(); const item = this.get(ref); if (!item) return null; if (this.experiments.includes(item)) return { type: 'experiment', value: item, samples: this.samplesForExperiment(item.id), measurements: this.measurementsForExperiment(item.id) }; if (this.samples.includes(item)) return { type: 'sample', value: item, runs: this.runsForSample(item.id), measurements: this.measurementsForSample(item.id), best: this.bestMeasurementForSample(item.id) }; if (this.runs.includes(item)) return { type: 'run', value: item, measurements: this.selectMeasurements({ run: item.id }) }; return { type: item.kind || item.type || 'record', value: item }; }
+    summary() { const a = this.analysis && this.analysis.summary || {};
+return { id: this.id || '', name: this.meta && this.meta.name || '', source: this.meta && this.meta.sourceName || '',
+      revision: Number(this.sync && this.sync.revision || 0), files: this.files.length, experiments: this.experiments.length,
+      samples: this.samples.length, runs: this.runs.length, measurements: this.measurements.length,
+      eligible: Number(a.eligibleCount || 0), findings: this.findings.filter(function (f) { return f.status !== 'resolved';
+      }).length, bestExperiment: a.bestExperiment || '', bestSample: a.bestSample || '',
+      bestEfficiency: a.bestEfficiency == null ? null : a.bestEfficiency }; }
+    tree() { const self = this; return this.experiments.map(function (e) { return {
+id: e.id, experiment: e.name, reference: !!e.isRef, samples: self.samplesForExperiment(e.id).map(function (s) { return {
+      id: s.id, sample: s.name, position: s.position || '', cell: s.cell || '',
+      runs: self.runsForSample(s.id).map(function (r) { return {
+      id: r.id, run: r.label || r.path || '', measurements: self.selectMeasurements({ run: r.id }).map(function (m) { return {
+      id: m.id, sequence: m.sequence, file: m.file, bestEff: m.bestEff, quality: m.qualityStatus }; }) }; }) }; }) }; }); }
+    inspect(ref) { if (ref == null || ref === '') return this.summary(); const item = this.get(ref);
+if (!item) return null; if (this.experiments.includes(item)) return {
+      type: 'experiment', value: item, samples: this.samplesForExperiment(item.id),
+      measurements: this.measurementsForExperiment(item.id) };
+      if (this.samples.includes(item)) return {
+      type: 'sample', value: item, runs: this.runsForSample(item.id), measurements: this.measurementsForSample(item.id),
+      best: this.bestMeasurementForSample(item.id) };
+      if (this.runs.includes(item)) return { type: 'run', value: item, measurements: this.selectMeasurements({ run: item.id }
+      ) }; return { type: item.kind || item.type || 'record', value: item }; }
     reanalyze(reason) { if (!LF.DataPipeline || !LF.DataPipeline.refresh) throw new Error('LabFlow.DataPipeline is not loaded.'); LF.DataPipeline.refresh(this, { reason: reason || 'ExperimentData.reanalyze' }); return this.summary(); }
     setMismatchFactor(value) { const factor = Number(value); if (!Number.isFinite(factor) || factor <= 0) throw new Error('Mismatch factor must be a finite number > 0.'); this.analysisSettings.mismatchFactor = factor; touch(this, 'analysis'); return this.reanalyze(); }
     toWorkingJSON(opts) { return toWorkingJSON(this, opts); }
@@ -308,11 +327,19 @@
     return {
       meta: clone(n.meta), experiments: clone(n.experiments), samples: clone(n.samples), runs: clone(n.runs), measurements: clone(n.measurements),
       files: n.files.map(function (f) { return { id: f.id, path: f.path, rawPath: f.rawPath, name: f.name, rawName: f.rawName, canonicalName: f.canonicalName, canonicalPath: f.canonicalPath, family: f.family, type: f.type }; }),
-      blocks: n.blocks.map(function (b) { const limit = Number.isInteger(opts.rows) && opts.rows >= 0 ? opts.rows : b.data.rows.length; return { id: b.id, type: b.type, family: b.family, name: b.name, direction: b.direction, file: b.file && b.file.path || '', refs: clone(b.refs), columns: (b.schema.columns || []).map(function (c) { return c.name; }), rows: (b.data.rows || []).slice(0, limit) }; }),
+      blocks: n.blocks.map(function (b) {
+const limit = Number.isInteger(opts.rows) && opts.rows >= 0 ? opts.rows : b.data.rows.length;
+        return { id: b.id, type: b.type, family: b.family, name: b.name, direction: b.direction,
+        file: b.file && b.file.path || '', refs: clone(b.refs), columns: (b.schema.columns || []).map(function (c) {
+        return c.name; }), rows: (b.data.rows || []).slice(0, limit) }; }),
       patches: clone(n.patches)
     };
   }
 
   LF.ExperimentData = ExperimentData;
-  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, restore: restore, serialize: serialize, normalize: normalize, touch: touch, stage: stage, commitStage: commitStage, transact: transact, getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock, getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch, toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
+  LF.DataModel = { ExperimentData: ExperimentData, create: create, hydrate: hydrate, restore: restore,
+serialize: serialize, normalize: normalize, touch: touch, stage: stage, commitStage: commitStage, transact: transact,
+    getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock,
+    getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch,
+    toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
 }());

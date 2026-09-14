@@ -10,7 +10,7 @@ else:
     for sel in ['.settings-workspace-grid','.settings-tools-workshop','.settings-rail','.settings-content']:
         if sel in early: problems.append(f'Settings selector appears before canonical Settings block: {sel}')
 media=len(re.findall(r'@media\s*\(',css))
-if media>90: problems.append(f'responsive media-query count regressed: {media} > 90')
+if media>70: problems.append(f'responsive media-query count regressed: {media} > 70')
 if problems:
     print('CSS contract: FAIL')
     for p in problems: print(' -',p)

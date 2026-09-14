@@ -54,7 +54,12 @@
     }
     return C.safeJson(valueToPrint, 2);
   }
-  function preview(valueToPrint,maxChars){const full=pretty(valueToPrint),limit=Math.max(600,Number(maxChars)||PAYLOAD_PREVIEW_CHARS);if(full.length<=limit)return{full:full,text:full,truncated:false};const head=Math.floor(limit*.78),tail=Math.floor(limit*.18);return{full:full,text:full.slice(0,head)+'\n… [bounded UI preview · download JSONL for complete payload] …\n'+full.slice(-tail),truncated:true};}
+  function preview(valueToPrint,maxChars){
+const full=pretty(valueToPrint),limit=Math.max(600,Number(maxChars)||PAYLOAD_PREVIEW_CHARS);
+    if(full.length<=limit)return{full:full,text:full,truncated:false};
+    const head=Math.floor(limit*.78),tail=Math.floor(limit*.18);
+    return{full:full,text:full.slice(0,head)+'\n… [bounded UI preview · download JSONL for complete payload] …\n'+
+    full.slice(-tail),truncated:true};}
   function codeBlock(title, content, tone) {
     if (content == null || content === '') return '';const p=preview(content,PAYLOAD_PREVIEW_CHARS);
     return '<section class="log-payload '+(tone || '')+'"><header><strong>'+C.escapeHtml(title)+'</strong><span>'+C.escapeHtml(p.full.length+' chars'+(p.truncated?' · preview':''))+'</span></header><pre>'+C.escapeHtml(p.text)+'</pre></section>';
@@ -74,7 +79,10 @@
     const responseBody=response.body != null ? response.body : (typeof response === 'string' ? response : data.providerResponse);
     const status=data.status || response.status;
     return '<div class="log-detail-body">'+
-      '<dl class="log-facts">'+fact('Sequence','#'+value(entry.seq))+fact('Timestamp',entry.ts)+fact('Session',entry.sessionId)+fact('Route',entry.route)+fact('Experiment',entry.experimentId)+fact('Duration',data.elapsedMs != null ? data.elapsedMs+' ms' : '')+fact('HTTP',status ? status+' '+value(response.statusText,'') : '')+fact('Request ID',data.requestId || response.requestId || data.requestLogId)+'</dl>'+
+      '<dl class="log-facts">'+fact('Sequence','#'+value(entry.seq))+fact('Timestamp',entry.ts)+fact('Session',
+entry.sessionId)+fact('Route',entry.route)+fact('Experiment',entry.experimentId)+fact('Duration',
+        data.elapsedMs != null ? data.elapsedMs+' ms' : '')+fact('HTTP',status ? status+' '+value(response.statusText,
+        '') : '')+fact('Request ID',data.requestId || response.requestId || data.requestLogId)+'</dl>'+
       (error.message || data.message || data.providerMessage ? '<div class="log-error-message"><strong>Message</strong><span>'+C.escapeHtml(value(error.message || data.message || data.providerMessage))+'</span></div>' : '')+
       '<div class="log-payload-grid">'+codeBlock('Request headers',request.headers)+codeBlock('Request body / messages',requestBody)+codeBlock('Response headers',response.headers)+codeBlock('Provider response',responseBody,status >= 400 ? 'danger' : '')+codeBlock('Error and cause',error, 'danger')+codeBlock('Complete event data',data)+'</div></div>';
   }
@@ -82,7 +90,13 @@
   function lazyDetail(kind,id,className) { return '<div class="'+(className||'log-detail-body')+' log-lazy-detail" data-log-detail-kind="'+C.escapeHtml(kind)+'" data-log-detail-id="'+C.escapeHtml(id)+'"><div class="meta">Open to load bounded diagnostic payload.</div></div>'; }
   function entryRow(entry) {
     const data=entry.data||{},id=String(entry.id||entry.seq);
-    return '<tr data-log-entry="'+C.escapeHtml(id)+'"><td class="mono log-time"><strong>'+C.escapeHtml(new Date(entry.ts).toLocaleTimeString())+'</strong><span>'+C.escapeHtml(entry.ts)+'</span></td><td>'+badge(entry.level)+'</td><td><span class="mono">'+C.escapeHtml(entry.scope)+'</span><small>'+C.escapeHtml(categoryOf(entry))+'</small></td><td><details class="log-detail"><summary><span><strong>'+C.escapeHtml(entry.event)+'</strong><small>'+C.escapeHtml(entrySummary(entry))+'</small></span><span class="log-summary-meta">'+C.escapeHtml(data.elapsedMs != null ? data.elapsedMs+' ms' : '#'+value(entry.seq))+'</span></summary>'+lazyDetail('event',id)+'</details></td></tr>';
+    return '<tr data-log-entry="'+C.escapeHtml(id)+'"><td class="mono log-time"><strong>'+
+C.escapeHtml(new Date(entry.ts).toLocaleTimeString())+'</strong><span>'+C.escapeHtml(entry.ts)+'</span></td><td>'+
+      badge(entry.level)+'</td><td><span class="mono">'+C.escapeHtml(entry.scope)+'</span><small>'+
+      C.escapeHtml(categoryOf(entry))+'</small></td><td><details class="log-detail"><summary><span><strong>'+
+      C.escapeHtml(entry.event)+'</strong><small>'+C.escapeHtml(entrySummary(entry))+
+      '</small></span><span class="log-summary-meta">'+C.escapeHtml(data.elapsedMs != null ? data.elapsedMs+' ms' : '#'+
+      value(entry.seq))+'</span></summary>'+lazyDetail('event',id)+'</details></td></tr>';
   }
 
   function apiTransactions(entries) {
@@ -123,13 +137,36 @@
     const scopeOptions=['<option value="all">All scopes</option>'].concat(scopes.map(function(scope){return '<option value="'+C.escapeHtml(scope)+'" '+(active.scope===scope?'selected':'')+'>'+C.escapeHtml(scope)+'</option>';})).join('');
     const environment=LF.Logger.environmentSnapshot();
 
-    const controls='<div class="toolbar logs-settings-toolbar"><button type="button" class="button" id="refreshLogs">Refresh</button><button type="button" class="button primary" id="downloadDiagnostics">Diagnostic bundle</button><button type="button" class="button" id="downloadLogs">JSONL</button><button type="button" class="button danger" id="clearLogs">Clear</button></div>';
+    const controls='<div class="toolbar logs-settings-toolbar"><button type="button" class="button" id="refreshLogs">Refresh</button>' +
+      '<button type="button" class="button primary" id="downloadDiagnostics">Diagnostic bundle</button><button ' +
+      'type="button" class="button" id="downloadLogs">JSONL</button><button type="button" class="button danger" id="clearLogs">Clear</button></div>';
     return (embedded?'<div class="logs-page settings-embedded-page">':'<section class="page logs-page">')+
       (embedded?'<div class="settings-embedded-actions">'+controls+'</div>':'<div class="page-head"><div><h1 class="h1">Logs & diagnostics</h1><div class="meta">Local runtime and API events for troubleshooting.</div></div><div class="spacer"></div>'+controls+'</div>')+
-      '<div class="metric-grid logs-metrics">'+metric('Events',all.length,'buffered this session')+metric('Errors',errors.length,'with stack and cause')+metric('Warnings',warnings,'handled anomalies')+metric('API calls',transactions.length,failedCalls+' failed')+metric('Avg latency',avg?avg+' ms':'—',durations.length+' measured calls')+metric('Visible',matched.length,visible.length<matched.length?'latest '+visible.length+' rendered':'after active filters')+'</div>'+
-      '<section class="panel logs-health"><div class="panel-head"><div><h2 class="h2">Runtime snapshot</h2><div class="meta mono">'+C.escapeHtml(environment.sessionId)+'</div></div><div class="spacer"></div><span class="badge '+(environment.browser.online?'success':'danger')+'">'+(environment.browser.online?'Online':'Offline')+'</span></div><dl class="log-facts">'+fact('Build',environment.app.build||'dev')+fact('Started',environment.startedAt)+fact('Route',environment.app.route)+fact('Protocol',environment.page.protocol)+fact('Viewport',environment.viewport.width+' × '+environment.viewport.height)+fact('Browser language',environment.browser.language)+fact('AI transport','Configured endpoint')+fact('Buffer level',environment.logging.level.toUpperCase())+'</dl></section>'+
-      '<section class="panel"><div class="panel-head"><div><h2 class="h2">Recent errors</h2><div class="meta">Message, provider body, stack and cause</div></div><div class="spacer"></div><span class="badge danger">'+errors.length+'</span></div><div class="logs-focus-list">'+(errors.length?errors.slice(0,8).map(errorCard).join(''):'<div class="empty compact-empty">No errors recorded.</div>')+'</div></section>'+
-      '<section class="panel logs-workbench"><div class="panel-head logs-filter-head"><div><h2 class="h2">Event stream</h2><div class="meta">Newest first · UI renders at most '+RENDER_LIMIT+' rows; JSONL exports the buffered bounded trace</div></div><div class="spacer"></div><label class="sr-only" for="logScopeFilter">Scope</label><select class="select compact" id="logScopeFilter">'+scopeOptions+'</select><label class="sr-only" for="logSearch">Search logs</label><input class="input log-search" id="logSearch" type="search" autocomplete="off" placeholder="Search message, request ID, endpoint…" value="'+C.escapeHtml(active.query)+'"></div><div class="logs-filter-row"><div class="logs-levels" aria-label="Filter by level">'+levelButtons+'</div><div class="logs-levels" aria-label="Filter by category">'+categoryButtons+'</div></div><div class="table-wrap logs-table-wrap"><table class="data-table logs-table"><thead><tr><th>Time</th><th>Level</th><th>Scope</th><th>Event, message & payload</th></tr></thead><tbody>'+(visible.length?visible.map(entryRow).join(''):'<tr><td colspan="4"><div class="empty compact-empty">No log entries match these filters.</div></td></tr>')+'</tbody></table></div></section>'+(embedded?'</div>':'</section>');
+      '<div class="metric-grid logs-metrics">'+metric('Events',all.length,'buffered this session')+metric('Errors',
+errors.length,'with stack and cause')+metric('Warnings',warnings,'handled anomalies')+metric('API calls',
+        transactions.length,failedCalls+' failed')+metric('Avg latency',avg?avg+' ms':'—',
+        durations.length+' measured calls')+metric('Visible',matched.length,
+        visible.length<matched.length?'latest '+visible.length+' rendered':'after active filters')+'</div>'+
+      '<section class="panel logs-health"><div class="panel-head"><div><h2 class="h2">Runtime snapshot</h2><div class="meta mono">'+
+C.escapeHtml(environment.sessionId)+'</div></div><div class="spacer"></div><span class="badge '+
+        (environment.browser.online?'success':'danger')+'">'+(environment.browser.online?'Online':'Offline')+
+        '</span></div><dl class="log-facts">'+fact('Build',environment.app.build||'dev')+fact('Started',
+        environment.startedAt)+fact('Route',environment.app.route)+fact('Protocol',environment.page.protocol)+fact('Viewport',
+        environment.viewport.width+' × '+environment.viewport.height)+fact('Browser language',
+        environment.browser.language)+fact('AI transport','Configured endpoint')+fact('Buffer level',
+        environment.logging.level.toUpperCase())+'</dl></section>'+
+      '<section class="panel"><div class="panel-head"><div><h2 class="h2">Recent errors</h2><div class="meta">Message, provider body, stack and cause</div></div><div class="spacer"></div><span class="badge danger">'+
+errors.length+'</span></div><div class="logs-focus-list">'+(errors.length?errors.slice(0,
+        8).map(errorCard).join(''):'<div class="empty compact-empty">No errors recorded.</div>')+'</div></section>'+
+      '<section class="panel logs-workbench"><div class="panel-head logs-filter-head"><div><h2 class="h2">Event stream</h2><div class="meta">Newest first · UI renders at most '+
+RENDER_LIMIT+' rows; JSONL exports the buffered bounded trace</div></div><div class="spacer"></div><label class="sr-only" for="logScopeFilter">Scope</label><select class="select compact" id="logScopeFilter">'+
+scopeOptions+'</select><label class="sr-only" for="logSearch">Search logs</label><input class="input log-search" id="logSearch" type="search" autocomplete="off" placeholder="Search message, request ID, endpoint…" value="'+
+  C.escapeHtml(active.query)+'"></div><div class="logs-filter-row"><div class="logs-levels" aria-label="Filter by level">'+levelButtons+
+  '</div><div class="logs-levels" aria-label="Filter by category">'+categoryButtons+
+  '</div></div><div class="table-wrap logs-table-wrap"><table class="data-table logs-table"><thead><tr><th>Time</th><th>Level</th><th>Scope</th><th>Event, message & payload</th></tr></thead><tbody>'+
+  (visible.length?visible.map(entryRow).join(''):
+  '<tr><td colspan="4"><div class="empty compact-empty">No log entries match these filters.</div></td></tr>')+
+  '</tbody></table></div></section>'+(embedded?'</div>':'</section>');
   }
 
   function hydrateLazyDetail(host){

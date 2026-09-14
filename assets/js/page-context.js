@@ -20,7 +20,12 @@
   function pageData(){
     const s=state(),exp=s&&s.experiment||{},route=s&&s.route||s&&s.ui&&s.ui.route||'';
     if(!exp||!exp.id)return{};
-    if(route==='experiment-import')return{experiment:{name:exp.meta&&exp.meta.name||'',source:exp.meta&&exp.meta.sourceName||'',files:(exp.files||[]).length,samples:(exp.samples||[]).length,measurements:(exp.measurements||[]).length},review:{findings:take(exp.findings,30).map(compact),open_findings:(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).length,analysis:compact(exp.datasetAnalysis&&exp.datasetAnalysis.summary||exp.analysis&&exp.analysis.summary||{})}};
+    if(route==='experiment-import')return{experiment:{
+name:exp.meta&&exp.meta.name||'',source:exp.meta&&exp.meta.sourceName||'',files:(exp.files||[]).length,
+      samples:(exp.samples||[]).length,measurements:(exp.measurements||[]).length},review:{
+      findings:take(exp.findings,30).map(compact),open_findings:(exp.findings||[]).filter(function(f){
+      return f.status!=='resolved';}).length,analysis:compact(exp.datasetAnalysis&&exp.datasetAnalysis.summary||exp.analysis&&
+      exp.analysis.summary||{})}};
     if(route==='experiment-results'){
       const selected=(exp.measurements||[]).find(function(m){return String(m.id)===String(s.selectedMeasurementId||'');});
       return{tab:s.resultsTab||'overview',summary:compact(exp.analysis&&exp.analysis.summary||{}),top_non_ref:take(exp.analysis&&exp.analysis.topNonRef,8).map(compact),top_ref:take(exp.analysis&&exp.analysis.topRef,8).map(compact),selected_measurement:compact(selected||null),statistics:compact(exp.analysisSummary||null)};
@@ -28,7 +33,15 @@
     if(route==='experiment-design'){
       const dev=(exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===String(s.selectedDesignDeviceId||'');})||(exp.design&&exp.design.devices||[])[0]||null;
       const proposals=LF.ActionData?LF.ActionData.proposals(exp,'design.infer'):{};
-      return{selected_experiment:compact(dev),selected_solutions:dev?linkedSolutions(exp,dev).map(compact):[],selected_ai_suggestion:dev?compact(proposals[dev.id]||null):null,ai_status:dev?compact(LF.ActionData&&LF.ActionData.status(exp,'design.infer',dev.id)||null):null,experiments:take(exp.design&&exp.design.devices,40).map(function(d){return{id:d.id,name:d.name||'',samples:take(d.sampleNames,12),solutions:linkedSolutions(exp,d).map(function(x){return{name:x.name,role:x.role,solutes:x.solutes,solvents:x.solvents};}),stack:take(d.stack,14).map(function(x){return{role:x.role,material:x.material,thickness:x.thickness};}),ai_status:compact(LF.ActionData&&LF.ActionData.status(exp,'design.infer',d.id)||null),has_suggestion:!!proposals[d.id]};})};
+      return{selected_experiment:compact(dev),selected_solutions:dev?linkedSolutions(exp,dev).map(compact):[],
+selected_ai_suggestion:dev?compact(proposals[dev.id]||null):null,
+        ai_status:dev?compact(LF.ActionData&&LF.ActionData.status(exp,'design.infer',dev.id)||null):null,
+        experiments:take(exp.design&&exp.design.devices,40).map(function(d){return{
+        id:d.id,name:d.name||'',samples:take(d.sampleNames,12),solutions:linkedSolutions(exp,d).map(function(x){return{
+        name:x.name,role:x.role,solutes:x.solutes,solvents:x.solvents};
+        }),stack:take(d.stack,14).map(function(x){return{role:x.role,material:x.material,thickness:x.thickness};
+        }),ai_status:compact(LF.ActionData&&LF.ActionData.status(exp,'design.infer',d.id)||null),
+        has_suggestion:!!proposals[d.id]};})};
     }
     if(route==='experiment-export'){
       const plan=exp.nomad&&exp.nomad.mappingPlan||{};

@@ -16,10 +16,47 @@
   function localProvider(providerId){const provider=LF.AIProviders[providerId||providerIdFromForm()]||LF.AIProviders.custom;return provider.local===true;}
   function setInputModel(input,providerId,value){if(!input)return;const raw=String(value||'');if(localProvider(providerId)&&raw){input.dataset.rawModel=raw;input.value=modelLabel(providerId,raw);}else{delete input.dataset.rawModel;input.value=raw;}}
   function modelValue(providerId){const model=activeModelField(providerId);if(!model)return'';const shown=String(model.value||'').trim(),raw=String(model.dataset&&model.dataset.rawModel||'').trim();if(raw&&shown===modelLabel(providerId,raw))return raw;return shown;}
-  function setModelValue(value){value=String(value||'');const input=field('aiModel'),select=field('aiModelSelect'),providerId=providerIdFromForm();setInputModel(input,providerId,value);if(select){if(value&&!Array.from(select.options).some(function(option){return option.value===value;})){const option=document.createElement('option');option.value=value;option.textContent=modelLabel(providerId,value);select.appendChild(option);}select.value=value;}}
+  function setModelValue(value){value=String(value||'');
+const input=field('aiModel'),select=field('aiModelSelect'),providerId=providerIdFromForm();
+    setInputModel(input,providerId,value);if(select){if(value&&!Array.from(select.options).some(function(option){
+    return option.value===value;})){const option=document.createElement('option');option.value=value;
+    option.textContent=modelLabel(providerId,value);select.appendChild(option);}select.value=value;}}
   function catalogueModel(provider,current,models){provider=provider||{};current=String(current||'').trim();models=Array.isArray(models)?models.map(String).filter(Boolean):[];const preset=String(provider.model||'').trim();if(current&&models.includes(current))return current;if(preset&&models.includes(preset))return preset;return models[0]||current||preset||'';}
-  function catalogueChoices(provider,current,models){const providerId=providerIdFromForm(),meta=modelCatalogueMeta[providerId]||{},catalogue=Array.from(new Set((Array.isArray(models)?models:[]).map(String).filter(Boolean))).sort(function(a,b){if(providerId==='openrouter'){const af=meta[a]&&meta[a].free?1:0,bf=meta[b]&&meta[b].free?1:0;if(af!==bf)return bf-af;}return a.localeCompare(b);});return{catalogue:catalogue,choices:catalogue.slice()};}
-  function syncModelControls(models,options){options=options||{};const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AIProviders.custom,input=field('aiModel'),select=field('aiModelSelect'),button=field('detectProviderModel'),hint=field('aiModelHint'),key=field('aiKey');if(!input||!select)return;if(!options.manualFallback&&(!Array.isArray(models)||!models.length)&&Array.isArray(modelCatalogues[providerId]))models=modelCatalogues[providerId].slice();if(select.dataset.provider!==providerId){delete select.dataset.manualFallback;delete select.dataset.catalogueCount;select.dataset.provider=providerId;select.replaceChildren();}if(options.manualFallback){select.dataset.manualFallback='true';modelCatalogueFallbacks[providerId]=true;}else if(modelCatalogueFallbacks[providerId])select.dataset.manualFallback='true';if(Array.isArray(models)&&models.length){delete select.dataset.manualFallback;delete modelCatalogueFallbacks[providerId];modelCatalogues[providerId]=models.slice();}const manualFallback=select.dataset.manualFallback==='true',selectMode=!!provider.modelSelect&&!manualFallback,current=String(modelValue(providerId)||provider.model||'');if(Array.isArray(models)&&models.length){const prepared=catalogueChoices(provider,current,models),catalogue=prepared.catalogue,choices=prepared.choices;select.replaceChildren();choices.forEach(function(id){const option=document.createElement('option');option.value=id;option.textContent=modelLabel(providerId,id);select.appendChild(option);});const preferred=catalogueModel(provider,current,choices);if(selectMode){select.value=preferred;setInputModel(input,providerId,preferred);}else{setInputModel(input,providerId,preferred);if(choices.includes(preferred))select.value=preferred;}select.dataset.catalogueCount=String(catalogue.length);}else if(!select.options.length&&current){const option=document.createElement('option');option.value=current;option.textContent=modelLabel(providerId,current);select.appendChild(option);select.value=current;}input.hidden=selectMode;select.hidden=!selectMode;select.setAttribute('aria-label',provider.modelSelectLabel||provider.name+' model');const host=input.closest('.ai-model-control');if(host)host.dataset.modelSelect=selectMode?'true':'false';if(button&&!button.dataset.loading){button.textContent='Check';button.disabled=false;}if(hint&&!options.preserveHint){if(provider.keyRequired&&!String(key&&key.value||'').trim())hint.textContent='Add the API key before checking the connection.';else if(provider.modelSelect&&manualFallback)hint.textContent='LabFlow could not load the model list. Enter the model name manually, then Save & test.';else if(!select.dataset.catalogueCount)hint.textContent='Check the connection to refresh the available models.';}}
+  function catalogueChoices(provider,current,models){
+const providerId=providerIdFromForm(),meta=modelCatalogueMeta[providerId]||{}
+    ,catalogue=Array.from(new Set((Array.isArray(models)?models:[]).map(String).filter(Boolean))).sort(function(a,b){
+    if(providerId==='openrouter'){const af=meta[a]&&meta[a].free?1:0,bf=meta[b]&&meta[b].free?1:0;if(af!==bf)return bf-af;
+    }return a.localeCompare(b);});return{catalogue:catalogue,choices:catalogue.slice()};}
+  function syncModelControls(models,options){options=options||{};
+const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AIProviders.custom,input=field('aiModel'),
+    select=field('aiModelSelect'),button=field('detectProviderModel'),hint=field('aiModelHint'),key=field('aiKey');
+    if(!input||!select)return;if(!options.manualFallback&&(!Array.isArray(models)||!models.length)&&
+    Array.isArray(modelCatalogues[providerId]))models=modelCatalogues[providerId].slice();
+    if(select.dataset.provider!==providerId){delete select.dataset.manualFallback;delete select.dataset.catalogueCount;
+    select.dataset.provider=providerId;select.replaceChildren();
+    }if(options.manualFallback){select.dataset.manualFallback='true';modelCatalogueFallbacks[providerId]=true;
+    }else if(modelCatalogueFallbacks[providerId])select.dataset.manualFallback='true';
+    if(Array.isArray(models)&&models.length){delete select.dataset.manualFallback;
+    delete modelCatalogueFallbacks[providerId];modelCatalogues[providerId]=models.slice();
+    }const manualFallback=select.dataset.manualFallback==='true',selectMode=!!provider.modelSelect&&!manualFallback,
+    current=String(modelValue(providerId)||provider.model||'');
+    if(Array.isArray(models)&&models.length){
+    const prepared=catalogueChoices(provider,current,models),catalogue=prepared.catalogue,choices=prepared.choices;
+    select.replaceChildren();choices.forEach(function(id){const option=document.createElement('option');option.value=id;
+    option.textContent=modelLabel(providerId,id);select.appendChild(option);});
+    const preferred=catalogueModel(provider,current,choices);if(selectMode){select.value=preferred;
+    setInputModel(input,providerId,preferred);}else{setInputModel(input,providerId,preferred);
+    if(choices.includes(preferred))select.value=preferred;}select.dataset.catalogueCount=String(catalogue.length);
+    }else if(!select.options.length&&current){const option=document.createElement('option');option.value=current;
+    option.textContent=modelLabel(providerId,current);select.appendChild(option);select.value=current;
+    }input.hidden=selectMode;select.hidden=!selectMode;
+    select.setAttribute('aria-label',provider.modelSelectLabel||provider.name+' model');
+    const host=input.closest('.ai-model-control');if(host)host.dataset.modelSelect=selectMode?'true':'false';
+    if(button&&!button.dataset.loading){button.textContent='Check';button.disabled=false;
+    }if(hint&&!options.preserveHint){if(provider.keyRequired&&!String(key&&key.value||
+    '').trim())hint.textContent='Add the API key before checking the connection.';
+    else if(provider.modelSelect&&manualFallback)hint.textContent='LabFlow could not load the model list. Enter the model name manually, then Save & test.';
+    else if(!select.dataset.catalogueCount)hint.textContent='Check the connection to refresh the available models.';}}
 
   /** Reduce an endpoint to a safe diagnostic host; never expose credentials or query data. */
   function endpointHost(endpoint) {
@@ -61,7 +98,8 @@
       if(space==='loopback'){if(summary)summary.textContent='Running on this computer';if(badge){badge.className='badge warning';badge.textContent='Local';}}
       else if(space==='local'){if(summary)summary.textContent='Available on your local network';if(badge){badge.className='badge info';badge.textContent='Local';}}
       else{if(summary)summary.textContent='Using a custom address';if(badge){badge.className='badge info';badge.textContent='Custom';}}
-      if(endpointHint)endpointHint.innerHTML='Same device: <span class="mono">127.0.0.1</span>. Open local LabFlow as <span class="mono">localhost</span> or <span class="mono">127.0.0.1</span>, not <span class="mono">0.0.0.0</span>. Another device: use <span class="mono">fedora.local</span> or a private IP and enable LAN binding explicitly.';
+      if(endpointHint)endpointHint.innerHTML='Same device: <span class="mono">127.0.0.1</span>. Open local LabFlow as <span class="mono">localhost</span> or ' +
+        '<span class="mono">127.0.0.1</span>, not <span class="mono">0.0.0.0</span>. Another device: use <span class="mono">fedora.local</span> or a private IP and enable LAN binding explicitly.';
     }else{
       if(summary)summary.textContent='Online service · '+(provider.name||providerId);
       if(badge){badge.className='badge info';badge.textContent='Online';}
@@ -77,7 +115,14 @@
   /** Read exactly what is visible in Settings; never substitute saved/default connection values. */
   function connectionFromForm(){
     const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AIProviders.custom;
-    const endpoint=String(field('aiEndpoint')&&field('aiEndpoint').value||'').trim(),key=String(field('aiKey')&&field('aiKey').value||'').trim(),saved=LF.Storage.getAiSettings();let safeKey=key;try{const changedOrigin=new URL(endpoint).origin!==new URL(saved.endpoint||endpoint).origin;if(changedOrigin&&key&&key===LF.Storage.getApiKey(saved.provider,saved.endpoint)){safeKey='';if(field('aiKey'))field('aiKey').value='';}}catch(_){} return{providerId:providerId,provider:provider,endpoint:endpoint,model:String(modelValue(providerId)||'').trim(),apiKey:safeKey,rememberKey:!!(field('aiRememberKey')&&field('aiRememberKey').checked)};
+    const endpoint=String(field('aiEndpoint')&&field('aiEndpoint').value||'').trim(),
+key=String(field('aiKey')&&field('aiKey').value||'').trim(),saved=LF.Storage.getAiSettings();let safeKey=key;
+      try{const changedOrigin=new URL(endpoint).origin!==new URL(saved.endpoint||endpoint).origin;
+      if(changedOrigin&&key&&key===LF.Storage.getApiKey(saved.provider,saved.endpoint)){safeKey='';
+      if(field('aiKey'))field('aiKey').value='';
+      }}catch(_){} return{providerId:providerId,provider:provider,endpoint:endpoint,
+      model:String(modelValue(providerId)||'').trim(),apiKey:safeKey,
+      rememberKey:!!(field('aiRememberKey')&&field('aiRememberKey').checked)};
   }
   function validateConnectionForm(config,options){
     options=options||{};
@@ -109,7 +154,13 @@
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom,key=String(field('aiKey')&&field('aiKey').value||'').trim(),rememberKey=!!(field('aiRememberKey')&&field('aiRememberKey').checked);
     validateConnectionForm({providerId:settings.provider,provider:provider,endpoint:settings.endpoint,model:settings.model,apiKey:key});
     LF.Storage.saveAiSettings(settings);
-    if(provider.keyRequired||provider.optionalKey){const stored=LF.Storage.saveApiKey(key,settings.provider,{endpoint:settings.endpoint,remember:rememberKey});if(stored===false)throw new Error('The '+(provider.name||settings.provider)+' API key could not be saved in this browser. Check site-storage permissions, then try again.');if(provider.keyRequired&&key&&!LF.Storage.getApiKey(settings.provider,settings.endpoint))throw new Error('The '+(provider.name||settings.provider)+' API key was not retained by this browser. Check site-storage permissions, then try again.');}
+    if(provider.keyRequired||provider.optionalKey){const stored=LF.Storage.saveApiKey(key,settings.provider,{
+endpoint:settings.endpoint,remember:rememberKey});
+      if(stored===false)throw new Error('The '+(provider.name||
+      settings.provider)+' API key could not be saved in this browser. Check site-storage permissions, then try again.');
+      if(provider.keyRequired&&key&&!LF.Storage.getApiKey(settings.provider,
+      settings.endpoint))throw new Error('The '+(provider.name||
+      settings.provider)+' API key was not retained by this browser. Check site-storage permissions, then try again.');}
     Log.info('saved', {provider:settings.provider, endpoint:settings.endpoint, model:settings.model});
     if(LF.SettingsPage&&LF.SettingsPage.markSaved)LF.SettingsPage.markSaved();
     if (!options || options.toast !== false) LF.UI.message('AI connection saved.', 'success');
@@ -204,7 +255,11 @@
       if(useActivity){
         const warning=catalogueError?'Model catalogue could not be read from this browser; the configured model was tested directly.':'';
         const runtimeWarning=cap&&cap.runtimeProfileStatus==='mismatch'?(cap.runtimeProfileMessage||'llama.cpp runtime differs from the recommended LabFlow profile.'):'';
-        finishProviderActivity({stage:'Connection verified',message:(provider.name||providerId)+' is reachable and the model answered the live probe.',response:[warning,runtimeWarning].filter(Boolean).join('\n\n')||'Live provider probe completed successfully.',details:{Provider:provider.name||providerId,Endpoint:endpointHost(endpoint),Model:modelLabel(providerId,selected),Models:models.length||'—',Transport:probe.transport||'direct',Diagnostic:diagnosticId}});
+        finishProviderActivity({stage:'Connection verified',
+message:(provider.name||providerId)+' is reachable and the model answered the live probe.',response:[warning,
+          runtimeWarning].filter(Boolean).join('\n\n')||'Live provider probe completed successfully.',details:{
+          Provider:provider.name||providerId,Endpoint:endpointHost(endpoint),Model:modelLabel(providerId,selected),
+          Models:models.length||'—',Transport:probe.transport||'direct',Diagnostic:diagnosticId}});
       }
       return models;
     }catch(error){
@@ -261,12 +316,22 @@
       updateProviderActivity({stepId:'persist',stepStatus:'done',stepNote:'Saved',progress:.97});
       Log.info('connection-test.stage',{diagnosticId:diagnosticId,provider:config.providerId,phase:'persist',status:'ok'});
       Log.info('connection-test.ok',{diagnosticId:diagnosticId,provider:settings.provider,model:settings.model,endpoint:endpointHost(settings.endpoint),elapsedMs:result.elapsedMs,requestId:result.requestId||'',transport:result.transport||'direct'});
-      finishProviderActivity({stage:'Connection verified and saved',message:(provider.name||settings.provider)+' answered the live probe and the settings were saved.',response:'Connection verified with '+modelLabel(settings.provider,result.model||settings.model)+'.',details:{Provider:provider.name||settings.provider,Endpoint:endpointHost(settings.endpoint),Model:modelLabel(settings.provider,result.model||settings.model),Time:result.elapsedMs?Math.round(result.elapsedMs)+' ms':'—',Transport:result.transport||'direct',Diagnostic:diagnosticId}});
+      finishProviderActivity({stage:'Connection verified and saved',
+message:(provider.name||settings.provider)+' answered the live probe and the settings were saved.',
+        response:'Connection verified with '+modelLabel(settings.provider,result.model||settings.model)+'.',details:{
+        Provider:provider.name||settings.provider,Endpoint:endpointHost(settings.endpoint),Model:modelLabel(settings.provider,
+        result.model||settings.model),Time:result.elapsedMs?Math.round(result.elapsedMs)+' ms':'—',
+        Transport:result.transport||'direct',Diagnostic:diagnosticId}});
       return result;
     }catch(error){
       const summary=LF.AIDiagnostics?LF.AIDiagnostics.errorSummary(error):null,next=summary&&summary.next?summary.next:'';
       Log.error('connection-test.failed',{diagnosticId:diagnosticId,provider:config.providerId,model:config.model,endpoint:endpointHost(config.endpoint),keyConfigured:!!config.apiKey,phase:error&&error.phase||'chat-probe',category:summary&&summary.category||'',next:next,error:error});
-      failProviderActivity(error,{stage:'Save & test failed',message:(summary&&summary.category)||'Connection check failed',response:(error.message||String(error))+(next?'\n\n'+next:''),details:{Provider:provider.name||config.providerId,Endpoint:endpointHost(config.endpoint),Model:modelLabel(config.providerId,config.model),Phase:error&&error.phase||'chat-probe',Category:summary&&summary.category||'Provider error',Diagnostic:diagnosticId}});
+      failProviderActivity(error,{stage:'Save & test failed',
+message:(summary&&summary.category)||'Connection check failed',
+        response:(error.message||String(error))+(next?'\n\n'+next:''),details:{
+        Provider:provider.name||config.providerId,Endpoint:endpointHost(config.endpoint),Model:modelLabel(config.providerId,
+        config.model),Phase:error&&error.phase||'chat-probe',Category:summary&&summary.category||'Provider error',
+        Diagnostic:diagnosticId}});
       return null;
     }finally{if(button){button.textContent=oldText;button.disabled=false;}}
   }

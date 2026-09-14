@@ -82,7 +82,11 @@
       const firstY = pos.y + 24 - ((lines.length - 1) * 6.5);
       return '<g class="mermaid-node"><rect x="' + pos.x + '" y="' + pos.y + '" width="148" height="46" rx="5"></rect><text x="' + (pos.x + 74) + '" y="' + firstY + '" text-anchor="middle">' + text + '</text></g>';
     }).join('');
-    return '<figure class="docs-mermaid"><div class="docs-mermaid-canvas"><svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Documentation flow diagram"><defs><marker id="' + marker + '" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>' + edgeSvg + nodeSvg + '</svg></div><details><summary>Mermaid source</summary><pre><code>' + C.escapeHtml(source) + '</code></pre></details></figure>';
+    return '<figure class="docs-mermaid"><div class="docs-mermaid-canvas"><svg viewBox="0 0 ' + width + ' ' + height +
+'" role="img" aria-label="Documentation flow diagram"><defs><marker id="' + marker +
+      '" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"></path></marker></defs>' +
+      edgeSvg + nodeSvg + '</svg></div><details><summary>Mermaid source</summary><pre><code>' + C.escapeHtml(source) +
+      '</code></pre></details></figure>';
   }
   function headingId(title, counts) {
     const base = String(title || '').replace(/<[^>]+>/g, '').toLowerCase().replace(/&amp;/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
@@ -116,7 +120,11 @@
     return Object.keys(grouped).map(function (section) {
       return '<section class="docs-catalog-group" data-doc-group><h2>' + C.escapeHtml(section) + '</h2>' + grouped[section].map(function (doc) {
         const search = [doc.title, doc.summary, doc.section, doc.path].join(' ').toLowerCase();
-        return '<button type="button" class="docs-topic ' + (doc.slug === active.slug ? 'active' : '') + '" data-doc-slug="' + C.escapeHtml(doc.slug) + '" data-doc-search="' + C.escapeHtml(search) + '" ' + (doc.slug === active.slug ? 'aria-current="page"' : '') + '><strong>' + C.escapeHtml(doc.title) + '</strong><small>' + C.escapeHtml(doc.summary) + '</small><span>' + C.escapeHtml(doc.path.replace(/^docs\//, '')) + ' · ' + doc.words + ' words</span></button>';
+        return '<button type="button" class="docs-topic ' + (doc.slug === active.slug ? 'active' : '') +
+'" data-doc-slug="' + C.escapeHtml(doc.slug) + '" data-doc-search="' + C.escapeHtml(search) + '" ' +
+          (doc.slug === active.slug ? 'aria-current="page"' : '') + '><strong>' + C.escapeHtml(doc.title) + '</strong><small>' +
+          C.escapeHtml(doc.summary) + '</small><span>' + C.escapeHtml(doc.path.replace(/^docs\//,
+          '')) + ' · ' + doc.words + ' words</span></button>';
       }).join('') + '</section>';
     }).join('');
   }
@@ -133,8 +141,20 @@
     return '<section class="page docs-page">' + LF.PageShell.pageHead('Documentation','Researcher guidance and technical reference, rendered locally from the current Markdown sources.') +
       '<div class="docs-provenance"><span><strong>' + docs.length + '</strong> Markdown documents</span><span><strong>' + sections.length + '</strong> collections</span><span><strong>Local</strong> no documentation network requests</span><span><strong>Mermaid</strong> diagrams from fenced source</span></div>' +
       '<div class="docs-workbench">' +
-        '<aside class="panel docs-catalog" aria-label="Documentation topics"><div class="docs-catalog-tools"><label class="field-label" for="docsSearch">Find documentation</label><input class="input" id="docsSearch" type="search" autocomplete="off" placeholder="Search topics and paths…" value="' + C.escapeHtml(query) + '"><label class="field-label" for="docsSection">Collection</label><select class="select" id="docsSection"><option value="all">All collections</option>' + sections.map(function (name) { return '<option value="' + C.escapeHtml(name) + '" ' + (name === section ? 'selected' : '') + '>' + C.escapeHtml(name) + '</option>'; }).join('') + '</select><span class="docs-result-count" id="docsResultCount" aria-live="polite"></span></div><nav class="docs-topic-list" data-scroll-memory>' + catalogHtml(doc) + '</nav></aside>' +
-        '<article class="panel docs-document"><header class="docs-document-head"><div><span class="eyebrow">' + C.escapeHtml(doc.section) + '</span><strong>' + C.escapeHtml(doc.title) + '</strong><small>' + C.escapeHtml(doc.path) + ' · ' + doc.words + ' words</small></div><button type="button" class="button compact" data-copy-doc="' + C.escapeHtml(doc.slug) + '">Copy Markdown</button></header><div class="markdown-view docs-markdown">' + renderMarkdown(doc) + '</div><details class="docs-source"><summary>Markdown source <span>' + C.escapeHtml(doc.path) + '</span></summary><pre><code>' + C.escapeHtml(doc.markdown) + '</code></pre></details></article>' +
+        '<aside class="panel docs-catalog" aria-label="Documentation topics"><div class="docs-catalog-tools">' +
+          '<label class="field-label" for="docsSearch">Find documentation</label><input class="input" id="docsSearch" ' +
+          'type="search" autocomplete="off" placeholder="Search topics and paths…" value="' + C.escapeHtml(query) +
+'"><label class="field-label" for="docsSection">Collection</label><select class="select" id="docsSection"><option value="all">All collections</option>' +
+            sections.map(function (name) { return '<option value="' + C.escapeHtml(name) + '" ' +
+            (name === section ? 'selected' : '') + '>' + C.escapeHtml(name) + '</option>';
+            }).join('') + '</select><span class="docs-result-count" id="docsResultCount" aria-live="polite"></span></div><nav class="docs-topic-list" data-scroll-memory>' +
+            catalogHtml(doc) + '</nav></aside>' +
+        '<article class="panel docs-document"><header class="docs-document-head"><div><span class="eyebrow">' +
+C.escapeHtml(doc.section) + '</span><strong>' + C.escapeHtml(doc.title) + '</strong><small>' + C.escapeHtml(doc.path) +
+          ' · ' + doc.words + ' words</small></div><button type="button" class="button compact" data-copy-doc="' +
+          C.escapeHtml(doc.slug) + '">Copy Markdown</button></header><div class="markdown-view docs-markdown">' +
+          renderMarkdown(doc) + '</div><details class="docs-source"><summary>Markdown source <span>' + C.escapeHtml(doc.path) +
+          '</span></summary><pre><code>' + C.escapeHtml(doc.markdown) + '</code></pre></details></article>' +
         '<aside class="panel docs-outline" aria-label="On this page"><div class="panel-head"><div><span class="eyebrow">On this page</span><strong>' + C.escapeHtml(doc.title) + '</strong></div></div><nav>' + outlineHtml(doc) + '</nav><div class="docs-outline-foot"><span>Source of truth</span><strong>Canonical Markdown</strong><small>Rendered without a backend or CDN.</small></div></aside>' +
       '</div></section>';
   }

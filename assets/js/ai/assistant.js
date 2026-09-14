@@ -12,13 +12,65 @@ function fmtMs(ms){const n=Number(ms);return Number.isFinite(n)?(n<1000?Math.rou
 function fmtBytes(value){const n=Number(value);if(!Number.isFinite(n))return'—';if(n<1024)return Math.round(n)+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(1)+' MB';}
 function answerHtml(m){const clean=compact(m.content||''),detected=!m.structured?parseJson(clean):null;if(m.structured||detected)return jsonHtml(m.structured||detected);return clean?C.markdown(clean):'';}
 function copyButton(id){return '<button class="button ghost compact icon-only chat-copy" type="button" data-copy-message="'+C.escapeHtml(id)+'" aria-label="Copy message" title="Copy">'+(LF.Icons?LF.Icons.icon('copy'):'⧉')+'</button>';}
-function detailRows(m){const u=m.usage||{},rows=[];function row(label,value){if(value==null||value==='')return;rows.push('<div><dt>'+C.escapeHtml(label)+'</dt><dd>'+C.escapeHtml(String(value))+'</dd></div>');}if(m.provider||m.model)row('Provider / model',(m.provider||'—')+' / '+(C.modelDisplayName?C.modelDisplayName(m.provider,m.model||'—'):(m.model||'—')));if(Number.isFinite(Number(m.latencyMs)))row('Total turn',fmtMs(m.latencyMs));if(Number(m.requestCount)>0)row('Provider calls',Number(m.requestCount));if(Number.isFinite(Number(m.providerElapsedMs)))row('Provider time',fmtMs(m.providerElapsedMs));if(Number.isFinite(Number(m.ttftMs)))row('Final TTFT',fmtMs(m.ttftMs));if(Number.isFinite(Number(m.tokensPerSecond)))row('Throughput',Number(m.tokensPerSecond).toFixed(1)+' tok/s');if(Number.isFinite(Number(u.totalTokens)))row('Usage',Number(u.promptTokens||0).toLocaleString()+' input · '+Number(u.completionTokens||0).toLocaleString()+' output · '+Number(u.totalTokens).toLocaleString()+' total'+(u.estimated?' · estimated':''));if(Number.isFinite(Number(m.responseBytes)))row('Response payloads',fmtBytes(m.responseBytes));if(m.streamed!=null)row('Transport',m.streamed?'Streamed':'Non-streaming');if(m.finishReason)row('Finish reason',m.finishReason);if(m.requestId)row('Request ID',m.requestId);if(m.requestLogId)row('Log correlation',m.requestLogId);return rows;}
-function detailsHtml(m,event){const reasoning=compact(m.reasoning||''),rows=detailRows(m),structured=event&&m.structured?jsonHtml(m.structured):'';if(!reasoning&&!rows.length&&!structured)return'';return '<details class="chat-details"><summary>Details</summary><div class="chat-details-body">'+(structured?'<section><strong>Structured Action output</strong>'+structured+'</section>':'')+(reasoning?'<section><strong>Reasoning details</strong><div class="markdown-view">'+C.markdown(reasoning)+'</div></section>':'')+(rows.length?'<dl>'+rows.join('')+'</dl>':'')+'</div></details>';}
+function detailRows(m){const u=m.usage||{},rows=[];function row(label,value){if(value==null||value==='')return;
+rows.push('<div><dt>'+C.escapeHtml(label)+'</dt><dd>'+C.escapeHtml(String(value))+'</dd></div>');
+  }if(m.provider||m.model)row('Provider / model',
+  (m.provider||'—')+' / '+(C.modelDisplayName?C.modelDisplayName(m.provider,m.model||'—'):(m.model||'—')));
+  if(Number.isFinite(Number(m.latencyMs)))row('Total turn',fmtMs(m.latencyMs));
+  if(Number(m.requestCount)>0)row('Provider calls',Number(m.requestCount));
+  if(Number.isFinite(Number(m.providerElapsedMs)))row('Provider time',fmtMs(m.providerElapsedMs));
+  if(Number.isFinite(Number(m.ttftMs)))row('Final TTFT',fmtMs(m.ttftMs));
+  if(Number.isFinite(Number(m.tokensPerSecond)))row('Throughput',Number(m.tokensPerSecond).toFixed(1)+' tok/s');
+  if(Number.isFinite(Number(u.totalTokens)))row('Usage',
+  Number(u.promptTokens||0).toLocaleString()+' input · '+Number(u.completionTokens||
+  0).toLocaleString()+' output · '+Number(u.totalTokens).toLocaleString()+' total'+(u.estimated?' · estimated':''));
+  if(Number.isFinite(Number(m.responseBytes)))row('Response payloads',fmtBytes(m.responseBytes));
+  if(m.streamed!=null)row('Transport',m.streamed?'Streamed':'Non-streaming');
+  if(m.finishReason)row('Finish reason',m.finishReason);if(m.requestId)row('Request ID',m.requestId);
+  if(m.requestLogId)row('Log correlation',m.requestLogId);return rows;}
+function detailsHtml(m,event){const reasoning=compact(m.reasoning||''),rows=detailRows(m),
+structured=event&&m.structured?jsonHtml(m.structured):'';if(!reasoning&&!rows.length&&!structured)return'';
+  return '<details class="chat-details"><summary>Details</summary><div class="chat-details-body">'+
+  (structured?'<section><strong>Structured Action output</strong>'+structured+'</section>':'')+
+  (reasoning?'<section><strong>Reasoning details</strong><div class="markdown-view">'+C.markdown(reasoning)+
+  '</div></section>':'')+(rows.length?'<dl>'+rows.join('')+'</dl>':'')+'</div></details>';}
 function transientHtml(m){const label=m.statusLabel||'Thinking';return '<div class="chat-transient" data-chat-status role="status" aria-live="polite"><span class="chat-thinking-dot" aria-hidden="true"></span><span>'+C.escapeHtml(label)+'</span></div>';}
-function kbSourcesHtml(m){if(!LF.KnowledgeBase)return'';const refs=LF.KnowledgeBase.referencesFromText(m&&m.content||'');if(!refs.length)return'';const rows=refs.map(function(entry){const sources=(entry.sources||[]).slice(0,4).map(function(src){const href=LF.KnowledgeBase.sourceHref(src),meta=[src.authors,src.year].filter(Boolean).join(' · '),label=src.citation||src.title||src.doi||src.url||'Source';return '<div class="chat-kb-source"><strong>'+C.escapeHtml('KB:'+entry.id+' · '+entry.title)+'</strong>'+(meta?'<span>'+C.escapeHtml(meta)+'</span>':'')+(href?'<a href="'+C.escapeHtml(href)+'" target="_blank" rel="noopener noreferrer">'+C.escapeHtml(label)+'</a>':'<span>'+C.escapeHtml(label)+'</span>')+'</div>';}).join('');return sources||'<div class="chat-kb-source"><strong>'+C.escapeHtml('KB:'+entry.id+' · '+entry.title)+'</strong><span>Stored source metadata unavailable.</span></div>';}).join('');return '<details class="chat-kb-sources"><summary>Knowledge Base sources · '+refs.length+'</summary><div class="chat-kb-source-list">'+rows+'</div></details>';}
-function assistantInnerHtml(m){const pending=m.state==='requesting'&&!compact(m.content||''),failed=m.state==='error',cancelled=m.state==='cancelled';return '<div class="chat-message-label"><strong>Assistant</strong><span class="spacer"></span>'+(m.state==='complete'?copyButton(m.id):'')+'</div>'+(pending?transientHtml(m):'<div class="chat-transient" data-chat-status hidden></div>')+'<div class="chat-body markdown-view" data-chat-body'+(!m.content?' hidden':'')+'>'+answerHtml(m)+'</div>'+(m.state==='complete'?kbSourcesHtml(m):'')+(failed?'<div class="chat-error-actions"><button class="button compact" type="button" data-retry-message="'+C.escapeHtml(m.id)+'">Retry</button></div>':'')+(cancelled?'<small class="chat-cancelled">Request stopped.</small>':'')+(m.state==='complete'?detailsHtml(m,false):'');}
-function eventHtml(m){const body=compact(m.content||''),kind=m.unavailable?'unavailable':(m.error?'error':'done'),icon=kind==='error'?'!':kind==='unavailable'?'○':'✓',cmd=m.actionId?actionCommand(m.actionId):'';return '<article class="chat-event '+kind+'" data-message-row="'+C.escapeHtml(m.id)+'"><div class="chat-action-head"><span aria-hidden="true">'+icon+'</span>'+(cmd?'<code class="chat-action-command">'+C.escapeHtml(cmd)+'</code>':'')+'<strong>'+C.escapeHtml(m.eventTitle||m.actionTitle||'Action completed')+'</strong>'+(Number.isFinite(Number(m.latencyMs))?'<small>'+fmtMs(m.latencyMs)+'</small>':'')+'<span class="spacer"></span>'+(body?copyButton(m.id):'')+'</div>'+(body?'<div class="chat-action-result markdown-view">'+C.markdown(body)+'</div>':'')+detailsHtml(m,true)+'</article>';}
-function messageHtml(m){if(m.role==='system')return eventHtml(m);const ai=m.role==='assistant',clean=String(m.content||'');return '<article class="chat-row '+(ai?'assistant-row':'user-row')+'" data-message-row="'+C.escapeHtml(m.id)+'"><div class="chat-message '+(ai?'ai':'user')+(m.state==='error'||m.error?' error':'')+'" data-message-id="'+C.escapeHtml(m.id)+'">'+(ai?assistantInnerHtml(m):'<div class="chat-body"><p>'+C.escapeHtml(clean).replace(/\n/g,'<br>')+'</p></div><div class="chat-user-tools">'+copyButton(m.id)+'</div>')+'</div></article>';}
+function kbSourcesHtml(m){if(!LF.KnowledgeBase)return'';
+const refs=LF.KnowledgeBase.referencesFromText(m&&m.content||'');if(!refs.length)return'';
+  const rows=refs.map(function(entry){const sources=(entry.sources||[]).slice(0,4).map(function(src){
+  const href=LF.KnowledgeBase.sourceHref(src),meta=[src.authors,src.year].filter(Boolean).join(' · '),
+  label=src.citation||src.title||src.doi||src.url||'Source';
+  return '<div class="chat-kb-source"><strong>'+C.escapeHtml('KB:'+entry.id+' · '+entry.title)+'</strong>'+(meta?'<span>'+
+  C.escapeHtml(meta)+'</span>':'')+(href?'<a href="'+C.escapeHtml(href)+'" target="_blank" rel="noopener noreferrer">'+
+  C.escapeHtml(label)+'</a>':'<span>'+C.escapeHtml(label)+'</span>')+'</div>';}).join('');
+  return sources||'<div class="chat-kb-source"><strong>'+C.escapeHtml('KB:'+entry.id+' · '+entry.title)+
+  '</strong><span>Stored source metadata unavailable.</span></div>';}).join('');
+  return '<details class="chat-kb-sources"><summary>Knowledge Base sources · '+refs.length+
+  '</summary><div class="chat-kb-source-list">'+rows+'</div></details>';}
+function assistantInnerHtml(m){const pending=m.state==='requesting'&&!compact(m.content||''),failed=m.state==='error',
+cancelled=m.state==='cancelled';return '<div class="chat-message-label"><strong>Assistant</strong><span class="spacer"></span>'+
+  (m.state==='complete'?copyButton(m.id):'')+'</div>'+
+  (pending?transientHtml(m):'<div class="chat-transient" data-chat-status hidden></div>')+
+  '<div class="chat-body markdown-view" data-chat-body'+(!m.content?' hidden':'')+'>'+answerHtml(m)+'</div>'+
+  (m.state==='complete'?kbSourcesHtml(m):'')+
+  (failed?'<div class="chat-error-actions"><button class="button compact" type="button" data-retry-message="'+
+  C.escapeHtml(m.id)+'">Retry</button></div>':'')+(cancelled?'<small class="chat-cancelled">Request stopped.</small>':'')+
+  (m.state==='complete'?detailsHtml(m,false):'');}
+function eventHtml(m){const body=compact(m.content||''),kind=m.unavailable?'unavailable':(m.error?'error':'done'),
+icon=kind==='error'?'!':kind==='unavailable'?'○':'✓',cmd=m.actionId?actionCommand(m.actionId):'';
+  return '<article class="chat-event '+kind+'" data-message-row="'+C.escapeHtml(m.id)+
+  '"><div class="chat-action-head"><span aria-hidden="true">'+icon+'</span>'+(cmd?'<code class="chat-action-command">'+
+  C.escapeHtml(cmd)+'</code>':'')+'<strong>'+C.escapeHtml(m.eventTitle||m.actionTitle||
+  'Action completed')+'</strong>'+(Number.isFinite(Number(m.latencyMs))?'<small>'+fmtMs(m.latencyMs)+'</small>':'')+
+  '<span class="spacer"></span>'+(body?copyButton(m.id):'')+'</div>'+
+  (body?'<div class="chat-action-result markdown-view">'+C.markdown(body)+'</div>':'')+detailsHtml(m,true)+'</article>';}
+function messageHtml(m){if(m.role==='system')return eventHtml(m);
+const ai=m.role==='assistant',clean=String(m.content||'');
+  return '<article class="chat-row '+(ai?'assistant-row':'user-row')+'" data-message-row="'+C.escapeHtml(m.id)+
+  '"><div class="chat-message '+(ai?'ai':'user')+(m.state==='error'||
+  m.error?' error':'')+'" data-message-id="'+C.escapeHtml(m.id)+'">'+
+  (ai?assistantInnerHtml(m):'<div class="chat-body"><p>'+C.escapeHtml(clean).replace(/\n/g,
+  '<br>')+'</p></div><div class="chat-user-tools">'+copyButton(m.id)+'</div>')+'</div></article>';}
 function contextSnapshot(){return LF.PageContext&&LF.PageContext.snapshot?LF.PageContext.snapshot():{};}
 function updateHeader(has){const ctx=document.getElementById('assistantContext'),payload=document.getElementById('assistantContextPayload'),summary=has&&LF.PageContext?LF.PageContext.summary():'Current page';if(ctx)ctx.textContent=summary;if(payload)payload.textContent=JSON.stringify(contextSnapshot(),null,2);}
 function isNearBottom(log){return!log||log.scrollHeight-log.scrollTop-log.clientHeight<72;}
@@ -26,24 +78,139 @@ function setJump(show){const b=document.getElementById('chatJumpLatest');if(b)b.
 function followLatest(force){const log=document.getElementById('chatLog');if(!log)return;if(force||isNearBottom(log)){log.scrollTop=log.scrollHeight;setJump(false);}else setJump(true);}
 function actionCatalog(){return LF.ActionCapabilities&&LF.ActionCapabilities.catalog?LF.ActionCapabilities.catalog():[];}
 function actionCommand(id){return LF.ActionCapabilities&&LF.ActionCapabilities.command?LF.ActionCapabilities.command(id):('/action '+id);}
-function renderActionMenu(has){const menu=document.getElementById('assistantActionMenu'),toggle=document.getElementById('assistantActionsToggle');if(!menu||!toggle)return;toggle.disabled=!has;if(!has){menu.hidden=true;toggle.setAttribute('aria-expanded','false');return;}const actions=actionCatalog();menu.innerHTML='<div class="chat-action-menu-head"><strong>LabFlow Actions</strong><span>Recommended Actions first · unavailable Actions explain why</span></div>'+actions.map(function(a){return '<button type="button" class="chat-action-item" data-assistant-action="'+C.escapeHtml(a.id)+'" '+(a.available?'':'disabled')+' title="'+C.escapeHtml(a.available?(a.purpose||a.title):a.reason)+'"><span><strong>'+C.escapeHtml(a.title)+(a.recommended?' <mark>Recommended</mark>':'')+'</strong><small>'+C.escapeHtml(a.purpose||'')+'</small></span><code>'+C.escapeHtml(a.command||actionCommand(a.id))+'</code>'+(a.available?'':'<em>'+C.escapeHtml(a.reason)+'</em>')+'</button>';}).join('');}
+function renderActionMenu(has){const menu=document.getElementById('assistantActionMenu'),
+toggle=document.getElementById('assistantActionsToggle');if(!menu||!toggle)return;toggle.disabled=!has;
+  if(!has){menu.hidden=true;toggle.setAttribute('aria-expanded','false');return;}const actions=actionCatalog();
+  menu.innerHTML='<div class="chat-action-menu-head"><strong>LabFlow Actions</strong><span>Recommended Actions first · unavailable Actions explain why</span></div>'+
+  actions.map(function(a){return '<button type="button" class="chat-action-item" data-assistant-action="'+
+  C.escapeHtml(a.id)+'" '+(a.available?'':'disabled')+' title="'+C.escapeHtml(a.available?(a.purpose||
+  a.title):a.reason)+'"><span><strong>'+C.escapeHtml(a.title)+(a.recommended?' <mark>Recommended</mark>':'')+
+  '</strong><small>'+C.escapeHtml(a.purpose||'')+'</small></span><code>'+C.escapeHtml(a.command||
+  actionCommand(a.id))+'</code>'+(a.available?'':'<em>'+C.escapeHtml(a.reason)+'</em>')+'</button>';}).join('');}
 function setActionMenu(open){const menu=document.getElementById('assistantActionMenu'),toggle=document.getElementById('assistantActionsToggle');if(!menu||!toggle)return;menu.hidden=!open;toggle.setAttribute('aria-expanded',open?'true':'false');}
 function toggleActionMenu(){const menu=document.getElementById('assistantActionMenu');if(menu)setActionMenu(menu.hidden);}
 function setComposer(has){const input=document.getElementById('chatInput'),send=document.getElementById('chatSend');if(input){input.disabled=!has||!!active;input.placeholder=has?'Ask about this page or use /actions…':'Upload a ZIP first';}if(send){send.disabled=!has;send.textContent=active?'Stop':'Send';send.setAttribute('aria-label',active?'Stop response':'Send message');}renderActionMenu(has);}
 function restoreInterrupted(items){items.forEach(function(m){if(m.role==='assistant'&&(m.state==='requesting'||m.state==='streaming')){m.state='cancelled';m.statusLabel='';}});}
-function render(options){options=options||{};const log=document.getElementById('chatLog');if(!log)return;const e=LF.State.state.experiment,items=e&&e.derived&&e.derived.chat&&e.derived.chat.conversation||[],has=!!(e&&e.id),pinned=isNearBottom(log),previous=log.scrollTop;if(!active)restoreInterrupted(items);log.innerHTML=items.length?items.map(messageHtml).join(''):'<div class="assistant-empty"><strong>'+(has?'Ask, inspect, or run an Action':'Upload a ZIP to activate the assistant')+'</strong><span>'+(has?'The Assistant uses current-page evidence. Use the Actions menu for bounded LabFlow operations and review their output here.':'AI stays disabled until an experiment is loaded.')+'</span></div>';updateHeader(has);setComposer(has);if(options.forceBottom||pinned)followLatest(true);else{log.scrollTop=previous;setJump(true);}}
+function render(options){options=options||{};const log=document.getElementById('chatLog');if(!log)return;
+const e=LF.State.state.experiment,items=e&&e.derived&&e.derived.chat&&e.derived.chat.conversation||[],has=!!(e&&e.id),
+  pinned=isNearBottom(log),previous=log.scrollTop;if(!active)restoreInterrupted(items);
+  log.innerHTML=items.length?items.map(messageHtml).join(''):'<div class="assistant-empty"><strong>'+
+  (has?'Ask, inspect, or run an Action':'Upload a ZIP to activate the assistant')+'</strong><span>'+
+  (has?'The Assistant uses current-page evidence. Use the Actions menu for bounded LabFlow operations and review their output here.':
+  'AI stays disabled until an experiment is loaded.')+'</span></div>';updateHeader(has);setComposer(has);
+  if(options.forceBottom||pinned)followLatest(true);else{log.scrollTop=previous;setJump(true);}}
 function messageNode(id){return document.querySelector('[data-message-id="'+String(id).replace(/"/g,'\\"')+'"]');}
 function updateTransient(run,label){const node=messageNode(run.message.id);if(!node)return;const status=node.querySelector('[data-chat-status]');run.message.statusLabel=label;if(status){status.hidden=false;status.innerHTML='<span class="chat-thinking-dot" aria-hidden="true"></span><span>'+C.escapeHtml(label)+'</span>';}}
-function syncProgress(run,p){if(!active||active!==run)return;const log=document.getElementById('chatLog'),pinned=isNearBottom(log),node=messageNode(run.message.id);run.progress=p||{};const content=compact(run.progress.content||''),reasoning=compact(run.progress.reasoning||'');if(reasoning)run.message.reasoning=reasoning;if(run.progress.transportState==='rate_limit'){updateTransient(run,'Provider rate limit');return;}if(!node)return;if(content){run.message.state='streaming';run.message.content=content;const status=node.querySelector('[data-chat-status]'),body=node.querySelector('[data-chat-body]');if(status){status.hidden=true;status.innerHTML='';}if(body){body.hidden=false;body.innerHTML=answerHtml(run.message);}}else updateTransient(run,reasoning?'Thinking':'Waiting for provider');if(pinned)followLatest(true);else setJump(true);}
+function syncProgress(run,p){if(!active||active!==run)return;
+const log=document.getElementById('chatLog'),pinned=isNearBottom(log),node=messageNode(run.message.id);
+  run.progress=p||{};const content=compact(run.progress.content||''),reasoning=compact(run.progress.reasoning||'');
+  if(reasoning)run.message.reasoning=reasoning;
+  if(run.progress.transportState==='rate_limit'){updateTransient(run,'Provider rate limit');return;}if(!node)return;
+  if(content){run.message.state='streaming';run.message.content=content;
+  const status=node.querySelector('[data-chat-status]'),body=node.querySelector('[data-chat-body]');
+  if(status){status.hidden=true;status.innerHTML='';}if(body){body.hidden=false;body.innerHTML=answerHtml(run.message);
+  }}else updateTransient(run,reasoning?'Thinking':'Waiting for provider');if(pinned)followLatest(true);else setJump(true);
+  }
 function syncFinal(run){const log=document.getElementById('chatLog'),pinned=isNearBottom(log),node=messageNode(run.message.id);if(node){node.classList.toggle('error',run.message.state==='error');node.innerHTML=assistantInnerHtml(run.message);}else render({forceBottom:true});if(pinned)followLatest(true);else setJump(true);}
-function addActionMessage(payload){payload=payload||{};const exp=LF.State&&LF.State.state&&LF.State.state.experiment;if(!exp||!exp.id)return null;const failed=!!payload.error,unavailable=!!payload.unavailable,item=push(exp,{role:'system',content:compact(payload.content||''),structured:payload.structured||null,error:failed,unavailable:unavailable,eventTitle:String(payload.actionTitle||payload.actionId||'Action')+(failed?' failed':unavailable?' unavailable':' completed'),actionId:String(payload.actionId||''),actionTitle:String(payload.actionTitle||payload.actionId||'Action'),model:payload.model||'',provider:payload.provider||'',latencyMs:payload.latencyMs||null,providerElapsedMs:payload.providerElapsedMs||null,ttftMs:payload.ttftMs||null,tokensPerSecond:payload.tokensPerSecond||null,usage:payload.usage||null,finishReason:payload.finishReason||'',requestCount:payload.requestCount||null,planningRequests:payload.planningRequests||null,responseBytes:payload.responseBytes||null,streamed:!!payload.streamed,requestId:payload.requestId||'',requestLogId:payload.requestLogId||'',tools:Array.isArray(payload.tools)?payload.tools:[]},false);render();if(LF.State&&LF.State.notify)LF.State.notify('assistant');return item;}
-function aggregateRunMeta(out,settings,elapsed){const entries=Object.keys(out&&out.requestMeta||{}).map(function(key){return{key:key,meta:out.requestMeta[key]||{}};}),last=(entries[entries.length-1]||{}).meta||{},usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};let seen=false,providerElapsedMs=0,responseBytes=0;entries.forEach(function(x){const m=x.meta||{},u=m.usage||{};['promptTokens','completionTokens','totalTokens','cachedTokens'].forEach(function(k){if(Number.isFinite(Number(u[k]))){usage[k]+=Number(u[k]);seen=true;}});usage.estimated=usage.estimated||!!u.estimated;if(Number.isFinite(Number(m.latencyMs)))providerElapsedMs+=Number(m.latencyMs);if(Number.isFinite(Number(m.responseBytes)))responseBytes+=Number(m.responseBytes);});return{model:last.model||settings.model,provider:last.provider||settings.provider,latencyMs:elapsed,providerElapsedMs:providerElapsedMs||null,ttftMs:last.ttftMs||null,tokensPerSecond:last.tokensPerSecond||null,streamed:!!last.streamed,usage:seen?usage:null,finishReason:last.finishReason||'',requestCount:entries.length||1,responseBytes:responseBytes||null,requestId:last.requestId||'',requestLogId:last.requestLogId||''};}
-async function runTurn(exp,text,message){const settings=LF.Storage.getAiSettings(),run={started:performance.now(),message:message,controller:null,clock:null,firstContentLogged:false};active=run;message.state='requesting';message.content='';message.error=false;message.statusLabel='Thinking';if(Log)Log.info('turn.start',{messageId:message.id,provider:settings.provider,model:settings.model,questionChars:String(text||'').length});render({forceBottom:true});run.clock=setInterval(function(){if(active===run&&message.state==='requesting'&&!message.content)updateTransient(run,'Thinking · '+fmtMs(performance.now()-run.started));},500);let out=null;try{out=await Promise.race([LF.ActionRunner.run('assistant.chat',{userText:text,onProgress:function(p){if(!run.firstContentLogged&&p&&compact(p.content||'')){run.firstContentLogged=true;if(Log)Log.info('turn.first-content',{messageId:message.id,elapsedMs:Math.round(performance.now()-run.started)});}syncProgress(run,p);}}),new Promise(function(_,reject){run.watchdog=window.setTimeout(function(){try{if(LF.ActionRunner&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();}catch(_){}const e=new Error('Assistant timed out after 95 seconds. Retry the question.');e.code='ASSISTANT_TIMEOUT';reject(e);},95000);})]);const elapsed=Math.round(performance.now()-run.started);if(out&&out.status==='done'){let finalMeta=null;Object.keys(out.requestMeta||{}).forEach(function(k){finalMeta=out.requestMeta[k]||finalMeta;});Object.assign(message,{state:'complete',content:compact(out.result||message.content||''),reasoning:compact(finalMeta&&finalMeta.reasoning||message.reasoning||''),error:false},aggregateRunMeta(out,settings,elapsed));if(Log)Log.info('turn.done',{messageId:message.id,elapsedMs:elapsed,requests:message.requestCount||1,ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length});}else if(out&&(out.status==='cancelled'||out.status==='aborted')){Object.assign(message,{state:'cancelled',content:'',error:false,finishReason:'cancelled',latencyMs:elapsed});if(Log)Log.info('turn.cancelled',{messageId:message.id,elapsedMs:elapsed});}else{Object.assign(message,{state:'error',content:compact(out&&out.message||'Assistant request failed.'),error:true,model:settings.model,provider:settings.provider,latencyMs:elapsed,requestCount:Object.keys(out&&out.requestMeta||{}).length||null,finishReason:out&&out.code||'ASSISTANT_FAILED'});if(Log)Log.warn('turn.failed',{messageId:message.id,elapsedMs:elapsed,code:message.finishReason,message:message.content});LF.UI.message(message.content,'error');}}catch(error){Object.assign(message,{state:error&&error.name==='AbortError'?'cancelled':'error',content:error&&error.name==='AbortError'?'':String(error&&error.message||error||'Assistant request failed.'),error:!(error&&error.name==='AbortError'),model:settings.model,provider:settings.provider,latencyMs:Math.round(performance.now()-run.started),finishReason:error&&error.code||'ASSISTANT_FAILED'});if(Log)(message.error?Log.error:Log.info)('turn.exception',{messageId:message.id,elapsedMs:message.latencyMs,code:message.finishReason,error:error});if(message.error)LF.UI.message(message.content,'error');}finally{if(run.clock)clearInterval(run.clock);if(run.watchdog)window.clearTimeout(run.watchdog);if(active===run)active=null;if(message.state==='requesting'||message.state==='streaming')message.state=message.content?'complete':'cancelled';try{syncFinal(run);}catch(renderError){if(Log)Log.error('turn.final-render-failed',{messageId:message.id,error:renderError});try{render({forceBottom:true});}catch(_){}}finally{setComposer(true);if(LF.State&&LF.State.notify)LF.State.notify('assistant');}}}
+function addActionMessage(payload){payload=payload||{};const exp=LF.State&&LF.State.state&&LF.State.state.experiment;
+if(!exp||!exp.id)return null;const failed=!!payload.error,unavailable=!!payload.unavailable,item=push(exp,{
+  role:'system',content:compact(payload.content||''),structured:payload.structured||null,error:failed,
+  unavailable:unavailable,eventTitle:String(payload.actionTitle||payload.actionId||
+  'Action')+(failed?' failed':unavailable?' unavailable':' completed'),actionId:String(payload.actionId||''),
+  actionTitle:String(payload.actionTitle||payload.actionId||'Action'),model:payload.model||'',
+  provider:payload.provider||'',latencyMs:payload.latencyMs||null,providerElapsedMs:payload.providerElapsedMs||null,
+  ttftMs:payload.ttftMs||null,tokensPerSecond:payload.tokensPerSecond||null,usage:payload.usage||null,
+  finishReason:payload.finishReason||'',requestCount:payload.requestCount||null,
+  planningRequests:payload.planningRequests||null,responseBytes:payload.responseBytes||null,streamed:!!payload.streamed,
+  requestId:payload.requestId||'',requestLogId:payload.requestLogId||'',
+  tools:Array.isArray(payload.tools)?payload.tools:[]},false);render();
+  if(LF.State&&LF.State.notify)LF.State.notify('assistant');return item;}
+function aggregateRunMeta(out,settings,elapsed){const entries=Object.keys(out&&out.requestMeta||{}).map(function(key){
+return{key:key,meta:out.requestMeta[key]||{}};
+  }),last=(entries[entries.length-1]||{}).meta||{},usage={
+  promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};
+  let seen=false,providerElapsedMs=0,responseBytes=0;entries.forEach(function(x){const m=x.meta||{},u=m.usage||{};
+  ['promptTokens','completionTokens','totalTokens','cachedTokens'].forEach(function(k){if(Number.isFinite(Number(u[k]))){
+  usage[k]+=Number(u[k]);seen=true;}});usage.estimated=usage.estimated||!!u.estimated;
+  if(Number.isFinite(Number(m.latencyMs)))providerElapsedMs+=Number(m.latencyMs);
+  if(Number.isFinite(Number(m.responseBytes)))responseBytes+=Number(m.responseBytes);});
+  return{model:last.model||settings.model,provider:last.provider||settings.provider,latencyMs:elapsed,
+  providerElapsedMs:providerElapsedMs||null,ttftMs:last.ttftMs||null,tokensPerSecond:last.tokensPerSecond||null,
+  streamed:!!last.streamed,usage:seen?usage:null,finishReason:last.finishReason||'',requestCount:entries.length||1,
+  responseBytes:responseBytes||null,requestId:last.requestId||'',requestLogId:last.requestLogId||''};}
+async function runTurn(exp,text,message){const settings=LF.Storage.getAiSettings(),run={
+started:performance.now(),message:message,controller:null,clock:null,firstContentLogged:false};active=run;
+  message.state='requesting';message.content='';message.error=false;message.statusLabel='Thinking';
+  if(Log)Log.info('turn.start',{messageId:message.id,provider:settings.provider,model:settings.model,
+  questionChars:String(text||'').length});render({forceBottom:true});
+  run.clock=setInterval(function(){if(active===run&&message.state==='requesting'&&!message.content)updateTransient(run,
+  'Thinking · '+fmtMs(performance.now()-run.started));},500);let out=null;
+  try{out=await Promise.race([LF.ActionRunner.run('assistant.chat',{userText:text,onProgress:function(p){
+  if(!run.firstContentLogged&&p&&compact(p.content||'')){run.firstContentLogged=true;
+  if(Log)Log.info('turn.first-content',{messageId:message.id,elapsedMs:Math.round(performance.now()-run.started)});
+  }syncProgress(run,p);}}),new Promise(function(_,reject){run.watchdog=window.setTimeout(function(){try{
+  if(LF.ActionRunner&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();
+  }catch(_){}const e=new Error('Assistant timed out after 95 seconds. Retry the question.');e.code='ASSISTANT_TIMEOUT';
+  reject(e);},95000);})]);const elapsed=Math.round(performance.now()-run.started);
+  if(out&&out.status==='done'){let finalMeta=null;
+  Object.keys(out.requestMeta||{}).forEach(function(k){finalMeta=out.requestMeta[k]||finalMeta;});
+  Object.assign(message,{state:'complete',content:compact(out.result||message.content||''),
+  reasoning:compact(finalMeta&&finalMeta.reasoning||message.reasoning||''),error:false}
+  ,aggregateRunMeta(out,settings,elapsed));
+  if(Log)Log.info('turn.done',{messageId:message.id,elapsedMs:elapsed,requests:message.requestCount||1,
+  ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length});
+  }else if(out&&(out.status==='cancelled'||out.status==='aborted')){Object.assign(message,{
+  state:'cancelled',content:'',error:false,finishReason:'cancelled',latencyMs:elapsed});
+  if(Log)Log.info('turn.cancelled',{messageId:message.id,elapsedMs:elapsed});
+  }else{Object.assign(message,{state:'error',content:compact(out&&out.message||'Assistant request failed.'),error:true,
+  model:settings.model,provider:settings.provider,latencyMs:elapsed,requestCount:Object.keys(out&&out.requestMeta||{}
+  ).length||null,finishReason:out&&out.code||'ASSISTANT_FAILED'});
+  if(Log)Log.warn('turn.failed',{messageId:message.id,elapsedMs:elapsed,code:message.finishReason,message:message.content}
+  );LF.UI.message(message.content,'error');
+  }}catch(error){Object.assign(message,{state:error&&error.name==='AbortError'?'cancelled':'error',
+  content:error&&error.name==='AbortError'?'':String(error&&error.message||error||'Assistant request failed.'),
+  error:!(error&&error.name==='AbortError'),model:settings.model,provider:settings.provider,
+  latencyMs:Math.round(performance.now()-run.started),finishReason:error&&error.code||'ASSISTANT_FAILED'});
+  if(Log)(message.error?Log.error:Log.info)('turn.exception',{
+  messageId:message.id,elapsedMs:message.latencyMs,code:message.finishReason,error:error});
+  if(message.error)LF.UI.message(message.content,'error');}finally{if(run.clock)clearInterval(run.clock);
+  if(run.watchdog)window.clearTimeout(run.watchdog);if(active===run)active=null;
+  if(message.state==='requesting'||message.state==='streaming')message.state=message.content?'complete':'cancelled';
+  try{syncFinal(run);}catch(renderError){if(Log)Log.error('turn.final-render-failed',{
+  messageId:message.id,error:renderError});try{render({forceBottom:true});}catch(_){}}finally{setComposer(true);
+  if(LF.State&&LF.State.notify)LF.State.notify('assistant');}}}
 function commandAction(text){const raw=String(text||'').trim(),lower=raw.toLowerCase();if(lower==='/actions'){toggleActionMenu();return true;}const id=LF.ActionCapabilities&&LF.ActionCapabilities.resolveCommand?LF.ActionCapabilities.resolveCommand(raw):'';if(!id)return false;runAction(id,raw);return true;}
-function runAction(id,sourceText){if(active||runnerBusy()||!LF.ActionUI||!LF.ActionUI.run)return Promise.resolve(null);const capability=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(id):null,d=capability&&capability.definition;if(!d||d.visibility!=='public'){LF.UI.message('Unknown Assistant Action: '+id,'error');return Promise.resolve(null);}const exp=LF.State.ensureExperiment('assistant-action:'+id);if(!exp.id)return Promise.resolve(null);if(sourceText)push(exp,{role:'user',content:sourceText},false);setActionMenu(false);render({forceBottom:true});return LF.ActionUI.run(id,'',{params:capability.params,fromAssistant:true});}
-function sendChat(text){if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();text=String(text||'').trim();if(!text||active||runnerBusy())return;if(commandAction(text))return;if(!configured())return;const exp=LF.State.ensureExperiment('action:assistant.chat');if(!exp.id)return;push(exp,{role:'user',content:text},false);const message=push(exp,{role:'assistant',content:'',state:'requesting',retryText:text,statusLabel:'Thinking'},false);return runTurn(exp,text,message);}
+function runAction(id,sourceText){if(active||runnerBusy()||!LF.ActionUI||!LF.ActionUI.run)return Promise.resolve(null);
+const capability=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(id):null,
+  d=capability&&capability.definition;if(!d||d.visibility!=='public'){
+  LF.UI.message('Unknown Assistant Action: '+id,'error');return Promise.resolve(null);
+  }const exp=LF.State.ensureExperiment('assistant-action:'+id);if(!exp.id)return Promise.resolve(null);
+  if(sourceText)push(exp,{role:'user',content:sourceText},false);setActionMenu(false);render({forceBottom:true});
+  return LF.ActionUI.run(id,'',{params:capability.params,fromAssistant:true});}
+function sendChat(text){if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();text=String(text||'').trim();
+if(!text||active||runnerBusy())return;if(commandAction(text))return;if(!configured())return;
+  const exp=LF.State.ensureExperiment('action:assistant.chat');if(!exp.id)return;
+  push(exp,{role:'user',content:text},false);
+  const message=push(exp,{role:'assistant',content:'',state:'requesting',retryText:text,statusLabel:'Thinking'},false);
+  return runTurn(exp,text,message);}
 function retryMessage(id){if(active||runnerBusy()||!configured())return;const exp=LF.State.state.experiment,m=conversation(exp).find(function(x){return x.id===id&&x.role==='assistant'&&x.state==='error';});if(m)return runTurn(exp,m.retryText||'',m);}
 function cancel(){if(!active)return;if(LF.ActionRunner&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();else if(active.controller)active.controller.abort();}
-function bind(){document.addEventListener('click',function(e){const c=e.target.closest('[data-copy-message]');if(c){const m=conversation(LF.State.state.experiment).find(function(x){return x.id===c.dataset.copyMessage;});if(m)C.copyText(m.structured?JSON.stringify(m.structured,null,2):m.content);return;}const retry=e.target.closest('[data-retry-message]');if(retry){retryMessage(retry.dataset.retryMessage);return;}const action=e.target.closest('[data-assistant-action]');if(action){e.preventDefault();runAction(action.dataset.assistantAction,'');return;}if(e.target.closest('#assistantActionsToggle')){e.preventDefault();toggleActionMenu();return;}if(e.target.closest('#chatJumpLatest')){followLatest(true);return;}const menu=document.getElementById('assistantActionMenu'),toggle=document.getElementById('assistantActionsToggle');if(menu&&!menu.hidden&&toggle&&!toggle.contains(e.target)&&!menu.contains(e.target))setActionMenu(false);});document.addEventListener('keydown',function(e){if(e.key==='Escape')setActionMenu(false);});const input=document.getElementById('chatInput'),button=document.getElementById('chatSend');function fit(){if(!input)return;if(!String(input.value||'')){input.style.height='30px';input.style.overflowY='hidden';return;}input.style.height='30px';const next=Math.min(92,Math.max(30,input.scrollHeight));input.style.height=next+'px';input.style.overflowY=next>=92?'auto':'hidden';}function go(){if(active){cancel();return;}if(!input)return;const v=input.value;if(!v.trim())return;input.value='';fit();sendChat(v);}if(button)button.addEventListener('click',go);if(input){input.addEventListener('input',fit);input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go();}});fit();}}
+function bind(){document.addEventListener('click',function(e){const c=e.target.closest('[data-copy-message]');
+if(c){const m=conversation(LF.State.state.experiment).find(function(x){return x.id===c.dataset.copyMessage;});
+  if(m)C.copyText(m.structured?JSON.stringify(m.structured,null,2):m.content);return;
+  }const retry=e.target.closest('[data-retry-message]');if(retry){retryMessage(retry.dataset.retryMessage);return;
+  }const action=e.target.closest('[data-assistant-action]');if(action){e.preventDefault();
+  runAction(action.dataset.assistantAction,'');return;}if(e.target.closest('#assistantActionsToggle')){e.preventDefault();
+  toggleActionMenu();return;}if(e.target.closest('#chatJumpLatest')){followLatest(true);return;
+  }const menu=document.getElementById('assistantActionMenu'),toggle=document.getElementById('assistantActionsToggle');
+  if(menu&&!menu.hidden&&toggle&&!toggle.contains(e.target)&&!menu.contains(e.target))setActionMenu(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')setActionMenu(false);});
+  const input=document.getElementById('chatInput'),button=document.getElementById('chatSend');
+  function fit(){if(!input)return;if(!String(input.value||'')){input.style.height='30px';input.style.overflowY='hidden';
+  return;}input.style.height='30px';const next=Math.min(92,Math.max(30,input.scrollHeight));input.style.height=next+'px';
+  input.style.overflowY=next>=92?'auto':'hidden';}function go(){if(active){cancel();return;}if(!input)return;
+  const v=input.value;if(!v.trim())return;input.value='';fit();sendChat(v);}if(button)button.addEventListener('click',go);
+  if(input){input.addEventListener('input',fit);
+  input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go();}});fit();}}
 LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,isActive:function(){return!!active;},cancel:cancel};
 }());

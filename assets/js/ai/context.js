@@ -1,7 +1,8 @@
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger?LF.Logger.scope('context'):null;
-  const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
+  const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain ' +
+    'please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
   function expOf(){return(LF.DataModel&&LF.DataModel.getExperiment&&LF.DataModel.getExperiment())||(LF.State&&LF.State.state&&LF.State.state.experiment)||{};}
   function clean(v){return LF.PageContext&&LF.PageContext.cleanText?LF.PageContext.cleanText(v):String(v==null?'':v).replace(/%%LF(?:MD|CODE)[^%]*%%/g,'').trim();}
   function sanitize(v){if(v==null||typeof v==='number'||typeof v==='boolean')return v;if(typeof v==='string')return clean(v);if(Array.isArray(v))return v.map(sanitize);if(typeof v==='object'){const o={};Object.keys(v).forEach(function(k){o[k]=sanitize(v[k]);});return o;}return clean(v);}
@@ -20,10 +21,31 @@
     return out;
   }
   function dataState(exp){const sync=exp.sync||{},patches=exp.patches||[];return{basis:patches.length?'labflow_data_with_changes':'imported_data_interpretation',source_archive:exp.meta&&exp.meta.sourceName||'',revision:Number(sync.revision||0),applied_changes:patches.length};}
-  function sharedBrief(exp){const b=LF.ExperimentBrief&&LF.ExperimentBrief.ensure?LF.ExperimentBrief.ensure(exp):exp.experimentBrief||null;if(!b)return null;const d=b.deterministic||{},det={scope:sanitize(d.scope||{}),performance:sanitize(Object.assign({},d.performance||{},{top_reference:take(d.performance&&d.performance.top_reference,3),top_non_reference:take(d.performance&&d.performance.top_non_reference,3)})),comparisons:sanitize(take(d.comparisons,8)),quality:sanitize(Object.assign({},d.quality||{},{anomalies:take(d.quality&&d.quality.anomalies,6)})),design:sanitize(d.design||{}),unresolved:sanitize(take(d.unresolved,8))};return{input_signature:b.inputSignature||'',status:'deterministic',deterministic:det};}
+  function sharedBrief(exp){const b=LF.ExperimentBrief&&
+LF.ExperimentBrief.ensure?LF.ExperimentBrief.ensure(exp):exp.experimentBrief||null;if(!b)return null;
+    const d=b.deterministic||{},det={scope:sanitize(d.scope||{}),performance:sanitize(Object.assign({},d.performance||{},{
+    top_reference:take(d.performance&&d.performance.top_reference,3),
+    top_non_reference:take(d.performance&&d.performance.top_non_reference,3)}
+    )),comparisons:sanitize(take(d.comparisons,8)),quality:sanitize(Object.assign({},d.quality||{},{
+    anomalies:take(d.quality&&d.quality.anomalies,6)})),design:sanitize(d.design||{}
+    ),unresolved:sanitize(take(d.unresolved,8))};
+    return{input_signature:b.inputSignature||'',status:'deterministic',deterministic:det};}
   function actionCatalog(exp){if(!LF.ActionCapabilities||!LF.ActionCapabilities.assistantCatalog)return[];return LF.ActionCapabilities.assistantCatalog({exp:exp}).map(function(item){item.purpose=clip(item.purpose||'',260);item.blocked_reason=clip(item.blocked_reason||'',220);return item;});}
-  function recentActionEvents(exp){const conv=(exp&&exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[];return conv.filter(function(m){return m&&m.role==='system'&&m.actionId;}).slice(-6).map(function(m){return{action_id:clean(m.actionId),title:clean(m.actionTitle||m.eventTitle),command:LF.ActionCapabilities&&LF.ActionCapabilities.command?LF.ActionCapabilities.command(m.actionId):'',status:m.error?'error':m.unavailable?'unavailable':'completed',route:clean(m.route||''),page:clean(m.page||''),output:clip(m.content,1200),created_at:m.createdAt||''};});}
-  function chatMemory(exp){const settings=LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings():{memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!settings.memoryEnabled)return[];const conv=(exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[],messages=conv.filter(function(m){return(m.role==='user'||m.role==='assistant')&&(!m.state||m.state==='complete');}).slice(-Math.max(0,settings.memoryTurns*2)),out=[];let chars=0;for(let i=messages.length-1;i>=0;i--){const m=messages[i],content=clip(m.content,settings.messageChars);if(!content)continue;if(chars+content.length>settings.memoryChars)break;out.unshift({role:m.role,content:content,route:clean(m.route||''),page:clean(m.page||''),view:clean(m.view||'')});chars+=content.length;}return out;}
+  function recentActionEvents(exp){const conv=(exp&&exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[];
+return conv.filter(function(m){return m&&m.role==='system'&&m.actionId;
+    }).slice(-6).map(function(m){return{action_id:clean(m.actionId),title:clean(m.actionTitle||m.eventTitle),
+    command:LF.ActionCapabilities&&LF.ActionCapabilities.command?LF.ActionCapabilities.command(m.actionId):'',
+    status:m.error?'error':m.unavailable?'unavailable':'completed',route:clean(m.route||''),page:clean(m.page||''),
+    output:clip(m.content,1200),created_at:m.createdAt||''};});}
+  function chatMemory(exp){const settings=LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings():{
+memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!settings.memoryEnabled)return[];
+    const conv=(exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[],messages=conv.filter(function(m){
+    return(m.role==='user'||m.role==='assistant')&&(!m.state||m.state==='complete');
+    }).slice(-Math.max(0,settings.memoryTurns*2)),out=[];let chars=0;for(let i=messages.length-1;i>=0;
+    i--){const m=messages[i],content=clip(m.content,settings.messageChars);if(!content)continue;
+    if(chars+content.length>settings.memoryChars)break;
+    out.unshift({role:m.role,content:content,route:clean(m.route||''),page:clean(m.page||''),view:clean(m.view||'')});
+    chars+=content.length;}return out;}
   function findingRef(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',title:clean(f.title),detail:clip(f.detail,360),target:clean(f.target),measurement_id:f.measurementId||'',status:f.status||'open'};}
   function measurementRef(m){return{id:m.id||'',sample:clean(m.sample),group:clean(m.group),is_ref:!!m.isRef,file:clean(m.path||m.file),quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,hysteresis:m.hysteresis,fw:compact(m.fw||null),rv:compact(m.rv||null)};}
   function sampleRef(s){return{id:s.id||'',name:clean(s.name),aliases:take(s.aliases||[s.rawName],6).map(clean),group:clean(s.group),is_ref:!!s.isRef,measurement_ids:take(s.measurementIds,20)};}
@@ -54,20 +76,187 @@
     return boundValue(fallback,80,2,8,0);
   }
   function base(exp,profile){const sum=LF.CanonicalStore.summary(exp);return{context_pack:{profile:profile,source_revision:sum.revision,budgeted:true},experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),summary:sum},data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()};}
-  function relatedFromQuestion(exp,question){const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(function(x){return x.id;}),samples=ids.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean),names=new Set(samples.map(function(s){return String(s.name);})),measurements=(exp.measurements||[]).filter(function(m){return names.has(String(m.sample));}).slice(0,24);return{matches:matches,samples:samples,measurements:measurements,ids:ids};}
-  function pageEntityIds(exp,ctx){const out=[];const s=ctx.selected||{};[s.sample,s.measurement,s.finding,s.experiment,s.mapping].forEach(function(id){if(id){const e=LF.CanonicalStore.record(exp,id)||LF.CanonicalStore.sample(exp,id);if(e&&e.id)out.push(e.id);else out.push(String(id));}});if(Array.isArray(s.groups)){(exp.samples||[]).filter(function(x){return s.groups.includes(x.group);}).forEach(function(x){out.push(x.id);});}return Array.from(new Set(out));}
-  function packChat(exp,opts){const q=clean(opts.question),out=base(exp,'chat',q),pc=out.page_context||{},related=relatedFromQuestion(exp,q),ids=related.ids.concat(pageEntityIds(exp,pc));const selectedMeasurement=(exp.measurements||[]).find(function(m){return String(m.id)===String(pc.selected&&pc.selected.measurement||'');});if(selectedMeasurement)ids.push(selectedMeasurement.id);const focus=[];if(selectedMeasurement)focus.push(selectedMeasurement);related.measurements.forEach(function(m){if(!focus.some(function(x){return x.id===m.id;}))focus.push(m);});out.samples=related.samples.slice(0,12).map(sampleRef);out.measurements=focus.slice(0,18).map(measurementRef);out.results={summary:compact(exp.analysis&&exp.analysis.summary||{}),top_non_ref:take(exp.analysis&&exp.analysis.topNonRef,6),top_ref:take(exp.analysis&&exp.analysis.topRef,6)};out.action_catalog=actionCatalog(exp);out.action_outputs=LF.ActionData&&LF.ActionData.assistantContext?LF.ActionData.assistantContext(exp,{limit:8}):{items:[]};out.recent_actions=recentActionEvents(exp);const terms=words(q),open=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}),matched=open.filter(function(f){const hay=clean([f.title,f.detail,f.target].join(' ')).toLowerCase();return terms.some(function(t){return hay.indexOf(t)>=0;})||ids.includes(String(f.measurementId||''))||ids.includes(String(f.id||''));});out.findings=(matched.length?matched:(pc.page==='Review data'?open.slice(0,10):[])).slice(0,12).map(findingRef);out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:Array.from(new Set(ids)),terms:terms,limit:18}).map(function(e){return{id:e.id,type:e.type,fact:clean(e.fact),summary:clean(e.summary),source:clean(e.source_path||e.source_id)};});const designId=pc.selected&&pc.selected.experiment;out.design=designId?compact((exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===String(designId);})||null):null;if(pc.page==='Export'){const plan=exp.nomad&&exp.nomad.mappingPlan||{};out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',missing:take(plan.missing,12)};}if(LF.KnowledgeBase){const knowledgeQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{limit:8,minScore:2});}out.history=chatMemory(exp);return budgetPack(out,opts.maxChars||14000);}
-  function packAmbiguity(exp,opts){const out=base(exp,'ambiguity',''),collect=opts.collect||{},ids=(collect.finding_ids||[]).map(String),findings=(exp.datasetAnalysis&&exp.datasetAnalysis.ambiguousFindings||[]).filter(function(f){return ids.includes(String(f.id));}),measurementIds=findings.map(function(f){return String(f.measurementId||'');}).filter(Boolean),measurements=(exp.measurements||[]).filter(function(m){return measurementIds.includes(String(m.id));}),sampleIds=[];measurements.forEach(function(m){const s=LF.CanonicalStore.sample(exp,m.sample);if(s)sampleIds.push(s.id);});out.scope={instruction:'Resolve only these semantic ambiguities. Return unresolved when evidence is insufficient.',finding_ids:ids};out.findings=findings;out.measurements=measurements.map(measurementRef);out.samples=sampleIds.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean).map(sampleRef);out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:sampleIds.concat(measurementIds),limit:20}).map(compact);return budgetPack(out,12000);}
-  function packDesignEvidence(exp,opts){const out=base(exp,'design',''),params=opts.params||{},device=(exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===String(params.deviceId||'');})||null;if(!device)return budgetPack(Object.assign(out,{scope:{error:'No selected experiment'}}),10000);const sampleEntities=(device.sampleNames||[]).map(function(n){return LF.CanonicalStore.sample(exp,n);}).filter(Boolean),ids=sampleEntities.map(function(s){return s.id;}),designRows=exp.designAnalysis&&Array.isArray(exp.designAnalysis.samples)?exp.designAnalysis.samples:[],selectedNames=new Set(device.sampleNames||[]),evidenceUnknown=designRows.filter(function(row){return row&&row.sample&&selectedNames.has(row.sample.name);}).reduce(function(acc,row){return acc.concat(row.unknownFields||[]);},[]),evidence=LF.CanonicalStore.evidence(exp,{record_ids:ids,limit:18}).map(compact),designPattern=/solution|solvent|solute|formulat|precursor|stack|layer|material|substrate|electrode|contact|transport|perovskite|anneal|coating|deposition|process|atmosphere|glovebox|evaporation/i,designEvidence=evidence.filter(function(item){return designPattern.test(JSON.stringify(item));});const missingDomains=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[];out.scope={device_id:device.id,sample_names:(device.sampleNames||[]).slice(),manual_variant:!(device.sampleNames||[]).length,unknown_fields:missingDomains.slice(),source_unknowns:Array.from(new Set(evidenceUnknown))};out.design_evidence_summary={evidence_items:evidence.length,design_relevant_items:designEvidence.length,raw_design_evidence_found:designEvidence.length>0,inference_basis:designEvidence.length?'experiment_evidence_and_model_inference':'model_inference_only'};out.current_design=compact(device);out.known_solutions=(exp.design&&exp.design.solutions||[]).filter(function(sol){return(device.solutionIds||[]).includes(sol.id);}).map(compact);out.cabinet=LF.Cabinet?{solutions:LF.Cabinet.compactForAI('solution',8),stacks:LF.Cabinet.compactForAI('stack',6),protocols:LF.Cabinet.compactForAI('protocol',6),note:'Workspace reusable resources only. Cabinet entries are not experiment evidence; prefer exact reuse when compatible, otherwise treat them as optional design context.'}:null;out.samples=sampleEntities.map(sampleRef);out.evidence=designEvidence;out.source_context={experiment:{name:clean(exp.meta&&exp.meta.name),source:clean(exp.meta&&exp.meta.sourceName)},source_design:compact(exp.design&&exp.design.evidenceSummary||{}),measurement_files:(exp.measurements||[]).filter(function(m){return selectedNames.has(String(m.sample||''));}).slice(0,16).map(function(m){return{sample:clean(m.sample),group:clean(m.group),file:clean(m.path||m.file),raw_sample:clean(m.rawSample),quality:m.qualityStatus||''};})};if(LF.KnowledgeBase){const knowledgeQuery=[JSON.stringify(out.current_design||{}),JSON.stringify(out.known_solutions||[]),JSON.stringify(out.evidence||[]),missingDomains.join(' ')].join(' ');out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{kinds:['material','architecture','formulation','process'],limit:10,minScore:2});}return budgetPack(out,7600);}
-  function packResults(exp,opts){opts=opts||{};const out=base(exp,'results',''),a=exp.analysis||{};out.results={summary:compact(a.summary||{}),statistics:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?compact(LF.AnalysisSummary.ensure(exp)):null,top_non_ref:take(a.topNonRef,10),top_ref:take(a.topRef,10),best_by_sample:take(a.bestBySample,40)};out.anomalies=(exp.measurements||[]).filter(function(m){return!m.excluded&&(m.qualityStatus!=='valid'||(m.flags||[]).length);}).slice(0,24).map(measurementRef);out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,24).map(findingRef);return budgetPack(out,16000);}
+  function relatedFromQuestion(exp,question){
+const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(function(x){return x.id;
+    }),samples=ids.map(function(id){return LF.CanonicalStore.record(exp,id);
+    }).filter(Boolean),names=new Set(samples.map(function(s){return String(s.name);
+    })),measurements=(exp.measurements||[]).filter(function(m){return names.has(String(m.sample));}).slice(0,24);
+    return{matches:matches,samples:samples,measurements:measurements,ids:ids};}
+  function pageEntityIds(exp,ctx){const out=[];const s=ctx.selected||{};
+[s.sample,s.measurement,s.finding,s.experiment,s.mapping].forEach(function(id){if(id){
+    const e=LF.CanonicalStore.record(exp,id)||LF.CanonicalStore.sample(exp,id);if(e&&e.id)out.push(e.id);
+    else out.push(String(id));}});if(Array.isArray(s.groups)){(exp.samples||[]).filter(function(x){
+    return s.groups.includes(x.group);}).forEach(function(x){out.push(x.id);});}return Array.from(new Set(out));}
+  function packChat(exp,opts){const q=clean(opts.question),out=base(exp,'chat',q),pc=out.page_context||{}
+,related=relatedFromQuestion(exp,q),ids=related.ids.concat(pageEntityIds(exp,pc));
+    const selectedMeasurement=(exp.measurements||[]).find(function(m){
+    return String(m.id)===String(pc.selected&&pc.selected.measurement||'');});
+    if(selectedMeasurement)ids.push(selectedMeasurement.id);const focus=[];
+    if(selectedMeasurement)focus.push(selectedMeasurement);
+    related.measurements.forEach(function(m){if(!focus.some(function(x){return x.id===m.id;}))focus.push(m);});
+    out.samples=related.samples.slice(0,12).map(sampleRef);out.measurements=focus.slice(0,18).map(measurementRef);
+    out.results={summary:compact(exp.analysis&&exp.analysis.summary||{}
+    ),top_non_ref:take(exp.analysis&&exp.analysis.topNonRef,6),top_ref:take(exp.analysis&&exp.analysis.topRef,6)};
+    out.action_catalog=actionCatalog(exp);out.action_outputs=LF.ActionData&&
+    LF.ActionData.assistantContext?LF.ActionData.assistantContext(exp,{limit:8}):{items:[]};
+    out.recent_actions=recentActionEvents(exp);
+    const terms=words(q),open=(exp.findings||[]).filter(function(f){return f.status!=='resolved';
+    }),matched=open.filter(function(f){const hay=clean([f.title,f.detail,f.target].join(' ')).toLowerCase();
+    return terms.some(function(t){return hay.indexOf(t)>=0;
+    })||ids.includes(String(f.measurementId||''))||ids.includes(String(f.id||''));});
+    out.findings=(matched.length?matched:(pc.page==='Review data'?open.slice(0,10):[])).slice(0,12).map(findingRef);
+    out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:Array.from(new Set(ids)),terms:terms,limit:18}).map(function(e){
+    return{id:e.id,type:e.type,fact:clean(e.fact),summary:clean(e.summary),source:clean(e.source_path||e.source_id)};});
+    const designId=pc.selected&&pc.selected.experiment;
+    out.design=designId?compact((exp.design&&exp.design.devices||[]).find(function(d){
+    return String(d.id)===String(designId);})||null):null;
+    if(pc.page==='Export'){const plan=exp.nomad&&exp.nomad.mappingPlan||{};
+    out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',
+    missing:take(plan.missing,12)};}if(LF.KnowledgeBase){
+    const knowledgeQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
+    out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{limit:8,minScore:2});}out.history=chatMemory(exp);
+    return budgetPack(out,opts.maxChars||14000);}
+  function packAmbiguity(exp,opts){const out=base(exp,'ambiguity',''),collect=opts.collect||{}
+,ids=(collect.finding_ids||[]).map(String),
+    findings=(exp.datasetAnalysis&&exp.datasetAnalysis.ambiguousFindings||[]).filter(function(f){
+    return ids.includes(String(f.id));}),measurementIds=findings.map(function(f){return String(f.measurementId||'');
+    }).filter(Boolean),measurements=(exp.measurements||[]).filter(function(m){return measurementIds.includes(String(m.id));
+    }),sampleIds=[];measurements.forEach(function(m){const s=LF.CanonicalStore.sample(exp,m.sample);
+    if(s)sampleIds.push(s.id);});out.scope={
+    instruction:'Resolve only these semantic ambiguities. Return unresolved when evidence is insufficient.',finding_ids:ids}
+    ;out.findings=findings;out.measurements=measurements.map(measurementRef);
+    out.samples=sampleIds.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean).map(sampleRef);
+    out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:sampleIds.concat(measurementIds),limit:20}).map(compact);
+    return budgetPack(out,12000);}
+  function packDesignEvidence(exp,opts){
+    const out=base(exp,'design','');
+    const params=opts.params||{};
+    const device=(exp.design&&exp.design.devices||[]).find(function(d){
+      return String(d.id)===String(params.deviceId||'');
+    })||null;
+    if(!device){
+      return budgetPack(Object.assign(out,{scope:{error:'No selected experiment'}}),10000);
+    }
+
+    const sampleEntities=(device.sampleNames||[])
+      .map(function(name){return LF.CanonicalStore.sample(exp,name);})
+      .filter(Boolean);
+    const ids=sampleEntities.map(function(sample){return sample.id;});
+    const designRows=exp.designAnalysis&&Array.isArray(exp.designAnalysis.samples)?exp.designAnalysis.samples:[];
+    const selectedNames=new Set(device.sampleNames||[]);
+    const evidenceUnknown=designRows
+      .filter(function(row){return row&&row.sample&&selectedNames.has(row.sample.name);})
+      .reduce(function(acc,row){return acc.concat(row.unknownFields||[]);},[]);
+    const evidence=LF.CanonicalStore.evidence(exp,{record_ids:ids,limit:18}).map(compact);
+    const designPattern=/solution|solvent|solute|formulat|precursor|stack|layer|material|substrate|electrode|contact|transport|perovskite|anneal|coating|deposition|process|atmosphere|glovebox|evaporation/i;
+    const designEvidence=evidence.filter(function(item){
+      return designPattern.test(JSON.stringify(item));
+    });
+    const missingDomains=LF.DesignModel&&LF.DesignModel.missingDomains
+      ?LF.DesignModel.missingDomains(exp,device)
+      :[];
+
+    out.scope={
+      device_id:device.id,
+      sample_names:(device.sampleNames||[]).slice(),
+      manual_variant:!(device.sampleNames||[]).length,
+      unknown_fields:missingDomains.slice(),
+      source_unknowns:Array.from(new Set(evidenceUnknown))
+    };
+    out.design_evidence_summary={
+      evidence_items:evidence.length,
+      design_relevant_items:designEvidence.length,
+      raw_design_evidence_found:designEvidence.length>0,
+      inference_basis:designEvidence.length?'experiment_evidence_and_model_inference':'model_inference_only'
+    };
+    out.current_design=compact(device);
+    out.known_solutions=(exp.design&&exp.design.solutions||[])
+      .filter(function(sol){return(device.solutionIds||[]).includes(sol.id);})
+      .map(compact);
+    out.cabinet=LF.Cabinet?{
+      solutions:LF.Cabinet.compactForAI('solution',8),
+      stacks:LF.Cabinet.compactForAI('stack',6),
+      protocols:LF.Cabinet.compactForAI('protocol',6),
+      note:'Workspace reusable resources only. Cabinet entries are not experiment evidence; '+
+        'prefer exact reuse when compatible, otherwise treat them as optional design context.'
+    }:null;
+    out.samples=sampleEntities.map(sampleRef);
+    out.evidence=designEvidence;
+    out.source_context={
+      experiment:{
+        name:clean(exp.meta&&exp.meta.name),
+        source:clean(exp.meta&&exp.meta.sourceName)
+      },
+      source_design:compact(exp.design&&exp.design.evidenceSummary||{}),
+      measurement_files:(exp.measurements||[])
+        .filter(function(m){return selectedNames.has(String(m.sample||''));})
+        .slice(0,16)
+        .map(function(m){
+          return{
+            sample:clean(m.sample),
+            group:clean(m.group),
+            file:clean(m.path||m.file),
+            raw_sample:clean(m.rawSample),
+            quality:m.qualityStatus||''
+          };
+        })
+    };
+
+    if(LF.KnowledgeBase){
+      const knowledgeQuery=[
+        JSON.stringify(out.current_design||{}),
+        JSON.stringify(out.known_solutions||[]),
+        JSON.stringify(out.evidence||[]),
+        missingDomains.join(' ')
+      ].join(' ');
+      out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{
+        kinds:['material','architecture','formulation','process'],
+        limit:10,
+        minScore:2
+      });
+    }
+    return budgetPack(out,7600);
+  }
+  function packResults(exp,opts){opts=opts||{};const out=base(exp,'results',''),a=exp.analysis||{};
+out.results={summary:compact(a.summary||{}
+    ),statistics:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?compact(LF.AnalysisSummary.ensure(exp)):null,
+    top_non_ref:take(a.topNonRef,10),top_ref:take(a.topRef,10),best_by_sample:take(a.bestBySample,40)};
+    out.anomalies=(exp.measurements||[]).filter(function(m){
+    return!m.excluded&&(m.qualityStatus!=='valid'||(m.flags||[]).length);}).slice(0,24).map(measurementRef);
+    out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,24).map(findingRef);
+    return budgetPack(out,16000);}
   function comparisonStats(values){return LF.AnalysisSummary&&LF.AnalysisSummary.stats?LF.AnalysisSummary.stats(values):null;}
-  function packResultsCompare(exp,opts){opts=opts||{};const out=base(exp,'results_compare',''),p=opts.params||{},groups=(Array.isArray(p.groups)?p.groups:[]).map(String).filter(Boolean),metric=String(p.metric||'eff'),direction=String(p.direction||'both'),eligibleOnly=p.eligibleOnly!==false,factor=Number(exp.analysis&&exp.analysis.summary&&exp.analysis.summary.mismatchFactor)||1;function val(m,dir){const x=m&&m[dir],n=x&&Number(x[metric]);if(!Number.isFinite(n))return null;return(metric==='eff'||metric==='jsc')?n/factor:n;}out.selection={groups:groups,metric:metric,direction:direction,eligible_only:eligibleOnly};out.groups=groups.map(function(group){const ms=(exp.measurements||[]).filter(function(m){return!m.excluded&&(String(m.group||'').trim()||'Ungrouped')===group&&(!eligibleOnly||m.rankingEligible);}),fw=ms.map(function(m){return val(m,'fw');}).filter(Number.isFinite),rv=ms.map(function(m){return val(m,'rv');}).filter(Number.isFinite);return{name:group,measurements:ms.length,fw:direction==='rv'?null:comparisonStats(fw),rv:direction==='fw'?null:comparisonStats(rv),quality:{valid:ms.filter(function(m){return m.qualityStatus==='valid';}).length,review:ms.filter(function(m){return m.qualityStatus==='review';}).length,blocked:ms.filter(function(m){return m.qualityStatus==='blocked';}).length}};});out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,16).map(findingRef);out.instruction='Compare only the selected groups using the supplied deterministic statistics. Do not infer unprovided fabrication causes as facts.';return budgetPack(out,9000);}
+  function packResultsCompare(exp,opts){opts=opts||{};
+const out=base(exp,'results_compare',''),p=opts.params||{}
+    ,groups=(Array.isArray(p.groups)?p.groups:[]).map(String).filter(Boolean),metric=String(p.metric||'eff'),
+    direction=String(p.direction||'both'),eligibleOnly=p.eligibleOnly!==false,
+    factor=Number(exp.analysis&&exp.analysis.summary&&exp.analysis.summary.mismatchFactor)||1;
+    function val(m,dir){const x=m&&m[dir],n=x&&Number(x[metric]);if(!Number.isFinite(n))return null;
+    return(metric==='eff'||metric==='jsc')?n/factor:n;
+    }out.selection={groups:groups,metric:metric,direction:direction,eligible_only:eligibleOnly};
+    out.groups=groups.map(function(group){const ms=(exp.measurements||[]).filter(function(m){
+    return!m.excluded&&(String(m.group||'').trim()||'Ungrouped')===group&&(!eligibleOnly||m.rankingEligible);
+    }),fw=ms.map(function(m){return val(m,'fw');}).filter(Number.isFinite),rv=ms.map(function(m){return val(m,'rv');
+    }).filter(Number.isFinite);return{name:group,measurements:ms.length,fw:direction==='rv'?null:comparisonStats(fw),
+    rv:direction==='fw'?null:comparisonStats(rv),quality:{valid:ms.filter(function(m){return m.qualityStatus==='valid';
+    }).length,review:ms.filter(function(m){return m.qualityStatus==='review';
+    }).length,blocked:ms.filter(function(m){return m.qualityStatus==='blocked';}).length}};});
+    out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,16).map(findingRef);
+    out.instruction='Compare only the selected groups using the supplied deterministic statistics. Do not infer unprovided fabrication causes as facts.';
+    return budgetPack(out,9000);}
   function packDesign(exp,opts){
     const out=packDesignEvidence(exp,opts),id=String(opts&&opts.params&&opts.params.deviceId||''),device=(exp.design&&exp.design.devices||[]).find(function(item){return String(item.id)===id;})||null;
     if(!device||!out.scope)return out;
     const missing=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[];
     out.scope.unknown_fields=Array.from(new Set((out.scope.unknown_fields||[]).concat(missing)));
-    out.scope.instruction='Complete EVERY domain in unknown_fields. If solutions is missing, a suggested response MUST include at least one chemically useful formulation with non-empty solutes and/or solvents; stack/process alone is not sufficient. A cautious qualitative model_inference formulation is allowed when exact recipe evidence is absent. A lone absorber or “perovskite” layer is a partial stack, not a device architecture: propose the full plausible qualitative layer sequence while preserving known layers. Include useful fabrication-method families; leave unsupported quantities unknown. Experiment evidence is authoritative. Cabinet resources are optional reusable context, not evidence. Knowledge Base entries are sourced reference knowledge, not evidence about this experiment; cite KB ids when used and keep them review-only. Never invent sample identities, citations or exact quantities.';
+    out.scope.instruction='Complete EVERY domain in unknown_fields. If solutions is missing, a suggested response MUST include at least ' +
+      'one chemically useful formulation with non-empty solutes and/or solvents; stack/process alone is not sufficient.' +
+      ' A cautious qualitative model_inference formulation is allowed when exact recipe evidence is absent. A lone ' +
+      'absorber or “perovskite” layer is a partial stack, not a device architecture: propose the full plausible ' +
+      'qualitative layer sequence while preserving known layers. Include useful fabrication-method families; leave ' +
+      'unsupported quantities unknown. Experiment evidence is authoritative. Cabinet resources are optional reusable ' +
+      'context, not evidence. Knowledge Base entries are sourced reference knowledge, not evidence about this experiment;' +
+      ' cite KB ids when used and keep them review-only. Never invent sample identities, citations or exact quantities.';
     return out;
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,results_compare:packResultsCompare};
@@ -75,7 +264,23 @@
   function profiles(){return Object.keys(PACKERS).sort();}
   function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(base(exp,profile,opts.question||''),10000);}
   function profile(def){const declared=def&&def.contract&&def.contract.context&&clean(def.contract.context.profile);return declared||'generic';}
-  function system(def,step){const parts=[];(def.policies||[]).forEach(function(id){const p=policy(id);if(p)parts.push('# '+id.toUpperCase()+'\n\n'+p);});const prompt=LF.Storage&&LF.Storage.getEffectivePrompt?LF.Storage.getEffectivePrompt(def.id):(LF.ActionRegistry&&LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(def.id):'');if(prompt)parts.push('# ACTION CONTRACT\n\n'+prompt);if(step&&step.output==='json'&&step.schema){const schema=LF.ActionRegistry.schema(step.schema);parts.push('# OUTPUT CONTRACT\n\nReturn exactly one JSON value matching this schema.\n\n'+JSON.stringify(schema));}return parts.join('\n\n---\n\n');}
-  function build(def,step,opts){opts=opts||{};const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings().contextChars:14000):undefined,requestedMax=Number(opts.maxChars)||assistantMax;let ctx=pack(prof,{exp:expOf(),question:opts.userText||'',params:opts.params||{},selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{},workItem:opts.workItem||null,maxChars:requestedMax});if(requestedMax)ctx=budgetPack(ctx,requestedMax);let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+(req?'\n\n<user_request>\n'+req+'\n</user_request>':'');if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length,budgetChars:requestedMax||null});return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
+  function system(def,step){const parts=[];(def.policies||[]).forEach(function(id){const p=policy(id);
+if(p)parts.push('# '+id.toUpperCase()+'\n\n'+p);});
+    const prompt=LF.Storage&&LF.Storage.getEffectivePrompt?LF.Storage.getEffectivePrompt(def.id):(LF.ActionRegistry&&
+    LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(def.id):'');if(prompt)parts.push('# ACTION CONTRACT\n\n'+prompt);
+    if(step&&step.output==='json'&&step.schema){const schema=LF.ActionRegistry.schema(step.schema);
+    parts.push('# OUTPUT CONTRACT\n\nReturn exactly one JSON value matching this schema.\n\n'+JSON.stringify(schema));
+    }return parts.join('\n\n---\n\n');}
+  function build(def,step,opts){opts=opts||{};
+const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?
+    LF.Storage.getAssistantSettings().contextChars:14000):undefined,requestedMax=Number(opts.maxChars)||assistantMax;
+    let ctx=pack(prof,{exp:expOf(),question:opts.userText||'',params:opts.params||{}
+    ,selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{}
+    ,workItem:opts.workItem||null,maxChars:requestedMax});if(requestedMax)ctx=budgetPack(ctx,requestedMax);
+    let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);
+    const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+
+    (req?'\n\n<user_request>\n'+req+'\n</user_request>':'');
+    if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length,budgetChars:requestedMax||null});
+    return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
   LF.ContextBuilder={pack:pack,profiles:profiles,registerProfile:registerProfile};LF.ActionContext={build:build};
 }());

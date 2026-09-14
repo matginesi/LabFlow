@@ -3,12 +3,30 @@
   const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger.scope('ai');
   function resolveChatUrl(endpoint){let url=String(endpoint||'').trim();if(!url)return'';url=url.replace(/\/+$/,'').replace(/\/chat\/completions(?:\/chat\/completions)+$/i,'/chat/completions');return /\/chat\/completions$/i.test(url)?url:url+'/chat/completions';}
   function validateHttpUrl(url){let parsed;try{parsed=new URL(String(url||''));}catch(_){throw new Error('AI endpoint is not a valid URL.');}if(parsed.protocol!=='https:'&&parsed.protocol!=='http:')throw new Error('AI endpoint must use http:// or https://.');return parsed.toString();}
-  function targetAddressSpace(url){let host='';try{host=new URL(String(url||'')).hostname.toLowerCase().replace(/^\[|\]$/g,'');}catch(_){return'';}if(host==='localhost'||host==='127.0.0.1'||host==='::1')return'loopback';if(host.endsWith('.local')||(!host.includes('.')&&!host.includes(':')))return'local';const parts=host.split('.').map(Number);if(parts.length===4&&parts.every(Number.isFinite)){if(parts[0]===127)return'loopback';if(parts[0]===10||(parts[0]===192&&parts[1]===168)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||(parts[0]===169&&parts[1]===254))return'local';}if(/^f[cd][0-9a-f]{2}:/i.test(host)||/^fe[89ab][0-9a-f]:/i.test(host))return'local';return'';}
+  function targetAddressSpace(url){let host='';
+try{host=new URL(String(url||'')).hostname.toLowerCase().replace(/^\[|\]$/g,'');}catch(_){return'';
+    }if(host==='localhost'||host==='127.0.0.1'||host==='::1')return'loopback';
+    if(host.endsWith('.local')||(!host.includes('.')&&!host.includes(':')))return'local';
+    const parts=host.split('.').map(Number);
+    if(parts.length===4&&parts.every(Number.isFinite)){if(parts[0]===127)return'loopback';
+    if(parts[0]===10||(parts[0]===192&&parts[1]===168)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||(parts[0]===169&&
+    parts[1]===254))return'local';}if(/^f[cd][0-9a-f]{2}:/i.test(host)||/^fe[89ab][0-9a-f]:/i.test(host))return'local';
+    return'';}
   function isLocalAddress(url){return!!targetAddressSpace(url);}
   function supportsLocalNetworkAccess(){try{return typeof Request!=='undefined'&&Request.prototype&&('targetAddressSpace' in Request.prototype);}catch(_){return false;}}
   function networkFetchOptions(url,base){const options=Object.assign({},base||{}),space=targetAddressSpace(url);if(space){options.mode='cors';options.targetAddressSpace=space;}return options;}
   function fetchOptions(url,headers,requestBody,controller){return networkFetchOptions(url,{method:'POST',headers:headers,body:requestBody,signal:controller.signal,cache:'no-store',credentials:'omit'});}
   function pageOrigin(){try{return typeof location!=='undefined'&&location.origin?String(location.origin):'';}catch(_){return'';}}
-  async function providerFetch(url,options,providerId,phase){options=options||{};providerId=String(providerId||'');phase=String(phase||'request');Log.info('network.route',{provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote'});try{const response=await fetch(url,networkFetchOptions(url,options));try{response.labflowTransport='direct';response.labflowTargetUrl=String(url||'');}catch(_){}return response;}catch(error){Log.warn('network.direct-failed',{provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote',error:error});if(error&&typeof error==='object'){error.providerId=error.providerId||providerId;error.phase=error.phase||phase;error.url=error.url||String(url||'');error.directBrowser=true;error.transport='direct';}throw error;}}
+  async function providerFetch(url,options,providerId,phase){options=options||{};providerId=String(providerId||'');
+phase=String(phase||'request');Log.info('network.route',{
+    provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),
+    targetAddressSpace:targetAddressSpace(url)||'remote'});
+    try{const response=await fetch(url,networkFetchOptions(url,options));try{response.labflowTransport='direct';
+    response.labflowTargetUrl=String(url||'');}catch(_){}return response;
+    }catch(error){Log.warn('network.direct-failed',{
+    provider:providerId,phase:phase,transport:'direct',url:url,origin:pageOrigin(),
+    targetAddressSpace:targetAddressSpace(url)||'remote',error:error});
+    if(error&&typeof error==='object'){error.providerId=error.providerId||providerId;error.phase=error.phase||phase;
+    error.url=error.url||String(url||'');error.directBrowser=true;error.transport='direct';}throw error;}}
   LF.AIHttp={resolveChatUrl,validateHttpUrl,targetAddressSpace,isLocalAddress,supportsLocalNetworkAccess,networkFetchOptions,fetchOptions,pageOrigin,providerFetch};
 })();

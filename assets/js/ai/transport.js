@@ -146,7 +146,12 @@
     const requestBody=JSON.stringify(body);
     let responseMeta=null;
     const msgChars=(body.messages||[]).reduce(function(n,m){return n+String(m&&m.content||'').length;},0),maxTokens=body.max_completion_tokens||body.max_tokens||body.max_output_tokens||null;
-    Log.info('request.start',{requestLogId:requestLogId,label:label,provider:providerId,phase:'chat',endpoint:url,model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,bodyChars:requestBody.length,maxTokens:maxTokens,thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,origin:pageOrigin(),localTarget:isLocalAddress(url),targetAddressSpace:targetAddressSpace(url)||'public',localNetworkAccessApi:supportsLocalNetworkAccess()});
+    Log.info('request.start',{requestLogId:requestLogId,label:label,provider:providerId,phase:'chat',endpoint:url,
+model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,
+      bodyChars:requestBody.length,maxTokens:maxTokens,
+      thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,
+      origin:pageOrigin(),localTarget:isLocalAddress(url),targetAddressSpace:targetAddressSpace(url)||'public',
+      localNetworkAccessApi:supportsLocalNetworkAccess()});
     Log.debug('request.semantic',{requestLogId:requestLogId,messages:diagnosticSemanticMessages(body)});
     Log.debug('request.transport',{requestLogId:requestLogId,headers:diagnosticHeaders(headers),body:diagnosticTransportBody(body)});
     try{
@@ -162,15 +167,33 @@
         Log.warn('thinking.observed-while-off',{requestId:info.requestId,model:info.model||body.model,reasoningChars:String(info.totalReasoning||'').length,control:'reasoning_end'});
         reasoningControlPromise=sendReasoningEnd(url,headers,info.requestId,info.model||body.model,controller.signal).then(function(result){reasoningControlResult=result;return result;});
       }
-      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){const streamed=await readEventStream(response,function(chunk){requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);},onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens),stopReasoning,providerId);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;if(reasoningControlPromise)await reasoningControlPromise;}
+      if(response.ok&&body.stream&&contentType.indexOf('text/event-stream')>=0){
+const streamed=await readEventStream(response,function(chunk){
+        requestState.partialRaw=(requestState.partialRaw+chunk).slice(-STREAM_DIAGNOSTIC_CHARS);
+        },onProgress,resetInactivity,started,positiveInt(body.max_completion_tokens||body.max_tokens||body.max_output_tokens),
+        stopReasoning,providerId);text=streamed.rawText;obj=streamed.json;streamMeta=streamed.stream;
+        if(reasoningControlPromise)await reasoningControlPromise;}
       else{text=await response.text();resetInactivity();}
       const elapsed=Math.round(performance.now()-started);
       const responseRequestId=response.headers.get('x-request-id')||response.headers.get('request-id')||'';
-      responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,transport:response.labflowTransport||'direct',headers:headersObject(response.headers),body:text,bodyChars:text.length,requestId:responseRequestId,stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,finishReason:streamMeta.finishReason,reasoningControlRequests:reasoningControlRequests,reasoningControlOk:reasoningControlResult&&reasoningControlResult.ok===true}:null};
-      Log.info('request.end',{requestLogId:requestLogId,label:label,provider:providerId,phase:'chat',transport:response.labflowTransport||'direct',status:response.status,ok:response.ok,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,bodyChars:text.length,requestId:responseRequestId,stream:responseMeta.stream});Log.debug('response.payload',{requestLogId:requestLogId,status:response.status,body:text.length>12000?text.slice(0,12000)+'…':text});
+      responseMeta={status:response.status,statusText:response.statusText,ok:response.ok,
+transport:response.labflowTransport||'direct',headers:headersObject(response.headers),body:text,bodyChars:text.length,
+        requestId:responseRequestId,stream:streamMeta?{
+        events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs,
+        finishReason:streamMeta.finishReason,reasoningControlRequests:reasoningControlRequests,
+        reasoningControlOk:reasoningControlResult&&reasoningControlResult.ok===true}:null};
+      Log.info('request.end',{requestLogId:requestLogId,label:label,provider:providerId,phase:'chat',
+transport:response.labflowTransport||'direct',status:response.status,ok:response.ok,elapsedMs:elapsed,
+        responseHeadersMs:responseHeadersMs,bodyChars:text.length,requestId:responseRequestId,stream:responseMeta.stream});
+        Log.debug('response.payload',{requestLogId:requestLogId,status:response.status,body:text.length>12000?text.slice(0,
+        12000)+'…':text});
       if(!response.ok){const providerError=parseProviderError(text,response.status,responseRequestId,response.headers,providerId);providerError.transport=response.labflowTransport||'direct';providerError.phase='chat';throw providerError;}
       if(!obj)try{obj=text?JSON.parse(text):{};}catch(parseError){const invalid=new Error('Provider returned invalid JSON.');invalid.cause=parseError;invalid.status=response.status;invalid.requestId=responseRequestId;invalid.providerResponse=text;throw invalid;}
-      Log.debug('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}:null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||'',responseKeys:Object.keys(obj||{})});
+      Log.debug('response.parsed',{requestLogId:requestLogId,requestId:responseRequestId||obj.request_id||obj.id||'',
+model:obj.model||body.model,transport:streamMeta?'sse':'json',stream:streamMeta?{
+        events:streamMeta.events,meaningfulEvents:streamMeta.meaningfulEvents,bytes:streamMeta.bytes,ttftMs:streamMeta.ttftMs}
+        :null,usage:obj.usage||null,finishReason:obj.choices&&obj.choices[0]&&obj.choices[0].finish_reason||obj.finish_reason||
+        '',responseKeys:Object.keys(obj||{})});
       return{json:obj,elapsedMs:elapsed,responseHeadersMs:responseHeadersMs,requestId:response.headers.get('x-request-id')||response.headers.get('request-id')||obj.request_id||obj.id||'',requestLogId:requestLogId,rawText:text,stream:streamMeta,reasoningControlRequests:reasoningControlRequests,reasoningControlResult:reasoningControlResult,transport:response.labflowTransport||'direct'};
     }catch(err){
       const elapsed=Math.round(performance.now()-started);
@@ -189,7 +212,13 @@
       if(requestState.partialRaw&&!failure.providerResponse){failure.providerResponse=requestState.partialRaw;failure.rawProviderResponse=requestState.partialRaw;}
       if(!Number.isFinite(Number(failure.elapsedMs)))failure.elapsedMs=elapsed;
       failure.requestLogId=requestLogId;failure.transport=failure.transport||(responseMeta&&responseMeta.transport)||'';
-      const failureLog={requestLogId:requestLogId,label:label,provider:providerId,phase:failure&&failure.phase||'chat',transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',endpoint:url,model:body.model,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote',elapsedMs:elapsed,timeoutMs:limit,hardTimeoutMs:hardLimit||null,status:failure&&failure.status||responseMeta&&responseMeta.status||0,providerCode:failure&&failure.providerCode||'',providerMessage:failure&&failure.providerMessage||'',requestId:failure&&failure.requestId||responseMeta&&responseMeta.requestId||'',bodyChars:requestBody.length,responseChars:Number(responseDetail&&responseDetail.bodyChars)||0,error:failure};
+      const failureLog={requestLogId:requestLogId,label:label,provider:providerId,phase:failure&&failure.phase||'chat',
+transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',endpoint:url,model:body.model,
+        origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'remote',elapsedMs:elapsed,timeoutMs:limit,
+        hardTimeoutMs:hardLimit||null,status:failure&&failure.status||responseMeta&&responseMeta.status||0,
+        providerCode:failure&&failure.providerCode||'',providerMessage:failure&&failure.providerMessage||'',
+        requestId:failure&&failure.requestId||responseMeta&&responseMeta.requestId||'',bodyChars:requestBody.length,
+        responseChars:Number(responseDetail&&responseDetail.bodyChars)||0,error:failure};
       if(isRateLimitError(failure))Log.warn('request.rate-limited',failureLog);else Log.error('request.failed',failureLog);Log.debug('request.failed-details',{requestLogId:requestLogId,request:{headers:diagnosticHeaders(headers),transport:diagnosticTransportBody(body),messages:diagnosticSemanticMessages(body)},response:responseDetail});
       throw failure;
     }finally{
@@ -361,10 +390,22 @@
     const controller=new AbortController(),timer=setTimeout(function(){controller.abort();},METADATA_TIMEOUT_MS),started=performance.now();phase=String(phase||'metadata');
     Log.info('metadata.start',{provider:providerId||'',phase:phase,url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'public'});
     try{const response=await providerFetch(url,Object.assign({cache:'no-store',credentials:'omit'},options||{},{signal:controller.signal}),providerId,phase);Log.info('metadata.end',{provider:providerId||'',phase:phase,url:url,transport:response.labflowTransport||'direct',status:response.status,ok:response.ok,elapsedMs:Math.round(performance.now()-started)});return response;}
-    catch(error){if(controller.signal.aborted){const timeout=new Error('Provider metadata request timed out after '+METADATA_TIMEOUT_MS+' ms.');timeout.timedOut=true;timeout.metadataOnly=true;timeout.providerId=providerId||'';timeout.phase=phase;timeout.url=url;timeout.cause=error;Log.error('metadata.failed',{provider:providerId||'',phase:phase,url:url,elapsedMs:Math.round(performance.now()-started),error:timeout});throw timeout;}if(error&&typeof error==='object'){error.providerId=error.providerId||providerId||'';error.phase=error.phase||phase;error.url=error.url||url;}Log.error('metadata.failed',{provider:providerId||'',phase:phase,url:url,elapsedMs:Math.round(performance.now()-started),error:error});throw error;}
+    catch(error){if(controller.signal.aborted){
+const timeout=new Error('Provider metadata request timed out after '+METADATA_TIMEOUT_MS+' ms.');timeout.timedOut=true;
+      timeout.metadataOnly=true;timeout.providerId=providerId||'';timeout.phase=phase;timeout.url=url;timeout.cause=error;
+      Log.error('metadata.failed',{provider:providerId||'',phase:phase,url:url,
+      elapsedMs:Math.round(performance.now()-started),error:timeout});throw timeout;
+      }if(error&&typeof error==='object'){error.providerId=error.providerId||providerId||'';error.phase=error.phase||phase;
+      error.url=error.url||url;}Log.error('metadata.failed',{
+      provider:providerId||'',phase:phase,url:url,elapsedMs:Math.round(performance.now()-started),error:error});throw error;}
     finally{clearTimeout(timer);}
   }
-  async function fetchJson(url,options,providerId,phase){const response=await metadataFetch(url,options,providerId,phase),text=await response.text();if(!response.ok){const err=parseProviderError(text,response.status,response.headers.get('x-request-id')||'',response.headers,providerId);err.phase=phase||'metadata';err.url=url;throw err;}try{return text?JSON.parse(text):{};}catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;e.providerResponse=text;e.providerId=providerId||'';e.phase=phase||'metadata';e.url=url;throw e;}}
+  async function fetchJson(url,options,providerId,phase){
+const response=await metadataFetch(url,options,providerId,phase),text=await response.text();
+    if(!response.ok){const err=parseProviderError(text,response.status,response.headers.get('x-request-id')||'',
+    response.headers,providerId);err.phase=phase||'metadata';err.url=url;throw err;}try{return text?JSON.parse(text):{};
+    }catch(error){const e=new Error('Provider capability metadata returned invalid JSON.');e.cause=error;
+    e.providerResponse=text;e.providerId=providerId||'';e.phase=phase||'metadata';e.url=url;throw e;}}
   function modelRows(obj){if(Array.isArray(obj))return obj;if(Array.isArray(obj&&obj.data))return obj.data;if(Array.isArray(obj&&obj.models))return obj.models;return[];}
   function modelId(row){return String(row&&row.id||row&&row.model||row&&row.name||row&&row.key||'').trim();}
   function numericPrice(value){const n=Number(value);return Number.isFinite(n)?n:null;}
@@ -374,7 +415,11 @@
     return{id:id,free:free,pricing:{prompt:prompt,completion:completion,request:request},contextWindow:positiveInt(row&&row.context_length||row&&row.contextWindow||row&&row.context_window),name:String(row&&row.name||''),provider:providerId||''};
   }
   function catalogueEntries(obj,providerId){return modelRows(obj).map(function(row){return modelCatalogueEntry(row,providerId);}).filter(function(row){return row.id;});}
-  function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'')===wanted;})||rows.find(function(item){const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
+  function matchingRow(obj,model){const rows=modelRows(obj),wanted=String(model||'');
+return rows.find(function(item){return String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||
+    '')===wanted;})||rows.find(function(item){
+    const id=String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');
+    return id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id));})||null;}
   async function genericCapability(providerId,endpoint,model,provider,key){
     const url=resolveModelsUrl(endpoint),obj=await fetchJson(url,{method:'GET',headers:providerAuthHeaders(provider,key)}),row=matchingRow(obj,model);return capabilityFromRow(row,providerId==='openrouter'?'OpenRouter model metadata':'provider model metadata');
   }
@@ -393,14 +438,32 @@
   }
   async function llamaCppCapability(endpoint,model,provider){
     const chat=new URL(validateHttpUrl(resolveChatUrl(endpoint))),url=new URL(chat.origin+'/props');if(model)url.searchParams.set('model',model);
-    const obj=await fetchJson(url.toString(),{method:'GET',headers:{Accept:'application/json'}}),defaults=obj&&obj.default_generation_settings||{},params=defaults&&defaults.params||{},context=positiveInt(defaults.n_ctx),maxOutput=positiveInt(params.max_tokens),slots=positiveInt(obj.total_slots),caps=obj&&obj.chat_template_caps&&typeof obj.chat_template_caps==='object'?obj.chat_template_caps:{},chatTemplate=String(obj&&obj.chat_template||''),usesThinkTags=/<think\b/i.test(chatTemplate)&&/<\/think>/i.test(chatTemplate),reasoningParserFormat=usesThinkTags?'deepseek':'',recommended=provider&&provider.recommendedRuntime&&typeof provider.recommendedRuntime==='object'?provider.recommendedRuntime:{},recommendedSlots=positiveInt(recommended.parallelSlots)||1,recommendedContext=positiveInt(recommended.contextWindow)||65536;
+    const obj=await fetchJson(url.toString(),{method:'GET',headers:{Accept:'application/json'}}
+),defaults=obj&&obj.default_generation_settings||{},params=defaults&&defaults.params||{}
+      ,context=positiveInt(defaults.n_ctx),maxOutput=positiveInt(params.max_tokens),slots=positiveInt(obj.total_slots),
+      caps=obj&&obj.chat_template_caps&&typeof obj.chat_template_caps==='object'?obj.chat_template_caps:{}
+      ,chatTemplate=String(obj&&obj.chat_template||''),
+      usesThinkTags=/<think\b/i.test(chatTemplate)&&/<\/think>/i.test(chatTemplate),
+      reasoningParserFormat=usesThinkTags?'deepseek':'',
+      recommended=provider&&provider.recommendedRuntime&&
+      typeof provider.recommendedRuntime==='object'?provider.recommendedRuntime:{}
+      ,recommendedSlots=positiveInt(recommended.parallelSlots)||1,
+      recommendedContext=positiveInt(recommended.contextWindow)||65536;
     const supportsEffort=caps.supports_reasoning_effort===true||caps.reasoning_effort===true,reasoning=supportsEffort?{reasoningStatus:'optional',reasoningAllowedOptions:['off','low','medium','high'],reasoningDefault:'auto'}:{};
     let runtimeProfileStatus='unknown',runtimeProfileMessage='llama.cpp runtime profile not fully exposed';
     if(slots&&context){
       if(slots===recommendedSlots&&context===recommendedContext){runtimeProfileStatus='match';runtimeProfileMessage='LabFlow llama.cpp profile active · '+slots+' slot · '+context.toLocaleString()+' context tok';}
-      else{runtimeProfileStatus='mismatch';const issues=[];if(slots!==recommendedSlots)issues.push('expected --parallel '+recommendedSlots+', detected '+slots+' slot'+(slots===1?'':'s'));if(context!==recommendedContext)issues.push('expected -c '+recommendedContext+', detected '+context.toLocaleString()+' context tok per slot');runtimeProfileMessage='Different llama.cpp runtime profile · '+issues.join(' · ');}
+      else{runtimeProfileStatus='mismatch';const issues=[];
+if(slots!==recommendedSlots)issues.push('expected --parallel '+recommendedSlots+', detected '+slots+' slot'+
+        (slots===1?'':'s'));if(context!==recommendedContext)issues.push('expected -c '+recommendedContext+', detected '+
+        context.toLocaleString()+' context tok per slot');
+        runtimeProfileMessage='Different llama.cpp runtime profile · '+issues.join(' · ');}
     }
-    return Object.assign({maxOutputTokens:maxOutput,contextWindow:context,exactOutput:!!maxOutput,runtimeContextWindow:context,totalSlots:slots,recommendedSlots:recommendedSlots,recommendedContextWindow:recommendedContext,runtimeProfileStatus:runtimeProfileStatus,runtimeProfileMessage:runtimeProfileMessage,chatTemplateUsesThinkTags:usesThinkTags,reasoningParserFormat:reasoningParserFormat,source:'llama.cpp /props'},reasoning);
+    return Object.assign({maxOutputTokens:maxOutput,contextWindow:context,exactOutput:!!maxOutput,
+runtimeContextWindow:context,totalSlots:slots,recommendedSlots:recommendedSlots,
+      recommendedContextWindow:recommendedContext,runtimeProfileStatus:runtimeProfileStatus,
+      runtimeProfileMessage:runtimeProfileMessage,chatTemplateUsesThinkTags:usesThinkTags,
+      reasoningParserFormat:reasoningParserFormat,source:'llama.cpp /props'},reasoning);
   }
 
   async function lmStudioCapability(endpoint,model){
@@ -411,23 +474,49 @@
     let cap=capabilityFromRow(row,'LM Studio model metadata');
     const activeRow=requestedRow&&Array.isArray(requestedRow.loaded_instances)&&requestedRow.loaded_instances.length?requestedRow:loadedRow;
     if(activeRow){
-      const wanted=String(model||''),loaded=activeRow.loaded_instances.find(function(instance){const id=String(instance&&instance.id||'');return id===wanted||(id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id)));})||activeRow.loaded_instances[0],instance=capabilityFromRow(loaded,'LM Studio loaded instance context'),loadedModel=String(loaded&&loaded.id||activeRow.id||activeRow.model||activeRow.key||activeRow.name||'');
+      const wanted=String(model||''),loaded=activeRow.loaded_instances.find(function(instance){
+const id=String(instance&&instance.id||'');
+        return id===wanted||(id&&wanted&&(id.endsWith('/'+wanted)||wanted.endsWith('/'+id)));
+        })||activeRow.loaded_instances[0],instance=capabilityFromRow(loaded,'LM Studio loaded instance context'),
+        loadedModel=String(loaded&&loaded.id||activeRow.id||activeRow.model||activeRow.key||activeRow.name||'');
       const reasoning=activeRow&&activeRow.capabilities&&activeRow.capabilities.reasoning||{};
-      const allowed=Array.isArray(reasoning.allowed_options)?reasoning.allowed_options.map(function(x){return String(x).toLowerCase();}):[],reasoningStatus=!reasoning||!Object.keys(reasoning).length?(cap&&cap.reasoningStatus||'unknown'):(allowed.length&&!allowed.includes('off')&&!allowed.includes('none')?'required':allowed.length&&allowed.every(function(x){return x==='off'||x==='none';})?'none':'optional');
-      cap=Object.assign({},cap||{},instance||{},{loadedModel:loadedModel,maxOutputTokens:cap&&cap.maxOutputTokens||instance&&instance.maxOutputTokens||null,modelMaxContextWindow:cap&&cap.contextWindow||null,runtimeContextWindow:instance&&instance.contextWindow||null,reasoningStatus:reasoningStatus,reasoningAllowedOptions:allowed,reasoningDefault:String(reasoning.default||''),source:'LM Studio loaded instance context'});
+      const allowed=Array.isArray(reasoning.allowed_options)?reasoning.allowed_options.map(function(x){
+return String(x).toLowerCase();}):[],reasoningStatus=!reasoning||!Object.keys(reasoning).length?(cap&&
+        cap.reasoningStatus||'unknown'):(allowed.length&&!allowed.includes('off')&&
+        !allowed.includes('none')?'required':allowed.length&&allowed.every(function(x){return x==='off'||x==='none';
+        })?'none':'optional');
+      cap=Object.assign({},cap||{},instance||{},{
+loadedModel:loadedModel,maxOutputTokens:cap&&cap.maxOutputTokens||instance&&instance.maxOutputTokens||null,
+        modelMaxContextWindow:cap&&cap.contextWindow||null,runtimeContextWindow:instance&&instance.contextWindow||null,
+        reasoningStatus:reasoningStatus,reasoningAllowedOptions:allowed,reasoningDefault:String(reasoning.default||''),
+        source:'LM Studio loaded instance context'});
     }
     return cap;
   }
   async function resolveModelCapabilities(options){
-    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{},key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId,endpoint),cacheKey=capabilityKey(providerId,endpoint,model);
+    options=options||{};const settings=LF.Storage.getAiSettings(),providerId=options.provider||settings.provider,
+endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model,
+      provider=(LF.AIProviders&&LF.AIProviders[providerId])||LF.AIProviders.custom||{}
+      ,key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId,endpoint),
+      cacheKey=capabilityKey(providerId,endpoint,model);
     if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
     const known=knownCapability(providerId,model);
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     if(!options.force){const fallback={provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'conservative fallback; run Detect for provider metadata',probeError:'',resolvedAt:Date.now()};capabilityCache.set(cacheKey,fallback);return fallback;}
     let detected=null,error=null;
-    try{if(providerId==='gemini')detected=await geminiCapability(model,key);else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);else if(providerId==='llamacpp')detected=await llamaCppCapability(endpoint,model,provider);else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
+    try{if(providerId==='gemini')detected=await geminiCapability(model,key);
+else if(providerId==='ollama')detected=await ollamaCapability(endpoint,model);
+      else if(providerId==='lmstudio')detected=await lmStudioCapability(endpoint,model);
+      else if(providerId==='llamacpp')detected=await llamaCppCapability(endpoint,model,provider);
+      else detected=await genericCapability(providerId,endpoint,model,provider,key);}catch(err){error=err;
+      Log.warn('capability.probe-failed',{provider:providerId,model:model,error:err});}
     const cap=Object.assign({provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'provider default',probeError:error?String(error.message||error):'',resolvedAt:Date.now()},known||{},detected||{});
-    capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{model:cap.loadedModel}));Log.info('capability.resolved',{provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,contextWindow:cap.contextWindow,reasoningStatus:cap.reasoningStatus,reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
+    capabilityCache.set(cacheKey,cap);if(cap.loadedModel&&
+cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,cap.loadedModel),Object.assign({},cap,{
+      model:cap.loadedModel}));Log.info('capability.resolved',{
+      provider:providerId,model:model,loadedModel:cap.loadedModel||'',maxOutputTokens:cap.maxOutputTokens,
+      contextWindow:cap.contextWindow,reasoningStatus:cap.reasoningStatus,
+      reasoningAllowedOptions:cap.reasoningAllowedOptions||[],exactOutput:cap.exactOutput,source:cap.source});return cap;
   }
   function resolveOutputBudget(capability,requestedCap,globalCap,inputTokens){
     capability=capability||{};const candidates=[],detected=positiveInt(capability.maxOutputTokens),context=positiveInt(capability.contextWindow),input=Math.max(0,Number(inputTokens)||0);
@@ -440,7 +529,13 @@
   function modelId(item){return typeof item==='string'?item:String(item&&item.id||item&&item.model||item&&item.name||item&&item.key||'');}
   function uniqueModels(rows){return Array.from(new Set((rows||[]).map(modelId).filter(Boolean)));}
   function lmStudioLlmRows(obj){return modelRows(obj).filter(function(item){return !item||!item.type||String(item.type).toLowerCase()==='llm';});}
-  function lmStudioLoadedModels(rows){const out=[];(rows||[]).forEach(function(row){const instances=Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[];if(!instances.length)return;const rowId=modelId(row);const explicit=instances.map(function(instance){return String(instance&&instance.model_key||instance&&instance.model_id||instance&&instance.model||'').trim();}).filter(Boolean);const candidates=explicit.length?explicit:(rowId?[rowId]:[]);candidates.forEach(function(id){if(id&&!out.includes(id))out.push(id);});});return out;}
+  function lmStudioLoadedModels(rows){const out=[];
+(rows||[]).forEach(function(row){const instances=Array.isArray(row&&row.loaded_instances)?row.loaded_instances:[];
+    if(!instances.length)return;const rowId=modelId(row);
+    const explicit=instances.map(function(instance){
+    return String(instance&&instance.model_key||instance&&instance.model_id||instance&&instance.model||'').trim();
+    }).filter(Boolean);const candidates=explicit.length?explicit:(rowId?[rowId]:[]);
+    candidates.forEach(function(id){if(id&&!out.includes(id))out.push(id);});});return out;}
 
   async function listModels(providerId,endpoint,apiKey){
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
@@ -505,7 +600,12 @@
         /* Throughput measures generated tokens, not answer quality. A model that
            spends the tiny benchmark budget entirely in parsed reasoning is still
            measurable and should not make Detect fail. */
-        if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'&&Number(err.tokensPerSecond)>0)return{content:'',reasoning:String(err.reasoning||''),model:err.model||model,provider:providerId,thinkingMode:'off',latencyMs:Number(err.elapsedMs)||0,requestElapsedMs:Number(err.requestElapsedMs)||Number(err.elapsedMs)||0,generationMs:Number(err.generationMs)||0,ttftMs:Number.isFinite(Number(err.ttftMs))?Number(err.ttftMs):null,tokensPerSecond:Number(err.tokensPerSecond),usage:err.usage||null,finishReason:err.finishReason||'length',requestId:err.requestId||'',streamed:options.stream!==false,reasoningOnly:true};
+        if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'&&Number(err.tokensPerSecond)>0)return{
+content:'',reasoning:String(err.reasoning||''),model:err.model||model,provider:providerId,thinkingMode:'off',
+          latencyMs:Number(err.elapsedMs)||0,requestElapsedMs:Number(err.requestElapsedMs)||Number(err.elapsedMs)||0,
+          generationMs:Number(err.generationMs)||0,ttftMs:Number.isFinite(Number(err.ttftMs))?Number(err.ttftMs):null,
+          tokensPerSecond:Number(err.tokensPerSecond),usage:err.usage||null,finishReason:err.finishReason||'length',
+          requestId:err.requestId||'',streamed:options.stream!==false,reasoningOnly:true};
         throw err;
       }
     }
@@ -537,16 +637,31 @@
       if(err&&err.isContract&&Number(err.status)===200&&cfg.provider.connectionTestAcceptReasoningOnly===true){
         const elapsed=Math.round(performance.now()-started),raw=String(err.rawProviderResponse||''),reasoning=String(err.reasoning||'');
         Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-reasoning-only',prepareMs:spec.prepareMs||0,requestMs:Number(err.elapsedMs)||elapsed,totalMs:elapsed,httpRequests:1,finishReason:err.finishReason||'',reasoningChars:reasoning.length});
-        return{ok:true,reachable:true,rateLimited:false,probeLimited:true,finalTextVerified:false,reasoningObserved:!!reasoning,elapsedMs:elapsed,prepareMs:spec.prepareMs||0,requestElapsedMs:Number(err.elapsedMs)||elapsed,model:err.model||cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',reasoning:reasoning,usage:err.usage||null,finishReason:err.finishReason||'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:raw?new TextEncoder().encode(raw).byteLength:0,streamed:false,httpRequests:1,transport:err.transport||'direct'};
+        return{ok:true,reachable:true,rateLimited:false,probeLimited:true,finalTextVerified:false,
+reasoningObserved:!!reasoning,elapsedMs:elapsed,prepareMs:spec.prepareMs||0,
+          requestElapsedMs:Number(err.elapsedMs)||elapsed,model:err.model||cfg.settings.model,provider:cfg.settings.provider,
+          thinkingMode:spec.thinkingMode||'auto',content:'',reasoning:reasoning,usage:err.usage||null,
+          finishReason:err.finishReason||'',requestId:err.requestId||'',tokensPerSecond:null,
+          responseBytes:raw?new TextEncoder().encode(raw).byteLength:0,streamed:false,httpRequests:1,
+          transport:err.transport||'direct'};
       }
       if(!isRateLimitError(err))throw err;
       const elapsed=Math.round(performance.now()-started),retryMs=Math.max(0,Number(err.retryAfterMs)||0);
       Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-rate-limited',prepareMs:spec.prepareMs||0,totalMs:elapsed,httpRequests:1,retryAfterMs:retryMs||null});
-      return{ok:false,reachable:true,rateLimited:true,retryAfterMs:retryMs,providerCode:String(err.providerCode||''),providerMessage:String(err.providerMessage||''),status:Number(err.status)||429,elapsedMs:elapsed,requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',tokensPerSecond:null,responseBytes:0,streamed:false,httpRequests:1};
+      return{ok:false,reachable:true,rateLimited:true,retryAfterMs:retryMs,providerCode:String(err.providerCode||''),
+providerMessage:String(err.providerMessage||''),status:Number(err.status)||429,elapsedMs:elapsed,
+        requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,
+        thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',
+        tokensPerSecond:null,responseBytes:0,streamed:false,httpRequests:1};
     }
     if(!r.content)Log.warn('test.empty-content',{model:r.model||cfg.settings.model,finishReason:r.finishReason});
     Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'ok',prepareMs:r.prepareMs||0,requestMs:r.requestElapsedMs,totalMs:r.latencyMs,httpRequests:r.httpRequests||1});
-    return{ok:true,reachable:true,rateLimited:false,elapsedMs:r.latencyMs,prepareMs:r.prepareMs,responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finalizeMs:r.finalizeMs,model:r.model||cfg.settings.model,provider:r.provider||cfg.settings.provider,thinkingMode:r.thinkingMode||'auto',content:r.content,usage:r.usage||null,finishReason:r.finishReason||'',requestId:r.requestId,tokensPerSecond:r.tokensPerSecond,responseBytes:r.responseBytes,streamed:!!r.streamed,httpRequests:r.httpRequests||1,transport:r.transport||'direct'};
+    return{ok:true,reachable:true,rateLimited:false,elapsedMs:r.latencyMs,prepareMs:r.prepareMs,
+responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finalizeMs:r.finalizeMs,
+      model:r.model||cfg.settings.model,provider:r.provider||cfg.settings.provider,thinkingMode:r.thinkingMode||'auto',
+      content:r.content,usage:r.usage||null,finishReason:r.finishReason||'',requestId:r.requestId,
+      tokensPerSecond:r.tokensPerSecond,responseBytes:r.responseBytes,streamed:!!r.streamed,httpRequests:r.httpRequests||1,
+      transport:r.transport||'direct'};
   }
 
   /**
@@ -616,10 +731,24 @@
     const promptTokens=Number.isFinite(Number(usage.prompt_tokens))?Number(usage.prompt_tokens):estimateTokens((spec.body.messages||[]).map(function(m){return m.content||'';}).join('\n'));
     const completionTokens=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):estimateTokens(content+reasoning);
     const totalTokens=Number.isFinite(Number(usage.total_tokens))?Number(usage.total_tokens):promptTokens+completionTokens;
-    const exactReasoningTokens=usage.completion_tokens_details&&Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?Number(usage.completion_tokens_details.reasoning_tokens):null,estimatedReasoningTokens=reasoning?estimateTokens(reasoning):0,reasoningTokens=exactReasoningTokens==null?estimatedReasoningTokens:exactReasoningTokens,answerTokens=Math.max(0,completionTokens-reasoningTokens);
+    const exactReasoningTokens=usage.completion_tokens_details&&
+Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?
+      Number(usage.completion_tokens_details.reasoning_tokens):null,
+      estimatedReasoningTokens=reasoning?estimateTokens(reasoning):0,
+      reasoningTokens=exactReasoningTokens==null?estimatedReasoningTokens:exactReasoningTokens,answerTokens=Math.max(0,
+      completionTokens-reasoningTokens);
     const normalizedUsage={promptTokens:promptTokens,completionTokens:completionTokens,totalTokens:totalTokens,cachedTokens:usage.prompt_tokens_details&&usage.prompt_tokens_details.cached_tokens||null,reasoningTokens:reasoningTokens,answerTokens:answerTokens,reasoningEstimated:exactReasoningTokens==null&&!!reasoning,estimated:!obj.usage};
-    const finalizeMs=Math.round(performance.now()-finalizeStarted),totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),httpRequests=1+controlRequests+(technicalThinkingRetry?1:0);
-    if(!technicalThinkingRetry&&spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''});
+    const finalizeMs=Math.round(performance.now()-finalizeStarted),
+totalElapsed=Math.round(performance.now()-overallStarted),ttftMs=r.stream&&r.stream.ttftMs||null,
+      generationMs=Math.max(1,(Number(r.elapsedMs)||0)-(ttftMs||0)),
+      tps=generationMs>0?Number((completionTokens/(generationMs/1000)).toFixed(2)):null,reasoningObserved=reasoning.length>0,
+      controlRequests=Math.max(0,Number(r.reasoningControlRequests)||0),
+      httpRequests=1+controlRequests+(technicalThinkingRetry?1:0);
+    if(!technicalThinkingRetry&&spec.thinkingMode==='off'&&reasoningObserved)Log.warn('thinking.override-ignored',{
+provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),
+      reasoningChars:reasoning.length,reasoningControlRequests:controlRequests,
+      reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,finishReason:extracted.finishReason||''}
+      );
     if(!content){
       Log.warn('response.empty-content',{model:logModel(spec.settings.provider,obj.model||spec.settings.model),finishReason:extracted.finishReason,reasoningChars:reasoning.length,completionTokens:completionTokens,responseKeys:Object.keys(obj||{}),messageKeys:Object.keys(extracted.message||{})});
       const suffix=extracted.finishReason?' Finish reason: '+extracted.finishReason+'.':'';
@@ -627,12 +756,31 @@
       const emptyError=new Error('The model returned no final text.'+suffix+hint);
       emptyError.code=extracted.finishReason==='length'?'MODEL_OUTPUT_TRUNCATED':'MODEL_OUTPUT_INVALID';emptyError.isContract=true;emptyError.status=200;emptyError.httpOk=true;emptyError.reasoning=reasoning;emptyError.finishReason=extracted.finishReason;
       emptyError.providerResponse=extracted.refusal||'';emptyError.rawProviderResponse=r.rawText;
-      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;emptyError.requestElapsedMs=r.elapsedMs;emptyError.generationMs=generationMs;emptyError.ttftMs=ttftMs;emptyError.tokensPerSecond=tps;emptyError.usage=normalizedUsage;emptyError.model=obj.model||spec.settings.model;emptyError.requestedMaxTokens=positiveInt(spec.body.max_completion_tokens||spec.body.max_tokens||spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';emptyError.reasoningObserved=reasoningObserved;emptyError.reasoningControlRequests=controlRequests;emptyError.reasoningControlOk=r.reasoningControlResult&&r.reasoningControlResult.ok===true;
+      emptyError.requestId=r.requestId;emptyError.requestLogId=r.requestLogId;emptyError.elapsedMs=r.elapsedMs;
+emptyError.requestElapsedMs=r.elapsedMs;emptyError.generationMs=generationMs;emptyError.ttftMs=ttftMs;
+        emptyError.tokensPerSecond=tps;emptyError.usage=normalizedUsage;emptyError.model=obj.model||spec.settings.model;
+        emptyError.requestedMaxTokens=positiveInt(spec.body.max_completion_tokens||spec.body.max_tokens||
+        spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';
+        emptyError.reasoningObserved=reasoningObserved;emptyError.reasoningControlRequests=controlRequests;
+        emptyError.reasoningControlOk=r.reasoningControlResult&&r.reasoningControlResult.ok===true;
       throw emptyError;
     }
-    Log.info('request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model||spec.settings.model),prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
+    Log.info('request.timing',{provider:spec.settings.provider,model:logModel(spec.settings.provider,
+obj.model||spec.settings.model),prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,firstTokenMs:ttftMs,
+      generationMs:generationMs,requestMs:r.elapsedMs,finalizeMs:finalizeMs,totalMs:totalElapsed,httpRequests:httpRequests,
+      reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests});
     const finalThinkingPolicy=technicalThinkingRetry?Object.assign({},spec.thinkingPolicy||{},{transportMode:'auto',effective:'required',reason:'Provider rejected reasoning disable; retried with provider default'}):(spec.thinkingPolicy||null);
-    return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,reasoningControlRequests:controlRequests,reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,reasoningCompatibilityRetry:technicalThinkingRetry,model:obj.model||spec.settings.model,provider:spec.settings.provider,thinkingMode:technicalThinkingRetry?'auto':(spec.thinkingMode||'auto'),thinkingPolicy:finalThinkingPolicy,latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,transport:r.transport||'direct',rawProviderResponse:r.rawText,streamed:!!r.stream,streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
+    return{content:content,reasoning:reasoning,reasoningObserved:reasoningObserved,
+reasoningControlRequests:controlRequests,
+      reasoningControlOk:r.reasoningControlResult&&r.reasoningControlResult.ok===true,
+      reasoningCompatibilityRetry:technicalThinkingRetry,model:obj.model||spec.settings.model,provider:spec.settings.provider,
+      thinkingMode:technicalThinkingRetry?'auto':(spec.thinkingMode||'auto'),thinkingPolicy:finalThinkingPolicy,
+      latencyMs:totalElapsed,prepareMs:spec.prepareMs||0,responseHeadersMs:r.responseHeadersMs,finalizeMs:finalizeMs,
+      httpRequests:httpRequests,requestElapsedMs:r.elapsedMs,generationMs:generationMs,ttftMs:ttftMs,tokensPerSecond:tps,
+      usage:normalizedUsage,finishReason:extracted.finishReason,requestId:r.requestId,requestLogId:r.requestLogId,
+      transport:r.transport||'direct',rawProviderResponse:r.rawText,streamed:!!r.stream,
+      streamEvents:r.stream&&r.stream.events||0,meaningfulStreamEvents:r.stream&&r.stream.meaningfulEvents||0,
+      responseBytes:r.stream&&r.stream.bytes||new TextEncoder().encode(r.rawText).byteLength};
   }
 
   async function probe(options){
@@ -640,7 +788,10 @@
     const saved=LF.Storage.getAiSettings(),providerId=options.provider!=null?String(options.provider):String(saved.provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const endpoint=options.endpoint!=null?String(options.endpoint):String(saved.endpoint||provider.endpoint||''),model=options.model!=null?String(options.model):String(saved.model||provider.model||''),apiKey=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId);
     const cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),timeout=Math.max(5000,Math.min(120000,Number(options.timeoutMs)||Number(provider.connectionTestTimeoutMs)||30000));
-    const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,thinkingMode:options.thinkingMode||'auto',guardThinking:options.thinkingMode==='off',connectionTest:true});
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:String(options.prompt||'Reply with exactly: OK')}
+],stream:options.stream===true,maxTokens:Math.max(8,Math.min(512,Number(options.maxTokens)||32)),timeoutMs:timeout,
+      hardTimeoutMs:timeout,temperature:Number.isFinite(Number(options.temperature))?Number(options.temperature):0,
+      thinkingMode:options.thinkingMode||'auto',guardThinking:options.thinkingMode==='off',connectionTest:true});
     return send(spec,{label:String(options.label||'Provider console probe')});
   }
 

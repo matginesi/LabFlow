@@ -4,41 +4,147 @@ const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,shell=LF.PageShell;
 function safe(v){return C.escapeHtml(String(v==null?'':v));}
 function badge(v,t){return shell.badge(v,t||'');}
 function value(v){if(v==null||v==='')return'—';if(typeof v==='object')return JSON.stringify(v);return String(v);}
-function ambiguityImpact(f){const type=String(f&&f.type||'').toLowerCase();if(type==='identity'||type==='sample-mapping')return'Affects sample identity and comparisons.';if(type==='group-mapping')return'Affects group comparisons.';if(type==='reference-classification')return'Affects REF/non-REF comparisons.';if(type==='unit-mapping'||type==='scale-factor')return'Affects the numerical meaning of the measurement.';return'Needs a researcher decision before this record can be interpreted reliably.';}
+function ambiguityImpact(f){const type=String(f&&f.type||'').toLowerCase();
+if(type==='identity'||type==='sample-mapping')return'Affects sample identity and comparisons.';
+  if(type==='group-mapping')return'Affects group comparisons.';
+  if(type==='reference-classification')return'Affects REF/non-REF comparisons.';
+  if(type==='unit-mapping'||type==='scale-factor')return'Affects the numerical meaning of the measurement.';
+  return'Needs a researcher decision before this record can be interpreted reliably.';}
 function proposalMeasurements(e,p){return LF.DatasetCorrections&&LF.DatasetCorrections.proposalMeasurements?LF.DatasetCorrections.proposalMeasurements(e,p):[];}
 function plural(n,one,many){return Number(n)===1?one:many;}
 function render(options){
   const e=LF.State.state.experiment;if(!shell.hasExperiment())return shell.needExperiment();
   if(!e.datasetAnalysis||Number(e.datasetAnalysis.sourceRevision)!==Number(e.sync&&e.sync.revision||0)){if(LF.DataPipeline&&LF.DataPipeline.refresh)LF.DataPipeline.refresh(e,{reason:'review-render'});}
-  const a=e.datasetAnalysis||{},reviewFixes=a.reviewFixes||[],nameFixes=a.filenameNormalizations||[],amb=a.ambiguousFindings||[],info=a.informationalFindings||[],plan=LF.ActionData&&LF.ActionData.proposal(e,'dataset.resolve-ambiguities')||{},ambIds=new Set(amb.map(function(f){return String(f.id||'');})),rawProps=Array.isArray(plan.proposals)?plan.proposals:[],planFresh=Number(plan.sourceRevision)===Number(a.sourceRevision),props=amb.length&&planFresh?rawProps.filter(function(p){return p.finding_id&&ambIds.has(String(p.finding_id));}):[],unresolved=amb.length&&planFresh?(Array.isArray(plan.unresolved)?plan.unresolved:[]):[],current=Number(a.sourceRevision)===Number(e.sync&&e.sync.revision||0),autoCleanup=e.autoCleanup||{applied:0,pending:0,pendingTargets:0,targets:0,items:[],appliedItems:[]},pendingAuto=Number(autoCleanup.pending||0),attention=pendingAuto+reviewFixes.length+amb.length,files=(e.manifest||[]).filter(function(x){return !x.directory;}).length;
+  const a=e.datasetAnalysis||{},reviewFixes=a.reviewFixes||[],nameFixes=a.filenameNormalizations||[],
+amb=a.ambiguousFindings||[],info=a.informationalFindings||[],plan=LF.ActionData&&LF.ActionData.proposal(e,
+    'dataset.resolve-ambiguities')||{},ambIds=new Set(amb.map(function(f){return String(f.id||'');
+    })),rawProps=Array.isArray(plan.proposals)?plan.proposals:[],
+    planFresh=Number(plan.sourceRevision)===Number(a.sourceRevision),
+    props=amb.length&&planFresh?rawProps.filter(function(p){return p.finding_id&&ambIds.has(String(p.finding_id));
+    }):[],unresolved=amb.length&&planFresh?(Array.isArray(plan.unresolved)?plan.unresolved:[]):[],
+    current=Number(a.sourceRevision)===Number(e.sync&&e.sync.revision||0),autoCleanup=e.autoCleanup||{
+    applied:0,pending:0,pendingTargets:0,targets:0,items:[],appliedItems:[]}
+    ,pendingAuto=Number(autoCleanup.pending||0),attention=pendingAuto+reviewFixes.length+amb.length,
+    files=(e.manifest||[]).filter(function(x){return !x.directory;}).length;
   if(LF.PageContext)LF.PageContext.publish('Upload & Review',{view:'Research review',visible:['needs_review:'+attention,'samples:'+Number(a.summary&&a.summary.samples||e.samples.length),'measurements:'+Number(a.summary&&a.summary.measurements||e.measurements.length)]});
 
   const nameRows=nameFixes.slice(0,10).map(function(f){return '<tr><td class="mono wrap-anywhere"><span class="review-name-old">'+safe(f.rawName||'—')+'</span></td><td class="mono wrap-anywhere"><strong class="review-name-new">'+safe(f.canonicalName||'—')+'</strong></td></tr>';}).join('');
-  const reviewFixRows=reviewFixes.map(function(f,i){const measurement=(e.measurements||[]).find(function(item){return String(item.id)===String(f.target);})||{};return '<tr><td data-label="Measurement"><strong>'+safe(measurement.sample||'Unknown sample')+'</strong><small class="mono wrap-anywhere">'+safe(measurement.path||measurement.file||f.target||'—')+'</small></td><td data-label="Suggestion"><strong>Exclude from analysis</strong><small>'+safe(f.reason||'This measurement did not pass the data checks.')+'</small></td><td data-label="Why">'+safe((f.evidence||[]).slice(0,3).join(' · ')||'The measurement needs review')+'</td><td data-label="Decision" class="review-action-cell"><button class="button primary compact" type="button" data-apply-review-fix="'+i+'">Apply</button></td></tr>';}).join('');
-  const ambiguityRows=amb.map(function(f){return '<tr><td data-label="Question"><strong>'+safe(f.title||f.type||'Uncertain value')+'</strong><small>'+safe(f.detail||'LabFlow cannot choose one interpretation with confidence.')+'</small></td><td data-label="Record" class="mono wrap-anywhere">'+safe(f.target||f.measurementId||'—')+'</td><td data-label="Why it matters"><strong>'+safe(ambiguityImpact(f))+'</strong><small>'+safe((f.evidence||[]).slice(0,3).join(' · ')||'No decisive evidence is linked yet.')+'</small></td></tr>';}).join('');
-  const proposalRows=props.map(function(p){const planIndex=rawProps.indexOf(p),matches=proposalMeasurements(e,p),conf=Math.round(Number(p.confidence||0)*100),source=matches.map(function(m){return m.sample||m.rawSample;}).filter(Boolean).filter(function(x,j,arr){return arr.indexOf(x)===j;}).slice(0,3).join(', ')||String(p.before||p.target||'—'),applied=!!p.applied,rejected=p.decision==='rejected',evidence=(p.evidence||[]).slice(0,3).join(' · ');return '<tr class="'+(applied?'is-applied':rejected?'is-rejected':'')+'"><td data-label="Affected data"><strong>'+safe(source)+'</strong><small class="mono wrap-anywhere">'+safe(p.target||'')+'</small></td><td data-label="Suggestion"><strong>'+safe(value(p.after))+'</strong><small>'+safe(String(p.patch_type||'mapping').replace(/_/g,' '))+'</small></td><td data-label="Why"><div class="review-proposal-basis">'+badge(conf+'% confidence','ai')+'<strong>'+safe(p.reason||'Suggested from the available evidence.')+'</strong>'+(evidence?'<small>'+safe(evidence)+'</small>':'')+'</div></td><td data-label="Decision" class="review-action-cell">'+(applied?badge('Applied','success'):rejected?'<button class="button compact" type="button" data-review-proposal="'+planIndex+'" data-decision="pending">Restore</button>':'<button class="button primary compact" type="button" data-apply-review-proposal="'+planIndex+'">Apply</button><button class="button ghost compact" type="button" data-review-proposal="'+planIndex+'" data-decision="rejected">Ignore</button>')+(p.applyError?'<small class="danger-text">'+safe(p.applyError)+'</small>':'')+'</td></tr>';}).join('');
+  const reviewFixRows=reviewFixes.map(function(f,i){const measurement=(e.measurements||[]).find(function(item){
+return String(item.id)===String(f.target);})||{};
+    return '<tr><td data-label="Measurement"><strong>'+safe(measurement.sample||
+    'Unknown sample')+'</strong><small class="mono wrap-anywhere">'+safe(measurement.path||measurement.file||f.target||
+    '—')+'</small></td><td data-label="Suggestion"><strong>Exclude from analysis</strong><small>'+safe(f.reason||
+    'This measurement did not pass the data checks.')+'</small></td><td data-label="Why">'+safe((f.evidence||[]).slice(0,
+    3).join(' · ')||'The measurement needs review')+
+    '</td><td data-label="Decision" class="review-action-cell"><button class="button primary compact" type="button" data-apply-review-fix="'+
+    i+'">Apply</button></td></tr>';}).join('');
+  const ambiguityRows=amb.map(function(f){
+return '<tr><td data-label="Question"><strong>'+safe(f.title||f.type||
+    'Uncertain value')+'</strong><small>'+safe(f.detail||
+    'LabFlow cannot choose one interpretation with confidence.')+
+    '</small></td><td data-label="Record" class="mono wrap-anywhere">'+safe(f.target||f.measurementId||
+    '—')+'</td><td data-label="Why it matters"><strong>'+safe(ambiguityImpact(f))+'</strong><small>'+safe((f.evidence||
+    []).slice(0,3).join(' · ')||'No decisive evidence is linked yet.')+'</small></td></tr>';}).join('');
+  const proposalRows=props.map(function(p){
+const planIndex=rawProps.indexOf(p),matches=proposalMeasurements(e,p),conf=Math.round(Number(p.confidence||0)*100),
+    source=matches.map(function(m){return m.sample||m.rawSample;
+    }).filter(Boolean).filter(function(x,j,arr){return arr.indexOf(x)===j;
+    }).slice(0,3).join(', ')||String(p.before||p.target||'—'),applied=!!p.applied,rejected=p.decision==='rejected',
+    evidence=(p.evidence||[]).slice(0,3).join(' · ');
+    return '<tr class="'+(applied?'is-applied':rejected?'is-rejected':'')+'"><td data-label="Affected data"><strong>'+
+    safe(source)+'</strong><small class="mono wrap-anywhere">'+safe(p.target||
+    '')+'</small></td><td data-label="Suggestion"><strong>'+safe(value(p.after))+'</strong><small>'+
+    safe(String(p.patch_type||'mapping').replace(/_/g,
+    ' '))+'</small></td><td data-label="Why"><div class="review-proposal-basis">'+badge(conf+'% confidence',
+    'ai')+'<strong>'+safe(p.reason||'Suggested from the available evidence.')+'</strong>'+(evidence?'<small>'+
+    safe(evidence)+'</small>':'')+'</div></td><td data-label="Decision" class="review-action-cell">'+
+    (applied?badge('Applied','success'):rejected?'<button class="button compact" type="button" data-review-proposal="'+
+    planIndex+'" data-decision="pending">Restore</button>':
+    '<button class="button primary compact" type="button" data-apply-review-proposal="'+planIndex+
+    '">Apply</button><button class="button ghost compact" type="button" data-review-proposal="'+planIndex+
+    '" data-decision="rejected">Ignore</button>')+(p.applyError?'<small class="danger-text">'+safe(p.applyError)+
+    '</small>':'')+'</td></tr>';}).join('');
   const unresolvedRows=unresolved.map(function(x){return '<tr><td data-label="Record" class="mono wrap-anywhere">'+safe(x.target||'—')+'</td><td data-label="Reason">'+safe(x.reason||'Not enough information')+'</td><td data-label="Checked">'+safe((x.evidence||[]).slice(0,2).join(' · ')||'—')+'</td></tr>';}).join('');
 
   const sampleOptions=(e.samples||[]).map(function(s){return '<option value="'+safe(s.name)+'"></option>';}).join('');
-  const manual='<form id="samplePatchForm" class="review-manual-form"><div class="field"><label>Current sample</label><input class="input" name="from" list="reviewSampleList" required><datalist id="reviewSampleList">'+sampleOptions+'</datalist></div><div class="field"><label>Correct sample</label><input class="input" name="to" required></div><div class="field grow"><label>Reason</label><input class="input" name="reason" required></div><button class="button primary" type="submit">Apply change</button></form>';
+  const manual='<form id="samplePatchForm" class="review-manual-form"><div class="field"><label>Current sample</label><input class="input" name="from" list="reviewSampleList" required><datalist id="reviewSampleList">'+sampleOptions+'</datalist></div><div class="field"><label>Correct sample</label><input class="input" name="to" required></div>' +
+    '<div class="field grow"><label>Reason</label><input class="input" name="reason" required></div><button class="button primary" type="submit">Apply change</button></form>';
 
-  const overview='<section class="panel review-overview '+(attention?'needs-attention':'is-ready')+'"><div class="review-overview-main"><div class="review-state-mark" aria-hidden="true"><span data-icon="'+(attention?'triangle-alert':'check')+'"></span></div><div class="review-overview-copy"><span class="eyebrow">Data review</span><h2 class="h2">'+(attention?attention+' '+plural(attention,'item needs','items need')+' your attention':'Everything looks ready')+'</h2><p>'+(attention?'Review the highlighted items below before continuing.':'No issues require your attention. You can continue to Results.')+'</p></div><button class="button ghost compact review-recheck" type="button" id="reanalyzeDataset">Check again</button></div><div class="review-key-facts" aria-label="Imported data summary"><div><span>Samples</span><strong>'+Number(a.summary&&a.summary.samples||e.samples.length)+'</strong></div><div><span>Measurements</span><strong>'+Number(a.summary&&a.summary.measurements||e.measurements.length)+'</strong></div><div><span>Files</span><strong>'+files+'</strong></div><div><span>Status</span><strong class="'+(attention?'warning-text':'success-text')+'">'+(attention?'Review needed':'Ready')+'</strong></div></div></section>';
+  const overview='<section class="panel review-overview '+(attention?'needs-attention':'is-ready')+
+'"><div class="review-overview-main"><div class="review-state-mark" aria-hidden="true"><span data-icon="'+
+    (attention?'triangle-alert':'check')+'"></span></div><div class="review-overview-copy"><span class="eyebrow">Data review</span><h2 class="h2">'+
+    (attention?attention+' '+plural(attention,'item needs',
+    'items need')+' your attention':'Everything looks ready')+'</h2><p>'+
+    (attention?'Review the highlighted items below before continuing.':
+    'No issues require your attention. You can continue to Results.')+
+    '</p></div><button class="button ghost compact review-recheck" type="button" id="reanalyzeDataset">' +
+      'Check again</button></div><div class="review-key-facts" aria-label="Imported data summary"><div><span>Samples</span><strong>'+
+Number(a.summary&&a.summary.samples||e.samples.length)+'</strong></div><div><span>Measurements</span><strong>'+
+        Number(a.summary&&a.summary.measurements||
+        e.measurements.length)+'</strong></div><div><span>Files</span><strong>'+files+
+        '</strong></div><div><span>Status</span><strong class="'+(attention?'warning-text':'success-text')+'">'+
+        (attention?'Review needed':'Ready')+'</strong></div></div></section>';
 
   const automaticItems=(autoCleanup.items||[]).slice(0,20).map(function(x){return '<li><strong>'+safe(String(x.patch_type||'fix').replace(/_/g,' '))+'</strong><span class="mono">'+safe(x.target||'')+'</span><small>'+safe(x.reason||'')+'</small></li>';}).join('');
   const appliedAutomaticItems=(autoCleanup.appliedItems||[]).slice(-20).map(function(x){return '<li><strong>'+safe(String(x.patch_type||'fix').replace(/_/g,' '))+'</strong><span class="mono">'+safe(x.target||'')+'</span><small>'+safe(x.reason||'')+'</small></li>';}).join('');
-  const automatic=pendingAuto?'<section class="panel review-attention-panel"><div class="panel-head"><div><span class="eyebrow">Suggested corrections</span><h2 class="h2">'+pendingAuto+' safe '+plural(pendingAuto,'correction','corrections')+'</h2><div class="meta">Review and accept the changes you want LabFlow to apply.</div></div><div class="spacer"></div><button class="button primary" type="button" id="applyAutomaticCleanup">Apply safe corrections</button></div><div class="panel-body">'+(automaticItems?'<ul class="review-auto-cleanup-list">'+automaticItems+'</ul>':'')+'</div></section>':'';
+  const automatic=pendingAuto?'<section class="panel review-attention-panel"><div class="panel-head"><div><span class="eyebrow">Suggested corrections</span><h2 class="h2">'+
+pendingAuto+' safe '+plural(pendingAuto,'correction',
+    'corrections')+'</h2><div class="meta">Review and accept the changes you want LabFlow to apply.</div></div><div class="spacer"></div><button class="button primary" type="button" id="applyAutomaticCleanup">Apply safe corrections</button></div><div class="panel-body">'+(automaticItems?'<ul class="review-auto-cleanup-list">'+automaticItems+'</ul>':'')+'</div></section>':'';
 
-  const exclusionSuggestions=reviewFixes.length?'<section class="review-suggestion-group"><div class="review-suggestion-head"><div><strong>Measurements to review</strong><small>These records may need to be excluded from analysis.</small></div><button class="button primary compact" type="button" id="applyAllReviewFixes">Apply all exclusions</button></div><div class="table-wrap"><table class="table dense-table review-dense-table review-exclusion-table"><thead><tr><th>Measurement</th><th>Suggestion</th><th>Why</th><th>Your decision</th></tr></thead><tbody>'+reviewFixRows+'</tbody></table></div></section>':'';
-  const ambiguitySuggestions=amb.length?'<section class="review-suggestion-group"><div class="review-suggestion-head"><div><strong>Open questions</strong><small>LabFlow needs your judgement for these records.</small></div><button class="button primary compact" type="button" data-action="dataset.resolve-ambiguities" '+(!current?'disabled':'')+'>'+(props.length?'Refresh AI suggestions':'Suggest with AI')+'</button>'+(props.length?'<button class="button primary compact" type="button" id="applyAllAiCorrections">Apply all suggestions</button>':'')+'</div><div class="review-decision-summary"><span><b>'+amb.length+'</b> open</span><span><b>'+props.filter(function(x){return !x.applied&&x.decision!=="rejected";}).length+'</b> suggested</span><span><b>'+unresolved.length+'</b> unresolved</span></div>'+(props.length?'<div class="table-wrap"><table class="table dense-table review-dense-table review-ai-table"><thead><tr><th>Affected data</th><th>Suggestion</th><th>Why</th><th>Your decision</th></tr></thead><tbody>'+proposalRows+'</tbody></table></div>':'<div class="table-wrap"><table class="table dense-table review-dense-table review-ambiguity-table"><thead><tr><th>Question</th><th>Record</th><th>Why it matters</th></tr></thead><tbody>'+ambiguityRows+'</tbody></table></div>')+(unresolved.length?'<details class="review-inline-details"><summary>'+unresolved.length+' still unresolved</summary><div class="table-wrap"><table class="table dense-table"><thead><tr><th>Record</th><th>Reason</th><th>Checked</th></tr></thead><tbody>'+unresolvedRows+'</tbody></table></div></details>':'')+'</section>':'';
-  const decisions=(reviewFixes.length||amb.length)?'<section class="panel review-attention-panel"><div class="panel-head"><div><span class="eyebrow">Researcher decisions</span><h2 class="h2">Review before continuing</h2><div class="meta">Nothing changes until you choose Apply.</div></div></div><div class="panel-body stack">'+exclusionSuggestions+ambiguitySuggestions+'</div></section>':'';
+  const exclusionSuggestions=reviewFixes.length?
+'<section class="review-suggestion-group"><div class="review-suggestion-head"><div><strong>Measurements to ' +
+  'review</strong><small>These records may need to be excluded from analysis.</small></div><button class="button ' +
+  'primary compact" type="button" id="applyAllReviewFixes">Apply all exclusions</button></div><div class="table-wrap">' +
+  '<table class="table dense-table review-dense-table review-exclusion-table"><thead><tr><th>Measurement</th><th>Suggestion</th><th>Why</th><th>Your decision</th></tr></thead><tbody>'+reviewFixRows+'</tbody></table></div></section>':'';
+  const ambiguitySuggestions=amb.length?
+'<section class="review-suggestion-group"><div class="review-suggestion-head"><div><strong>Open questions</strong>' +
+  '<small>LabFlow needs your judgement for these records.</small></div><button class="button primary compact" type="button" data-action="dataset.resolve-ambiguities" '+
+(!current?'disabled':'')+'>'+(props.length?'Refresh AI suggestions':'Suggest with AI')+'</button>'+
+    (props.length?'<button class="button primary compact" type="button" id="applyAllAiCorrections">Apply all suggestions</button>':
+    '')+'</div><div class="review-decision-summary"><span><b>'+amb.length+'</b> open</span><span><b>'+
+    props.filter(function(x){return !x.applied&&x.decision!=="rejected";
+    }).length+'</b> suggested</span><span><b>'+unresolved.length+'</b> unresolved</span></div>'+
+    (props.length?'<div class="table-wrap"><table class="table dense-table review-dense-table review-ai-table"><thead><tr><th>Affected data</th><th>Suggestion</th><th>Why</th><th>Your decision</th></tr></thead><tbody>'+
+proposalRows+'</tbody></table></div>':'<div class="table-wrap"><table class="table dense-table review-dense-table review-ambiguity-table"><thead><tr><th>Question</th><th>Record</th><th>Why it matters</th></tr></thead><tbody>'+
+      ambiguityRows+'</tbody></table></div>')+(unresolved.length?'<details class="review-inline-details"><summary>'+unresolved.length+
+      ' still unresolved</summary><div class="table-wrap"><table class="table dense-table"><thead><tr><th>Record</th><th>Reason</th><th>Checked</th></tr></thead><tbody>'+
+      unresolvedRows+'</tbody></table></div></details>':'')+'</section>':'';
+  const decisions=(reviewFixes.length||amb.length)?'<section class="panel review-attention-panel"><div class="panel-head"><div><span class="eyebrow">Researcher ' +
+    'decisions</span><h2 class="h2">Review before continuing</h2><div class="meta">Nothing changes until you choose Apply.</div></div></div><div class="panel-body stack">'+exclusionSuggestions+ambiguitySuggestions+'</div></section>':'';
 
   const changeCount=Number(autoCleanup.applied||0)+nameFixes.length;
-  const changes='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Details</span><h2 class="h2">Review changes</h2><div class="meta">'+(changeCount?changeCount+' recorded '+plural(changeCount,'change','changes'):'No recorded changes')+'</div></div></summary><div class="panel-body stack">'+(appliedAutomaticItems?'<details class="review-inline-details"><summary>Applied corrections · '+Number(autoCleanup.applied||0)+'</summary><ul class="review-auto-cleanup-list">'+appliedAutomaticItems+'</ul></details>':'')+(nameFixes.length?'<details class="review-inline-details review-name-normalizations"><summary>Normalized names · '+nameFixes.length+'</summary><div class="table-wrap"><table class="table dense-table review-name-table"><thead><tr><th>Imported name</th><th>LabFlow name</th></tr></thead><tbody>'+nameRows+'</tbody></table></div>'+(nameFixes.length>10?'<small class="meta">Showing 10 examples.</small>':'')+'</details>':'')+(!changeCount?'<div class="empty compact-empty">Nothing to review here.</div>':'')+'</div></details>';
+  const changes='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Details</span><h2 class="h2">Review changes</h2><div class="meta">'+
+(changeCount?changeCount+' recorded '+plural(changeCount,'change',
+    'changes'):'No recorded changes')+'</div></div></summary><div class="panel-body stack">'+
+    (appliedAutomaticItems?'<details class="review-inline-details"><summary>Applied corrections · '+
+    Number(autoCleanup.applied||0)+'</summary><ul class="review-auto-cleanup-list">'+appliedAutomaticItems+
+    '</ul></details>':'')+(nameFixes.length?
+    '<details class="review-inline-details review-name-normalizations"><summary>Normalized names · '+nameFixes.length+
+    '</summary><div class="table-wrap"><table class="table dense-table review-name-table"><thead><tr><th>Imported name</th><th>LabFlow name</th></tr></thead><tbody>'+
+    nameRows+'</tbody></table></div>'+(nameFixes.length>10?'<small class="meta">Showing 10 examples.</small>':'')+
+    '</details>':'')+(!changeCount?'<div class="empty compact-empty">Nothing to review here.</div>':'')+'</div></details>';
 
   const brief=e.experimentBrief||{},briefDet=brief.deterministic||{},briefPerf=briefDet.performance||{},briefScope=briefDet.scope||{};
-  const experimentInfo='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Details</span><h2 class="h2">Experiment information</h2><div class="meta">A quick summary of the imported dataset</div></div></summary><div class="panel-body"><div class="review-brief-strip"><div class="review-brief-primary"><span>Best experiment</span><strong>'+safe(briefPerf.best_experiment||'—')+'</strong></div><div class="review-brief-scope"><span>Dataset</span><strong>'+Number(briefScope.experiments||0)+' experiments · '+Number(briefScope.samples||0)+' samples · '+Number(briefScope.measurements||0)+' measurements</strong></div></div></div></details>';
+  const experimentInfo='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Details</span>' +
+    '<h2 class="h2">Experiment information</h2><div class="meta">A quick summary of the imported dataset</div></div>' +
+    '</summary><div class="panel-body"><div class="review-brief-strip"><div class="review-brief-primary"><span>Best experiment</span><strong>'+
+safe(briefPerf.best_experiment||'—')+'</strong></div><div class="review-brief-scope"><span>Dataset</span><strong>'+
+      Number(briefScope.experiments||0)+' experiments · '+Number(briefScope.samples||
+      0)+' samples · '+Number(briefScope.measurements||0)+' measurements</strong></div></div></div></details>';
 
-  const diagnostics='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Advanced</span><h2 class="h2">Import details</h2><div class="meta">Manual correction and technical records</div></div></summary><div class="panel-body review-advanced-grid"><details class="review-advanced-tool" name="review-advanced-tool"><summary><div><strong>Manual sample correction</strong><span class="meta">Use only when you know the correct sample identity.</span></div><span class="review-disclosure-hint">Manual</span></summary><div class="review-advanced-tool-body">'+manual+'</div></details><details class="review-advanced-tool review-diagnostics-tool" name="review-advanced-tool"><summary><div><strong>Technical records</strong><span class="meta">Import messages and parser checks.</span></div><span class="review-disclosure-hint">'+info.length+'</span></summary><div class="review-advanced-tool-body">'+(info.length?'<div class="table-wrap review-diagnostics-scroll"><table class="table dense-table"><thead><tr><th>Finding</th><th>Record</th></tr></thead><tbody>'+info.slice(0,100).map(function(f){return'<tr><td><strong>'+safe(f.title||f.type||'Information')+'</strong><small>'+safe(f.detail||'')+'</small></td><td class="mono wrap-anywhere">'+safe(f.target||'—')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty compact-empty">No technical records.</div>')+'</div></details></div></details>';
+  const diagnostics='<details class="panel review-secondary"><summary class="panel-head"><div><span class="eyebrow">Advanced</span>' +
+    '<h2 class="h2">Import details</h2><div class="meta">Manual correction and technical records</div></div></summary>' +
+    '<div class="panel-body review-advanced-grid"><details class="review-advanced-tool" name="review-advanced-tool">' +
+    '<summary><div><strong>Manual sample correction</strong><span class="meta">Use only when you know the correct ' +
+    'sample identity.</span></div><span class="review-disclosure-hint">Manual</span></summary><div class="review-advanced-tool-body">'+
+manual+'</div></details><details class="review-advanced-tool review-diagnostics-tool" name="review-advanced-tool">' +
+  '<summary><div><strong>Technical records</strong><span class="meta">Import messages and parser checks.</span></div><span class="review-disclosure-hint">'+
+info.length+'</span></summary><div class="review-advanced-tool-body">'+
+    (info.length?'<div class="table-wrap review-diagnostics-scroll"><table class="table dense-table"><thead><tr><th>Finding</th><th>Record</th></tr></thead><tbody>'+
+    info.slice(0,100).map(function(f){return'<tr><td><strong>'+safe(f.title||f.type||
+    'Information')+'</strong><small>'+safe(f.detail||'')+'</small></td><td class="mono wrap-anywhere">'+safe(f.target||
+    '—')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div class="empty compact-empty">No technical records.</div>')+
+    '</div></details></div></details>';
 
   const source=(options&&options.merged&&LF.ImportPage&&LF.ImportPage.receipt)?LF.ImportPage.receipt(e):'';
   return '<section class="page review-page review-page-compact upload-review-page">'+shell.workflowHead('Upload & Review','Review the imported data before moving to Results.','<button type="button" class="button" data-open-dataset>Replace ZIP</button>')+source+overview+automatic+decisions+'<div class="review-secondary-stack">'+changes+experimentInfo+diagnostics+'</div></section>';

@@ -16,39 +16,153 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0));}
 function weighted(d,index,fraction){const ss=actionSteps(d),w=ss.map(function(x){return Math.max(.001,Number(x.weight)||1);}),total=w.reduce(function(a,b){return a+b;},0)||1,done=w.slice(0,index).reduce(function(a,b){return a+b;},0);return Math.max(0,Math.min(.992,(done+(w[index]||0)*clamp(fraction,0,1))/total));}
 function unitFraction(workIndex,workTotal,phaseFraction){const total=Math.max(1,Number(workTotal)||1),idx=clamp(workIndex,0,total-1);return clamp((idx+clamp(phaseFraction,0,1))/total,0,1);}
 function actionProgress(d,index,workIndex,workTotal,phaseFraction){return weighted(d,Math.max(0,Number(index)||0),unitFraction(workIndex,workTotal,phaseFraction));}
-function streamFraction(p){const text=String(p&&((p.content||'')+(p.reasoning||''))||''),tokens=Number.isFinite(Number(p&&p.tokens))?Math.max(0,Number(p.tokens)):Math.max(0,Math.ceil(text.length/4)),target=Math.max(1,Number(p&&p.targetTokens)||Number(p&&p.budgetTokens)||tokens||1),tokenRatio=clamp(tokens/target,0,1),fine=clamp(tokenRatio,0,.985);return{fraction:.20+.62*fine,tokens:tokens,target:target};}
+function streamFraction(p){const text=String(p&&((p.content||'')+(p.reasoning||''))||''),
+tokens=Number.isFinite(Number(p&&p.tokens))?Math.max(0,Number(p.tokens)):Math.max(0,Math.ceil(text.length/4)),
+  target=Math.max(1,Number(p&&p.targetTokens)||Number(p&&p.budgetTokens)||tokens||1),tokenRatio=clamp(tokens/target,0,1),
+  fine=clamp(tokenRatio,0,.985);return{fraction:.20+.62*fine,tokens:tokens,target:target};}
 function phaseFraction(phase){return({prepare:.08,request:.14,waiting:.18,work:.25,validate:.90,store:.95,complete:.98})[phase]||.05;}
 function params(el){const p={};if(!el)return p;if(el.dataset.actionMode)p.mode=el.dataset.actionMode;if(el.dataset.actionDevice)p.deviceId=el.dataset.actionDevice;if(el.dataset.actionSample)p.sampleName=el.dataset.actionSample;return p;}
 function resultText(v){if(Array.isArray(v)&&v.every(function(x){return typeof x==='string';}))return v.join('\n\n---\n\n');return v&&typeof v==='object'?JSON.stringify(v,null,2):String(v==null?'':v);}
 function jsonResult(v){return!!(v&&typeof v==='object'&&!(Array.isArray(v)&&v.every(function(x){return typeof x==='string';})));}
-function usageMeta(out,elapsed){const values=Object.keys(out&&out.requestMeta||{}).filter(function(k){return k.indexOf(':tool-plan:')<0;}).map(function(k){return out.requestMeta[k];}).filter(Boolean),last=values[values.length-1]||{},usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0},seen={promptTokens:false,completionTokens:false,totalTokens:false,cachedTokens:false};let providerMs=0;values.forEach(function(m){const u=m&&m.usage||{};Object.keys(usage).forEach(function(k){if(Number.isFinite(Number(u[k]))){usage[k]+=Number(u[k]);seen[k]=true;}});if(Number.isFinite(Number(m&&m.latencyMs)))providerMs+=Number(m.latencyMs);});const aggregateRate=providerMs>0&&seen.completionTokens?usage.completionTokens/(providerMs/1000):null;return{model:last.model||'',provider:last.provider||'',latencyMs:elapsed,ttftMs:values.length===1?last.ttftMs||null:null,tokensPerSecond:values.length===1?last.tokensPerSecond||aggregateRate:aggregateRate,usage:Object.keys(seen).some(function(k){return seen[k];})?usage:null,finishReason:last.finishReason||''};}
-function resultSummary(d,out){const title=label(d&&d.id||out&&out.actionId),value=out&&out.result,lines=['**'+title+' completed.**'];if(d&&d.id==='design.infer'&&out&&out.aiOutput&&typeof out.aiOutput==='object'){const proposal=out.aiOutput,device=proposal.devices&&proposal.devices[0]||{},stack=(proposal.stack||device.stack||[]),process=proposal.process||device.process||{};if(proposal.summary)lines.push(String(proposal.summary));lines.push('- status: '+String(proposal.status||'suggested').replace(/_/g,' '));lines.push('- solution suggestions: '+((proposal.solutions||[]).length));lines.push('- stack layers suggested: '+stack.length);lines.push('- process suggested: '+([process.coating,process.annealing,process.atmosphere,process.notes].some(function(v){return String(v||'').trim();})?'yes':'no'));lines.push('- still unknown: '+((proposal.unknowns||[]).length));lines.push('Review the visual suggestion in **Design Experiment**, then accept or discard it. Retry inference appears only after an exhausted failure. Accepted values remain editable.');return lines.join('\n');}if(value&&typeof value==='object'){Object.keys(value).slice(0,10).forEach(function(k){const v=value[k],name=String(k).replace(/_/g,' ');if(v==null||typeof v==='string'||typeof v==='number'||typeof v==='boolean'){let shown=String(v==null?'—':v);if(String(k).toLowerCase()==='status')shown=shown.replace(/_/g,' ');lines.push('- '+name+': '+shown);}else if(Array.isArray(v))lines.push('- '+name+': '+v.length+' item'+(v.length===1?'':'s'));});}else if(value!=null&&String(value).trim())lines.push(String(value));if(lines.length===1)lines.push('The Action completed successfully.');return lines.join('\n');}
-function publishActionResult(d,out,elapsed,override){if(!LF.Assistant||!LF.Assistant.addActionMessage||!out||out.status!=='done')return;override=override||{};const textual=override.textual!=null?override.textual:String(d&&d.contract&&d.contract.result&&d.contract.result.format||'').toLowerCase()==='text',shown=override.content!=null?override.content:(textual?(out.aiOutput!=null?out.aiOutput:out.result):null),content=override.content!=null?String(override.content):(textual?resultText(shown):resultSummary(d,out)),structured=override.structured!==undefined?override.structured:(!textual&&out.aiOutput&&typeof out.aiOutput==='object'?out.aiOutput:null),meta=usageMeta(out,elapsed);LF.Assistant.addActionMessage(Object.assign({actionId:override.actionId||d.id,actionTitle:override.actionTitle||label(d.id),content:content||resultSummary(d,out),structured:structured},meta));}
-function publishActionFailure(d,out,elapsed){if(!LF.Assistant||!LF.Assistant.addActionMessage||!out)return;const content='**Action failed.** '+String(out.message||'The Action could not be completed.')+(out.code?'\n\n`'+out.code+'`':'');LF.Assistant.addActionMessage(Object.assign({actionId:d&&d.id||out.actionId||'',actionTitle:label(d&&d.id||out.actionId),content:content,error:true,finishReason:out.code||'ACTION_FAILED'},usageMeta(out,elapsed)));}
+function usageMeta(out,elapsed){const values=Object.keys(out&&out.requestMeta||{}).filter(function(k){
+return k.indexOf(':tool-plan:')<0;}).map(function(k){return out.requestMeta[k];
+  }).filter(Boolean),last=values[values.length-1]||{},usage={
+  promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0},seen={
+  promptTokens:false,completionTokens:false,totalTokens:false,cachedTokens:false};let providerMs=0;
+  values.forEach(function(m){const u=m&&m.usage||{};
+  Object.keys(usage).forEach(function(k){if(Number.isFinite(Number(u[k]))){usage[k]+=Number(u[k]);seen[k]=true;}});
+  if(Number.isFinite(Number(m&&m.latencyMs)))providerMs+=Number(m.latencyMs);});
+  const aggregateRate=providerMs>0&&seen.completionTokens?usage.completionTokens/(providerMs/1000):null;
+  return{model:last.model||'',provider:last.provider||'',latencyMs:elapsed,
+  ttftMs:values.length===1?last.ttftMs||null:null,
+  tokensPerSecond:values.length===1?last.tokensPerSecond||aggregateRate:aggregateRate,
+  usage:Object.keys(seen).some(function(k){return seen[k];})?usage:null,finishReason:last.finishReason||''};}
+function resultSummary(d,out){
+  const title=label(d&&d.id||out&&out.actionId);
+  const value=out&&out.result;
+  const lines=['**'+title+' completed.**'];
+
+  if(d&&d.id==='design.infer'&&out&&out.aiOutput&&typeof out.aiOutput==='object'){
+    const proposal=out.aiOutput;
+    const device=proposal.devices&&proposal.devices[0]||{};
+    const stack=proposal.stack||device.stack||[];
+    const process=proposal.process||device.process||{};
+    if(proposal.summary)lines.push(String(proposal.summary));
+    lines.push('- status: '+String(proposal.status||'suggested').replace(/_/g,' '));
+    lines.push('- solution suggestions: '+((proposal.solutions||[]).length));
+    lines.push('- stack layers suggested: '+stack.length);
+    lines.push('- process suggested: '+(
+      [process.coating,process.annealing,process.atmosphere,process.notes]
+        .some(function(v){return String(v||'').trim();})?'yes':'no'
+    ));
+    lines.push('- still unknown: '+((proposal.unknowns||[]).length));
+    lines.push(
+      'Review the visual suggestion in **Design Experiment**, then accept or discard it. '+
+      'Retry inference appears only after an exhausted failure. Accepted values remain editable.'
+    );
+    return lines.join('\n');
+  }
+
+  if(value&&typeof value==='object'){
+    Object.keys(value).slice(0,10).forEach(function(k){
+      const v=value[k];
+      const name=String(k).replace(/_/g,' ');
+      if(v==null||typeof v==='string'||typeof v==='number'||typeof v==='boolean'){
+        let shown=String(v==null?'—':v);
+        if(String(k).toLowerCase()==='status')shown=shown.replace(/_/g,' ');
+        lines.push('- '+name+': '+shown);
+      }else if(Array.isArray(v)){
+        lines.push('- '+name+': '+v.length+' item'+(v.length===1?'':'s'));
+      }
+    });
+  }else if(value!=null&&String(value).trim()){
+    lines.push(String(value));
+  }
+  if(lines.length===1)lines.push('The Action completed successfully.');
+  return lines.join('\n');
+}
+function publishActionResult(d,out,elapsed,override){
+if(!LF.Assistant||!LF.Assistant.addActionMessage||!out||out.status!=='done')return;override=override||{};
+  const textual=override.textual!=null?override.textual:String(d&&d.contract&&d.contract.result&&
+  d.contract.result.format||'').toLowerCase()==='text',
+  shown=override.content!=null?override.content:(textual?(out.aiOutput!=null?out.aiOutput:out.result):null),
+  content=override.content!=null?String(override.content):(textual?resultText(shown):resultSummary(d,out)),
+  structured=override.structured!==undefined?override.structured:(!textual&&out.aiOutput&&
+  typeof out.aiOutput==='object'?out.aiOutput:null),meta=usageMeta(out,elapsed);
+  LF.Assistant.addActionMessage(Object.assign({
+  actionId:override.actionId||d.id,actionTitle:override.actionTitle||label(d.id),content:content||resultSummary(d,out),
+  structured:structured},meta));}
+function publishActionFailure(d,out,elapsed){if(!LF.Assistant||!LF.Assistant.addActionMessage||!out)return;
+const content='**Action failed.** '+String(out.message||
+  'The Action could not be completed.')+(out.code?'\n\n`'+out.code+'`':'');
+  LF.Assistant.addActionMessage(Object.assign({
+  actionId:d&&d.id||out.actionId||'',actionTitle:label(d&&d.id||out.actionId),content:content,error:true,
+  finishReason:out.code||'ACTION_FAILED'},usageMeta(out,elapsed)));}
 function publishActionUnavailable(d,out){if(!LF.Assistant||!LF.Assistant.addActionMessage||!out)return;LF.Assistant.addActionMessage({actionId:d&&d.id||out.actionId||'',actionTitle:label(d&&d.id||out.actionId),content:'**Action unavailable.** '+String(out.message||'A prerequisite is not satisfied.'),error:false,unavailable:true,finishReason:out.code||'ACTION_UNAVAILABLE'});} 
 function publishSequenceResult(content,elapsed,error){if(!LF.Assistant||!LF.Assistant.addActionMessage)return;LF.Assistant.addActionMessage({actionId:'design.infer',actionTitle:'Complete experiment designs',content:String(content||''),latencyMs:elapsed||null,error:!!error,finishReason:error?'ACTION_SEQUENCE_FAILED':'complete'});}
 
 function designLinkedSolutions(exp,dev){const ids=new Set(dev&&dev.solutionIds||[]);return(exp&&exp.design&&exp.design.solutions||[]).filter(function(s){return ids.has(s.id);});}
-function designMissing(exp,dev){if(LF.DesignModel&&LF.DesignModel.missingDomains)return LF.DesignModel.missingDomains(exp,dev).length;const solutions=designLinkedSolutions(exp,dev);let n=0;if(!solutions.length)n++;if(!(dev&&dev.stack||[]).length)n++;if(!dev||![dev.process&&dev.process.coating,dev.process&&dev.process.annealing,dev.process&&dev.process.atmosphere,dev.process&&dev.process.notes].some(function(v){return String(v||'').trim();}))n++;return n;}
+function designMissing(exp,dev){if(LF.DesignModel&&
+LF.DesignModel.missingDomains)return LF.DesignModel.missingDomains(exp,dev).length;
+  const solutions=designLinkedSolutions(exp,dev);let n=0;if(!solutions.length)n++;if(!(dev&&dev.stack||[]).length)n++;
+  if(!dev||![dev.process&&dev.process.coating,dev.process&&dev.process.annealing,dev.process&&dev.process.atmosphere,
+  dev.process&&dev.process.notes].some(function(v){return String(v||'').trim();}))n++;return n;}
 function setDesignStatus(exp,id,state,message){return LF.ActionData.setStatus(exp,'design.infer',String(id),{state:state,updatedAt:new Date().toISOString(),message:String(message||'')});}
 function designProposal(exp,id){id=String(id||'');const proposal=id&&LF.ActionData.proposal(exp,'design.infer',id);return proposal&&(!proposal.targetDeviceId||String(proposal.targetDeviceId)===id)?proposal:null;}
-function syncDesignSequenceSteps(exp,targets){targets.forEach(function(dev,i){const id=String(dev.id),proposal=designProposal(exp,id),status=LF.ActionData.status(exp,'design.infer',id)||{};if(proposal){LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'done',stepNote:'Suggestion ready'});return;}if(status.state==='error'){LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'error',stepNote:status.message||'Needs retry'});return;}LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'pending',stepNote:'Not run'});});}
+function syncDesignSequenceSteps(exp,targets){targets.forEach(function(dev,i){
+const id=String(dev.id),proposal=designProposal(exp,id),status=LF.ActionData.status(exp,'design.infer',id)||{};
+  if(proposal){LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'done',stepNote:'Suggestion ready'});return;
+  }if(status.state==='error'){LF.UI.activityUpdate({
+  stepId:'experiment-'+i,stepStatus:'error',stepNote:status.message||'Needs retry'});return;
+  }LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'pending',stepNote:'Not run'});});}
 
 
 function progressCallbacks(d,context){
   context=context||{};let last=0,lastWork={index:0,total:1};
-  function emit(local,update){local=clamp(local,0,.995);if(local<last)local=last;last=local;if(context.sequence){const global=(context.sequence.index+local)/Math.max(1,context.sequence.total);update=Object.assign({},update,{progress:global,progressLabel:context.sequence.label+' '+(context.sequence.index+1)+' / '+context.sequence.total+(update&&update.progressLabel?' · '+update.progressLabel:'')});context.sequence.emit(global,update);}else{update=Object.assign({},update,{progress:local});LF.UI.activityUpdate(update);}}
+  function emit(local,update){local=clamp(local,0,.995);if(local<last)local=last;last=local;
+if(context.sequence){const global=(context.sequence.index+local)/Math.max(1,context.sequence.total);
+    update=Object.assign({},update,{progress:global,
+    progressLabel:context.sequence.label+' '+(context.sequence.index+1)+' / '+context.sequence.total+(update&&
+    update.progressLabel?' · '+update.progressLabel:'')});context.sequence.emit(global,update);
+    }else{update=Object.assign({},update,{progress:local});LF.UI.activityUpdate(update);}}
   function pos(info,phase){const wi=info&&Number.isFinite(Number(info.workIndex))?Number(info.workIndex):lastWork.index,wt=info&&Number(info.workTotal)>0?Number(info.workTotal):lastWork.total;lastWork={index:wi,total:wt};return actionProgress(d,Number(info&&info.index)||0,wi,wt,phase);}
   return{
     onStep:function(st){const frac=st.status==='done'?1:.02;emit(weighted(d,st.index,frac),{stage:(st.status==='active'?'Running ':st.status==='error'?'Failed ':'Completed ')+st.id,progressLabel:'Checkpoint '+(st.index+1)+' / '+st.total,stepId:st.id,stepStatus:st.status,stepNote:st.note||''});},
-    onWork:function(info){const done=!!info.done,wi=Number(info.workIndex)||0,wt=Math.max(1,Number(info.workTotal)||1);lastWork={index:Math.min(wi,wt-1),total:wt};const local=done?actionProgress(d,info.index,Math.max(0,wi-1),wt,.995):actionProgress(d,info.index,wi,wt,.04),unit=Math.min(wi+(done?0:1),wt);emit(local,{stage:(info.label?'Preparing '+info.label:'Preparing work unit'),progressLabel:wt>1?'Unit '+unit+' / '+wt:'Preparing checkpoint'});},
+    onWork:function(info){const done=!!info.done,wi=Number(info.workIndex)||0,wt=Math.max(1,Number(info.workTotal)||1);
+lastWork={index:Math.min(wi,wt-1),total:wt};
+      const local=done?actionProgress(d,info.index,Math.max(0,wi-1),wt,.995):actionProgress(d,info.index,wi,wt,.04),
+      unit=Math.min(wi+(done?0:1),wt);emit(local,{
+      stage:(info.label?'Preparing '+info.label:'Preparing work unit'),
+      progressLabel:wt>1?'Unit '+unit+' / '+wt:'Preparing checkpoint'});},
     onPhase:function(info){const pf=phaseFraction(info.phase),local=pos(info,pf),unit=Number(info.workTotal)>1?' · unit '+(Number(info.workIndex||0)+1)+' / '+Number(info.workTotal):'';emit(local,{stage:info.label||String(info.phase||'Working'),progressLabel:'Checkpoint '+(Number(info.index||0)+1)+' / '+actionSteps(d).length+unit});},
-    onRequest:function(info){const local=pos(info,.18),target=Number(info.targetTokens)||0,max=Number(info.maxTokens)||0;emit(local,{stage:'Waiting for model · '+info.stepId,progressLabel:(Number(info.workTotal)>1?'Unit '+(Number(info.workIndex||0)+1)+' / '+info.workTotal+' · ':'')+'request sent',showAiTrace:true,request:JSON.stringify(info.request,null,2),requestIsJson:true,details:{'AI checkpoint':info.stepId,'Estimated input':Number(info.inputTokens)>0?Math.round(Number(info.inputTokens)).toLocaleString()+' tok':'—','Action input cap':Number(info.inputCapTokens)>0?Math.round(Number(info.inputCapTokens)).toLocaleString()+' tok':'—','Output target':target?target.toLocaleString()+' tok':'provider default','Request ceiling':max?max.toLocaleString()+' tok':'provider default','Model output capacity':info.modelCapability&&info.modelCapability.maxOutputTokens?Number(info.modelCapability.maxOutputTokens).toLocaleString()+' tok':'unknown'}});},
+    onRequest:function(info){const local=pos(info,.18),target=Number(info.targetTokens)||0,
+max=Number(info.maxTokens)||0;emit(local,{
+      stage:'Waiting for model · '+info.stepId,
+      progressLabel:(Number(info.workTotal)>1?'Unit '+(Number(info.workIndex||
+      0)+1)+' / '+info.workTotal+' · ':'')+'request sent',showAiTrace:true,request:JSON.stringify(info.request,null,2),
+      requestIsJson:true,details:{'AI checkpoint':info.stepId,
+      'Estimated input':Number(info.inputTokens)>0?Math.round(Number(info.inputTokens)).toLocaleString()+' tok':'—',
+      'Action input cap':Number(info.inputCapTokens)>0?Math.round(Number(info.inputCapTokens)).toLocaleString()+' tok':'—',
+      'Output target':target?target.toLocaleString()+' tok':'provider default',
+      'Request ceiling':max?max.toLocaleString()+' tok':'provider default',
+      'Model output capacity':info.modelCapability&&
+      info.modelCapability.maxOutputTokens?Number(info.modelCapability.maxOutputTokens).toLocaleString()+' tok':'unknown'}});
+      },
     onAutoRetry:function(info){emit(last,{stage:'Automatic retry · '+info.step,progressLabel:'Retry '+info.attempt,message:'Retrying this checkpoint in '+Math.round(info.delayMs/1000)+' seconds.'});},
     onProgress:function(p){
-      if(p&&p.transportState==='rate_limit'){const retry=Number(p.retryInMs||0)>0?' Provider Retry-After: about '+Math.max(1,Math.ceil(Number(p.retryInMs)/1000))+' s.':'';emit(last,{stage:'Provider rate limit',message:'The provider rejected this request with a rate limit. LabFlow did not retry it and created no local cooldown.',response:'No Action state was changed.'+retry,responseIsJson:false,stream:{active:false,status:'rate-limit'}});return;}
+      if(p&&p.transportState==='rate_limit'){
+const retry=Number(p.retryInMs||0)>0?' Provider Retry-After: about '+Math.max(1,
+        Math.ceil(Number(p.retryInMs)/1000))+' s.':'';
+        emit(last,{stage:'Provider rate limit',message:
+        'The provider rejected this request with a rate limit. LabFlow did not retry it and created no local cooldown.',
+        response:'No Action state was changed.'+retry,responseIsJson:false,stream:{active:false,status:'rate-limit'}});return;}
       const fine=streamFraction(p),local=pos(p,fine.fraction),stream=p.content||p.reasoning||'',unit=Number(p.workTotal)>1?' · unit '+(Number(p.workIndex||0)+1)+' / '+p.workTotal:'';
-      const shownTokens=Number.isFinite(Number(p.tokens))?Number(p.tokens):fine.tokens;emit(local,{stage:fine.tokens?'Receiving model response':'Waiting for first token',progressLabel:'Streaming'+unit+' · '+shownTokens+' / ~'+fine.target+' tok',response:stream||'Waiting for model output…',responseIsJson:false,stream:{active:true,status:'streaming',ttftMs:p.ttftMs,tokens:shownTokens,rate:p.rate,estimated:p.estimated!==false,inputTokens:p.inputTokens||null,budgetTokens:p.maxTokens||p.budgetTokens||null,targetTokens:p.targetTokens||null}});
+      const shownTokens=Number.isFinite(Number(p.tokens))?Number(p.tokens):fine.tokens;
+emit(local,{stage:fine.tokens?'Receiving model response':'Waiting for first token',
+        progressLabel:'Streaming'+unit+' · '+shownTokens+' / ~'+fine.target+' tok',response:stream||'Waiting for model output…',
+        responseIsJson:false,stream:{active:true,status:'streaming',ttftMs:p.ttftMs,tokens:shownTokens,rate:p.rate,
+        estimated:p.estimated!==false,inputTokens:p.inputTokens||null,budgetTokens:p.maxTokens||p.budgetTokens||null,
+        targetTokens:p.targetTokens||null}});
     }
   };
 }
@@ -62,7 +176,12 @@ async function runDesignAllSequence(){
   if(!targets.length){LF.UI.message('Every incomplete experiment already has a suggestion. Accept, edit or discard the existing suggestions first.','info');return null;}
   const started=performance.now(),settings=LF.Storage.getAiSettings(),stepsUi=targets.map(function(dev,i){return{id:'experiment-'+i,label:dev.name||('Experiment '+(i+1)),status:'pending',note:'Waiting'};});
   let suggested=0,failed=0,stopped=false,throttled=false,throttleMessage='',throttleRetryMs=0;const failures=[];sequenceRunning=true;
-  LF.UI.activityStart({title:'Complete all experiment designs',subtitle:'One independent suggestion per incomplete experiment',kind:'AI',stage:'Preparing experiments',progress:.01,cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();},message:'LabFlow processes each experiment separately and saves each suggestion as soon as it is ready.',showAiTrace:true,details:{Experiments:targets.length,Model:displayModel(settings),Provider:settings.provider},steps:stepsUi});
+  LF.UI.activityStart({title:'Complete all experiment designs',
+subtitle:'One independent suggestion per incomplete experiment',kind:'AI',stage:'Preparing experiments',progress:.01,
+    cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();
+    },message:'LabFlow processes each experiment separately and saves each suggestion as soon as it is ready.',
+    showAiTrace:true,details:{Experiments:targets.length,Model:displayModel(settings),Provider:settings.provider}
+    ,steps:stepsUi});
   try{
     for(let i=0;i<targets.length;i++){
       const dev=targets[i],id=String(dev.id),labelText=dev.name||('Experiment '+(i+1));
@@ -80,17 +199,48 @@ async function runDesignAllSequence(){
       if(out.status==='done'&&saved){
         suggested++;setDesignStatus(exp,id,'suggested','');LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'done',stepNote:'Suggestion stored',progress:(i+1)/targets.length,progressLabel:(i+1)+' / '+targets.length+' experiments'});
       }else{
-        const message=String(out&&out.status==='done'?'The inference finished but no suggestion was saved for this experiment.':out&&out.message||'No usable suggestion was returned.');failed++;failures.push(labelText+': '+message);setDesignStatus(exp,id,'error',message);LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'error',stepNote:out&&out.code||'Needs retry',response:message,responseIsJson:false,progress:(i+1)/targets.length});
+        const message=String(out&&out.status==='done'?
+'The inference finished but no suggestion was saved for this experiment.':out&&out.message||
+          'No usable suggestion was returned.');failed++;failures.push(labelText+': '+message);
+          setDesignStatus(exp,id,'error',message);
+          LF.UI.activityUpdate({stepId:'experiment-'+i,stepStatus:'error',stepNote:out&&out.code||'Needs retry',response:message,
+          responseIsJson:false,progress:(i+1)/targets.length});
       }
     }
     const elapsed=Math.round(performance.now()-started),remaining=targets.filter(function(dev){return !designProposal(exp,dev.id);}).length;
-    if(throttled){syncDesignSequenceSteps(exp,targets);const retryIn=throttleRetryMs?Math.max(1,Math.ceil(throttleRetryMs/1000)):null,summary='**Design completion paused.** '+suggested+' experiment'+(suggested===1?'':'s')+' suggested · '+remaining+' pending. No further requests were sent after the provider rate limit.'+(retryIn?' Retry after about '+retryIn+' s.':'');LF.UI.activityFinish({message:'Design suggestions paused by provider rate limit.',response:summary,details:{Suggested:suggested,Pending:remaining,Time:fmtMs(elapsed)},holdMs:0,preserveStepStates:true,progress:(targets.length-remaining)/targets.length,progressLabel:remaining+' pending'});publishSequenceResult(summary,elapsed,true);LF.UI.message('Provider rate limit reached. Existing suggestions were kept.','warning');return{status:'paused',reason:'provider_rate_limit',suggested:suggested,remaining:remaining,retryInMs:throttleRetryMs};}
-    if(stopped){syncDesignSequenceSteps(exp,targets);const summary='**Design completion stopped.** '+suggested+' suggestions are saved · '+remaining+' remain.';LF.UI.activityFinish({message:'Design completion stopped.',response:summary,details:{Suggested:suggested,Remaining:remaining,Time:fmtMs(elapsed)},holdMs:0,preserveStepStates:true,progress:(targets.length-remaining)/targets.length,progressLabel:remaining+' remaining'});publishSequenceResult(summary,elapsed,false);return{status:'aborted',suggested:suggested,remaining:remaining};}
+    if(throttled){syncDesignSequenceSteps(exp,targets);
+const retryIn=throttleRetryMs?Math.max(1,Math.ceil(throttleRetryMs/1000)):null,
+      summary='**Design completion paused.** '+suggested+' experiment'+(suggested===1?'':'s')+' suggested · '+remaining+
+      ' pending. No further requests were sent after the provider rate limit.'+(retryIn?' Retry after about '+retryIn+
+      ' s.':'');LF.UI.activityFinish({message:'Design suggestions paused by provider rate limit.',response:summary,details:{
+      Suggested:suggested,Pending:remaining,Time:fmtMs(elapsed)}
+      ,holdMs:0,preserveStepStates:true,progress:(targets.length-remaining)/targets.length,progressLabel:remaining+' pending'}
+      );publishSequenceResult(summary,elapsed,true);
+      LF.UI.message('Provider rate limit reached. Existing suggestions were kept.','warning');
+      return{status:'paused',reason:'provider_rate_limit',suggested:suggested,remaining:remaining,retryInMs:throttleRetryMs};}
+    if(stopped){syncDesignSequenceSteps(exp,targets);
+const summary='**Design completion stopped.** '+suggested+' suggestions are saved · '+remaining+' remain.';
+      LF.UI.activityFinish({message:'Design completion stopped.',response:summary,details:{
+      Suggested:suggested,Remaining:remaining,Time:fmtMs(elapsed)}
+      ,holdMs:0,preserveStepStates:true,progress:(targets.length-remaining)/targets.length,
+      progressLabel:remaining+' remaining'});publishSequenceResult(summary,elapsed,false);
+      return{status:'aborted',suggested:suggested,remaining:remaining};}
     const evidenceNote=suggested+' experiment'+(suggested===1?'':'s')+' suggested.';
     const response=failed?(evidenceNote+' · '+failed+' request'+(failed===1?'':'s')+' need retry.\n\n'+failures.join('\n')):(evidenceNote+(suggested?' Accept or edit suggestions in Design Experiment.':' Retry the failed inference when appropriate.'));
-    syncDesignSequenceSteps(exp,targets);LF.UI.activityFinish({message:failed?'Design completion finished with retries needed.':'Design suggestions ready.',response:response,details:{Suggested:suggested,'Need retry':failed,Remaining:remaining,Time:fmtMs(elapsed)},holdMs:0,preserveStepStates:true,progress:1,progressLabel:failed?(failed+' need retry'):'Complete'});publishSequenceResult('**Design completion finished.**\n\n'+response,elapsed,failed>0);LF.UI.message(failed?'Some Design experiments need retry.':'AI suggestions ready for review.',failed?'warning':'success');return{status:'done',suggested:suggested,failed:failed,remaining:remaining};
+    syncDesignSequenceSteps(exp,targets);
+LF.UI.activityFinish({message:failed?'Design completion finished with retries needed.':'Design suggestions ready.',
+      response:response,details:{Suggested:suggested,'Need retry':failed,Remaining:remaining,Time:fmtMs(elapsed)}
+      ,holdMs:0,preserveStepStates:true,progress:1,progressLabel:failed?(failed+' need retry'):'Complete'});
+      publishSequenceResult('**Design completion finished.**\n\n'+response,elapsed,failed>0);
+      LF.UI.message(failed?'Some Design experiments need retry.':'AI suggestions ready for review.',
+      failed?'warning':'success');return{status:'done',suggested:suggested,failed:failed,remaining:remaining};
   }catch(err){
-    const message=String(err&&err.message||'Design suggestion sequence failed.');if(LF.UI&&LF.UI.activityError)LF.UI.activityError(err,{message:'Design suggestions stopped.',response:message,details:{Suggested:suggested,'Need retry':Math.max(failed,1)},holdMs:0});publishSequenceResult('**Design completion failed.** '+message,Math.round(performance.now()-started),true);if(LF.UI&&LF.UI.message)LF.UI.message('Design suggestions stopped. Existing suggestions were kept.','error');return{status:'error',message:message,error:err,suggested:suggested,failed:Math.max(failed,1)};
+    const message=String(err&&err.message||'Design suggestion sequence failed.');
+if(LF.UI&&LF.UI.activityError)LF.UI.activityError(err,{message:'Design suggestions stopped.',response:message,details:{
+      Suggested:suggested,'Need retry':Math.max(failed,1)},holdMs:0});
+      publishSequenceResult('**Design completion failed.** '+message,Math.round(performance.now()-started),true);
+      if(LF.UI&&LF.UI.message)LF.UI.message('Design suggestions stopped. Existing suggestions were kept.','error');
+      return{status:'error',message:message,error:err,suggested:suggested,failed:Math.max(failed,1)};
   }finally{sequenceRunning=false;if(LF.State&&LF.State.notify)LF.State.notify('ai');if(LF.Assistant&&LF.Assistant.render)LF.Assistant.render();}
 }
 function runSequence(id){if(id==='design-all')return runDesignAllSequence();LF.UI.message('Unknown action sequence: '+id,'error');return Promise.resolve(null);}
@@ -101,11 +251,49 @@ function run(id,userText,opts,retry){
   if(capability&&!capability.available){const out={actionId:id,status:'unavailable',code:'ACTION_UNAVAILABLE',message:capability.reason,guards:capability.failures||[],steps:[]};LF.UI.message(capability.reason||'Action unavailable.','info');if(opts.fromAssistant&&!opts.suppressChat)publishActionUnavailable(d,out);return Promise.resolve(out);}
   if(capability)opts.params=capability.params;
   const ai=usesAi(d);if(ai&&!configured())return Promise.resolve(null);const exp=LF.State.ensureExperiment('action:'+id);if(!exp.id)return Promise.resolve(null);const settings=LF.Storage.getAiSettings(),checkpoints=steps(d),nested=!!opts.sequence,started=performance.now();
-  if(!nested){LF.UI.activityStart({title:label(id),subtitle:LF.PageContext?LF.PageContext.summary():'Current page',kind:ai?'AI':'LOCAL',stage:retry?'Retrying failed checkpoint':'Starting action',progress:.01,cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();},message:d.purpose||'',showAiTrace:ai,response:ai?'Provider output will appear here.':'Deterministic action; no provider request.',details:{Action:id,Engine:ai?'AI-assisted':'Deterministic',Model:ai?displayModel(settings):'—',Provider:ai?settings.provider:'—'},steps:checkpoints});active={actionId:id,started:started};}
+  if(!nested){LF.UI.activityStart({title:label(id),subtitle:LF.PageContext?LF.PageContext.summary():'Current page',
+kind:ai?'AI':'LOCAL',stage:retry?'Retrying failed checkpoint':'Starting action',progress:.01,cancellable:true,
+    onCancel:function(){return LF.ActionRunner.cancel();
+    },message:d.purpose||'',showAiTrace:ai,response:ai?
+    'Provider output will appear here.':'Deterministic action; no provider request.',details:{
+    Action:id,Engine:ai?'AI-assisted':'Deterministic',Model:ai?displayModel(settings):'—',Provider:ai?settings.provider:'—'}
+    ,steps:checkpoints});active={actionId:id,started:started};}
   const progress=progressCallbacks(d,{sequence:opts.sequence||null});
   const cb={params:opts.params||{},selection:opts.selection||null,userText:userText||'',onStep:progress.onStep,onWork:progress.onWork,onPhase:progress.onPhase,onRequest:progress.onRequest,onAutoRetry:progress.onAutoRetry,onProgress:progress.onProgress};
   const promise=retry?LF.ActionRunner.retry(cb):LF.ActionRunner.run(id,cb);
-  return promise.then(function(out){const elapsed=Math.round(performance.now()-started);if(id==='design.infer'){const deviceId=String(opts.params&&opts.params.deviceId||'');if(out&&out.status==='done'){if(designProposal(exp,deviceId))setDesignStatus(exp,deviceId,'suggested','');else{out.status='error';out.code=out.code||'DESIGN_PROPOSAL_NOT_STORED';out.message='The inference finished but no suggestion was saved for this experiment.';setDesignStatus(exp,deviceId,'error',out.message);}}else if(out&&(out.status==='aborted'||out.status==='unavailable'))setDesignStatus(exp,deviceId,'idle','');else setDesignStatus(exp,deviceId,'error',out&&out.message||'AI suggestion failed.');if(LF.State&&LF.State.notify)LF.State.notify('ai');}if(!nested){if(out.status==='done'){const shown=ai&&out.aiOutput!=null?out.aiOutput:out.result,isJson=jsonResult(shown),meta=usageMeta(out,elapsed),details={Action:id,Time:fmtMs(elapsed),Checkpoints:actionSteps(d).length,'Final result':out.result&&typeof out.result==='object'?'Stored/validated':'Completed'};if(out.designApplied){details['Fields filled']=out.designApplied.changed;details['Needs review']=out.designApplied.review;details['Unresolved']=out.designApplied.unresolved;}if(Number.isFinite(Number(meta.tokensPerSecond)))details['Output rate']=Number(meta.tokensPerSecond).toFixed(1)+' tok/s';LF.UI.activityFinish({message:out.designApplied?'Design completed · '+out.designApplied.changed+' filled automatically · '+out.designApplied.review+' need review · '+out.designApplied.unresolved+' unresolved.':'Action completed.',response:resultText(shown)||'Completed.',responseIsJson:isJson,details:details,holdMs:0});if(!opts.suppressChat)publishActionResult(d,out,elapsed);}else if(out.status==='aborted'){LF.UI.activityFinish({message:'Action stopped by user.',response:'Stopped.',holdMs:0});}else if(out.status==='unavailable'){LF.UI.activityFinish({message:'Action unavailable.',response:out.message||'A prerequisite is not satisfied.',details:{Action:id,Status:'Unavailable'},holdMs:0});if(!opts.suppressChat)publishActionUnavailable(d,out);}else{const err=out.error instanceof Error?out.error:new Error(out.message||'Action failed.');LF.UI.activityError(err,Object.assign({message:'Checkpoint failed: '+(out.failedStep||'unknown'),response:'## Action error\n\n'+(out.message||err.message)+(out.code?'\n\n`'+out.code+'`':'')+(id==='design.infer'?'\n\nUse the single **Retry inference** control on the active Design experiment.':''),details:{Action:id,Checkpoint:out.failedStep||'—',Code:out.code||'ACTION_FAILED'},holdMs:0},id==='design.infer'?{}:{onRetry:function(){return run(id,userText,opts,true);},retryLabel:'Retry checkpoint'}));if(!opts.suppressChat)publishActionFailure(d,out,elapsed);}}return out;}).finally(function(){if(!nested)active=null;if(LF.Assistant&&LF.Assistant.render)LF.Assistant.render();});
+  return promise.then(function(out){const elapsed=Math.round(performance.now()-started);
+if(id==='design.infer'){const deviceId=String(opts.params&&opts.params.deviceId||'');
+    if(out&&out.status==='done'){if(designProposal(exp,deviceId))setDesignStatus(exp,deviceId,'suggested','');
+    else{out.status='error';out.code=out.code||'DESIGN_PROPOSAL_NOT_STORED';
+    out.message='The inference finished but no suggestion was saved for this experiment.';
+    setDesignStatus(exp,deviceId,'error',out.message);
+    }}else if(out&&(out.status==='aborted'||out.status==='unavailable'))setDesignStatus(exp,deviceId,'idle','');
+    else setDesignStatus(exp,deviceId,'error',out&&out.message||'AI suggestion failed.');
+    if(LF.State&&LF.State.notify)LF.State.notify('ai');
+    }if(!nested){if(out.status==='done'){const shown=ai&&out.aiOutput!=null?out.aiOutput:out.result,
+    isJson=jsonResult(shown),meta=usageMeta(out,elapsed),details={
+    Action:id,Time:fmtMs(elapsed),Checkpoints:actionSteps(d).length,
+    'Final result':out.result&&typeof out.result==='object'?'Stored/validated':'Completed'};
+    if(out.designApplied){details['Fields filled']=out.designApplied.changed;
+    details['Needs review']=out.designApplied.review;details['Unresolved']=out.designApplied.unresolved;
+    }if(Number.isFinite(Number(meta.tokensPerSecond)))details['Output rate']=Number(meta.tokensPerSecond).toFixed(1)+
+    ' tok/s';LF.UI.activityFinish({message:out.designApplied?'Design completed · '+out.designApplied.changed+
+    ' filled automatically · '+out.designApplied.review+' need review · '+out.designApplied.unresolved+
+    ' unresolved.':'Action completed.',response:resultText(shown)||'Completed.',responseIsJson:isJson,details:details,
+    holdMs:0});if(!opts.suppressChat)publishActionResult(d,out,elapsed);
+    }else if(out.status==='aborted'){LF.UI.activityFinish({message:'Action stopped by user.',response:'Stopped.',holdMs:0});
+    }else if(out.status==='unavailable'){LF.UI.activityFinish({
+    message:'Action unavailable.',response:out.message||'A prerequisite is not satisfied.',details:{
+    Action:id,Status:'Unavailable'},holdMs:0});if(!opts.suppressChat)publishActionUnavailable(d,out);
+    }else{const err=out.error instanceof Error?out.error:new Error(out.message||'Action failed.');
+    LF.UI.activityError(err,Object.assign({message:'Checkpoint failed: '+(out.failedStep||'unknown'),
+    response:'## Action error\n\n'+(out.message||
+    err.message)+(out.code?'\n\n`'+out.code+'`':'')+
+    (id==='design.infer'?'\n\nUse the single **Retry inference** control on the active Design experiment.':''),details:{
+    Action:id,Checkpoint:out.failedStep||'—',Code:out.code||'ACTION_FAILED'},holdMs:0},id==='design.infer'?{}:{
+    onRetry:function(){return run(id,userText,opts,true);},retryLabel:'Retry checkpoint'}));
+    if(!opts.suppressChat)publishActionFailure(d,out,elapsed);}}return out;}).finally(function(){if(!nested)active=null;
+    if(LF.Assistant&&LF.Assistant.render)LF.Assistant.render();});
 }
 
 function bind(){document.addEventListener('click',function(e){const b=e.target.closest('button[data-action]')||e.target.closest('button[data-action-sequence]');if(!b)return;e.preventDefault();e.stopPropagation();if(b.dataset.actionSequence){runSequence(b.dataset.actionSequence);return;}run(b.dataset.action,'',{params:params(b)});});}

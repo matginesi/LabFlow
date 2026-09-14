@@ -30,10 +30,26 @@
     LF.CanonicalStore.ensure(exp);
     const devices=LF.DesignModel.devices(exp),solutions=LF.DesignModel.solutions(exp),source=LF.DesignModel.evidenceSummary(exp)||{};
     function gaps(d){return LF.DesignModel.missingDomains(exp,d);}
-    const items=(exp.samples||[]).map(function(s){const d=devices.find(function(x){return(x.sampleIds||[]).includes(s.id);})||null,unknown=gaps(d),ev=LF.CanonicalStore.evidence(exp,{record_ids:[s.id],limit:24});return{sample:{id:s.id,name:s.name,group:s.group||'',isRef:!!s.isRef},currentDevice:d?compact(d):null,evidenceIds:ev.map(function(e){return e.id;}),designEvidenceIds:ev.filter(function(e){return /design|stack|precursor|solution|anneal|coating|atmosphere/i.test([e.fact,e.summary].join(' '));}).map(function(e){return e.id;}),unknownFields:unknown};});
-    const deviceRows=devices.map(function(d){const linked=(d.solutionIds||[]).map(function(id){return solutions.find(function(s){return String(s.id)===String(id);});}).filter(Boolean);return{id:d.id,name:d.name||'',group:d.group||'',sampleIds:(d.sampleIds||[]).slice(),sampleNames:(d.sampleNames||[]).slice(),status:d.status||'',known:{stackLayers:(d.stack||[]).length,solutions:linked.length},unknownFields:gaps(d),sourceEvidence:!!(d.status==='raw_evidence'||/Recovered from source/.test(String(d.evidence||'')))};});
+    const items=(exp.samples||[]).map(function(s){const d=devices.find(function(x){
+return(x.sampleIds||[]).includes(s.id);})||null,unknown=gaps(d),ev=LF.CanonicalStore.evidence(exp,{
+      record_ids:[s.id],limit:24});return{sample:{id:s.id,name:s.name,group:s.group||'',isRef:!!s.isRef}
+      ,currentDevice:d?compact(d):null,evidenceIds:ev.map(function(e){return e.id;
+      }),designEvidenceIds:ev.filter(function(e){
+      return /design|stack|precursor|solution|anneal|coating|atmosphere/i.test([e.fact,e.summary].join(' '));
+      }).map(function(e){return e.id;}),unknownFields:unknown};});
+    const deviceRows=devices.map(function(d){const linked=(d.solutionIds||[]).map(function(id){
+return solutions.find(function(s){return String(s.id)===String(id);});}).filter(Boolean);
+      return{id:d.id,name:d.name||'',group:d.group||'',sampleIds:(d.sampleIds||[]).slice(),
+      sampleNames:(d.sampleNames||[]).slice(),status:d.status||'',known:{
+      stackLayers:(d.stack||[]).length,solutions:linked.length}
+      ,unknownFields:gaps(d),sourceEvidence:!!(d.status==='raw_evidence'||/Recovered from source/.test(String(d.evidence||
+      '')))};});
     const unresolved=items.filter(function(x){return x.unknownFields.length;});
-    return{generatedAt:new Date().toISOString(),sourceRevision:Number(revision)||0,summary:{samples:items.length,devices:devices.length,solutions:solutions.length,sourceDesignRecords:Number(source.sourceRecords||0),samplesCoveredBySource:Number(source.samplesCovered||0),unresolvedSamples:unresolved.length,unknownFields:unresolved.reduce(function(n,x){return n+x.unknownFields.length;},0)},devices:deviceRows,samples:items};
+    return{generatedAt:new Date().toISOString(),sourceRevision:Number(revision)||0,summary:{
+samples:items.length,devices:devices.length,solutions:solutions.length,
+      sourceDesignRecords:Number(source.sourceRecords||0),samplesCoveredBySource:Number(source.samplesCovered||0),
+      unresolvedSamples:unresolved.length,unknownFields:unresolved.reduce(function(n,x){return n+x.unknownFields.length;
+      },0)},devices:deviceRows,samples:items};
   }
 
   function looksQuantitative(value){
@@ -42,16 +58,51 @@
     if(/(?:^|[\s(])[-+]?\d+(?:[.,]\d+)?\s*[:/]\s*\d+(?:[.,]\d+)?(?:$|[\s),])/i.test(v))return true;
     return /(?:^|[\s(])[-+]?\d+(?:[.,]\d+)?(?:e[-+]?\d+)?\s*(?:°\s*C|°C|C\b|K\b|ms\b|s\b|sec\b|seconds?\b|min\b|minutes?\b|h\b|hours?\b|rpm\b|rps\b|nm\b|µm\b|um\b|mm\b|cm\b|mL\b|µL\b|uL\b|mg\b|kg\b|g\b|mM\b|M\b|mol\b|wt%|vol%|%|torr\b|Pa\b|kPa\b|mbar\b|bar\b|psi\b|Hz\b|kHz\b|MHz\b|mV\b|V\b|mA\b|A\b|mW\b|W\b)/i.test(v);
   }
-  function canonicalDesignSource(item,inherited){let raw=String(item&&item.provenance_kind||item&&item.provenanceKind||item&&item.source||inherited||'').toLowerCase().trim();const evidence=String(item&&item.evidence||'').trim();if(raw==='raw_evidence'||raw==='source'||raw==='evidence'||raw==='mixed')raw=evidence?'experiment':'model_inference';if(raw==='knowledge_reference')return /(?:^|[\s,;])KB:[A-Za-z0-9._:-]+/.test(evidence)?'knowledge_reference':'model_inference';return raw==='experiment'?'experiment':'model_inference';}
+  function canonicalDesignSource(item,inherited){
+let raw=String(item&&item.provenance_kind||item&&item.provenanceKind||item&&item.source||inherited||
+    '').toLowerCase().trim();const evidence=String(item&&item.evidence||'').trim();
+    if(raw==='raw_evidence'||raw==='source'||raw==='evidence'||raw==='mixed')raw=evidence?'experiment':'model_inference';
+    if(raw==='knowledge_reference')return /(?:^|[\s,;])KB:[A-Za-z0-9._:-]+/.test(evidence)?
+    'knowledge_reference':'model_inference';return raw==='experiment'?'experiment':'model_inference';}
   function designConfidence(item,field){const map=item&&item.field_confidence&&typeof item.field_confidence==='object'?item.field_confidence:{},raw=Object.prototype.hasOwnProperty.call(map,field)?Number(map[field]):Number(item&&item.confidence);return Number.isFinite(raw)?Math.max(0,Math.min(1,raw)):null;}
   function fieldDecision(item,field){return(item&&Array.isArray(item.field_decisions)?item.field_decisions:[]).find(function(x){return String(x&&x.field||'')===String(field);})||null;}
-  function autoApplyAllowed(item,field,value,inherited,manual){if(value==null||String(value).trim()==='')return false;if(manual)return true;const decision=fieldDecision(item,field);if(decision)return decision.auto_apply===true;const source=canonicalDesignSource(item,inherited),confidence=designConfidence(item,field),supported=source==='experiment'&&!!String(item&&item.evidence||'').trim(),hasSource=!!String(item&&item.provenance_kind||item&&item.provenanceKind||inherited||'').trim();if(source==='knowledge_reference')return false;if(confidence==null)return!!supported||!hasSource;return confidence>=0.75&&(!looksQuantitative(value)||supported);}
-  function sanitizeDesignProposal(proposal){const stats={reviewOnlyQuantities:0,modelOnlyItems:0,knowledgeItems:0,autoApply:0,review:0,unresolved:(proposal.unknowns||[]).length};function annotate(item,fields,inheritedSource){if(!item||typeof item!=='object')return;const directEvidence=String(item.evidence||'').trim(),declared=canonicalDesignSource(item,inheritedSource),source=declared==='experiment'&&directEvidence?'experiment':declared==='knowledge_reference'?'knowledge_reference':'model_inference';if(source==='model_inference')stats.modelOnlyItems++;if(source==='knowledge_reference')stats.knowledgeItems++;item.provenance_kind=source;item.field_decisions=[];(fields||[]).forEach(function(entry){const field=typeof entry==='string'?entry:entry.field,value=typeof entry==='string'?item[field]:entry.value;if(value==null||String(value).trim()==='')return;const confidence=designConfidence(item,field),quantitative=looksQuantitative(value),supported=source==='experiment'&&!!directEvidence,autoApply=source==='knowledge_reference'?false:(confidence!=null&&confidence>=0.75&&(!quantitative||supported)),decision={field:field,value:String(value),source:source,confidence:confidence,auto_apply:autoApply,quantitative:quantitative,applied:false,skipped:''};item.field_decisions.push(decision);if(autoApply)stats.autoApply++;else{stats.review++;if(quantitative&&!supported)stats.reviewOnlyQuantities++;}});}
+  function autoApplyAllowed(item,field,value,inherited,manual){if(value==null||String(value).trim()==='')return false;
+if(manual)return true;const decision=fieldDecision(item,field);if(decision)return decision.auto_apply===true;
+    const source=canonicalDesignSource(item,inherited),confidence=designConfidence(item,field),
+    supported=source==='experiment'&&!!String(item&&item.evidence||'').trim(),
+    hasSource=!!String(item&&item.provenance_kind||item&&item.provenanceKind||inherited||'').trim();
+    if(source==='knowledge_reference')return false;if(confidence==null)return!!supported||!hasSource;
+    return confidence>=0.75&&(!looksQuantitative(value)||supported);}
+  function sanitizeDesignProposal(proposal){const stats={
+reviewOnlyQuantities:0,modelOnlyItems:0,knowledgeItems:0,autoApply:0,review:0,unresolved:(proposal.unknowns||[]).length}
+    ;function annotate(item,fields,inheritedSource){if(!item||typeof item!=='object')return;
+    const directEvidence=String(item.evidence||'').trim(),declared=canonicalDesignSource(item,inheritedSource),
+    source=declared==='experiment'&&directEvidence?'experiment':declared==='knowledge_reference'?
+    'knowledge_reference':'model_inference';if(source==='model_inference')stats.modelOnlyItems++;
+    if(source==='knowledge_reference')stats.knowledgeItems++;item.provenance_kind=source;item.field_decisions=[];
+    (fields||[]).forEach(function(entry){const field=typeof entry==='string'?entry:entry.field,
+    value=typeof entry==='string'?item[field]:entry.value;if(value==null||String(value).trim()==='')return;
+    const confidence=designConfidence(item,field),quantitative=looksQuantitative(value),
+    supported=source==='experiment'&&!!directEvidence,
+    autoApply=source==='knowledge_reference'?false:(confidence!=null&&confidence>=0.75&&(!quantitative||supported)),
+    decision={field:field,value:String(value),source:source,confidence:confidence,auto_apply:autoApply,
+    quantitative:quantitative,applied:false,skipped:''};item.field_decisions.push(decision);if(autoApply)stats.autoApply++;
+    else{stats.review++;if(quantitative&&!supported)stats.reviewOnlyQuantities++;}});}
     (proposal.solutions||[]).forEach(function(item){annotate(item,['name','role','solutes','solvents','concentration','additives','preparation']);});
-    (proposal.devices||[]).forEach(function(device){const process=device.process||{};annotate(device,[{field:'solutions',value:(device.solution_names||[]).join(', ')},{field:'coating',value:process.coating},{field:'annealing',value:process.annealing},{field:'atmosphere',value:process.atmosphere},{field:'notes',value:process.notes}]);(device.stack||[]).forEach(function(layer){annotate(layer,['role','material','thickness','process'],device.provenance_kind);});});
+    (proposal.devices||[]).forEach(function(device){const process=device.process||{};
+annotate(device,[{field:'solutions',value:(device.solution_names||[]).join(', ')},{
+      field:'coating',value:process.coating},{field:'annealing',value:process.annealing},{
+      field:'atmosphere',value:process.atmosphere},{field:'notes',value:process.notes}]);
+      (device.stack||[]).forEach(function(layer){
+      annotate(layer,['role','material','thickness','process'],device.provenance_kind);});});
     proposal.applicationSummary={auto_apply_count:stats.autoApply,review_count:stats.review,unresolved_count:stats.unresolved};return stats;
   }
-  function designApplicationSummary(proposal){const out={auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:(proposal&&proposal.unknowns||[]).length};function add(item){(item&&item.field_decisions||[]).forEach(function(d){if(d.skipped==='existing')return;if(d.applied)out.auto_applied_count++;else if(d.auto_apply)out.auto_apply_count++;else out.review_count++;});}(proposal&&proposal.solutions||[]).forEach(add);(proposal&&proposal.devices||[]).forEach(function(d){add(d);(d.stack||[]).forEach(add);});return out;}
+  function designApplicationSummary(proposal){const out={
+auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:(proposal&&proposal.unknowns||[]).length};
+    function add(item){(item&&item.field_decisions||[]).forEach(function(d){if(d.skipped==='existing')return;
+    if(d.applied)out.auto_applied_count++;else if(d.auto_apply)out.auto_apply_count++;else out.review_count++;});
+    }(proposal&&proposal.solutions||[]).forEach(add);(proposal&&proposal.devices||[]).forEach(function(d){add(d);
+    (d.stack||[]).forEach(add);});return out;}
   function applicableDesignFields(proposal,unknownFields){
     const wanted=new Set((unknownFields||[]).map(function(x){return String(x).toLowerCase();})),device=proposal&&proposal.devices&&proposal.devices[0]||{},solutions=proposal&&proposal.solutions||[],fields=[];
     /* The Action already targets one selected experiment. A useful chemistry

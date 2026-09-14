@@ -596,26 +596,70 @@
     function text(value) { return value == null ? '' : typeof value === 'object' && value.value != null ? String(value.value) : String(value); }
     function confidence(value) { const n=Number(value);return Number.isFinite(n)?Math.max(0,Math.min(1,n)):null; }
     function fieldConfidence(value) { const out={};if(!value||typeof value!=='object'||Array.isArray(value))return out;Object.keys(value).forEach(function(key){const n=confidence(value[key]);if(n!=null)out[text(key)]=n;});return out; }
-    function fieldDecisions(value) { return list(value).map(function(item){item=item&&typeof item==='object'?item:{};return{field:text(item.field),value:text(item.value),source:text(item.source),confidence:confidence(item.confidence),auto_apply:item.auto_apply===true,quantitative:item.quantitative===true,applied:item.applied===true,skipped:text(item.skipped)};}).filter(function(item){return item.field;}); }
+    function fieldDecisions(value) { return list(value).map(function(item){item=item&&typeof item==='object'?item:{};
+return{field:text(item.field),value:text(item.value),source:text(item.source),confidence:confidence(item.confidence),
+      auto_apply:item.auto_apply===true,quantitative:item.quantitative===true,applied:item.applied===true,
+      skipped:text(item.skipped)};}).filter(function(item){return item.field;}); }
     function layer(item) {
       item=item&&typeof item==='object'?item:{};
-      return {role:text(item.role||item.layer||item.function||item.type),material:text(item.material||item.material_name||item.name||item.composition),thickness:text(item.thickness||item.thickness_nm),process:text(item.process||item.deposition),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
+      return {role:text(item.role||item.layer||item.function||item.type),
+material:text(item.material||item.material_name||item.name||item.composition),
+        thickness:text(item.thickness||item.thickness_nm),process:text(item.process||item.deposition),
+        evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),
+        field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
+        field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
+        provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
     }
     let solutionSource=source.solutions||source.formulations||source.recipes||source.solution_chemistry||source.solutionChemistry||source.chemistry||source.solution;
     if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)&&Array.isArray(solutionSource.solutions))solutionSource=solutionSource.solutions;
     const solutions=list(solutionSource).map(function (item,index) {
       item=item&&typeof item==='object'?item:{};
-      return {name:text(item.name||item.title||item.solution_name||item.solutionName||('Solution '+(index+1))),role:text(item.role||item.type||item.function),solutes:text(item.solutes||item.solute||item.materials||item.precursors),solvents:text(item.solvents||item.solvent||item.solvent_system),concentration:text(item.concentration||item.composition||item.ratio||item.composition_or_concentration),additives:text(item.additives||item.additive),preparation:text(item.preparation||item.process||item.notes),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),reason:text(item.reason||item.rationale),status:'ai_inferred'};
+      return {name:text(item.name||item.title||item.solution_name||item.solutionName||('Solution '+(index+1))),
+role:text(item.role||item.type||item.function),solutes:text(item.solutes||item.solute||item.materials||item.precursors),
+        solvents:text(item.solvents||item.solvent||item.solvent_system),
+        concentration:text(item.concentration||item.composition||item.ratio||item.composition_or_concentration),
+        additives:text(item.additives||item.additive),preparation:text(item.preparation||item.process||item.notes),
+        evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),
+        field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
+        field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
+        provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),
+        reason:text(item.reason||item.rationale),status:'ai_inferred'};
     });
     let deviceSource=source.devices||source.variants||source.device_variants||source.device;
     if(!deviceSource&&(source.device_stack||source.deviceStack||source.stack||source.layers||source.process))deviceSource={stack:source.device_stack||source.deviceStack||source.stack||source.layers,process:source.process||{},confidence:source.confidence,provenance_kind:source.provenance_kind||source.provenanceKind,reason:source.reason||source.rationale};
     const devices=list(deviceSource).map(function (item,index) {
       item=item&&typeof item==='object'?item:{};
-      const proc=item.process&&typeof item.process==='object'?item.process:{notes:text(item.process)};return {name:text(item.name||item.title||item.group||('Device '+(index+1))),sample_names:list(item.sample_names||item.sampleNames||item.samples).map(text),group:text(item.group),solution_names:list(item.solution_names||item.solutionNames||item.solutions).map(function(v){return typeof v==='object'?text(v.name):text(v);}),process:{coating:text(proc.coating||proc.deposition),annealing:text(proc.annealing),atmosphere:text(proc.atmosphere),notes:text(proc.notes),evidence:text(proc.evidence||item.evidence||item.source),confidence:confidence(proc.confidence!=null?proc.confidence:item.confidence),provenance_kind:text(proc.provenance_kind||proc.provenanceKind||item.provenance_kind||item.provenanceKind||item.source_kind),reason:text(proc.reason||proc.rationale||item.reason||item.rationale)},stack:list(item.stack||item.layers||item.device_stack||item.deviceStack).map(layer),evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),reason:text(item.reason||item.rationale),status:'ai_inferred'};
+      const proc=item.process&&typeof item.process==='object'?item.process:{notes:text(item.process)};
+return {name:text(item.name||item.title||item.group||('Device '+(index+1))),
+        sample_names:list(item.sample_names||item.sampleNames||item.samples).map(text),group:text(item.group),
+        solution_names:list(item.solution_names||item.solutionNames||item.solutions).map(function(v){
+        return typeof v==='object'?text(v.name):text(v);
+        }),process:{coating:text(proc.coating||proc.deposition),annealing:text(proc.annealing),atmosphere:text(proc.atmosphere),
+        notes:text(proc.notes),evidence:text(proc.evidence||item.evidence||item.source),
+        confidence:confidence(proc.confidence!=null?proc.confidence:item.confidence),
+        provenance_kind:text(proc.provenance_kind||proc.provenanceKind||item.provenance_kind||item.provenanceKind||
+        item.source_kind),reason:text(proc.reason||proc.rationale||item.reason||item.rationale)}
+        ,stack:list(item.stack||item.layers||item.device_stack||item.deviceStack).map(layer),
+        evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),
+        field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
+        field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
+        provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),
+        reason:text(item.reason||item.rationale),status:'ai_inferred'};
     });
     const process=source.process&&typeof source.process==='object'?source.process:{};
     const coverage=source.coverage&&typeof source.coverage==='object'?source.coverage:{};
-    return {status:'suggested',summary:text(source.summary||source.assessment||'Design suggestion ready for review.'),coverage:{input_experiments:Number(coverage.input_experiments)||0,proposed_experiments:Number(coverage.proposed_experiments)||devices.length,covered_sample_names:list(coverage.covered_sample_names).map(text),unmatched_sample_names:list(coverage.unmatched_sample_names).map(text)},solutions:solutions,devices:devices,process:{coating:text(process.coating||process.deposition),annealing:text(process.annealing),atmosphere:text(process.atmosphere),notes:text(process.notes),evidence:text(process.evidence||process.source),confidence:confidence(process.confidence),provenance_kind:text(process.provenance_kind||process.provenanceKind||process.source_kind),reason:text(process.reason||process.rationale)},stack:list(source.stack||source.layers).map(layer),unknowns:list(source.unknowns||source.unresolved||source.missing).map(function(v){return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);})};
+    return {status:'suggested',summary:text(source.summary||source.assessment||'Design suggestion ready for review.'),
+coverage:{input_experiments:Number(coverage.input_experiments)||0,
+      proposed_experiments:Number(coverage.proposed_experiments)||devices.length,
+      covered_sample_names:list(coverage.covered_sample_names).map(text),
+      unmatched_sample_names:list(coverage.unmatched_sample_names).map(text)},solutions:solutions,devices:devices,process:{
+      coating:text(process.coating||process.deposition),annealing:text(process.annealing),atmosphere:text(process.atmosphere),
+      notes:text(process.notes),evidence:text(process.evidence||process.source),confidence:confidence(process.confidence),
+      provenance_kind:text(process.provenance_kind||process.provenanceKind||process.source_kind),
+      reason:text(process.reason||process.rationale)}
+      ,stack:list(source.stack||source.layers).map(layer),
+      unknowns:list(source.unknowns||source.unresolved||source.missing).map(function(v){
+      return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);})};
   }
 
   LF.DesignModel = {

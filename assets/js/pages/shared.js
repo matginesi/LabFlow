@@ -27,7 +27,12 @@
 
   function experimentStepper() {
     const ready=hasExperiment(),currentRoute=LF.State.state.ui.route,current=Math.max(0,WORKFLOW_IDS.indexOf(currentRoute));
-    return '<nav class="stepper experiment-strip no-print" aria-label="Experiment workflow">'+ROUTES.slice(0,4).map(function(item,i){const active=item.id===currentRoute,done=ready&&i<current,disabled=item.requiresExperiment&&!ready;return '<button type="button" class="step '+(active?'active ':'')+(done?'done ':'')+'" data-route="'+item.id+'" '+(active?'aria-current="step" ':'')+(disabled?'disabled aria-disabled="true"':'')+'><span class="step-index">'+(i+1)+'</span><strong>'+C.escapeHtml(item.label)+'</strong></button>';}).join('')+'</nav>';
+    return '<nav class="stepper experiment-strip no-print" aria-label="Experiment workflow">'+ROUTES.slice(0,
+4).map(function(item,i){const active=item.id===currentRoute,done=ready&&i<current,
+      disabled=item.requiresExperiment&&!ready;
+      return '<button type="button" class="step '+(active?'active ':'')+(done?'done ':'')+'" data-route="'+item.id+'" '+
+      (active?'aria-current="step" ':'')+(disabled?'disabled aria-disabled="true"':'')+'><span class="step-index">'+(i+1)+
+      '</span><strong>'+C.escapeHtml(item.label)+'</strong></button>';}).join('')+'</nav>';
   }
 
   function pageHead(title, subtitle, actions) {
@@ -57,7 +62,15 @@
 
   function needExperiment() {
     return '<section class="page start-page upload-start-page">'+workflowHead('Upload experiment','Choose the experiment ZIP to begin.')+
-      '<section class="panel upload-start-card"><div class="upload-start-main"><div class="upload-source-mark" aria-hidden="true"><span>LAB</span><strong>ZIP</strong></div><div class="upload-copy"><span class="eyebrow">Experiment source</span><h2>Choose your experiment ZIP</h2><p>LabFlow will import the data and show anything that needs your attention before analysis.</p><div class="row-wrap"><button type="button" class="button primary upload-primary" data-open-dataset>Choose ZIP file</button><span class="upload-simple-note"><span data-icon="check" aria-hidden="true"></span> Your original file stays unchanged.</span></div></div></div><details class="upload-start-details"><summary>What happens next?</summary><div class="upload-next-steps"><div><strong>1</strong><span>Import the experiment</span></div><div><strong>2</strong><span>Review anything unusual</span></div><div><strong>3</strong><span>Explore Results</span></div></div></details></section></section>';
+      '<section class="panel upload-start-card"><div class="upload-start-main"><div class="upload-source-mark" ' +
+        'aria-hidden="true"><span>LAB</span><strong>ZIP</strong></div><div class="upload-copy"><span class="eyebrow">' +
+        'Experiment source</span><h2>Choose your experiment ZIP</h2><p>LabFlow will import the data and show anything ' +
+        'that needs your attention before analysis.</p><div class="row-wrap"><button type="button" class="button primary ' +
+        'upload-primary" data-open-dataset>Choose ZIP file</button><span class="upload-simple-note"><span data-icon="check" ' +
+        'aria-hidden="true"></span> Your original file stays unchanged.</span></div></div></div><details ' +
+        'class="upload-start-details"><summary>What happens next?</summary><div class="upload-next-steps"><div><strong>' +
+        '1</strong><span>Import the experiment</span></div><div><strong>2</strong><span>Review anything unusual</span>' +
+        '</div><div><strong>3</strong><span>Explore Results</span></div></div></details></section></section>';
   }
 
   function badge(text,type){return '<span class="badge '+(type||'')+'">'+C.escapeHtml(text)+'</span>';}

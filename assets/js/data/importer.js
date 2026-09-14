@@ -37,8 +37,68 @@
       return{known:Number.isFinite(u)&&u>=0&&Number.isFinite(c)&&c>=0,uncompressed:Number.isFinite(u)&&u>=0?u:0,compressed:Number.isFinite(c)&&c>=0?c:0};
     }
   };
-  function preflightArchive(zip,compressedBytes){const limits=importLimits(),entries=Object.values(zip.files||{}).filter(function(file){return file&&!file.dir;});if(entries.length>limits.maxFiles)throw limitError('This ZIP contains too many files for a browser import.',{files:entries.length,limit:limits.maxFiles});let total=0;entries.forEach(function(file){const sizes=ZipMetadataAdapter.sizes(file),name=String(file.name||'file');if(!sizes.known)throw limitError('ZIP size metadata is unavailable for '+name+'. Import stopped because LabFlow cannot verify the archive safely.',{path:name,metadata:'unavailable'});total+=sizes.uncompressed;if(sizes.uncompressed>limits.maxEntryBytes)throw limitError('A file inside the ZIP is too large to import safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxEntryBytes});if(/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(name)&&sizes.uncompressed>limits.maxTextEntryBytes)throw limitError('A text file inside the ZIP is too large to parse safely: '+name,{path:name,bytes:sizes.uncompressed,limit:limits.maxTextEntryBytes});if(sizes.compressed>0&&sizes.uncompressed/sizes.compressed>limits.maxCompressionRatio)throw limitError('This ZIP contains an unusually compressed file and was stopped before extraction: '+name,{path:name,ratio:sizes.uncompressed/sizes.compressed,limit:limits.maxCompressionRatio});});if(total>limits.maxUncompressedBytes)throw limitError('The uncompressed ZIP is too large for a browser import.',{bytes:total,limit:limits.maxUncompressedBytes});Log.info('dataset.import-budget',{compressedBytes:compressedBytes,uncompressedBytes:total,files:entries.length,limits:limits});return{files:entries.length,uncompressedBytes:total};}
-  function extractionBudget(limits){let total=0;return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);if(n>limits.maxEntryBytes)throw limitError('A file expanded beyond the safe per-file limit: '+path,{path:path,bytes:n,limit:limits.maxEntryBytes});if(isText&&n>limits.maxTextEntryBytes)throw limitError('A text file expanded beyond the safe parsing limit: '+path,{path:path,bytes:n,limit:limits.maxTextEntryBytes});total+=n;if(total>limits.maxUncompressedBytes)throw limitError('ZIP extraction exceeded the safe browser memory budget.',{path:path,bytes:total,limit:limits.maxUncompressedBytes});return n;},total:function(){return total;}};}
+  function preflightArchive(zip,compressedBytes){
+    const limits=importLimits();
+    const entries=Object.values(zip.files||{}).filter(function(file){return file&&!file.dir;});
+    if(entries.length>limits.maxFiles){
+      throw limitError('This ZIP contains too many files for a browser import.',{
+        files:entries.length,
+        limit:limits.maxFiles
+      });
+    }
+
+    let total=0;
+    entries.forEach(function(file){
+      const sizes=ZipMetadataAdapter.sizes(file);
+      const name=String(file.name||'file');
+      if(!sizes.known){
+        throw limitError(
+          'ZIP size metadata is unavailable for '+name+'. Import stopped because LabFlow cannot verify the archive safely.',
+          {path:name,metadata:'unavailable'}
+        );
+      }
+      total+=sizes.uncompressed;
+      if(sizes.uncompressed>limits.maxEntryBytes){
+        throw limitError('A file inside the ZIP is too large to import safely: '+name,{
+          path:name,bytes:sizes.uncompressed,limit:limits.maxEntryBytes
+        });
+      }
+      const isText=/\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(name);
+      if(isText&&sizes.uncompressed>limits.maxTextEntryBytes){
+        throw limitError('A text file inside the ZIP is too large to parse safely: '+name,{
+          path:name,bytes:sizes.uncompressed,limit:limits.maxTextEntryBytes
+        });
+      }
+      const ratio=sizes.compressed>0?sizes.uncompressed/sizes.compressed:0;
+      if(ratio>limits.maxCompressionRatio){
+        throw limitError(
+          'This ZIP contains an unusually compressed file and was stopped before extraction: '+name,
+          {path:name,ratio:ratio,limit:limits.maxCompressionRatio}
+        );
+      }
+    });
+
+    if(total>limits.maxUncompressedBytes){
+      throw limitError('The uncompressed ZIP is too large for a browser import.',{
+        bytes:total,limit:limits.maxUncompressedBytes
+      });
+    }
+    Log.info('dataset.import-budget',{
+      compressedBytes:compressedBytes,
+      uncompressedBytes:total,
+      files:entries.length,
+      limits:limits
+    });
+    return{files:entries.length,uncompressedBytes:total};
+  }
+  function extractionBudget(limits){let total=0;
+return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
+    if(n>limits.maxEntryBytes)throw limitError('A file expanded beyond the safe per-file limit: '+path,{
+    path:path,bytes:n,limit:limits.maxEntryBytes});
+    if(isText&&n>limits.maxTextEntryBytes)throw limitError('A text file expanded beyond the safe parsing limit: '+path,{
+    path:path,bytes:n,limit:limits.maxTextEntryBytes});total+=n;
+    if(total>limits.maxUncompressedBytes)throw limitError('ZIP extraction exceeded the safe browser memory budget.',{
+    path:path,bytes:total,limit:limits.maxUncompressedBytes});return n;},total:function(){return total;}};}
   async function extractBytes(zip,path,budget,isText){const file=zip.file(path);if(!file)throw new Error('ZIP entry not found: '+path);const bytes=await file.async('uint8array');budget.account(path,bytes.byteLength,!!isText);return bytes;}
   function bytesToText(bytes){return typeof TextDecoder!=='undefined'?new TextDecoder('utf-8').decode(bytes):Array.from(bytes||[]).map(function(b){return String.fromCharCode(b);}).join('');}
   async function extractText(zip,path,budget){return bytesToText(await extractBytes(zip,path,budget,true));}
@@ -414,7 +474,11 @@
         const isRef = P.isReference(sample);
         const s = sampleRecord(sample, parsed.sample, group, isRef);
         const canonicalFile = P.canonicalFileName ? P.canonicalFileName(entry.name) : entry.name;
-        m = DS.create('measurement', { file: canonicalFile, rawFile: entry.name, path: entry.path, rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile, parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename', group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file', excluded: false, recoveries: [] });
+        m = DS.create('measurement', { file: canonicalFile, rawFile: entry.name, path: entry.path,
+rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile,
+          parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename',
+          group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file',
+          excluded: false, recoveries: [] });
         s.measurementIds.push(m.id);
         measurementMap.set(entry.path, m);
       }

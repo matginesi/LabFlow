@@ -54,7 +54,12 @@
     const e=error||{},status=Number(e.status||0),code=String(e.providerCode||e.code||'');
     let category='Provider error',next='Review the endpoint, model and provider status.';
     if(e.cancelled){category='Cancelled';next='Run the operation again when ready.';}
-    else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:''),provider=LF.AIProviders&&LF.AIProviders[providerId];category='Timeout';next=provider&&provider.local===true?'Retry or increase the inactivity timeout if the local model is still loading.':'The provider did not expose a response before the deadline. Retry once; if curl succeeds while the browser does not, inspect browser CORS/network policy.';}
+    else if(e.timedOut){const providerId=e.providerId||(LF.Storage&&
+LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:''),provider=LF.AIProviders&&LF.AIProviders[providerId];
+      category='Timeout';next=provider&&provider.local===true?
+      'Retry or increase the inactivity timeout if the local model is still loading.':
+      'The provider did not expose a response before the deadline. Retry once; if curl succeeds while the browser does not, inspect browser CORS/network policy.';
+      }
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
       category=localProvider(providerId)?(providerId==='llamacpp'&&bindAddressOrigin()?'Local origin mismatch':'Local endpoint unreachable'):'Browser / network';
@@ -65,7 +70,9 @@
     }
     else if(e.isContextOverflow||code==='MODEL_CONTEXT_LENGTH'||code==='1261'){category='Model context';next='The prompt exceeded the model context loaded by the provider. Increase the loaded context or narrow the task.';}
     else if(e.isContract&&String(e.finishReason||'')==='length'){category='Model output limit';next='The provider returned a valid response envelope but exhausted the bounded output budget.';}
-    else if(status===400&&/reasoning[^.\n]{0,100}(?:mandatory|required|cannot be disabled)|(?:mandatory|required)[^.\n]{0,80}reasoning/i.test(String(e.providerMessage||e.message||''))){category='Thinking compatibility';next=e.reasoningCompatibilityRetry?'The provider still rejected its own default reasoning mode after LabFlow removed the explicit override. Choose another model/provider or inspect provider-specific reasoning requirements.':'LabFlow will normally retry once without a disable-reasoning override; if this persists, use Auto thinking or another model.';}
+    else if(status===400&&/reasoning[^.\n]{0,100}(?:mandatory|required|cannot be disabled)|(?:mandatory|required)[^.\n]{0,80}reasoning/i.test(String(e.providerMessage||
+e.message||''))){category='Thinking compatibility';
+      next=e.reasoningCompatibilityRetry?'The provider still rejected its own default reasoning mode after LabFlow removed the explicit override. Choose another model/provider or inspect provider-specific reasoning requirements.':'LabFlow will normally retry once without a disable-reasoning override; if this persists, use Auto thinking or another model.';}
     else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load/select a valid model in the provider, then Detect or Save & test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
@@ -75,7 +82,11 @@
     return{category:category,next:next,status:status||'',providerCode:code};
   }
 
-  function contextNote(providerId){providerId=String(providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'')||'');const provider=LF.AIProviders&&LF.AIProviders[providerId];return provider&&provider.local===true?'LabFlow connects directly from this browser to the configured local/LAN endpoint.':'LabFlow connects directly from this browser to the configured provider endpoint; there is no relay/backend fallback.';}
+  function contextNote(providerId){providerId=String(providerId||(LF.Storage&&
+LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'')||'');
+    const provider=LF.AIProviders&&LF.AIProviders[providerId];
+    return provider&&provider.local===true?'LabFlow connects directly from this browser to the configured local/LAN endpoint.':
+    'LabFlow connects directly from this browser to the configured provider endpoint; there is no relay/backend fallback.';}
 
   LF.AIDiagnostics={networkMessage:networkMessage,statusHint:statusHint,errorSummary:errorSummary,contextNote:contextNote};
 }());

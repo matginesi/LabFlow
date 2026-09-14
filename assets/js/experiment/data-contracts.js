@@ -89,8 +89,27 @@ function validateRelations(exp,errors,sets,record,kind,path){
 
 function validateBacklinks(exp,errors,maps){
   (exp.samples||[]).forEach(function(s){const e=maps.experiment.get(String(s.experimentId||''));if(e&&!includesId(e.sampleIds,s.id))add(errors,'MISSING_EXPERIMENT_SAMPLE_BACKLINK','Experiment '+e.id+' does not link back to sample '+s.id+'.',s,'samples');});
-  (exp.runs||[]).forEach(function(r){const e=maps.experiment.get(String(r.experimentId||'')),s=maps.sample.get(String(r.sampleId||''));if(e&&!includesId(e.runIds,r.id))add(errors,'MISSING_EXPERIMENT_RUN_BACKLINK','Experiment '+e.id+' does not link back to run '+r.id+'.',r,'runs');if(s&&!includesId(s.runIds,r.id))add(errors,'MISSING_SAMPLE_RUN_BACKLINK','Sample '+s.id+' does not link back to run '+r.id+'.',r,'runs');if(s&&String(s.experimentId)!==String(r.experimentId))add(errors,'RUN_PARENT_MISMATCH','Run '+r.id+' and sample '+s.id+' disagree on experimentId.',r,'runs');});
-  (exp.measurements||[]).forEach(function(m){const e=maps.experiment.get(String(m.experimentId||'')),s=maps.sample.get(String(m.sampleId||'')),r=m.runId?maps.run.get(String(m.runId)):null;if(e&&!includesId(e.measurementIds,m.id))add(errors,'MISSING_EXPERIMENT_MEASUREMENT_BACKLINK','Experiment '+e.id+' does not link back to measurement '+m.id+'.',m,'measurements');if(s&&!includesId(s.measurementIds,m.id))add(errors,'MISSING_SAMPLE_MEASUREMENT_BACKLINK','Sample '+s.id+' does not link back to measurement '+m.id+'.',m,'measurements');if(r&&!includesId(r.measurementIds,m.id))add(errors,'MISSING_RUN_MEASUREMENT_BACKLINK','Run '+r.id+' does not link back to measurement '+m.id+'.',m,'measurements');if(s&&String(s.experimentId)!==String(m.experimentId))add(errors,'MEASUREMENT_PARENT_MISMATCH','Measurement '+m.id+' and sample '+s.id+' disagree on experimentId.',m,'measurements');if(r&&(String(r.sampleId)!==String(m.sampleId)||String(r.experimentId)!==String(m.experimentId)))add(errors,'MEASUREMENT_RUN_MISMATCH','Measurement '+m.id+' disagrees with run '+r.id+' parent links.',m,'measurements');});
+  (exp.runs||[]).forEach(function(r){const e=maps.experiment.get(String(r.experimentId||'')),
+s=maps.sample.get(String(r.sampleId||''));
+    if(e&&!includesId(e.runIds,r.id))add(errors,'MISSING_EXPERIMENT_RUN_BACKLINK',
+    'Experiment '+e.id+' does not link back to run '+r.id+'.',r,'runs');
+    if(s&&!includesId(s.runIds,r.id))add(errors,'MISSING_SAMPLE_RUN_BACKLINK',
+    'Sample '+s.id+' does not link back to run '+r.id+'.',r,'runs');
+    if(s&&String(s.experimentId)!==String(r.experimentId))add(errors,'RUN_PARENT_MISMATCH',
+    'Run '+r.id+' and sample '+s.id+' disagree on experimentId.',r,'runs');});
+  (exp.measurements||[]).forEach(function(m){
+const e=maps.experiment.get(String(m.experimentId||'')),s=maps.sample.get(String(m.sampleId||'')),
+    r=m.runId?maps.run.get(String(m.runId)):null;
+    if(e&&!includesId(e.measurementIds,m.id))add(errors,'MISSING_EXPERIMENT_MEASUREMENT_BACKLINK',
+    'Experiment '+e.id+' does not link back to measurement '+m.id+'.',m,'measurements');
+    if(s&&!includesId(s.measurementIds,m.id))add(errors,'MISSING_SAMPLE_MEASUREMENT_BACKLINK',
+    'Sample '+s.id+' does not link back to measurement '+m.id+'.',m,'measurements');
+    if(r&&!includesId(r.measurementIds,m.id))add(errors,'MISSING_RUN_MEASUREMENT_BACKLINK',
+    'Run '+r.id+' does not link back to measurement '+m.id+'.',m,'measurements');
+    if(s&&String(s.experimentId)!==String(m.experimentId))add(errors,'MEASUREMENT_PARENT_MISMATCH',
+    'Measurement '+m.id+' and sample '+s.id+' disagree on experimentId.',m,'measurements');
+    if(r&&(String(r.sampleId)!==String(m.sampleId)||String(r.experimentId)!==String(m.experimentId)))add(errors,
+    'MEASUREMENT_RUN_MISMATCH','Measurement '+m.id+' disagrees with run '+r.id+' parent links.',m,'measurements');});
 }
 
 function validate(exp){
@@ -106,13 +125,24 @@ function validate(exp){
 
   Schema.rootFields().forEach(function(meta){
     if(!meta.recordKind)return;const rows=exp[meta.key]||[],seen=new Set();
-    rows.forEach(function(record,index){const path=meta.key+'['+index+']',id=String(record&&record.id||'');if(!id)add(errors,'ID_REQUIRED',meta.recordKind+' record has no id.',record,path);else if(seen.has(id))add(errors,'ID_DUPLICATE','Duplicate '+meta.recordKind+' id: '+id,record,path);else seen.add(id);validateRecordShape(errors,warnings,record,meta.recordKind,path);validateRelations(exp,errors,sets,record,meta.recordKind,path);});
+    rows.forEach(function(record,index){const path=meta.key+'['+index+']',id=String(record&&record.id||'');
+if(!id)add(errors,'ID_REQUIRED',meta.recordKind+' record has no id.',record,path);
+      else if(seen.has(id))add(errors,'ID_DUPLICATE','Duplicate '+meta.recordKind+' id: '+id,record,path);else seen.add(id);
+      validateRecordShape(errors,warnings,record,meta.recordKind,path);
+      validateRelations(exp,errors,sets,record,meta.recordKind,path);});
   });
 
   // Generic typed block references.
-  (exp.blocks||[]).forEach(function(block,bi){(block.refs||[]).forEach(function(ref,ri){const set=sets[ref.kind];if(!set)add(errors,'BLOCK_REF_KIND_UNKNOWN','Block '+block.id+' references unsupported kind '+ref.kind+'.',block,'blocks['+bi+'].refs['+ri+']');else if(!set.has(String(ref.id)))add(errors,'BLOCK_REF_BROKEN','Block '+block.id+' references missing '+ref.kind+' '+ref.id+'.',block,'blocks['+bi+'].refs['+ri+']');});});
+  (exp.blocks||[]).forEach(function(block,bi){(block.refs||[]).forEach(function(ref,ri){const set=sets[ref.kind];
+if(!set)add(errors,'BLOCK_REF_KIND_UNKNOWN','Block '+block.id+' references unsupported kind '+ref.kind+'.',block,
+    'blocks['+bi+'].refs['+ri+']');else if(!set.has(String(ref.id)))add(errors,'BLOCK_REF_BROKEN',
+    'Block '+block.id+' references missing '+ref.kind+' '+ref.id+'.',block,'blocks['+bi+'].refs['+ri+']');});});
   // Patch targets are authoritative provenance links.
-  (exp.patches||[]).forEach(function(p,pi){if(!p.target||!p.target.kind||!p.target.id)return;const set=sets[p.target.kind];if(!set)add(errors,'PATCH_TARGET_KIND_UNKNOWN','Patch '+p.id+' targets unsupported kind '+p.target.kind+'.',p,'patches['+pi+'].target');else if(!set.has(String(p.target.id)))add(errors,'PATCH_TARGET_BROKEN','Patch '+p.id+' targets missing '+p.target.kind+' '+p.target.id+'.',p,'patches['+pi+'].target');});
+  (exp.patches||[]).forEach(function(p,pi){if(!p.target||!p.target.kind||!p.target.id)return;
+const set=sets[p.target.kind];if(!set)add(errors,'PATCH_TARGET_KIND_UNKNOWN',
+    'Patch '+p.id+' targets unsupported kind '+p.target.kind+'.',p,'patches['+pi+'].target');
+    else if(!set.has(String(p.target.id)))add(errors,'PATCH_TARGET_BROKEN',
+    'Patch '+p.id+' targets missing '+p.target.kind+' '+p.target.id+'.',p,'patches['+pi+'].target');});
 
   validateBacklinks(exp,errors,maps);
 
@@ -120,7 +150,17 @@ function validate(exp){
   const solutionIds=sets.design_solution||new Set(),sampleIds=sets.sample||new Set(),experimentIds=sets.experiment||new Set();
   (exp.design&&exp.design.solutions||[]).forEach(function(x,i){validateRecordShape(errors,warnings,x,'design_solution','design.solutions['+i+']');});
   (exp.design&&exp.design.stack||[]).forEach(function(x,i){validateRecordShape(errors,warnings,x,'design_layer','design.stack['+i+']');});
-  (exp.design&&exp.design.devices||[]).forEach(function(d,i){const path='design.devices['+i+']';validateRecordShape(errors,warnings,d,'design_device',path);if(d.experimentId&&!experimentIds.has(String(d.experimentId)))add(errors,'DESIGN_EXPERIMENT_BROKEN','Design device '+d.id+' references missing experiment '+d.experimentId+'.',d,path+'.experimentId');(d.sampleIds||[]).forEach(function(id){if(!sampleIds.has(String(id)))add(errors,'DESIGN_SAMPLE_BROKEN','Design device '+d.id+' references missing sample '+id+'.',d,path+'.sampleIds');});(d.solutionIds||[]).forEach(function(id){if(!solutionIds.has(String(id)))add(errors,'DESIGN_SOLUTION_BROKEN','Design device '+d.id+' references missing solution '+id+'.',d,path+'.solutionIds');});(d.stack||[]).forEach(function(layer,li){validateRecordShape(errors,warnings,layer,'design_layer',path+'.stack['+li+']');});});
+  (exp.design&&exp.design.devices||[]).forEach(function(d,i){const path='design.devices['+i+']';
+validateRecordShape(errors,warnings,d,'design_device',path);
+    if(d.experimentId&&!experimentIds.has(String(d.experimentId)))add(errors,'DESIGN_EXPERIMENT_BROKEN',
+    'Design device '+d.id+' references missing experiment '+d.experimentId+'.',d,path+'.experimentId');
+    (d.sampleIds||[]).forEach(function(id){if(!sampleIds.has(String(id)))add(errors,'DESIGN_SAMPLE_BROKEN',
+    'Design device '+d.id+' references missing sample '+id+'.',d,path+'.sampleIds');});
+    (d.solutionIds||[]).forEach(function(id){
+    if(!solutionIds.has(String(id)))add(errors,'DESIGN_SOLUTION_BROKEN',
+    'Design device '+d.id+' references missing solution '+id+'.',d,path+'.solutionIds');});
+    (d.stack||[]).forEach(function(layer,li){
+    validateRecordShape(errors,warnings,layer,'design_layer',path+'.stack['+li+']');});});
 
   return{ok:errors.length===0,errors:errors,warnings:warnings,counts:{files:exp.files.length,blocks:exp.blocks.length,patches:exp.patches.length,experiments:exp.experiments.length,samples:exp.samples.length,runs:exp.runs.length,measurements:exp.measurements.length,findings:exp.findings.length,designDevices:exp.design&&exp.design.devices?exp.design.devices.length:0}};
 }

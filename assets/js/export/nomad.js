@@ -167,7 +167,9 @@
   }
 
   function readme(exp) {
-    return '# LabFlow NOMAD staging package\n\nExperiment: '+exp.meta.name+'\n\nThis package keeps RAW, canonical/derived data and correction provenance separate. Inspect `manifest.json`, `metadata/patches.json`, `metadata/provenance.json`, `'+SCHEMA_FILE+'` and `'+ENTRY_FILE+'` before manual upload. The current POC simulates the remote upload step and does not publish anything. Validate processing against the selected NOMAD deployment before publication.\n';
+    return '# LabFlow NOMAD staging package\n\nExperiment: '+exp.meta.name+
+'\n\nThis package keeps RAW, canonical/derived data and correction provenance separate. Inspect `manifest.json`, `metadata/patches.json`, `metadata/provenance.json`, `'+
+      SCHEMA_FILE+'` and `'+ENTRY_FILE+'` before manual upload. The current POC simulates the remote upload step and does not publish anything. Validate processing against the selected NOMAD deployment before publication.\n';
   }
 
   function findingMeasurement(exp,f){const id=String(f&&f.measurementId||f&&f.target||'');return (A.measurementsOf(exp)||[]).find(function(m){return String(m.id)===id;})||null;}
@@ -211,7 +213,13 @@
     if(unknown)warning('design_unconfirmed',unknown+' experimental-design item(s) remain unconfirmed.',{kind:'route',route:'experiment-design',label:'Review Design'});
     const schemaText=schemaYaml(),entryText=dataYaml(exp,settings,plan),schemaContractOk=/LabFlowExperiment:/.test(schemaText)&&schemaText.indexOf('base_sections:')>=0&&schemaText.indexOf('nomad.datamodel.data.EntryData')>=0&&entryText.indexOf('m_def: '+yamlString(SCHEMA_REFERENCE))>=0;
     if(!schemaContractOk)problem('schema_contract_invalid','The generated NOMAD schema and entry reference are inconsistent.',{kind:'refresh',label:'Rebuild mapping'});
-    const result={audit:audit,status:issues.length?'blocked':warnings.length?'review':'ready',issues:issues,warnings:warnings,problems:problems,checks:{schemaReference:SCHEMA_REFERENCE,schemaContractOk:schemaContractOk,unresolvedDanger:audit.unresolvedDanger.length,acceptedUnapplied:audit.acceptedUnapplied.length,pendingCorrections:audit.pending.length,incompletePatchProvenance:audit.incompletePatches.length,mappedFields:(plan.mappings||[]).filter(function(x){return x.status==='mapped';}).length,missingFields:(plan.mappings||[]).filter(function(x){return x.status==='missing';}).length},checkedAt:new Date().toISOString()};
+    const result={audit:audit,status:issues.length?'blocked':warnings.length?'review':'ready',issues:issues,
+warnings:warnings,problems:problems,checks:{
+      schemaReference:SCHEMA_REFERENCE,schemaContractOk:schemaContractOk,unresolvedDanger:audit.unresolvedDanger.length,
+      acceptedUnapplied:audit.acceptedUnapplied.length,pendingCorrections:audit.pending.length,
+      incompletePatchProvenance:audit.incompletePatches.length,mappedFields:(plan.mappings||[]).filter(function(x){
+      return x.status==='mapped';}).length,missingFields:(plan.mappings||[]).filter(function(x){return x.status==='missing';
+      }).length},checkedAt:new Date().toISOString()};
     exp.nomad=exp.nomad||{};exp.nomad.validation=result;return result;
   }
 
@@ -226,10 +234,25 @@
     return rows.length;
   }
 
-  function provenanceSnapshot(exp){return {format:'labflow-provenance',experimentId:exp.id,dataBasis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',source:{name:exp.meta&&exp.meta.sourceName||'',size:exp.raw&&exp.raw.sourceSize||0,immutable:true},revision:exp.sync&&exp.sync.revision||0,statusVocabulary:['RAW','parsed','derived','recovered','AI inferred','user confirmed','missing','excluded'],patchCount:(exp.patches||[]).length,generatedAt:new Date().toISOString()};
+  function provenanceSnapshot(exp){return {
+format:'labflow-provenance',experimentId:exp.id,
+    dataBasis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',source:{
+    name:exp.meta&&exp.meta.sourceName||'',size:exp.raw&&exp.raw.sourceSize||0,immutable:true}
+    ,revision:exp.sync&&exp.sync.revision||0,statusVocabulary:['RAW','parsed','derived','recovered','AI inferred',
+    'user confirmed','missing','excluded'],patchCount:(exp.patches||[]).length,generatedAt:new Date().toISOString()};
   }
 
-  function packageManifest(exp,settings,validation,files){const plan=ensureMapping(exp);return {format:'labflow-nomad-staging',generatedAt:new Date().toISOString(),experimentId:exp.id,experimentName:exp.meta.name,dataState:{basis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',revision:exp.sync&&exp.sync.revision||0,appliedChanges:(exp.patches||[]).length,rawImmutable:true},missingInformation:{mapping:(plan.missing||[]).length,validationIssues:(validation.issues||[]).length,validationWarnings:(validation.warnings||[]).length},schemaReference:SCHEMA_REFERENCE,validation:validation,options:settings,files:files.map(function(path){return{path:path,role:path===ENTRY_FILE?'nomad_entry':path===SCHEMA_FILE?'nomad_schema':path==='raw/source.zip'?'immutable_raw':path==='derived/measurements.csv'?'canonical_table':path.indexOf('metadata/')===0?'provenance_or_review':'supporting'};})};
+  function packageManifest(exp,settings,validation,files){const plan=ensureMapping(exp);
+return {format:'labflow-nomad-staging',generatedAt:new Date().toISOString(),experimentId:exp.id,
+    experimentName:exp.meta.name,dataState:{
+    basis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',
+    revision:exp.sync&&exp.sync.revision||0,appliedChanges:(exp.patches||[]).length,rawImmutable:true},missingInformation:{
+    mapping:(plan.missing||[]).length,validationIssues:(validation.issues||[]).length,
+    validationWarnings:(validation.warnings||[]).length}
+    ,schemaReference:SCHEMA_REFERENCE,validation:validation,options:settings,files:files.map(function(path){return{
+    path:path,role:path===ENTRY_FILE?'nomad_entry':path===SCHEMA_FILE?'nomad_schema':path==='raw/source.zip'?
+    'immutable_raw':path==='derived/measurements.csv'?'canonical_table':path.indexOf('metadata/')===0?
+    'provenance_or_review':'supporting'};})};
   }
 
   async function buildPackage(exp, rawArchive, onProgress) {
@@ -256,7 +279,12 @@
     progress({stage:'Package ready',progress:1});return blob;
   }
 
-  function exportEntry(exp){const settings=LF.Storage.getExportSettings(),plan=ensureMapping(exp),validation=validate(exp,exp.raw&&exp.raw.sourceArchive);if(validation.status==='blocked')throw new Error('NOMAD export is blocked. Resolve the listed issues first.');const text=dataYaml(exp,settings,plan),blob=new Blob([text],{type:'text/yaml;charset=utf-8'}),filename=C.safeName(exp.meta.name)+'_nomad.archive.yaml';C.downloadBlob(blob,filename);Log.info('export.entry',{filename:filename,bytes:blob.size});return blob;}
+  function exportEntry(exp){const settings=LF.Storage.getExportSettings(),plan=ensureMapping(exp),
+validation=validate(exp,exp.raw&&exp.raw.sourceArchive);
+    if(validation.status==='blocked')throw new Error('NOMAD export is blocked. Resolve the listed issues first.');
+    const text=dataYaml(exp,settings,plan),blob=new Blob([text],{type:'text/yaml;charset=utf-8'}
+    ),filename=C.safeName(exp.meta.name)+'_nomad.archive.yaml';C.downloadBlob(blob,filename);
+    Log.info('export.entry',{filename:filename,bytes:blob.size});return blob;}
 
   async function exportZip(exp, rawArchive, onProgress) {
     const end=Log.timer('export.zip',{experimentId:exp&&exp.id,name:exp&&exp.meta&&exp.meta.name});

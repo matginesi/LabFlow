@@ -7,22 +7,99 @@ function clean(v){return String(v==null?'':v).trim();}
 function limit(v,fallback,max){const n=Math.max(1,Number(v)||fallback||20);return Math.min(n,max||100);}
 function compact(v,max){return LF.CanonicalStore&&LF.CanonicalStore.compact?LF.CanonicalStore.compact(v,max||420):v;}
 function words(text){return clean(text).toLowerCase().replace(/[^a-z0-9_.-]+/g,' ').split(/\s+/).filter(function(x){return x.length>=3;}).slice(0,24);}
-function findings(exp,args){args=args||{};let rows=(exp.findings||[]).filter(function(f){if(args.status&&String(f.status||'open')!==String(args.status))return false;if(args.severity&&String(f.severity||'')!==String(args.severity))return false;return true;});const terms=words(args.query||'');if(terms.length)rows=rows.filter(function(f){const hay=clean([f.title,f.detail,f.target,f.type].join(' ')).toLowerCase();return terms.some(function(t){return hay.indexOf(t)>=0;});});return rows.slice(0,limit(args.limit,20,60)).map(function(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',status:f.status||'open',title:clean(f.title),detail:clean(f.detail).slice(0,700),target:clean(f.target),measurement_id:f.measurementId||'',evidence:(f.evidence||[]).slice(0,4)};});}
-function measurements(exp,args){args=args||{};let rows=(exp.measurements||[]).slice();if(args.sample){const s=LF.CanonicalStore.sample(exp,args.sample),name=s&&s.name||String(args.sample);rows=rows.filter(function(m){return String(m.sample)===String(name)||String(m.id)===String(args.sample);});}if(args.group)rows=rows.filter(function(m){return String(m.group||'')===String(args.group);});if(args.reference!=null)rows=rows.filter(function(m){return!!m.isRef===!!args.reference;});if(args.eligible!=null)rows=rows.filter(function(m){return!!m.rankingEligible===!!args.eligible;});return rows.slice(0,limit(args.limit,30,80)).map(function(m){return{id:m.id||'',sample:m.sample||'',raw_sample:m.rawSample||'',group:m.group||'',is_ref:!!m.isRef,file:m.path||m.file||'',quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,hysteresis:m.hysteresis,fw:compact(m.fw||null,360),rv:compact(m.rv||null,360)};});}
+function findings(exp,args){args=args||{};
+let rows=(exp.findings||[]).filter(function(f){
+  if(args.status&&String(f.status||'open')!==String(args.status))return false;
+  if(args.severity&&String(f.severity||'')!==String(args.severity))return false;return true;});
+  const terms=words(args.query||'');if(terms.length)rows=rows.filter(function(f){
+  const hay=clean([f.title,f.detail,f.target,f.type].join(' ')).toLowerCase();
+  return terms.some(function(t){return hay.indexOf(t)>=0;});});
+  return rows.slice(0,limit(args.limit,20,60)).map(function(f){return{
+  id:f.id||'',type:f.type||'',severity:f.severity||'info',status:f.status||'open',title:clean(f.title),
+  detail:clean(f.detail).slice(0,700),target:clean(f.target),measurement_id:f.measurementId||'',
+  evidence:(f.evidence||[]).slice(0,4)};});}
+function measurements(exp,args){args=args||{};let rows=(exp.measurements||[]).slice();
+if(args.sample){const s=LF.CanonicalStore.sample(exp,args.sample),name=s&&s.name||String(args.sample);
+  rows=rows.filter(function(m){return String(m.sample)===String(name)||String(m.id)===String(args.sample);});
+  }if(args.group)rows=rows.filter(function(m){return String(m.group||'')===String(args.group);});
+  if(args.reference!=null)rows=rows.filter(function(m){return!!m.isRef===!!args.reference;});
+  if(args.eligible!=null)rows=rows.filter(function(m){return!!m.rankingEligible===!!args.eligible;});
+  return rows.slice(0,limit(args.limit,30,80)).map(function(m){return{
+  id:m.id||'',sample:m.sample||'',raw_sample:m.rawSample||'',group:m.group||'',is_ref:!!m.isRef,file:m.path||m.file||'',
+  quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,hysteresis:m.hysteresis,
+  fw:compact(m.fw||null,360),rv:compact(m.rv||null,360)};});}
 const defs={
-  'experiment.summary':{title:'Experiment summary',domain:'experiment',access:'read',agent_visible:true,description:'Return the current experiment identity, revision, data-state counts and compact Experiment Brief.',input:{type:'object',properties:{}},handler:function(args,ctx){const exp=expOf(ctx),store=LF.CanonicalStore.ensure(exp);return{experiment:store.experiment,source:store.source,revision:store.revision,counts:LF.CanonicalStore.summary(exp),brief:compact(exp.experimentBrief||null,900)};}},
-  'samples.list':{title:'List samples',domain:'samples',access:'read',agent_visible:true,description:'List canonical samples and aliases. Optionally filter by group or name query.',input:{type:'object',properties:{query:{type:'string'},group:{type:'string'},limit:{type:'number'}}},handler:function(args,ctx){const exp=expOf(ctx);args=args||{};let rows=(exp.samples||[]).slice(),q=clean(args.query).toLowerCase();if(q)rows=rows.filter(function(s){return[s.name,s.rawName,s.group].concat(s.aliases||[]).join(' ').toLowerCase().indexOf(q)>=0;});if(args.group)rows=rows.filter(function(s){return String(s.group||'')===String(args.group);});return rows.slice(0,limit(args.limit,30,80)).map(function(s){return{id:s.id,name:s.name,raw_name:s.rawName||'',aliases:(s.aliases||[]).slice(0,8),group:s.group||'',is_ref:!!s.isRef,measurement_ids:(s.measurementIds||[]).slice(0,30)};});}},
-  'sample.get':{title:'Get sample',domain:'samples',access:'read',agent_visible:true,description:'Resolve one sample by stable id, canonical name or alias and return its linked measurements.',input:{type:'object',required:['sample'],properties:{sample:{type:'string'}}},handler:function(args,ctx){const exp=expOf(ctx),s=LF.CanonicalStore.sample(exp,args&&args.sample);if(!s)return{found:false};return{found:true,sample:clone(s),measurements:measurements(exp,{sample:s.id,limit:40}),evidence:LF.CanonicalStore.evidence(exp,{record_ids:[s.id],limit:16}).map(function(x){return compact(x,500);})};}},
-  'measurements.query':{title:'Query measurements',domain:'measurements',access:'read',agent_visible:true,description:'Query compact deterministic measurement records by sample, group, reference class or ranking eligibility.',input:{type:'object',properties:{sample:{type:'string'},group:{type:'string'},reference:{type:'boolean'},eligible:{type:'boolean'},limit:{type:'number'}}},handler:function(args,ctx){return measurements(expOf(ctx),args);}},
-  'results.get':{title:'Get results',domain:'results',access:'read',agent_visible:true,description:'Return deterministic Results and rankings. Never recalculates values or mixes Action annotations into canonical results.',input:{type:'object',properties:{}},handler:function(args,ctx){const exp=expOf(ctx),store=LF.CanonicalStore.ensure(exp);return clone(store.scientific&&store.scientific.results||{});}},
+  'experiment.summary':{title:'Experiment summary',domain:'experiment',access:'read',agent_visible:true,
+description:'Return the current experiment identity, revision, data-state counts and compact Experiment Brief.',input:{
+    type:'object',properties:{}},handler:function(args,ctx){const exp=expOf(ctx),store=LF.CanonicalStore.ensure(exp);
+    return{experiment:store.experiment,source:store.source,revision:store.revision,counts:LF.CanonicalStore.summary(exp),
+    brief:compact(exp.experimentBrief||null,900)};}},
+  'samples.list':{title:'List samples',domain:'samples',access:'read',agent_visible:true,
+description:'List canonical samples and aliases. Optionally filter by group or name query.',input:{
+    type:'object',properties:{query:{type:'string'},group:{type:'string'},limit:{type:'number'}}}
+    ,handler:function(args,ctx){const exp=expOf(ctx);args=args||{};
+    let rows=(exp.samples||[]).slice(),q=clean(args.query).toLowerCase();
+    if(q)rows=rows.filter(function(s){return[s.name,s.rawName,
+    s.group].concat(s.aliases||[]).join(' ').toLowerCase().indexOf(q)>=0;});
+    if(args.group)rows=rows.filter(function(s){return String(s.group||'')===String(args.group);});
+    return rows.slice(0,limit(args.limit,30,80)).map(function(s){return{
+    id:s.id,name:s.name,raw_name:s.rawName||'',aliases:(s.aliases||[]).slice(0,8),group:s.group||'',is_ref:!!s.isRef,
+    measurement_ids:(s.measurementIds||[]).slice(0,30)};});}},
+  'sample.get':{title:'Get sample',domain:'samples',access:'read',agent_visible:true,
+description:'Resolve one sample by stable id, canonical name or alias and return its linked measurements.',input:{
+    type:'object',required:['sample'],properties:{sample:{type:'string'}}},handler:function(args,ctx){
+    const exp=expOf(ctx),s=LF.CanonicalStore.sample(exp,args&&args.sample);if(!s)return{found:false};
+    return{found:true,sample:clone(s),measurements:measurements(exp,{sample:s.id,limit:40}
+    ),evidence:LF.CanonicalStore.evidence(exp,{record_ids:[s.id],limit:16}).map(function(x){return compact(x,500);})};}},
+  'measurements.query':{title:'Query measurements',domain:'measurements',access:'read',agent_visible:true,
+description:'Query compact deterministic measurement records by sample, group, reference class or ranking eligibility.',
+    input:{type:'object',properties:{sample:{type:'string'},group:{type:'string'},reference:{type:'boolean'},eligible:{
+    type:'boolean'},limit:{type:'number'}}},handler:function(args,ctx){return measurements(expOf(ctx),args);}},
+  'results.get':{title:'Get results',domain:'results',access:'read',agent_visible:true,
+description:'Return deterministic Results and rankings. Never recalculates values or mixes Action annotations into canonical results.',
+    input:{type:'object',properties:{}},handler:function(args,ctx){const exp=expOf(ctx),store=LF.CanonicalStore.ensure(exp);
+    return clone(store.scientific&&store.scientific.results||{});}},
   'findings.list':{title:'List findings',domain:'findings',access:'read',agent_visible:true,description:'List current Review findings, optionally filtered by status, severity or query.',input:{type:'object',properties:{status:{type:'string'},severity:{type:'string'},query:{type:'string'},limit:{type:'number'}}},handler:function(args,ctx){return findings(expOf(ctx),args);}},
-  'design.get':{title:'Get design',domain:'design',access:'read',agent_visible:true,description:'Return current Design variants, formulations, source recovery status and unresolved fields, optionally narrowed to a device or sample.',input:{type:'object',properties:{device_id:{type:'string'},sample:{type:'string'}}},handler:function(args,ctx){const exp=expOf(ctx),d=exp.design||{},a=args||{},devices=(d.devices||[]).filter(function(x){if(a.device_id&&String(x.id)!==String(a.device_id))return false;if(a.sample&&!(x.sampleNames||[]).some(function(n){const s=LF.CanonicalStore.sample(exp,a.sample);return String(n)===String(s&&s.name||a.sample);} ))return false;return true;});const ids=new Set();devices.forEach(function(x){(x.solutionIds||[]).forEach(function(id){ids.add(String(id));});});const analysis=exp.designAnalysis||null;return{devices:devices.map(function(x){return compact(x,1100);}),solutions:(d.solutions||[]).filter(function(x){return!ids.size||ids.has(String(x.id));}).map(function(x){return compact(x,1000);}),source:compact(d.evidenceSummary||{},700),coverage:analysis?compact(analysis.summary||{},700):null,status:d.status||''};}},
-  'cabinet.search':{title:'Search Lab Cabinet',domain:'cabinet',access:'read',agent_visible:true,description:'Search reusable workspace Cabinet resources. Cabinet content is optional context, not experiment evidence.',input:{type:'object',properties:{query:{type:'string'},kind:{type:'string'},limit:{type:'number'}}},handler:function(args){args=args||{};if(!LF.Cabinet)return[];return LF.Cabinet.list(args.kind||'all',args.query||'').slice(0,limit(args.limit,12,30)).map(function(x){return compact(x,900);});}},
+  'design.get':{title:'Get design',domain:'design',access:'read',agent_visible:true,
+description:'Return current Design variants, formulations, source recovery status and unresolved fields, optionally narrowed to a device or sample.',
+    input:{type:'object',properties:{device_id:{type:'string'},sample:{type:'string'}}},handler:function(args,ctx){
+    const exp=expOf(ctx),d=exp.design||{},a=args||{},devices=(d.devices||[]).filter(function(x){
+    if(a.device_id&&String(x.id)!==String(a.device_id))return false;
+    if(a.sample&&!(x.sampleNames||[]).some(function(n){const s=LF.CanonicalStore.sample(exp,a.sample);
+    return String(n)===String(s&&s.name||a.sample);} ))return false;return true;});const ids=new Set();
+    devices.forEach(function(x){(x.solutionIds||[]).forEach(function(id){ids.add(String(id));});});
+    const analysis=exp.designAnalysis||null;return{devices:devices.map(function(x){return compact(x,1100);
+    }),solutions:(d.solutions||[]).filter(function(x){return!ids.size||ids.has(String(x.id));
+    }).map(function(x){return compact(x,1000);
+    }),source:compact(d.evidenceSummary||{},700),coverage:analysis?compact(analysis.summary||{}
+    ,700):null,status:d.status||''};}},
+  'cabinet.search':{title:'Search Lab Cabinet',domain:'cabinet',access:'read',agent_visible:true,
+description:'Search reusable workspace Cabinet resources. Cabinet content is optional context, not experiment evidence.',
+    input:{type:'object',properties:{query:{type:'string'},kind:{type:'string'},limit:{type:'number'}}}
+    ,handler:function(args){args=args||{};if(!LF.Cabinet)return[];
+    return LF.Cabinet.list(args.kind||'all',args.query||'').slice(0,limit(args.limit,12,30)).map(function(x){
+    return compact(x,900);});}},
   'cabinet.get':{title:'Get Cabinet resource',domain:'cabinet',access:'read',agent_visible:true,description:'Return one reusable Lab Cabinet resource by id. The returned resource is workspace context, not source evidence.',input:{type:'object',required:['id'],properties:{id:{type:'string'}}},handler:function(args){return LF.Cabinet?compact(LF.Cabinet.get(args.id),1400):null;}},
-  'evidence.search':{title:'Search evidence',domain:'evidence',access:'read',agent_visible:true,description:'Search compact source/evidence records by text terms or related record ids.',input:{type:'object',properties:{query:{type:'string'},record_ids:{type:'array'},limit:{type:'number'}}},handler:function(args,ctx){const a=args||{};return LF.CanonicalStore.evidence(expOf(ctx),{record_ids:Array.isArray(a.record_ids)?a.record_ids:[],terms:words(a.query||''),limit:limit(a.limit,20,50)}).map(function(x){return compact(x,600);});}},
+  'evidence.search':{title:'Search evidence',domain:'evidence',access:'read',agent_visible:true,
+description:'Search compact source/evidence records by text terms or related record ids.',input:{
+    type:'object',properties:{query:{type:'string'},record_ids:{type:'array'},limit:{type:'number'}}}
+    ,handler:function(args,ctx){const a=args||{};
+    return LF.CanonicalStore.evidence(expOf(ctx),{
+    record_ids:Array.isArray(a.record_ids)?a.record_ids:[],terms:words(a.query||''),limit:limit(a.limit,20,50)}
+    ).map(function(x){return compact(x,600);});}},
 
-  'provenance.list':{title:'Get provenance',domain:'provenance',access:'read',agent_visible:true,description:'Return recent scientific patch provenance.',input:{type:'object',properties:{limit:{type:'number'}}},handler:function(args,ctx){const p=LF.CanonicalStore.ensure(expOf(ctx)).provenance||{},n=limit(args&&args.limit,20,60);return{patches:(p.patches||[]).slice(-n).map(function(x){return compact(x,700);}),document_edits:(p.document_edits||[]).slice(-n).map(function(x){return{id:x.id||'',kind:x.kind||'',source:x.source||'',created_at:x.createdAt||'',updated_at:x.updatedAt||'',before_words:x.beforeWords,after_words:x.afterWords};})};}},
-  'nomad.get':{title:'Get NOMAD state',domain:'nomad',access:'read',agent_visible:true,description:'Return current deterministic NOMAD export mapping/readiness state without changing it.',input:{type:'object',properties:{}},handler:function(args,ctx){const n=expOf(ctx).nomad||{};return{validation:compact(n.validation||null,900),mapping_plan:compact(n.mappingPlan||null,1400),stale_since:n.staleSince||'',stale_reason:n.staleReason||''};}}
+  'provenance.list':{title:'Get provenance',domain:'provenance',access:'read',agent_visible:true,
+description:'Return recent scientific patch provenance.',input:{type:'object',properties:{limit:{type:'number'}}}
+    ,handler:function(args,ctx){const p=LF.CanonicalStore.ensure(expOf(ctx)).provenance||{},n=limit(args&&args.limit,20,60);
+    return{patches:(p.patches||[]).slice(-n).map(function(x){return compact(x,700);
+    }),document_edits:(p.document_edits||[]).slice(-n).map(function(x){return{
+    id:x.id||'',kind:x.kind||'',source:x.source||'',created_at:x.createdAt||'',updated_at:x.updatedAt||'',
+    before_words:x.beforeWords,after_words:x.afterWords};})};}},
+  'nomad.get':{title:'Get NOMAD state',domain:'nomad',access:'read',agent_visible:true,
+description:'Return current deterministic NOMAD export mapping/readiness state without changing it.',input:{
+    type:'object',properties:{}},handler:function(args,ctx){const n=expOf(ctx).nomad||{};
+    return{validation:compact(n.validation||null,900),mapping_plan:compact(n.mappingPlan||null,1400),
+    stale_since:n.staleSince||'',stale_reason:n.staleReason||''};}}
 };
 function register(id,def){
   id=clean(id);
@@ -50,8 +127,23 @@ if(LF.ActionStepTools&&typeof LF.ActionStepTools==='object'){
 function definition(id){const d=defs[id];if(!d)return null;const c=clone(d);c.id=id;delete c.handler;return c;}
 function ids(){return Object.keys(defs);}
 function catalog(opts){opts=opts||{};return ids().filter(function(id){const d=defs[id];if(opts.agentVisible&&(!d.agent_visible||d.access!=='read'||d.available&&d.available()===false))return false;if(opts.access&&d.access!==opts.access)return false;return true;}).map(definition);}
-function validateArgs(id,schema,args){schema=schema||{};args=args&&typeof args==='object'&&!Array.isArray(args)?args:{};const props=schema.properties||{},required=Array.isArray(schema.required)?schema.required:[];required.forEach(function(k){if(args[k]===undefined||args[k]===null||args[k]==='')throw new Error('Tool '+id+' requires argument: '+k);});Object.keys(args).forEach(function(k){const rule=props[k];if(!rule)return;const v=args[k],type=Array.isArray(v)?'array':typeof v;if(rule.type&&type!==rule.type)throw new Error('Tool '+id+' argument '+k+' must be '+rule.type+'.');if(rule.enum&&rule.enum.indexOf(v)<0)throw new Error('Tool '+id+' argument '+k+' is not an allowed value.');});return args;}
-function execute(id,args,ctx){const d=defs[id];if(!d)throw new Error('Unknown LabFlow tool: '+id);ctx=ctx||{};if(ctx.agent&&(!d.agent_visible||d.access!=='read'))throw new Error('Assistant cannot invoke non-read tool: '+id);if(d.available&&d.available()===false)return{active:false,records:[],notice:'Optional tool is disabled or unavailable; continue without it.'};const exp=expOf(ctx);if(!exp||!exp.id)throw new Error('Upload a ZIP before using LabFlow tools.');args=validateArgs(id,d.input,args);if(LF.CanonicalStore&&LF.CanonicalStore.ensure)LF.CanonicalStore.ensure(exp);const out=d.handler(args,Object.assign({},ctx,{exp:exp}));if(Log)Log.debug('tool.execute',{id:id,access:d.access,agent:!!ctx.agent});return out;}
+function validateArgs(id,schema,args){schema=schema||{};args=args&&typeof args==='object'&&!Array.isArray(args)?args:{};
+const props=schema.properties||{},required=Array.isArray(schema.required)?schema.required:[];
+  required.forEach(function(k){if(args[k]===undefined||args[k]===null||
+  args[k]==='')throw new Error('Tool '+id+' requires argument: '+k);});
+  Object.keys(args).forEach(function(k){const rule=props[k];if(!rule)return;
+  const v=args[k],type=Array.isArray(v)?'array':typeof v;
+  if(rule.type&&type!==rule.type)throw new Error('Tool '+id+' argument '+k+' must be '+rule.type+'.');
+  if(rule.enum&&rule.enum.indexOf(v)<0)throw new Error('Tool '+id+' argument '+k+' is not an allowed value.');});
+  return args;}
+function execute(id,args,ctx){const d=defs[id];if(!d)throw new Error('Unknown LabFlow tool: '+id);ctx=ctx||{};
+if(ctx.agent&&(!d.agent_visible||d.access!=='read'))throw new Error('Assistant cannot invoke non-read tool: '+id);
+  if(d.available&&d.available()===false)return{
+  active:false,records:[],notice:'Optional tool is disabled or unavailable; continue without it.'};const exp=expOf(ctx);
+  if(!exp||!exp.id)throw new Error('Upload a ZIP before using LabFlow tools.');args=validateArgs(id,d.input,args);
+  if(LF.CanonicalStore&&LF.CanonicalStore.ensure)LF.CanonicalStore.ensure(exp);
+  const out=d.handler(args,Object.assign({},ctx,{exp:exp}));
+  if(Log)Log.debug('tool.execute',{id:id,access:d.access,agent:!!ctx.agent});return out;}
 function describeForAgent(idsList){const allow=new Set(idsList||[]);return catalog({agentVisible:true}).filter(function(d){return!allow.size||allow.has(d.id);}).map(function(d){return{id:d.id,description:d.description,input:d.input};});}
 LF.ToolRegistry={definition:definition,ids:ids,catalog:catalog,execute:execute,describeForAgent:describeForAgent,register:register,registerActionStep:registerActionStep};
 }());

@@ -32,7 +32,14 @@
     const out=[];
     (exp.files||[]).forEach(function(f){addEvidence(out,{id:'ev:file:'+f.id,type:'file',source_id:f.id,source_path:f.path||f.name||'',record_ids:inferRecordIds(exp,f.path||f.name||''),fact:'source file',summary:[f.family||f.type||'unknown',f.path||f.name||''].filter(Boolean).join(' · '),locator:{path:f.path||f.name||''}});});
     (exp.rawFormatEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path);addEvidence(out,{id:'ev:format:'+i,type:'format',source_id:f&&f.id||'',source_path:path,record_ids:inferRecordIds(exp,x),fact:'format evidence',summary:evidenceSummary(x),locator:path?{path:path}:null});});
-    (exp.auxiliaryEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path),meta=x&&x.meta||{},designBits=[];Object.keys(meta).forEach(function(k){if(/note|stack|precursor|solution|solvent|anneal|coating|fabricat|process|atmosphere/i.test(k)&&clean(meta[k]))designBits.push(k+': '+compact(meta[k],700));});const summary=[evidenceSummary(x)].concat(designBits.slice(0,3)).filter(Boolean).join(' · ');addEvidence(out,{id:'ev:aux:'+i,type:'auxiliary',source_id:f&&f.id||'',source_path:path,record_ids:inferRecordIds(exp,x),fact:designBits.length?'auxiliary design evidence':'auxiliary evidence',summary:summary,locator:path?{path:path}:null});});
+    (exp.auxiliaryEvidence||[]).forEach(function(x,i){const path=pathOf(x),f=fileByPath(exp,path),meta=x&&x.meta||{}
+,designBits=[];Object.keys(meta).forEach(function(k){
+      if(/note|stack|precursor|solution|solvent|anneal|coating|fabricat|process|atmosphere/i.test(k)&&
+      clean(meta[k]))designBits.push(k+': '+compact(meta[k],700));});
+      const summary=[evidenceSummary(x)].concat(designBits.slice(0,3)).filter(Boolean).join(' · ');
+      addEvidence(out,{id:'ev:aux:'+i,type:'auxiliary',source_id:f&&f.id||'',source_path:path,record_ids:inferRecordIds(exp,
+      x),fact:designBits.length?'auxiliary design evidence':'auxiliary evidence',summary:summary,locator:path?{path:path}
+      :null});});
     (exp.findings||[]).forEach(function(f){(f.evidence||[]).forEach(function(ev,i){addEvidence(out,{id:'ev:finding:'+String(f.id||i)+':'+i,type:'finding',source_id:String(f.id||''),source_path:'',record_ids:inferRecordIds(exp,[f.target,ev]),fact:f.title||f.type||'finding evidence',summary:compact(ev,360),locator:{finding_id:String(f.id||'')}});});});
     return out;
   }
@@ -49,7 +56,11 @@
     return out;
   }
   function buildAliases(exp){
-    return(exp.samples||[]).map(function(s){const values=[s.name,s.rawName].concat(s.aliases||[]);(exp.measurements||[]).forEach(function(m){if(norm(m.sample)===norm(s.name)){if(m.rawSample)values.push(m.rawSample);(m.sampleAliases||[]).forEach(function(a){values.push(a);});}});const aliases=Array.from(new Set(values.map(clean).filter(Boolean)));return{record_id:s.id,kind:'sample',canonical:s.name||'',aliases:aliases};});
+    return(exp.samples||[]).map(function(s){const values=[s.name,s.rawName].concat(s.aliases||[]);
+(exp.measurements||[]).forEach(function(m){if(norm(m.sample)===norm(s.name)){if(m.rawSample)values.push(m.rawSample);
+      (m.sampleAliases||[]).forEach(function(a){values.push(a);});}});
+      const aliases=Array.from(new Set(values.map(clean).filter(Boolean)));
+      return{record_id:s.id,kind:'sample',canonical:s.name||'',aliases:aliases};});
   }
   function indexes(exp,evidence,relations){
     const idx={byId:new Map(),evidenceByRecord:new Map(),relationsByNode:new Map(),sampleByAlias:new Map()};
@@ -74,12 +85,29 @@
   }
   function ensure(exp){const hit=cache.get(exp),sig=stamp(exp);if(hit&&hit.stamp===sig&&exp.canonical===hit.store)return hit.store;return build(exp);}
   function index(exp){ensure(exp);return(cache.get(exp)||{}).index||null;}
-  function summary(exp){const s=ensure(exp)||{},records=s.records||{},scientific=s.scientific||{};return{revision:s.revision||0,files:(records.files||[]).length,experiments:(records.experiments||[]).length,samples:(records.samples||[]).length,runs:(records.runs||[]).length,measurements:(records.measurements||[]).length,findings:(scientific.findings||[]).filter(function(f){return f.status!=='resolved';}).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,x){return n+(x.aliases||[]).length;},0)};}
+  function summary(exp){const s=ensure(exp)||{},records=s.records||{},scientific=s.scientific||{};
+return{revision:s.revision||0,files:(records.files||[]).length,experiments:(records.experiments||[]).length,
+    samples:(records.samples||[]).length,runs:(records.runs||[]).length,measurements:(records.measurements||[]).length,
+    findings:(scientific.findings||[]).filter(function(f){return f.status!=='resolved';
+    }).length,evidence:(s.evidence||[]).length,relations:(s.relations||[]).length,aliases:(s.aliases||[]).reduce(function(n,
+    x){return n+(x.aliases||[]).length;},0)};}
   function record(exp,id){const idx=index(exp);return idx&&idx.byId.get(String(id))||null;}
   function sample(exp,nameOrId){const idx=index(exp);return record(exp,nameOrId)||(idx&&idx.sampleByAlias.get(norm(nameOrId)))||null;}
   function related(exp,id,type){const idx=index(exp);const list=idx&&idx.relationsByNode.get(String(id))||[];return type?list.filter(function(r){return r.type===type;}):list.slice();}
-  function evidence(exp,opts){opts=opts||{};const store=ensure(exp),ids=new Set((opts.record_ids||opts.recordIds||[]).map(String)),types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,Number(opts.limit)||20);let rows=(store&&store.evidence||[]).filter(function(ev){if(ids.size&&!Array.from(ids).some(function(id){return(ev.record_ids||[]).includes(id)||ev.source_id===id;}))return false;if(types.size&&!types.has(ev.type))return false;if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
-  function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;}),store=ensure(exp),out=[];if(!terms.length)return out;((store.records&&store.records.samples)||[]).forEach(function(s){const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});});return out.slice(0,limit||12);}
+  function evidence(exp,opts){opts=opts||{};
+const store=ensure(exp),ids=new Set((opts.record_ids||opts.recordIds||[]).map(String)),
+    types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,
+    Number(opts.limit)||20);let rows=(store&&store.evidence||[]).filter(function(ev){
+    if(ids.size&&!Array.from(ids).some(function(id){return(ev.record_ids||[]).includes(id)||ev.source_id===id;
+    }))return false;if(types.size&&!types.has(ev.type))return false;
+    if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));
+    if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
+  function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;
+}),store=ensure(exp),out=[];if(!terms.length)return out;
+    ((store.records&&store.records.samples)||[]).forEach(function(s){
+    const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));
+    if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});
+    });return out.slice(0,limit||12);}
   function domain(exp,name){const s=ensure(exp);if(!s)return null;const map={experiment:s.experiment,source:s.source,records:s.records,scientific:s.scientific,evidence:s.evidence,relations:s.relations,aliases:s.aliases,provenance:s.provenance};return map[name]!==undefined?map[name]:null;}
   LF.CanonicalStore={build:build,ensure:ensure,summary:summary,record:record,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,domain:domain,compact:compact};
 }());

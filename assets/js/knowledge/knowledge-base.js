@@ -20,7 +20,13 @@ function sourceLocator(s){return clean(s&&s.citation)||normalizeDoi(s&&s.doi)||s
 function normalize(seed,origin){
   seed=seed&&typeof seed==='object'?seed:{};
   const kind=Object.prototype.hasOwnProperty.call(KINDS,seed.kind)?seed.kind:'concept',status=Object.prototype.hasOwnProperty.call(STATUSES,seed.status)?seed.status:'draft',id=clean(seed.id,120)||C.uid('kb');
-  return{id:id,kind:kind,title:clean(seed.title,MAX.title),aliases:tokens(seed.aliases,MAX.alias),tags:tokens(seed.tags,MAX.tag),summary:clean(seed.summary,MAX.summary),facts:lines(seed.facts,MAX.fact),cautions:lines(seed.cautions,MAX.caution),related_ids:tokens(seed.related_ids||seed.relatedIds,120),sources:(Array.isArray(seed.sources)?seed.sources:[]).map(source).filter(function(s){return s.title||sourceLocator(s);}).slice(0,20),status:status,origin:origin||clean(seed.origin,24)||'custom',created_at:seed.created_at||seed.createdAt||new Date().toISOString(),updated_at:seed.updated_at||seed.updatedAt||new Date().toISOString()};
+  return{id:id,kind:kind,title:clean(seed.title,MAX.title),aliases:tokens(seed.aliases,MAX.alias),tags:tokens(seed.tags,
+MAX.tag),summary:clean(seed.summary,MAX.summary),facts:lines(seed.facts,MAX.fact),cautions:lines(seed.cautions,
+    MAX.caution),related_ids:tokens(seed.related_ids||seed.relatedIds,120),
+    sources:(Array.isArray(seed.sources)?seed.sources:[]).map(source).filter(function(s){return s.title||sourceLocator(s);
+    }).slice(0,20),status:status,origin:origin||clean(seed.origin,24)||'custom',
+    created_at:seed.created_at||seed.createdAt||new Date().toISOString(),
+    updated_at:seed.updated_at||seed.updatedAt||new Date().toISOString()};
 }
 function issues(entry,forUse){
   const e=normalize(entry,entry&&entry.origin),out=[];
@@ -73,7 +79,8 @@ function duplicate(id){const src=get(id);if(!src)throw new Error('Knowledge Base
 function resetCustom(){persist([]);if(Log)Log.info('custom.reset');return true;}
 
 function textOf(e){return [e.id,e.kind,e.title].concat(e.aliases||[],e.tags||[],[e.summary]).concat(e.facts||[],e.cautions||[]).join(' ').toLowerCase();}
-const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
+const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain ' +
+  'please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
 function queryTokens(q){return Array.from(new Set(clean(q).toLowerCase().replace(/[^a-z0-9à-ž_.+\-]+/gi,' ').split(/\s+/).filter(function(x){return x.length>=2&&!STOP.has(x);}))).slice(0,48);}
 function score(e,query,kinds){
   if(e.status!=='active'||issues(e,true).length)return-1;
@@ -89,8 +96,14 @@ function search(query,opts){
   return all().map(function(e){return{entry:e,score:score(e,query,kinds)};}).filter(function(x){return x.score>=minScore;}).sort(function(a,b){return b.score-a.score||String(a.entry.title).localeCompare(String(b.entry.title));}).slice(0,limit).map(function(x){return clone(x.entry);});
 }
 function compactSource(s){return{title:clean(s.title,180),authors:clean(s.authors,180),year:s.year,citation:clean(s.citation,260),doi:s.doi,url:s.url};}
-function compactForAI(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,10),tags:(entry.tags||[]).slice(0,12),summary:clean(entry.summary,520),facts:(entry.facts||[]).slice(0,7).map(function(x){return clean(x,320);}),cautions:(entry.cautions||[]).slice(0,4).map(function(x){return clean(x,280);}),related_ids:(entry.related_ids||[]).slice(0,12),sources:(entry.sources||[]).slice(0,3).map(compactSource)};}
-function context(query,opts){const entries=search(query,opts).map(compactForAI);return{entries:entries,note:'Reference knowledge only. It is not evidence that the current experiment used or exhibited these materials, architectures, processes or causes.',citation_contract:'When an answer or proposal relies on an entry, cite its exact id as KB:<id>. Assistant prose must use [KB:<id>] immediately after the supported claim.'};}
+function compactForAI(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,
+10),tags:(entry.tags||[]).slice(0,12),summary:clean(entry.summary,520),facts:(entry.facts||[]).slice(0,
+  7).map(function(x){return clean(x,320);}),cautions:(entry.cautions||[]).slice(0,4).map(function(x){return clean(x,280);
+  }),related_ids:(entry.related_ids||[]).slice(0,12),sources:(entry.sources||[]).slice(0,3).map(compactSource)};}
+function context(query,opts){const entries=search(query,opts).map(compactForAI);
+return{entries:entries,note:'Reference knowledge only. It is not evidence that the current experiment used or exhibited these materials, architectures, processes or causes.',
+  citation_contract:'When an answer or proposal relies on an entry, cite its exact id as KB:<id>. Assistant prose must use [KB:<id>] immediately after the supported claim.'}
+  ;}
 function referenceIds(text){const out=[],re=/\[KB:([A-Za-z0-9._:-]+)\]/g;let m;while((m=re.exec(String(text||''))))if(!out.includes(m[1]))out.push(m[1]);return out;}
 function referencesFromText(text){return referenceIds(text).map(get).filter(Boolean).map(clone);}
 function sourceHref(s){const u=safeUrl(s&&s.url);if(u)return u;const doi=normalizeDoi(s&&s.doi);return doi?'https://doi.org/'+doi:'';}

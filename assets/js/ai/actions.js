@@ -10,10 +10,43 @@ function usesAi(def){return stepsOf(def).some(function(s){return s.type==='AI';}
 function cancel(){if(!controller||controller.signal.aborted)return false;controller.abort();return true;}
 function actionError(code,message){const e=new Error(message);e.code=code;return e;}
 function cancelError(){const e=actionError('ACTION_ABORTED','Action stopped by the user.');e.cancelled=true;return e;}
-function classify(err){if(err&&err.cancelled)return err.code||'ACTION_ABORTED';if(err&&err.code==='MODEL_OUTPUT_TRUNCATED')return'MODEL_OUTPUT_TRUNCATED';if(err&&err.isContract)return err.code||'MODEL_OUTPUT_INVALID';if(err&&(err.isContextOverflow||err.code==='MODEL_CONTEXT_LENGTH'||String(err.providerCode||'')==='1261'||/exceed(?:s|ed)?.*context|exceed_context_size_error/i.test(String(err.message||'')+' '+String(err.providerMessage||''))))return'MODEL_CONTEXT_LENGTH';if(err&&((LF.AI&&LF.AI.isRateLimitError&&LF.AI.isRateLimitError(err))||Number(err.status)===429))return err.rateLimitRetryable===false?'MODEL_QUOTA_LIMIT':'MODEL_RATE_LIMIT';if(err&&err.timedOut)return'MODEL_TIMEOUT';if(err&&err.isNetwork)return'NETWORK_ERROR';return err&&err.code||'ACTION_FAILED';}
+function classify(err){if(err&&err.cancelled)return err.code||'ACTION_ABORTED';
+if(err&&err.code==='MODEL_OUTPUT_TRUNCATED')return'MODEL_OUTPUT_TRUNCATED';
+  if(err&&err.isContract)return err.code||'MODEL_OUTPUT_INVALID';
+  if(err&&(err.isContextOverflow||err.code==='MODEL_CONTEXT_LENGTH'||String(err.providerCode||'')==='1261'||
+  /exceed(?:s|ed)?.*context|exceed_context_size_error/i.test(String(err.message||'')+' '+String(err.providerMessage||
+  ''))))return'MODEL_CONTEXT_LENGTH';if(err&&((LF.AI&&LF.AI.isRateLimitError&&LF.AI.isRateLimitError(err))||
+  Number(err.status)===429))return err.rateLimitRetryable===false?'MODEL_QUOTA_LIMIT':'MODEL_RATE_LIMIT';
+  if(err&&err.timedOut)return'MODEL_TIMEOUT';if(err&&err.isNetwork)return'NETWORK_ERROR';
+  return err&&err.code||'ACTION_FAILED';}
 function getPath(root,path){return String(path||'').split('.').filter(Boolean).reduce(function(v,key){return v==null?undefined:v[key];},root);}
-function parseJson(step,content){const parsed=LF.StructuredOutput.parse(content);let rawValue=parsed.value,note=parsed.strategy||'JSON';if(!rawValue&&step.schema&&LF.StructuredOutput.recoverForSchema){const recovered=LF.StructuredOutput.recoverForSchema(step.schema,content);if(recovered){rawValue=recovered;note='bounded '+step.schema+' text recovery';if(Log)Log.warn('output.recovered-structured-text',{schema:step.schema,outputPreview:String(content||'').slice(0,1200)});}}if(!rawValue){if(Log)Log.warn('output.invalid-json',{schema:step&&step.schema||'',diagnosis:parsed&&parsed.diagnosis||'',outputPreview:String(content||'').slice(0,1200)});const e=LF.StructuredOutput.contractError(step.schema,null,{text:content,parseResult:parsed});e.modelOutput=content;throw e;}const normalized=step.schema&&LF.StructuredOutput.normalizeForSchema?LF.StructuredOutput.normalizeForSchema(step.schema,rawValue):rawValue;if(step.schema){const errors=LF.StructuredOutput.validate(step.schema,normalized,{registry:LF.ActionRegistry});if(errors.length){if(Log)Log.warn('output.invalid-contract',{schema:step.schema,errors:errors.slice(0,12),parseStrategy:parsed.strategy||'JSON',outputPreview:String(content||'').slice(0,1200)});const e=LF.StructuredOutput.contractError(step.schema,normalized,{providerResponse:errors.join('\n')+'\n\n'+content});e.validationErrors=errors;e.modelOutput=content;throw e;}}return{value:normalized,note:note};}
-function requestMeta(r){const p=r.thinkingPolicy||{};return{model:r.model,provider:r.provider,thinkingMode:r.thinkingMode||'auto',thinkingRequested:p.requested||'auto',thinkingCapability:p.capability||'unknown',thinkingEffective:p.effective||r.thinkingMode||'auto',thinkingReason:p.reason||'',reasoningObserved:!!r.reasoningObserved,reasoningControlRequests:Number(r.reasoningControlRequests)||0,reasoningControlOk:r.reasoningControlOk===true,reasoningCompatibilityRetry:r.reasoningCompatibilityRetry===true,requestId:r.requestId,requestLogId:r.requestLogId,latencyMs:r.latencyMs,prepareMs:r.prepareMs,responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,generationMs:r.generationMs,finalizeMs:r.finalizeMs,httpRequests:r.httpRequests,ttftMs:r.ttftMs,tokensPerSecond:r.tokensPerSecond,streamed:r.streamed,responseBytes:r.responseBytes,usage:r.usage,finishReason:r.finishReason,content:r.content,reasoning:r.reasoning};}
+function parseJson(step,content){const parsed=LF.StructuredOutput.parse(content);
+let rawValue=parsed.value,note=parsed.strategy||'JSON';
+  if(!rawValue&&step.schema&&LF.StructuredOutput.recoverForSchema){
+  const recovered=LF.StructuredOutput.recoverForSchema(step.schema,content);if(recovered){rawValue=recovered;
+  note='bounded '+step.schema+' text recovery';
+  if(Log)Log.warn('output.recovered-structured-text',{schema:step.schema,outputPreview:String(content||'').slice(0,1200)}
+  );}}if(!rawValue){if(Log)Log.warn('output.invalid-json',{
+  schema:step&&step.schema||'',diagnosis:parsed&&parsed.diagnosis||'',outputPreview:String(content||'').slice(0,1200)});
+  const e=LF.StructuredOutput.contractError(step.schema,null,{text:content,parseResult:parsed});e.modelOutput=content;
+  throw e;}const normalized=step.schema&&LF.StructuredOutput.normalizeForSchema?
+  LF.StructuredOutput.normalizeForSchema(step.schema,rawValue):rawValue;
+  if(step.schema){const errors=LF.StructuredOutput.validate(step.schema,normalized,{registry:LF.ActionRegistry});
+  if(errors.length){if(Log)Log.warn('output.invalid-contract',{
+  schema:step.schema,errors:errors.slice(0,12),parseStrategy:parsed.strategy||'JSON',
+  outputPreview:String(content||'').slice(0,1200)});
+  const e=LF.StructuredOutput.contractError(step.schema,normalized,{providerResponse:errors.join('\n')+'\n\n'+content});
+  e.validationErrors=errors;e.modelOutput=content;throw e;}}return{value:normalized,note:note};}
+function requestMeta(r){const p=r.thinkingPolicy||{};
+return{model:r.model,provider:r.provider,thinkingMode:r.thinkingMode||'auto',thinkingRequested:p.requested||'auto',
+  thinkingCapability:p.capability||'unknown',thinkingEffective:p.effective||r.thinkingMode||'auto',
+  thinkingReason:p.reason||'',reasoningObserved:!!r.reasoningObserved,
+  reasoningControlRequests:Number(r.reasoningControlRequests)||0,reasoningControlOk:r.reasoningControlOk===true,
+  reasoningCompatibilityRetry:r.reasoningCompatibilityRetry===true,requestId:r.requestId,requestLogId:r.requestLogId,
+  latencyMs:r.latencyMs,prepareMs:r.prepareMs,responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,
+  generationMs:r.generationMs,finalizeMs:r.finalizeMs,httpRequests:r.httpRequests,ttftMs:r.ttftMs,
+  tokensPerSecond:r.tokensPerSecond,streamed:r.streamed,responseBytes:r.responseBytes,usage:r.usage,
+  finishReason:r.finishReason,content:r.content,reasoning:r.reasoning};}
 function safeRequest(spec){const headers=Object.assign({},spec.headers||{});if(headers.Authorization)headers.Authorization='Configured · redacted';return{method:'POST',endpoint:spec.url||'',headers:headers,body:spec.body||{}};}
 function retryable(step,err,retryNo,truncationRetryNo){
   if(!(step&&step.type==='AI')||(err&&err.cancelled))return false;
@@ -29,22 +62,76 @@ function retryable(step,err,retryNo,truncationRetryNo){
 }
 function feedbackFor(err,step){
   const code=classify(err);
-  if(code==='MODEL_OUTPUT_TRUNCATED'){if(step&&step.output==='json')return'Previous attempt exhausted the completion budget before closing the JSON. Return the final JSON immediately, with no analysis or reasoning text. Return the entire JSON object again, not a continuation. Make it much more compact: include only requested missing fields, use short summary/reason/unknown strings, omit optional empty properties, and never repeat evidence or known values.';return'Previous attempt exhausted the completion budget. Return the final answer immediately, with no analysis or reasoning text. Rewrite the whole requested work unit as a complete, shorter block within the reduced word range; do not continue the cut-off text.';}
+  if(code==='MODEL_OUTPUT_TRUNCATED'){if(step&&
+step.output==='json')return'Previous attempt exhausted the completion budget before closing the JSON. Return the final JSON immediately, ' +
+  'with no analysis or reasoning text. Return the entire JSON object again, not a continuation. Make it much more ' +
+  'compact: include only requested missing fields, use short summary/reason/unknown strings, omit optional empty properties, and never repeat evidence or known values.';
+return'Previous attempt exhausted the completion budget. Return the final answer immediately, with no analysis or reasoning text. Rewrite the whole requested work unit as a complete, shorter block within the reduced word range; do not continue the cut-off text.';}
   /* A transport/network/server failure has no semantic correction to teach the
      model. Retrying with providerResponse would feed HTTP/provider metadata back
      into the prompt, so transport retries regenerate the exact clean context. */
   if(err&&(err.isNetwork||err.timedOut||Number(err.status)>=500))return'';
-  if(err&&err.isContract){const details=err.validationErrors&&err.validationErrors.length?err.validationErrors.join('\n'):String(err&&err.message||'The previous model output did not match the required contract.');const modelOutput=String(err&&err.modelOutput||'').slice(0,4200);return('Previous model output failed '+code+'.\n'+details+(modelOutput?'\n\nPrevious assistant output only:\n'+modelOutput:'')).trim().slice(0,6000);}
+  if(err&&err.isContract){const details=err.validationErrors&&
+err.validationErrors.length?err.validationErrors.join('\n'):String(err&&err.message||
+    'The previous model output did not match the required contract.');
+    const modelOutput=String(err&&err.modelOutput||'').slice(0,4200);
+    return('Previous model output failed '+code+'.\n'+details+(modelOutput?'\n\nPrevious assistant output only:\n'+
+    modelOutput:'')).trim().slice(0,6000);}
   return('Previous attempt failed with '+code+'. Return only a valid result for the original task.').trim();
 }
-function delay(ms){return new Promise(function(resolve,reject){if(!controller||controller.signal.aborted){reject(cancelError());return;}const timer=setTimeout(done,ms);function clean(){clearTimeout(timer);controller&&controller.signal.removeEventListener('abort',aborted);}function done(){clean();resolve();}function aborted(){clean();reject(cancelError());}controller.signal.addEventListener('abort',aborted,{once:true});});}
-function historyRequestMeta(meta){const out={};Object.keys(meta||{}).slice(-24).forEach(function(key){const m=meta[key]||{};out[key]={model:m.model||'',provider:m.provider||'',thinkingMode:m.thinkingMode||'auto',thinkingRequested:m.thinkingRequested||'auto',thinkingCapability:m.thinkingCapability||'unknown',thinkingEffective:m.thinkingEffective||m.thinkingMode||'auto',thinkingReason:m.thinkingReason||'',reasoningObserved:!!m.reasoningObserved,reasoningControlRequests:Number(m.reasoningControlRequests)||0,reasoningControlOk:m.reasoningControlOk===true,reasoningCompatibilityRetry:m.reasoningCompatibilityRetry===true,requestId:m.requestId||'',requestLogId:m.requestLogId||'',latencyMs:m.latencyMs,prepareMs:m.prepareMs,responseHeadersMs:m.responseHeadersMs,requestElapsedMs:m.requestElapsedMs,generationMs:m.generationMs,finalizeMs:m.finalizeMs,httpRequests:m.httpRequests,ttftMs:m.ttftMs,tokensPerSecond:m.tokensPerSecond,streamed:!!m.streamed,responseBytes:m.responseBytes,usage:m.usage||null,finishReason:m.finishReason||'',answerMaxTokens:m.answerMaxTokens||null,completionBudgetTokens:m.completionBudgetTokens||null,reasoningReserveTokens:m.reasoningReserveTokens||null};});return out;}
-function recordHistory(run,status,code){const e=expOf();if(!e)return;LF.State.ensureDerived(e);const entry=e.derived.actions[run.actionId]||{runs:[]};entry.lastStatus=status;entry.lastRunAt=new Date().toISOString();entry.runs.push({runId:run.runId,status:status,code:code||'',sourceRevision:run.sourceRevision,startedAt:run.startedAt,endedAt:new Date().toISOString(),steps:run.steps.slice(),attempts:run.attempts.slice(-8).map(function(x){return Object.assign({},x,{message:String(x.message||'').slice(0,900)});}),work:run.work,requestMeta:historyRequestMeta(run.requestMeta)});if(entry.runs.length>12)entry.runs=entry.runs.slice(-12);e.derived.actions[run.actionId]=entry;}
+function delay(ms){return new Promise(function(resolve,reject){if(!controller||controller.signal.aborted){
+reject(cancelError());return;}const timer=setTimeout(done,ms);function clean(){clearTimeout(timer);
+  controller&&controller.signal.removeEventListener('abort',aborted);}function done(){clean();resolve();
+  }function aborted(){clean();reject(cancelError());}controller.signal.addEventListener('abort',aborted,{once:true});});}
+function historyRequestMeta(meta){const out={};
+Object.keys(meta||{}).slice(-24).forEach(function(key){const m=meta[key]||{};
+  out[key]={model:m.model||'',provider:m.provider||'',thinkingMode:m.thinkingMode||'auto',
+  thinkingRequested:m.thinkingRequested||'auto',thinkingCapability:m.thinkingCapability||'unknown',
+  thinkingEffective:m.thinkingEffective||m.thinkingMode||'auto',thinkingReason:m.thinkingReason||'',
+  reasoningObserved:!!m.reasoningObserved,reasoningControlRequests:Number(m.reasoningControlRequests)||0,
+  reasoningControlOk:m.reasoningControlOk===true,reasoningCompatibilityRetry:m.reasoningCompatibilityRetry===true,
+  requestId:m.requestId||'',requestLogId:m.requestLogId||'',latencyMs:m.latencyMs,prepareMs:m.prepareMs,
+  responseHeadersMs:m.responseHeadersMs,requestElapsedMs:m.requestElapsedMs,generationMs:m.generationMs,
+  finalizeMs:m.finalizeMs,httpRequests:m.httpRequests,ttftMs:m.ttftMs,tokensPerSecond:m.tokensPerSecond,
+  streamed:!!m.streamed,responseBytes:m.responseBytes,usage:m.usage||null,finishReason:m.finishReason||'',
+  answerMaxTokens:m.answerMaxTokens||null,completionBudgetTokens:m.completionBudgetTokens||null,
+  reasoningReserveTokens:m.reasoningReserveTokens||null};});return out;}
+function recordHistory(run,status,code){const e=expOf();if(!e)return;LF.State.ensureDerived(e);
+const entry=e.derived.actions[run.actionId]||{runs:[]};entry.lastStatus=status;entry.lastRunAt=new Date().toISOString();
+  entry.runs.push({runId:run.runId,status:status,code:code||'',sourceRevision:run.sourceRevision,startedAt:run.startedAt,
+  endedAt:new Date().toISOString(),steps:run.steps.slice(),attempts:run.attempts.slice(-8).map(function(x){
+  return Object.assign({},x,{message:String(x.message||'').slice(0,900)});
+  }),work:run.work,requestMeta:historyRequestMeta(run.requestMeta)});
+  if(entry.runs.length>12)entry.runs=entry.runs.slice(-12);e.derived.actions[run.actionId]=entry;}
 function semanticResult(run){const id=String(run&&run.def&&run.def.execution&&run.def.execution.result_step||'').trim();if(id&&Object.prototype.hasOwnProperty.call(run.outputs,id))return run.outputs[id];return run.result;}
 function guardFailures(exp,def,opts){if(!LF.ActionGuards||!LF.ActionGuards.check)return[];return LF.ActionGuards.check(def,{exp:exp,params:opts.params||{},selection:opts.selection||null,userText:opts.userText||''});}
-function deterministicContext(run,step,opts,workItem,workIndex,workTotal){return{actionId:run.actionId,exp:expOf(),step:step,outputs:run.outputs,lastResult:run.result,params:run.params,selection:run.selection,sourceRevision:run.sourceRevision,requestMeta:run.requestMeta,workItem:workItem,workIndex:workIndex,workTotal:workTotal,progress:function(done,total,label){if(opts.onWork)opts.onWork({step:step.id,index:run.currentIndex,totalSteps:stepsOf(run.def).length,workIndex:Number(done)||0,workTotal:Number(total)||0,label:label||''});}};}
-function runTool(run,step,opts,workItem,workIndex,workTotal){const id=step.tool||step.fn,ctx=deterministicContext(run,step,opts,workItem,workIndex,workTotal);if(!id)throw actionError('ACTION_STEP_INVALID','Deterministic step has no tool id: '+step.id);const definition=LF.ToolRegistry&&LF.ToolRegistry.definition?LF.ToolRegistry.definition(id):null,meta=definition||LF.ActionStepTools&&LF.ActionStepTools[id]||{},currentRevision=Number(ctx.exp&&ctx.exp.sync&&ctx.exp.sync.revision||0);if(meta.access==='write'){if(currentRevision!==Number(run.sourceRevision||0))throw actionError('ACTION_STATE_STALE','LabFlow Data changed while this Action was running. Its output was not applied; run the Action again with the current data.');const allowed=run&&run.def&&run.def.contract&&run.def.contract.effect&&Array.isArray(run.def.contract.effect.writes)?run.def.contract.effect.writes:[],required=Array.isArray(meta.writes)?meta.writes:[];if(required.some(function(path){return !allowed.includes(path);}))throw actionError('ACTION_EFFECT_FORBIDDEN','This Action is not allowed to write the state required by '+id+'. Restore the source Action definition.');}if(definition)return LF.ToolRegistry.execute(id,{},ctx);const fn=LF.ActionSteps&&LF.ActionSteps[id];if(!fn)throw actionError('ACTION_STEP_INVALID','Deterministic tool is not registered: '+id);return fn(ctx);}
-function validateAiCandidate(run,step,opts,value,workItem,workIndex,workTotal){const id=String(step&&step.validate_with||'').trim();if(!id)return value;const ctx=deterministicContext(run,step,opts,workItem,workIndex,workTotal);ctx.candidate=value;ctx.lastResult=value;if(LF.ToolRegistry&&LF.ToolRegistry.definition&&LF.ToolRegistry.definition(id))return LF.ToolRegistry.execute(id,{},ctx);const fn=LF.ActionSteps&&LF.ActionSteps[id];if(!fn)throw actionError('ACTION_STEP_INVALID','AI semantic validator is not registered: '+id);return fn(ctx);}
+function deterministicContext(run,step,opts,workItem,workIndex,workTotal){return{
+actionId:run.actionId,exp:expOf(),step:step,outputs:run.outputs,lastResult:run.result,params:run.params,
+  selection:run.selection,sourceRevision:run.sourceRevision,requestMeta:run.requestMeta,workItem:workItem,
+  workIndex:workIndex,workTotal:workTotal,progress:function(done,total,label){if(opts.onWork)opts.onWork({
+  step:step.id,index:run.currentIndex,totalSteps:stepsOf(run.def).length,workIndex:Number(done)||0,
+  workTotal:Number(total)||0,label:label||''});}};}
+function runTool(run,step,opts,workItem,workIndex,workTotal){
+const id=step.tool||step.fn,ctx=deterministicContext(run,step,opts,workItem,workIndex,workTotal);
+  if(!id)throw actionError('ACTION_STEP_INVALID','Deterministic step has no tool id: '+step.id);
+  const definition=LF.ToolRegistry&&LF.ToolRegistry.definition?LF.ToolRegistry.definition(id):null,
+  meta=definition||LF.ActionStepTools&&LF.ActionStepTools[id]||{}
+  ,currentRevision=Number(ctx.exp&&ctx.exp.sync&&ctx.exp.sync.revision||0);
+  if(meta.access==='write'){if(currentRevision!==Number(run.sourceRevision||0))throw actionError('ACTION_STATE_STALE',
+  'LabFlow Data changed while this Action was running. Its output was not applied; run the Action again with the current data.');
+  const allowed=run&&run.def&&run.def.contract&&run.def.contract.effect&&
+  Array.isArray(run.def.contract.effect.writes)?run.def.contract.effect.writes:[],
+  required=Array.isArray(meta.writes)?meta.writes:[];if(required.some(function(path){return !allowed.includes(path);
+  }))throw actionError('ACTION_EFFECT_FORBIDDEN',
+  'This Action is not allowed to write the state required by '+id+'. Restore the source Action definition.');
+  }if(definition)return LF.ToolRegistry.execute(id,{},ctx);const fn=LF.ActionSteps&&LF.ActionSteps[id];
+  if(!fn)throw actionError('ACTION_STEP_INVALID','Deterministic tool is not registered: '+id);return fn(ctx);}
+function validateAiCandidate(run,step,opts,value,workItem,workIndex,workTotal){
+const id=String(step&&step.validate_with||'').trim();if(!id)return value;
+  const ctx=deterministicContext(run,step,opts,workItem,workIndex,workTotal);ctx.candidate=value;ctx.lastResult=value;
+  if(LF.ToolRegistry&&LF.ToolRegistry.definition&&LF.ToolRegistry.definition(id))return LF.ToolRegistry.execute(id,{}
+  ,ctx);const fn=LF.ActionSteps&&LF.ActionSteps[id];
+  if(!fn)throw actionError('ACTION_STEP_INVALID','AI semantic validator is not registered: '+id);return fn(ctx);}
 async function modelCapability(settings){return LF.AI.resolveModelCapabilities?LF.AI.resolveModelCapabilities({provider:settings.provider,endpoint:settings.endpoint,model:settings.model}):null;}
 function positive(value){const n=Math.floor(Number(value)||0);return n>0?n:null;}
 function tokenProfile(step,workItem,hardCap){
@@ -70,7 +157,10 @@ function fitWorkItemToOutput(step,workItem,hardCap,capability,settings){
 }
 function shrinkTruncatedWorkItem(workItem,partial){
   const current=positive(workItem&&workItem.target_words);if(!current)return workItem;
-  const produced=String(partial||'').trim().split(/\s+/).filter(Boolean).length,byTarget=Math.floor(current*.65),byObserved=produced?Math.floor(produced*.78):byTarget,target=Math.max(80,Math.min(byTarget,byObserved)),min=Math.max(60,Math.min(positive(workItem.min_words)||target,Math.floor(target*.72))),max=Math.max(target,Math.min(positive(workItem.max_words)||Math.ceil(target*1.18),Math.ceil(target*1.18)));
+  const produced=String(partial||'').trim().split(/\s+/).filter(Boolean).length,byTarget=Math.floor(current*.65),
+byObserved=produced?Math.floor(produced*.78):byTarget,target=Math.max(80,Math.min(byTarget,byObserved)),min=Math.max(60,
+    Math.min(positive(workItem.min_words)||target,Math.floor(target*.72))),max=Math.max(target,
+    Math.min(positive(workItem.max_words)||Math.ceil(target*1.18),Math.ceil(target*1.18)));
   return Object.assign({},workItem,{requested_target_words:positive(workItem.requested_target_words)||current,target_words:target,min_words:min,max_words:max,output_budget_adjusted:true,truncation_retry:true});
 }
 function providerCompletionCeiling(capability,settings,inputTokens){
@@ -88,47 +178,119 @@ function reasoningHeadroom(profile,capability,thinkingPolicy){
   return Math.max(512,Math.ceil(target));
 }
 function truncationRetryBudget(err,profile){
-  const prior=positive(err&&err.completionBudgetTokens)||positive(err&&err.requestedMaxTokens)||positive(profile&&profile.requestTokens)||512,usage=err&&err.usage||{},observedCompletion=positive(usage.completionTokens)||0,reportedReasoning=positive(usage.reasoningTokens)||0,estimatedReasoning=LF.AI&&LF.AI.estimateTokens?LF.AI.estimateTokens(err&&err.reasoning||''):Math.ceil(String(err&&err.reasoning||'').length/4),reasoning=Math.max(reportedReasoning,estimatedReasoning),answer=positive(profile&&profile.requestTokens)||prior;
+  const prior=positive(err&&err.completionBudgetTokens)||positive(err&&err.requestedMaxTokens)||positive(profile&&
+profile.requestTokens)||512,usage=err&&err.usage||{}
+    ,observedCompletion=positive(usage.completionTokens)||0,reportedReasoning=positive(usage.reasoningTokens)||0,
+    estimatedReasoning=LF.AI&&LF.AI.estimateTokens?LF.AI.estimateTokens(err&&err.reasoning||''):Math.ceil(String(err&&
+    err.reasoning||'').length/4),reasoning=Math.max(reportedReasoning,estimatedReasoning),
+    answer=positive(profile&&profile.requestTokens)||prior;
   /* A retry needs room for the complete answer plus whatever reasoning the
      template already demonstrated it may emit. observedCompletion also catches
      providers that do not expose reasoning tokens separately. */
   return Math.max(Math.ceil(prior*1.7),answer+Math.max(1024,Math.ceil(reasoning*1.5))+384,observedCompletion+Math.ceil(answer*.75)+384);
 }
 async function budgetFor(messages,settings,step,workItem,hardCap,knownCapability,thinkingPolicy,minCompletionTokens){
-  const inputTokens=LF.AI.estimatePromptTokens?LF.AI.estimatePromptTokens(messages):(LF.AI.estimateTokens?LF.AI.estimateTokens((messages||[]).map(function(m){return m.content||'';}).join('\n')):0),capability=knownCapability||await modelCapability(settings),profile=tokenProfile(step,workItem,hardCap),ceiling=providerCompletionCeiling(capability,settings,inputTokens),answerRequest=ceiling?Math.min(profile.requestTokens,ceiling):profile.requestTokens,target=ceiling?Math.min(profile.targetTokens,ceiling):profile.targetTokens,reserve=reasoningHeadroom(profile,capability,thinkingPolicy),desired=Math.max(answerRequest+reserve,positive(minCompletionTokens)||0),completionRequest=ceiling?Math.min(desired,ceiling):desired;
+  const inputTokens=LF.AI.estimatePromptTokens?LF.AI.estimatePromptTokens(messages):(LF.AI.estimateTokens?
+LF.AI.estimateTokens((messages||[]).map(function(m){return m.content||'';
+    }).join('\n')):0),capability=knownCapability||await modelCapability(settings),profile=tokenProfile(step,workItem,
+    hardCap),ceiling=providerCompletionCeiling(capability,settings,inputTokens),
+    answerRequest=ceiling?Math.min(profile.requestTokens,ceiling):profile.requestTokens,
+    target=ceiling?Math.min(profile.targetTokens,ceiling):profile.targetTokens,reserve=reasoningHeadroom(profile,capability,
+    thinkingPolicy),desired=Math.max(answerRequest+reserve,positive(minCompletionTokens)||0),
+    completionRequest=ceiling?Math.min(desired,ceiling):desired;
   return{capability:capability,inputTokens:inputTokens,answerRequestTokens:Math.max(16,Math.floor(answerRequest)),requestMax:Math.max(16,Math.floor(completionRequest||answerRequest||profile.maxTokens)),targetTokens:Math.max(16,Math.floor(target||answerRequest||profile.targetTokens)),reasoningReserveTokens:reserve,profile:profile,ceiling:ceiling||null};
 }
 function truncatedError(response,completionBudgetTokens){
   const usage=response&&response.usage||null,reasoningObserved=!!(response&&response.reasoningObserved||response&&response.reasoning),reasoningTokens=usage&&positive(usage.reasoningTokens)||0;
-  const ex=actionError('MODEL_OUTPUT_TRUNCATED','The model exhausted the completion budget before producing a complete final answer'+(reasoningObserved?' (reasoning consumed part of that budget)':'')+'.');ex.providerResponse=response&&response.content||'';ex.reasoning=response&&response.reasoning||'';ex.usage=usage;ex.finishReason=response&&response.finishReason||'length';ex.completionBudgetTokens=positive(completionBudgetTokens)||null;ex.reasoningObserved=reasoningObserved;ex.reasoningTokens=reasoningTokens||null;ex.reasoningControlRequests=Number(response&&response.reasoningControlRequests)||0;ex.reasoningControlOk=response&&response.reasoningControlOk===true;return ex;
+  const ex=actionError('MODEL_OUTPUT_TRUNCATED',
+'The model exhausted the completion budget before producing a complete final answer'+
+    (reasoningObserved?' (reasoning consumed part of that budget)':'')+'.');
+    ex.providerResponse=response&&response.content||'';ex.reasoning=response&&response.reasoning||'';ex.usage=usage;
+    ex.finishReason=response&&response.finishReason||'length';
+    ex.completionBudgetTokens=positive(completionBudgetTokens)||null;ex.reasoningObserved=reasoningObserved;
+    ex.reasoningTokens=reasoningTokens||null;
+    ex.reasoningControlRequests=Number(response&&response.reasoningControlRequests)||0;
+    ex.reasoningControlOk=response&&response.reasoningControlOk===true;return ex;
 }
 async function sendModel(run,step,opts,key,messages,settings,requestOptions,progress){
-  const capability=requestOptions.capability||await modelCapability(settings),actionThinking=requestOptions.thinkingMode||step.thinking||'auto',thinkingPolicy=LF.AI.resolveThinkingPolicy?LF.AI.resolveThinkingPolicy(capability,actionThinking,settings.thinkingMode,(LF.AIProviders&&LF.AIProviders[settings.provider])||{}):{requested:actionThinking,transportMode:actionThinking,capability:'unknown',effective:actionThinking,reason:'Action policy'},b=await budgetFor(messages,settings,step,requestOptions.workItem||null,requestOptions.actionCap||null,capability,thinkingPolicy,requestOptions.minCompletionTokens||null),explicit=positive(requestOptions.maxTokens),maxTokens=explicit?Math.min(explicit,b.requestMax):b.requestMax,targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),schema=requestOptions.schema||null,providerSchema=step.provider_schema===false?null:schema,spec=LF.AI.buildRequest({messages:messages,stream:!!requestOptions.stream,maxTokens:maxTokens||null,timeoutMs:step.timeout_ms||null,hardTimeoutMs:step.deadline_ms||null,jsonMode:!!requestOptions.jsonMode,jsonSchema:providerSchema,jsonSchemaName:requestOptions.schemaName||step.schema||run.actionId,temperature:requestOptions.temperature,thinkingMode:thinkingPolicy.transportMode,thinkingPolicy:thinkingPolicy,modelCapability:capability,guardThinking:thinkingPolicy.transportMode==='off'});
+  const capability=requestOptions.capability||await modelCapability(settings),
+actionThinking=requestOptions.thinkingMode||step.thinking||'auto',
+    thinkingPolicy=LF.AI.resolveThinkingPolicy?LF.AI.resolveThinkingPolicy(capability,actionThinking,settings.thinkingMode,
+    (LF.AIProviders&&LF.AIProviders[settings.provider])||{}):{
+    requested:actionThinking,transportMode:actionThinking,capability:'unknown',effective:actionThinking,
+    reason:'Action policy'},b=await budgetFor(messages,settings,step,requestOptions.workItem||null,
+    requestOptions.actionCap||null,capability,thinkingPolicy,requestOptions.minCompletionTokens||null),
+    explicit=positive(requestOptions.maxTokens),maxTokens=explicit?Math.min(explicit,b.requestMax):b.requestMax,
+    targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),schema=requestOptions.schema||null,
+    providerSchema=step.provider_schema===false?null:schema,spec=LF.AI.buildRequest({
+    messages:messages,stream:!!requestOptions.stream,maxTokens:maxTokens||null,timeoutMs:step.timeout_ms||null,
+    hardTimeoutMs:step.deadline_ms||null,jsonMode:!!requestOptions.jsonMode,jsonSchema:providerSchema,
+    jsonSchemaName:requestOptions.schemaName||step.schema||run.actionId,temperature:requestOptions.temperature,
+    thinkingMode:thinkingPolicy.transportMode,thinkingPolicy:thinkingPolicy,modelCapability:capability,
+    guardThinking:thinkingPolicy.transportMode==='off'});
   if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,retryBoost:positive(requestOptions.minCompletionTokens)||null,thinkingEffective:thinkingPolicy.effective||'auto'});
-  if(opts.onRequest)opts.onRequest({actionId:run.actionId,stepId:step.id,index:run.currentIndex,workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,phase:requestOptions.phase||'response',request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,modelCapability:b.capability,tokenProfile:b.profile,inputTokens:b.inputTokens,inputCapTokens:positive(step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS});
+  if(opts.onRequest)opts.onRequest({actionId:run.actionId,stepId:step.id,index:run.currentIndex,
+workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,phase:requestOptions.phase||'response',
+    request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,
+    reasoningReserveTokens:b.reasoningReserveTokens,modelCapability:b.capability,tokenProfile:b.profile,
+    inputTokens:b.inputTokens,inputCapTokens:positive(step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS});
   try{
-    const response=await LF.AI.send(spec,{label:run.actionId+'.'+step.id+'.'+(requestOptions.phase||'response'),onProgress:progress?function(p){if(opts.onProgress)opts.onProgress(Object.assign({},p,{stepId:step.id,index:run.currentIndex,workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,budgetTokens:maxTokens||null,inputTokens:b.inputTokens,phase:requestOptions.phase||'response'}));}:undefined});
+    const response=await LF.AI.send(spec,{
+label:run.actionId+'.'+step.id+'.'+(requestOptions.phase||'response'),onProgress:progress?function(p){
+      if(opts.onProgress)opts.onProgress(Object.assign({},p,{
+      stepId:step.id,index:run.currentIndex,workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,
+      targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,budgetTokens:maxTokens||null,
+      inputTokens:b.inputTokens,phase:requestOptions.phase||'response'}));}:undefined});
     run.requestMeta[key]=Object.assign(requestMeta(response),{answerTargetTokens:targetTokens,answerMaxTokens:b.answerRequestTokens,completionBudgetTokens:maxTokens,reasoningReserveTokens:b.reasoningReserveTokens});return response;
   }catch(err){
-    if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'){err.completionBudgetTokens=positive(err.completionBudgetTokens)||maxTokens;run.requestMeta[key]=Object.assign(run.requestMeta[key]||{},{finishReason:err.finishReason||'length',completionBudgetTokens:maxTokens,answerTargetTokens:targetTokens,answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,usage:err.usage||null,reasoningObserved:!!err.reasoningObserved,reasoningControlRequests:Number(err.reasoningControlRequests)||0,reasoningControlOk:err.reasoningControlOk===true});}
+    if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'){
+err.completionBudgetTokens=positive(err.completionBudgetTokens)||maxTokens;
+      run.requestMeta[key]=Object.assign(run.requestMeta[key]||{},{
+      finishReason:err.finishReason||'length',completionBudgetTokens:maxTokens,answerTargetTokens:targetTokens,
+      answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,usage:err.usage||null,
+      reasoningObserved:!!err.reasoningObserved,reasoningControlRequests:Number(err.reasoningControlRequests)||0,
+      reasoningControlOk:err.reasoningControlOk===true});}
     throw err;
   }
 }
 function contextFitLimit(capability,step,workItem,hardCap,settings){
-  const contextWindow=positive(capability&&capability.contextWindow),operationalCap=positive(step&&step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS,profile=tokenProfile(step,workItem,hardCap),modelOut=positive(capability&&capability.maxOutputTokens)||profile.maxTokens,userCap=positive(settings&&settings.maxOutputTokensCap),ceiling=Math.min(modelOut,userCap||Infinity),outputReserve=Math.min(profile.targetTokens,ceiling),minimumOutputReserve=Math.min(profile.minTokens,ceiling),modelInputBudget=contextWindow?Math.max(256,contextWindow-outputReserve-768):operationalCap,modelMaximumInputBudget=contextWindow?Math.max(256,contextWindow-minimumOutputReserve-768):operationalCap,inputBudget=Math.min(operationalCap,modelInputBudget),maximumInputBudget=Math.min(operationalCap,modelMaximumInputBudget);
+  const contextWindow=positive(capability&&capability.contextWindow),
+operationalCap=positive(step&&step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS,profile=tokenProfile(step,workItem,
+    hardCap),modelOut=positive(capability&&capability.maxOutputTokens)||profile.maxTokens,
+    userCap=positive(settings&&settings.maxOutputTokensCap),ceiling=Math.min(modelOut,userCap||Infinity),
+    outputReserve=Math.min(profile.targetTokens,ceiling),minimumOutputReserve=Math.min(profile.minTokens,ceiling),
+    modelInputBudget=contextWindow?Math.max(256,contextWindow-outputReserve-768):operationalCap,
+    modelMaximumInputBudget=contextWindow?Math.max(256,contextWindow-minimumOutputReserve-768):operationalCap,
+    inputBudget=Math.min(operationalCap,modelInputBudget),maximumInputBudget=Math.min(operationalCap,
+    modelMaximumInputBudget);
   return{contextWindow:contextWindow||null,operationalInputCap:operationalCap,inputBudget:inputBudget,maximumInputBudget:maximumInputBudget,outputReserve:outputReserve,minimumOutputReserve:minimumOutputReserve};
 }
 function promptTokens(messages){return LF.AI.estimatePromptTokens?LF.AI.estimatePromptTokens(messages):(LF.AI.estimateTokens?LF.AI.estimateTokens((messages||[]).map(function(m){return m.content||'';}).join('\n')):0);}
 function buildActionContext(run,step,baseOpts,maxChars){return LF.ActionContext.build(run.def,step,{outputs:run.outputs,userText:run.userText,params:run.params,selection:run.selection,retryFeedback:baseOpts.retryFeedback,workItem:baseOpts.workItem,workIndex:baseOpts.workIndex,workTotal:baseOpts.workTotal,retrievalCache:baseOpts.retrievalCache||null,maxChars:maxChars||undefined});}
 async function fitActionContext(run,step,settings,baseOpts,hardCap){
-  const started=performance.now(),capabilityStarted=performance.now(),capability=await modelCapability(settings),capabilityMs=Math.round(performance.now()-capabilityStarted),workItem=fitWorkItemToOutput(step,baseOpts.workItem,hardCap,capability,settings),contextOpts=Object.assign({},baseOpts,{workItem:workItem}),fit=contextFitLimit(capability,step,workItem,hardCap,settings);let built=buildActionContext(run,step,contextOpts,null);
+  const started=performance.now(),capabilityStarted=performance.now(),capability=await modelCapability(settings),
+capabilityMs=Math.round(performance.now()-capabilityStarted),workItem=fitWorkItemToOutput(step,baseOpts.workItem,
+    hardCap,capability,settings),contextOpts=Object.assign({},baseOpts,{workItem:workItem}
+    ),fit=contextFitLimit(capability,step,workItem,hardCap,settings);
+    let built=buildActionContext(run,step,contextOpts,null);
   if(workItem&&workItem.output_budget_adjusted&&Log)Log.info('output.work-item-adjusted',{actionId:run.actionId,step:step.id,requestedTargetWords:workItem.requested_target_words,targetWords:workItem.target_words,outputCeiling:outputCeiling(capability,settings,hardCap)});
     let tokens=promptTokens(built.messageList);if(tokens<=fit.inputBudget){if(Log)Log.info('request.prepare',{actionId:run.actionId,step:step.id,capabilityMs:capabilityMs,contextMs:Math.round(performance.now()-started-capabilityMs),totalMs:Math.round(performance.now()-started)});return{built:built,capability:capability,workItem:workItem};}
   let currentChars=Math.max(1800,JSON.stringify(built.context||{}).length),attempt=0;
   while(tokens>fit.inputBudget&&attempt<4){const ratio=Math.max(.18,Math.min(.82,fit.inputBudget/Math.max(tokens,1)*.78));currentChars=Math.max(1800,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);tokens=promptTokens(built.messageList);attempt++;}
   let activeInputBudget=fit.inputBudget,activeOutputReserve=fit.outputReserve;
-  if(tokens>activeInputBudget&&fit.maximumInputBudget>activeInputBudget){activeInputBudget=fit.maximumInputBudget;activeOutputReserve=fit.minimumOutputReserve;while(tokens>activeInputBudget&&attempt<6){const ratio=Math.max(.18,Math.min(.82,activeInputBudget/Math.max(tokens,1)*.78));currentChars=Math.max(1800,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);tokens=promptTokens(built.messageList);attempt++;}}
-  if(tokens>activeInputBudget){const reason=fit.contextWindow?('the detected model context ('+fit.contextWindow+' total tokens) and LabFlow input cap'):'the LabFlow operational input cap';const e=actionError('MODEL_CONTEXT_LENGTH','LabFlow could not fit this Action into '+reason+' ('+tokens+' estimated input tokens; '+fit.operationalInputCap+' token Action input cap; at least '+fit.minimumOutputReserve+' reserved for a valid output). Reduce the Action context.');e.isContextOverflow=true;e.promptTokens=tokens;e.contextWindow=fit.contextWindow||fit.operationalInputCap;e.operationalInputCap=fit.operationalInputCap;throw e;}
+  if(tokens>activeInputBudget&&fit.maximumInputBudget>activeInputBudget){activeInputBudget=fit.maximumInputBudget;
+activeOutputReserve=fit.minimumOutputReserve;
+    while(tokens>activeInputBudget&&attempt<6){
+    const ratio=Math.max(.18,Math.min(.82,activeInputBudget/Math.max(tokens,1)*.78));
+    currentChars=Math.max(1800,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);
+    tokens=promptTokens(built.messageList);attempt++;}}
+  if(tokens>activeInputBudget){const reason=fit.contextWindow?('the detected model context ('+fit.contextWindow+
+' total tokens) and LabFlow input cap'):'the LabFlow operational input cap';
+    const e=actionError('MODEL_CONTEXT_LENGTH',
+    'LabFlow could not fit this Action into '+reason+' ('+tokens+' estimated input tokens; '+fit.operationalInputCap+
+    ' token Action input cap; at least '+fit.minimumOutputReserve+
+    ' reserved for a valid output). Reduce the Action context.');e.isContextOverflow=true;e.promptTokens=tokens;
+    e.contextWindow=fit.contextWindow||fit.operationalInputCap;e.operationalInputCap=fit.operationalInputCap;throw e;}
   if(Log)Log.info('context.compacted',{actionId:run.actionId,step:step.id,estimatedInputTokens:tokens,contextWindow:fit.contextWindow,operationalInputCap:fit.operationalInputCap,reservedOutputTokens:activeOutputReserve,contextChars:JSON.stringify(built.context||{}).length});
   if(Log)Log.info('request.prepare',{actionId:run.actionId,step:step.id,capabilityMs:capabilityMs,contextMs:Math.round(performance.now()-started-capabilityMs),totalMs:Math.round(performance.now()-started),compactionPasses:attempt});
   return{built:built,capability:capability,workItem:workItem};
@@ -138,12 +300,32 @@ async function runAi(run,step,opts,workItem,workIndex,workTotal){
   if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'prepare',label:'Preparing model context'});
   const fitted=await fitActionContext(run,step,settings,{retryFeedback:run.retryFeedback[key]||'',workItem:workItem,workIndex:workIndex,workTotal:workTotal},actionCap),context=fitted.built,jsonMode=step.output==='json',schema=jsonMode&&step.schema&&LF.ActionRegistry.schema?LF.ActionRegistry.schema(step.schema):null;
   if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'request',label:'Sending model request'});
-  const response=await sendModel(run,step,opts,key,context.messageList,settings,{phase:'response',stream:settings.streaming!==false,jsonMode:jsonMode,schema:schema,schemaName:step.schema||run.actionId,temperature:jsonMode?0.2:undefined,actionCap:actionCap,workItem:fitted.workItem,workIndex:workIndex,workTotal:workTotal,capability:fitted.capability,minCompletionTokens:run.retryCompletionBudget[key]||null},true);
+  const response=await sendModel(run,step,opts,key,context.messageList,settings,{
+phase:'response',stream:settings.streaming!==false,jsonMode:jsonMode,schema:schema,schemaName:step.schema||run.actionId,
+    temperature:jsonMode?0.2:undefined,actionCap:actionCap,workItem:fitted.workItem,workIndex:workIndex,workTotal:workTotal,
+    capability:fitted.capability,minCompletionTokens:run.retryCompletionBudget[key]||null},true);
   if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'validate',label:jsonMode?'Validating structured output':'Finalizing model output'});
-  if(jsonMode){let parsed;try{parsed=parseJson(step,response.content);parsed.value=validateAiCandidate(run,step,opts,parsed.value,workItem,workIndex,workTotal);}catch(err){if(response.finishReason==='length'){const truncated=truncatedError(response,run.requestMeta[key]&&run.requestMeta[key].completionBudgetTokens);truncated.validationErrors=err&&err.validationErrors||null;throw truncated;}throw err;}delete run.retryFeedback[key];delete run.retryCompletionBudget[key];run.parseNote=parsed.note;if(response.finishReason==='length'&&Log)Log.warn('output.length-but-valid',{actionId:run.actionId,step:step.id,note:'Structured response passed schema validation despite provider length finish reason.'});if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'complete',label:step.validate_with?'Schema + semantic validation passed':'Validated'});return parsed.value;}
+  if(jsonMode){let parsed;try{parsed=parseJson(step,response.content);
+parsed.value=validateAiCandidate(run,step,opts,parsed.value,workItem,workIndex,workTotal);
+    }catch(err){if(response.finishReason==='length'){
+    const truncated=truncatedError(response,run.requestMeta[key]&&run.requestMeta[key].completionBudgetTokens);
+    truncated.validationErrors=err&&err.validationErrors||null;throw truncated;}throw err;}delete run.retryFeedback[key];
+    delete run.retryCompletionBudget[key];run.parseNote=parsed.note;
+    if(response.finishReason==='length'&&Log)Log.warn('output.length-but-valid',{
+    actionId:run.actionId,step:step.id,note:
+    'Structured response passed schema validation despite provider length finish reason.'});
+    if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,
+    phase:'complete',label:step.validate_with?'Schema + semantic validation passed':'Validated'});return parsed.value;}
   if(response.finishReason==='length')throw truncatedError(response,run.requestMeta[key]&&run.requestMeta[key].completionBudgetTokens);delete run.retryFeedback[key];delete run.retryCompletionBudget[key];if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'complete',label:'Response complete'});return String(response.content||'');
 }
-async function runOne(run,step,opts,workItem,workIndex,workTotal){if(step.type==='DETERMINISTIC'){if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'work',label:'Running local checkpoint'});return Promise.resolve(runTool(run,step,opts,workItem,workIndex,workTotal)).then(function(value){if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'complete',label:'Checkpoint complete'});return value;});}if(step.type!=='AI')throw actionError('ACTION_STEP_INVALID','Unsupported action step type: '+step.type);return runAi(run,step,opts,workItem,workIndex,workTotal);}
+async function runOne(run,step,opts,workItem,workIndex,workTotal){if(step.type==='DETERMINISTIC'){
+if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'work',
+  label:'Running local checkpoint'});return Promise.resolve(runTool(run,step,opts,workItem,workIndex,
+  workTotal)).then(function(value){if(opts.onPhase)opts.onPhase({
+  step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'complete',
+  label:'Checkpoint complete'});return value;});
+  }if(step.type!=='AI')throw actionError('ACTION_STEP_INVALID','Unsupported action step type: '+step.type);
+  return runAi(run,step,opts,workItem,workIndex,workTotal);}
 async function runUnitWithRetry(run,step,opts,item,index,total){
   const key=step.id+(total>1?':'+index:'');let semanticRetryNo=0,truncationRetryNo=0,totalAttemptNo=0,activeItem=item;
   while(true){
@@ -167,12 +349,73 @@ async function runUnitWithRetry(run,step,opts,item,index,total){
 }
 function stepItem(step,status,index,total,note){return{id:step.id,type:step.type,status:status,index:index,total:total,note:note||''};}
 function setStep(run,item,opts){run.steps=run.steps.filter(function(x){return x.index!==item.index;});run.steps.push(item);run.steps.sort(function(a,b){return a.index-b.index;});if(opts.onStep)opts.onStep(item);}
-async function execute(run,startIndex,opts){const actionSteps=stepsOf(run.def);for(let i=startIndex;i<actionSteps.length;i++){const step=actionSteps[i];run.currentIndex=i;run.failedIndex=null;run.failedWorkIndex=null;const items=step.foreach?getPath(run.outputs,step.foreach):null,units=step.foreach?(Array.isArray(items)?items:[]):[null];if(step.foreach&&!Array.isArray(items))throw actionError('ACTION_WORK_INVALID','Work-unit source is not an array: '+step.foreach);if(step.foreach&&!units.length){run.outputs[step.id]=[];setStep(run,stepItem(step,'done',i,stepsOf(run.def).length,'0 work units'),opts);continue;}const start=step.foreach?Number(run.work[step.id]||0):0,results=step.foreach?(Array.isArray(run.outputs[step.id])?run.outputs[step.id]:[]):null;setStep(run,stepItem(step,'active',i,stepsOf(run.def).length,step.foreach?('Work units '+start+'/'+units.length):step.type),opts);const started=performance.now();try{for(let u=start;u<units.length;u++){if(opts.onWork)opts.onWork({step:step.id,index:i,totalSteps:stepsOf(run.def).length,workIndex:u,workTotal:units.length,label:units[u]&&units[u].label||units[u]&&units[u].id||''});const v=await runUnitWithRetry(run,step,opts,units[u],u,units.length);if(step.foreach){results[u]=v;run.outputs[step.id]=results;run.work[step.id]=u+1;run.result=results;}else{run.outputs[step.id]=v;if(v!==undefined&&(step.type==='AI'||modeOf(run.def)==='deterministic'||step.capture_result))run.result=v;}if(opts.onWork)opts.onWork({step:step.id,index:i,totalSteps:stepsOf(run.def).length,workIndex:u+1,workTotal:units.length,label:units[u]&&units[u].label||units[u]&&units[u].id||'',done:true});}setStep(run,stepItem(step,'done',i,stepsOf(run.def).length,step.foreach?(units.length+' work units · '+Math.round(performance.now()-started)+' ms'):(step.type==='AI'?(run.parseNote||''):(Math.round(performance.now()-started)+' ms'))),opts);}catch(err){run.failedIndex=i;run.failedWorkIndex=step.foreach?Number(run.work[step.id]||0):null;setStep(run,stepItem(step,'error',i,stepsOf(run.def).length,String(err&&err.message||err)),opts);throw err;}}return run;}
+async function execute(run,startIndex,opts){const actionSteps=stepsOf(run.def);for(let i=startIndex;
+i<actionSteps.length;i++){const step=actionSteps[i];run.currentIndex=i;run.failedIndex=null;run.failedWorkIndex=null;
+  const items=step.foreach?getPath(run.outputs,step.foreach):null,
+  units=step.foreach?(Array.isArray(items)?items:[]):[null];
+  if(step.foreach&&!Array.isArray(items))throw actionError('ACTION_WORK_INVALID',
+  'Work-unit source is not an array: '+step.foreach);if(step.foreach&&!units.length){run.outputs[step.id]=[];
+  setStep(run,stepItem(step,'done',i,stepsOf(run.def).length,'0 work units'),opts);continue;
+  }const start=step.foreach?Number(run.work[step.id]||0):0,
+  results=step.foreach?(Array.isArray(run.outputs[step.id])?run.outputs[step.id]:[]):null;
+  setStep(run,stepItem(step,'active',i,stepsOf(run.def).length,
+  step.foreach?('Work units '+start+'/'+units.length):step.type),opts);const started=performance.now();
+  try{for(let u=start;u<units.length;u++){if(opts.onWork)opts.onWork({
+  step:step.id,index:i,totalSteps:stepsOf(run.def).length,workIndex:u,workTotal:units.length,
+  label:units[u]&&units[u].label||units[u]&&units[u].id||''});
+  const v=await runUnitWithRetry(run,step,opts,units[u],u,units.length);if(step.foreach){results[u]=v;
+  run.outputs[step.id]=results;run.work[step.id]=u+1;run.result=results;}else{run.outputs[step.id]=v;
+  if(v!==undefined&&(step.type==='AI'||modeOf(run.def)==='deterministic'||step.capture_result))run.result=v;
+  }if(opts.onWork)opts.onWork({step:step.id,index:i,totalSteps:stepsOf(run.def).length,workIndex:u+1,
+  workTotal:units.length,label:units[u]&&units[u].label||units[u]&&units[u].id||'',done:true});
+  }setStep(run,stepItem(step,'done',i,stepsOf(run.def).length,
+  step.foreach?(units.length+' work units · '+Math.round(performance.now()-started)+
+  ' ms'):(step.type==='AI'?(run.parseNote||''):(Math.round(performance.now()-started)+' ms'))),opts);
+  }catch(err){run.failedIndex=i;run.failedWorkIndex=step.foreach?Number(run.work[step.id]||0):null;
+  setStep(run,stepItem(step,'error',i,stepsOf(run.def).length,String(err&&err.message||err)),opts);throw err;}}return run;
+  }
 function aiOutput(run){const actionSteps=stepsOf(run.def);for(let i=actionSteps.length-1;i>=0;i--){const step=actionSteps[i];if(step.type==='AI'&&Object.prototype.hasOwnProperty.call(run.outputs,step.id))return run.outputs[step.id];}return null;}
-function outcome(run,status,extra){return Object.assign({runId:run.runId,actionId:run.actionId,status:status,steps:run.steps,attempts:run.attempts,result:run.result,aiOutput:aiOutput(run),outputs:run.outputs,requestMeta:run.requestMeta,sourceRevision:run.sourceRevision,failedStep:run.failedIndex!=null&&stepsOf(run.def)[run.failedIndex]?stepsOf(run.def)[run.failedIndex].id:null,failedWorkIndex:run.failedWorkIndex,work:run.work},extra||{});}
-async function startRun(run,startIndex,opts){running=true;controller=new AbortController();if(Log)Log.info('action.started',{runId:run.runId,actionId:run.actionId,startStep:startIndex,sourceRevision:run.sourceRevision});if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(controller);if(LF.State&&LF.State.startActionRun)LF.State.startActionRun({actionId:run.actionId,stepIndex:startIndex,runId:run.runId});try{await execute(run,startIndex,opts);run.result=semanticResult(run);running=false;failedRun=null;if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(null);if(LF.State&&LF.State.endActionRun)LF.State.endActionRun('done');recordHistory(run,'done');if(Log)Log.info('action.completed',{runId:run.runId,actionId:run.actionId,sourceRevision:run.sourceRevision,steps:run.steps.length,attempts:run.attempts.length});if(LF.State&&LF.State.notify)LF.State.notify('ai');return outcome(run,'done');}catch(err){running=false;if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(null);const code=classify(err),status=err&&err.cancelled?'aborted':'error';if(LF.State&&LF.State.endActionRun)LF.State.endActionRun(status);failedRun=status==='error'?run:null;recordHistory(run,status,code);if(LF.State&&LF.State.notify)LF.State.notify('ai');const errorMessage=String(err&&err.message||'Action failed.');if(Log)Log.warn('action.failed',{runId:run.runId,actionId:run.actionId,step:run.failedIndex!=null&&stepsOf(run.def)[run.failedIndex]?stepsOf(run.def)[run.failedIndex].id:null,code:code,message:errorMessage,error:err});return outcome(run,status,{code:code,message:errorMessage,error:err});}}
-function newRun(actionId,def,opts){const exp=expOf();return{runId:(LF.Core&&LF.Core.uid?LF.Core.uid('action'):'action_'+Date.now()),actionId:actionId,def:def,sourceRevision:exp&&exp.sync&&exp.sync.revision||0,startedAt:new Date().toISOString(),params:opts.params||{},selection:opts.selection||null,userText:opts.userText||'',outputs:{},requestMeta:{},retryFeedback:{},retryCompletionBudget:{},steps:[],attempts:[],work:{},result:null,currentIndex:0,failedIndex:null,failedWorkIndex:null};}
-function run(actionId,opts){opts=opts||{};if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();const def=effective(actionId);if(!def)return Promise.resolve({actionId:actionId,status:'error',code:'ACTION_UNKNOWN',message:'Unknown action: '+actionId,steps:[]});if(running)return Promise.resolve({actionId:actionId,status:'unavailable',code:'ACTION_BUSY',message:'Another action is already running.',steps:[]});const exp=expOf();if(!exp||!exp.id)return Promise.resolve({actionId:actionId,status:'unavailable',code:'ACTION_UPLOAD_REQUIRED',message:'Upload a ZIP before running this action.',steps:[]});if(LF.ActionCapabilities&&LF.ActionCapabilities.params)opts.params=LF.ActionCapabilities.params(actionId,opts.params||{});const blocked=guardFailures(exp,def,opts);if(blocked.length)return Promise.resolve({actionId:actionId,status:'unavailable',code:'ACTION_UNAVAILABLE',message:blocked[0].message,guards:blocked,steps:[]});return startRun(newRun(actionId,def,opts),0,opts);}
+function outcome(run,status,extra){return Object.assign({
+runId:run.runId,actionId:run.actionId,status:status,steps:run.steps,attempts:run.attempts,result:run.result,
+  aiOutput:aiOutput(run),outputs:run.outputs,requestMeta:run.requestMeta,sourceRevision:run.sourceRevision,
+  failedStep:run.failedIndex!=null&&stepsOf(run.def)[run.failedIndex]?stepsOf(run.def)[run.failedIndex].id:null,
+  failedWorkIndex:run.failedWorkIndex,work:run.work},extra||{});}
+async function startRun(run,startIndex,opts){running=true;controller=new AbortController();
+if(Log)Log.info('action.started',{runId:run.runId,actionId:run.actionId,startStep:startIndex,
+  sourceRevision:run.sourceRevision});if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(controller);
+  if(LF.State&&LF.State.startActionRun)LF.State.startActionRun({
+  actionId:run.actionId,stepIndex:startIndex,runId:run.runId});try{await execute(run,startIndex,opts);
+  run.result=semanticResult(run);running=false;failedRun=null;
+  if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(null);
+  if(LF.State&&LF.State.endActionRun)LF.State.endActionRun('done');recordHistory(run,'done');
+  if(Log)Log.info('action.completed',{runId:run.runId,actionId:run.actionId,sourceRevision:run.sourceRevision,
+  steps:run.steps.length,attempts:run.attempts.length});if(LF.State&&LF.State.notify)LF.State.notify('ai');
+  return outcome(run,'done');}catch(err){running=false;if(LF.AI&&LF.AI.acceptController)LF.AI.acceptController(null);
+  const code=classify(err),status=err&&err.cancelled?'aborted':'error';
+  if(LF.State&&LF.State.endActionRun)LF.State.endActionRun(status);failedRun=status==='error'?run:null;
+  recordHistory(run,status,code);if(LF.State&&LF.State.notify)LF.State.notify('ai');
+  const errorMessage=String(err&&err.message||'Action failed.');
+  if(Log)Log.warn('action.failed',{runId:run.runId,actionId:run.actionId,
+  step:run.failedIndex!=null&&stepsOf(run.def)[run.failedIndex]?stepsOf(run.def)[run.failedIndex].id:null,code:code,
+  message:errorMessage,error:err});return outcome(run,status,{code:code,message:errorMessage,error:err});}}
+function newRun(actionId,def,opts){const exp=expOf();
+return{runId:(LF.Core&&LF.Core.uid?LF.Core.uid('action'):'action_'+Date.now()),actionId:actionId,def:def,
+  sourceRevision:exp&&exp.sync&&exp.sync.revision||0,startedAt:new Date().toISOString(),params:opts.params||{}
+  ,selection:opts.selection||null,userText:opts.userText||'',outputs:{},requestMeta:{},retryFeedback:{}
+  ,retryCompletionBudget:{},steps:[],attempts:[],work:{},result:null,currentIndex:0,failedIndex:null,failedWorkIndex:null}
+  ;}
+function run(actionId,opts){opts=opts||{};if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();
+const def=effective(actionId);if(!def)return Promise.resolve({
+  actionId:actionId,status:'error',code:'ACTION_UNKNOWN',message:'Unknown action: '+actionId,steps:[]});
+  if(running)return Promise.resolve({actionId:actionId,status:'unavailable',code:'ACTION_BUSY',
+  message:'Another action is already running.',steps:[]});const exp=expOf();
+  if(!exp||!exp.id)return Promise.resolve({
+  actionId:actionId,status:'unavailable',code:'ACTION_UPLOAD_REQUIRED',message:'Upload a ZIP before running this action.',
+  steps:[]});if(LF.ActionCapabilities&&LF.ActionCapabilities.params)opts.params=LF.ActionCapabilities.params(actionId,
+  opts.params||{});const blocked=guardFailures(exp,def,opts);
+  if(blocked.length)return Promise.resolve({
+  actionId:actionId,status:'unavailable',code:'ACTION_UNAVAILABLE',message:blocked[0].message,guards:blocked,steps:[]});
+  return startRun(newRun(actionId,def,opts),0,opts);}
 function retry(opts){opts=opts||{};if(running)return Promise.resolve({status:'error',code:'ACTION_BUSY',message:'Another action is already running.',steps:[]});if(!failedRun)return Promise.resolve({status:'error',code:'ACTION_NO_FAILED_RUN',message:'There is no failed checkpoint to retry.',steps:[]});return startRun(failedRun,failedRun.failedIndex==null?0:failedRun.failedIndex,opts);}
 LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},failed:function(){return failedRun;},effective:effective,usesAi:usesAi,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
 }());

@@ -7,11 +7,20 @@
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     openrouter: {
-      id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true, endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}, connectionTestTimeoutMs:45000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
+      id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true,
+endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true,
+        modelCatalogueRequired:true, modelSelectLabel:'OpenRouter model', supportsJsonMode:true, supportsStreaming:true,
+        supportsStreamUsage:true, tokenParam:'max_tokens', supportsTemperature:true, thinkingModes:{off:{reasoning:{
+        effort:'none'}},on:{reasoning:{effort:'medium'}}}, headers:{'X-OpenRouter-Title':'LabFlow'}
+        , connectionTestTimeoutMs:45000, connectionTestMaxTokens:128, connectionTestThinkingMode:'auto',
       note:'OpenRouter OpenAI-compatible endpoint. Dynamic router aliases keep provider-default reasoning.'
     },
     openai: {
-      id:'openai', name:'OpenAI', catalogueFallbackToConfiguredModel:true, endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true, tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}},
+      id:'openai', name:'OpenAI', catalogueFallbackToConfiguredModel:true,
+endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRequired:true, modelSelect:true,
+        modelCatalogueRequired:true, modelSelectLabel:'OpenAI model', supportsStreaming:true, supportsStreamUsage:true,
+        tokenParam:'max_completion_tokens', supportsTemperature:false, thinkingModes:{off:{reasoning_effort:'none'},on:{
+        reasoning_effort:'medium'}},
       note:'OpenAI Chat Completions endpoint.'
     },
     gemini: {
@@ -19,15 +28,31 @@
       note:'Gemini OpenAI-compatible endpoint.'
     },
     ollama: {
-      id:'ollama', name:'Ollama', local:true, endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Ollama model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingPromptGuard:true, thinkingModes:{off:{reasoning_effort:'none'},on:{reasoning_effort:'medium'}}, requestTimeoutMs:300000, connectionTestTimeoutMs:15000,
+      id:'ollama', name:'Ollama', local:true, endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false,
+modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Ollama model', supportsStreaming:true,
+        tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, thinkingPromptGuard:true, thinkingModes:{off:{
+        reasoning_effort:'none'},on:{reasoning_effort:'medium'}}, requestTimeoutMs:300000, connectionTestTimeoutMs:15000,
       note:'Ollama OpenAI-compatible endpoint.'
     },
     lmstudio: {
-      id:'lmstudio', name:'LM Studio', local:true, endpoint:'http://127.0.0.1:1234/v1', model:'local-model', keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'LM Studio model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, supportsJsonSchema:true, jsonSchemaStrict:false, thinkingPromptGuard:true, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}}, requestTimeoutMs:300000, connectionTestTimeoutMs:15000,
+      id:'lmstudio', name:'LM Studio', local:true, endpoint:'http://127.0.0.1:1234/v1', model:'local-model',
+keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'LM Studio model',
+        supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true,
+        supportsJsonSchema:true, jsonSchemaStrict:false, thinkingPromptGuard:true, thinkingModes:{off:{
+        reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{
+        reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}}
+        , requestTimeoutMs:300000, connectionTestTimeoutMs:15000,
       note:'LM Studio OpenAI-compatible endpoint.'
     },
     llamacpp: {
-      id:'llamacpp', name:'llama.cpp', local:true, endpoint:'http://127.0.0.1:8080/v1', model:'local-model', keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'llama.cpp model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true, requestTimeoutMs:300000, connectionTestTimeoutMs:15000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off', connectionTestAcceptReasoningOnly:true, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true, thinkingPromptGuard:true, recommendedRuntime:{parallelSlots:1,contextWindow:65536}, thinkingModes:{off:{reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}},
+      id:'llamacpp', name:'llama.cpp', local:true, endpoint:'http://127.0.0.1:8080/v1', model:'local-model',
+keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'llama.cpp model',
+        supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true,
+        requestTimeoutMs:300000, connectionTestTimeoutMs:15000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off',
+        connectionTestAcceptReasoningOnly:true, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true,
+        thinkingPromptGuard:true, recommendedRuntime:{parallelSlots:1,contextWindow:65536}, thinkingModes:{off:{
+        reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{
+        reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}},
       note:'llama.cpp llama-server OpenAI-compatible endpoint.'
     },
     custom: {

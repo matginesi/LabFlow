@@ -68,15 +68,22 @@ for path in [
     if re.search(r'const\s+C\s*=\s*LF\.Core\s*\|\|\s*\{\}', source):
         errors.append(f'{path}: required Core dependency is hidden behind a fallback object')
 
-# Keep track of readability debt without blocking unrelated work. New/edited core files
-# should be formatted; remaining warnings identify older dense modules for later passes.
+# Readability is now a release invariant for authored JavaScript. Generated bundles are
+# intentionally compact and are validated by their own deterministic builders.
 GENERATED = {'action-registry.js', 'prompt-bundle.js', 'kb-bundle.js', 'docs-bundle.js', 'ui-kit-inline.js'}
 for path in sorted((ROOT / 'assets/js').rglob('*.js')):
     if path.name in GENERATED:
         continue
-    long_count = sum(1 for line in path.read_text(encoding='utf-8', errors='ignore').splitlines() if len(line) > 400)
-    if long_count:
-        warnings.append(f'{path.relative_to(ROOT)}: {long_count} lines exceed 400 characters')
+    long_lines = [
+        index for index, line in enumerate(path.read_text(encoding='utf-8', errors='ignore').splitlines(), start=1)
+        if len(line) > 400
+    ]
+    if long_lines:
+        errors.append(
+            f'{path.relative_to(ROOT)}: lines exceed the 400-character readability limit: '
+            + ', '.join(map(str, long_lines[:12]))
+            + (' …' if len(long_lines) > 12 else '')
+        )
 
 if errors:
     print('Source hygiene: FAILED')
@@ -85,9 +92,3 @@ if errors:
     sys.exit(1)
 
 print('Source hygiene: OK (owner boundaries, strict restore, no version wrappers/hard-coded developer defaults)')
-if warnings:
-    print(f'Source hygiene: {len(warnings)} readability warnings remain in older dense modules')
-    for warning in warnings[:12]:
-        print(' ~', warning)
-    if len(warnings) > 12:
-        print(f' ~ ... {len(warnings) - 12} more')

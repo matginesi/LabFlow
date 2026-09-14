@@ -7,8 +7,16 @@ function sectionBody(content,wide){return'<div class="settings-section-body '+(w
 function releaseInfo(){const build=String(window.LABFLOW_BUILD||'dev'),label=String(window.LABFLOW_VERSION||'POC');return{build:build,label:label};}
 function nav(active,s,a){
   const kb=LF.KnowledgeBase&&LF.KnowledgeBase.stats?LF.KnowledgeBase.stats():{active:0},defs=(LF.ActionRegistry&&LF.ActionRegistry.actions?LF.ActionRegistry.actions():[]).map(function(id){return LF.ActionRegistry.action(id);}).filter(function(d){return d&&d.visibility!=='internal';});
-  const groups=[['AI',[['provider','AI connection','Service & model'],['assistant','Assistant','Conversation preferences'],['actions','AI tools',defs.length+' available'],['knowledge','Knowledge Base',kb.active+' ready']]],['Export',[['nomad','NOMAD','Export & connection']]],['Workspace',[['workspace','Workspace','Appearance & profile']]],['Advanced',[['diagnostics','Diagnostics','Support tools'],['ui-kit','UI Kit','Design reference']]]];
-  return'<aside class="settings-rail"><nav class="settings-nav" aria-label="Settings sections">'+groups.map(function(group){return'<div class="settings-nav-group"><div class="settings-nav-label">'+group[0]+'</div>'+group[1].map(function(x){return'<button type="button" class="settings-nav-item '+(active===x[0]?'active':'')+'" data-settings-section="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><strong>'+x[1]+'</strong><span>'+C.escapeHtml(x[2])+'</span></button>';}).join('')+'</div>';}).join('')+'</nav></aside>';
+  const groups=[['AI',[['provider','AI connection','Service & model'],['assistant','Assistant',
+'Conversation preferences'],['actions','AI tools',defs.length+' available'],['knowledge','Knowledge Base',
+    kb.active+' ready']]],['Export',[['nomad','NOMAD','Export & connection']]],['Workspace',[['workspace','Workspace',
+    'Appearance & profile']]],['Advanced',[['diagnostics','Diagnostics','Support tools'],['ui-kit','UI Kit',
+    'Design reference']]]];
+  return'<aside class="settings-rail"><nav class="settings-nav" aria-label="Settings sections">'+
+groups.map(function(group){return'<div class="settings-nav-group"><div class="settings-nav-label">'+group[0]+'</div>'+
+    group[1].map(function(x){return'<button type="button" class="settings-nav-item '+(active===x[0]?'active':'')+
+    '" data-settings-section="'+x[0]+'" '+(active===x[0]?'aria-current="page"':'')+'><strong>'+x[1]+'</strong><span>'+
+    C.escapeHtml(x[2])+'</span></button>';}).join('')+'</div>';}).join('')+'</nav></aside>';
 }
 function head(){return'<div class="page-head settings-page-head"><div><h1 class="h1">Settings</h1><div class="meta">Configure LabFlow without changing your experiment data.</div></div></div>';}
 function sectionHead(title,description,dirty){return'<header class="settings-section-head"><div><h2>'+C.escapeHtml(title)+'</h2><p>'+C.escapeHtml(description)+'</p></div>'+(dirty?'<span class="badge success" id="settingsSaveState">Saved</span>':'')+'</header>';}
@@ -16,8 +24,17 @@ function providerPanel(s,key,remembered){
   const providers=(LF.AIProviderList||[]).map(function(p){return'<option value="'+p.id+'" '+(s.provider===p.id?'selected':'')+'>'+C.escapeHtml(p.name)+'</option>';}).join('');
   const activeProvider=LF.AIProviders[s.provider]||LF.AIProviders.custom,selectMode=!!activeProvider.modelSelect,modelLabel=activeProvider.modelSelectLabel||activeProvider.name+' model',displayModel=C.modelDisplayName?C.modelDisplayName(s.provider,s.model):s.model;
   const detectHint=activeProvider.keyRequired&&!key?'Add the API key, then check the connection.':activeProvider.modelSelect?'Check the connection to refresh the available models.':'Check the connection before using AI tools.';
-  const modelControl='<div class="input-action ai-model-control" data-model-select="'+(selectMode?'true':'false')+'"><input class="input mono" id="aiModel" list="aiModelList" value="'+C.escapeHtml(activeProvider.local?displayModel:s.model)+'" '+(activeProvider.local&&s.model?'data-raw-model="'+C.escapeHtml(s.model)+'" ':'')+(selectMode?'hidden':'')+'><select class="select mono" id="aiModelSelect" aria-label="'+C.escapeHtml(modelLabel)+'" '+(selectMode?'':'hidden')+'><option value="'+C.escapeHtml(s.model)+'">'+C.escapeHtml(displayModel)+'</option></select><button type="button" class="button compact" id="detectProviderModel">Check</button></div><datalist id="aiModelList"></datalist><div class="help" id="aiModelHint">'+detectHint+'</div>';
-  const thinkingControl='<select class="select" id="aiThinkingMode"><option value="auto" '+(s.thinkingMode==='auto'?'selected':'')+'>Automatic</option><option value="off" '+(s.thinkingMode==='off'?'selected':'')+'>Prefer off</option><option value="on" '+(s.thinkingMode==='on'?'selected':'')+'>Prefer on</option></select><div class="help">Automatic is recommended. The selected model may still require its own reasoning mode.</div>';
+  const modelControl='<div class="input-action ai-model-control" data-model-select="'+(selectMode?'true':'false')+
+'"><input class="input mono" id="aiModel" list="aiModelList" value="'+
+    C.escapeHtml(activeProvider.local?displayModel:s.model)+'" '+(activeProvider.local&&
+    s.model?'data-raw-model="'+C.escapeHtml(s.model)+'" ':'')+(selectMode?'hidden':'')+
+    '><select class="select mono" id="aiModelSelect" aria-label="'+C.escapeHtml(modelLabel)+'" '+(selectMode?'':'hidden')+
+    '><option value="'+C.escapeHtml(s.model)+'">'+C.escapeHtml(displayModel)+
+    '</option></select><button type="button" class="button compact" id="detectProviderModel">Check</button></div><datalist id="aiModelList"></datalist><div class="help" id="aiModelHint">'+detectHint+'</div>';
+  const thinkingControl='<select class="select" id="aiThinkingMode"><option value="auto" '+
+(s.thinkingMode==='auto'?'selected':'')+'>Automatic</option><option value="off" '+
+    (s.thinkingMode==='off'?'selected':'')+'>Prefer off</option><option value="on" '+(s.thinkingMode==='on'?'selected':'')+
+    '>Prefer on</option></select><div class="help">Automatic is recommended. The selected model may still require its own reasoning mode.</div>';
   const endpointHint=activeProvider.local?'<div class="help" id="aiEndpointHint">For a model running on this computer, the default local address is usually correct.</div>':'';
   const keyHelp=activeProvider.keyRequired?'Required for this service.':activeProvider.optionalKey?'Only needed when this service requires authentication.':'No API key is needed for this service.';
   return '<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Service &amp; model</h3><div class="meta">'+C.escapeHtml(activeProvider.name||s.provider)+'</div></div><div class="spacer"></div><span class="badge info" id="aiConnectivityBadge">Not checked</span></div>'
@@ -25,7 +42,11 @@ function providerPanel(s,key,remembered){
     +'<div class="form-grid settings-provider-grid">'
     +field('AI service','<select class="select" id="aiProvider">'+providers+'</select>')
     +field('Model',modelControl)
-    +'<div class="field field-wide" data-ai-key-field><label for="aiKey">API key</label><input class="input mono" id="aiKey" type="password" placeholder="Your API key…" value="'+C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{return new URL(s.endpoint).origin;}catch(_){return'';}})())+'" autocomplete="off"><div class="help" id="aiKeyHint">'+C.escapeHtml(keyHelp)+'</div><label class="switch-row compact-switch"><input type="checkbox" id="aiRememberKey" '+(remembered?'checked':'')+'> Remember this key on this browser</label><div class="help">Otherwise the key lasts only for this browser session. Changing the service host requires its own key.</div></div>'
+    +'<div class="field field-wide" data-ai-key-field><label for="aiKey">API key</label><input class="input mono" id="aiKey" type="password" placeholder="Your API key…" value="'+
+C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{return new URL(s.endpoint).origin;
+      }catch(_){return'';}})())+'" autocomplete="off"><div class="help" id="aiKeyHint">'+C.escapeHtml(keyHelp)+
+      '</div><label class="switch-row compact-switch"><input type="checkbox" id="aiRememberKey" '+(remembered?'checked':'')+
+      '> Remember this key on this browser</label><div class="help">Otherwise the key lasts only for this browser session. Changing the service host requires its own key.</div></div>'
     +'</div>'
     +'<div class="settings-connection-summary" id="aiConnectivitySummary"><div><strong>Status</strong><span id="aiConnectivityText">Check the connection when you are ready.</span></div></div>'
     +'<details class="settings-advanced"><summary>Advanced connection settings</summary><div class="settings-advanced-body stack"><div class="form-grid">'
@@ -34,10 +55,27 @@ function providerPanel(s,key,remembered){
     +field('Wait time · seconds','<input class="input" id="aiInactivityTimeout" type="number" min="15" max="600" step="5" value="'+Math.round(s.inactivityTimeoutMs/1000)+'">')
     +field('Response limit','<input class="input" id="aiMaxOutputTokensCap" type="number" min="0" max="1048576" step="256" value="'+Number(s.maxOutputTokensCap||0)+'"><div class="help">Leave 0 to let each AI tool choose its normal limit.</div>')
     +'</div><label class="switch-row"><input type="checkbox" id="aiStreaming" '+(s.streaming?'checked':'')+'> Show responses while they are being generated</label></div></details>'
-    +'<div class="settings-savebar"><span class="help">Save when the connection is ready.</span><div class="row-wrap"><button type="button" class="button" id="saveAiSettings">Save</button><button type="button" class="button primary" id="testAiConnection">Save &amp; test</button></div></div>'
+    +'<div class="settings-savebar"><span class="help">Save when the connection is ready.</span><div class="row-wrap">' +
+      '<button type="button" class="button" id="saveAiSettings">Save</button><button type="button" class="button primary" id="testAiConnection">Save &amp; test</button></div></div>'
     +'</div></section>';
 }
-function assistantPanel(s){return'<div class="stack assistant-settings-simple"><section class="panel"><div class="panel-head"><div><h2 class="h2">Conversation memory</h2><div class="meta">Keep recent exchanges available while you work.</div></div></div><div class="panel-body stack"><label class="switch-row"><input type="checkbox" id="assistantMemoryEnabled" '+(s.memoryEnabled?'checked':'')+'> Remember recent conversation</label>'+field('Recent turns','<input class="input" id="assistantMemoryTurns" type="number" min="0" max="20" value="'+s.memoryTurns+'"><div class="help">How many recent exchanges can be reused as context.</div>')+'<details class="settings-advanced"><summary>Advanced conversation settings</summary><div class="settings-advanced-body"><div class="form-grid">'+field('Conversation memory size','<input class="input" id="assistantMemoryChars" type="number" min="500" max="32000" step="500" value="'+s.memoryChars+'">')+field('Single message size','<input class="input" id="assistantMessageChars" type="number" min="250" max="8000" step="250" value="'+s.messageChars+'">')+field('Answer limit','<input class="input" id="assistantMaxOutputTokens" type="number" min="0" max="1048576" step="256" value="'+s.maxOutputTokens+'"><div class="help">Leave 0 to use the normal Assistant limit.</div>')+field('Creativity','<input class="input" id="assistantTemperature" type="number" min="0" max="2" step="0.1" value="'+s.temperature+'">')+field('Research context size','<input class="input" id="assistantContextChars" type="number" min="2000" max="48000" step="500" value="'+s.contextChars+'">')+'</div></div></details><div class="settings-savebar"><span class="help">These preferences affect Assistant conversations only.</span><div class="row-wrap"><button type="button" class="button primary" id="saveAssistantSettings">Save</button><button type="button" class="button danger" id="clearAssistantConversation">Clear conversation</button></div></div></div></section></div>';}
+function assistantPanel(s){return'<div class="stack assistant-settings-simple"><section class="panel"><div class="panel-head"><div><h2 class="h2">' +
+  'Conversation memory</h2><div class="meta">Keep recent exchanges available while you work.</div></div></div><div ' +
+  'class="panel-body stack"><label class="switch-row"><input type="checkbox" id="assistantMemoryEnabled" '+
+(s.memoryEnabled?'checked':'')+'> Remember recent conversation</label>'+field('Recent turns',
+    '<input class="input" id="assistantMemoryTurns" type="number" min="0" max="20" value="'+s.memoryTurns+
+    '"><div class="help">How many recent exchanges can be reused as context.</div>')+
+    '<details class="settings-advanced"><summary>Advanced conversation settings</summary><div class="settings-advanced-body"><div class="form-grid">'+
+    field('Conversation memory size','<input class="input" id="assistantMemoryChars" type="number" min="500" max="32000" step="500" value="'+
+    s.memoryChars+'">')+field('Single message size',
+    '<input class="input" id="assistantMessageChars" type="number" min="250" max="8000" step="250" value="'+s.messageChars+
+    '">')+field('Answer limit','<input class="input" id="assistantMaxOutputTokens" type="number" min="0" max="1048576" step="256" value="'+
+    s.maxOutputTokens+'"><div class="help">Leave 0 to use the normal Assistant limit.</div>')+field('Creativity',
+    '<input class="input" id="assistantTemperature" type="number" min="0" max="2" step="0.1" value="'+s.temperature+'">')+
+    field('Research context size','<input class="input" id="assistantContextChars" type="number" min="2000" max="48000" step="500" value="'+
+    s.contextChars+'">')+'</div></div></details><div class="settings-savebar"><span class="help">These preferences affect Assistant ' +
+  'conversations only.</span><div class="row-wrap"><button type="button" class="button primary" id="saveAssistantSettings">' +
+  'Save</button><button type="button" class="button danger" id="clearAssistantConversation">Clear conversation</button></div></div></div></section></div>';}
 function knowledgePanel(){
   const kb=LF.KnowledgeBase;if(!kb)return'<div class="notice warning">Knowledge Base is unavailable.</div>';
   const state=LF.State.state;state.ui=state.ui||{};
@@ -49,20 +87,67 @@ function knowledgePanel(){
   const kindOptions=Object.entries(kb.kinds()).map(function(x){return'<option value="'+x[0]+'" '+(selected.kind===x[0]?'selected':'')+'>'+C.escapeHtml(x[1])+'</option>';}).join('');
   const statusOptions='<option value="draft" '+(selected.status==='draft'?'selected':'')+'>Draft — keep for later</option><option value="active" '+(selected.status==='active'?'selected':'')+'>Ready — available to LabFlow AI</option>';
   const kindFilter='<option value="all" '+(kind==='all'?'selected':'')+'>All types</option>'+Object.entries(kb.kinds()).map(function(x){return'<option value="'+x[0]+'" '+(kind===x[0]?'selected':'')+'>'+C.escapeHtml(x[1])+'</option>';}).join('');
-  const catalog=visible.length?visible.map(function(item){const ready=item.status==='active',origin=item.origin==='bundled'?'Built-in':'My JSONL';return'<button type="button" class="kb-list-item '+(String(item.id)===String(selectedId)?'active':'')+'" data-kb-entry="'+C.escapeHtml(item.id)+'"><span><strong>'+C.escapeHtml(item.title||'Untitled')+'</strong><small>'+C.escapeHtml((kb.kinds()[item.kind]||item.kind)+' · '+origin)+'</small></span><span class="badge '+(ready?'success':'warning')+'">'+(ready?'Ready':'Draft')+'</span></button>';}).join(''):'<div class="empty compact-empty">No references match this search.</div>';
+  const catalog=visible.length?visible.map(function(item){
+const ready=item.status==='active',origin=item.origin==='bundled'?'Built-in':'My JSONL';
+    return'<button type="button" class="kb-list-item '+(String(item.id)===String(selectedId)?'active':'')+
+    '" data-kb-entry="'+C.escapeHtml(item.id)+'"><span><strong>'+C.escapeHtml(item.title||
+    'Untitled')+'</strong><small>'+C.escapeHtml((kb.kinds()[item.kind]||
+    item.kind)+' · '+origin)+'</small></span><span class="badge '+(ready?'success':'warning')+'">'+(ready?'Ready':'Draft')+
+    '</span></button>';}).join(''):'<div class="empty compact-empty">No references match this search.</div>';
   const issueHtml=issues.length?'<div class="notice warning compact-notice"><strong>Needs attention.</strong> '+C.escapeHtml(issues.join(' '))+'</div>':'<div class="notice success compact-notice"><strong>Ready to use.</strong> LabFlow can retrieve this reference when it is relevant.</div>';
-  const actions=readonly?'<button type="button" class="button primary" id="duplicateKbEntry" data-kb-id="'+C.escapeHtml(selected.id)+'">Make editable copy</button>':('<button type="button" class="button primary" id="saveKbEntry">'+(isNew?'Add reference':'Save reference')+'</button>'+(isNew?'':'<button type="button" class="button" id="duplicateKbEntry" data-kb-id="'+C.escapeHtml(selected.id)+'">Duplicate</button><button type="button" class="button danger" id="deleteKbEntry" data-kb-id="'+C.escapeHtml(selected.id)+'">Delete</button>'));
-  const jsonl='<section class="panel kb-jsonl-panel"><div class="panel-body kb-jsonl-body"><div class="kb-jsonl-intro"><span class="kb-jsonl-icon" data-icon="file-text" aria-hidden="true"></span><div><span class="eyebrow">Portable by design</span><h2 class="h2">My JSONL library</h2><p>Your editable references are stored as plain JSONL: one reference per line, no extra database. Open an existing file or save your current library whenever you want.</p></div></div><div class="kb-jsonl-stats"><div><span>Built-in</span><strong>'+stats.bundled+'</strong><small>read-only references shipped with LabFlow</small></div><div><span>Mine</span><strong>'+stats.custom+'</strong><small>editable JSONL references in this browser</small></div></div><div class="kb-jsonl-actions"><button type="button" class="button" id="importKb">Open JSONL</button><input type="file" id="kbImportFile" accept=".jsonl,application/x-ndjson,application/jsonl,text/plain" hidden><button type="button" class="button primary" id="exportKb">Save my JSONL</button></div><details class="compact-details kb-jsonl-more"><summary>More library tools</summary><div class="panel-body"><div class="row-wrap"><button type="button" class="button compact" id="downloadFullKb">Download full library</button><button type="button" class="button danger compact" id="resetKbCustom" '+(stats.custom?'':'disabled')+'>Clear my references</button></div><div class="help">The full download includes the built-in library plus your own entries. Reopening a JSONL file safely merges your editable entries by ID and ignores built-in duplicates.</div></div></details></div></section>';
+  const actions=readonly?'<button type="button" class="button primary" id="duplicateKbEntry" data-kb-id="'+
+C.escapeHtml(selected.id)+'">Make editable copy</button>':
+    ('<button type="button" class="button primary" id="saveKbEntry">'+(isNew?'Add reference':'Save reference')+'</button>'+
+    (isNew?'':'<button type="button" class="button" id="duplicateKbEntry" data-kb-id="'+C.escapeHtml(selected.id)+
+    '">Duplicate</button><button type="button" class="button danger" id="deleteKbEntry" data-kb-id="'+
+    C.escapeHtml(selected.id)+'">Delete</button>'));
+  const jsonl='<section class="panel kb-jsonl-panel"><div class="panel-body kb-jsonl-body"><div class="kb-jsonl-intro"><span ' +
+    'class="kb-jsonl-icon" data-icon="file-text" aria-hidden="true"></span><div><span class="eyebrow">Portable by ' +
+    'design</span><h2 class="h2">My JSONL library</h2><p>Your editable references are stored as plain JSONL: one ' +
+    'reference per line, no extra database. Open an existing file or save your current library whenever you want.</p></div></div><div class="kb-jsonl-stats"><div><span>Built-in</span><strong>'+
+stats.bundled+'</strong><small>read-only references shipped with LabFlow</small></div><div><span>Mine</span><strong>'+stats.custom+
+      '</strong><small>editable JSONL references in this browser</small></div></div><div class="kb-jsonl-actions">' +
+    '<button type="button" class="button" id="importKb">Open JSONL</button><input type="file" id="kbImportFile" ' +
+    'accept=".jsonl,application/x-ndjson,application/jsonl,text/plain" hidden><button type="button" class="button ' +
+    'primary" id="exportKb">Save my JSONL</button></div><details class="compact-details kb-jsonl-more"><summary>More ' +
+    'library tools</summary><div class="panel-body"><div class="row-wrap"><button type="button" class="button compact" ' +
+    'id="downloadFullKb">Download full library</button><button type="button" class="button danger compact" id="resetKbCustom" '+
+(stats.custom?'':'disabled')+'>Clear my references</button></div><div class="help">The full download includes the built-in library plus your own entries. Reopening a JSONL file safely merges your editable entries by ID and ignores built-in duplicates.</div></div></details></div></section>';
   return'<div class="stack knowledge-settings">'+jsonl+
-    '<section class="panel kb-overview"><div class="panel-head"><div><h2 class="h2">Scientific reference library</h2><div class="meta">Search the knowledge LabFlow can use, or add a sourced reference of your own.</div></div><div class="spacer"></div><div class="row-wrap"><span class="badge info">'+stats.active+' ready</span>'+(stats.draft?'<span class="badge warning">'+stats.draft+' drafts</span>':'')+'</div></div><div class="panel-body"><div class="kb-toolbar"><div class="input-action"><input class="input" id="kbSettingsSearch" value="'+C.escapeHtml(state.ui.settingsKnowledgeQuery||'')+'" placeholder="Search concepts, materials, processes…"><select class="select" id="kbSettingsKind">'+kindFilter+'</select></div><div class="row-wrap"><button type="button" class="button primary compact" id="kbAddEntry">Add reference</button></div></div></div></section>'+
+    '<section class="panel kb-overview"><div class="panel-head"><div><h2 class="h2">Scientific reference library</h2>' +
+      '<div class="meta">Search the knowledge LabFlow can use, or add a sourced reference of your own.</div></div><div class="spacer"></div><div class="row-wrap"><span class="badge info">'+
+stats.active+' ready</span>'+(stats.draft?'<span class="badge warning">'+stats.draft+' drafts</span>':'')+
+        '</div></div><div class="panel-body"><div class="kb-toolbar"><div class="input-action"><input class="input" id="kbSettingsSearch" value="'+
+        C.escapeHtml(state.ui.settingsKnowledgeQuery||
+        '')+'" placeholder="Search concepts, materials, processes…"><select class="select" id="kbSettingsKind">'+kindFilter+
+        '</select></div><div class="row-wrap"><button type="button" class="button primary compact" id="kbAddEntry">Add reference</button></div></div></div></section>'+
     '<div class="kb-workbench"><aside class="panel kb-catalog"><div class="panel-head"><div><h2 class="h2">References</h2><div class="meta">'+visible.length+' shown</div></div></div><div class="panel-body">'+catalog+'</div></aside>'+
-    '<section class="panel kb-editor"><div class="panel-head"><div><span class="eyebrow">'+(readonly?'Built-in reference':isNew?'New reference':'My JSONL reference')+'</span><h2 class="h2">'+C.escapeHtml(selected.title||'New reference')+'</h2></div><div class="spacer"></div><span class="badge '+(selected.status==='active'?'success':'warning')+'">'+(selected.status==='active'?'Ready':'Draft')+'</span></div><div class="panel-body stack">'+
+    '<section class="panel kb-editor"><div class="panel-head"><div><span class="eyebrow">'+
+(readonly?'Built-in reference':isNew?'New reference':'My JSONL reference')+'</span><h2 class="h2">'+
+      C.escapeHtml(selected.title||'New reference')+'</h2></div><div class="spacer"></div><span class="badge '+
+      (selected.status==='active'?'success':'warning')+'">'+(selected.status==='active'?'Ready':'Draft')+
+      '</span></div><div class="panel-body stack">'+
       (readonly?'<div class="notice info compact-notice">Built-in references are read-only. Make an editable copy if you want to adapt one for your lab.</div>':'')+
-      '<div class="form-grid">'+field('Title','<input class="input" id="kbTitle" maxlength="180" value="'+C.escapeHtml(selected.title)+'"'+disabled+'>',true)+field('Type','<select class="select" id="kbKind"'+disabled+'>'+kindOptions+'</select>')+field('Use in LabFlow','<select class="select" id="kbStatus"'+disabled+'>'+statusOptions+'</select><div class="help">Drafts stay saved but are not retrieved by AI features.</div>')+'</div>'+
+      '<div class="form-grid">'+field('Title',
+'<input class="input" id="kbTitle" maxlength="180" value="'+C.escapeHtml(selected.title)+'"'+disabled+'>',
+        true)+field('Type','<select class="select" id="kbKind"'+disabled+'>'+kindOptions+'</select>')+field('Use in LabFlow',
+        '<select class="select" id="kbStatus"'+disabled+'>'+statusOptions+
+        '</select><div class="help">Drafts stay saved but are not retrieved by AI features.</div>')+'</div>'+
       field('Short summary','<textarea class="textarea" id="kbSummary" rows="3" maxlength="1200" placeholder="What should LabFlow know from this source?"'+disabled+'>'+C.escapeHtml(selected.summary||'')+'</textarea>',true)+
-      '<div class="kb-text-grid">'+field('Useful facts · one per line','<textarea class="textarea" id="kbFacts" rows="7" placeholder="One concise, source-supported fact per line…"'+disabled+'>'+C.escapeHtml((selected.facts||[]).join('\n'))+'</textarea>')+field('Cautions · one per line','<textarea class="textarea" id="kbCautions" rows="7" placeholder="Limits, ambiguities or important caveats…"'+disabled+'>'+C.escapeHtml((selected.cautions||[]).join('\n'))+'</textarea>')+'</div>'+
+      '<div class="kb-text-grid">'+field('Useful facts · one per line',
+'<textarea class="textarea" id="kbFacts" rows="7" placeholder="One concise, source-supported fact per line…"'+disabled+
+        '>'+C.escapeHtml((selected.facts||[]).join('\n'))+'</textarea>')+field('Cautions · one per line',
+        '<textarea class="textarea" id="kbCautions" rows="7" placeholder="Limits, ambiguities or important caveats…"'+disabled+
+        '>'+C.escapeHtml((selected.cautions||[]).join('\n'))+'</textarea>')+'</div>'+
       field('Sources','<textarea class="textarea mono kb-source-editor" id="kbSources" rows="6" placeholder="Paper title | DOI or URL | Year | Authors"'+disabled+'>'+C.escapeHtml(kb.sourceLines(selected.sources||[]))+'</textarea><div class="help">One source per line. Give it a title and a DOI, URL or normal citation so the claim stays traceable.</div>',true)+
-      '<details class="settings-advanced"><summary>Aliases, topics & related references</summary><div class="settings-advanced-body"><div class="form-grid">'+field('Also known as','<input class="input" id="kbAliases" value="'+C.escapeHtml((selected.aliases||[]).join(', '))+'" placeholder="SnO2, tin dioxide…"'+disabled+'>')+field('Topics','<input class="input" id="kbTags" value="'+C.escapeHtml((selected.tags||[]).join(', '))+'" placeholder="perovskite, ETL, p-i-n…"'+disabled+'>')+field('Related reference IDs','<input class="input mono" id="kbRelatedIds" value="'+C.escapeHtml((selected.related_ids||[]).join(', '))+'" placeholder="concept.pce, material.sno2…"'+disabled+'>',true)+'</div>'+(isNew?'':'<div class="help mono">Reference ID: '+C.escapeHtml(selected.id)+'</div>')+'</div></details>'+
+      '<details class="settings-advanced"><summary>Aliases, topics & related references</summary><div class="settings-advanced-body"><div class="form-grid">'+
+field('Also known as','<input class="input" id="kbAliases" value="'+C.escapeHtml((selected.aliases||
+        []).join(', '))+'" placeholder="SnO2, tin dioxide…"'+disabled+'>')+field('Topics',
+        '<input class="input" id="kbTags" value="'+C.escapeHtml((selected.tags||
+        []).join(', '))+'" placeholder="perovskite, ETL, p-i-n…"'+disabled+'>')+field('Related reference IDs',
+        '<input class="input mono" id="kbRelatedIds" value="'+C.escapeHtml((selected.related_ids||
+        []).join(', '))+'" placeholder="concept.pce, material.sno2…"'+disabled+'>',
+        true)+'</div>'+(isNew?'':'<div class="help mono">Reference ID: '+C.escapeHtml(selected.id)+'</div>')+'</div></details>'+
       issueHtml+'<div class="row-wrap">'+actions+'</div></div></section></div></div>';
 }
 
@@ -70,15 +155,21 @@ function nomadPanel(settings,token,remembered){
   const s=settings||{},configured=!!String(token||'').trim(),profileReady=!!String(s.apiEndpoint||'').trim();
   return '<div class="stack nomad-settings-simple">'
     +'<section class="panel settings-primary-panel"><div class="panel-head"><div><h2 class="h2">NOMAD destination</h2><div class="meta">Prepare the institutional destination now; local NOMAD export already works.</div></div><div class="spacer"></div>'+badge('Export ready','success')+'</div><div class="panel-body stack">'
-    +'<div class="notice info compact-notice"><strong>Future-ready connection profile.</strong><span>LabFlow stores the destination and credential locally, but this prototype does not upload data yet. When the Tor Vergata/CNR NOMAD service is available, the uploader can use this same profile without changing the export model.</span></div>'
+    +'<div class="notice info compact-notice"><strong>Future-ready connection profile.</strong><span>LabFlow stores ' +
+      'the destination and credential locally, but this prototype does not upload data yet. When the Tor Vergata/CNR ' +
+      'NOMAD service is available, the uploader can use this same profile without changing the export model.</span></div>'
     +'<div class="form-grid nomad-profile-grid">'
     +field('Destination name','<input class="input" id="nomadInstance" value="'+C.escapeHtml(s.instance||'')+'" placeholder="Tor Vergata NOMAD">')
     +field('NOMAD website','<input class="input mono" id="nomadWebUrl" type="url" value="'+C.escapeHtml(s.webUrl||'')+'" placeholder="https://…/gui/">',true)
     +field('API address','<input class="input mono" id="nomadApiEndpoint" type="url" value="'+C.escapeHtml(s.apiEndpoint||'')+'" placeholder="https://…/api/v1">',true)
     +field('Account','<input class="input" id="nomadUsername" value="'+C.escapeHtml(s.username||'')+'" autocomplete="username" placeholder="Optional">')
-    +'<div class="field field-wide"><label for="nomadToken">API token</label><input class="input mono" id="nomadToken" type="password" value="'+C.escapeHtml(token||'')+'" autocomplete="off" placeholder="Paste token…"><label class="switch-row compact-switch"><input type="checkbox" id="nomadRememberToken" '+(remembered?'checked':'')+'> Remember this token on this browser</label><div class="help">Otherwise the token stays only for this browser session. Credentials are bound to the API host, so a different NOMAD server never reuses them silently.</div></div>'
+    +'<div class="field field-wide"><label for="nomadToken">API token</label><input class="input mono" id="nomadToken" type="password" value="'+
+C.escapeHtml(token||'')+'" autocomplete="off" placeholder="Paste token…"><label class="switch-row compact-switch"><input type="checkbox" id="nomadRememberToken" '+
+      (remembered?'checked':'')+'> Remember this token on this browser</label><div class="help">Otherwise the token stays only for this browser session. Credentials are bound to the API host, so a different NOMAD server never reuses them silently.</div></div>'
     +'</div><div class="nomad-profile-status"><div><span>Profile</span><strong>'+(profileReady?'Destination configured':'Waiting for server')+'</strong></div><div><span>Credential</span><strong>'+(configured?(remembered?'Remembered':'This session only'):'Not set')+'</strong></div><div><span>Upload</span><strong>Not enabled yet</strong></div></div>'
-    +'<div class="settings-savebar"><span class="help">Validation checks the profile locally. It does not contact NOMAD.</span><div class="row-wrap"><button type="button" class="button" id="validateNomadProfile">Validate profile</button><button type="button" class="button primary" id="saveNomadSettings">Save profile</button><button type="button" class="button ghost" id="clearNomadToken" '+(configured?'':'disabled')+'>Clear token</button></div></div>'
+    +'<div class="settings-savebar"><span class="help">Validation checks the profile locally. It does not contact ' +
+      'NOMAD.</span><div class="row-wrap"><button type="button" class="button" id="validateNomadProfile">Validate ' +
+      'profile</button><button type="button" class="button primary" id="saveNomadSettings">Save profile</button><button type="button" class="button ghost" id="clearNomadToken" '+(configured?'':'disabled')+'>Clear token</button></div></div>'
     +'</div></section></div>';
 }
 
@@ -93,20 +184,70 @@ function workspacePanel(p){
     +field('Organization','<input class="input" id="userOrganization" value="'+C.escapeHtml(p.organization||'')+'">')
     +field('Email','<input class="input" id="userEmail" type="email" value="'+C.escapeHtml(p.email||'')+'">')
     +'</div><div class="settings-savebar"><span class="help">Used only where LabFlow needs author information.</span><button type="button" class="button primary" id="saveUserProfile">Save profile</button></div></div></section>'
-    +'<section class="panel settings-local-data-panel"><div class="panel-head"><div><h3 class="h2">Data on this browser</h3><div class="meta">Local workspace, source ZIP and browser preferences.</div></div></div><div class="panel-body stack"><div class="notice info compact-notice"><strong>Your source stays local.</strong><span>The original ZIP and working experiment are stored in this browser. Session-only credentials disappear when the browser session ends.</span></div><div class="settings-storage-status" id="browserStorageStatus" aria-live="polite"><span>Storage use</span><strong>Not checked</strong><small>Check when diagnosing browser quota or large local datasets.</small></div><div class="settings-savebar"><span class="help">Use this on a shared computer or when you want a completely fresh LabFlow.</span><div class="row-wrap"><button type="button" class="button" id="checkBrowserStorage">Check storage</button><button type="button" class="button danger" id="clearLocalLabFlowData">Clear local LabFlow data</button></div></div></div></section>'
-    +'<section class="panel settings-about-panel"><div class="panel-head"><div><h3 class="h2">About LabFlow</h3><div class="meta">Release information for this installation.</div></div><div class="spacer"></div><span class="badge info">Prototype</span></div><div class="panel-body"><div class="settings-about-grid"><div><span>Version</span><strong>'+C.escapeHtml(releaseInfo().label)+'</strong></div><div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div></div></div></section>'
+    +'<section class="panel settings-local-data-panel"><div class="panel-head"><div><h3 class="h2">Data on this ' +
+      'browser</h3><div class="meta">Local workspace, source ZIP and browser preferences.</div></div></div><div ' +
+      'class="panel-body stack"><div class="notice info compact-notice"><strong>Your source stays local.</strong><span>' +
+      'The original ZIP and working experiment are stored in this browser. Session-only credentials disappear when ' +
+      'the browser session ends.</span></div><div class="settings-storage-status" id="browserStorageStatus" ' +
+      'aria-live="polite"><span>Storage use</span><strong>Not checked</strong><small>Check when diagnosing browser ' +
+      'quota or large local datasets.</small></div><div class="settings-savebar"><span class="help">Use this on a ' +
+      'shared computer or when you want a completely fresh LabFlow.</span><div class="row-wrap"><button type="button" ' +
+      'class="button" id="checkBrowserStorage">Check storage</button><button type="button" class="button danger" ' +
+      'id="clearLocalLabFlowData">Clear local LabFlow data</button></div></div></div></section>'
+    +'<section class="panel settings-about-panel"><div class="panel-head"><div><h3 class="h2">About LabFlow</h3><div ' +
+      'class="meta">Release information for this installation.</div></div><div class="spacer"></div><span class="badge ' +
+      'info">Prototype</span></div><div class="panel-body"><div class="settings-about-grid"><div><span>Version</span><strong>'+C.escapeHtml(releaseInfo().label)+'</strong></div><div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div></div></div></section>'
     +'</div></div>';
 }
-function stepCard(step){const ai=step.type==='AI',inp=Number(step.max_input_tokens)||0,mn=Number(step.min_output_tokens)||0,tg=Number(step.target_output_tokens)||0,mx=Number(step.max_output_tokens)||0,budget=ai&&mx?(' · input ≤ '+(inp?inp.toLocaleString():'default')+' tok · output '+(mn?mn.toLocaleString()+' → ':'')+(tg?tg.toLocaleString()+' → ':'')+mx.toLocaleString()+' tok min/target/max'):'',deadline=ai&&step.deadline_ms?(' · '+Math.round(Number(step.deadline_ms)/1000)+'s max'):'',retries=ai&&step.max_retries!=null?(' · retry '+Number(step.max_retries)):'',thinking=ai?(' · thinking preference '+String(step.thinking||'auto')):'',detail=ai?('prompt.md'+(step.schema?' · '+step.schema:'')+(step.foreach?' · repeated blocks':'')+thinking+budget+deadline+retries):(step.tool||step.fn||'local');return'<div class="operation-step '+(ai?'ai':'det')+'"><div class="operation-step-no">'+badge(ai?'AI':'DET',ai?'ai':'success')+'</div><div><strong>'+C.escapeHtml(step.id)+'</strong><span class="mono">'+C.escapeHtml(detail)+'</span></div></div>';}
+function stepCard(step){const ai=step.type==='AI',inp=Number(step.max_input_tokens)||0,
+mn=Number(step.min_output_tokens)||0,tg=Number(step.target_output_tokens)||0,mx=Number(step.max_output_tokens)||0,
+  budget=ai&&mx?(' · input ≤ '+(inp?inp.toLocaleString():'default')+' tok · output '+(mn?mn.toLocaleString()+' → ':'')+
+  (tg?tg.toLocaleString()+' → ':'')+mx.toLocaleString()+' tok min/target/max'):'',
+  deadline=ai&&step.deadline_ms?(' · '+Math.round(Number(step.deadline_ms)/1000)+'s max'):'',
+  retries=ai&&step.max_retries!=null?(' · retry '+Number(step.max_retries)):'',
+  thinking=ai?(' · thinking preference '+String(step.thinking||'auto')):'',
+  detail=ai?('prompt.md'+(step.schema?' · '+step.schema:'')+(step.foreach?' · repeated blocks':'')+thinking+budget+
+  deadline+retries):(step.tool||step.fn||'local');
+  return'<div class="operation-step '+(ai?'ai':'det')+'"><div class="operation-step-no">'+badge(ai?'AI':'DET',
+  ai?'ai':'success')+'</div><div><strong>'+C.escapeHtml(step.id)+'</strong><span class="mono">'+C.escapeHtml(detail)+
+  '</span></div></div>';}
 function actionSteps(def){return def&&def.execution&&Array.isArray(def.execution.steps)?def.execution.steps:[];}
-function toolSummary(def){const map={'dataset.resolve-ambiguities':'Suggest how to resolve data items that still need scientific review.','results.compare':'Explain the main differences between the result groups you selected.','results.interpret':'Summarize and interpret the current experimental results.','design.infer':'Suggest missing chemistry, stack or process details for the selected experiment.'};return map[def&&def.id]||'Use this tool with the current experiment.';}
+function toolSummary(def){const map={'dataset.resolve-ambiguities':
+'Suggest how to resolve data items that still need scientific review.',
+  'results.compare':'Explain the main differences between the result groups you selected.',
+  'results.interpret':'Summarize and interpret the current experimental results.',
+  'design.infer':'Suggest missing chemistry, stack or process details for the selected experiment.'};
+  return map[def&&def.id]||'Use this tool with the current experiment.';}
 function actionsPanel(){
-  const state=LF.State.state,ids=LF.ActionRegistry&&LF.ActionRegistry.actions?LF.ActionRegistry.actions():[],defs=ids.map(function(id){return LF.Storage.getEffectiveAction?LF.Storage.getEffectiveAction(id):LF.ActionRegistry.action(id);}).filter(function(d){return d&&d.visibility!=='internal';}),requested=state.ui&&state.ui.settingsActionId||'',selectedId=defs.some(function(d){return d.id===requested;})?requested:(defs[0]&&defs[0].id||''),selected=LF.Storage.getEffectiveAction(selectedId),override=LF.Storage.getActionOverride(selectedId);if(!selected)return'<div class="empty">No AI tools are available.</div>';
+  const state=LF.State.state,ids=LF.ActionRegistry&&LF.ActionRegistry.actions?LF.ActionRegistry.actions():[],
+defs=ids.map(function(id){return LF.Storage.getEffectiveAction?
+    LF.Storage.getEffectiveAction(id):LF.ActionRegistry.action(id);
+    }).filter(function(d){return d&&d.visibility!=='internal';
+    }),requested=state.ui&&state.ui.settingsActionId||'',selectedId=defs.some(function(d){return d.id===requested;
+    })?requested:(defs[0]&&defs[0].id||''),selected=LF.Storage.getEffectiveAction(selectedId),
+    override=LF.Storage.getActionOverride(selectedId);
+    if(!selected)return'<div class="empty">No AI tools are available.</div>';
   function areaLabel(def){const map={dataset:'Upload & Review',results:'Results',design:'Design Experiment',assistant:'Assistant'};return map[def.category]||'LabFlow';}
   function modeLabel(def){return actionSteps(def).some(function(x){return x.type==='AI';})?'AI-assisted':'Local';}
-  const catalog=defs.map(function(d){return'<button type="button" class="operation-catalog-item '+(d.id===selectedId?'active':'')+'" data-action-editor="'+C.escapeHtml(d.id)+'"><span class="operation-catalog-icon">'+(modeLabel(d)==='AI-assisted'?'AI':'LOCAL')+'</span><span><strong>'+C.escapeHtml(d.short_title||d.title||d.id)+'</strong><small>'+C.escapeHtml(areaLabel(d))+' · '+modeLabel(d)+(LF.Storage.getActionOverride(d.id)?' · Customized':'')+'</small></span></button>';}).join('');
-  const ss=actionSteps(selected),aiStep=ss.find(function(x){return x.type==='AI';})||null,aiSteps=ss.filter(function(x){return x.type==='AI';}).length,prompt=LF.Storage.getEffectivePrompt(selected.id),schemaStep=ss.find(function(x){return x.schema;}),schema=schemaStep?LF.ActionRegistry.schema(schemaStep.schema):null,exp=state.experiment,history=exp&&exp.derived&&exp.derived.actions&&exp.derived.actions[selected.id],last=history&&history.runs&&history.runs[history.runs.length-1],contract=selected.contract||{},target=contract.target||{},context=contract.context||{},effect=contract.effect||{},guards=Array.isArray(contract.guards)?contract.guards:[],result=contract.result||{},writeLabels=(effect.writes||[]).map(function(path){return String(path).split('.').slice(-2).join(' · ');});
-  const cap=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(selected.id,{exp:exp}):null,run='<div class="stack compact-stack action-settings-run"><button type="button" class="button primary compact" data-action="'+C.escapeHtml(selected.id)+'" '+(cap&&!cap.available?'disabled aria-disabled="true" title="'+C.escapeHtml(cap.reason)+'"':'')+'>Run tool</button>'+(cap&&!cap.available?'<span class="meta">'+C.escapeHtml(cap.reason)+'</span>':'<span class="meta">Ready with the current experiment.</span>')+'</div>';
+  const catalog=defs.map(function(d){return'<button type="button" class="operation-catalog-item '+
+(d.id===selectedId?'active':'')+'" data-action-editor="'+C.escapeHtml(d.id)+'"><span class="operation-catalog-icon">'+
+    (modeLabel(d)==='AI-assisted'?'AI':'LOCAL')+'</span><span><strong>'+C.escapeHtml(d.short_title||d.title||
+    d.id)+'</strong><small>'+C.escapeHtml(areaLabel(d))+' · '+modeLabel(d)+
+    (LF.Storage.getActionOverride(d.id)?' · Customized':'')+'</small></span></button>';}).join('');
+  const ss=actionSteps(selected),aiStep=ss.find(function(x){return x.type==='AI';
+})||null,aiSteps=ss.filter(function(x){return x.type==='AI';
+    }).length,prompt=LF.Storage.getEffectivePrompt(selected.id),schemaStep=ss.find(function(x){return x.schema;
+    }),schema=schemaStep?LF.ActionRegistry.schema(schemaStep.schema):null,exp=state.experiment,
+    history=exp&&exp.derived&&exp.derived.actions&&exp.derived.actions[selected.id],
+    last=history&&history.runs&&history.runs[history.runs.length-1],contract=selected.contract||{},target=contract.target||{
+    },context=contract.context||{},effect=contract.effect||{}
+    ,guards=Array.isArray(contract.guards)?contract.guards:[],result=contract.result||{}
+    ,writeLabels=(effect.writes||[]).map(function(path){return String(path).split('.').slice(-2).join(' · ');});
+  const cap=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(selected.id,{exp:exp}
+):null,run='<div class="stack compact-stack action-settings-run"><button type="button" class="button primary compact" data-action="'+
+    C.escapeHtml(selected.id)+'" '+(cap&&!cap.available?'disabled aria-disabled="true" title="'+C.escapeHtml(cap.reason)+
+    '"':'')+'>Run tool</button>'+(cap&&!cap.available?'<span class="meta">'+C.escapeHtml(cap.reason)+
+    '</span>':'<span class="meta">Ready with the current experiment.</span>')+'</div>';
   const flow='<div class="operation-step-flow">'+ss.map(stepCard).join('<span class="operation-step-arrow">→</span>')+'</div>';
   const tuning=aiStep?'<div class="action-tuning-grid">'
     +field('Thinking','<select class="select" id="actionStepThinking"><option value="auto" '+(String(aiStep.thinking||'auto')==='auto'?'selected':'')+'>Automatic</option><option value="off" '+(String(aiStep.thinking||'auto')==='off'?'selected':'')+'>Prefer off</option><option value="on" '+(String(aiStep.thinking||'auto')==='on'?'selected':'')+'>Prefer on</option></select>')
@@ -115,29 +256,88 @@ function actionsPanel(){
     +field('Maximum answer','<input class="input" id="actionStepMaxOutput" type="number" min="0" step="128" value="'+Number(aiStep.max_output_tokens||0)+'">')
     +field('Automatic retries','<input class="input" id="actionStepRetries" type="number" min="0" max="8" step="1" value="'+Number(aiStep.max_retries||0)+'">')
     +field('Deadline · seconds','<input class="input" id="actionStepDeadline" type="number" min="0" step="5" value="'+Math.round(Number(aiStep.deadline_ms||0)/1000)+'">')+'</div>':'';
-  const editor='<section class="workshop-editor action-customizer"><div class="workshop-editor-head"><div><span class="eyebrow">Action Studio</span><h3>Customize this tool</h3><p class="meta">Change its wording, AI instruction and runtime budget without changing the scientific contract.</p></div>'+badge(override?'Customized':'Source defaults',override?'warning':'success')+'</div>'
+  const editor='<section class="workshop-editor action-customizer"><div class="workshop-editor-head"><div><span class="eyebrow">' +
+    'Action Studio</span><h3>Customize this tool</h3><p class="meta">Change its wording, AI instruction and runtime budget without changing the scientific contract.</p></div>'+badge(override?'Customized':'Source defaults',override?'warning':'success')+'</div>'
     +'<div class="action-safety-strip"><div><span>Scientific contract</span><strong>Locked</strong></div><div><span>May write</span><strong>'+(writeLabels.length?C.escapeHtml(writeLabels.join(', ')):'Read only')+'</strong></div><div><span>Execution</span><strong>'+ss.length+' step'+(ss.length===1?'':'s')+' · '+aiSteps+' AI</strong></div></div>'
-    +'<div class="form-grid action-copy-grid">'+field('Display name','<input class="input" id="actionTitleEditor" value="'+C.escapeHtml(selected.title||'')+'">')+field('Short label','<input class="input" id="actionShortTitleEditor" value="'+C.escapeHtml(selected.short_title||'')+'">')+field('Purpose','<textarea class="textarea" id="actionPurposeEditor" rows="3">'+C.escapeHtml(selected.purpose||'')+'</textarea>',true)+field('Strategy','<textarea class="textarea" id="actionStrategyEditor" rows="3">'+C.escapeHtml(selected.strategy||'')+'</textarea>',true)+'</div>'
-    +(aiStep?'<div class="workshop-editor-head action-subhead"><div><span class="eyebrow">Runtime</span><h3>AI budget</h3><p class="meta">These are ceilings and preferences, not a second execution path.</p></div></div>'+tuning+'<div class="workshop-editor-head action-subhead"><div><span class="eyebrow">Instruction</span><h3>Prompt</h3><p class="meta">Sent to the selected model together with LabFlow&#39;s bounded experiment context.</p></div></div><textarea class="textarea mono operation-prompt-editor" id="actionPromptEditor" spellcheck="false">'+C.escapeHtml(prompt||'')+'</textarea>':'<input type="hidden" id="actionPromptEditor" value=""><div class="notice success compact-notice"><strong>This tool does not call an AI model.</strong></div>')
-    +'<details class="workshop-detail action-expert-json"><summary>Expert JSON editor <small>safe fields only</small></summary><div class="notice info compact-notice"><strong>Safety boundary enforced.</strong> LabFlow rejects changes to target, guards, output schema, deterministic tool bindings and write permissions.</div><textarea class="textarea mono operation-definition-editor" id="actionDefinitionEditor" spellcheck="false">'+C.escapeHtml(JSON.stringify(selected,null,2))+'</textarea></details>'
-    +'<div class="workshop-savebar"><button type="button" class="button" id="validateActionEditor" data-action-id="'+C.escapeHtml(selected.id)+'">Validate</button><button type="button" class="button primary" id="saveActionEditor" data-action-id="'+C.escapeHtml(selected.id)+'">Save customization</button><button type="button" class="button ghost" id="resetActionEditor" data-action-id="'+C.escapeHtml(selected.id)+'" '+(override?'':'disabled')+'>Restore default</button><span class="help">Validation checks the same protected boundary used at runtime.</span></div></section>';
-  const technical='<details class="settings-advanced settings-developer-details"><summary>Tool details &amp; customization</summary><div class="settings-advanced-body stack"><div class="operation-technical-id"><span>Tool ID</span><code>'+C.escapeHtml(selected.id)+'</code></div><div class="operation-contract-grid"><div><span>Target</span><strong>'+C.escapeHtml((target.kind||'—')+' · '+(target.cardinality||'—'))+'</strong></div><div><span>Context</span><strong>'+C.escapeHtml((context.profile||'generic')+' · '+(context.scope||'experiment'))+'</strong></div><div><span>Result</span><strong>'+C.escapeHtml((result.format||'—')+(result.schema?' · '+result.schema:'')+(result.kind?' · '+result.kind:''))+'</strong></div><div><span>Effect</span><strong>'+C.escapeHtml((effect.mode||'read_only')+' · '+((effect.writes||[]).length)+' write target'+(((effect.writes||[]).length)===1?'':'s'))+'</strong></div><div><span>Guards</span><strong>'+C.escapeHtml(guards.length?guards.join(' · '):'none')+'</strong></div><div><span>AI steps</span><strong>'+aiSteps+'</strong></div></div><div class="operation-flow"><div class="section-label">Execution steps</div>'+flow+'</div>'+editor+(last?'<div class="operation-last-run"><span>Last run</span><strong>'+C.escapeHtml(last.status||'—')+'</strong><span class="mono">'+C.escapeHtml(last.endedAt||'')+'</span></div>':'')+(schema?'<details class="workshop-detail"><summary>Output format · '+C.escapeHtml(schemaStep.schema)+'</summary>'+C.jsonBlock(schema,true)+'</details>':'')+'</div></details>';
-  return'<div class="operation-workshop settings-tools-workshop"><aside class="panel operation-catalog"><div class="panel-head"><div><h2 class="h2">Available tools</h2><div class="meta">Choose a tool to review or run.</div></div></div><div class="panel-body">'+catalog+'</div></aside><section class="panel operation-inspector"><div class="panel-head"><div><div class="row-wrap">'+badge(modeLabel(selected),aiSteps?'ai':'success')+badge(areaLabel(selected),'info')+'</div><h2 class="h2 operation-inspector-title">'+C.escapeHtml(selected.title||selected.id)+'</h2></div><div class="spacer"></div>'+run+'</div><div class="panel-body stack"><p class="operation-purpose">'+C.escapeHtml(toolSummary(selected))+'</p>'+technical+'</div></section></div>';
+    +'<div class="form-grid action-copy-grid">'+field('Display name',
+'<input class="input" id="actionTitleEditor" value="'+C.escapeHtml(selected.title||'')+'">')+field('Short label',
+      '<input class="input" id="actionShortTitleEditor" value="'+C.escapeHtml(selected.short_title||'')+'">')+field('Purpose',
+      '<textarea class="textarea" id="actionPurposeEditor" rows="3">'+C.escapeHtml(selected.purpose||'')+'</textarea>',
+      true)+field('Strategy','<textarea class="textarea" id="actionStrategyEditor" rows="3">'+C.escapeHtml(selected.strategy||
+      '')+'</textarea>',true)+'</div>'
+    +(aiStep?'<div class="workshop-editor-head action-subhead"><div><span class="eyebrow">Runtime</span><h3>AI budget</h3><p class="meta">These are ceilings and preferences, not a second execution path.</p></div></div>'+tuning+'<div class="workshop-editor-head action-subhead"><div><span class="eyebrow">Instruction</span><h3>Prompt</h3>' +
+      '<p class="meta">Sent to the selected model together with LabFlow&#39;s bounded experiment context.</p></div>' +
+      '</div><textarea class="textarea mono operation-prompt-editor" id="actionPromptEditor" spellcheck="false">'+C.escapeHtml(prompt||'')+'</textarea>':'<input type="hidden" id="actionPromptEditor" value=""><div class="notice success compact-notice"><strong>This tool does not call an AI model.</strong></div>')
+    +'<details class="workshop-detail action-expert-json"><summary>Expert JSON editor <small>safe fields only</small>' +
+      '</summary><div class="notice info compact-notice"><strong>Safety boundary enforced.</strong> LabFlow rejects ' +
+      'changes to target, guards, output schema, deterministic tool bindings and write permissions.</div><textarea ' +
+      'class="textarea mono operation-definition-editor" id="actionDefinitionEditor" spellcheck="false">'+C.escapeHtml(JSON.stringify(selected,null,2))+'</textarea></details>'
+    +'<div class="workshop-savebar"><button type="button" class="button" id="validateActionEditor" data-action-id="'+
+C.escapeHtml(selected.id)+'">Validate</button><button type="button" class="button primary" id="saveActionEditor" data-action-id="'+
+      C.escapeHtml(selected.id)+'">Save customization</button><button type="button" class="button ghost" id="resetActionEditor" data-action-id="'+
+      C.escapeHtml(selected.id)+'" '+(override?'':'disabled')+
+      '>Restore default</button><span class="help">Validation checks the same protected boundary used at runtime.</span></div></section>';
+  const technical='<details class="settings-advanced settings-developer-details"><summary>Tool details &amp; customization</summary><div class="settings-advanced-body stack"><div class="operation-technical-id"><span>Tool ID</span><code>'+
+C.escapeHtml(selected.id)+'</code></div><div class="operation-contract-grid"><div><span>Target</span><strong>'+C.escapeHtml((target.kind||
+    '—')+' · '+(target.cardinality||'—'))+'</strong></div><div><span>Context</span><strong>'+C.escapeHtml((context.profile||
+    'generic')+' · '+(context.scope||'experiment'))+'</strong></div><div><span>Result</span><strong>'+C.escapeHtml((result.format||
+    '—')+(result.schema?' · '+result.schema:'')+(result.kind?' · '+result.kind:''))+'</strong></div><div><span>Effect</span><strong>'+
+    C.escapeHtml((effect.mode||'read_only')+' · '+((effect.writes||[]).length)+' write target'+(((effect.writes||
+    []).length)===1?'':'s'))+'</strong></div><div><span>Guards</span><strong>'+C.escapeHtml(guards.length?guards.join(' · '):'none')+
+    '</strong></div><div><span>AI steps</span><strong>'+aiSteps+
+    '</strong></div></div><div class="operation-flow"><div class="section-label">Execution steps</div>'+flow+'</div>'+editor+
+    (last?'<div class="operation-last-run"><span>Last run</span><strong>'+C.escapeHtml(last.status||
+    '—')+'</strong><span class="mono">'+C.escapeHtml(last.endedAt||
+    '')+'</span></div>':'')+(schema?'<details class="workshop-detail"><summary>Output format · '+C.escapeHtml(schemaStep.schema)+'</summary>'+
+    C.jsonBlock(schema,true)+'</details>':'')+'</div></details>';
+  return'<div class="operation-workshop settings-tools-workshop"><aside class="panel operation-catalog"><div ' +
+    'class="panel-head"><div><h2 class="h2">Available tools</h2><div class="meta">Choose a tool to review or run.</div></div></div><div class="panel-body">'+
+catalog+'</div></aside><section class="panel operation-inspector"><div class="panel-head"><div><div class="row-wrap">'+
+      badge(modeLabel(selected),aiSteps?'ai':'success')+badge(areaLabel(selected),
+      'info')+'</div><h2 class="h2 operation-inspector-title">'+C.escapeHtml(selected.title||
+      selected.id)+'</h2></div><div class="spacer"></div>'+run+
+      '</div><div class="panel-body stack"><p class="operation-purpose">'+C.escapeHtml(toolSummary(selected))+'</p>'+
+      technical+'</div></section></div>';
 }
 
-function diagnosticsPanel(){const warning='<div class="notice info diagnostics-privacy-note"><strong>Before sharing a diagnostic bundle</strong><span>It may contain experiment identifiers, provider errors and limited AI request/output excerpts. API keys are redacted, but review the file before sending it to someone else.</span></div>';return warning+(LF.LogsPage&&LF.LogsPage.render?LF.LogsPage.render({embedded:true}):'<div class="notice warning">Diagnostics are unavailable.</div>');}
+function diagnosticsPanel(){const warning='<div class="notice info diagnostics-privacy-note"><strong>Before sharing a diagnostic bundle</strong><span>It ' +
+  'may contain experiment identifiers, provider errors and limited AI request/output excerpts. API keys are redacted, but review the file before sending it to someone else.</span></div>';return warning+(LF.LogsPage&&LF.LogsPage.render?LF.LogsPage.render({embedded:true}):'<div class="notice warning">Diagnostics are unavailable.</div>');}
 function uiKitPanel(){
   if(!LF.UIKitInline||!LF.UIKitInline.render){
     const lazy=LF.LazyAssets&&LF.LazyAssets.status?LF.LazyAssets.status('ui-kit'):null,failed=lazy&&lazy.error;
     return'<div class="notice '+(failed?'danger':'info')+'"><strong>'+(failed?'UI Kit could not be loaded.':'Loading UI Kit…')+'</strong><span>'+(failed?C.escapeHtml(failed.message||String(failed)):'This maintenance reference is loaded only when you open it.')+'</span></div>';
   }
   const ui=LF.State.state.ui||{};
-  return '<section class="panel settings-uikit-tools"><div class="panel-body settings-uikit-toolbar"><label class="field"><span>Search</span><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" placeholder="Search patterns…" value="'+C.escapeHtml(ui.uiKitQuery||'')+'"></label><label class="field"><span>Category</span><select class="select" id="uiKitGlobalFilter"><option value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option><option value="data">Scientific data</option><option value="ai">AI & actions</option><option value="system">System pages</option></select></label><div class="settings-uikit-count"><span>Visible</span><strong id="uiKitGlobalCount">—</strong></div></div></section>'+LF.UIKitInline.render();
+  return '<section class="panel settings-uikit-tools"><div class="panel-body settings-uikit-toolbar"><label class="field"><span>Search</span><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" placeholder="Search patterns…" value="'+C.escapeHtml(ui.uiKitQuery||'')+'"></label><label class="field"><span>Category</span><select class="select" id="uiKitGlobalFilter"><option ' +
+    'value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option>' +
+    '<option value="data">Scientific data</option><option value="ai">AI & actions</option><option value="system">' +
+    'System pages</option></select></label><div class="settings-uikit-count"><span>Visible</span><strong id="uiKitGlobalCount">—</strong></div></div></section>'+LF.UIKitInline.render();
 }
 function render(){
-  const state=LF.State.state;state.ui=state.ui||{};const allowed=['provider','actions','assistant','knowledge','nomad','workspace','diagnostics','ui-kit'],requested=state.ui.settingsSection||'provider',active=allowed.includes(requested)?requested:'provider',s=LF.Storage.getAiSettings(),key=LF.Storage.getApiKey(s.provider,s.endpoint),keyRemembered=LF.Storage.isApiKeyRemembered?LF.Storage.isApiKeyRemembered(s.provider,s.endpoint):false,p=LF.Storage.getUserProfile(),a=LF.Storage.getAssistantSettings(),n=LF.Storage.getNomadSettings(),nt=LF.Storage.getNomadToken(n.apiEndpoint),ntRemembered=LF.Storage.isNomadTokenRemembered?LF.Storage.isNomadTokenRemembered(n.apiEndpoint):false;if(state.ui.settingsSection!==active)state.ui.settingsSection=active;
-  const config={provider:['AI connection','Choose the AI service and model LabFlow should use.',true,providerPanel(s,key,keyRemembered)],assistant:['Assistant','Choose how LabFlow keeps recent conversation context.',true,assistantPanel(a)],actions:['AI tools','Choose and run the AI tools available in LabFlow.',false,actionsPanel()],knowledge:['Knowledge Base','Manage the scientific references available to LabFlow.',false,knowledgePanel()],nomad:['NOMAD','Prepare NOMAD exports and, if needed, connection details.',true,nomadPanel(n,nt,ntRemembered)],workspace:['Workspace','Choose appearance, researcher information and view the LabFlow version.',true,workspacePanel(p)],diagnostics:['Diagnostics','Use these tools only when troubleshooting LabFlow.',false,diagnosticsPanel()], 'ui-kit':['UI Kit','Design reference for LabFlow interface maintenance.',false,uiKitPanel()]};
-  const current=config[active]||config.provider,wide=active==='diagnostics'||active==='ui-kit',section=sectionHead(current[0],current[1],current[2])+sectionBody(current[3],wide);return'<section class="page settings-page '+(wide?'settings-page-advanced':'')+'">'+head()+'<div class="settings-layout">'+nav(active,s,a)+'<main class="settings-content settings-content-'+active+'" data-settings-current="'+active+'" data-settings-persist="'+(['provider','assistant','nomad','workspace'].includes(active)?'explicit':'immediate')+'">'+section+'</main></div></section>';
+  const state=LF.State.state;state.ui=state.ui||{};
+const allowed=['provider','actions','assistant','knowledge','nomad','workspace','diagnostics','ui-kit'],
+    requested=state.ui.settingsSection||'provider',active=allowed.includes(requested)?requested:'provider',
+    s=LF.Storage.getAiSettings(),key=LF.Storage.getApiKey(s.provider,s.endpoint),
+    keyRemembered=LF.Storage.isApiKeyRemembered?LF.Storage.isApiKeyRemembered(s.provider,s.endpoint):false,
+    p=LF.Storage.getUserProfile(),a=LF.Storage.getAssistantSettings(),n=LF.Storage.getNomadSettings(),
+    nt=LF.Storage.getNomadToken(n.apiEndpoint),
+    ntRemembered=LF.Storage.isNomadTokenRemembered?LF.Storage.isNomadTokenRemembered(n.apiEndpoint):false;
+    if(state.ui.settingsSection!==active)state.ui.settingsSection=active;
+  const config={provider:['AI connection','Choose the AI service and model LabFlow should use.',true,providerPanel(s,
+key,keyRemembered)],assistant:['Assistant','Choose how LabFlow keeps recent conversation context.',true,
+    assistantPanel(a)],actions:['AI tools','Choose and run the AI tools available in LabFlow.',false,actionsPanel()],
+    knowledge:['Knowledge Base','Manage the scientific references available to LabFlow.',false,knowledgePanel()],
+    nomad:['NOMAD','Prepare NOMAD exports and, if needed, connection details.',true,nomadPanel(n,nt,ntRemembered)],
+    workspace:['Workspace','Choose appearance, researcher information and view the LabFlow version.',true,
+    workspacePanel(p)],diagnostics:['Diagnostics','Use these tools only when troubleshooting LabFlow.',false,
+    diagnosticsPanel()], 'ui-kit':['UI Kit','Design reference for LabFlow interface maintenance.',false,uiKitPanel()]};
+  const current=config[active]||config.provider,wide=active==='diagnostics'||active==='ui-kit',
+section=sectionHead(current[0],current[1],current[2])+sectionBody(current[3],wide);
+    return'<section class="page settings-page '+(wide?'settings-page-advanced':'')+'">'+head()+
+    '<div class="settings-layout">'+nav(active,s,
+    a)+'<main class="settings-content settings-content-'+active+'" data-settings-current="'+active+
+    '" data-settings-persist="'+(['provider','assistant','nomad',
+    'workspace'].includes(active)?'explicit':'immediate')+'">'+section+'</main></div></section>';
 }
 function markSaved(){const el=document.getElementById('settingsSaveState');if(!el)return;el.className='badge success';el.textContent='Saved';}
 LF.SettingsPage={render:render,markSaved:markSaved};

@@ -112,13 +112,23 @@
   function schema(){return LF.DomainSchema&&LF.DomainSchema.contract?LF.DomainSchema.contract():null;}
   function ownership(){return LF.DomainSchema&&LF.DomainSchema.rootFields?LF.DomainSchema.rootFields():[];}
   function derived(){return LF.DerivedState&&LF.DerivedState.describe?LF.DerivedState.describe():[];}
-  function actions(){return(LF.ActionRegistry&&LF.ActionRegistry.actions?LF.ActionRegistry.actions():[]).map(function(id){const d=LF.ActionRegistry.action(id),c=d.contract||{},e=d.execution||{};return{id:id,title:d.title,mode:e.mode,target:c.target,context:c.context,result:c.result,effect:c.effect,guards:(c.guards||[]).slice(),resultStep:e.result_step||'',steps:(e.steps||[]).map(function(x){return{id:x.id,type:x.type,tool:x.tool||'',schema:x.schema||'',validateWith:x.validate_with||''};})};});}
+  function actions(){return(LF.ActionRegistry&&
+LF.ActionRegistry.actions?LF.ActionRegistry.actions():[]).map(function(id){
+    const d=LF.ActionRegistry.action(id),c=d.contract||{},e=d.execution||{};
+    return{id:id,title:d.title,mode:e.mode,target:c.target,context:c.context,result:c.result,effect:c.effect,
+    guards:(c.guards||[]).slice(),resultStep:e.result_step||'',steps:(e.steps||[]).map(function(x){return{
+    id:x.id,type:x.type,tool:x.tool||'',schema:x.schema||'',validateWith:x.validate_with||''};})};});}
   function actionData(actionId,targetId){const exp=need();if(!LF.ActionData)return null;if(!actionId)return LF.ActionData.snapshot(exp);const id=String(actionId),target=targetId==null?'':String(targetId);return{proposal:LF.ActionData.proposal(exp,id,target),annotation:LF.ActionData.annotation(exp,id),status:LF.ActionData.status(exp,id,target)};}
   function contracts(){return{domain:schema(),pipeline:LF.DataPipeline&&LF.DataPipeline.stages?LF.DataPipeline.stages():[],derived:derived(),actions:actions()};}
   function types(){const fromContracts=LF.DataContracts&&LF.DataContracts.types?LF.DataContracts.types():[];return Array.from(new Set(Object.keys(TYPE_DOCS).concat(fromContracts)));}
   function describe(type) {
     const key=String(type||'').trim().toLowerCase(),contract=LF.DataContracts&&LF.DataContracts.describe?LF.DataContracts.describe(key):null,doc=TYPE_DOCS[key]||null;
-    if(contract){const out={type:key,label:contract.label||key,meaning:contract.description||contract.meaning||'',required:(contract.required||[]).slice(),relations:Object.assign({},contract.relations||{})};if(typeof console!=='undefined'){if(console.groupCollapsed)console.groupCollapsed('[LabFlow.Data] '+key);if(console.info)console.info(out.meaning);if(console.table)console.table([{required:out.required.join(', '),relations:JSON.stringify(out.relations)}]);if(console.groupEnd)console.groupEnd();}return out;}
+    if(contract){const out={type:key,label:contract.label||key,meaning:contract.description||contract.meaning||'',
+required:(contract.required||[]).slice(),relations:Object.assign({},contract.relations||{})};
+      if(typeof console!=='undefined'){if(console.groupCollapsed)console.groupCollapsed('[LabFlow.Data] '+key);
+      if(console.info)console.info(out.meaning);
+      if(console.table)console.table([{required:out.required.join(', '),relations:JSON.stringify(out.relations)}]);
+      if(console.groupEnd)console.groupEnd();}return out;}
     
     if(!doc)return null;
     if(typeof console!=='undefined'){
@@ -169,5 +179,9 @@
     return lines.concat(['','Commands:']).concat(COMMANDS.map(function(x){return'  LabFlow.Data.'+x[0]+' -> '+x[1];})).join('\n');
   }
 
-  LF.Data = {current:current,summary:summary,experiments:experiments,samples:samples,runs:runs,measurements:measurements,experiment:experiment,sample:sample,run:run,measurement:measurement,get:get,inspect:get,best:best,tree:tree,json:json,patch:patch,reanalyze:reanalyze,setMismatchFactor:setMismatchFactor,validate:validate,pipeline:pipeline,schema:schema,ownership:ownership,derived:derived,actions:actions,actionData:actionData,contracts:contracts,types:types,describe:describe,help:help};
+  LF.Data = {current:current,summary:summary,experiments:experiments,samples:samples,runs:runs,
+measurements:measurements,experiment:experiment,sample:sample,run:run,measurement:measurement,get:get,inspect:get,
+    best:best,tree:tree,json:json,patch:patch,reanalyze:reanalyze,setMismatchFactor:setMismatchFactor,validate:validate,
+    pipeline:pipeline,schema:schema,ownership:ownership,derived:derived,actions:actions,actionData:actionData,
+    contracts:contracts,types:types,describe:describe,help:help};
 }());

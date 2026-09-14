@@ -14,14 +14,26 @@ function sourceBadge(item){
 }
 function linkedSolutions(design,dev){const ids=new Set(dev&&dev.solutionIds||[]);return(design.solutions||[]).filter(function(s){return ids.has(s.id);});}
 function meaningfulProcess(p){return!!(p&&[p.coating,p.annealing,p.atmosphere,p.notes].some(present));}
-function completeness(dev,solutions,exp){const keys=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp||{design:{solutions:solutions||[]}},dev):[],labels={solutions:'solution chemistry',stack:'complete device architecture',process:'fabrication process'},missing=keys.map(function(key){return labels[key]||key;});return{missing:missing.length,missingFields:missing,missingDomains:keys,complete:missing.length===0};}
+function completeness(dev,solutions,exp){
+const keys=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp||{design:{
+  solutions:solutions||[]}},dev):[],labels={
+  solutions:'solution chemistry',stack:'complete device architecture',process:'fabrication process'}
+  ,missing=keys.map(function(key){return labels[key]||key;});
+  return{missing:missing.length,missingFields:missing,missingDomains:keys,complete:missing.length===0};}
 function measurementCount(exp,dev){const ids=new Set(dev&&dev.sampleIds||[]),names=new Set(dev&&dev.sampleNames||[]);return(exp.measurements||[]).filter(function(m){return ids.has(m.sampleId)||names.has(m.sample);}).length;}
 function proposalFor(exp,id){return LF.ActionData?LF.ActionData.proposal(exp,'design.infer',id):null;}
 function assistState(exp,id){return LF.ActionData?LF.ActionData.status(exp,'design.infer',id)||{}:{};}
 function meaningfulSolution(s){return!!(s&&[s.solutes,s.solvents].some(present));}
 function meaningfulLayer(l){return!!(l&&[l.role,l.material].some(present));}
 function proposalHasContent(p){const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};return!!(p&&((p.solutions||[]).some(meaningfulSolution)||(d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc)));}
-function proposalConfidence(p){const values=[];function add(v){const n=Number(v);if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));}(p&&p.solutions||[]).forEach(function(x){if(meaningfulSolution(x))add(x.confidence);});const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};if((d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc))add(d.confidence);(d.stack||[]).forEach(function(x){if(meaningfulLayer(x))add(x.confidence);});if(meaningfulProcess(proc))add(proc.confidence);if(!values.length)return null;return Math.round(values.reduce(function(a,b){return a+b;},0)/values.length*100);}
+function proposalConfidence(p){const values=[];function add(v){const n=Number(v);
+if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));
+  }(p&&p.solutions||[]).forEach(function(x){if(meaningfulSolution(x))add(x.confidence);});
+  const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};
+  if((d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc))add(d.confidence);
+  (d.stack||[]).forEach(function(x){if(meaningfulLayer(x))add(x.confidence);});
+  if(meaningfulProcess(proc))add(proc.confidence);if(!values.length)return null;
+  return Math.round(values.reduce(function(a,b){return a+b;},0)/values.length*100);}
 function experimentState(exp,design,dev){
   const sols=linkedSolutions(design,dev),ready=completeness(dev,sols,exp),proposal=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
   if(proposal&&proposalHasContent(proposal)){const score=proposalConfidence(proposal);return{kind:'proposal',label:'Suggested',detail:'AI suggestion ready to review'+(score!=null?' · '+score+'% confidence':''),ready:ready};}
@@ -29,30 +41,117 @@ function experimentState(exp,design,dev){
   if(assist.state==='error')return{kind:'error',label:'Error',detail:assist.message||'AI suggestion failed',ready:ready};
   return{kind:'missing',label:'Incomplete',detail:ready.missingFields.join(' · '),ready:ready};
 }
-function experimentCards(exp,design,devices,selectedId){return devices.map(function(dev){const st=experimentState(exp,design,dev),count=(dev.sampleIds||dev.sampleNames||[]).length;return '<button type="button" class="design-variant-card '+st.kind+(String(dev.id)===String(selectedId)?' selected':'')+'" data-design-select="'+esc(dev.id)+'" data-design-card="'+esc(dev.id)+'"><span class="design-variant-card-top"><strong>'+esc(dev.name||dev.group||'Experiment')+'</strong><span class="design-variant-card-status">'+esc(st.label)+'</span></span><span class="design-variant-card-meta">'+count+' sample'+(count===1?'':'s')+' · '+measurementCount(exp,dev)+' measurements</span><small>'+esc(st.detail)+'</small></button>';}).join('');}
-function activeExperimentStrip(exp,design,dev){const sols=linkedSolutions(design,dev),st=experimentState(exp,design,dev),samples=dev.sampleNames||[],canRun=st.kind==='missing'||st.kind==='error',actionLabel=st.kind==='error'?'Retry inference':'Complete with AI',facts=[sols.length+' solution'+(sols.length===1?'':'s'),(dev.stack||[]).length+' layer'+((dev.stack||[]).length===1?'':'s'),meaningfulProcess(dev.process)?'process ready':'process missing',measurementCount(exp,dev)+' measurements'];return '<div class="design-active-strip"><div class="design-active-main"><span class="eyebrow">Active</span><input class="input design-active-name" data-device-field="name" value="'+esc(dev.name||'')+'" placeholder="Experiment name…"><span class="design-active-source">'+esc(samples.length?samples.join(' · '):'Manual experiment · no source sample linked')+'</span></div><div class="design-active-facts">'+facts.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div><div class="design-active-actions"><span class="design-variant-card-status '+esc(st.kind)+'">'+esc(st.label)+'</span>'+(canRun?'<button class="button primary compact" type="button" data-action="design.infer" data-action-device="'+esc(dev.id)+'">'+actionLabel+'</button>':'')+'</div>'+(st.ready&&st.ready.missingFields.length?'<div class="design-active-missing"><strong>Missing:</strong> '+esc(st.ready.missingFields.join(' · '))+'</div>':'')+'</div>'; }
+function experimentCards(exp,design,devices,selectedId){return devices.map(function(dev){
+const st=experimentState(exp,design,dev),count=(dev.sampleIds||dev.sampleNames||[]).length;
+  return '<button type="button" class="design-variant-card '+st.kind+(String(dev.id)===String(selectedId)?' selected':'')+
+  '" data-design-select="'+esc(dev.id)+'" data-design-card="'+esc(dev.id)+
+  '"><span class="design-variant-card-top"><strong>'+esc(dev.name||dev.group||
+  'Experiment')+'</strong><span class="design-variant-card-status">'+esc(st.label)+
+  '</span></span><span class="design-variant-card-meta">'+count+' sample'+(count===1?'':'s')+' · '+measurementCount(exp,
+  dev)+' measurements</span><small>'+esc(st.detail)+'</small></button>';}).join('');}
+function activeExperimentStrip(exp,design,dev){
+const sols=linkedSolutions(design,dev),st=experimentState(exp,design,dev),samples=dev.sampleNames||[],
+  canRun=st.kind==='missing'||st.kind==='error',actionLabel=st.kind==='error'?'Retry inference':'Complete with AI',
+  facts=[sols.length+' solution'+(sols.length===1?'':'s'),
+  (dev.stack||[]).length+' layer'+((dev.stack||[]).length===1?'':'s'),
+  meaningfulProcess(dev.process)?'process ready':'process missing',measurementCount(exp,dev)+' measurements'];
+  return '<div class="design-active-strip"><div class="design-active-main"><span class="eyebrow">Active</span><input class="input design-active-name" data-device-field="name" value="'+
+esc(dev.name||'')+'" placeholder="Experiment name…"><span class="design-active-source">'+
+    esc(samples.length?samples.join(' · '):'Manual experiment · no source sample linked')+'</span></div><div class="design-active-facts">'+
+    facts.map(function(x){return '<span>'+esc(x)+'</span>';
+    }).join('')+'</div><div class="design-active-actions"><span class="design-variant-card-status '+esc(st.kind)+'">'+esc(st.label)+'</span>'+
+    (canRun?'<button class="button primary compact" type="button" data-action="design.infer" data-action-device="'+esc(dev.id)+'">'+actionLabel+
+    '</button>':'')+'</div>'+(st.ready&&st.ready.missingFields.length?'<div class="design-active-missing"><strong>Missing:</strong> '+
+    esc(st.ready.missingFields.join(' · '))+'</div>':'')+'</div>'; }
 function board(exp,design,devices,selected){
   const states=devices.map(function(d){return experimentState(exp,design,d);}),suggested=states.filter(function(s){return s.kind==='proposal';}).length,errors=states.filter(function(s){return s.kind==='error';}).length,untouched=states.filter(function(s){return s.kind==='missing';}).length,ready=states.filter(function(s){return s.kind==='complete';}).length;
-  const bulkLabel=errors?'Retry & complete remaining':'Complete all missing with AI',bulk=devices.length>1?'<div class="row-wrap design-board-actions"><button type="button" class="button primary compact" data-action-sequence="design-all" '+((untouched+errors)?'':'disabled')+'>'+bulkLabel+'</button><button type="button" class="button compact" id="acceptAllDesignInferences" '+(suggested?'':'disabled')+'>Accept all</button></div>':'';
-  return '<section class="panel design-experiment-workbench"><div class="panel-head"><div><span class="eyebrow">Experiments</span><h2 class="h2">'+devices.length+' design experiment'+(devices.length===1?'':'s')+'</h2><div class="meta">'+ready+' ready · '+suggested+' suggested'+(errors?' · '+errors+' need retry':'')+'</div></div><div class="spacer"></div>'+bulk+'</div><div class="panel-body"><div class="design-variant-cards">'+experimentCards(exp,design,devices,selected.id)+'</div>'+activeExperimentStrip(exp,design,selected)+'</div></section>';
+  const bulkLabel=errors?'Retry & complete remaining':'Complete all missing with AI',
+bulk=devices.length>1?'<div class="row-wrap design-board-actions"><button type="button" class="button primary compact" data-action-sequence="design-all" '+
+    ((untouched+errors)?'':'disabled')+'>'+bulkLabel+
+    '</button><button type="button" class="button compact" id="acceptAllDesignInferences" '+(suggested?'':'disabled')+
+    '>Accept all</button></div>':'';
+  return '<section class="panel design-experiment-workbench"><div class="panel-head"><div><span class="eyebrow">Experiments</span><h2 class="h2">'+
+devices.length+' design experiment'+(devices.length===1?'':'s')+'</h2><div class="meta">'+ready+' ready · '+suggested+
+    ' suggested'+(errors?' · '+errors+' need retry':'')+'</div></div><div class="spacer"></div>'+bulk+
+    '</div><div class="panel-body"><div class="design-variant-cards">'+experimentCards(exp,design,devices,
+    selected.id)+'</div>'+activeExperimentStrip(exp,design,selected)+'</div></section>';
 }
 function splitTokens(value){return String(value||'').split(/[,;+]|\s+\+\s+/).map(function(x){return x.trim();}).filter(Boolean);}
 function chips(value,cls){const parts=splitTokens(value);return parts.length?'<div class="design-chem-chips '+(cls||'')+'">'+parts.map(function(x){return '<span>'+esc(x)+'</span>';}).join('')+'</div>':'<span class="design-muted">Unknown</span>';}
-function chemistryGraphic(s,ai){return '<div class="design-chem-card'+(ai?' ai':'')+'"><div class="design-chem-head"><div><span>'+esc(s.role||'solution')+'</span><strong>'+esc(s.name||'Solution')+'</strong></div>'+sourceBadge(s)+'</div><div class="design-chem-flow"><div><small>Solutes</small>'+chips(s.solutes,'solutes')+'</div><i>+</i><div><small>Solvents</small>'+chips(s.solvents,'solvents')+'</div></div>'+(present(s.concentration)||present(s.additives)?'<div class="design-chem-meta">'+(present(s.concentration)?'<span><b>Composition</b> '+esc(s.concentration)+'</span>':'')+(present(s.additives)?'<span><b>Additives</b> '+esc(s.additives)+'</span>':'')+'</div>':'')+'</div>';}
+function chemistryGraphic(s,ai){return '<div class="design-chem-card'+(ai?' ai':'')+
+'"><div class="design-chem-head"><div><span>'+esc(s.role||'solution')+'</span><strong>'+esc(s.name||
+  'Solution')+'</strong></div>'+sourceBadge(s)+'</div><div class="design-chem-flow"><div><small>Solutes</small>'+
+  chips(s.solutes,'solutes')+'</div><i>+</i><div><small>Solvents</small>'+chips(s.solvents,
+  'solvents')+'</div></div>'+(present(s.concentration)||
+  present(s.additives)?'<div class="design-chem-meta">'+(present(s.concentration)?'<span><b>Composition</b> '+
+  esc(s.concentration)+'</span>':'')+(present(s.additives)?'<span><b>Additives</b> '+esc(s.additives)+'</span>':'')+
+  '</div>':'')+'</div>';}
 function solutionEditor(design,dev){
   const linked=linkedSolutions(design,dev);
   if(!linked.length)return '<div class="design-empty-visual"><strong>No solution chemistry yet.</strong><span>Create one, reuse a Cabinet formulation, or ask AI.</span></div>';
-  return '<div class="design-chem-grid">'+linked.map(function(s){return chemistryGraphic(s,false);}).join('')+'</div><div class="design-simple-edit-list">'+linked.map(function(s){const i=design.solutions.indexOf(s);return '<div class="design-solution-edit"><input class="input" data-solution-index="'+i+'" data-solution-field="name" value="'+esc(s.name||'')+'" placeholder="Solution name"><input class="input" data-solution-index="'+i+'" data-solution-field="role" value="'+esc(s.role||'')+'" placeholder="Role"><input class="input" data-solution-index="'+i+'" data-solution-field="solutes" value="'+esc(s.solutes||'')+'" placeholder="Solutes"><input class="input" data-solution-index="'+i+'" data-solution-field="solvents" value="'+esc(s.solvents||'')+'" placeholder="Solvents"><input class="input" data-solution-index="'+i+'" data-solution-field="concentration" value="'+esc(s.concentration||'')+'" placeholder="Composition / concentration"><button class="button ghost compact" type="button" data-save-solution-cabinet="'+esc(s.id)+'">Save to Cabinet</button><button class="button ghost compact icon-only" type="button" data-remove-solution="'+i+'" aria-label="Remove solution">×</button></div>';}).join('')+'</div>';
+  return '<div class="design-chem-grid">'+linked.map(function(s){return chemistryGraphic(s,false);
+}).join('')+'</div><div class="design-simple-edit-list">'+linked.map(function(s){const i=design.solutions.indexOf(s);
+    return '<div class="design-solution-edit"><input class="input" data-solution-index="'+i+
+    '" data-solution-field="name" value="'+esc(s.name||
+    '')+'" placeholder="Solution name"><input class="input" data-solution-index="'+i+'" data-solution-field="role" value="'+
+    esc(s.role||'')+'" placeholder="Role"><input class="input" data-solution-index="'+i+
+    '" data-solution-field="solutes" value="'+esc(s.solutes||
+    '')+'" placeholder="Solutes"><input class="input" data-solution-index="'+i+'" data-solution-field="solvents" value="'+
+    esc(s.solvents||'')+'" placeholder="Solvents"><input class="input" data-solution-index="'+i+
+    '" data-solution-field="concentration" value="'+esc(s.concentration||
+    '')+'" placeholder="Composition / concentration"><button class="button ghost compact" type="button" data-save-solution-cabinet="'+
+    esc(s.id)+'">Save to Cabinet</button><button class="button ghost compact icon-only" type="button" data-remove-solution="'+
+    i+'" aria-label="Remove solution">×</button></div>';}).join('')+'</div>';
 }
-function stackGraphic(stack,ai){if(!stack||!stack.length)return '<div class="design-empty-visual"><strong>No device stack yet.</strong><span>Create layers, reuse a Cabinet stack, or ask AI.</span></div>';return '<div class="design-stack-diagram'+(ai?' ai':'')+'"><div class="design-stack-axis"><span>TOP CONTACT</span><i></i><span>SUBSTRATE</span></div><div class="design-stack-layers">'+stack.slice().reverse().map(function(l,i){return '<div class="design-stack-layer"><span>'+esc(l.role||('Layer '+(stack.length-i)))+'</span><strong>'+esc(l.material||'Unknown material')+'</strong>'+(present(l.thickness)?'<small>'+esc(l.thickness)+'</small>':'')+'</div>';}).join('')+'</div></div>';}
-function stackEditor(dev){const stack=dev.stack||[];return stackGraphic(stack,false)+(stack.length?'<div class="design-layer-edit-list">'+stack.map(function(l,i){return '<div class="design-layer-edit"><span class="mono">'+(i+1)+'</span><input class="input" data-device-layer-index="'+i+'" data-device-layer-field="role" value="'+esc(l.role||'')+'" placeholder="Role"><input class="input" data-device-layer-index="'+i+'" data-device-layer-field="material" value="'+esc(l.material||'')+'" placeholder="Material"><input class="input" data-device-layer-index="'+i+'" data-device-layer-field="thickness" value="'+esc(l.thickness||'')+'" placeholder="Thickness"><button class="button ghost compact icon-only" type="button" data-remove-device-layer="'+i+'" aria-label="Remove layer">×</button></div>';}).join('')+'</div>':'');}
-function processEditor(dev){const p=dev.process||{};return '<div class="design-process-grid"><label class="field"><span>Coating / deposition</span><input class="input" data-device-process-field="coating" value="'+esc(p.coating||'')+'" placeholder="spin coating / evaporation…"></label><label class="field"><span>Annealing</span><input class="input" data-device-process-field="annealing" value="'+esc(p.annealing||'')+'" placeholder="temperature/time when known"></label><label class="field"><span>Atmosphere</span><input class="input" data-device-process-field="atmosphere" value="'+esc(p.atmosphere||'')+'" placeholder="air / N2 / glovebox…"></label><label class="field design-process-notes"><span>Notes</span><textarea class="textarea" rows="2" data-device-process-field="notes" placeholder="Additional process notes">'+esc(p.notes||'')+'</textarea></label></div>';}
-function processSuggestion(p){if(!meaningfulProcess(p))return '<div class="design-empty-visual compact"><span>No process suggestion.</span></div>';const rows=[['Coating / deposition',p.coating],['Annealing',p.annealing],['Atmosphere',p.atmosphere],['Notes',p.notes]].filter(function(x){return present(x[1]);});return '<div class="design-process-suggestion">'+rows.map(function(x){return '<div><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong></div>';}).join('')+'</div>'; }
+function stackGraphic(stack,ai){if(!stack||
+!stack.length)return '<div class="design-empty-visual"><strong>No device stack yet.</strong><span>Create layers, reuse a Cabinet stack, or ask AI.</span></div>';
+  return '<div class="design-stack-diagram'+(ai?' ai':'')+
+  '"><div class="design-stack-axis"><span>TOP CONTACT</span><i></i><span>SUBSTRATE</span></div><div class="design-stack-layers">'+
+  stack.slice().reverse().map(function(l,i){
+  return '<div class="design-stack-layer"><span>'+esc(l.role||
+  ('Layer '+(stack.length-i)))+'</span><strong>'+esc(l.material||
+  'Unknown material')+'</strong>'+(present(l.thickness)?'<small>'+esc(l.thickness)+'</small>':'')+'</div>';
+  }).join('')+'</div></div>';}
+function stackEditor(dev){const stack=dev.stack||[];
+return stackGraphic(stack,false)+(stack.length?'<div class="design-layer-edit-list">'+stack.map(function(l,i){
+  return '<div class="design-layer-edit"><span class="mono">'+(i+1)+
+  '</span><input class="input" data-device-layer-index="'+i+'" data-device-layer-field="role" value="'+esc(l.role||
+  '')+'" placeholder="Role"><input class="input" data-device-layer-index="'+i+
+  '" data-device-layer-field="material" value="'+esc(l.material||
+  '')+'" placeholder="Material"><input class="input" data-device-layer-index="'+i+
+  '" data-device-layer-field="thickness" value="'+esc(l.thickness||
+  '')+'" placeholder="Thickness"><button class="button ghost compact icon-only" type="button" data-remove-device-layer="'+
+  i+'" aria-label="Remove layer">×</button></div>';}).join('')+'</div>':'');}
+function processEditor(dev){const p=dev.process||{};
+return '<div class="design-process-grid"><label class="field"><span>Coating / deposition</span><input class="input" data-device-process-field="coating" value="'+
+  esc(p.coating||'')+'" placeholder="spin coating / evaporation…"></label><label class="field"><span>Annealing</span><input class="input" data-device-process-field="annealing" value="'+
+esc(p.annealing||'')+'" placeholder="temperature/time when known"></label><label class="field"><span>Atmosphere</span><input class="input" data-device-process-field="atmosphere" value="'+
+    esc(p.atmosphere||'')+'" placeholder="air / N2 / glovebox…"></label><label class="field design-process-notes"><span>Notes</span><textarea class="textarea" rows="2" data-device-process-field="notes" placeholder="Additional process notes">'+
+    esc(p.notes||'')+'</textarea></label></div>';}
+function processSuggestion(p){if(!meaningfulProcess(p))return '<div class="design-empty-visual compact"><span>No process suggestion.</span></div>';
+const rows=[['Coating / deposition',p.coating],['Annealing',p.annealing],['Atmosphere',p.atmosphere],['Notes',
+  p.notes]].filter(function(x){return present(x[1]);});
+  return '<div class="design-process-suggestion">'+rows.map(function(x){
+  return '<div><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong></div>';}).join('')+'</div>'; }
 function cabinetPicker(kind){
   if(!LF.Cabinet)return'';
   const rows=LF.Cabinet.list(kind,'').slice(0,12),defs=LF.Cabinet.kinds(),label=defs[kind]&&defs[kind].plural||kind;
-  if(!rows.length)return '<section class="panel design-cabinet-picker"><div class="panel-head"><div><span class="eyebrow">Lab cabinet</span><h2 class="h2">No '+esc(String(label).toLowerCase())+' yet</h2><div class="meta">Create reusable resources once, then snapshot them into any experiment.</div></div><div class="spacer"></div><button class="button compact" type="button" data-route="cabinet">Open Cabinet</button><button class="button ghost compact" type="button" data-close-design-cabinet>Close</button></div></section>';
-  return '<section class="panel design-cabinet-picker"><div class="panel-head"><div><span class="eyebrow">Lab cabinet</span><h2 class="h2">Use '+esc(String(label).toLowerCase())+'</h2><div class="meta">A snapshot is copied into the experiment. Later Cabinet edits do not change it.</div></div><div class="spacer"></div><button class="button compact" type="button" data-route="cabinet">Manage Cabinet</button><button class="button ghost compact" type="button" data-close-design-cabinet>Close</button></div><div class="panel-body"><div class="design-cabinet-list">'+rows.map(function(item){let detail='';if(item.kind==='solution')detail=[item.solutes,item.solvents,item.concentration].filter(Boolean).join(' · ');if(item.kind==='stack')detail=(item.layers||[]).map(function(x){return x.material||x.role;}).filter(Boolean).join(' / ');if(item.kind==='protocol')detail=[item.coating,item.annealing,item.atmosphere].filter(Boolean).join(' · ');return '<div class="design-cabinet-item"><div><strong>'+esc(item.name)+'</strong><span>'+esc(detail||item.notes||'Reusable Cabinet resource')+'</span></div><button class="button primary compact" type="button" data-use-cabinet-item="'+esc(item.id)+'">Use snapshot</button></div>';}).join('')+'</div></div></section>';
+  if(!rows.length)return '<section class="panel design-cabinet-picker"><div class="panel-head"><div><span class="eyebrow">Lab cabinet</span><h2 class="h2">No '+
+esc(String(label).toLowerCase())+' yet</h2><div class="meta">Create reusable resources once, then snapshot them into any experiment.</div></div>' +
+  '<div class="spacer"></div><button class="button compact" type="button" data-route="cabinet">Open Cabinet</button>' +
+  '<button class="button ghost compact" type="button" data-close-design-cabinet>Close</button></div></section>';
+  return '<section class="panel design-cabinet-picker"><div class="panel-head"><div><span class="eyebrow">Lab cabinet</span><h2 class="h2">Use '+
+esc(String(label).toLowerCase())+'</h2><div class="meta">A snapshot is copied into the experiment. Later Cabinet edits do not change it.</div>' +
+  '</div><div class="spacer"></div><button class="button compact" type="button" data-route="cabinet">Manage ' +
+  'Cabinet</button><button class="button ghost compact" type="button" data-close-design-cabinet>Close</button></div><div class="panel-body"><div class="design-cabinet-list">'+
+rows.map(function(item){let detail='';if(item.kind==='solution')detail=[item.solutes,item.solvents,
+    item.concentration].filter(Boolean).join(' · ');
+    if(item.kind==='stack')detail=(item.layers||[]).map(function(x){return x.material||x.role;
+    }).filter(Boolean).join(' / ');if(item.kind==='protocol')detail=[item.coating,item.annealing,
+    item.atmosphere].filter(Boolean).join(' · ');
+    return '<div class="design-cabinet-item"><div><strong>'+esc(item.name)+'</strong><span>'+esc(detail||item.notes||
+    'Reusable Cabinet resource')+'</span></div><button class="button primary compact" type="button" data-use-cabinet-item="'+
+    esc(item.id)+'">Use snapshot</button></div>';}).join('')+'</div></div></section>';
 }
 function proposalPanel(exp,dev){
   const p=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
@@ -60,18 +159,66 @@ function proposalPanel(exp,dev){
   if(!p)return'';
   const pd=p.devices&&p.devices[0]||{},unknown=p.unknowns||[],solutions=(p.solutions||[]).filter(meaningfulSolution),score=proposalConfidence(p),matches=p.cabinetMatches||[];
   const cabinetMatches=matches.length?'<div class="design-cabinet-matches"><strong>Cabinet matches</strong>'+matches.map(function(m){return '<span>'+esc(m.name)+' <button class="button ghost compact" type="button" data-use-cabinet-item="'+esc(m.cabinetId)+'">Use Cabinet snapshot</button></span>';}).join('')+'</div>':'';
-  return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Review before accepting</h2><div class="meta">'+esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+'</div></div><div class="spacer"></div>'+(score!=null?'<div class="design-ai-confidence"><span>AI confidence</span><strong>'+score+'%</strong><small>Review before accepting.</small></div>':'')+'<div class="row-wrap"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+'">Accept experiment</button><button class="button ghost compact" type="button" data-discard-design-experiment="'+esc(dev.id)+'">Discard</button></div></div><div class="panel-body">'+cabinetMatches+'<div class="design-suggestion-grid"><div><span class="eyebrow">Solution chemistry</span>'+(solutions.length?'<div class="design-chem-grid">'+solutions.map(function(s){return chemistryGraphic(s,true);}).join('')+'</div>':'<div class="design-empty-visual compact"><span>No solution suggestion.</span></div>')+'</div><div><span class="eyebrow">Device stack</span>'+stackGraphic(pd.stack||[],true)+'</div><div><span class="eyebrow">Fabrication process</span>'+processSuggestion(pd.process||p.process||{})+'</div></div>'+(unknown.length?'<div class="design-unknowns"><strong>Still unknown</strong><span>'+esc(unknown.join(' · '))+'</span></div>':'')+'</div></section>';
+  return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Review before accepting</h2><div class="meta">'+
+esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+'</div></div><div class="spacer"></div>'+
+    (score!=null?'<div class="design-ai-confidence"><span>AI confidence</span><strong>'+score+
+    '%</strong><small>Review before accepting.</small></div>':'')+
+    '<div class="row-wrap"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
+    '">Accept experiment</button><button class="button ghost compact" type="button" data-discard-design-experiment="'+esc(dev.id)+
+    '">Discard</button></div></div><div class="panel-body">'+cabinetMatches+
+    '<div class="design-suggestion-grid"><div><span class="eyebrow">Solution chemistry</span>'+
+    (solutions.length?'<div class="design-chem-grid">'+solutions.map(function(s){return chemistryGraphic(s,true);
+    }).join('')+'</div>':'<div class="design-empty-visual compact"><span>No solution suggestion.</span></div>')+
+    '</div><div><span class="eyebrow">Device stack</span>'+stackGraphic(pd.stack||[],
+    true)+'</div><div><span class="eyebrow">Fabrication process</span>'+processSuggestion(pd.process||p.process||{}
+    )+'</div></div>'+(unknown.length?'<div class="design-unknowns"><strong>Still unknown</strong><span>'+esc(unknown.join(' · '))+
+    '</span></div>':'')+'</div></section>';
 }
-function evidenceDetails(design,dev){const names=new Set(dev.sampleNames||[]),rows=(design.sourceEvidence||[]).filter(function(r){return names.has(r.sample);});if(!rows.length)return'';return '<details class="panel design-context-details"><summary>Source details · '+rows.length+' record'+(rows.length===1?'':'s')+'</summary><div class="panel-body design-source-list">'+rows.slice(0,10).map(function(r){return '<div><strong>'+esc(r.sample||'Source')+'</strong><span>'+esc(r.note||'')+'</span><small>'+esc(r.path||'')+'</small></div>';}).join('')+'</div></details>';}
+function evidenceDetails(design,dev){const names=new Set(dev.sampleNames||[]),
+rows=(design.sourceEvidence||[]).filter(function(r){return names.has(r.sample);});if(!rows.length)return'';
+  return '<details class="panel design-context-details"><summary>Source details · '+rows.length+' record'+
+  (rows.length===1?'':'s')+'</summary><div class="panel-body design-source-list">'+rows.slice(0,10).map(function(r){
+  return '<div><strong>'+esc(r.sample||'Source')+'</strong><span>'+esc(r.note||'')+'</span><small>'+esc(r.path||
+  '')+'</small></div>';}).join('')+'</div></details>';}
 function render(options){
   const exp=options.experiment,design=exp.design||{devices:[],solutions:[]},devices=design.devices||[],selected=devices.find(function(d){return String(d.id)===String(options.selectedDeviceId);})||devices[0]||null;
-  if(!selected)return '<section class="page design-page design-table-page">'+(options.workflowHead?options.workflowHead('Design Experiment','Describe the solution chemistry, device stack and process for each experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button primary compact" id="addDesignDevice" type="button">Add experiment</button>'):options.pageHead('Design Experiment','Describe the solution chemistry, device stack and process for each experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button primary compact" id="addDesignDevice" type="button">Add experiment</button>')+options.stepper)+'<section class="panel"><div class="panel-body"><div class="empty"><strong>No experiment yet.</strong><br>Add one manually or re-read source metadata.</div></div></section></section>';
-  const proposal=proposalPanel(exp,selected),picker=LF.State&&LF.State.state&&LF.State.state.ui&&LF.State.state.ui.designCabinetPicker||'',selectedState=experimentState(exp,design,selected),missingFields=selectedState&&selectedState.ready&&Array.isArray(selectedState.ready.missingFields)?selectedState.ready.missingFields:[],chemOpen=missingFields.some(function(x){return /solution|solute|solvent|chem/i.test(String(x));}),stackOpen=missingFields.some(function(x){return /stack|layer/i.test(String(x));}),processOpen=missingFields.some(function(x){return /process|coating|anneal|atmos/i.test(String(x));});
+  if(!selected)return '<section class="page design-page design-table-page">'+
+(options.workflowHead?options.workflowHead('Design Experiment',
+    'Describe the solution chemistry, device stack and process for each experiment.',
+    '<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button primary compact" id="addDesignDevice" type="button">Add experiment</button>'):
+options.pageHead('Design Experiment','Describe the solution chemistry, device stack and process for each experiment.',
+      '<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button primary compact" id="addDesignDevice" type="button">Add experiment</button>')+
+      options.stepper)+'<section class="panel"><div class="panel-body"><div class="empty"><strong>No experiment yet.</strong><br>Add one manually or re-read source metadata.</div></div></section></section>';
+  const proposal=proposalPanel(exp,selected),
+picker=LF.State&&LF.State.state&&LF.State.state.ui&&LF.State.state.ui.designCabinetPicker||'',
+    selectedState=experimentState(exp,design,selected),
+    missingFields=selectedState&&selectedState.ready&&
+    Array.isArray(selectedState.ready.missingFields)?selectedState.ready.missingFields:[],
+    chemOpen=missingFields.some(function(x){return /solution|solute|solvent|chem/i.test(String(x));
+    }),stackOpen=missingFields.some(function(x){return /stack|layer/i.test(String(x));
+    }),processOpen=missingFields.some(function(x){return /process|coating|anneal|atmos/i.test(String(x));});
   if(LF.PageContext)LF.PageContext.publish('Design',{view:'Experiment design',selected:{experiment:selected.id},visible:['solutions:'+linkedSolutions(design,selected).length,'layers:'+(selected.stack||[]).length,'cabinet:'+((LF.Cabinet&&LF.Cabinet.all().length)||0)]});
-  return '<section class="page design-page design-table-page">'+(options.workflowHead?options.workflowHead('Design Experiment','Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>'):options.pageHead('Design Experiment','Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>')+options.stepper)+board(exp,design,devices,selected)+proposal+(picker?cabinetPicker(picker):'')+
-    '<div class="design-two-column"><details class="panel design-work-panel" '+(chemOpen?'open':'')+'><summary class="panel-head"><div><span class="eyebrow">01 · Solution chemistry</span><h2 class="h2">Solutions · solvents · solutes</h2><div class="meta">Reuse a known formulation or create one locally for this experiment.</div></div></summary><div class="panel-body"><div class="row-wrap design-panel-actions"><button class="button compact" type="button" data-open-design-cabinet="solution">From Cabinet</button><button class="button compact" id="addSolution" type="button">New solution</button></div>'+solutionEditor(design,selected)+'</div></details>'+
-    '<details class="panel design-work-panel" '+(stackOpen?'open':'')+'><summary class="panel-head"><div><span class="eyebrow">02 · Device stack</span><h2 class="h2">Layer stack</h2><div class="meta">Physical order runs from substrate to top contact.</div></div></summary><div class="panel-body"><div class="row-wrap design-panel-actions"><button class="button compact" type="button" data-open-design-cabinet="stack">From Cabinet</button><button class="button compact" id="saveStackCabinet" type="button" '+((selected.stack||[]).length?'':'disabled')+'>Save to Cabinet</button><button class="button compact" id="addDeviceLayer" type="button">Add layer</button></div>'+stackEditor(selected)+'</div></details></div>'+
-    '<details class="panel design-work-panel design-process-panel" '+(processOpen?'open':'')+'><summary class="panel-head"><div><span class="eyebrow">03 · Process</span><h2 class="h2">Fabrication process</h2><div class="meta">Keep the process details that matter for reproducibility.</div></div></summary><div class="panel-body"><div class="row-wrap design-panel-actions"><button class="button compact" type="button" data-open-design-cabinet="protocol">From Cabinet</button><button class="button compact" id="saveProtocolCabinet" type="button">Save to Cabinet</button></div>'+processEditor(selected)+'</div></details>'+evidenceDetails(design,selected)+'</section>';
+  return '<section class="page design-page design-table-page">'+
+(options.workflowHead?options.workflowHead('Design Experiment',
+    'Build chemistry, stack and process for the next experiment.',
+    '<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
+      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>'):options.pageHead('Design Experiment','Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
+      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>')+options.stepper)+board(exp,design,devices,selected)+proposal+(picker?cabinetPicker(picker):'')+
+    '<div class="design-two-column"><details class="panel design-work-panel" '+(chemOpen?'open':'')+
+'><summary class="panel-head"><div><span class="eyebrow">01 · Solution chemistry</span><h2 class="h2">Solutions ' +
+  '· solvents · solutes</h2><div class="meta">Reuse a known formulation or create one locally for this experiment.' +
+  '</div></div></summary><div class="panel-body"><div class="row-wrap design-panel-actions"><button class="button ' +
+  'compact" type="button" data-open-design-cabinet="solution">From Cabinet</button><button class="button compact" id="addSolution" type="button">New solution</button></div>'+solutionEditor(design,selected)+'</div></details>'+
+    '<details class="panel design-work-panel" '+(stackOpen?'open':'')+
+'><summary class="panel-head"><div><span class="eyebrow">02 · Device stack</span><h2 class="h2">Layer stack</h2>' +
+  '<div class="meta">Physical order runs from substrate to top contact.</div></div></summary><div class="panel-body">' +
+  '<div class="row-wrap design-panel-actions"><button class="button compact" type="button" data-open-design-cabinet="stack">' +
+  'From Cabinet</button><button class="button compact" id="saveStackCabinet" type="button" '+((selected.stack||[]).length?'':'disabled')+'>Save to Cabinet</button><button class="button compact" id="addDeviceLayer" type="button">Add layer</button></div>'+stackEditor(selected)+'</div></details></div>'+
+    '<details class="panel design-work-panel design-process-panel" '+(processOpen?'open':'')+
+'><summary class="panel-head"><div><span class="eyebrow">03 · Process</span><h2 class="h2">Fabrication process</h2>' +
+  '<div class="meta">Keep the process details that matter for reproducibility.</div></div></summary><div ' +
+  'class="panel-body"><div class="row-wrap design-panel-actions"><button class="button compact" type="button" ' +
+  'data-open-design-cabinet="protocol">From Cabinet</button><button class="button compact" id="saveProtocolCabinet" type="button">Save to Cabinet</button></div>'+processEditor(selected)+'</div></details>'+evidenceDetails(design,selected)+'</section>';
 }
 LF.DesignPage={render:render,refreshProjection:function(){},completeness:completeness,linkedSolutions:linkedSolutions,experimentState:experimentState};
 }());

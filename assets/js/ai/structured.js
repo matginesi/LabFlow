@@ -253,7 +253,12 @@
     const stack=designList(stackSource).slice(0,12).map(function(layer){return normalizeDesignLayer(layer,'model_inference',0.5);}).filter(function(x){return x.role||x.material;});
     const processSource=v.process||v.fabrication_process||v.fabricationProcess||v.protocol||v.processing||{};
     const po=processSource&&typeof processSource==='object'&&!Array.isArray(processSource)?processSource:{};
-    const process={coating:designText(po.coating||po.deposition||po.method),annealing:designText(po.annealing||po.anneal),atmosphere:designText(po.atmosphere||po.environment),notes:designText(po.notes||po.details),evidence:clip(po.evidence||po.source,500),confidence:designConfidence(po.confidence,0.5),provenance_kind:normalizeDesignSource(po.provenance_kind||po.provenanceKind||po.source_kind,'model_inference'),reason:clip(po.reason||po.rationale||'Model suggestion for researcher review.',180)};
+    const process={coating:designText(po.coating||po.deposition||po.method),
+annealing:designText(po.annealing||po.anneal),atmosphere:designText(po.atmosphere||po.environment),
+      notes:designText(po.notes||po.details),evidence:clip(po.evidence||po.source,500),
+      confidence:designConfidence(po.confidence,0.5),
+      provenance_kind:normalizeDesignSource(po.provenance_kind||po.provenanceKind||po.source_kind,'model_inference'),
+      reason:clip(po.reason||po.rationale||'Model suggestion for researcher review.',180)};
     const processUseful=[process.coating,process.annealing,process.atmosphere,process.notes].some(function(x){return !!designText(x);});
     return{
       status:'suggested',
@@ -275,8 +280,35 @@
   function unwrapResult(value){let v=value;if(Array.isArray(v)&&v.length===1&&v[0]&&typeof v[0]==='object')v=v[0];if(!v||typeof v!=='object'||Array.isArray(v))return v;['result','output','interpretation','comparison'].some(function(k){if(v[k]&&typeof v[k]==='object'&&!Array.isArray(v[k])){v=v[k];return true;}return false;});return v;}
   function evidenceItem(item){const x=item&&typeof item==='object'&&!Array.isArray(item)?item:{statement:item};return{statement:resultText(x.statement||x.observation||x.finding||x.text,260),evidence:resultList(x.evidence||x.basis||x.sources).map(function(v){return resultText(v,120);}).filter(Boolean).slice(0,5),confidence:resultConfidence(x.confidence,0.6)};}
   function hypothesisItem(item){const x=item&&typeof item==='object'&&!Array.isArray(item)?item:{statement:item};return{statement:resultText(x.statement||x.hypothesis||x.explanation||x.text,260),basis:resultList(x.basis||x.evidence||x.sources).map(function(v){return resultText(v,140);}).filter(Boolean).slice(0,5),confidence:resultConfidence(x.confidence,0.4)};}
-  function normalizeResultsInterpretation(value){const v=unwrapResult(value);if(!v||typeof v!=='object'||Array.isArray(v))return value;const recognized=['summary','observations','findings','hypotheses','interpretations','limitations','caveats','next_checks','nextChecks','recommendations','status'];if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;const observations=resultList(v.observations||v.findings).map(evidenceItem).filter(function(x){return x.statement;}).slice(0,8),hypotheses=resultList(v.hypotheses||v.interpretations).map(hypothesisItem).filter(function(x){return x.statement;}).slice(0,6),limitations=resultList(v.limitations||v.caveats).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();return{status:explicit==='limited'||(!observations.length&&!hypotheses.length)?'limited':'interpreted',summary:resultText(v.summary||v.assessment||v.description,700),observations:observations,hypotheses:hypotheses,limitations:limitations,next_checks:next};}
-  function normalizeResultsComparison(value){const v=unwrapResult(value);if(!v||typeof v!=='object'||Array.isArray(v))return value;const recognized=['summary','groups','contrasts','differences','observations','hypotheses','limitations','caveats','next_checks','nextChecks','recommendations','status'];if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;const contrasts=resultList(v.contrasts||v.differences||v.observations).map(evidenceItem).filter(function(x){return x.statement;}).slice(0,10),hypotheses=resultList(v.hypotheses).map(hypothesisItem).filter(function(x){return x.statement;}).slice(0,6),groups=resultList(v.groups).map(function(x){return resultText(x,100);}).filter(Boolean).slice(0,12),limitations=resultList(v.limitations||v.caveats).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);}).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();return{status:explicit==='insufficient_evidence'||!contrasts.length?'insufficient_evidence':'compared',summary:resultText(v.summary||v.assessment||v.description,600),groups:groups,contrasts:contrasts,hypotheses:hypotheses,limitations:limitations,next_checks:next};}
+  function normalizeResultsInterpretation(value){const v=unwrapResult(value);
+if(!v||typeof v!=='object'||Array.isArray(v))return value;
+    const recognized=['summary','observations','findings','hypotheses','interpretations','limitations','caveats',
+    'next_checks','nextChecks','recommendations','status'];
+    if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;
+    const observations=resultList(v.observations||v.findings).map(evidenceItem).filter(function(x){return x.statement;
+    }).slice(0,8),hypotheses=resultList(v.hypotheses||v.interpretations).map(hypothesisItem).filter(function(x){
+    return x.statement;}).slice(0,6),limitations=resultList(v.limitations||v.caveats).map(function(x){
+    return resultText(x,220);}).filter(Boolean).slice(0,8),
+    next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);
+    }).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();
+    return{status:explicit==='limited'||(!observations.length&&!hypotheses.length)?'limited':'interpreted',
+    summary:resultText(v.summary||v.assessment||v.description,700),observations:observations,hypotheses:hypotheses,
+    limitations:limitations,next_checks:next};}
+  function normalizeResultsComparison(value){const v=unwrapResult(value);
+if(!v||typeof v!=='object'||Array.isArray(v))return value;
+    const recognized=['summary','groups','contrasts','differences','observations','hypotheses','limitations','caveats',
+    'next_checks','nextChecks','recommendations','status'];
+    if(!recognized.some(function(k){return Object.prototype.hasOwnProperty.call(v,k);}))return value;
+    const contrasts=resultList(v.contrasts||v.differences||v.observations).map(evidenceItem).filter(function(x){
+    return x.statement;}).slice(0,10),hypotheses=resultList(v.hypotheses).map(hypothesisItem).filter(function(x){
+    return x.statement;}).slice(0,6),groups=resultList(v.groups).map(function(x){return resultText(x,100);
+    }).filter(Boolean).slice(0,12),limitations=resultList(v.limitations||v.caveats).map(function(x){
+    return resultText(x,220);}).filter(Boolean).slice(0,8),
+    next=resultList(v.next_checks||v.nextChecks||v.recommendations).map(function(x){return resultText(x,220);
+    }).filter(Boolean).slice(0,8),explicit=String(v.status||'').toLowerCase();
+    return{status:explicit==='insufficient_evidence'||!contrasts.length?'insufficient_evidence':'compared',
+    summary:resultText(v.summary||v.assessment||v.description,600),groups:groups,contrasts:contrasts,hypotheses:hypotheses,
+    limitations:limitations,next_checks:next};}
 
   function recoverForSchema(schemaId, text) {
     if(schemaId==='design_suggestion')return recoverDesignText(text);

@@ -10,7 +10,12 @@ function fixControls(fix){
   if(fix.kind==='focus')return '<button class="button compact" type="button" data-export-focus="'+safe(fix.target||'issues')+'">'+label+'</button>';
   if(fix.kind==='route')return '<button class="button compact" type="button" data-route="'+safe(fix.route)+'">'+label+'</button>';
   if(fix.kind==='action'){const a=actionState(fix.action);return a.available?'<button class="button primary compact" type="button" data-action="'+safe(fix.action)+'">'+label+'</button>':'<span class="meta export-fix-note">'+safe(a.reason||'AI resolution is not applicable to this issue.')+'</span>';}
-  if(fix.kind==='review_or_action'){const a=actionState(fix.action),review='<button class="button compact" type="button" data-route="'+safe(fix.route)+'">Review data</button>';return '<div class="row-wrap">'+(a.available?'<button class="button primary compact" type="button" data-action="'+safe(fix.action)+'">Resolve with AI</button>':'')+review+(a.available?'':'<span class="meta export-fix-note">AI is not applicable: '+safe(a.reason||'no semantic ambiguity is active')+'</span>')+'</div>';}
+  if(fix.kind==='review_or_action'){const a=actionState(fix.action),
+review='<button class="button compact" type="button" data-route="'+safe(fix.route)+'">Review data</button>';
+    return '<div class="row-wrap">'+(a.available?'<button class="button primary compact" type="button" data-action="'+
+    safe(fix.action)+'">Resolve with AI</button>':'')+review+
+    (a.available?'':'<span class="meta export-fix-note">AI is not applicable: '+safe(a.reason||
+    'no semantic ambiguity is active')+'</span>')+'</div>';}
   if(fix.kind==='option')return '<button class="button compact" type="button" data-export-option="'+safe(fix.option)+'" data-export-option-value="'+safe(String(fix.value))+'">'+label+'</button>';
   if(fix.kind==='repair')return '<button class="button compact" type="button" data-export-repair="'+safe(fix.id)+'">'+label+'</button>';
   if(fix.kind==='refresh')return '<button class="button compact" type="button" data-export-refresh>'+label+'</button>';
@@ -29,23 +34,78 @@ function mappingTable(plan){
 function remediation(exp,validation){
   const audit=validation.audit||{},danger=audit.unresolvedDanger||[],incomplete=audit.incompletePatches||[],focus=String(S.state.ui.exportFocus||''),openDanger=focus==='danger-findings'?' open':'',openProv=focus==='patch-provenance'?' open':'';
   if(!danger.length&&!incomplete.length)return'';
-  const dangerRows=danger.slice(0,80).map(function(f){const id=String(f.measurementId||f.target||''),m=(exp.measurements||[]).find(function(x){return String(x.id)===id;}),canExclude=!!m&&!m.excluded;return '<article class="export-remediation-row"><div><strong>'+safe(f.title||f.type||'Blocking finding')+'</strong><span>'+safe(f.detail||'This finding affects export readiness.')+'</span><small class="mono">'+safe(id||'dataset')+'</small></div><div class="row-wrap">'+(canExclude?'<button class="button compact" type="button" data-local-fix="exclude" data-measurement-id="'+safe(m.id)+'">Exclude measurement</button>':'')+'</div></article>';}).join('');
+  const dangerRows=danger.slice(0,80).map(function(f){
+const id=String(f.measurementId||f.target||''),m=(exp.measurements||[]).find(function(x){return String(x.id)===id;
+    }),canExclude=!!m&&!m.excluded;return '<article class="export-remediation-row"><div><strong>'+safe(f.title||f.type||
+    'Blocking finding')+'</strong><span>'+safe(f.detail||
+    'This finding affects export readiness.')+'</span><small class="mono">'+safe(id||
+    'dataset')+'</small></div><div class="row-wrap">'+
+    (canExclude?'<button class="button compact" type="button" data-local-fix="exclude" data-measurement-id="'+safe(m.id)+
+    '">Exclude measurement</button>':'')+'</div></article>';}).join('');
   const provRows=incomplete.slice(0,40).map(function(p){return '<tr><td class="mono">'+safe(p.id||'—')+'</td><td>'+safe(p.patchType||'patch')+'</td><td>'+safe(p.reason||'Missing')+'</td><td>'+safe((p.evidence||[]).length?'present':'missing')+'</td></tr>';}).join('');
-  return '<section class="panel export-remediation"><div class="panel-head"><div><span class="eyebrow">Fix export readiness</span><h2 class="h2">Resolve issues here</h2><div class="meta">Review only the items that need attention before export.</div></div></div><div class="panel-body stack">'+(danger.length?'<details id="exportDangerFindings"'+openDanger+'><summary><strong>'+danger.length+' blocking finding'+(danger.length===1?'':'s')+'</strong><small>Excluded measurements stop blocking export; the RAW source is unchanged.</small></summary><div class="export-remediation-list">'+dangerRows+'</div></details>':'')+(incomplete.length?'<details id="exportPatchProvenance"'+openProv+'><summary><strong>'+incomplete.length+' incomplete change record'+(incomplete.length===1?'':'s')+'</strong><small>Some applied changes are missing a reason or supporting evidence.</small></summary><div class="row-wrap export-remediation-actions"><button class="button" type="button" data-export-repair="complete-provenance">Repair change details</button></div><div class="table-wrap"><table class="data-table dense-table"><thead><tr><th>Change</th><th>Type</th><th>Reason</th><th>Evidence</th></tr></thead><tbody>'+provRows+'</tbody></table></div></details>':'')+'</div></section>';
+  return '<section class="panel export-remediation"><div class="panel-head"><div><span class="eyebrow">Fix export ' +
+    'readiness</span><h2 class="h2">Resolve issues here</h2><div class="meta">Review only the items that need attention before export.</div></div></div><div class="panel-body stack">'+
+(danger.length?'<details id="exportDangerFindings"'+openDanger+'><summary><strong>'+danger.length+' blocking finding'+
+      (danger.length===1?'':'s')+'</strong><small>Excluded measurements stop blocking export; the RAW source is unchanged.</small></summary><div class="export-remediation-list">'+
+      dangerRows+'</div></details>':'')+(incomplete.length?'<details id="exportPatchProvenance"'+openProv+'><summary><strong>'+incomplete.length+
+      ' incomplete change record'+(incomplete.length===1?'':'s')+
+      '</strong><small>Some applied changes are missing a reason or supporting evidence.</small></summary><div ' +
+    'class="row-wrap export-remediation-actions"><button class="button" type="button" data-export-repair="complete-provenance">' +
+    'Repair change details</button></div><div class="table-wrap"><table class="data-table dense-table"><thead><tr><th>Change</th><th>Type</th><th>Reason</th><th>Evidence</th></tr></thead><tbody>'+provRows+'</tbody></table></div></details>':'')+'</div></section>';
 }
 function nomadUploadStub(settings,token){
   const s=settings||{},hasToken=!!String(token||'').trim(),hasEndpoint=!!String(s.apiEndpoint||'').trim(),configured=hasToken&&hasEndpoint;
-  return '<section class="panel export-nomad-upload"><div class="panel-head"><div><span class="eyebrow">NOMAD upload</span><h2 class="h2">Upload directly to NOMAD</h2><div class="meta">Future remote workflow for creating an upload and transferring the prepared package.</div></div><div class="spacer"></div>'+PS.badge('Not implemented','warning')+'</div><div class="panel-body stack"><div class="export-upload-target"><div><span>Instance</span><strong>'+safe(s.instance||'NOMAD')+'</strong><small class="mono">'+safe(s.apiEndpoint||'No API endpoint configured')+'</small></div><div><span>Account</span><strong>'+safe(s.username||'Not set')+'</strong><small>'+(hasToken?'Credential configured':'No API token stored')+'</small></div></div><div class="notice info compact-notice"><strong>Stub only.</strong> LabFlow does not send credentials or experiment data to NOMAD yet. Use the local NOMAD ZIP/Entry export above; direct upload will be enabled only when the connector is implemented.</div><div class="row-wrap"><button type="button" class="button primary" id="uploadNomadStub" aria-describedby="nomadUploadStubHint">Upload to NOMAD</button><button type="button" class="button" id="openNomadSettings">NOMAD settings</button><span class="meta" id="nomadUploadStubHint">'+(configured?'Connection settings are ready for the future uploader.':'Configure endpoint/account/token for the future uploader.')+'</span></div></div></section>';
+  return '<section class="panel export-nomad-upload"><div class="panel-head"><div><span class="eyebrow">NOMAD upload</span>' +
+    '<h2 class="h2">Upload directly to NOMAD</h2><div class="meta">Future remote workflow for creating an upload and transferring the prepared package.</div></div><div class="spacer"></div>'+
+PS.badge('Not implemented','warning')+'</div><div class="panel-body stack"><div class="export-upload-target"><div><span>Instance</span><strong>'+
+      safe(s.instance||'NOMAD')+'</strong><small class="mono">'+safe(s.apiEndpoint||
+      'No API endpoint configured')+'</small></div><div><span>Account</span><strong>'+safe(s.username||
+      'Not set')+'</strong><small>'+(hasToken?'Credential configured':'No API token stored')+
+      '</small></div></div><div class="notice info compact-notice"><strong>Stub only.</strong> LabFlow does not send ' +
+    'credentials or experiment data to NOMAD yet. Use the local NOMAD ZIP/Entry export above; direct upload will be ' +
+    'enabled only when the connector is implemented.</div><div class="row-wrap"><button type="button" class="button ' +
+    'primary" id="uploadNomadStub" aria-describedby="nomadUploadStubHint">Upload to NOMAD</button><button type="button" ' +
+    'class="button" id="openNomadSettings">NOMAD settings</button><span class="meta" id="nomadUploadStubHint">'+(configured?'Connection settings are ready for the future uploader.':'Configure endpoint/account/token for the future uploader.')+'</span></div></div></section>';
 }
 function render(){
   if(!PS.hasExperiment())return PS.needExperiment();
-  const exp=PS.ensureExperimentShape(S.state.experiment),settings=LF.Storage.getExportSettings(),nomadSettings=LF.Storage.getNomadSettings(),nomadToken=LF.Storage.getNomadToken(nomadSettings.apiEndpoint),plan=LF.NomadExport.ensureMapping(exp),validation=LF.NomadExport.validate(exp,exp.raw&&exp.raw.sourceArchive),blocked=validation.status==='blocked',mapped=(plan.mappings||[]).filter(function(x){return x.status==='mapped';}).length,missing=(plan.mappings||[]).filter(function(x){return x.status==='missing';}).length,patches=Number((exp.patches||[]).length),sourceName=exp.meta&&exp.meta.sourceName||exp.raw&&exp.raw.sourceName||'Original source ZIP',blocking=(validation.problems||[]).filter(function(x){return x.severity==='blocking';}).length;
+  const exp=PS.ensureExperimentShape(S.state.experiment),settings=LF.Storage.getExportSettings(),
+nomadSettings=LF.Storage.getNomadSettings(),nomadToken=LF.Storage.getNomadToken(nomadSettings.apiEndpoint),
+    plan=LF.NomadExport.ensureMapping(exp),validation=LF.NomadExport.validate(exp,exp.raw&&exp.raw.sourceArchive),
+    blocked=validation.status==='blocked',mapped=(plan.mappings||[]).filter(function(x){return x.status==='mapped';
+    }).length,missing=(plan.mappings||[]).filter(function(x){return x.status==='missing';
+    }).length,patches=Number((exp.patches||[]).length),
+    sourceName=exp.meta&&exp.meta.sourceName||exp.raw&&exp.raw.sourceName||'Original source ZIP',
+    blocking=(validation.problems||[]).filter(function(x){return x.severity==='blocking';}).length;
   if(LF.PageContext)LF.PageContext.publish('Export',{view:'Export workspace',selected:{},filters:{includeRaw:!!settings.includeRaw,includeDerived:!!settings.includeDerived},visible:['nomad:'+validation.status,'mapped:'+mapped,'blocking:'+blocking]});
-  const save='<section class="panel export-primary-save"><div class="panel-head"><div><span class="eyebrow">Portable save</span><h2 class="h2">LabFlow ZIP</h2><div class="meta">Save the current workspace as a portable LabFlow ZIP.</div></div><div class="spacer"></div><button type="button" class="button primary" id="exportLabFlowZip">Export LabFlow ZIP</button></div><div class="panel-body"><div class="export-save-facts"><span><b>'+patches+'</b> '+(patches===1?'change':'changes')+'</span><span class="mono">'+safe(sourceName)+'</span></div></div></section>';
+  const save='<section class="panel export-primary-save"><div class="panel-head"><div><span class="eyebrow">Portable save</span>' +
+    '<h2 class="h2">LabFlow ZIP</h2><div class="meta">Save the current workspace as a portable LabFlow ZIP.</div>' +
+    '</div><div class="spacer"></div><button type="button" class="button primary" id="exportLabFlowZip">Export ' +
+    'LabFlow ZIP</button></div><div class="panel-body"><div class="export-save-facts"><span><b>'+patches+'</b> '+(patches===1?'change':'changes')+'</span><span class="mono">'+safe(sourceName)+'</span></div></div></section>';
   const statusCopy=blocked?blocking+' blocking issue'+(blocking===1?'':'s')+' must be resolved before NOMAD export.':validation.status==='review'?'Export is available; review the warnings before publication.':'Local staging checks passed.';
   const remediate=remediation(exp,validation);
-  const nomad='<section class="panel export-nomad-workbench" id="nomadReadiness"><div class="panel-head"><div><span class="eyebrow">NOMAD</span><h2 class="h2">Prepare NOMAD package</h2><div class="meta">Check the package, then export it locally.</div></div><div class="spacer"></div>'+PS.badge(validation.status,statusTone(validation.status))+'<button class="button compact" type="button" data-export-refresh>Recheck</button></div><div class="panel-body stack"><div class="export-nomad-status '+statusTone(validation.status)+'"><div><strong>'+safe(validation.status==='ready'?'Ready':validation.status==='review'?'Ready with warnings':'Needs attention')+'</strong><span>'+safe(statusCopy)+'</span></div><div class="export-nomad-actions"><button type="button" class="button primary" id="exportNomadZip" '+(blocked?'disabled':'')+'>Export NOMAD ZIP</button><button type="button" class="button" id="exportNomadEntry" '+(blocked?'disabled':'')+'>Entry YAML</button></div></div>'+issueList(validation)+'<details class="export-options-details"><summary>Package options <small>'+(settings.includeRaw?'RAW':'no RAW')+' · '+(settings.includeDerived?'analysis tables':'no analysis tables')+'</small></summary><div class="export-option-grid"><label class="export-option"><input type="checkbox" id="nomadRaw" '+(settings.includeRaw?'checked':'')+'><span><strong>Include RAW source</strong><small>Include the original source ZIP in the package.</small></span></label><label class="export-option"><input type="checkbox" id="nomadDerived" '+(settings.includeDerived?'checked':'')+'><span><strong>Include analysis tables</strong><small>Include LabFlow measurement tables for inspection.</small></span></label><button class="button compact" type="button" id="saveExportOptions">Apply options</button></div></details><details class="export-mapping-details"><summary><span>Mapping details</span><small>'+mapped+' mapped · '+missing+' missing · '+(plan.mappings||[]).length+' total</small></summary>'+mappingTable(plan)+'</details></div></section>';
-  return '<section class="page export-page">'+PS.workflowHead('Export','Save LabFlow first. Use NOMAD when the readiness panel is clear; every blocker below has a concrete next step.')+'<div class="export-summary-strip"><div><span>Experiment</span><strong>'+safe(exp.meta&&exp.meta.name||'Current experiment')+'</strong></div><div><span>Changes</span><strong>'+patches+'</strong></div><div><span>NOMAD</span><strong class="status-'+statusTone(validation.status)+'">'+safe(validation.status)+'</strong></div></div>'+save+nomad+nomadUploadStub(nomadSettings,nomadToken)+remediate+'</section>';
+  const nomad='<section class="panel export-nomad-workbench" id="nomadReadiness"><div class="panel-head"><div><span class="eyebrow">' +
+    'NOMAD</span><h2 class="h2">Prepare NOMAD package</h2><div class="meta">Check the package, then export it locally.</div></div><div class="spacer"></div>'+
+PS.badge(validation.status,statusTone(validation.status))+
+      '<button class="button compact" type="button" data-export-refresh>Recheck</button></div><div class="panel-body stack"><div class="export-nomad-status '+
+      statusTone(validation.status)+'"><div><strong>'+
+      safe(validation.status==='ready'?'Ready':validation.status==='review'?'Ready with warnings':'Needs attention')+
+      '</strong><span>'+safe(statusCopy)+'</span></div><div class="export-nomad-actions"><button type="button" class="button primary" id="exportNomadZip" '+
+      (blocked?'disabled':'')+'>Export NOMAD ZIP</button><button type="button" class="button" id="exportNomadEntry" '+
+      (blocked?'disabled':'')+'>Entry YAML</button></div></div>'+issueList(validation)+
+      '<details class="export-options-details"><summary>Package options <small>'+(settings.includeRaw?'RAW':'no RAW')+' · '+
+      (settings.includeDerived?'analysis tables':'no analysis tables')+
+      '</small></summary><div class="export-option-grid"><label class="export-option"><input type="checkbox" id="nomadRaw" '+
+      (settings.includeRaw?'checked':'')+'><span><strong>Include RAW source</strong><small>Include the original source ZIP in the package.</small></span></label><label class="export-option"><input type="checkbox" id="nomadDerived" '+(settings.includeDerived?'checked':'')+'><span><strong>Include analysis tables</strong><small>Include LabFlow measurement tables for inspection.</small>' +
+    '</span></label><button class="button compact" type="button" id="saveExportOptions">Apply options</button></div>' +
+    '</details><details class="export-mapping-details"><summary><span>Mapping details</span><small>'+mapped+' mapped · '+missing+' missing · '+(plan.mappings||[]).length+' total</small></summary>'+mappingTable(plan)+'</details></div></section>';
+  return '<section class="page export-page">'+PS.workflowHead('Export',
+'Save LabFlow first. Use NOMAD when the readiness panel is clear; every blocker below has a concrete next step.')+
+    '<div class="export-summary-strip"><div><span>Experiment</span><strong>'+safe(exp.meta&&exp.meta.name||
+    'Current experiment')+'</strong></div><div><span>Changes</span><strong>'+patches+
+    '</strong></div><div><span>NOMAD</span><strong class="status-'+statusTone(validation.status)+'">'+
+    safe(validation.status)+'</strong></div></div>'+save+nomad+nomadUploadStub(nomadSettings,
+    nomadToken)+remediate+'</section>';
 }
 LF.ExportPage={render:render};
 }());
