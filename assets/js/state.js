@@ -1,3 +1,7 @@
+/*
+ * Application-state coordinator for the single ExperimentData aggregate, UI state and active Action run.
+ * Boundary: Coordinate revision/invalidation; feature modules remain owners of scientific mutations.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
@@ -6,14 +10,6 @@
   }
   const Log = LF.Logger.scope('state');
 
-  /*
-   * One app-wide in-memory state object. The experiment slot holds the single
-   * canonical ExperimentData. Scientific collections and documents live on
-   * that object; `experiment.derived` is reserved for transient Action history
-   * and chat. Route and selection state live under `ui`. `actionRun`
-   * records the one active workflow so navigation/abort/staleness checks
-   * never start a second request behind the user's back.
-   */
   function nowIso() { return new Date().toISOString(); }
 
   function emptyExperiment() {
@@ -78,9 +74,10 @@
   function ensureDerived(exp) {
     if (!exp.derived || typeof exp.derived !== 'object') exp.derived = {};
     const d = exp.derived;
+        // History is bounded diagnostic context, not a second store for Action semantic output.
     d.actions = d.actions && typeof d.actions === 'object' ? d.actions : {};
-    /* Completed Action history is diagnostic metadata, not a second copy of model outputs.
-       Keep only bounded telemetry so long sessions stay small. */
+
+
     Object.keys(d.actions).forEach(function(actionId){const entry=d.actions[actionId];
 if(!entry||!Array.isArray(entry.runs))return;
       entry.runs=entry.runs.slice(-12).map(function(run){if(!run||typeof run!=='object')return run;
@@ -97,11 +94,6 @@ if(!entry||!Array.isArray(entry.runs))return;
     return d;
   }
 
-  /**
-   * Return the one canonical in-memory experiment and repair only structural
-   * gaps. Route-independent. This never parses RAW bytes, calculates metrics or
-   * invents scientific values; canonical guarantees come from LF.DataModel.
-   */
   function ensureExperiment(reason) {
     if (!state.experiment || typeof state.experiment !== 'object') state.experiment = emptyExperiment();
     if (!state.experiment.id) state.experiment.id = 'exp_' + Math.random().toString(36).slice(2, 10);
@@ -114,7 +106,7 @@ if(!entry||!Array.isArray(entry.runs))return;
     return exp;
   }
 
-  /** Invalidate NOMAD-derived state through the dependency registry. */
+
   function invalidateNomad(exp, scope) {
     LF.DerivedState.invalidate(exp, scope || 'metadata');
   }
@@ -148,8 +140,8 @@ if(!entry||!Array.isArray(entry.runs))return;
     state.experiment = exp || emptyExperiment();
     state.experiment = LF.DataModel.hydrate(state.experiment);
     ensureExperiment('set');
-    /* Preserve the uploaded source bytes as immutable evidence. The application
-       works on ExperimentData and never rewrites this ArrayBuffer. */
+
+
     if (rawArchive && state.experiment.raw && !(state.experiment.raw.sourceArchive instanceof ArrayBuffer && state.experiment.raw.sourceArchive.byteLength)) {
       state.experiment.raw.sourceArchive = rawArchive;
     }
@@ -160,8 +152,6 @@ if(!entry||!Array.isArray(entry.runs))return;
     notify('experiment');
   }
 
-  /** Commit an already-applied edit: advance revision through DataModel, then
-      invalidate NOMAD projections when the scope demands it. */
   function touch(scope) {
     const exp = ensureExperiment('before-touch');
     if (!exp.id) return exp;
@@ -176,7 +166,7 @@ if(!entry||!Array.isArray(entry.runs))return;
     return exp;
   }
 
-  /** The one active Action run examined by every execution path. */
+
   function startActionRun(record) {
     state.actionRun = {
       actionId: record && record.actionId || '',
@@ -215,14 +205,40 @@ if(!entry||!Array.isArray(entry.runs))return;
   function resetSession() {
     state.experiment = emptyExperiment();
     state.actionRun = null;
-    /* Keep the `ui` object identity stable for modules that reference it, but
-       reset every transient view field from one canonical default factory. */
+
+
     Object.keys(state.ui).forEach(function (key) { delete state.ui[key]; });
     Object.assign(state.ui, defaultUiState());
     notify('reset');
     return state;
   }
 
+
+  if (LF.Structures) {
+    LF.Structures.defineFromExample('runtime.ui-state', {
+      owner: 'State', layer: 'ui_runtime', persistence: 'session',
+      description: 'Route, selection, filters and view-only state. Never a scientific source of truth.'
+    }, defaultUiState());
+    LF.Structures.define('action.active-run', {
+      owner: 'State', layer: 'workflow_runtime', persistence: 'session',
+      description: 'The single active Action workflow checkpoint used for busy/abort/staleness guards.',
+      fields: {
+        actionId: { type: 'string', required: true }, stepIndex: { type: 'number', required: true },
+        sourceRevision: { type: 'number', required: true }, status: { type: 'string', required: true },
+        startedAt: { type: 'string', required: true }, aborted: { type: 'boolean', required: true }
+      }
+    });
+    LF.Structures.define('runtime.application-state', {
+      owner: 'State', layer: 'application_runtime', persistence: 'session',
+      description: 'One app-wide runtime shell. experiment points to the single canonical ExperimentData aggregate.',
+      fields: {
+        user: { type: 'object', required: true }, workspace: { type: 'object', required: true },
+        project: { type: 'object', required: true }, experiment: { type: 'object', required: true, itemType: 'experiment.aggregate' },
+        actionRun: { type: 'object', nullable: true, itemType: 'action.active-run' },
+        ui: { type: 'object', required: true, itemType: 'runtime.ui-state' }
+      }
+    });
+  }
 
   LF.State = {
     state: state,

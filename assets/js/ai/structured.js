@@ -1,14 +1,13 @@
+/*
+ * Structured model-output extraction, cleanup and schema-oriented rejection diagnostics.
+ * Boundary: Transport success is insufficient until the declared result contract is satisfied.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core || {};
   const Log = LF.Logger ? LF.Logger.scope('structured') : null;
 
-  /* ------------------------------------------------------------------ *
-   * Provider JSON parsing shared by every schema-backed AI Action
-   * ------------------------------------------------------------------ */
-
-  /** Locate complete JSON values without confusing braces inside quoted text. */
   function balancedJsonCandidates(raw) {
     const out = [];
     for (let start = 0; start < raw.length; start++) {
@@ -28,7 +27,7 @@
     return out;
   }
 
-  /** Repair JSON presentation syntax only: comments, control chars, trailing commas. */
+
   function normalizeJsonSyntax(source) {
     let out = '', quote = false, escaped = false, lineComment = false, blockComment = false, changed = false;
     for (let i = 0; i < source.length; i++) {
@@ -61,7 +60,7 @@
     return { text: withoutTrailing, changed: changed || withoutTrailing !== out };
   }
 
-  /** Parse provider text into a value plus an audit-friendly account. */
+
   function parse(text) {
     const raw = String(text || '').replace(/^\uFEFF/, '').trim();
     const candidates = [];
@@ -93,10 +92,6 @@
     if (Log) Log.warn('parse.failed', { chars: raw.length, diagnosis: diagnosis, attempts: candidates.length });
     return { value: null, strategy: 'failed', repaired: false, diagnosis: diagnosis, raw: raw };
   }
-
-  /* ------------------------------------------------------------------ *
-   * Schema validation (no per-handler code)
-   * ------------------------------------------------------------------ */
 
   function schemaErrors(schema, value, path) {
     path = path || 'result';
@@ -234,10 +229,8 @@
     const v=unwrapDesign(value);
     let solutionSource=v.solutions||v.formulations||v.recipes||v.solution_chemistry||v.solutionChemistry||v.solution_suggestion||v.solutionSuggestion||v.formulation||v.recipe||v.chemistry||v.solution||[];
     if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)&&Array.isArray(solutionSource.solutions))solutionSource=solutionSource.solutions;
-    /* Small/local models often return chemistry as a keyed object or expose
-       solutes/solvents directly. Normalize those common shapes before schema
-       validation instead of turning a scientifically useful answer into a
-       provider-contract failure. */
+    /* Normalize common local-model chemistry envelopes before schema validation.
+       This is transport-shape tolerance only; semantic completeness is still validated later. */
     if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)){
       const chemistryKeys=['name','title','role','type','solutes','solute','solvents','solvent','chemistry','formulation','recipe'];
       const isOne=chemistryKeys.some(function(k){return Object.prototype.hasOwnProperty.call(solutionSource,k);});

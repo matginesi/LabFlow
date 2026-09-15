@@ -1,17 +1,14 @@
-# Recovery Rules
+---
+title: Recovery-rule authority
+section: Scientific data
+summary: Where deterministic source-format recovery policy lives and what parser code is allowed to do.
+order: 34
+---
 
-## Ground truth
+# Recovery-rule authority
 
-The operational recovery rules are **not defined in this document**. They live in:
+Operational recovery policy lives in `prompts/policies/data-format-repair.md`. Its machine-readable rule block is consumed by deterministic parser/validator code.
 
-`prompts/policies/data-format-repair.md`
+JavaScript implements mechanics: archive traversal, text/numeric parsing, configured pattern matching, configured normalization, evidence collection, findings and reviewed patch application. It must not invent new semantic recovery policy independently.
 
-That Markdown file is deliberately both an AI prompt/policy and a machine-readable rules source. Its fenced `json labflow-rules` block is consumed by the deterministic parser/validator.
-
-This separation is mandatory: when laboratory naming, file structure, fallback behavior, unit interpretation, missing-data handling or guardrails change, update the Markdown policy first. Do not hide new semantic rules inside `parser.js`.
-
-## Implementation boundary
-
-JavaScript may implement mechanics such as ZIP traversal, text splitting, numeric parsing, matching configured file patterns, applying configured normalization, generating findings, and applying reviewed patches. It must not independently invent the policy for what a broken format means.
-
-RAW bytes are always preserved.
+When laboratory structure/naming/fallback/unit/guardrail policy changes, update the policy source and its tests first. RAW bytes remain immutable regardless of recovery strategy.

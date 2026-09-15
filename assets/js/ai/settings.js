@@ -1,3 +1,7 @@
+/*
+ * AI Settings orchestration for provider/model/key persistence, detection and connection tests.
+ * Boundary: Visible form values drive diagnostics; saving settings never mutates scientific state.
+ */
 (function () {
   'use strict';
 
@@ -7,7 +11,7 @@
   const modelCatalogueMeta={};
   const modelCatalogueFallbacks={};
 
-  /** Return an element by ID. Settings is dynamically rendered, so resolve lazily. */
+
   function field(id) { return document.getElementById(id); }
 
   function providerIdFromForm(){return(field('aiProvider')&&field('aiProvider').value)||LF.Storage.getAiSettings().provider;}
@@ -58,13 +62,13 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
     else if(provider.modelSelect&&manualFallback)hint.textContent='LabFlow could not load the model list. Enter the model name manually, then Save & test.';
     else if(!select.dataset.catalogueCount)hint.textContent='Check the connection to refresh the available models.';}}
 
-  /** Reduce an endpoint to a safe diagnostic host; never expose credentials or query data. */
+
   function endpointHost(endpoint) {
     try { return new URL(String(endpoint || '')).host; }
     catch (_) { return String(endpoint || ''); }
   }
 
-  /** Simple Settings feedback uses the Message Totem. Connection checks use the Action Totem below. */
+
   function notify(message,type,title){if(LF.UI&&LF.UI.message)LF.UI.message(message,type||'info',title||'AI connection');}
 
   function canStartProviderActivity(){
@@ -86,7 +90,7 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
   function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
 
-  /** Keep the provider page compact: classify the target, do not pretend it has been tested. */
+
   function decorate() {
     const providerSelect=field('aiProvider');
     if(!providerSelect)return;
@@ -112,7 +116,7 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
     syncModelControls(null,{preserveHint:true});
   }
 
-  /** Read exactly what is visible in Settings; never substitute saved/default connection values. */
+
   function connectionFromForm(){
     const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AIProviders.custom;
     const endpoint=String(field('aiEndpoint')&&field('aiEndpoint').value||'').trim(),
@@ -135,7 +139,7 @@ key=String(field('aiKey')&&field('aiKey').value||'').trim(),saved=LF.Storage.get
     return config;
   }
 
-  /** Persist the visible provider form. Experiment data is intentionally untouched. */
+
   function saveFromForm(options) {
     const providerField = field('aiProvider');
     if (!providerField) throw new Error('AI connection settings are not visible.');
@@ -167,7 +171,7 @@ endpoint:settings.endpoint,remember:rememberKey});
     return settings;
   }
 
-  /** Apply a provider preset to the unsaved form without starting a model request. */
+
   function selectProvider(providerId) {
     const provider = LF.AIProviders[providerId] || LF.AIProviders.custom;
     field('aiEndpoint').value = provider.endpoint || '';
@@ -178,8 +182,6 @@ endpoint:settings.endpoint,remember:rememberKey});
     decorate();
   }
 
-  /** Detect against the exact visible configuration. Catalogue discovery is useful
-      but never allowed to fake connectivity; the final chat probe is authoritative. */
   async function detectModel(options) {
     options=options||{};
     const button=field('detectProviderModel'),list=field('aiModelList'),diagnosticId=LF.Core&&LF.Core.uid?LF.Core.uid('detect'):'detect_'+Date.now();
@@ -274,7 +276,7 @@ message:(provider.name||providerId)+' is reachable and the model answered the li
     }
   }
 
-  /** Verify the exact visible configuration first; persist it only after a successful probe. */
+
   async function testConnection(button) {
     const oldText=button&&button.textContent||'Save & test',diagnosticId=LF.Core&&LF.Core.uid?LF.Core.uid('test'):'test_'+Date.now(),draft=connectionFromForm();
     const useActivity=canStartProviderActivity();

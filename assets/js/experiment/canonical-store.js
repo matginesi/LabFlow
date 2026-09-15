@@ -1,3 +1,7 @@
+/*
+ * Pure read indexes and evidence lookup over current ExperimentData.
+ * Boundary: Indexes are rebuildable caches and never own mutations.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

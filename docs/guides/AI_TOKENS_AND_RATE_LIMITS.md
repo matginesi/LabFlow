@@ -1,42 +1,26 @@
 ---
-title: AI tokens, limits and rate limiting
+title: AI budgets and rate limits
 section: Researcher guide
-summary: Current Action budgets, semantic retries and provider throttling behavior.
+summary: Operational token ceilings, deadlines, semantic retries and rate-limit behavior.
 order: 31
 ---
 
-# AI tokens, limits and rate limiting
+# AI budgets and rate limits
 
-## Independent limits
+Each Action has an operational input ceiling, target output budget, output ceiling, semantic retry policy and inference deadline. These values come from Action manifests and may be smaller than the selected model's theoretical limits. The executable source for these limits is `actions/*/action.json`; prose documentation must not duplicate it as a second authority.
 
-AI requests are bounded by several independent controls:
-
-- Action `max_input_tokens`;
-- normal `target_output_tokens`;
-- Action `max_output_tokens` ceiling;
-- provider/model context and completion limits;
-- per-step inference deadline.
-
-The Action manifest, not the theoretical model maximum, defines LabFlow's operational budget.
-
-## Current budgets
-
-Do not duplicate hardcoded budget tables in prose. The generated `docs/reference/ACTION_RUNTIME_MATRIX.md` is the source of truth and is rebuilt from `actions/*/action.json`.
+Use the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md) for current values rather than duplicating numbers in prose.
 
 ## Semantic retries
 
-Current structured AI Actions use at most one bounded semantic retry. If an Action has `validate_with`, a rejected proposal causes the AI step to regenerate with validator feedback.
+A semantic retry occurs only when the Action contract permits another model attempt after structured/semantic validation failure. It is bounded and may include concise validator feedback.
 
-Provider throttling/429 responses are not silently replayed by the transport.
+Provider throttling (for example HTTP 429) is not silently replayed by transport. Bulk Design stops subsequent requests and leaves untouched targets pending.
 
-## Bulk Design
+## Common diagnostic categories
 
-**Complete all missing with AI** is a sequence of independent `design.infer` runs for multiple incomplete experiments. Each run attempts all missing domains and uses bounded internal retries. Completed suggestions remain stored if a later experiment fails. Provider rate limiting stops subsequent requests rather than creating hidden background traffic.
+- `MODEL_OUTPUT_TRUNCATED` — completion ended before a usable structured result.
+- `MODEL_CONTEXT_LENGTH` — request/completion budget exceeded provider/model context.
+- structured/schema/semantic validation error — content was returned but did not satisfy the Action result contract.
 
-## Diagnosing local-model truncation
-
-`MODEL_OUTPUT_TRUNCATED` means the response ended before a usable structured object was completed. `MODEL_CONTEXT_LENGTH` means request + completion budget exceeded the model/server context. These are distinct from schema/semantic validation failures.
-
-## Diagnostics
-
-Use Logs plus `LabFlow.Data.actions()` to see the exact Action budget/contract currently in use.
+These are different failure modes and should lead to different fixes.

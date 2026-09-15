@@ -1,10 +1,14 @@
+/*
+ * Serial unit-test harness for classic-script LabFlow modules under Node.
+ * Boundary: Suites are self-contained and reset mutable global/module state between files.
+ */
 'use strict';
-global.window = globalThis; // classic IIFEs attach window.LabFlow
+global.window = globalThis; // Browser modules attach to window; Node exposes the same namespace through globalThis.
 const path = require('path');
 const fs = require('fs');
 const childProcess = require('child_process');
 const root = path.resolve(__dirname, '..', '..');
-// Minimal in-memory storage so browser modules can load under Node.
+
 global.localStorage = (function () {
   let store = {};
   return {
@@ -46,26 +50,25 @@ global.LabFlow.Core = global.LabFlow.Core || {
     }, space == null ? 2 : space);
   }
 };
-// Load the one canonical domain schema before suites import DataModel.
+
+require(path.join(root, 'assets', 'js', 'data-structures.js'));
 require(path.join(root, 'assets', 'js', 'experiment', 'domain-schema.js'));
 require(path.join(root, 'assets', 'js', 'experiment', 'action-data.js'));
 
-// JSZip is vendored for the browser; when runnable under Node it is exported as a module.
+
 try {
   global.window.JSZip = global.window.JSZip || require(path.join(root, 'vendor', 'jszip', 'jszip.min.js'));
 } catch (_err) {
   global.window.JSZip = global.window.JSZip || null;
 }
 
-/** Run suites serially so Promise-returning tests cannot finish after success. */
+
 async function main() {
   let files = process.argv.slice(2);
   if (!files.length) {
     files = fs.readdirSync(__dirname).filter(function (name) { return /-test\.js$/.test(name); }).sort().map(function (name) { return path.relative(process.cwd(), path.join(__dirname, name)); });
   }
-  /* Every suite mutates the classic-script namespace by design. Run multiple
-     requested files in isolated Node processes so one suite cannot leak its
-     stubs into the next suite. */
+
   if (files.length > 1) {
     let failedSuites = 0;
     files.forEach(function (file) {

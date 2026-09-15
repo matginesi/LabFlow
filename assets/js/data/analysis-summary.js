@@ -1,3 +1,7 @@
+/*
+ * Deterministic aggregate summaries and experiment briefs for UI, context and export.
+ * Boundary: Remain reproducible projections of canonical data.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {}, C = LF.Core, A = LF.Analysis;
@@ -50,8 +54,8 @@
 
   function groupStatisticsOf(exp) {
     const ms = A.measurementsOf(exp), factor = A.settingsOf(exp), map = {};
-    /* Same eligible scope and group naming the Results Compare view uses, so the
-       bundle is a valid single source for the per-scan statistics table. */
+
+
     ms.forEach(function (m) {
       if (!m.rankingEligible) return;
       const key = String(m.group || '').trim() || 'Ungrouped';

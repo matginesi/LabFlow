@@ -1,17 +1,17 @@
 ---
 title: Deterministic data pipeline
 section: Operating model
-summary: Declarative deterministic lifecycle from imported ZIP to a validated researcher-ready LabFlow Data.
+summary: Declarative lifecycle from imported archive to validated, researcher-ready LabFlow Data.
 order: 15
 ---
 
 # Deterministic data pipeline
 
-## Contract
+`DataPipeline` owns deterministic construction and refresh. It never calls an AI provider and never waits for provider availability.
 
-`DataPipeline` owns deterministic construction and refresh of scientific state. It never calls an AI provider.
+## Stage contract
 
-Each stage is registered as:
+A stage declares identity, phase, dependencies, reads, writes and one `run` function:
 
 ```js
 LabFlow.DataPipeline.register({
@@ -20,60 +20,42 @@ LabFlow.DataPipeline.register({
   after: ['previous-stage'],
   reads: ['measurements'],
   writes: ['myProjection'],
-  description: '...',
-  run(exp, ctx) { ... }
+  description: 'Build the projection from validated measurements.',
+  run(exp, ctx) { /* deterministic work */ }
 })
 ```
 
-The registry derives execution order from dependencies and rejects missing dependencies/cycles. `reads`/`writes` are declarative ownership documentation and must match real behavior.
+Dependencies produce one logical execution plan. Missing dependencies and cycles are contract errors. `reads`/`writes` are architectural declarations and must match actual behavior.
 
-## Current logical plan
+## Current plan
 
-1. `normalize` — hydrate through `DomainSchema`.
-2. `link` — rebuild Experiment → Sample → Run → Measurement links/backlinks.
-3. `validate-structure` — fail closed before scientific calculations.
+1. `normalize` — canonical hydration/shape normalization.
+2. `link` — rebuild acquisition hierarchy links/backlinks.
+3. `validate-structure` — fail closed before dependent analysis.
 4. `analyze` — deterministic JV metrics, ranking and findings.
-5. `index` — build pure CanonicalStore read indexes/evidence.
-6. `review` — produce deterministic review dossier and semantic ambiguities.
-7. `auto-cleanup` — detect mechanically provable LabFlow Data fixes and expose them as pending; explicit Review acceptance applies them with patches.
-8. `project-design` — project source evidence into Design without overwriting researcher values.
-9. `summarize` — build deterministic statistics and Experiment Brief.
-10. `validate-final` — validate the completed domain/Design graph.
+5. `index` — rebuild pure CanonicalStore read indexes/evidence.
+6. `review` — build deterministic review dossier and semantic ambiguities.
+7. `auto-cleanup` — detect mechanically provable fixes; do not silently apply newly detected fixes.
+8. `project-design` — project source evidence into Design without overwriting researcher-owned values.
+9. `summarize` — build deterministic summaries/brief.
+10. `validate-final` — assert the final graph/Design contract.
 
-## Restart contract
+## Restart semantics
 
-A stage must not call downstream stages itself. If it changes upstream state, it may return:
+A stage does not call downstream stages. If an accepted deterministic mutation changes upstream state, the pipeline may return a bounded restart request:
 
 ```js
 { restartFrom: 'link' }
 ```
 
-The pipeline restarts from that stage with a bounded restart count. `auto-cleanup` uses this contract after safe fixes.
-
-## Plan vs execution trace
-
-`DataPipeline.stages()` returns the unique logical plan. `exp.pipeline.executions` records actual executions, including bounded restarts and timing. These are intentionally different concepts.
+The runner records actual executions separately from the logical plan.
 
 ## Idempotence
 
-Repeated refresh on an unchanged LabFlow Data must not accumulate findings/patches or alter hierarchy. The real JV fixture must remain:
+Refreshing unchanged data must not accumulate findings, patches, duplicate links or modified identifiers. Idempotence is a release invariant, not an optimization.
 
-```text
-5 → 31 → 42 → 72
-```
+## Stage versus service versus Action
 
-through repeated refreshes.
+Add a pipeline stage only when the work is deterministic, belongs to normal refresh, has explicit read/write ownership and should run without user/provider availability.
 
-## Mutation boundary
-
-Pipeline stages may write only their declared/owned output. The auto-cleanup stage does not silently mutate a newly detected fix. Explicit acceptance changes LabFlow Data via the patch/provenance mechanism and triggers a deterministic refresh. Runtime caches are recomputable and not persisted.
-
-## When to add a stage
-
-Add a pipeline stage only when the transformation:
-- is deterministic;
-- belongs in the normal lifecycle after relevant mutations;
-- has clear read/write ownership;
-- should run without researcher/provider availability.
-
-A researcher decision, interpretation or proposal belongs in an Action instead. A local helper used by one feature remains a service/tool, not automatically a stage.
+A reusable helper that does not belong in every lifecycle is a service/tool. A researcher request producing a proposal/interpretation/answer is an Action.

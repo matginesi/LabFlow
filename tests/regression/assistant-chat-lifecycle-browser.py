@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Navigation-free Chromium regression for the real Assistant lifecycle code.
-
-Uses page.set_content() because this execution environment blocks localhost/file
-navigation by browser policy. The production assistant.js is injected unchanged.
-"""
+"""Browser regression for Assistant pending/stream/final lifecycle across successive turns and failures."""
 from pathlib import Path
 import shutil
 from playwright.sync_api import sync_playwright
@@ -77,7 +73,7 @@ with sync_playwright() as p:
     page.add_script_tag(content=ASSISTANT_JS)
     page.evaluate("LabFlow.Assistant.bind(); LabFlow.Assistant.render({forceBottom:true});")
 
-    # First turn: one bubble, one spinner, stream into same bubble, clean finish.
+                                                                                 
     page.add_script_tag(content=PENDING)
     page.evaluate("() => { LabFlow.Assistant.sendChat('First question'); }")
     check(page.locator('.assistant-row').count()==1, 'first request must create one Assistant row')
@@ -92,7 +88,7 @@ with sync_playwright() as p:
     check(page.locator('.chat-thinking-dot').count()==0, 'first completion must leave no spinner')
     check(not page.locator('#chatInput').is_disabled(), 'composer must re-enable after first turn')
 
-    # Second turn: regression for the stuck-spinner/dead-chat bug.
+                                                                  
     page.add_script_tag(content=PENDING)
     page.evaluate("() => { LabFlow.Assistant.sendChat('Second question'); }")
     check(page.locator('.assistant-row').count()==2, 'second request must create exactly one additional Assistant row')
@@ -108,7 +104,7 @@ with sync_playwright() as p:
     check('Second answer' in page.locator('.assistant-row').last.inner_text(), 'second answer must be visible')
     check(not page.locator('#chatInput').is_disabled(), 'composer must re-enable after second turn')
 
-    # Error and abort must also clear transient state.
+                                                      
     page.evaluate("() => { LabFlow.ActionRunner={isRunning:()=>false,run:()=>Promise.resolve({status:'error',code:'TEST',message:'Provider failed',requestMeta:{}}),cancel:()=>true}; LabFlow.Assistant.sendChat('Fail'); }")
     page.wait_for_function("!LabFlow.Assistant.isActive()")
     check(page.locator('.chat-thinking-dot').count()==0, 'error must leave no spinner')

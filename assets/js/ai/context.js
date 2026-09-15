@@ -1,3 +1,7 @@
+/*
+ * Build bounded authority-labelled Context Packs for Actions and Assistant.
+ * Boundary: Keep experiment evidence, Cabinet references, KB references and Action output distinguishable.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger?LF.Logger.scope('context'):null;
@@ -14,8 +18,8 @@
   function compact(v){return sanitize(LF.CanonicalStore&&LF.CanonicalStore.compact?LF.CanonicalStore.compact(v,360):v);}
   function pageContext(){
     const raw=LF.PageContext&&LF.PageContext.snapshot?LF.PageContext.snapshot():{},page=clean(raw&&raw.page),out={page:page,view:clean(raw&&raw.view),selected:sanitize(raw&&raw.selected||{}),filters:sanitize(raw&&raw.filters||{}),visible:take(raw&&raw.visible,16).map(clean)};
-    /* Settings and Logs are runtime/debug surfaces. Their data may contain model,
-       provider, endpoint or diagnostic metadata and is never task context. */
+
+
     if(page==='Settings'||page==='Logs')return out;
     if(raw&&raw.data&&typeof raw.data==='object')out.data=compact(raw.data);
     return out;
@@ -75,7 +79,21 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     if(JSON.stringify(fallback).length<=maxChars)return fallback;
     return boundValue(fallback,80,2,8,0);
   }
-  function base(exp,profile){const sum=LF.CanonicalStore.summary(exp);return{context_pack:{profile:profile,source_revision:sum.revision,budgeted:true},experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),summary:sum},data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()};}
+  function base(exp,profile){
+    const sum=LF.CanonicalStore.summary(exp);
+    return{
+      context_pack:{profile:profile,source_revision:sum.revision,budgeted:true},
+      source_contract:{
+        experiment:'authoritative current-experiment data/evidence',
+        actions:'persisted workflow outputs; proposals remain review-only until accepted',
+        cabinet:'researcher-curated workspace reference; never experiment evidence',
+        knowledge:'sourced general reference; never experiment evidence',
+        history:'conversation context only'
+      },
+      experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),summary:sum},
+      data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()
+    };
+  }
   function relatedFromQuestion(exp,question){
 const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(function(x){return x.id;
     }),samples=ids.map(function(id){return LF.CanonicalStore.record(exp,id);
@@ -112,9 +130,11 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     return String(d.id)===String(designId);})||null):null;
     if(pc.page==='Export'){const plan=exp.nomad&&exp.nomad.mappingPlan||{};
     out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',
-    missing:take(plan.missing,12)};}if(LF.KnowledgeBase){
-    const knowledgeQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
-    out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{limit:8,minScore:2});}out.history=chatMemory(exp);
+    missing:take(plan.missing,12)};}
+    const referenceQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
+    if(LF.Cabinet)out.cabinet=LF.Cabinet.context(referenceQuery,{limit:6});
+    if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
+    out.history=chatMemory(exp);
     return budgetPack(out,opts.maxChars||14000);}
   function packAmbiguity(exp,opts){const out=base(exp,'ambiguity',''),collect=opts.collect||{}
 ,ids=(collect.finding_ids||[]).map(String),
@@ -173,13 +193,15 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     out.known_solutions=(exp.design&&exp.design.solutions||[])
       .filter(function(sol){return(device.solutionIds||[]).includes(sol.id);})
       .map(compact);
-    out.cabinet=LF.Cabinet?{
-      solutions:LF.Cabinet.compactForAI('solution',8),
-      stacks:LF.Cabinet.compactForAI('stack',6),
-      protocols:LF.Cabinet.compactForAI('protocol',6),
-      note:'Workspace reusable resources only. Cabinet entries are not experiment evidence; '+
-        'prefer exact reuse when compatible, otherwise treat them as optional design context.'
-    }:null;
+    const designReferenceQuery=[
+      JSON.stringify(out.current_design||{}),
+      JSON.stringify(out.known_solutions||[]),
+      JSON.stringify(designEvidence||[]),
+      missingDomains.join(' ')
+    ].join(' ');
+    out.cabinet=LF.Cabinet?LF.Cabinet.context(designReferenceQuery,{
+      kinds:['solution','stack','protocol','substrate','material'],limit:12
+    }):null;
     out.samples=sampleEntities.map(sampleRef);
     out.evidence=designEvidence;
     out.source_context={
@@ -203,13 +225,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     };
 
     if(LF.KnowledgeBase){
-      const knowledgeQuery=[
-        JSON.stringify(out.current_design||{}),
-        JSON.stringify(out.known_solutions||[]),
-        JSON.stringify(out.evidence||[]),
-        missingDomains.join(' ')
-      ].join(' ');
-      out.knowledge=LF.KnowledgeBase.context(knowledgeQuery,{
+      out.knowledge=LF.KnowledgeBase.context(designReferenceQuery,{
         kinds:['material','architecture','formulation','process'],
         limit:10,
         minScore:2

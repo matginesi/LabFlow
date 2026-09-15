@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Build the two documented LabFlow synthetic ZIP fixtures.
-
-The fixtures are deterministic and contain no real laboratory data.  Keep their
-expected behavior documented in TEST_DATA/README.md when changing this file.
-"""
+"""Generate deterministic non-scientific ZIP fixtures for public regression checks."""
 from __future__ import annotations
 
 import json
@@ -423,7 +419,7 @@ def multi_device_duplicate_names_files() -> dict[str, str]:
     remain 2 distinct measurements; the old basename-keyed merge would collapse them.
     """
     files: dict[str, str] = {}
-    # ---- run 1 ----
+                     
     files["synthetic_multi/run1/Stability (JV)_BH.txt"] = jv_text(
         "BH", fw=metric(1.05, 21.2, 75.0), rv=metric(1.04, 21.0, 74.5),
         note="Run 1 device BH JV",
@@ -434,7 +430,7 @@ def multi_device_duplicate_names_files() -> dict[str, str]:
     files["synthetic_multi/run1/Stability (Tracking)_BH.txt"] = tracking_text(
         "BH", note="Run 1 BH tracking",
     )
-    # ---- run 2 ----
+                     
     files["synthetic_multi/run2/Stability (JV)_BH.txt"] = jv_text(
         "BH", fw=metric(1.12, 23.8, 78.0), rv=metric(1.11, 23.9, 78.3),
         note="Run 2 device BH JV",
@@ -445,7 +441,7 @@ def multi_device_duplicate_names_files() -> dict[str, str]:
     files["synthetic_multi/run2/Stability (Tracking)_BH.txt"] = tracking_text(
         "BH", note="Run 2 BH tracking",
     )
-    # summary with both measurements (path-keyed, not basename-keyed)
+                                                                     
     summary_lines = ["File\tScan\tVoc (V)\tJsc (mA/cm2)\tFF (%)\tEfficiency (%)"]
     for run_label, voc, jsc, ff in [("run1", 1.05, 21.2, 75.0), ("run2", 1.12, 23.8, 78.0)]:
         summary_lines.append(f"synthetic_multi/{run_label}/Stability (JV)_BH.txt\tFW\t{voc}\t{jsc}\t{ff}\t{voc*jsc*ff/100.0:.1f}")
@@ -471,9 +467,9 @@ def large_dataset_files() -> dict[str, str]:
     measurements: list[dict[str, object]] = []
     sample_counter = 0
 
-    for device in range(1, 6):  # 5 devices
-        for run in range(1, 5):  # 4 runs per device → 16 combos
-            for variant in ("main", "alt"):  # 2 variants each = 32 samples
+    for device in range(1, 6):             
+        for run in range(1, 5):                                 
+            for variant in ("main", "alt"):                                
                 sample_counter += 1
                 folder = f"device_{device:02d}_run_{run:02d}_v{variant}"
                 jv_name = f"JV_{sample_counter:04d}_{'ABCDEFGHI'[sample_counter % 9]}.txt"
@@ -491,20 +487,20 @@ def large_dataset_files() -> dict[str, str]:
                     rv=metric(voc + 0.02, jsc + 0.10, ff + 0.10),
                     note=f"Device {device} Run {run} {variant} JV data",
                 )
-                # parameters file
+                                 
                 param_name = f"Parameters_{sample_counter:04d}_{'ABCDEFGHI'[sample_counter % 9]}.txt"
                 files[f"{folder}/{param_name}"] = parameters_text(
                     f"Device {device} Run {run} {variant}",
                     note=f"Device {device} Run {run} {variant} parameters",
                 )
-                # tracking file
+                               
                 track_name = f"Tracking_{sample_counter:04d}_{'ABCDEFGHI'[sample_counter % 9]}.txt"
                 files[f"{folder}/{track_name}"] = tracking_text(
                     f"Device {device} Run {run} {variant}",
                     note=f"Device {device} Run {run} {variant} tracking",
                 )
 
-    # combined summary
+                      
     summary_lines = ["File\tScan\tVoc (V)\tJsc (mA/cm2)\tFF (%)\tEfficiency (%)"]
     for i, m in enumerate(measurements, 1):
         summary_lines.append(

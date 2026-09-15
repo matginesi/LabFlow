@@ -1,3 +1,7 @@
+/*
+ * Sanitized provider/network diagnostic summaries and next-step guidance.
+ * Boundary: Expose enough evidence to troubleshoot without leaking credentials.
+ */
 (function () {
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

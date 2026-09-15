@@ -1,51 +1,38 @@
+---
+title: Privacy and local-first boundary
+section: Engineering reference
+summary: Browser-local scientific state, credential storage, external requests and diagnostic redaction.
+order: 25
+---
+
 # Privacy and local-first boundary
 
-LabFlow is a local-first browser application. Scientific parsing, analysis, validation, experiment-context retrieval, browser persistence and export generation remain client-side. LabFlow does not require an application backend for scientific state or AI transport.
+LabFlow is a local-first static browser application. Scientific parsing, deterministic analysis, validation, context construction, persistence and export generation run client-side.
 
-## Local runtime
+## Local assets and runtime
 
-LabFlow loads its runtime assets locally. The POC does not intentionally include trackers, analytics, service workers, WebSockets or remote fonts/assets.
-
-The experiment lifecycle is browser-local unless an AI Action explicitly contacts the configured provider. The current NOMAD direct-upload UI is a stub and does not contact NOMAD.
+The POC intentionally avoids analytics/tracking services, remote fonts, service-worker infrastructure and hidden application backends. Runtime assets are shipped with the application.
 
 ## Browser persistence
 
-LabFlow is **not memory-only**:
+Scientific working state and immutable source snapshot are persisted locally so a session can be restored. UI/provider/NOMAD preferences use browser storage. Provider API keys and the optional future NOMAD token are stored separately from scientific/export payloads.
 
-- the immutable source snapshot and current scientific LabFlow Data are autosaved in IndexedDB so the session can be restored;
-- provider/model/UI preferences and future NOMAD uploader configuration are stored in browser localStorage;
-- AI API keys are stored in browser localStorage separately by provider;
-- the optional NOMAD API token is stored in its own browser-local key, separately from export options and manifests;
-- provider rate-limit/cooldown state is not persisted; a 429 and optional `Retry-After` exist only in the current request result;
-- **Reset session** clears the persisted scientific session/RAW snapshot but keeps provider credentials/preferences unless separately changed.
+Resetting the scientific session does not silently erase unrelated provider credentials unless the corresponding settings are explicitly cleared.
 
-Request diagnostics may contain HTTP status, provider code/message, timing and `Retry-After`; they do not contain API-key values. Semantic messages and transport metadata are logged separately, and credential-bearing headers are explicitly redacted before they reach the diagnostic event.
+## External network requests
 
-## External AI requests
+External requests occur only through explicit capabilities such as an AI Action/Assistant/provider test. The configured provider endpoint is contacted directly; there is no hidden relay.
 
-`assets/js/ai/transport.js` is the browser transport boundary. AI requests are triggered by declared AI Actions, Assistant use, connection tests, or the optional automatic import enrichment when a provider is configured. Hosted and local/LAN providers use the exact endpoint configured in Settings. There is no hidden proxy/relay fallback, so browser CORS/network failures remain explicit.
+The current NOMAD direct-upload control is a non-networking stub. Package generation remains local.
 
-Requests use:
+## Context minimization
 
-```text
-credentials: omit
-cache: no-store
-```
+Actions/Assistant receive bounded semantic context required for the requested task. Provider settings, API keys and unrelated Settings diagnostics are not scientific context and are not inserted into model prompts.
 
-AI Actions send a bounded Context Pack selected for that Action. RAW curves and the full experiment are not sent by default. Settings/provider configuration and Logs contents are excluded from model-visible Context Packs. Provider transport metadata (model routing, endpoint-derived request options, reasoning controls and response-format controls) is kept outside semantic prompt content.
+Cabinet and KB context remain labelled reference data so a model cannot legitimately treat them as evidence from the current experiment.
 
-A connection test sends only a tiny provider probe and no experiment context.
+## Diagnostics
 
-## API keys
+Credential-bearing headers/fields and common secret names are redacted before events enter the logger. Diagnostics may contain endpoint host/path, HTTP status, provider error codes/messages, request timing and bounded sanitized response details.
 
-AI API keys are provider-scoped and are stored in browser localStorage. They are used directly by the browser request to the selected AI provider endpoint. NOMAD uploader settings/token are also browser-local, but the present upload stub never reads them into a network request because remote upload is not implemented.
-
-The structured logger redacts common credential fields such as API keys, Authorization headers, passwords, tokens and secrets. No `.env` file is required or shipped for normal browser use, and `.env` is excluded by `.gitignore`.
-
-## Exports
-
-The original uploaded ZIP is immutable. Save/autosave operate on LabFlow's internal browser representation. Explicit LabFlow ZIP and NOMAD exports create new derived files and never overwrite the source archive. NOMAD connection settings/token are not embedded in those export manifests.
-
-## Local providers
-
-LM Studio/Ollama/llama.cpp traffic remains on the configured local network endpoint, but it is still a browser network request and is subject to browser origin/CORS rules.
+A new network integration must document what leaves the browser, what credentials it uses, and how a user can tell that a request will occur.

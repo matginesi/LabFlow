@@ -1,3 +1,7 @@
+/*
+ * Deterministic numeric and statistical helpers shared by scientific analysis and presentation.
+ * Boundary: Own no application state, DOM behavior or provider behavior.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

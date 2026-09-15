@@ -1,16 +1,16 @@
-# File naming and canonical identity
+---
+title: File naming and identity
+section: Scientific data
+summary: Separation of immutable RAW paths, file identity, sample identity and canonical display names.
+order: 31
+---
 
-Real experiment archives contain inconsistent spaces/separators, sample/group tokens, `REF`, repeated runs and laboratory-specific filenames. LabFlow never rewrites RAW paths. Instead it keeps the verbatim RAW name/path as provenance and exposes a deterministic canonical name in the LabFlow Data.
+# File naming and identity
 
-A **file is not a sample**. Import keeps file identity and scientific sample identity separate:
+RAW archive names are provenance and are never rewritten. LabFlow may derive deterministic canonical names for the scientific model while retaining the original path/name separately.
 
-1. prefer an explicit internal device/sample field configured by the ground-truth policy (for current JV files: `General info.Device`);
-2. otherwise derive a candidate from the configured filename pattern;
-3. otherwise use the configured parent-directory fallback;
-4. if identity is still non-unique/uncertain, create a deterministic ambiguity finding rather than merging silently.
+A file is not a sample. Sample identity prefers configured internal evidence, then configured filename patterns, then configured parent-path fallback. If identity remains uncertain or non-unique, LabFlow creates an ambiguity finding rather than merging silently.
 
-The chosen sample receives a stable LabFlow ID. Original filename-derived values, raw device labels and equivalent observed names remain aliases/provenance in `LF.CanonicalStore`.
+Duplicate basenames in different directories remain distinct files/measurements because full archive path is the source-file identity.
 
-Example: a RAW device token `N1 3 -1A` maps deterministically to canonical identity `N1_3_1A`; a source file `0001_..._Stability (JV)_N1 3 -1A.txt` is represented canonically as `0001_..._Stability (JV)_N1_3_1A.txt`. The RAW filename/path remains stored separately and is still used to round-trip the pristine archive.
-
-Operational normalization and identity rules live in `prompts/policies/data-ground-truth.md`. This document is explanatory only and must not become a competing rule source.
+Operational normalization rules live in `prompts/policies/data-ground-truth.md`; update that policy rather than hardcoding a new naming convention inside page/import code.

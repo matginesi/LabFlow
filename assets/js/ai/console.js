@@ -1,3 +1,7 @@
+/*
+ * Developer console API for provider discovery and probes without experiment context.
+ * Boundary: Reuse provider transport without printing credentials.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};

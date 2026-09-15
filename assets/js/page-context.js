@@ -1,3 +1,7 @@
+/*
+ * Build bounded route/page context for Assistant and Action context construction.
+ * Boundary: Describe current focus without becoming another state store.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
@@ -47,8 +51,8 @@ selected_ai_suggestion:dev?compact(proposals[dev.id]||null):null,
       const plan=exp.nomad&&exp.nomad.mappingPlan||{};
       return{readiness:plan.readiness||'',missing:take(plan.missing,30).map(compact),validation:compact(exp.nomad&&exp.nomad.validation||null),mapping_count:Array.isArray(plan.mappings)?plan.mappings.length:0};
     }
-    /* Settings/provider configuration and diagnostic logs are UI/runtime data, not
-       experiment semantics. Never feed them into an Assistant Context Pack. */
+
+
     if(route==='settings')return{section:'settings'};
     return{experiment:{name:exp.meta&&exp.meta.name||'',samples:(exp.samples||[]).length,measurements:(exp.measurements||[]).length}};
   }

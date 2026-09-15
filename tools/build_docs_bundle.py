@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile canonical Markdown documentation into a file://-safe browser bundle."""
+"""Compile canonical Markdown documentation into the file-safe in-app bundle."""
 from __future__ import annotations
 
 from hashlib import sha256

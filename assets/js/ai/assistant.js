@@ -1,3 +1,7 @@
+/*
+ * Assistant UI/controller built on the read-only assistant.chat Action and capability catalog.
+ * Boundary: Recommend declared Actions without silently mutating scientific state or claiming unexecuted work.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Log=LF.Logger?LF.Logger.scope('assistant'):null;let active=null;
@@ -76,6 +80,7 @@ function updateHeader(has){const ctx=document.getElementById('assistantContext')
 function isNearBottom(log){return!log||log.scrollHeight-log.scrollTop-log.clientHeight<72;}
 function setJump(show){const b=document.getElementById('chatJumpLatest');if(b)b.hidden=!show;}
 function followLatest(force){const log=document.getElementById('chatLog');if(!log)return;if(force||isNearBottom(log)){log.scrollTop=log.scrollHeight;setJump(false);}else setJump(true);}
+// Assistant consumes the same capability catalog as UI surfaces and does not invent hidden workflows.
 function actionCatalog(){return LF.ActionCapabilities&&LF.ActionCapabilities.catalog?LF.ActionCapabilities.catalog():[];}
 function actionCommand(id){return LF.ActionCapabilities&&LF.ActionCapabilities.command?LF.ActionCapabilities.command(id):('/action '+id);}
 function renderActionMenu(has){const menu=document.getElementById('assistantActionMenu'),
@@ -89,7 +94,13 @@ toggle=document.getElementById('assistantActionsToggle');if(!menu||!toggle)retur
   actionCommand(a.id))+'</code>'+(a.available?'':'<em>'+C.escapeHtml(a.reason)+'</em>')+'</button>';}).join('');}
 function setActionMenu(open){const menu=document.getElementById('assistantActionMenu'),toggle=document.getElementById('assistantActionsToggle');if(!menu||!toggle)return;menu.hidden=!open;toggle.setAttribute('aria-expanded',open?'true':'false');}
 function toggleActionMenu(){const menu=document.getElementById('assistantActionMenu');if(menu)setActionMenu(menu.hidden);}
-function setComposer(has){const input=document.getElementById('chatInput'),send=document.getElementById('chatSend');if(input){input.disabled=!has||!!active;input.placeholder=has?'Ask about this page or use /actions…':'Upload a ZIP first';}if(send){send.disabled=!has;send.textContent=active?'Stop':'Send';send.setAttribute('aria-label',active?'Stop response':'Send message');}renderActionMenu(has);}
+function setComposer(has){
+  const input=document.getElementById('chatInput'),send=document.getElementById('chatSend');
+  if(input){input.disabled=!has||!!active;input.placeholder=has?'Ask about this page or use /actions…':'Upload a ZIP first';}
+  if(send){send.disabled=!has;send.textContent=active?'Stop':'Send';
+  send.setAttribute('aria-label',active?'Stop response':'Send message');}
+  renderActionMenu(has);
+}
 function restoreInterrupted(items){items.forEach(function(m){if(m.role==='assistant'&&(m.state==='requesting'||m.state==='streaming')){m.state='cancelled';m.statusLabel='';}});}
 function render(options){options=options||{};const log=document.getElementById('chatLog');if(!log)return;
 const e=LF.State.state.experiment,items=e&&e.derived&&e.derived.chat&&e.derived.chat.conversation||[],has=!!(e&&e.id),
@@ -212,5 +223,19 @@ if(c){const m=conversation(LF.State.state.experiment).find(function(x){return x.
   const v=input.value;if(!v.trim())return;input.value='';fit();sendChat(v);}if(button)button.addEventListener('click',go);
   if(input){input.addEventListener('input',fit);
   input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go();}});fit();}}
+if(LF.Structures){
+  LF.Structures.define('assistant.message',{
+    owner:'Assistant',layer:'derived_runtime',persistence:'experiment_derived',
+    description:'Bounded conversation/event item. It can reference canonical data and Actions but is never itself scientific evidence.',
+    variants:['user','assistant','system'],
+    fields:{
+      id:{type:'string',required:true},createdAt:{type:'string',required:true},route:{type:'string'},
+      page:{type:'string'},view:{type:'string'},role:{type:'string',required:true,enum:['user','assistant','system']},
+      content:{type:'string'},structured:{type:'object',nullable:true},state:{type:'string'},error:{type:'boolean'},
+      actionId:{type:'string'},model:{type:'string'},provider:{type:'string'},usage:{type:'object',nullable:true},
+      finishReason:{type:'string'}
+    }
+  });
+}
 LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,isActive:function(){return!!active;},cancel:cancel};
 }());

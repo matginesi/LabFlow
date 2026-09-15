@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""Small fail-closed dependency guard for LabFlow's script-module architecture.
-
-This is intentionally a boundary check, not a framework. It protects the pure
-scientific/domain layer from browser UI/storage dependencies and verifies the
-critical script ordering of the static application shell.
-"""
+"""Check authored JavaScript for forbidden cross-layer dependency direction."""
 from pathlib import Path
 import re,sys
 ROOT=Path(__file__).resolve().parents[1]
 errors=[]
 
 pure=[
- 'assets/js/experiment/domain-schema.js','assets/js/experiment/data-model.js',
+ 'assets/js/data-structures.js','assets/js/experiment/domain-schema.js','assets/js/experiment/data-model.js',
  'assets/js/experiment/derived-state.js','assets/js/experiment/data-contracts.js',
  'assets/js/experiment/canonical-store.js','assets/js/experiment/design-model.js',
  'assets/js/data/parser.js','assets/js/data/analysis.js','assets/js/data/analysis-summary.js'
@@ -26,7 +21,7 @@ for rel in pure:
  for label,pattern in forbidden.items():
   if re.search(pattern,text):errors.append(f'{rel}: pure layer depends on {label}')
 
-# RAW bytes may only be owned/transported by the small explicit boundary set.
+                                                                             
 allowed_raw={
  'assets/js/experiment/data-model.js','assets/js/state.js','assets/js/storage.js',
  'assets/js/data/importer.js','assets/js/export/export.js','assets/js/experiment/domain-schema.js'
@@ -44,9 +39,13 @@ def before(a,b):
  except ValueError:return False
 for a,b in [
  ('assets/js/build-info.js','assets/js/core.js'),
+ ('assets/js/core.js','assets/js/data-structures.js'),
+ ('assets/js/data-structures.js','assets/js/experiment/domain-schema.js'),
  ('assets/js/experiment/domain-schema.js','assets/js/state.js'),
  ('assets/js/experiment/data-model.js','assets/js/state.js'),
  ('assets/js/storage.js','assets/js/knowledge/knowledge-base.js'),
+ ('assets/js/ai/action-registry.js','assets/js/ai/contracts.js'),
+ ('assets/js/experiment/design-model.js','assets/js/cabinet/cabinet.js'),
  ('assets/js/ai/providers.js','assets/js/ai/transport.js'),
  ('assets/js/ai/transport.js','assets/js/ai/actions.js'),
  ('assets/js/pages/settings-page.js','assets/js/app.js'),

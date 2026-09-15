@@ -1,8 +1,10 @@
+/*
+ * Build, validate and package deterministic NOMAD-oriented projections.
+ * Boundary: Remote upload remains outside this service and is explicitly non-networking.
+ */
 (function () {
   'use strict';
-  /* Deterministic NOMAD staging service. It validates and packages the
-     canonical experiment locally; the upload surface is an explicit browser
-     simulation and never performs a hidden network request. */
+
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core;
   const Log = LF.Logger.scope('export-nomad');

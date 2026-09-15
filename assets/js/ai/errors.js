@@ -1,3 +1,7 @@
+/*
+ * Normalized provider/transport/model-output error taxonomy.
+ * Boundary: Do not collapse transport, provider and model-contract failures into one generic error.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

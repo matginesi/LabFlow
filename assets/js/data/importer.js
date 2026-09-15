@@ -1,22 +1,10 @@
+/*
+ * Materialize a RAW ZIP into canonical source evidence and initial ExperimentData records.
+ * Boundary: Keep RAW bytes and path identity immutable; deterministic lifecycle work continues in DataPipeline.
+ */
 (function () {
   'use strict';
 
-  /*
-   * ZIP -> canonical ExperimentData importer.
-   *
-   * The importer owns the mechanics of reading a RAW ZIP (via JSZip), applying
-   * the Markdown-driven Data Contract (LF.Parser.rules), and producing the
-   * canonical ExperimentData: files (identity by archive `path`, never
-   * basename), domain records, and parsed blocks (table / series / key_value) carrying the
-   * parsed scientific data. RAW bytes are immutable and retained verbatim.
-   *
-   * Deterministic semantics (naming, recovery, guardrails) live in the Markdown
-   * policies and are consumed through LF.Parser. Nothing here infers or
-   * interprets scientific meaning beyond the configured policy.
-   *
-   * The same canonical object owns both normalized blocks and the directly
-   * rendered scientific collections. No alternate parser/model is maintained.
-    */
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core;
   const Log = LF.Logger.scope('importer');
@@ -27,10 +15,6 @@
   function importLimits(){const custom=window.LABFLOW_IMPORT_LIMITS&&typeof window.LABFLOW_IMPORT_LIMITS==='object'?window.LABFLOW_IMPORT_LIMITS:{};return Object.assign({},DEFAULT_IMPORT_LIMITS,custom);}
   function limitError(message,details){const error=new Error(message);error.code='IMPORT_RESOURCE_LIMIT';error.details=details||{};return error;}
 
-  /* JSZip exposes archive sizes only through private metadata in the bundled
-     version. Keep that dependency isolated here and fail closed if an upgrade
-     stops exposing trustworthy sizes. Actual extraction bytes are accounted
-     separately below, so this is a preflight rather than the only guard. */
   const ZipMetadataAdapter={
     sizes:function(file){
       const data=file&&file._data||{},u=Number(data.uncompressedSize),c=Number(data.compressedSize);
@@ -128,11 +112,7 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
     return { sample: sample, experiment: experiment, position: '', cell: '', matched: false };
   }
 
-  /*
-   * Materialize the acquisition hierarchy that is already encoded by the RAW
-   * archive instead of flattening every JV result into an "experiment":
-   * dataset -> experiment/condition -> sample/cell -> run -> measurement -> scan.
-   */
+    // Reconstruct archive-encoded acquisition structure; a measurement file is not promoted to an experiment.
   function buildAcquisitionHierarchy(samples, measurements, auxiliaryEvidence) {
     const experimentMap = new Map(), runMap = new Map(), sampleByName = new Map();
 
@@ -312,8 +292,6 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
     const findings = [];
     const auxiliaryEvidence = [];
 
-    /* Read every non-directory entry once: size, sha256 and (for text files)
-       a decoded string used for format evidence and parsing. */
     const fileRecords = [];
     const textByPath = new Map();
     for (let i = 0; i < fileEntries.length; i++) {
@@ -347,7 +325,8 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
       }
     }
 
-    /* Format evidence: bounded literal RAW text lines for AI inspection. */
+
+        // Prompt/debug format evidence is bounded; complete RAW text remains local source evidence.
     const rawFormatEvidence = [];
     const textFiles = fileEntries.filter(function (entry) { return /\.(?:txt|csv|tsv|md|json|ya?ml)$/i.test(entry.name); }).slice(0, 64);
     for (let i = 0; i < textFiles.length; i++) {
@@ -391,9 +370,6 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
       findings.push(finding('warning', 'missing-summary', 'JV summary pair incomplete', 'The Markdown recovery policy allows individual JV fallback when available.', 'root', [fwFile && fwFile.path, rvFile && rvFile.path].filter(Boolean)));
     }
 
-    /* Path identity: a summary row references a source filename; resolve it to
-       exactly one archive path. Duplicate basenames stay distinct and are not
-       collapsed; ambiguity keeps the summary row as an orphan. */
     const jvFiles = recovery.use_individual_jv_fallback === false ? [] : fileEntries.filter(function (x) { return x.type === 'jv'; });
     const duplicateJvNames = new Map();
     jvFiles.forEach(function (entry) {
@@ -453,8 +429,6 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
       if ((!fw || !rv) && recovery.keep_partial_measurements !== false) findings.push(finding('warning', 'direction-pair', 'FW/RV summary pair incomplete', 'One scan direction is missing from summary data.', fileKey, [fileKey]));
     });
 
-    /* JV files provide metrics, curves and recoveries; every file is its own
-       measurement keyed by its full archive path. */
     for (let i = 0; i < jvFiles.length; i++) {
       const entry = jvFiles[i];
       if (onProgress) onProgress({ stage: 'Parsing JV files', progress: 0.18 + (jvFiles.length ? 0.70 * i / jvFiles.length : 0), current: i + 1, total: jvFiles.length, path: entry.path });
@@ -482,10 +456,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
         s.measurementIds.push(m.id);
         measurementMap.set(entry.path, m);
       }
-      /* The individual JV file is the preferred source for device identity.
-         Summary rows identify a measurement/file; they must not freeze the
-         sample identity to a filename when the JV metadata contains a better
-         `General info.Device` value. Original names remain provenance/aliases. */
+
       const parsedSample=P.canonicalSample(parsed.sample);
       if(parsed.sample!==unknownLabel&&parsedSample&&parsedSample!==m.sample){
         const previousSample=m.sample,group=P.groupFromSample(parsedSample),isRef=P.isReference(parsedSample),target=sampleRecord(parsedSample,parsed.sample,group,isRef);
@@ -513,7 +484,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
     }
     Log.info('dataset.jv-fallback', { enabled: recovery.use_individual_jv_fallback !== false, count: jvFiles.length });
 
-    /* Auxiliary Parameters / Tracking evidence becomes canonical blocks. */
+
     const auxiliaryFiles = fileEntries.filter(function (x) { return x.type === 'parameters' || x.type === 'tracking'; });
     for (let i = 0; i < auxiliaryFiles.length; i++) {
       const entry = auxiliaryFiles[i];
@@ -532,7 +503,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
     const hierarchy = buildAcquisitionHierarchy(samples, measurements, auxiliaryEvidence);
     if (!measurements.length) findings.push(finding('danger', 'no-measurements', 'No JV measurements parsed', 'Neither configured summaries nor individual JV fallback produced usable measurements.', 'root', []));
 
-    /* ---- canonical blocks ---- */
+
     function jvName(sample, direction, kind) { return sample + ' ' + direction + ' ' + kind; }
     function sampleKey(name) {
       const sample = samples.find(function (s) { return s.name === name; });
@@ -563,7 +534,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
       });
     }
 
-    /* Summary table blocks are built straight from the parsed summary rows. */
+
     if (fwSummary.length) {
       const file = exp.files.find(function (f) { return f.type === 'summary-fw'; });
       DM.addBlock(exp, {
@@ -583,7 +554,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
       });
     }
 
-    /* Per-measurement metric and curve blocks from the canonical measurements. */
+
     measurements.forEach(function (m) {
       if (m.fw) addMetricBlock(m.path, m.sample, 'fw', m.fw, { header: 'Scan', row: 0 });
       if (m.rv) addMetricBlock(m.path, m.sample, 'rv', m.rv, { header: 'Scan', row: 1 });
@@ -591,7 +562,7 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
       if (m.curve && m.curve.rv && m.curve.rv.length) addCurveBlock(m.path, m.sample, 'rv', m.curve.rv);
     });
 
-    /* Auxiliary key_value (metadata) and table (time series) blocks. */
+
     auxiliaryEvidence.forEach(function (aux) {
       const family = aux.type === 'tracking' ? 'tracking' : 'parameters';
       const fileId = fileIdOf(aux.path);

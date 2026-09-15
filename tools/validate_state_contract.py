@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard the single canonical ExperimentData + Action runtime state."""
+"""Validate state ownership, UI/runtime placement and Action-binding assumptions."""
 from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[1]
@@ -16,8 +16,8 @@ if 'LF.DataModel.getExperiment()' not in ctx: errors.append('Action context does
 if 'state.experiment.raw.sourceArchive=rawArchive' not in state.replace(' ',''): errors.append('RAW archive fallback must retain the immutable upload buffer without cloning')
 
 
-# UI/transient state has one canonical home under state.ui. Keep route's existing
-# proxy for convenience, but do not reintroduce duplicate root storage.
+                                                                                 
+                                                                       
 if 'function defaultUiState()' not in state: errors.append('state missing canonical defaultUiState')
 if 'Object.assign(state.ui,defaultUiState())' not in state.replace(' ',''): errors.append('resetSession must rebuild canonical UI state with defaultUiState')
 ui_fields=('resultsTab','resultsDataMode','resultsJvMode','resultsOverviewMetric','resultsOverviewDirection','resultsOverviewStatistic','selectedMeasurementId','curveSelection','curveOverlaySelection','curveView','curveGroup','curveDirection','curveEligibleOnly','curveSearch','curveZoom','pceDistributionZoom','selectedDesignDeviceId','resultInspectorId','boxPlot','uiKitQuery','uiKitFilter','settingsSection','settingsActionId','assistantOpen','docsSlug','docsQuery','docsSection')

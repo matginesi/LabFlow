@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Synchronize release labels/cache-busters from assets/js/build-info.js.
-
-build-info.js is the single human-edited release source. This tool updates the
-static HTML shells so they cannot silently advertise an older LabFlow release.
-"""
+"""Synchronize deterministic build metadata across application artifacts."""
 from __future__ import annotations
 import argparse,re
 from pathlib import Path

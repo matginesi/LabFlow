@@ -1,3 +1,7 @@
+/*
+ * Render the registry-driven Cabinet library and editor.
+ * Boundary: Field definitions, validation and application capability come from Cabinet, not UI duplication.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,S=LF.State;
@@ -13,14 +17,12 @@ function uiState(){
 }
 function summary(item){
   if(!item)return'';
-  if(item.kind==='solution')return[item.solutes,item.solvents,item.concentration].filter(Boolean).join(' · ');
-  if(item.kind==='stack')return(item.layers||[]).map(function(x){return x.material||x.role;}).filter(Boolean).join(' / ');
-  if(item.kind==='protocol')return[item.coating,item.annealing,item.atmosphere].filter(Boolean).join(' · ');
-  if(item.kind==='material')return[item.materialClass,item.formula,item.purity].filter(Boolean).join(' · ');
-  if(item.kind==='chemical')return[item.chemicalRole,item.formula,item.purity].filter(Boolean).join(' · ');
-  if(item.kind==='substrate')return[item.material,item.treatment].filter(Boolean).join(' · ');
-  if(item.kind==='instrument')return[item.manufacturer,item.model,item.instrumentType].filter(Boolean).join(' · ');
-  return item.notes||'';
+  const def=kinds()[item.kind]||{},keys=Array.isArray(def.summary)?def.summary:[];
+  return keys.map(function(key){
+    const value=item[key];
+    if(key==='layers'&&Array.isArray(value))return value.map(function(layer){return layer.material||layer.role||'';}).filter(Boolean).join(' / ');
+    return value;
+  }).filter(Boolean).join(' · ')||item.notes||'';
 }
 function field(label,key,value,placeholder,wide){
   return '<label class="field '+(wide?'cabinet-field-wide':'')+'"><span>'+esc(label)+'</span><input class="input" name="cabinet-'+esc(key)+'" autocomplete="off" data-cabinet-field="'+esc(key)+'" value="'+esc(value||'')+'" placeholder="'+esc((placeholder||'Value').replace(/\.*$/,'')+'…')+'"></label>';
@@ -28,22 +30,15 @@ function field(label,key,value,placeholder,wide){
 function textarea(label,key,value,placeholder,rows){
   return '<label class="field cabinet-field-wide"><span>'+esc(label)+'</span><textarea class="textarea" rows="'+(rows||3)+'" name="cabinet-'+esc(key)+'" autocomplete="off" data-cabinet-field="'+esc(key)+'" placeholder="'+esc((placeholder||'Notes').replace(/\.*$/,'')+'…')+'">'+esc(value||'')+'</textarea></label>';
 }
-function kindIcon(kind){return{material:'package-check',chemical:'flask-conical',solution:'flask-conical',substrate:'panels-top-left',stack:'panels-top-left',protocol:'notebook-text',instrument:'settings-2'}[kind]||'file-text';}
+function kindIcon(kind){const def=kinds()[kind]||{};return def.icon||'file-text';}
 function resourceMark(item){return '<span class="cabinet-resource-mark" data-icon="'+kindIcon(item.kind)+'" aria-hidden="true"></span>';}
 function kindFields(item){
-  if(!item)return'';
-  let html='';
-  if(item.kind==='material')html+=field('Class','materialClass',item.materialClass,'transport / absorber / electrode')+field('Formula / identifier','formula',item.formula,'SnO2')+field('Purity','purity',item.purity,'optional')+field('Supplier','supplier',item.supplier,'optional')+field('Catalog no.','catalogNumber',item.catalogNumber,'optional');
-  if(item.kind==='chemical')html+=field('Role','chemicalRole',item.chemicalRole,'solute / solvent / additive / reagent')+field('Formula / identifier','formula',item.formula,'DMSO / FAI')+field('Purity','purity',item.purity,'optional')+field('Supplier','supplier',item.supplier,'optional')+field('Catalog no.','catalogNumber',item.catalogNumber,'optional');
-  if(item.kind==='solution')html+=field('Role','role',item.role,'absorber precursor / passivation')+field('Solutes',
-'solutes',item.solutes,'FAI, PbI2')+field('Solvents','solvents',item.solvents,
-    'DMF, DMSO')+field('Composition / concentration','concentration',item.concentration,'optional')+field('Additives',
-    'additives',item.additives,'optional')+textarea('Preparation','preparation',item.preparation,
-    'Reusable preparation notes',3);
-  if(item.kind==='substrate')html+=field('Material','material',item.material,'glass / ITO / FTO')+field('Treatment','treatment',item.treatment,'cleaning / plasma / UV ozone')+field('Dimensions','dimensions',item.dimensions,'optional');
-  if(item.kind==='protocol')html+=field('Coating / deposition','coating',item.coating,'spin coating / evaporation')+field('Annealing','annealing',item.annealing,'qualitative or known recipe')+field('Atmosphere','atmosphere',item.atmosphere,'air / N2 / glovebox');
-  if(item.kind==='instrument')html+=field('Type','instrumentType',item.instrumentType,'spin coater / evaporator / JV tester')+field('Manufacturer','manufacturer',item.manufacturer,'optional')+field('Model','model',item.model,'optional')+field('Default settings','settings',item.settings,'optional');
-  return html;
+  if(!item||!LF.Cabinet||!LF.Cabinet.fields)return'';
+  return LF.Cabinet.fields(item.kind).filter(function(def){return def.name!=='layers';}).map(function(def){
+    return def.type==='textarea'
+      ?textarea(def.label,def.name,item[def.name],def.placeholder,def.rows)
+      :field(def.label,def.name,item[def.name],def.placeholder,!!def.wide);
+  }).join('');
 }
 function stackEditor(item){
   const rows=item.layers||[];
@@ -84,7 +79,7 @@ function editor(selected,exp,issues,usage){
   if(!selected)return '<section class="panel cabinet-resource-editor cabinet-resource-editor-empty"><div class="panel-body"><span ' +
     'class="cabinet-empty-mark" data-icon="notebook-text" aria-hidden="true"></span><div><strong>Select a saved ' +
     'resource</strong><span>Its reusable definition will open here. Nothing is copied into an experiment until you choose “Use in current Design”.</span></div></div></section>';
-  const def=kinds()[selected.kind]||{},usageCount=usage&&usage.experiments?usage.experiments.length:0,usageText=usageCount?usageCount+' current Design experiment'+(usageCount===1?'':'s')+' use a copy':'Not used by the current Design',canUse=['solution','stack','protocol','substrate'].includes(selected.kind)&&!!exp&&!issues.length;
+  const def=kinds()[selected.kind]||{},usageCount=usage&&usage.experiments?usage.experiments.length:0,usageText=usageCount?usageCount+' current Design experiment'+(usageCount===1?'':'s')+' use a copy':'Not used by the current Design',canUse=def.directUse===true&&!!exp&&!issues.length;
   const readiness=issues.length?'<div class="notice warning cabinet-readiness"><strong>Add a few details before reusing this.</strong> '+esc(issues.join(' · '))+'</div>':'<div class="notice success cabinet-readiness"><strong>Ready to reuse.</strong> '+esc(canUse?'Use it in Design with one click. The experiment receives its own copy.':usageText+'.')+'</div>';
   const actions=(canUse?'<button class="button primary compact" type="button" data-cabinet-use-design="'+
 esc(selected.id)+'">Use in current Design</button>':
@@ -114,9 +109,11 @@ field('Tags','tags',(selected.tags||[]).join(', '),'comma separated',true)+texta
 }
 function typeOptions(defs,current,includeAll){
   let html=includeAll?'<option value="all" '+(current==='all'?'selected':'')+'>All resource types</option>':'';
-  const primary=['solution','stack','protocol','substrate'],secondary=['material','chemical','instrument'];
-  html+='<optgroup label="Design recipes">'+primary.map(function(kind){const d=defs[kind];return d?'<option value="'+kind+'" '+(current===kind?'selected':'')+'>'+esc(d.label)+'</option>':'';}).join('')+'</optgroup>';
-  html+='<optgroup label="Lab references">'+secondary.map(function(kind){const d=defs[kind];return d?'<option value="'+kind+'" '+(current===kind?'selected':'')+'>'+esc(d.label)+'</option>':'';}).join('')+'</optgroup>';
+  const groups=[['design','Design recipes'],['reference','Lab references']];
+  groups.forEach(function(group){
+    const rows=Object.keys(defs).filter(function(kind){return defs[kind]&&defs[kind].group===group[0];});
+    if(rows.length)html+='<optgroup label="'+esc(group[1])+'">'+rows.map(function(kind){const d=defs[kind];return '<option value="'+kind+'" '+(current===kind?'selected':'')+'>'+esc(d.label)+'</option>';}).join('')+'</optgroup>';
+  });
   return html;
 }
 function capturePanel(exp,defs){

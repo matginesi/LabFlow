@@ -1,3 +1,7 @@
+/*
+ * Render the Design workbench, Cabinet reuse and reviewable AI proposal surfaces.
+ * Boundary: Every Design write delegates to DesignModel or an owner-controlled acceptance path.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;

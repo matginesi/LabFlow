@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Audit CSS tokens and selectors against the shared UI density/contract."""
 from pathlib import Path
 import re, sys
 css=Path('assets/css/app.css').read_text()

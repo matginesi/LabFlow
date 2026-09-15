@@ -1,3 +1,7 @@
+/*
+ * Bind Settings events to provider, storage, theme and diagnostics owners.
+ * Boundary: Remain orchestration-only and do not duplicate feature state.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

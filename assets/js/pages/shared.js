@@ -1,11 +1,13 @@
+/*
+ * Shared page-rendering helpers for workflow navigation and common data surfaces.
+ * Boundary: Render presentation only and own no scientific state.
+ */
 (function () {
   'use strict';
 
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core;
 
-  /* Shared page-shell fragments. Navigation metadata lives here so the
-     sidebar, workflow strip and in-page Previous/Next controls use one order. */
   const ROUTES = [
     {id:'experiment-import', label:'Upload & Review', short:'Upload', requiresExperiment:false},
     {id:'experiment-results', label:'Results', short:'Results', requiresExperiment:true},

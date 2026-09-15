@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the single current LabFlow Action contract.
-
-Actions are user-facing capabilities. Deterministic data lifecycle work belongs to
-DataPipeline/local services. The catalog is discovery-based: every
-actions/<id>/action.json must be self-contained and valid against this contract.
-"""
+"""Validate Action manifests, schemas, guards, execution semantics and researcher-facing catalog constraints."""
 from __future__ import annotations
 import json,re
 from pathlib import Path
@@ -128,14 +123,14 @@ for p in sorted(ACTIONS.glob('*/action.json')):
         if prompt.exists():err(f'{aid}: deterministic Action must not have prompt.md')
         if d.get('policies'):err(f'{aid}: deterministic Action must not carry AI policies')
 
-    # The semantic Action result and AI schema must describe one current contract.
+                                                                                  
     rs=next((s for s in steps if s.get('id')==result_step),None)
     if rs and result.get('format')=='json' and rs.get('type')=='AI':
         if not sid:err(f'{aid}: JSON AI result must declare contract.result.schema')
         elif str(rs.get('schema') or '')!=sid:err(f'{aid}: result_step schema must match contract.result.schema')
     if rs and result.get('format')=='text' and rs.get('type')=='AI' and rs.get('output')!='text':err(f'{aid}: text result_step must request text output')
 
-# Registered deterministic tools.
+                                 
 tool_source=(ROOT/'assets/js/tools/registry.js').read_text(encoding='utf-8')
 step_source=(ROOT/'assets/js/ai/action-steps.js').read_text(encoding='utf-8')
 tool_ids=set(re.findall(r"'([a-z0-9_.-]+)'\s*:\s*\{",tool_source))
@@ -146,15 +141,15 @@ for aid,d in defs.items():
             tid=step.get(field)
             if tid and tid not in tool_ids:err(f'{aid}/{step.get("id")}: unknown deterministic tool {tid} referenced by {field}')
 
-# Guards are independently registered and must resolve.
+                                                       
 guard_source=(ROOT/'assets/js/ai/action-guards.js').read_text(encoding='utf-8')
 guard_ids=set(re.findall(r"register\('([^']+)'",guard_source))
 for aid,d in defs.items():
     for gid in (d.get('contract') or {}).get('guards') or []:
         if gid not in guard_ids:err(f'{aid}: unknown Action guard {gid}')
 
-# Context profiles are registry-based. `review` is deterministic and intentionally
-# has no AI packer; all AI profiles must exist in ContextBuilder.
+                                                                                  
+                                                                 
 context_source=(ROOT/'assets/js/ai/context.js').read_text(encoding='utf-8')
 m=re.search(r'const PACKERS=\{([^}]+)\}',context_source)
 profiles=set(re.findall(r'([a-zA-Z0-9_-]+)\s*:',m.group(1))) if m else set()
@@ -162,15 +157,15 @@ for aid,d in defs.items():
     prof=str(((d.get('contract') or {}).get('context') or {}).get('profile') or '')
     if prof and prof not in profiles and prof!='review':err(f'{aid}: unknown Context profile {prof}')
 
-# Generic Action surfaces discover public capabilities from manifests; they must
-# not grow Action-id switches when a new capability is added.
+                                                                                
+                                                             
 public_ids={aid for aid,d in defs.items() if d.get('visibility')=='public'}
 for rel in ['assets/js/ai/action-capabilities.js','assets/js/ai/assistant.js']:
     text=(ROOT/rel).read_text(encoding='utf-8')
     hardcoded=sorted(aid for aid in public_ids if aid in text)
     if hardcoded:err(f'{rel}: generic Action surface hardcodes public Action ids: {", ".join(hardcoded)}')
 
-# Static UI references must resolve to real Actions.
+                                                    
 ui='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in (ROOT/'assets/js').rglob('*.js'))
 rendered=set(re.findall(r'data-action="([^"]+)"',ui))
 unknown={x for x in rendered-set(defs) if '+' not in x and 'escapeHtml' not in x}

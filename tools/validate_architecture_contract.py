@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Validate the single-aggregate architecture, root ownership and repository invariants."""
 from pathlib import Path
 import re, sys
 
@@ -12,6 +13,9 @@ def need(path):
 
 for path in [
     'knowledge/kb.jsonl',
+    'assets/js/data-structures.js',
+    'assets/js/cabinet/cabinet.js',
+    'assets/js/ai/contracts.js',
     'assets/js/experiment/domain-schema.js',
     'assets/js/experiment/data-model.js',
     'assets/js/experiment/data-contracts.js',
@@ -25,7 +29,7 @@ for path in [
 ]: need(path)
 
 index=(ROOT/'index.html').read_text(encoding='utf-8')
-order=['core.js','domain-schema.js','data-model.js','action-data.js','derived-state.js','data-contracts.js','parser.js','canonical-store.js','analysis.js','analysis-summary.js','design-model.js','dataset-corrections.js','design-analysis.js','pipeline.js','action-steps.js','actions.js']
+order=['core.js','data-structures.js','domain-schema.js','data-model.js','action-data.js','derived-state.js','data-contracts.js','parser.js','canonical-store.js','analysis.js','analysis-summary.js','design-model.js','dataset-corrections.js','design-analysis.js','pipeline.js','action-steps.js','actions.js']
 pos=[index.find(x) for x in order]
 if any(x < 0 for x in pos) or pos != sorted(pos):
     errors.append('architecture kernel script load order is invalid')
@@ -62,6 +66,21 @@ design_analysis=(ROOT/'assets/js/experiment/design-analysis.js').read_text(encod
 if re.search(r'exp\.design\b', design_analysis):
     errors.append('DesignAnalysis must delegate Design reads/writes through DesignModel')
 
+cabinet=(ROOT/'assets/js/cabinet/cabinet.js').read_text(encoding='utf-8')
+if 'LF.DesignModel' not in cabinet:
+    errors.append('Cabinet Design integration must delegate through DesignModel')
+for pattern,message in [
+    (r'exp\.design\.(?:solutions|devices|stack)\s*=', 'Cabinet must not assign Design collections directly'),
+    (r'\.design\.(?:solutions|devices)\.(?:push|splice)\s*\(', 'Cabinet must not mutate Design collections directly'),
+]:
+    if re.search(pattern,cabinet): errors.append(message)
+if 'LF.Structures.defineFromExample' not in cabinet:
+    errors.append('Cabinet must publish its reusable data structures through LF.Structures')
+
+structures=(ROOT/'assets/js/data-structures.js').read_text(encoding='utf-8')
+for token in ['define:', 'defineFromExample:', 'describe:', 'list:', 'validate:']:
+    if token not in structures: errors.append('Structure catalog missing API: '+token[:-1])
+
 dataset_corrections=(ROOT/'assets/js/data/dataset-corrections.js').read_text(encoding='utf-8')
 if re.search(r"sample\s*=\s*\{[^\n]*kind\s*:\s*['\"]sample['\"]", dataset_corrections):
     errors.append('DatasetCorrections must create sample records through DomainSchema')
@@ -91,7 +110,7 @@ contracts=(ROOT/'assets/js/experiment/data-contracts.js').read_text(encoding='ut
 if 'ACTION_DATA_INVALID' not in contracts or 'ACTION_DATA_BUCKET_INVALID' not in contracts:
     errors.append('DataContracts must fail closed on malformed ActionData')
 
-# Persistent public Action output has one current boundary: ExperimentData.actionData.
+                                                                                      
 import json
 for manifest in sorted((ROOT/'actions').glob('*/action.json')):
     d=json.loads(manifest.read_text(encoding='utf-8'))

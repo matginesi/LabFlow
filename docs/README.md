@@ -1,54 +1,55 @@
 ---
 title: LabFlow documentation
 section: Start here
-summary: The shortest useful path through LabFlow guides and technical contracts.
+summary: Authoritative map of product, architecture, scientific and engineering documentation.
 order: 0
 ---
 
 # LabFlow documentation
 
-LabFlow turns an immutable laboratory ZIP into one reviewed data model, deterministic Results, an explicit Design and a validated NOMAD export.
+The documentation is split by **authority**, not by implementation accident. When two documents overlap, the more specific contract listed below wins.
 
-## Choose one path
+## Start here
 
-### Use LabFlow
+For a researcher:
 
-1. [Start with LabFlow](guides/GETTING_STARTED.md)
+1. [Getting started](guides/GETTING_STARTED.md)
 2. [Research workflow](guides/RESEARCH_WORKFLOW.md)
-3. [AI assistance](guides/AI_ASSISTANCE.md)
-4. [Troubleshooting](guides/TROUBLESHOOTING.md)
+3. [Lab Cabinet](guides/LAB_CABINET.md)
+4. [Knowledge Base](guides/KNOWLEDGE_BASE.md)
+5. [AI assistance](guides/AI_ASSISTANCE.md)
+6. [Troubleshooting](guides/TROUBLESHOOTING.md)
 
-### Understand the scientific model
-
-1. [Data model](specs/DATA_MODEL.md)
-2. [Deterministic pipeline](specs/PIPELINE.md)
-3. [Actions](specs/ACTIONS.md)
-4. [Import and export](specs/IMPORT_EXPORT.md)
-
-### Change the application
+For a contributor or reviewer:
 
 1. [Architecture](ARCHITECTURE.md)
-2. [Extending LabFlow](guides/EXTENDING_LABFLOW.md)
-3. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
-4. [UI contract](UI.md)
-5. [Validation](VALIDATION.md)
+2. [Data model](specs/DATA_MODEL.md)
+3. [Deterministic pipeline](specs/PIPELINE.md)
+4. [Actions](specs/ACTIONS.md)
+5. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
+6. [Extending LabFlow](guides/EXTENDING_LABFLOW.md)
+7. [Contributing](CONTRIBUTING.md)
+8. [Code review](CODE_REVIEW.md)
+9. [Validation](VALIDATION.md)
 
-## Four rules
+## Authority map
 
-- The uploaded ZIP is immutable evidence.
-- `ExperimentData` is the only mutable scientific aggregate.
-- Calculations and mechanically safe-cleanup detection are deterministic; cleanup mutates LabFlow Data only after explicit acceptance.
-- AI proposes or interprets; it does not silently change scientific data.
+| Concern | Authoritative source |
+|---|---|
+| aggregate/root ownership and dependencies | `ARCHITECTURE.md` + `DomainSchema` |
+| scientific record shape/persistence | `specs/DATA_MODEL.md` + `DomainSchema` |
+| deterministic lifecycle | `specs/PIPELINE.md` + `DataPipeline` registry |
+| Action behavior | `specs/ACTIONS.md` + `actions/*/action.json` |
+| AI transport/provider behavior | `specs/AI_PROVIDERS.md` + provider/transport modules |
+| reusable lab resources | `guides/LAB_CABINET.md` + `Cabinet` registry |
+| reference knowledge | `guides/KNOWLEDGE_BASE.md` + JSONL schema/validator |
+| UI primitives and interaction | `UI.md` + `.agent/skills/labflow-ui/SKILL.md` |
+| release gates | `VALIDATION.md` + validator/test source |
 
-The executable Action definitions, schemas and validators must agree with the specifications. Generated bundles are build artifacts, not editing sources.
+Executable manifests, schemas and validators take precedence over prose when a mismatch is discovered. The mismatch should then be fixed as documentation debt.
 
-## Rebuild generated references
+## Generated documentation
 
-```bash
-python tools/build_prompt_bundle.py
-python tools/build_knowledge_bundle.py
-python tools/build_action_registry.py
-python tools/build_action_reference.py
-python tools/build_docs_bundle.py
-python tools/build_ui_kit_inline.py
-```
+The in-app Documentation route is generated from `docs/**/*.md` by `tools/build_docs_bundle.py`. `assets/js/pages/docs-bundle.js` is an artifact and must not be edited directly.
+
+The Action runtime matrix is generated from Action manifests. Rebuild generated references after source changes.

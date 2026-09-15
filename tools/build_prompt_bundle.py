@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Compile prompts/**/*.md into a file://-safe browser bundle.
-
-Markdown files remain the source of truth. This helper has no runtime role.
-
-Action definitions and their prompts live under actions/** and are compiled by tools/build_action_registry.py. This script compiles only shared policies and system utilities.
-"""
+"""Compile prompt and policy Markdown sources into deterministic browser artifacts."""
 from __future__ import annotations
 import json
 import hashlib

@@ -1,57 +1,36 @@
 ---
 title: Research workflow
 section: Researcher guide
-summary: Understand what each LabFlow step owns, what it produces, and where researcher review is required.
-order: 3
+summary: How evidence, review, Results, Design, Cabinet, AI and export fit together.
+order: 15
 ---
 
 # Research workflow
 
-The workflow is intentionally linear and uses one shared experiment state.
+## Upload and evidence
 
-| Step | Researcher goal | Authoritative owner | AI role |
-|---|---|---|---|
-| Upload & Review | Inspect source evidence and corrections | LabFlow Data + deterministic findings | optional semantic enrichment / ambiguity proposals |
-| Results | Evaluate measurements and rankings | deterministic analysis | optional interpretation only |
-| Design | Complete solution chemistry, device architecture and fabrication process | researcher-confirmed Design | suggestions for missing fields |
-| Export | Save LabFlow and prepare NOMAD artifacts | deterministic LabFlow/NOMAD export services | optional explanation or semantic-resolution Actions only |
+The uploaded ZIP is preserved as source evidence. LabFlow reads it into one canonical scientific aggregate without rewriting RAW files.
 
-## One state, several projections
+## Deterministic processing
 
-```mermaid
-flowchart TD
-  SOURCE[Immutable source] --> COPY[LabFlow Data]
-  COPY --> CANONICAL[Canonical Store]
-  CANONICAL --> REVIEW[Review]
-  CANONICAL --> RESULTS[Results]
-  CANONICAL --> DESIGN[Design]
-  CANONICAL --> NOMAD[NOMAD]
-```
+Naming, hierarchy recovery, validation, JV analysis, indexing and summaries run locally. When a correction is mechanically safe, LabFlow can detect it automatically but still requires explicit acceptance before changing LabFlow Data.
 
-Pages do not own separate scientific copies. A reviewed change to the LabFlow Data is therefore visible wherever that field matters.
+## Review
 
-## Upload & Review
-
-The first step establishes provenance and current data quality. Import is deterministic-first and remains usable without AI.
-
-Review distinguishes mechanically safe deterministic corrections from ambiguous interpretations. Safe corrections are detected automatically but remain pending until **Apply safe corrections**; acceptance changes only LabFlow Data, writes provenance, and immediately reruns the deterministic pipeline. Apply only changes whose evidence and target you understand.
+Review is reserved for decisions. Semantic uncertainty remains visible as an ambiguity/finding rather than being guessed. `dataset.resolve-ambiguities` can propose a resolution, but the proposal is not applied silently.
 
 ## Results
 
-Results reuse deterministic calculations from the current revision. Filters and charts change the view, not the underlying measurements. AI interpretation is read-only prose layered over these values.
+Results come from deterministic analysis. AI interpretation/comparison uses these results as evidence and cannot replace them.
 
-## Design
+## Design and Cabinet
 
-Design is directly editable. AI suggestions are optional proposals and never silently overwrite known fields.
+Design records experiment-specific chemistry, stack and process information. Cabinet stores reusable laboratory definitions. Applying a Cabinet item copies its current value into Design, so later Cabinet edits do not rewrite an experiment.
 
-Bulk suggestion is sequential/bounded. A provider throttle stops the sequence immediately and preserves completed proposals instead of converting every remaining experiment into an error.
+## Knowledge and Assistant
 
-## Export / NOMAD
+KB supplies reference knowledge; Assistant answers from bounded current context and may recommend available Actions. Neither is an authority over measurements or accepted Design.
 
-Export keeps the LabFlow ZIP as the primary portable save. The current Canonical Store is mapped deterministically to NOMAD for secondary entry/staging artifacts. Required missing mappings block readiness, and every blocker must expose a concrete remediation path. Changes to relevant scientific data or package options invalidate stale staging. A direct **Upload to NOMAD** surface is present only as a clearly labelled stub: it sends nothing. Future endpoint/account/token values are configured separately in Settings and retained locally.
+## Export
 
-## Save, autosave and export
-
-**Autosave** provides browser recovery through IndexedDB. **Save** marks an explicit checkpoint revision. **Export ZIP** creates a durable LabFlow package.
-
-Derived PDF/DOCX/NOMAD exports do not overwrite the source ZIP and do not silently mark later LabFlow Data edits saved.
+Export packages current validated LabFlow Data and optional payloads deterministically. NOMAD preparation is local; remote upload is not implemented in the current POC.

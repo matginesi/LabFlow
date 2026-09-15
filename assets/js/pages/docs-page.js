@@ -1,3 +1,7 @@
+/*
+ * Render locally bundled canonical Markdown documentation.
+ * Boundary: Read generated documentation artifacts; source of truth remains Markdown under docs.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};

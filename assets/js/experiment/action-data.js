@@ -1,3 +1,7 @@
+/*
+ * Persistent API for Action proposals, annotations and per-target status.
+ * Boundary: Keep Action output separate from authoritative scientific records until explicit acceptance.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};
@@ -37,6 +41,21 @@ function assistantContext(exp,opts){
   opts=opts||{};const root=exp&&exp.actionData&&typeof exp.actionData==='object'?exp.actionData:{},limit=Math.max(1,Math.min(12,Number(opts.limit)||8)),items=[];
   ['proposals','annotations','status'].forEach(function(kind){const values=root[kind]&&typeof root[kind]==='object'?root[kind]:{};Object.keys(values).forEach(function(actionId){items.push({action_id:actionId,kind:kind.replace(/s$/,''),value:bounded(values[actionId],0)});});});
   return{items:items.slice(-limit),note:'Current persisted Action outputs. Proposals and annotations are not authoritative scientific data until an owning deterministic acceptance path applies them.'};
+}
+if(LF.Structures){
+  LF.Structures.define('experiment.action-data',{
+    owner:'ActionData',layer:'canonical',persistence:'experiment',
+    description:'Persisted Action proposals, annotations and status keyed by Action id and optional target id.',
+    fields:{
+      proposals:{type:'object',required:true,description:'Reviewable Action proposals; not scientific truth until accepted by the owning model.'},
+      annotations:{type:'object',required:true,description:'Persisted read-only Action interpretations or annotations.'},
+      status:{type:'object',required:true,description:'Persisted per-Action/per-target workflow status.'}
+    }
+  });
+  LF.Structures.defineFromExample('action.context-output',{
+    owner:'ActionData',layer:'ai_context',persistence:'runtime',
+    description:'Bounded projection of persisted Action outputs exposed to Assistant context.'
+  },{items:[],note:''},{required:['items','note']});
 }
 LF.ActionData={ensure:ensure,proposal:proposal,proposals:proposals,setProposal:setProposal,removeProposal:removeProposal,annotation:annotation,setAnnotation:setAnnotation,removeAnnotation:removeAnnotation,status:status,setStatus:setStatus,removeStatus:removeStatus,clear:clear,snapshot:snapshot,assistantContext:assistantContext};
 }());

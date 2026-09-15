@@ -1,3 +1,7 @@
+/*
+ * Dependency registry and invalidation engine for recomputable projections.
+ * Boundary: Derived state is disposable and never authoritative.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};

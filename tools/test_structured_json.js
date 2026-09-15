@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-/* Regression checks for conservative parsing of local-model JSON output. */
+/*
+ * Regression checks for conservative structured-output parsing and repair behavior.
+ * Boundary: Parser tolerance must not weaken Action-level schema or semantic validation.
+ */
 'use strict';
 
 const fs = require('fs');

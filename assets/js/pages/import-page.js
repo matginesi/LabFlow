@@ -1,3 +1,7 @@
+/*
+ * Render Upload & Review from canonical import/review state.
+ * Boundary: Review decisions call owner services; page code does not implement parser or correction policy.
+ */
 (function () {
   'use strict';
 

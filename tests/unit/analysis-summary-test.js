@@ -50,9 +50,9 @@ module.exports = function (t, LF) {
     assert(b.sourceRevision, 4, 'revision stamped');
     assert(b.metrics.eff.fw.n, 3, 'fw count includes fw-only sample');
     assert(b.metrics.eff.rv.n, 2, 'rv count only paired');
-    // factor 2: fw eff 36/2=18, 38/2=19, 34/2=17 -> median 18
+
     assert(b.metrics.eff.fw.median, 18, 'factored fw median');
-    // rv: 40/2=20, 44/2=22 -> median 21
+
     assert(b.metrics.eff.rv.median, 21, 'factored rv median');
     const a = b.groupStatistics.find(function (g) { return g.name === 'A'; });
     assert(a.scans.fw.n, 2, 'group A fw count');

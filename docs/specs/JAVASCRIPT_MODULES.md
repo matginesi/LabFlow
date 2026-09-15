@@ -1,81 +1,80 @@
 ---
-title: JavaScript module ownership
-section: Core architecture
-summary: Source-level module map and write boundaries for contributors.
-order: 25
+title: JavaScript module map
+section: Engineering reference
+summary: Responsibility map for authored browser modules and write boundaries.
+order: 20
 ---
 
-# JavaScript module ownership
+# JavaScript module map
 
-LabFlow is a local-first browser application. Modules attach bounded APIs to `window.LabFlow`; scientific/application ownership remains in the browser modules and no application-specific server is required.
+LabFlow uses classic browser scripts rather than a bundler/module framework. Load order is explicit in HTML and required dependencies fail fast inside owner modules.
 
-## Architectural kernel
+## Core and state
 
-- `experiment/domain-schema.js` — canonical record factories, root ownership/persistence, detached snapshot contract.
-- `experiment/data-model.js` — `ExperimentData` aggregate/query/mutation API; strict persisted restore boundary.
-- `experiment/data-contracts.js` — graph/invariant validation.
+- `core.js` — generic deterministic helpers and required-module checks.
+- `logger.js` — structured sanitized diagnostics.
+- `storage.js` — browser persistence/preferences and Action overrides.
+- `state.js` — one application state object: scientific aggregate, UI runtime state and active Action run.
+- `data-structures.js` — descriptive cross-module structure catalog.
+
+## Scientific aggregate
+
+- `experiment/domain-schema.js` — canonical records, roots and persistence metadata.
+- `experiment/data-model.js` — `ExperimentData` aggregate mechanics/query/restore/serialize.
+- `experiment/data-contracts.js` — graph/snapshot validation.
 - `experiment/derived-state.js` — derived dependency/invalidation registry.
-- `data/dataset-corrections.js` — deterministic dataset repair/review/commit owner.
-- `data/pipeline.js` — declarative deterministic stage registry/executor; required stages/dependencies fail fast.
-- `experiment/action-data.js` — single Action proposal/annotation/status store.
+- `experiment/canonical-store.js` — pure read indexes/evidence.
+- `experiment/design-model.js` — Design owner/mutator API.
+- `experiment/action-data.js` — persisted Action proposals/annotations/status.
+- `experiment/data-console.js` — runtime introspection facade.
 
-## Import and scientific processing
+## Data lifecycle
 
-- `data/importer.js` — archive orchestration and source evidence creation.
-- `data/parser.js` — known source-format/naming parsing.
-- `data/analysis.js` — deterministic JV analysis/findings.
-- `data/analysis-summary.js` — deterministic statistics/brief projections.
-- `experiment/canonical-store.js` — pure read index/aliases/relations/evidence.
-- `experiment/design-model.js` — sole owner of Design record mutations and Design projection; it does not define the global experiment shape.
-- `experiment/design-analysis.js` — deterministic Design analysis plus proposal application; no provider calls and no UI rendering.
+- `data/importer.js` — ZIP materialization into canonical source/domain records.
+- `data/parser.js` — deterministic parsing mechanics driven by policy rules.
+- `data/dataset-corrections.js` — review analysis and correction commit semantics.
+- `data/analysis.js` — deterministic measurement/experiment analysis.
+- `data/analysis-summary.js` — deterministic aggregate summaries/briefs.
+- `data/pipeline.js` — declarative deterministic refresh lifecycle.
 
-## State/persistence
+## Reference systems
 
-- `state.js` — single LabFlow Data lifecycle, revision and autosave plus the canonical `state.ui` namespace for route/selection/filter/tab state; feature invalidation delegates to `DerivedState`. `state.ui.route` is the only route state.
-- `storage.js` — browser persistence/preferences, AI provider keys and the separate local NOMAD upload-stub settings/token.
+- `cabinet/cabinet.js` — reusable lab-resource registry, validation, persistence and Design application delegation.
+- `knowledge/knowledge-base.js` — bundled/custom JSONL knowledge validation, retrieval and source references.
 
-## Actions/AI
+## AI and Actions
 
-- `ai/action-registry.js` — generated bundle from `actions/*/action.json`.
-- `ai/action-guards.js` — pure Action precondition checks over resolved Action context/parameters.
-- `ai/action-capabilities.js` — global public catalog, manifest state bindings, availability reasons, recommendations and slash-command resolution; the single preflight API for UI/Assistant.
-- `ai/action-steps.js` — deterministic Action checkpoint implementations/apply services.
-- `ai/actions.js` — generic sequential runner/retry/contract execution.
-- `ai/action-ui.js` — Action UI orchestration; Design **Complete all missing with AI** sequences the same `design.infer` Action across multiple incomplete experiments.
-- `ai/context.js` — bounded Context profile registry/builders.
-- `ai/structured.js` — structured parse/schema normalization/validation.
-- `ai/providers.js` / `ai/transport.js` / `ai/settings.js` — provider capabilities, direct configured-endpoint browser transport and settings. The endpoint shown in Settings is the endpoint actually called.
-- `ai/assistant.js` — read-only Assistant turns plus presentation of the global Action catalog; it does not own Action availability rules.
-- `tools/registry.js` — typed deterministic/internal tools.
+- `ai/providers.js` — provider registry/defaults.
+- `ai/transport.js` / `http.js` / `stream.js` — direct-browser request mechanics.
+- `ai/structured.js` — structured-response parsing/validation support.
+- `ai/action-registry.js` — generated Action registry.
+- `ai/action-capabilities.js` / `action-guards.js` — bindings, availability and recommendation.
+- `ai/context.js` — bounded Action/Assistant Context Packs.
+- `ai/actions.js` — Action runner, retries, deadlines and semantic outcomes.
+- `ai/action-steps.js` — deterministic step implementations.
+- `ai/assistant.js` — conversational UI orchestration over `assistant.chat`.
+- `ai/settings.js` / `console.js` / `api-diagnostics.js` — configuration and diagnosis.
 
-Generated files (`action-registry.js`, `prompt-bundle.js`) must be rebuilt from sources, not manually edited.
+## Pages/controllers
 
-## Feature projections/exports
+Controllers bind shared application events to owner APIs. Pages render current state and retain only UI selection/filter/draft state. Neither layer owns scientific arrays or reference-schema definitions.
 
-- `export/nomad.js` — deterministic local NOMAD projection/validation/export; remote upload remains a page/settings stub and does not live in this service yet.
-- `export/export.js` — original/LabFlow Data package export.
-- `page-context.js` — bounded page context for Assistant/Actions.
-- `experiment/data-console.js` — live introspection facade.
+## Export
 
-## Pages
+- `export/export.js` — deterministic LabFlow package export.
+- `export/nomad.js` — deterministic NOMAD mapping/validation/package state.
 
-Files under `pages/` render/query the current aggregate/projections and may retain UI-only selection/filter state under `LF.State.state.ui`. They must not duplicate that state at the root and must not become scientific owners.
+## Write boundary
 
-## Shared/UI
-
-- `core.js`, `math.js`, `logger.js` — shared deterministic infrastructure.
-- `ui/*`, `pages/shared.js` — presentation helpers.
-
-## Write boundary summary
-
-| Owner | May write |
+| Owner | Writes |
 |---|---|
-| Importer | source evidence roots during import |
-| Domain services | LabFlow Data records/patches through explicit APIs |
-| Analysis | analysis/findings/owned derived values |
-| DesignModel | `design` |
-| DatasetCorrections | reviewed dataset corrections + their patch/provenance commit |
-| Actions | `actionData`, interaction history; scientific apply only via deterministic services |
-| Pipeline | runtime trace plus stage-owned outputs |
+| Importer | source/domain roots during canonical construction |
+| Domain services | owned scientific values through explicit APIs |
+| `DesignModel` | Design |
+| `DatasetCorrections` | accepted correction + patch/provenance |
+| `ActionData` | Action proposal/annotation/status |
+| Cabinet | Cabinet reference store; Design only via `DesignModel` |
+| KnowledgeBase | custom KB JSONL/reference state |
+| State | app/UI/active-run coordination |
 | Pages | UI state only, except through owner APIs |
-| NOMAD | NOMAD projection/export state |
+| NOMAD/export | derived export projections/packages |

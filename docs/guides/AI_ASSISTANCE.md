@@ -1,46 +1,36 @@
 ---
 title: AI assistance
 section: Researcher guide
-summary: Where AI helps, where it is deliberately absent, and what every AI result means.
+summary: Where AI is useful, what authority its output has, and where it is deliberately absent.
 order: 30
 ---
 
 # AI assistance
 
-## AI is never required for import
+AI is optional. Import, normalization, validation, JV analysis, safe-cleanup detection and export preparation remain deterministic.
 
-ZIP parsing, naming normalization, safe-cleanup detection, hierarchy validation and Results are deterministic. Applying a detected safe cleanup is an explicit researcher decision and does not require AI.
+## Supported uses
 
-## Where AI is useful
+- **Resolve ambiguities:** propose semantic resolutions deterministic rules cannot prove.
+- **Complete Design:** propose missing qualitative chemistry, device stack and process content for one experiment.
+- **Interpret Results:** explain deterministic summaries/findings.
+- **Compare Results:** explain differences among selected deterministic groups.
+- **Assistant:** answer questions from bounded current context and recommend existing Actions.
 
-### Resolve ambiguities
-`dataset.resolve-ambiguities` suggests mappings/classifications only when deterministic rules cannot settle semantic meaning. Suggestions are stored for review, not silently applied.
+## Authority
 
-### Design suggestions
-`design.infer` completes missing qualitative solution chemistry, a complete device architecture and/or fabrication process for one incomplete experiment. One absorber layer is still incomplete. One run attempts every missing domain; incomplete model output is retried internally. For multiple experiments, **Complete all missing with AI** runs the same Action sequentially. If bounded retries are exhausted, that experiment becomes a retryable Action error rather than a second “Suggest missing” / “Needs context” state.
+AI output is a proposal, derived annotation, or read-only answer. It is not an authoritative measurement and does not silently overwrite accepted scientific data.
 
-### Results interpretation
-`results.interpret` produces a structured, evidence-bounded interpretation of deterministic statistics/findings.
+## Context
 
-### Results comparison
-`results.compare` explains differences between two or more selected groups without recalculating anything.
+Context builders send the minimum semantic information needed for the current task. They preserve authority labels: experiment evidence, Cabinet references, KB references and existing Action output are not interchangeable.
 
-### Assistant
-`assistant.chat` answers questions from bounded page/experiment context and cannot mutate scientific data.
+Provider/model/endpoint settings and transport controls stay outside scientific context.
 
-## Researcher authority
+## Validation
 
-Model output is either a proposal, a derived annotation, or a read-only answer. Scientific measurements and researcher-confirmed Design values are not overwritten automatically.
+Structured Action output is parsed and validated before storage. A provider may return HTTP 200 and still fail the Action because output is truncated, malformed, schema-invalid or semantically incomplete.
 
-## Provider configuration
+## Bulk Design
 
-Cloud and local OpenAI-compatible providers can be selected in Settings. Local model paths are retained internally when needed but shown as basenames in the UI/logs.
-
-See the generated Action runtime matrix for current token/deadline budgets.
-
-## What the model receives
-
-LabFlow sends the minimum sufficient semantic context for the current Action. Provider/model configuration is not scientific context and is not placed in the prompt. In particular, endpoint/model settings and transport fields such as `reasoning_control`, `reasoning_format` and `response_format` stay in the provider layer.
-
-Settings and its Diagnostics section do not contribute runtime/configuration payloads to Assistant context. If a provider returns an HTTP error and LabFlow performs a bounded Action retry, the raw provider envelope is not sent back to the model. Structured Action results are validated against closed schemas before they can be stored.
-
+“Complete all missing with AI” sequences the same single-experiment `design.infer` Action. Each experiment persists independently; a later failure does not erase earlier successful proposals, and rate limiting stops future calls rather than creating hidden retries.

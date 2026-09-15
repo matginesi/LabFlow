@@ -1,3 +1,7 @@
+/*
+ * Deterministic text and section parsing mechanics driven by machine-readable policy rules.
+ * Boundary: Consume policy; do not invent laboratory semantics.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
@@ -45,9 +49,6 @@
     if (n.trim === true) s = s.trim();
     if (n.collapse_whitespace === true) s = s.replace(/\s+/g, ' ');
 
-    /* Canonical laboratory identities are deterministic formatting, not an AI
-       interpretation. Patterns live in the Data Contract so the browser does
-       not invent a second naming policy. The first matching pattern wins. */
     const patterns = Array.isArray(n.canonical_sample_patterns) ? n.canonical_sample_patterns : [];
     for (let i = 0; i < patterns.length; i++) {
       const item = patterns[i] || {}, re = configuredRegex(item.regex, 'i');
@@ -282,11 +283,6 @@
     return { id: C.uid('finding'), severity: severity, type: type, title: title, detail: detail, target: target || '', evidence: evidence || [], status: 'open', source: 'deterministic' };
   }
 
-  /**
-   * Build a bounded, literal RAW-text sample for AI format inspection.
-   * This records structure only: it does not classify unknown content or infer
-   * scientific meaning. Every line remains associated with its verbatim path.
-   */
   function formatEvidence(entry, text) {
     const lines=String(text||'').split(/\r?\n/),selected=[];
     function add(line){

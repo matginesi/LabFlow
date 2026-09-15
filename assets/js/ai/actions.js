@@ -1,3 +1,7 @@
+/*
+ * Action runner for manifest execution, bounded context, provider calls, retries and semantic outcomes.
+ * Boundary: HTTP success is not Action success; store only validated semantic results.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger?LF.Logger.scope('actions'):null,AUTO_RETRY_DELAYS=[5000,10000],DEFAULT_INPUT_CAP_TOKENS=16000;
@@ -51,10 +55,8 @@ function safeRequest(spec){const headers=Object.assign({},spec.headers||{});if(h
 function retryable(step,err,retryNo,truncationRetryNo){
   if(!(step&&step.type==='AI')||(err&&err.cancelled))return false;
   const status=Number(err&&err.status)||0,providerCode=String(err&&err.providerCode||''),code=classify(err);
-  if((LF.AI&&LF.AI.isRateLimitError&&LF.AI.isRateLimitError(err))||status===429)return false; // provider limits are surfaced once and never retried here
-  /* Exhausting a completion budget is a transport/output-fit problem, not a
-     semantic repair. Give every AI work unit one immediate adaptive recovery
-     even when max_retries=0. This never applies to rate limits/provider quota. */
+  if((LF.AI&&LF.AI.isRateLimitError&&LF.AI.isRateLimitError(err))||status===429)return false; // Provider throttling is surfaced to the caller; the runner never creates hidden rate-limit traffic.
+
   if(code==='MODEL_OUTPUT_TRUNCATED')return Math.max(0,Number(truncationRetryNo==null?retryNo:truncationRetryNo)||0)<1;
   const transient=!!(err&&(err.isNetwork||err.timedOut||err.isContract||err.code==='MODEL_OUTPUT_INVALID'||status>=500));
   if(!transient)return false;
@@ -67,9 +69,7 @@ step.output==='json')return'Previous attempt exhausted the completion budget bef
   'with no analysis or reasoning text. Return the entire JSON object again, not a continuation. Make it much more ' +
   'compact: include only requested missing fields, use short summary/reason/unknown strings, omit optional empty properties, and never repeat evidence or known values.';
 return'Previous attempt exhausted the completion budget. Return the final answer immediately, with no analysis or reasoning text. Rewrite the whole requested work unit as a complete, shorter block within the reduced word range; do not continue the cut-off text.';}
-  /* A transport/network/server failure has no semantic correction to teach the
-     model. Retrying with providerResponse would feed HTTP/provider metadata back
-     into the prompt, so transport retries regenerate the exact clean context. */
+
   if(err&&(err.isNetwork||err.timedOut||Number(err.status)>=500))return'';
   if(err&&err.isContract){const details=err.validationErrors&&
 err.validationErrors.length?err.validationErrors.join('\n'):String(err&&err.message||
@@ -138,9 +138,7 @@ function tokenProfile(step,workItem,hardCap){
   step=step||{};const max=positive(hardCap)||positive(step.max_output_tokens)||4096,min=Math.min(max,positive(step.min_output_tokens)||Math.min(768,max)),declaredTarget=Math.min(max,positive(step.target_output_tokens)||max);
   let target=declaredTarget;const words=positive(workItem&&workItem.target_words);
   if(words){const byWords=Math.ceil(words*1.65+220);target=Math.max(min,Math.min(declaredTarget,byWords));}
-  /* A structured response is useful only when the closing JSON is present.
-     Reserve the full Action ceiling for JSON while retaining targetTokens as
-     the expected-size telemetry; max_tokens remains a ceiling, not a quota. */
+
   const request=step.output==='json'?max:Math.max(min,Math.min(max,Math.ceil(target*1.35+256)));
   return{minTokens:min,targetTokens:target,maxTokens:max,requestTokens:request,targetWords:words||null};
 }
@@ -171,10 +169,7 @@ function reasoningHeadroom(profile,capability,thinkingPolicy){
   const status=String(thinkingPolicy&&thinkingPolicy.capability||capability&&capability.reasoningStatus||'unknown'),effective=String(thinkingPolicy&&thinkingPolicy.effective||'auto'),target=Math.max(16,Number(profile&&profile.targetTokens)||0);
   if(status==='none')return 0;
   if(effective==='required'||effective==='on')return Math.max(1024,Math.ceil(target*1.5));
-  /* Even when thinking is requested off, some OpenAI-compatible model templates
-     still emit hidden reasoning. A modest reserve prevents that internal work
-     from consuming the entire final-answer budget. max_tokens is a ceiling, so
-     compliant non-reasoning models do not pay this reserve. */
+
   return Math.max(512,Math.ceil(target));
 }
 function truncationRetryBudget(err,profile){
@@ -184,9 +179,7 @@ profile.requestTokens)||512,usage=err&&err.usage||{}
     estimatedReasoning=LF.AI&&LF.AI.estimateTokens?LF.AI.estimateTokens(err&&err.reasoning||''):Math.ceil(String(err&&
     err.reasoning||'').length/4),reasoning=Math.max(reportedReasoning,estimatedReasoning),
     answer=positive(profile&&profile.requestTokens)||prior;
-  /* A retry needs room for the complete answer plus whatever reasoning the
-     template already demonstrated it may emit. observedCompletion also catches
-     providers that do not expose reasoning tokens separately. */
+
   return Math.max(Math.ceil(prior*1.7),answer+Math.max(1024,Math.ceil(reasoning*1.5))+384,observedCompletion+Math.ceil(answer*.75)+384);
 }
 async function budgetFor(messages,settings,step,workItem,hardCap,knownCapability,thinkingPolicy,minCompletionTokens){
@@ -404,6 +397,7 @@ return{runId:(LF.Core&&LF.Core.uid?LF.Core.uid('action'):'action_'+Date.now()),a
   ,selection:opts.selection||null,userText:opts.userText||'',outputs:{},requestMeta:{},retryFeedback:{}
   ,retryCompletionBudget:{},steps:[],attempts:[],work:{},result:null,currentIndex:0,failedIndex:null,failedWorkIndex:null}
   ;}
+// Re-check bindings and guards at execution time so stale UI preflight cannot bypass the manifest contract.
 function run(actionId,opts){opts=opts||{};if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();
 const def=effective(actionId);if(!def)return Promise.resolve({
   actionId:actionId,status:'error',code:'ACTION_UNKNOWN',message:'Unknown action: '+actionId,steps:[]});
@@ -417,5 +411,30 @@ const def=effective(actionId);if(!def)return Promise.resolve({
   actionId:actionId,status:'unavailable',code:'ACTION_UNAVAILABLE',message:blocked[0].message,guards:blocked,steps:[]});
   return startRun(newRun(actionId,def,opts),0,opts);}
 function retry(opts){opts=opts||{};if(running)return Promise.resolve({status:'error',code:'ACTION_BUSY',message:'Another action is already running.',steps:[]});if(!failedRun)return Promise.resolve({status:'error',code:'ACTION_NO_FAILED_RUN',message:'There is no failed checkpoint to retry.',steps:[]});return startRun(failedRun,failedRun.failedIndex==null?0:failedRun.failedIndex,opts);}
+if(LF.Structures){
+  LF.Structures.define('action.execution-run',{
+    owner:'ActionRunner',layer:'workflow_runtime',persistence:'runtime',
+    description:'Ephemeral executable Action state. Outputs remain here until an explicit Action effect/store step persists a reviewed projection.',
+    fields:{
+      runId:{type:'string',required:true},actionId:{type:'string',required:true},
+      sourceRevision:{type:'number',required:true},startedAt:{type:'string',required:true},
+      params:{type:'object'},selection:{type:'object',nullable:true},userText:{type:'string'},
+      outputs:{type:'object',required:true},requestMeta:{type:'object',required:true},
+      steps:{type:'array',required:true},attempts:{type:'array',required:true},work:{type:'object'},
+      result:{type:'unknown',nullable:true},currentIndex:{type:'number'},
+      failedIndex:{type:'number',nullable:true},failedWorkIndex:{type:'number',nullable:true}
+    }
+  });
+  LF.Structures.define('action.execution-outcome',{
+    owner:'ActionRunner',layer:'workflow_runtime',persistence:'runtime',
+    description:'Public Action execution result returned to UI/Assistant after deterministic guards, steps and validation.',
+    fields:{
+      runId:{type:'string'},actionId:{type:'string',required:true},status:{type:'string',required:true},
+      code:{type:'string'},message:{type:'string'},steps:{type:'array',required:true},attempts:{type:'array'},
+      result:{type:'unknown',nullable:true},aiOutput:{type:'unknown',nullable:true},outputs:{type:'object'},
+      requestMeta:{type:'object'},sourceRevision:{type:'number'},failedStep:{type:'string',nullable:true}
+    }
+  });
+}
 LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},failed:function(){return failedRun;},effective:effective,usesAi:usesAi,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
 }());

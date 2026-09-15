@@ -1,3 +1,7 @@
+/*
+ * Shared deterministic utilities, escaping/Markdown helpers, IDs and runtime dependency assertions.
+ * Boundary: Remain domain-agnostic; feature ownership belongs to dedicated modules.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
@@ -76,8 +80,8 @@
     let src = String(text || '');
     const protectedHtml = [];
     function protect(html) { const token='@@LFPROTECTED'+protectedHtml.length+'@@'; protectedHtml.push(html); return token; }
-    /* Protect TeX before Markdown emphasis: underscores and asterisks are valid
-       mathematical syntax and must never be interpreted as Markdown. */
+
+
     src = src.replace(/\\\(([^\n]+?)\\\)/g, function(_m,math){ return protect('<span class="math-inline">\\('+escapeHtml(math)+'\\)</span>'); });
     src = src.replace(/(^|[^\\$])\$([^$\n]+?)\$/g, function(_m,prefix,math){ return prefix+protect('<span class="math-inline">\\('+escapeHtml(math)+'\\)</span>'); });
     src = src.replace(/`([^`]+)`/g, function(_m,code){ return protect('<code>'+escapeHtml(code)+'</code>'); });
@@ -159,10 +163,7 @@
 
   function cleanModelText(text) {
     let out = String(text == null ? '' : text);
-    /* Some local models occasionally emit opaque Markdown-protection tokens
-       (for example %%LFMD0%%) as if they were user-visible evidence. These
-       markers are never part of the LabFlow scientific model and must not leak
-       into the workbench. Keep the cleanup deliberately narrow. */
+
     out = out
       .replace(/%%LF(?:MD|CODE)[^%]*%%\s+tool/gi, 'LabFlow read tool')
       .replace(/\u0000LF(?:MD|CODE)[^\u0000]*\u0000\s+tool/gi, 'LabFlow read tool')
@@ -178,7 +179,7 @@
     return String(s || 'experiment').replace(/[^a-z0-9._-]+/gi, '_').replace(/^_+|_+$/g, '') || 'experiment';
   }
 
-  /** Keep provider model IDs intact internally, but hide filesystem paths in UI labels. */
+
   function modelDisplayName(providerId, model) {
     const raw=String(model==null?'':model).trim();
     const localProviders=new Set(['ollama','lmstudio','llamacpp']);
@@ -186,12 +187,7 @@
     return raw.replace(/\\/g,'/').split('/').filter(Boolean).pop()||raw;
   }
 
-  /**
-   * Fail fast when a module is used without one of its declared runtime
-   * dependencies. Classic browser scripts make load order implicit; this
-   * helper turns that implicit order into an executable contract without
-   * adding a module framework.
-   */
+    // Classic scripts make load order implicit; fail fast instead of allowing a partially initialized feature.
   function requireModules(owner, names) {
     const missing = (Array.isArray(names) ? names : [names]).filter(function (name) {
       return !LF[name];
@@ -204,7 +200,7 @@
     );
   }
 
-  /** Associate every shared .field label with its first native control. */
+
   function bindFieldLabels(root) {
     const scope=root||document;
     scope.querySelectorAll('.field').forEach(function(field,index){

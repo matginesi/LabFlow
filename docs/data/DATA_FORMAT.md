@@ -1,18 +1,16 @@
-# Laboratory Data Format
+---
+title: Laboratory source format
+section: Scientific data
+summary: Observed ZIP/file structure and parser assumptions for the current laboratory data family.
+order: 30
+---
 
-The current source is commonly delivered as a ZIP with one experiment root folder. The root may contain summary files and many sample folders. Sample folders contain one or more time folders, each containing JV, Parameters, and Tracking files.
+# Laboratory source format
 
-LabFlow does not require perfect conformance. Unknown files remain in the manifest; missing summaries trigger fallback parsing of individual JV files.
+Current archives commonly contain one root folder, summary tables, sample/device directories and per-run JV/Parameters/Tracking text files. LabFlow does not require perfect conformance: unknown files remain in the source manifest and missing summaries can fall back to individual-file evidence.
 
-Known files include:
+Observed text data is tab-separated with section markers such as `[General info]`, `[JV Settings]`, `[Cell Settings]` and `## Data ##`.
 
-- `JV Summary.txt`
-- `JV Summary_Parameters FW.txt`
-- `JV Summary_Parameters RV.txt`
-- `Stability (JV)`
-- `Stability (Parameters)`
-- `Stability (Tracking)`
+Unit labels may contain encoding damage. Deterministic parsing should prefer configured field names/positions and numeric semantics rather than depending on one rendered Unicode glyph.
 
-Text is tab-separated in the observed dataset, with section markers such as `## Header ##`, `[General info]`, `[JV Settings]`, `[Cell Settings]`, and `## Data ##`.
-
-Observed files may contain mojibake in unit labels such as squared-centimeter symbols. Parsing must rely on stable field positions/names where possible, not exact rendering of the unit glyph.
+Operational rules live in the parser policy sources under `prompts/policies/`; this document describes the observed family and must not become a competing parser rule set.

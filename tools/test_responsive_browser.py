@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Responsive browser audit for every LabFlow route.
-
-The test intentionally measures the rendered application instead of inferring
-layout safety from media queries. Horizontal scrolling is allowed only inside
-explicit local regions such as tables, toolbars and stack editors. Tabs are never horizontal-scroll regions on compact workspaces.
-"""
+"""Run responsive browser smoke checks against a locally served LabFlow build."""
 from __future__ import annotations
 
 import json
@@ -18,14 +13,14 @@ from playwright.sync_api import sync_playwright
 BASE_URL = os.environ.get("LABFLOW_TEST_BASE_URL", "http://127.0.0.1:8765")
 ZIP_PATH = Path("TEST_DATA/02_ROVINATO_SPORCO_OPERATIONS.zip").resolve()
 VIEWPORTS = (
-    (1920, 1080),  # large desktop
-    (1440, 900),   # desktop
-    (1280, 800),   # laptop
-    (1100, 800),   # compact workspace breakpoint
-    (900, 800),    # tablet landscape
-    (700, 800),    # compact navigation breakpoint
-    (390, 844),    # phone
-    (320, 720),    # narrow supported phone
+    (1920, 1080),                 
+    (1440, 900),            
+    (1280, 800),           
+    (1100, 800),                                 
+    (900, 800),                      
+    (700, 800),                                   
+    (390, 844),           
+    (320, 720),                            
 )
 ROUTES = (
     "experiment-import",
@@ -109,8 +104,8 @@ def main() -> int:
         page.wait_for_load_state("networkidle")
         page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
 
-        # Desktop navigation is persistent; tablet/mobile use the same sidebar
-        # as an off-canvas drawer. The Assistant stays closed until requested.
+                                                                              
+                                                                              
         assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
         assert not page.locator("#mobileNavToggle").is_visible()
         assert not page.locator("#assistantPanel").is_visible()
@@ -128,7 +123,7 @@ def main() -> int:
         page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
         assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
 
-        # Audit the upload-first state before adding experiment data.
+                                                                     
         findings.append(page.evaluate(AUDIT_JS))
         page.locator("#datasetInput").set_input_files(str(ZIP_PATH))
         page.wait_for_function("window.LabFlow.State.state.ui.route === 'experiment-import'")
@@ -162,8 +157,8 @@ def main() -> int:
                 result["surface"] = "default"
                 findings.append(result)
 
-                # Route-internal views often carry their own grids and are
-                # part of the responsive contract, not optional test detail.
+                                                                          
+                                                                            
                 if route == "experiment-results":
                     for tab in ("overview", "all", "curves", "boxplots"):
                         page.locator(f'[data-result-tab="{tab}"]').first.click()

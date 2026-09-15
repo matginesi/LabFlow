@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a human-readable Action runtime matrix from canonical action.json files."""
+"""Generate reviewer-facing Action runtime reference from executable manifests."""
 from __future__ import annotations
 
 from pathlib import Path

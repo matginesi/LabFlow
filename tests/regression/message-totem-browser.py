@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression: transient app feedback uses the shared, visibly styled Message Totem."""
+"""Browser regression for canonical Message Totem routing and NOMAD-stub feedback."""
 from __future__ import annotations
 
 import os
@@ -15,7 +15,7 @@ APP_JS = (ROOT / "assets/js/app.js").read_text()
 
 
 def main() -> int:
-    # The concrete NOMAD stub must call the canonical Message Totem service.
+                                                                            
     assert "closest('#uploadNomadStub')" in APP_JS
     assert "LF.UI.message('Direct NOMAD upload is not implemented yet." in APP_JS
     assert "'info','NOMAD upload'" in APP_JS
@@ -24,7 +24,7 @@ def main() -> int:
         browser_path = os.environ.get("LABFLOW_BROWSER") or shutil.which("google-chrome") or shutil.which("chromium") or shutil.which("chromium-browser")
         browser = playwright.chromium.launch(headless=True, executable_path=browser_path) if browser_path else playwright.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 800})
-        # Avoid external/local navigation so this regression also runs in locked-down CI browsers.
+                                                                                                  
         page.set_content(f"<style>{TOKENS}\n{UI_CSS}</style><div class='message-region' id='messageRegion' aria-live='polite'></div>")
         page.add_script_tag(content="window.LabFlow={Core:{},Logger:{scope:function(){return {debug:function(){},info:function(){},warn:function(){},error:function(){}};}}};")
         page.add_script_tag(content=FEEDBACK_JS)

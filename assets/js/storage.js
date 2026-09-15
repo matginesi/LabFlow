@@ -1,3 +1,7 @@
+/*
+ * Browser persistence for workspaces, reference stores, preferences, credentials and Action overrides.
+ * Boundary: Delegate scientific serialization to DataModel and keep credentials outside scientific payloads.
+ */
 (function () {
   'use strict';
 
@@ -6,11 +10,6 @@
 
   const Log = LF.Logger.scope('storage');
 
-  /*
-   * Storage owns browser persistence only. Scientific structure remains owned
-   * by DomainSchema/DataModel; feature modules should use these named methods
-   * instead of reading or writing localStorage/IndexedDB directly.
-   */
   const LOCAL_KEYS = Object.freeze({
     AI_SETTINGS: 'labflow.ai.settings',
     ASSISTANT_SETTINGS: 'labflow.assistant.settings',
@@ -212,6 +211,7 @@
     return !!persistent[id];
   }
 
+    // Credentials live outside scientific workspaces and export payloads so ordinary data portability cannot leak them.
   function saveApiKey(key, providerId, options) {
     try {
       options = options || {};
@@ -232,12 +232,6 @@
     }
   }
 
-
-  /*
-   * Browser-local Action overrides are valid only for the source contract they
-   * were edited from. A changed action.json/prompt invalidates the override;
-   * there is no migration path between Action definitions.
-   */
   function actionOverrides() {
     const current = read(LOCAL_KEYS.ACTION_OVERRIDES, {});
     return current && typeof current === 'object' && !Array.isArray(current)
@@ -398,8 +392,6 @@
     return ok;
   }
 
-  /* Knowledge Base format belongs to knowledge-base.js. Storage persists the
-     user's JSONL as opaque text so there is exactly one parser/validator. */
   function getKnowledgeJsonl() {
     try { return String(localStorage.getItem(LOCAL_KEYS.KNOWLEDGE) || ''); }
     catch (error) { Log.warn('knowledge.read-failed', { key: LOCAL_KEYS.KNOWLEDGE, error: error }); return ''; }
@@ -527,9 +519,7 @@
           const existing = rawStore.get(rawRef);
           existing.onsuccess = function () { if (!existing.result) rawStore.put(raw.sourceArchive, rawRef); };
         }
-        /* One current workspace owns at most one RAW archive. Delete the old
-           archive in the same IndexedDB transaction so a failed save rolls the
-           deletion back together with the workspace update. */
+
         if (previousRef && previousRef !== rawRef) rawStore.delete(previousRef);
       };
       transaction.oncomplete = function () { database.close(); resolve(payload); };
@@ -658,6 +648,17 @@
     return workspaceCleared;
   }
 
+
+  if (LF.Structures) {
+    LF.Structures.defineFromExample('ai.settings', {
+      owner: 'Storage', layer: 'configuration', persistence: 'browser_local',
+      description: 'Provider/model/transport defaults. Credentials are deliberately excluded.'
+    }, getAiSettings(), { required: ['provider','endpoint','model','thinkingMode','streaming'] });
+    LF.Structures.defineFromExample('assistant.settings', {
+      owner: 'Storage', layer: 'configuration', persistence: 'browser_local',
+      description: 'Assistant memory, context budget and answer-generation preferences.'
+    }, getAssistantSettings(), { required: ['memoryEnabled','memoryTurns','contextChars','messageChars'] });
+  }
 
   LF.Storage = {
     keys: LOCAL_KEYS,

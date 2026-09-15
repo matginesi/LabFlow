@@ -1,3 +1,7 @@
+/*
+ * Build deterministic LabFlow export artifacts from validated current state.
+ * Boundary: Export is a projection and never an editable scientific model.
+ */
 (function () {
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

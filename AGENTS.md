@@ -1,4 +1,6 @@
-# LabFlow contributor / coding-agent rules
+# LabFlow contributor contract
+
+This file is the shortest enforceable guide for humans and coding agents changing the repository. It intentionally duplicates only non-negotiable constraints; detailed rationale lives in `docs/ARCHITECTURE.md`.
 
 Read before structural changes:
 
@@ -7,98 +9,74 @@ Read before structural changes:
 3. `docs/specs/PIPELINE.md`
 4. `docs/specs/ACTIONS.md`
 5. `docs/guides/EXTENDING_LABFLOW.md`
-6. `.agent/skills/labflow-ui/SKILL.md` before any UI/layout/chart change
-7. the feature-specific docs/tests
+6. `.agent/skills/labflow-ui/SKILL.md` for UI/layout/chart work
+7. the feature-specific tests and documentation
 
 ## Non-negotiable invariants
 
-- One mutable scientific aggregate only: `LF.State.state.experiment` (`ExperimentData`).
-- `DomainSchema` is the only canonical record/root/default definition.
-- Source ZIP bytes/paths are immutable provenance.
-- Scientific relations use stable IDs when available.
-- `samples[]` is the physical sample/cell collection; do not add `entities[]` aliases.
-- LabFlow Data corrections use the single `patch` shape with typed target.
-- Runtime derived caches are recomputable and excluded from persistent snapshots.
-- `CanonicalStore` is a pure read index, not a second model.
-- Persisted Action outputs live only in `actionData` via `LF.ActionData`.
-- `ActionCapabilities` is the only Action availability/preflight service. Public Actions are globally discoverable; routes only affect recommendation.
-- Public Action target/filter bindings and slash commands belong in `action.json`, never in Assistant/page Action-ID switches.
-- `State.touch()` must not accumulate feature-specific invalidation code; use `DerivedState`.
-- The deterministic pipeline never calls AI.
-- Required runtime dependencies fail fast; do not hide missing modules behind fallback objects or conditional no-ops.
-- New scientific records are created through `DomainSchema`; Design writes go through `DesignModel`; dataset correction commits go through `DatasetCorrections`.
-- AI never calculates authoritative JV metrics or silently mutates source/LabFlow Data.
+- `LF.State.state.experiment` is the single mutable scientific aggregate.
+- `DomainSchema` owns canonical record shapes, root ownership and persistence metadata.
+- Uploaded archive bytes and RAW paths are immutable provenance.
+- Scientific relations use stable IDs; a file identity is never substituted for a sample identity.
+- `CanonicalStore` is a read index, not a second model.
+- `DerivedState` owns invalidation registration for recomputable projections; do not grow feature-specific invalidation branches inside `State.touch()`.
+- Persisted Action proposals, annotations and statuses live under `actionData` through `LF.ActionData`.
+- `ActionCapabilities` is the single Action availability/preflight service. Routes affect recommendation, not existence.
+- Public Action commands, routes and state bindings belong in `actions/*/action.json`; do not add Action-ID switches to pages or Assistant code.
+- `DataPipeline` is deterministic and may not call an AI provider.
+- Design mutations go through `DesignModel`. Reviewed dataset mutations go through `DatasetCorrections`.
+- Cabinet resources are reusable references. Applying one copies a detached snapshot and records provenance; later Cabinet edits must not rewrite historical experiments.
+- KB entries are reference knowledge, never experiment evidence.
+- Required runtime dependencies fail fast. Do not hide architectural load-order errors behind fallback objects or no-op branches.
+- External/persisted snapshots cross the strict `DataModel.restore()` trust boundary. `hydrate()` is not a migration layer.
 
-## Researcher-first workflow
+## Ownership before convenience
 
-```text
-Upload ZIP
-→ deterministic naming/hierarchy/analysis
-→ deterministic safe-cleanup detection + explicit acceptance
-→ researcher sees only genuine semantic ambiguity
-→ Results / Design / Export
-```
+Before writing data, identify its owner. A page/controller may coordinate a mutation but must call the owner API. Direct assignment is acceptable only inside the owning module or during canonical construction where the contract explicitly permits it.
 
-Do not add clicks for deterministic work LabFlow can safely perform itself.
+When a new cross-module structure is introduced, register descriptive metadata in `LF.Structures`; keep defaults, validation and mutation logic in the real owner.
 
-For UI work, `.agent/skills/labflow-ui/SKILL.md` is the visual/interaction contract. Keep the primary navigation and mental model exactly **Upload & Review → Results → Design → Export**; NOMAD is an export target, not a primary workflow page.
+## Pipeline, Action, service, or UI state?
 
-## Pipeline vs Action
+Use a **pipeline stage** when work is deterministic, lifecycle-bound, idempotent and should run without researcher/provider availability.
 
-Use a pipeline stage for deterministic lifecycle work. Use an Action only for an explicit researcher capability (proposal, interpretation, question). Use a local service/tool for reusable implementation detail.
+Use an **Action** when the user is asking for an explicit capability that produces a proposal, annotation, comparison, or answer.
 
-Current Actions:
+Use a **service/tool** for reusable implementation detail that is neither a lifecycle stage nor a researcher-facing capability.
 
-- `dataset.resolve-ambiguities`
-- `design.infer`
-- `results.interpret`
-- `results.compare`
-- `assistant.chat`
+Use **UI state** only for selection, route, open/closed surfaces, filters, drafts and presentation state.
 
-Do not reintroduce analysis, safe cleanup or NOMAD preparation as Actions. Safe cleanup is a deterministic Review operation: detect automatically, mutate only after explicit acceptance, then rerun the pipeline. The NOMAD direct-upload surface remains a labelled non-networking stub until a real connector exists. Do not page-filter the Action catalog: use manifest `ui.routes` for recommendation and guards for availability.
-
-## Mutations
-
-Prefer owner APIs/services. Avoid direct root-array writes from pages. Every scientific mutation must preserve revision/invalidation/provenance rules.
-
-When adding a derived projection, register dependencies with `DerivedState`. When adding a pipeline stage, declare `after`, `reads`, `writes`, `phase`; do not manually invoke downstream stages.
-
-## Persistence
-
-`DomainSchema.snapshot()` defines persistence. Do not add ad-hoc temporary fields and assume they will/should persist. Persisted/imported snapshots restore through `DataModel.restore()` and must satisfy the current snapshot contract before hydration. `DataModel.hydrate()` is internal normalization for already-owned runtime objects, not a compatibility layer.
-
-## Extension
-
-Follow `docs/guides/EXTENDING_LABFLOW.md`. Do not add framework abstraction unless it eliminates a demonstrated duplication/boundary problem.
+Do not turn internal functions into Actions merely to make them discoverable.
 
 ## Generated artifacts
 
-After relevant changes rebuild:
+Never edit these as source of truth:
+
+- `assets/js/ai/action-registry.js`
+- `assets/js/ai/prompt-bundle.js`
+- `assets/js/knowledge/kb-bundle.js`
+- `assets/js/pages/docs-bundle.js`
+- `assets/js/pages/ui-kit-inline.js`
+- generated Action references
+
+Change manifests/Markdown/JSONL/source HTML and rebuild with the corresponding tool.
+
+## Comments and documentation
+
+Comments explain **why**, invariants, ownership, protocol constraints, or non-obvious failure handling. They do not narrate obvious syntax. Prefer a precise module header plus a small number of local invariant comments over commentary on every branch.
+
+Public contracts, persistence boundaries and extension rules belong in `docs/`; comments should not become a second specification.
+
+## Verification
+
+Before delivery or merge:
 
 ```bash
-python tools/build_prompt_bundle.py
-python tools/build_knowledge_bundle.py
-python tools/build_action_registry.py
-python tools/build_action_reference.py
-python tools/build_docs_bundle.py
-python tools/build_ui_kit_inline.py
+./release_check.sh
 ```
 
-Do not edit generated bundles as source-of-truth.
-
-## Verification before delivery/merge
-
-```bash
-node tests/unit/run.js
-python tools/validate_action_contract.py
-python tools/validate_architecture_contract.py
-python tools/validate_state_contract.py
-python tools/validate_ui_contract.py
-python tools/validate_privacy_contract.py
-```
-
-Run JS syntax checks and the real JV fixture regression for import/domain/pipeline changes.
+For core import/domain/pipeline changes, also run the real private JV fixture regression when the fixture is available. For layout changes, run the browser audit when the environment permits local browser navigation.
 
 ## Repository hygiene
 
-`.gitignore` must keep local ZIP archives and `ORIGINAL_REQUEST/` / `TEST_DATA/` out of Git. Test fixtures may exist locally for validation but are not repository content.
+Local archives, `TEST_DATA/`, `ORIGINAL_REQUEST/`, credentials, workstation-specific model paths and generated scratch output do not belong in Git. Keep runtime defaults portable and reviewer-reproducible.

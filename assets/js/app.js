@@ -1,8 +1,10 @@
+/*
+ * Application bootstrap, routing and top-level event delegation.
+ * Boundary: Delegate scientific writes to owner services; the shell is not a domain owner.
+ */
 (function () {
   'use strict';
-  /* 0.0.0.0 is a bind address, not a stable browser origin.  When a local
-     static server prints http://0.0.0.0:PORT, use loopback in the browser so
-     local AI CORS rules remain deterministic. */
+
   function canonicalizeLocalBindAddress(){
     try{
       if(typeof location==='undefined'||location.hostname!=='0.0.0.0')return false;
@@ -110,17 +112,6 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     });
   }
 
-
-
-
-  /**
-   * Commit the visible editor before switching document or exporting.
-   * This makes the DOM-to-export boundary explicit even when a browser has not
-   * yet delivered the final input event (IME, autofill and accessibility tools).
-   */
-
-
-  /* Render is intentionally synchronous: state changes produce one complete DOM view. */
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
   function renderModelStatus(){
@@ -245,11 +236,6 @@ else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.sta
     if(LF.DesignPage&&LF.DesignPage.refreshProjection)LF.DesignPage.refreshProjection(S.state.experiment,S.state.ui.selectedDesignDeviceId,badge);
   }
 
-  /* ---------- reviewed state mutations and local file operations ---------- */
-
-  /** Update one ambiguity proposal decision. The Review page is rendered from
-      state immediately after this call, so there is no parallel DOM state
-      to keep in sync. */
   function updateProposalDecision(index, decision) {
     const plan=ambiguityPlan(),proposal=plan&&plan.proposals&&plan.proposals[index];
     if(!proposal)return;
@@ -310,9 +296,6 @@ LF.UI.activityStart({title:'Export NOMAD ZIP',kind:'ZIP',stage:'Preparing NOMAD 
     }catch(err){Log.error('export.nomad-zip-failed',{error:err});LF.UI.activityError(err);
     LF.UI.message(err.message||String(err),'error');}}
 
-
-
-  /** Update one Design proposal decision while preserving the current scroll. */
   function updateDesignProposalDecision(kind,index,decision){
 const proposal=selectedDesignProposal(),list=proposal&&(kind==='solution'?proposal.solutions:proposal.devices),
     item=list&&list[index];if(!item||item.applied)return;item.decision=decision;proposal.userEdited=true;
@@ -326,7 +309,7 @@ const proposal=selectedDesignProposal(),list=proposal&&(kind==='solution'?propos
     Log.debug('validation.finding-filter',{filter:filter});
   }
 
-  /* ---------- mobile navigation ---------- */
+
   function setMobileNav(open){const next=!!open;
 const mobile=!!(window.matchMedia&&window.matchMedia('(max-width:1100px)').matches);
     document.body.classList.toggle('mobile-nav-open',mobile&&next);const toggle=document.getElementById('mobileNavToggle');
@@ -343,7 +326,7 @@ const mobile=!!(window.matchMedia&&window.matchMedia('(max-width:1100px)').match
   function showChartTooltip(target,event){if(!target||!target.dataset.chartTip)return;const tip=chartTooltipNode();tip.textContent=target.dataset.chartTip;tip.hidden=false;const box=target.getBoundingClientRect(),x=event&&Number.isFinite(event.clientX)?event.clientX:box.left+box.width/2,y=event&&Number.isFinite(event.clientY)?event.clientY:box.top+box.height/2;positionChartTooltip(tip,x,y);}
   function hideChartTooltip(){const tip=document.getElementById('resultsChartTooltip');if(tip)tip.hidden=true;}
 
-  /* ---------- delegated user interaction ---------- */
+
   function bindEvents(){
     Log.debug('events.bind.start');
     document.addEventListener('click',function(e){const b=e.target&&e.target.closest?e.target.closest('button'):null;if(b&&!b.hasAttribute('type'))e.preventDefault();},true);
@@ -769,14 +752,11 @@ if(proposalDeviceField){const proposal=selectedDesignProposal(),
     Log.debug('events.bind.end');
   }
 
-  /** Export an inline deterministic SVG chart as PNG. */
-
-  /* ---------- bootstrap ---------- */
   async function init(){
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
       S.state.ui.route='experiment-import';S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
-      /* ExperimentData is autosaved in IndexedDB for browser recovery. Reset session is the explicit clear boundary; provider/key/theme remain independent. */
+
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
       let workspaceRestoreError=null;
       if(saved&&saved.experiment&&saved.experiment.id){
@@ -799,9 +779,7 @@ if(proposalDeviceField){const proposal=selectedDesignProposal(),
       S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
       bindEvents();setMobileNav(false);window.addEventListener('resize',syncMobileNav,{passive:true});if(LF.ActionUI)LF.ActionUI.bind();LF.Assistant.bind();S.subscribe(function(_state,reason){
         reason=String(reason||'state');
-        /* Route/view changes should not serialize the entire scientific workspace.
-           Assistant messages are persistent but render themselves. Action-run
-           progress is runtime-only. Scientific/data changes still render+persist. */
+
         const renderNeeded=reason!=='actionRun'&&reason!=='assistant';
         const persistNeeded=reason!=='actionRun'&&reason!=='route';
         if(renderNeeded)render();

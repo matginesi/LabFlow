@@ -1,3 +1,7 @@
+/*
+ * Render researcher review state, deterministic correction proposals and semantic ambiguities.
+ * Boundary: Presentation only; accepted corrections are committed through DatasetCorrections/ActionData owners.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,shell=LF.PageShell;

@@ -1,3 +1,7 @@
+/*
+ * Review analysis and deterministic commit path for accepted dataset corrections.
+ * Boundary: Mutate LabFlow Data with provenance; unresolved semantics remain explicit.
+ */
 (function () {
   'use strict';
 
@@ -199,7 +203,7 @@ lastApplied:Number(extra&&extra.lastApplied||0),targets:Number(extra&&extra.targ
   function prepareAutomaticSafeFixes(exp){return automaticCleanupState(exp);}
   function applyAutomaticSafeFixes(exp){
     const fixes=safeFixes(exp),applied=[];let targets=0;
-    fixes.forEach(function(fix){try{const copy=Object.assign({},fix);targets+=applyProposal(exp,copy,'automatic');applied.push(copy);}catch(err){/* Leave any unmappable item pending instead of forcing it. */}});
+    fixes.forEach(function(fix){try{const copy=Object.assign({},fix);targets+=applyProposal(exp,copy,'automatic');applied.push(copy);}catch(err){if(Log)Log.warn('auto-cleanup.fix-skipped',{target:fix&&fix.target||null,patchType:fix&&fix.patch_type||'',error:err});}});
     return automaticCleanupState(exp,{lastApplied:applied.length,targets:targets});
   }
   function commitAutomaticSafeFixes(exp){

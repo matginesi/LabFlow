@@ -1,55 +1,48 @@
 ---
 title: Lab Cabinet
 section: Researcher guide
+summary: Reusable laboratory references that can be copied safely into experiment Design.
 order: 36
-summary: Save lab recipes once and reuse them safely in future Design experiments.
 ---
+
 # Lab Cabinet
 
-Lab Cabinet is the place for **things you repeatedly type into Design**: formulations, device stacks, process recipes, substrates, materials and instrument references.
+Lab Cabinet is a browser-local library for definitions you repeatedly use in Design: formulations, device stacks, process recipes, substrates, materials/chemicals and instrument references.
 
-The simplest mental model is:
+It is intentionally **not** inventory management, stock control, ERP or a LIMS.
 
-1. **Save** something useful from a Design, or create it once in Cabinet.
-2. **Reuse** it in another Design instead of retyping it.
-3. **Keep experiments independent**: LabFlow copies the current values into the experiment, so changing the Cabinet later never rewrites past experiment data.
+## Mental model
 
-It is deliberately not stock management, inventory, ERP or LIMS.
+```mermaid
+flowchart TD
+    C[Create / save once in Cabinet] --> R[Reuse intentionally in a Design]
+    R --> D[Detached copy becomes experiment-owned]
+```
 
-## Most useful resources
+Changing or deleting the Cabinet item later does not rewrite an experiment that already used it.
 
-For most researchers the three main Cabinet resources are:
+## What belongs in Cabinet
 
-- **Formulations** — precursor solutions, passivation solutions or other reusable chemistry definitions.
-- **Device stacks** — ordered layer stacks that recur across devices.
-- **Process recipes** — coating/deposition, annealing, atmosphere and reusable process notes.
+The highest-value reusable resources are usually:
 
-Materials, chemicals, substrates and instruments are available when a lab needs finer reusable references, but they do not need to be created before using Cabinet.
+- formulation/solution definitions;
+- complete device stacks;
+- fabrication/process recipes.
 
-## Save from Design
+Materials, substrates and instruments are available for laboratories that want finer reusable references, but they are not prerequisites for using Cabinet.
 
-When an experiment is loaded, the top of Cabinet shows the current Design and lets you save a formulation, the selected device stack or its process recipe directly. Design also keeps its existing **Save to Cabinet** controls.
+## Design integration
 
-A saved resource remains browser-local until you export the Cabinet backup. It can then be reused from Design with **From Cabinet** / **Use in current Design**.
+Cabinet never assigns Design fields directly. Application goes through `DesignModel`, which validates/normalizes the copied value and records the Cabinet source reference.
 
-## Safe copies
+Only Cabinet kinds declaring an applicable Design capability are offered for reuse. The page reads fields, labels, summaries, grouping and capabilities from the Cabinet registry rather than maintaining a second UI-specific schema.
 
-Using a Cabinet resource creates a detached snapshot in the experiment and records a Cabinet source reference. Later edits or deletion of the Cabinet resource do not mutate an experiment that already used it.
+## Validity and AI context
 
-Cabinet resources may also be supplied to `design.infer` as reusable laboratory context. They are never treated as evidence that the current experiment actually used a recipe, stack or protocol.
+Incomplete resources can remain in Cabinet while being edited. Only resources satisfying the Cabinet validator are eligible for application or bounded AI context.
 
-## Page layout
+`design.infer` may receive relevant Cabinet context as “available/reusable lab reference”. It must not treat that context as proof that the current experiment used the item.
 
-Cabinet deliberately presents the workflow before the editor:
+## Storage and portability
 
-- a short explanation of why Cabinet exists;
-- quick capture from the current Design;
-- one searchable/filterable saved-resource library;
-- one editor for the selected resource;
-- portable backup behind progressive disclosure.
-
-The layout reflows from multi-column cards to a single column as the real workspace narrows, including when the Assistant panel is open.
-
-## Portability
-
-Cabinet remains a lightweight browser-local library and can be exported/imported as JSON. It is separate from experiment saves: use **Export → Export ZIP** for experiment portability.
+Cabinet is stored independently from an experiment workspace and can be exported/imported as JSON. Experiment portability remains the responsibility of the normal LabFlow export.

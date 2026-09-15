@@ -1,3 +1,7 @@
+/*
+ * Owner API for Design normalization, queries, mutations, provenance and acceptance state.
+ * Boundary: All Design writes, including Cabinet and accepted AI proposals, pass through this module.
+ */
 (function () {
   'use strict';
 
@@ -177,8 +181,6 @@
     return design.evidenceSummary;
   }
 
-  /* Design is a projection owned by this module. Core domain normalization is
-     exclusively DataModel/DomainSchema responsibility. */
   function ensure(exp) {
     if (!exp) return exp;
     if (LF.DataModel && LF.DataModel.hydrate) exp = LF.DataModel.hydrate(exp);
@@ -424,13 +426,87 @@
     return device(exp, deviceId);
   }
 
-  /*
-   * AI proposal mutation boundary.
-   *
-   * DesignAnalysis decides which proposal fields are admissible. These helpers
-   * are the only write primitives it needs: they keep all ExperimentData.design
-   * mutation inside DesignModel without introducing another service layer.
-   */
+  function sourcedLayerSeed(seed, meta) {
+    meta = meta || {};
+    return Object.assign({}, seed || {}, {
+      evidence: meta.evidence || (seed && seed.evidence) || '',
+      status: meta.status || (seed && seed.status) || STATUS.USER_CONFIRMED,
+      confidence: meta.confidence == null ? (seed && seed.confidence) : meta.confidence,
+      provenanceKind: meta.provenanceKind || (seed && seed.provenanceKind) || 'experiment',
+      cabinetRef: meta.sourceRef || (seed && seed.cabinetRef) || null
+    });
+  }
+
+  function replaceDeviceStack(exp, deviceId, layers, meta) {
+    const target = device(exp, deviceId);
+    if (!target) throw new Error('Design experiment not found.');
+    target.stack = (Array.isArray(layers) ? layers : []).map(function (layer) {
+      return LF.DomainSchema.create('design_layer', sourcedLayerSeed(layer, meta));
+    });
+    target.stackSourceRef = meta && meta.sourceRef || null;
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
+  function insertDeviceLayer(exp, deviceId, index, seed, meta) {
+    const target = device(exp, deviceId);
+    if (!target) throw new Error('Design experiment not found.');
+    const layer = LF.DomainSchema.create('design_layer', sourcedLayerSeed(seed, meta));
+    const position = Math.max(0, Math.min(target.stack.length, Number.isInteger(Number(index)) ? Number(index) : target.stack.length));
+    target.stack.splice(position, 0, layer);
+    target.status = STATUS.USER_CONFIRMED;
+    return layer;
+  }
+
+  function replaceDeviceLayer(exp, deviceId, index, seed, meta) {
+    const target = device(exp, deviceId);
+    const position = Number(index);
+    if (!target || !Number.isInteger(position) || position < 0 || position >= target.stack.length) return null;
+    const previous = target.stack[position] || {};
+    target.stack[position] = LF.DomainSchema.create('design_layer', sourcedLayerSeed(Object.assign({}, previous, seed || {}, { id: previous.id }), meta));
+    target.status = STATUS.USER_CONFIRMED;
+    return target.stack[position];
+  }
+
+  function mergeDeviceProcess(exp, deviceId, values, options) {
+    const target = device(exp, deviceId);
+    if (!target) throw new Error('Design experiment not found.');
+    values = values && typeof values === 'object' ? values : {};
+    options = options || {};
+    target.process = Object.assign({ coating: '', annealing: '', atmosphere: '', notes: '' }, target.process || {});
+    target.processProvenance = target.processProvenance && typeof target.processProvenance === 'object' ? target.processProvenance : {};
+    let changed = 0;
+    EDITABLE_FIELDS.process.forEach(function (field) {
+      const value = clean(values[field]);
+      if (!value) return;
+      if (!options.replace && clean(target.process[field])) return;
+      if (target.process[field] === value) return;
+      target.process[field] = value;
+      target.processProvenance[field] = {
+        status: options.status || STATUS.USER_CONFIRMED,
+        evidence: options.evidence || 'User entry',
+        provenanceKind: options.provenanceKind || 'experiment',
+        sourceRef: options.sourceRef || null
+      };
+      changed++;
+    });
+    if (changed) {
+      target.processSourceRef = options.sourceRef || target.processSourceRef || null;
+      target.status = STATUS.USER_CONFIRMED;
+    }
+    return { device: target, changed: changed };
+  }
+
+  function markCabinetAssisted(exp, deviceId, sourceRef) {
+    const target = device(exp, deviceId);
+    if (!target) throw new Error('Design experiment not found.');
+    target.cabinetAssisted = true;
+    target.cabinetAssistedAt = new Date().toISOString();
+    if (sourceRef && !target.evidence) target.evidence = 'Lab Cabinet snapshot · ' + String(sourceRef.cabinetName || 'resource');
+    target.status = STATUS.USER_CONFIRMED;
+    return target;
+  }
+
   function devices(exp) {
     return requireDesign(exp).devices;
   }
@@ -545,9 +621,6 @@
     return target;
   }
 
-  /* Dataset correction services may change Experiment/Sample parentage. Design
-     owns the corresponding projection update so dataset code never writes
-     Design records directly. */
   function syncDatasetGroupLinks(exp, sampleIds, experiment) {
     const ids = new Set((sampleIds || []).map(String));
     if (!experiment || !ids.size) return 0;
@@ -585,11 +658,6 @@
     return missing;
   }
 
-  /**
-   * Accept harmless provider variations in Design JSON while preserving the
-   * same evidence/status boundary. This normalizes shape; it does not infer or
-   * invent scientific content.
-   */
   function normalizeDesignProposal(raw) {
     const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     function list(value) { return Array.isArray(value) ? value : value ? [value] : []; }
@@ -680,6 +748,11 @@ coverage:{input_experiments:Number(coverage.input_experiments)||0,
     setDeviceStatus: setDeviceStatus,
     setDeviceSolutionLinked: setDeviceSolutionLinked,
     setDeviceSampleAssigned: setDeviceSampleAssigned,
+    replaceDeviceStack: replaceDeviceStack,
+    insertDeviceLayer: insertDeviceLayer,
+    replaceDeviceLayer: replaceDeviceLayer,
+    mergeDeviceProcess: mergeDeviceProcess,
+    markCabinetAssisted: markCabinetAssisted,
     syncDatasetGroupLinks: syncDatasetGroupLinks,
     devices: devices,
     solutions: solutions,

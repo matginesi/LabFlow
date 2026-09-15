@@ -286,8 +286,6 @@ module.exports=function(t,LF){
     assert(second.status,'done','retry status');assert(calls,['a','b','b','c','finish'],'resume from b only');assert(second.outputs.batch,['A','B','C'],'merged work-unit results');
   };
 
-
-
   t['runner does not double-touch an Action that committed its own revision'] = async function(){
     const exp={id:'exp_commit',sync:{revision:4},derived:{actions:{},chat:{conversation:[]}}};
     const def={id:'test.commit',type:'DETERMINISTIC',mutation_scope:'dataset',steps:[{id:'commit',type:'DETERMINISTIC',fn:'commit'}]};

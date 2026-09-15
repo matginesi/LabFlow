@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when distributed shells/generated UI advertise a release other than build-info.js."""
+"""Verify generated artifacts and build metadata are synchronized with source inputs."""
 from __future__ import annotations
 import re,sys
 from pathlib import Path

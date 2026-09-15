@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression for Action proposal acceptance and downstream canonical state."""
+"""Browser regression for Action state propagation, rendering and lifecycle synchronization."""
 from __future__ import annotations
 
 import json

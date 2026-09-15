@@ -75,10 +75,6 @@ module.exports=function(t,LF){
     localStorage.clear();
   };
 
-
-
-
-
   t['Detect and Save & test use the canonical Action Totem for the full provider operation']=function(){
     const detectSource=String(LF.AISettings.detectModel),testSource=String(LF.AISettings.testConnection);
     assert(detectSource.indexOf('startProviderActivity(')>=0,'Detect must open Action Totem');
@@ -88,8 +84,6 @@ module.exports=function(t,LF){
     assert(detectSource.indexOf('notify(')<0&&testSource.indexOf('notify(')<0,'provider operations must not emit a parallel Message Totem');
     assert(detectSource.indexOf('providerFeedback')<0&&testSource.indexOf('providerFeedback')<0,'provider operations must not use an inline feedback clone');
   };
-
-
 
   t['NOMAD settings are explicit local-only preparation for the upload stub']=function(){
     localStorage.removeItem('labflow.nomad.settings');localStorage.removeItem('labflow.nomad.token');

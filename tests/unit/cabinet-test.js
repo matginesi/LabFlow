@@ -1,5 +1,9 @@
 'use strict';
+require('../../assets/js/logger.js');
 require('../../assets/js/core.js');
+require('../../assets/js/storage.js');
+require('../../assets/js/experiment/data-model.js');
+require('../../assets/js/experiment/design-model.js');
 require('../../assets/js/cabinet/cabinet.js');
 module.exports=function(t,LF){
  t['Cabinet snapshot is detached and later Cabinet edits do not mutate Design copy']=function(){LF.Cabinet.reset({items:[]});const item=LF.Cabinet.create('solution',{name:'Ink A',role:'absorber',solutes:'FAI'}),exp={design:{solutions:[],devices:[{id:'d1',solutionIds:[],stack:[],process:{}}]}};LF.Cabinet.applyToDesign(exp,'d1',item.id);const sol=exp.design.solutions[0];LF.Cabinet.update(item.id,{solutes:'FAI, PbI2'});if(sol.solutes!=='FAI')throw new Error('Design snapshot mutated after Cabinet edit');if(!sol.cabinetRef||sol.cabinetRef.cabinetId!==item.id)throw new Error('Cabinet provenance missing');};
@@ -9,5 +13,7 @@ module.exports=function(t,LF){
  t['Saving an incomplete Design solution to Cabinet is blocked']=function(){LF.Cabinet.reset({items:[]});const exp={design:{solutions:[{id:'s-bad',name:'Placeholder',role:'absorber precursor'}],devices:[]}};let threw=false;try{LF.Cabinet.saveDesignSolution(exp,'s-bad');}catch(err){threw=/solute or solvent/i.test(String(err.message));}if(!threw)throw new Error('Incomplete Design solution should not enter Cabinet');};
 
  t['Incomplete Cabinet solutions are excluded from AI context and proposal matching']=function(){LF.Cabinet.reset({items:[]});const bad=LF.Cabinet.create('solution',{name:'Same name',role:'absorber precursor'}),good=LF.Cabinet.create('solution',{name:'Good ink',role:'absorber precursor',solutes:'FAI',solvents:'DMF'});const compact=LF.Cabinet.compactForAI('solution',8);if(compact.some(function(x){return x.id===bad.id;}))throw new Error('Incomplete solution leaked into AI context');if(!compact.some(function(x){return x.id===good.id;}))throw new Error('Complete solution missing from AI context');const matches=LF.Cabinet.matchProposal({solutions:[{name:'Same name',role:'absorber precursor',solutes:'FAI',solvents:'DMF'}],devices:[]});if(matches.some(function(x){return x.cabinetId===bad.id;}))throw new Error('Incomplete Cabinet item matched a Design proposal');};
+
+ t['Cabinet validates substrates and stacks with the contract for their own shape']=function(){LF.Cabinet.reset({items:[]});const substrate=LF.Cabinet.create('substrate',{name:'ITO glass',material:'ITO/glass'}),emptyStack=LF.Cabinet.create('stack',{name:'Empty stack',layers:[]}),validStack=LF.Cabinet.create('stack',{name:'Reference stack',layers:[{role:'Substrate',material:'ITO/glass'}]});if(LF.Cabinet.validate(substrate).length)throw new Error('Valid substrate should not require stack layers');if(!LF.Cabinet.validate(emptyStack).some(function(x){return /meaningful layer/i.test(x);}))throw new Error('Empty stack should be rejected');if(LF.Cabinet.validate(validStack).length)throw new Error('Meaningful stack should be accepted');};
 
 };

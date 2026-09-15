@@ -1,3 +1,7 @@
+/*
+ * Deterministic read/write step implementations used by Action manifests.
+ * Boundary: Write steps delegate to explicit owners; deterministic services stay outside model prompts.
+ */
 (function () {
   'use strict';
 
@@ -344,10 +348,7 @@
       if (!String(scope.device_id || '')) throw new Error('The selected Design experiment is unavailable.');
 
       proposal.devices = proposal.devices.slice(0, 1);
-      /*
-       * Device identity belongs to LabFlow. The model returns the scientific
-       * proposal; this deterministic wrapper binds it to the selected device.
-       */
+
       if (!proposal.devices[0]) {
         proposal.devices = [{
           name: '',

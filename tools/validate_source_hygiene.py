@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard maintainability boundaries that are easy to accidentally bypass."""
+"""Enforce source ownership, portability and readability boundaries that are easy to bypass accidentally."""
 from pathlib import Path
 import re
 import sys
@@ -19,24 +19,26 @@ def forbid(path, pattern, message):
         errors.append(f'{path}: {message}')
 
 
-# The application shell delegates scientific writes to owners.
+                                                              
+# Ownership boundary: application shell coordinates scientific writes but never owns Design.
 forbid('assets/js/app.js', r'S\.state\.experiment\.design\b', 'direct Design root access bypasses DesignModel')
 forbid('assets/js/app.js', r'\.design\.(?:devices|solutions)\.(?:push|splice)\s*\(', 'direct Design collection mutation bypasses DesignModel')
 forbid('assets/js/app.js', r'\.stack\.(?:push|splice)\s*\(', 'direct Design layer mutation bypasses DesignModel')
 forbid('assets/js/app.js', r"C\.uid\(['\"](?:device|sol|layer)['\"]", 'UI creates Design records directly')
 
-# DesignAnalysis decides policy, but DesignModel owns every Design write.
+                                                                         
 forbid('assets/js/experiment/design-analysis.js', r'exp\.design\b', 'DesignAnalysis must use DesignModel selectors/mutators')
 forbid('assets/js/experiment/design-analysis.js', r'\.design\.(?:devices|solutions)\.(?:push|splice)\s*\(', 'DesignAnalysis mutates Design collections directly')
 
-# DatasetCorrections may rebuild canonical samples, but record shape still belongs to DomainSchema.
+                                                                                                   
 forbid('assets/js/data/dataset-corrections.js', r"sample\s*=\s*\{[^\n]*kind\s*:\s*['\"]sample['\"]", 'DatasetCorrections manually defines the sample record shape')
 
-# AI orchestration must not own deterministic scientific services.
+                                                                  
 forbid('assets/js/ai/action-steps.js', r'LF\.DatasetCorrections\s*=', 'DatasetCorrections belongs to data/dataset-corrections.js')
 forbid('assets/js/ai/action-steps.js', r'LF\.DesignAnalysis\s*=', 'DesignAnalysis belongs to experiment/design-analysis.js')
 
-# External/persisted data has one strict restore path.
+                                                      
+# Trust boundary: persisted/external scientific data has one strict restore path.
 if 'DM.restore(data)' not in text('assets/js/data/importer.js'):
     errors.append('assets/js/data/importer.js: LabFlow save restore must use DataModel.restore()')
 if 'DataContracts.assertSnapshot(snapshot)' not in text('assets/js/experiment/data-model.js'):
@@ -46,7 +48,8 @@ if 'schemaVersion' in text('assets/js/storage.js'):
 if 'schema_version' in text('tools/build_knowledge_bundle.py'):
     errors.append('tools/build_knowledge_bundle.py: generated KB must not introduce a schema-version wrapper')
 
-# Never commit developer identity or workstation-specific model paths into runtime defaults.
+                                                                                            
+# Portability boundary: runtime defaults must not capture a developer identity or workstation path.
 for path in ['assets/js/app.js', 'assets/js/storage.js', 'labflow_engine.sh']:
     source = text(path)
     if 'Matteo Ginesi' in source:
@@ -54,7 +57,7 @@ for path in ['assets/js/app.js', 'assets/js/storage.js', 'labflow_engine.sh']:
     if re.search(r'/home/[^/]+/.*(?:LM Studio|lmstudio|\.gguf)', source, re.I):
         errors.append(f'{path}: developer-specific model path is hard-coded')
 
-# Classic scripts are acceptable, but required architectural dependencies must be explicit.
+                                                                                           
 for path in [
     'assets/js/experiment/data-model.js',
     'assets/js/state.js',
@@ -68,8 +71,9 @@ for path in [
     if re.search(r'const\s+C\s*=\s*LF\.Core\s*\|\|\s*\{\}', source):
         errors.append(f'{path}: required Core dependency is hidden behind a fallback object')
 
-# Readability is now a release invariant for authored JavaScript. Generated bundles are
-# intentionally compact and are validated by their own deterministic builders.
+                                                                                       
+                                                                              
+# Generated bundles have separate builders; readability checks apply to authored JavaScript only.
 GENERATED = {'action-registry.js', 'prompt-bundle.js', 'kb-bundle.js', 'docs-bundle.js', 'ui-kit-inline.js'}
 for path in sorted((ROOT / 'assets/js').rglob('*.js')):
     if path.name in GENERATED:

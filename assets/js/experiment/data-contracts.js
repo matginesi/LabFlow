@@ -1,3 +1,7 @@
+/*
+ * Fail-closed validation for canonical aggregate and persisted snapshot invariants.
+ * Boundary: Report violations without guessing or repairing ambiguous scientific meaning.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},Schema=LF.DomainSchema;
@@ -12,16 +16,6 @@ function collectionForKind(kind){return {file:'files',experiment:'experiments',s
 function relationIds(exp){const out={dataset:new Set([String(exp&&exp.id||'')].filter(Boolean))};Schema.rootFields().forEach(function(meta){if(meta.recordKind)out[meta.recordKind]=ids(exp[meta.key]);});out.design_solution=ids(exp.design&&exp.design.solutions);out.design_device=ids(exp.design&&exp.design.devices);return out;}
 function relationValues(record,field){const value=record&&record[field];return Array.isArray(value)?value:(value==null||value===''?[]:[value]);}
 
-
-/*
- * Persisted-data trust boundary.
- *
- * Runtime hydration may fill harmless defaults for objects already owned by
- * LabFlow. A saved/imported snapshot is different: validate its current
- * structure before hydration so missing fields are never mistaken for a valid
- * old format. LabFlow intentionally supports one current snapshot contract and
- * does not maintain a migration/compatibility ladder.
- */
 function validateSnapshot(snapshot){
   const errors=[];
   function fail(code,message,path){add(errors,code,message,snapshot,path||'');}
@@ -115,8 +109,8 @@ const e=maps.experiment.get(String(m.experimentId||'')),s=maps.sample.get(String
 function validate(exp){
   if(!exp||typeof exp!=='object')return{ok:false,errors:[{code:'DATASET_REQUIRED',message:'ExperimentData is required.',recordId:'',path:''}],warnings:[],counts:{}};
   const errors=[],warnings=[],source=exp,actionData=source.actionData;
-  // Validate persisted ActionData before hydration. Hydration normalizes malformed values
-  // for runtime safety and must not hide a broken persisted contract from validation.
+
+
   if(!actionData||typeof actionData!=='object'||Array.isArray(actionData))add(errors,'ACTION_DATA_INVALID','actionData must be the single persisted Action-output store.',source,'actionData');
   else ['proposals','annotations','status'].forEach(function(k){if(!actionData[k]||typeof actionData[k]!=='object'||Array.isArray(actionData[k]))add(errors,'ACTION_DATA_BUCKET_INVALID','actionData.'+k+' must be an object keyed by Action id.',source,'actionData.'+k);});
   exp=LF.DataModel&&LF.DataModel.hydrate?LF.DataModel.hydrate(exp):Schema.normalizeRoot(exp);
@@ -132,12 +126,12 @@ if(!id)add(errors,'ID_REQUIRED',meta.recordKind+' record has no id.',record,path
       validateRelations(exp,errors,sets,record,meta.recordKind,path);});
   });
 
-  // Generic typed block references.
+
   (exp.blocks||[]).forEach(function(block,bi){(block.refs||[]).forEach(function(ref,ri){const set=sets[ref.kind];
 if(!set)add(errors,'BLOCK_REF_KIND_UNKNOWN','Block '+block.id+' references unsupported kind '+ref.kind+'.',block,
     'blocks['+bi+'].refs['+ri+']');else if(!set.has(String(ref.id)))add(errors,'BLOCK_REF_BROKEN',
     'Block '+block.id+' references missing '+ref.kind+' '+ref.id+'.',block,'blocks['+bi+'].refs['+ri+']');});});
-  // Patch targets are authoritative provenance links.
+
   (exp.patches||[]).forEach(function(p,pi){if(!p.target||!p.target.kind||!p.target.id)return;
 const set=sets[p.target.kind];if(!set)add(errors,'PATCH_TARGET_KIND_UNKNOWN',
     'Patch '+p.id+' targets unsupported kind '+p.target.kind+'.',p,'patches['+pi+'].target');
@@ -146,7 +140,7 @@ const set=sets[p.target.kind];if(!set)add(errors,'PATCH_TARGET_KIND_UNKNOWN',
 
   validateBacklinks(exp,errors,maps);
 
-  // Design is a projection over stable domain IDs; names are display caches only.
+
   const solutionIds=sets.design_solution||new Set(),sampleIds=sets.sample||new Set(),experimentIds=sets.experiment||new Set();
   (exp.design&&exp.design.solutions||[]).forEach(function(x,i){validateRecordShape(errors,warnings,x,'design_solution','design.solutions['+i+']');});
   (exp.design&&exp.design.stack||[]).forEach(function(x,i){validateRecordShape(errors,warnings,x,'design_layer','design.stack['+i+']');});

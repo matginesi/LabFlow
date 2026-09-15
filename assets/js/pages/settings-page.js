@@ -1,3 +1,7 @@
+/*
+ * Render configuration, provider, Actions and utility settings surfaces.
+ * Boundary: Settings are preference/runtime state and excluded from scientific context.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;

@@ -1,54 +1,48 @@
 ---
 title: Getting started
 section: Researcher guide
-summary: The shortest path from a ZIP archive to trustworthy Results with minimal researcher interaction.
-order: 1
+summary: The shortest path from a laboratory ZIP to trustworthy deterministic Results and reviewable Design.
+order: 10
 ---
 
 # Start with LabFlow
 
+The normal workflow is intentionally short. A researcher should not need to understand internal pipeline mechanics before obtaining deterministic Results.
+
 ## Shortest workflow
 
-1. Open **Upload & Review**.
-2. Drop/select the experiment ZIP.
-3. Let LabFlow normalize names, rebuild hierarchy and analyze data; review any mechanically safe cleanup it detects and accept it explicitly before LabFlow Data is changed.
-4. If Review says **Scientific decisions: Clear**, go directly to **Results**.
-5. If ambiguities remain, click **Resolve with AI**, inspect the suggestions and optionally **Apply all suggestions**.
-6. Use **Design** or **Export** when needed. NOMAD artifacts live inside Export.
-
-That is the intended normal workflow. Researchers should not have to understand the internal pipeline to get trustworthy deterministic Results.
-
-## What happens automatically
+1. Open **Upload & Review** and select the laboratory ZIP.
+2. Let LabFlow preserve RAW evidence, normalize names, rebuild the hierarchy and calculate deterministic analysis.
+3. Review any mechanically safe correction that is still pending; LabFlow Data changes only after explicit acceptance.
+4. If **Scientific decisions** is clear, continue directly to **Results**.
+5. If a genuine semantic ambiguity remains, resolve it manually or run **Resolve with AI**, inspect the proposal and accept only the changes you agree with.
+6. Complete or verify **Design**. Cabinet resources may be copied into Design; optional AI inference produces a reviewable proposal rather than an automatic mutation.
+7. Use **Export** for the portable LabFlow package and deterministic NOMAD-oriented artifacts.
 
 ```mermaid
 flowchart LR
-    A[ZIP] --> B[Canonical naming]
-    B --> C[Hierarchy + JV analysis]
-    C --> D[Safe cleanup review]
-    D --> E{Semantic ambiguity?}
+    A[ZIP] --> B[Deterministic import]
+    B --> C[Validation + analysis]
+    C --> D[Review]
+    D --> E[Semantic ambiguity?]
     E -->|No| F[Results]
-    E -->|Yes| G[Review / Resolve with AI]
-    G --> F
+    E -->|Yes| G[Manual or AI proposal]
+    G --> D
+    F --> H[Design]
+    H --> I[Export]
 ```
 
-## During import
+## What happens automatically
 
-LabFlow performs no AI request. It automatically:
+Import does not require an AI provider. LabFlow preserves the uploaded source, establishes Experiment/Sample/Run/Measurement relationships, parses and pairs FW/RV JV data, computes deterministic metrics, records structural findings and prepares review state.
 
-- preserves RAW evidence;
-- identifies canonical names;
-- creates Experiment/Sample/Run/Measurement relationships;
-- parses and pairs FW/RV JV data;
-- calculates deterministic metrics/results;
-- marks deterministic ranking eligibility/validation status without silently applying pending cleanup;
-- records accepted safe-cleanup corrections in provenance;
-- checks structural invariants.
+Mechanically detectable cleanup may be proposed automatically, but a pending mutation is not silently committed. Genuine ambiguity remains visible rather than being guessed.
 
 ## AI is optional
 
-Without any provider configured you can still import, review deterministic findings, inspect Results, edit/confirm Design manually and prepare deterministic export data.
+Without a provider configured you can still import data, review findings, inspect Results, edit Design, use Cabinet/Knowledge Base features and prepare deterministic exports.
 
-AI is a convenience for ambiguity resolution, Design suggestions, Results interpretation/comparison and questions.
+AI is reserved for explicit Actions and Assistant questions where interpretation or semantic inference is useful. Its output remains non-authoritative until the relevant owner-controlled acceptance step.
 
 ## Useful console command
 
@@ -56,4 +50,4 @@ AI is a convenience for ambiguity resolution, Design suggestions, Results interp
 LabFlow.Data.help()
 ```
 
-This documents the exact live data object used by the application.
+It documents the live data surface used by the application. For ownership and mutation boundaries, continue with [Architecture](../ARCHITECTURE.md) or the [research workflow](RESEARCH_WORKFLOW.md).

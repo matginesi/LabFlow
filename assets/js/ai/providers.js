@@ -1,9 +1,10 @@
+/*
+ * Provider registry containing endpoint/model defaults and provider capability metadata.
+ * Boundary: Keep provider configuration out of scientific context and Action prompts.
+ */
 (function () {
   'use strict';
-  /* Provider capabilities are declarative transport metadata. Provider-specific
-     request fields belong here, never in Actions or scientific prompts. A
-     thinkingModes entry is applied only after the Action/global policy has been
-     reconciled with model capability; `auto` deliberately sends no override. */
+
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
     openrouter: {
@@ -60,6 +61,21 @@ keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:tr
       note:'Set endpoint and model manually.'
     }
   };
+  if (LF.Structures) {
+    LF.Structures.define('ai.provider', {
+      owner: 'AIProviders', layer: 'configuration', persistence: 'source',
+      description: 'Declarative provider transport/capability descriptor. No credentials are stored here.',
+      variants: Object.keys(LF.AIProviders),
+      fields: {
+        id: { type: 'string', required: true }, name: { type: 'string', required: true },
+        endpoint: { type: 'string', required: true }, model: { type: 'string', required: true },
+        keyRequired: { type: 'boolean' }, optionalKey: { type: 'boolean' }, local: { type: 'boolean' },
+        supportsStreaming: { type: 'boolean' }, supportsJsonMode: { type: 'boolean' },
+        supportsJsonSchema: { type: 'boolean' }, supportsTemperature: { type: 'boolean' },
+        tokenParam: { type: 'string' }, thinkingModes: { type: 'object' }, note: { type: 'string' }
+      }
+    });
+  }
   LF.AIProviderList = Object.keys(LF.AIProviders).map(function(id){return LF.AIProviders[id];});
   if(LF.Logger) LF.Logger.info('providers','registry.ready',{defaultProvider:'openrouter',defaultModel:'openrouter/free',providers:LF.AIProviderList.map(function(p){return{id:p.id,name:p.name,model:p.model,endpoint:p.endpoint,keyRequired:p.keyRequired};})});
 }());

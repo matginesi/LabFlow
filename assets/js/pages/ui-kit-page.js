@@ -1,29 +1,22 @@
+/*
+ * Render the in-application UI Kit reference and live component examples.
+ * Boundary: Examples demonstrate shared primitives and must not become production feature logic.
+ */
 (function () {
   'use strict';
 
-  /**
-   * Standalone UI Kit page controller.
-   *
-   * This module owns only pattern search/filtering and standalone theme controls.
-   * The application shell remains responsible for global navigation and forwards
-   * filter state through postMessage while the catalog is hosted in its iframe.
-   */
   const LF = window.LabFlow = window.LabFlow || {};
 
-  /** Normalize a catalog family without assuming that every caller is valid. */
+
   function normalizeFilter(value) {
     return String(value || 'all').trim() || 'all';
   }
 
-  /** Normalize search text once so matching remains case-insensitive. */
+
   function normalizeQuery(value) {
     return String(value || '').trim().toLowerCase();
   }
 
-  /**
-   * Bind the pattern catalog and return its small imperative API.
-   * @returns {{apply:Function,setQuery:Function,setFilter:Function}}
-   */
   function bindPatternBrowser() {
     const search = document.getElementById('uiKitSearch');
     const select = document.getElementById('uiKitFilterSelect');
@@ -32,7 +25,7 @@
     const buttons = Array.from(document.querySelectorAll('[data-ui-kit-filter]'));
     let activeFilter = 'all';
 
-    /** Keep every local representation of the active family in sync. */
+
     function syncControls() {
       buttons.forEach(function (button) {
         const selected = button.dataset.uiKitFilter === activeFilter;
@@ -42,15 +35,15 @@
       if (select) select.value = activeFilter;
     }
 
-    /** Tell the host shell how many catalog groups remain visible. */
+
     function reportVisibleCount(visibleCount) {
       if (window.self === window.top) return;
-      // `*` is required for direct file:// use, where the origin is opaque. The
-      // message contains only an integer; incoming commands are limited to parent.
+
+
       window.parent.postMessage({type:'labflow-ui-kit-count', count:visibleCount}, '*');
     }
 
-    /** Apply family and text filters without changing application routing. */
+
     function apply() {
       const query = normalizeQuery(search && search.value);
       let visibleCount = 0;
@@ -67,13 +60,13 @@
       reportVisibleCount(visibleCount);
     }
 
-    /** Set search text programmatically, then repaint the catalog. */
+
     function setQuery(value) {
       if (search) search.value = String(value || '');
       apply();
     }
 
-    /** Set the active component family programmatically, then repaint. */
+
     function setFilter(value) {
       activeFilter = normalizeFilter(value);
       apply();
@@ -103,10 +96,10 @@
     return {apply:apply, setQuery:setQuery, setFilter:setFilter};
   }
 
-  /** Initialize the directly-openable page after all static markup is available. */
+
   function init() {
-    // When embedded, the app already owns navigation and topbar. CSS uses this
-    // state to hide only duplicate chrome, never the documented components.
+
+
     if (window.self !== window.top) document.body.classList.add('is-embedded');
 
     LF.Theme.apply(LF.Theme.current(), false);

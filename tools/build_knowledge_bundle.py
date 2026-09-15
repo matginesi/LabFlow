@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static-browser Knowledge Base bundle from knowledge/kb.jsonl.
-
-LabFlow can run from file://, so runtime code cannot rely on fetch(). JSONL is the
-source-controlled representation: one knowledge entry per line. The generated
-bundle exposes the same records synchronously as window.LabFlowKnowledgeBundle.
-"""
+"""Compile bundled Knowledge Base JSONL into a deterministic browser artifact."""
 from __future__ import annotations
 
 import json

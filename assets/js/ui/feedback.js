@@ -1,14 +1,10 @@
+/*
+ * Shared Message and Action Totem lifecycle plus foreground feedback primitives.
+ * Boundary: Mirror application and Action state without owning hidden work queues.
+ */
 (function () {
   'use strict';
 
-  /**
-   * Global feedback service.
-   *
-   * This is the only module allowed to own Message Totems and the single
-   * Action Totem. It does not start work, call providers, navigate the app,
-   * or maintain experiment state; callers report lifecycle changes through the
-   * public `LabFlow.UI` methods exported at the bottom of the file.
-   */
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core;
   const Log = LF.Logger.scope('ui');
@@ -70,32 +66,24 @@
     }, 0);
   }
 
-  // Timer refreshes must not rebuild disclosures: doing so closes <details>,
-  // loses selection and causes flicker. The last rendered payload is remembered
-  // per element and replaced only when its content actually changes.
   const renderedContent = new WeakMap();
 
-  /** Return an element by id, or null when the host page omits that surface. */
+
   function byId(id) {
     return document.getElementById(id);
   }
 
-  /** Convert nullable values to display-safe strings. */
+
   function text(value) {
     return value == null ? '' : String(value);
   }
 
-  /** Constrain application progress to the inclusive 0..1 range. */
+
   function clampProgress(value) {
     const number = Number(value);
     return Number.isFinite(number) ? Math.max(0, Math.min(1, number)) : 0;
   }
 
-  /**
-   * Show a short, non-blocking Message Totem in the shared live region.
-   * @param {string} message Human-readable notification text.
-   * @param {string} [type] Optional semantic class such as `success` or `danger`.
-   */
   function message(message, type, titleText) {
     const semantic=type==='error'?'danger':(type || 'info'),titles={success:'Completed',danger:'Could not complete',warning:'Attention',info:'LabFlow'};
     Log.debug('message', {type:semantic, message:text(message).slice(0, 300)});
@@ -120,7 +108,7 @@
     Log.info('confirm', {message:pending.message.slice(0,300),result:!!result});pending.resolve(!!result);
   }
 
-  /** Render confirmation as a LabFlow totem rather than a browser-owned modal. */
+
   function confirmAction(message, options) {
     options=options||{};if(confirmPending)closeConfirmation(false);
     const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
@@ -135,13 +123,13 @@
     });
   }
 
-  /** Return elapsed milliseconds, frozen at the terminal timestamp when set. */
+
   function activityElapsedMs() {
     if (!activity) return 0;
     return Math.max(0, (activity.endedAt || Date.now()) - activity.startedAt);
   }
 
-  /** Freeze elapsed time and stop periodic repaints on every terminal path. */
+
   function stopActivityClock() {
     if (!activity) return;
     if (!activity.endedAt) activity.endedAt = Date.now();
@@ -149,11 +137,6 @@
     activityTimer = null;
   }
 
-  /**
-   * Normalize string or object Action-step declarations into one renderable shape.
-   * @param {Array<string|Object>} steps Caller-provided checklist items.
-   * @returns {Array<{id:string,label:string,status:string,note:string}>}
-   */
   function normalizeSteps(steps) {
     return (Array.isArray(steps) ? steps : []).map(function (step, index) {
       if (typeof step === 'string') {
@@ -169,26 +152,20 @@
     });
   }
 
-  /** Turn an internal snake_case key into a compact display label. */
+
   function humanKey(key) {
     return text(key).replace(/_/g, ' ').replace(/\b\w/g, function (character) {
       return character.toUpperCase();
     });
   }
 
-  /** Choose the most useful identity field for an item in structured output. */
+
   function structuredItemTitle(item, index) {
     if (!item || typeof item !== 'object') return 'Item ' + (index + 1);
     return item.title || item.name || item.patch_type || item.field || item.check ||
       item.labflow_path || item.item || ('Item ' + (index + 1));
   }
 
-  /**
-   * Render JSON-like data as readable facts, collections and nested disclosures.
-   * All values are escaped because provider output and filenames are untrusted.
-   * @param {*} object Value to render.
-   * @returns {string} Safe HTML fragment.
-   */
   function structuredObjectHtml(object) {
     if (object == null) return '<span class="structured-empty">—</span>';
     if (typeof object !== 'object') {
@@ -242,7 +219,7 @@
     return html || '<span class="structured-empty">No structured fields.</span>';
   }
 
-  /** Present final structured provider output as compact, theme-aware JSON. */
+
   function structuredActivityHtml(raw) {
     let parsed;
     try { parsed=JSON.parse(text(raw)); }
@@ -254,15 +231,11 @@
 
   function compactStreamText(raw){return text(raw).replace(/\r\n/g,'\n').replace(/\n[ \t]*\n+/g,'\n');}
 
-  /** Return a disclosure-safe authorization status, never the header value. */
+
   function authorizationStatus(headers) {
     return headers && headers.Authorization ? 'Configured · redacted' : 'Not set';
   }
 
-  /**
-   * Format the exact sanitized provider payload for inspection.
-   * Authorization is redacted again here as defence in depth.
-   */
   function requestActivityHtml(raw) {
     let request;
     try {
@@ -303,14 +276,14 @@
       (C.markdown ? C.markdown('```json\n' + JSON.stringify(safeRequest, null, 2) + '\n```') : '<pre>' + C.escapeHtml(JSON.stringify(safeRequest, null, 2)) + '</pre>') + '</div></details>';
   }
 
-  /** Preserve disclosure state, selection and scroll during timer refreshes. */
+
   function renderStable(element, key, render) {
     if (!element || renderedContent.get(element) === key) return;
     render();
     renderedContent.set(element, key);
   }
 
-  /** Update the definition list of compact Action facts. */
+
   function renderActivityDetails(details) {
     const list = byId('activityDetails');
     if (!list) return;
@@ -327,7 +300,7 @@
     });
   }
 
-  /** Render checklist and stage history, whose contents may change each update. */
+
   function renderActivityTimeline() {
     const checklist = byId('activityChecklist');
     if (checklist) {
@@ -354,7 +327,7 @@
     });
   }
 
-  /** Render request/response disclosures only when their underlying data changes. */
+
   function renderActivityPayloads() {
     const trace = byId('activityAiTrace');
     const request = byId('activityRequest');
@@ -381,7 +354,7 @@
     });
   }
 
-  /** A running Action/AI request is cancellable even when a caller forgot the UI flag. */
+
   function hasActiveCancellationTarget() {
     if (!activity || activity.status !== 'running') return false;
     if (activity.cancellable) return true;
@@ -389,7 +362,7 @@
     return Boolean(LF.AI && typeof LF.AI.isBusy === 'function' && LF.AI.isBusy());
   }
 
-  /** Render command labels and enabled states from the Action lifecycle. */
+
   function renderActivityCommands() {
     const finished = activity.status !== 'running';
     const canStop = !finished && hasActiveCancellationTarget();
@@ -429,7 +402,7 @@
     }
   }
 
-  /** Render real SSE telemetry separately from application-stage progress. */
+
   function renderActivityStream() {
     const panel = byId('activityStream');
     const stream = activity.stream;
@@ -461,7 +434,7 @@
     }
   }
 
-  /** Paint the current activity snapshot. Called at most once per animation frame. */
+
   function renderActivityNow() {
     const shade = byId('activityShade');
     if (!shade || !activity) return;
@@ -509,7 +482,7 @@
     renderActivityCommands();
   }
 
-  /** Coalesce multiple state changes into one animation-frame paint. */
+
   function renderActivity() {
     if (activityFrame) return;
     activityFrame = window.requestAnimationFrame(function () {
@@ -518,13 +491,6 @@
     });
   }
 
-  /**
-   * Restore the Action surface to a neutral, closed state.
-   *
-   * A fresh action must never inherit payloads, disclosure state, progress
-   * classes or timers from the previous action. This function deliberately
-   * does not read `activity`, so it is safe before a start and after a close.
-   */
   function resetActivitySurface() {
     window.clearTimeout(hideTimer);
     hideTimer = null;
@@ -596,10 +562,7 @@
     const retry=byId('activityRetry');if(retry)retry.hidden=true;
   }
 
-  /**
-   * Open the one global Action totem.
-   * @param {Object} [options] Initial display state and optional cancel callback.
-   */
+    // The Action Totem projects one foreground lifecycle; it is not a background job queue.
   function activityStart(options) {
     resetActivitySurface();
     const input = options || {};
@@ -643,11 +606,6 @@
     });
   }
 
-  /**
-   * Merge an incremental activity update without replacing unspecified fields.
-   * An Action step can be updated by passing `stepId`, `stepStatus`, and `stepNote`.
-   * @param {Object} [options] Partial activity state.
-   */
   function activityUpdate(options) {
     if (!activity) return;
     const input = options || {};
@@ -685,20 +643,20 @@
     Log.debug('activity.update', {stage:activity.stage, progress:activity.progress});
   }
 
-  /** Close the totem and release all timers and animation frames. */
+
   function activityHide() {
     activity = null;
     resetActivitySurface();
   }
 
-  /** Schedule optional auto-dismissal; zero keeps terminal details open. */
+
   function scheduleActivityHide(holdMs, fallback) {
     window.clearTimeout(hideTimer);
     const delay = Number.isFinite(Number(holdMs)) ? Number(holdMs) : fallback;
     if (delay > 0) hideTimer = window.setTimeout(activityHide, delay);
   }
 
-  /** Mark the current Action complete and freeze its final duration. */
+
   function activityFinish(options) {
     if (!activity) return;
     const input = options || {};
@@ -730,7 +688,7 @@
     scheduleActivityHide(input.holdMs, activity.showAiTrace ? 3000 : 650);
   }
 
-  /** Mark the current Action failed, preserve its detail, and freeze time. */
+
   function activityError(error, options) {
     if (!activity) return;
     const input = options || {};
@@ -761,10 +719,6 @@
     scheduleActivityHide(input.holdMs, 2800);
   }
 
-  /**
-   * Cancel a running Action, or close a completed/failed one.
-   * @returns {boolean} Whether a close/cancel action was accepted.
-   */
   function activityCancel() {
     if (!activity) return false;
     if (activity.status !== 'running') {
@@ -789,7 +743,7 @@
     return Boolean(stopped);
   }
 
-  /** Return whether the global Action surface currently owns the UI. */
+
   function isActivityOpen() {
     return Boolean(activity);
   }
@@ -821,8 +775,6 @@
     else activityHide();
   });
 
-  // Keep this stable public surface small. Callers should not reach into
-  // the private activity object or manipulate totem DOM directly.
   LF.UI = {
     message:message,
     confirmAction:confirmAction,

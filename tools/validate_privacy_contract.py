@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when LabFlow's local-first runtime privacy boundary is weakened."""
-
+"""Validate local-first assets, network boundaries and privacy assumptions."""
 from __future__ import annotations
 
 import re

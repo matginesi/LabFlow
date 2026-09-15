@@ -1,3 +1,7 @@
+/*
+ * Named deterministic tool registry used by Action steps and read-only agent contexts.
+ * Boundary: Tool metadata controls read/write exposure; tools are implementation capabilities, not automatically Actions.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger?LF.Logger.scope('tools'):null;

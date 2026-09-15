@@ -1,3 +1,7 @@
+/*
+ * Direct-browser provider transport, request shaping, reasoning compatibility, discovery and probes.
+ * Boundary: No hidden relay/fallback; normalize provider quirks here rather than in scientific logic.
+ */
 (function () {
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
@@ -11,7 +15,7 @@
   const STREAM_DIAGNOSTIC_CHARS=131072;
   const THINKING_PROMPT_GUARD='OUTPUT MODE: Do not emit chain-of-thought, hidden reasoning, analysis, or <think> blocks. Produce only the final requested answer. For structured output, begin with the requested JSON immediately.';
 
-  /** The ActionRunner hands over the single shared AbortController for a run. */
+
   function acceptController(c){injectedController=c||null;}
 
   function connectionTestPrompt(){
@@ -20,7 +24,7 @@
     throw new Error('The connection-test Markdown prompt is missing from the compiled registry.');
   }
 
-  /** Apply only allowlisted provider fields for the selected thinking policy. */
+
   function applyThinkingMode(body,provider,mode){
     mode=['off','on'].includes(mode)?mode:'auto';
     const payload=provider&&provider.thinkingModes&&provider.thinkingModes[mode];
@@ -38,9 +42,6 @@
     return rows;
   }
 
-  /** Keep connectivity boring: one tiny request, no capability discovery.
-      Cloud/router probes must not force reasoning off: the selected upstream may
-      require reasoning even when the route/model alias does not expose metadata. */
   function connectionProbePolicy(provider){
     const configured=Math.max(8,Math.min(256,Number(provider&&provider.connectionTestMaxTokens)||16));
     const mode=provider&&['off','on','auto'].includes(provider.connectionTestThinkingMode)?provider.connectionTestThinkingMode:'auto';
@@ -49,12 +50,11 @@
 
   const Http=LF.AIHttp;if(!Http)throw new Error('AI HTTP module is not loaded.');
   const resolveChatUrl=Http.resolveChatUrl,validateHttpUrl=Http.validateHttpUrl,targetAddressSpace=Http.targetAddressSpace,isLocalAddress=Http.isLocalAddress,supportsLocalNetworkAccess=Http.supportsLocalNetworkAccess,networkFetchOptions=Http.networkFetchOptions,fetchOptions=Http.fetchOptions,pageOrigin=Http.pageOrigin,providerFetch=Http.providerFetch;
+    // JSON-heavy Context Packs tokenize inefficiently; use a conservative preflight estimate and provider usage when available.
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
   function estimatePromptTokens(value){
     const text=Array.isArray(value)?value.map(function(m){return String(m&&m.content||'');}).join('\n'):String(value||'');
-    /* JSON-heavy scientific Context Packs tokenize less efficiently than prose.
-       Use a conservative estimate for context-fit decisions; provider usage still
-       replaces this estimate whenever the API exposes exact token counts. */
+
     return Math.max(0,Math.ceil(text.length/2.7)+(Array.isArray(value)?value.length*8:0));
   }
 
@@ -233,7 +233,7 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     return true;
   }
 
-  // Unified helper: same header/auth construction for chat, models and capability probes
+
   function requestConfig(){
     const settings=LF.Storage.getAiSettings();
     const key=LF.Storage.getApiKey(settings.provider);
@@ -243,11 +243,11 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
     const baseHeaders=providerAuthHeaders(provider,key);
     const headers=Object.assign({'Content-Type':'application/json'},baseHeaders);
-    // Avoid duplicating auth header construction; providerAuthHeaders is the single source
+
     return{settings:settings,provider:provider,url:url,headers:headers};
   }
 
-  /** Build an isolated config for local diagnostics without depending on saved streaming choices. */
+
   function diagnosticRequestConfig(providerId,endpoint,model,apiKey){
     const saved=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(providerId);
@@ -273,11 +273,6 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     return '';
   }
 
-  /* llama.cpp can expose reasoning in reasoning_content, raw <think> blocks,
-     or both when a template/parser combination is imperfect. Normalize the
-     envelope before Action validation so structured outputs never see transport
-     markers or duplicate <result> wrappers. This is intentionally scoped to
-     llama.cpp: other providers keep their response contract untouched. */
   function normalizeAssistantEnvelope(content,reasoning,providerId){
     let finalText=String(content||'').trim(),reasoningText=String(reasoning||'').trim(),changed=false;
     if(String(providerId||'').toLowerCase()!=='llamacpp')return{content:finalText,reasoning:reasoningText,changed:false,resultBlocks:0};
@@ -285,16 +280,11 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     const leakedThoughts=[];
     finalText=finalText.replace(/<think\b[^>]*>([\s\S]*?)<\/think>/gi,function(_,inner){const value=String(inner||'').trim();if(value)leakedThoughts.push(value);changed=true;return '\n';});
 
-    /* Some templates/prefills leak an unmatched closing marker even when the
-       server parser extracted the actual reasoning separately. */
     const withoutClosers=finalText.replace(/(?:^|\n)\s*<\/think>\s*(?=\n|$)/gi,'\n');
     if(withoutClosers!==finalText){finalText=withoutClosers;changed=true;}
 
     if(leakedThoughts.length){reasoningText=[reasoningText].concat(leakedThoughts).filter(Boolean).join('\n\n').trim();}
 
-    /* LFM-family templates may wrap the final channel in <result>. If a broken
-       parser leaves more than one result envelope, the last complete result is
-       the final answer; earlier ones belong to reasoning/prefill history. */
     const results=[];
     finalText.replace(/<result\b[^>]*>([\s\S]*?)<\/result>/gi,function(_,inner){results.push(String(inner||'').trim());return _;});
     if(results.length){finalText=results[results.length-1];changed=true;}
@@ -346,9 +336,7 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     }
     const supported=Array.isArray(row.supported_parameters)?row.supported_parameters.map(function(x){return String(x).toLowerCase();}):[];
     if(supported.includes('reasoning')||supported.includes('reasoning_effort'))return{reasoningStatus:'optional',reasoningAllowedOptions:[],reasoningDefault:''};
-    /* OpenRouter deliberately omits `reasoning` for non-reasoning models AND
-       dynamic routers such as openrouter/free/auto. Absence therefore means
-       unknown, never proof that reasoning can safely be disabled. */
+
     return null;
   }
   function capabilityFromRow(row,source){
@@ -385,7 +373,8 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
   }
   const capabilityCache=new Map();
   function capabilityKey(providerId,endpoint,model){return[String(providerId||''),String(endpoint||''),String(model||'')].join('|');}
-  /** Metadata probes must never prevent the real connection request from starting. */
+
+    // Capability metadata is advisory; metadata failure must not prevent the real request path.
   async function metadataFetch(url,options,providerId,phase){
     const controller=new AbortController(),timer=setTimeout(function(){controller.abort();},METADATA_TIMEOUT_MS),started=performance.now();phase=String(phase||'metadata');
     Log.info('metadata.start',{provider:providerId||'',phase:phase,url:url,origin:pageOrigin(),targetAddressSpace:targetAddressSpace(url)||'public'});
@@ -580,11 +569,6 @@ cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,ca
     return{models:models,entries:entries,loadedModels:loadedModels,elapsedMs:Math.round(performance.now()-started),url:url,source:'provider model catalogue'};
   }
 
-  /**
-   * Measure short-run generation throughput for a local model. One warm-up is
-   * intentionally excluded from the arithmetic mean. Detect uses this only for
-   * LM Studio, Ollama and llama.cpp so cloud metadata inspection stays request-free.
-   */
   async function benchmarkTokensPerSecond(options){
     options=options||{};
     const providerId=String(options.provider||LF.Storage.getAiSettings().provider||''),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
@@ -597,9 +581,7 @@ cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,ca
       const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off',guardThinking:true});
       try{return await send(spec,{label:label});}
       catch(err){
-        /* Throughput measures generated tokens, not answer quality. A model that
-           spends the tiny benchmark budget entirely in parsed reasoning is still
-           measurable and should not make Detect fail. */
+
         if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'&&Number(err.tokensPerSecond)>0)return{
 content:'',reasoning:String(err.reasoning||''),model:err.model||model,provider:providerId,thinkingMode:'off',
           latencyMs:Number(err.elapsedMs)||0,requestElapsedMs:Number(err.requestElapsedMs)||Number(err.elapsedMs)||0,
@@ -664,11 +646,6 @@ responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finali
       transport:r.transport||'direct'};
   }
 
-  /**
-   * Build the exact provider request. The caller (ActionRunner or Settings)
-   * owns the already-assembled messages; this is transport only. Deep thinking
-   * and temperature overrides for structured actions are explicit caller opts.
-   */
   function buildRequest(opts){
     const prepareStarted=performance.now();opts=opts||{};
     const cfg=opts.config||requestConfig();
@@ -705,10 +682,7 @@ responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finali
     try{
       r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),providerId);
     }catch(err){
-      /* Capability metadata can be absent/stale and router aliases may select a
-         different upstream per request. If the provider explicitly rejects a
-         disable-reasoning override, retry exactly once with provider defaults.
-         This is transport compatibility recovery, not an Action semantic retry. */
+
       if(reasoningRequiredError(err)&&reasoningDisablePresent(spec.body)){
         const fallbackBody=providerDefaultThinkingBody(spec.body);
         technicalThinkingRetry=true;

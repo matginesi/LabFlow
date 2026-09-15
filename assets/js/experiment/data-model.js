@@ -1,14 +1,10 @@
+/*
+ * ExperimentData aggregate mechanics, queries, staging, commit, serialization and restore.
+ * Boundary: Validate persisted/external snapshots before hydration; feature policy remains in owner services.
+ */
 (function () {
   'use strict';
 
-  /*
-   * ExperimentData is LabFlow's single aggregate root.
-   *
-   * DomainSchema owns record shapes/defaults/persistence metadata.
-   * This module owns aggregate mechanics and the stable query/mutation API.
-   * Importers and feature modules must not create parallel representations of
-   * samples, runs or measurements and must not redefine record defaults.
-   */
   const LF = window.LabFlow = window.LabFlow || {};
   if (!LF.Core) throw new Error('LabFlow.Core must be loaded before data-model.js.');
   const C = LF.Core;
@@ -191,13 +187,7 @@
     exp.meta.modifiedAt = nowIso();
   }
 
-
-  /*
-   * Stage/commit the same ExperimentData aggregate without mutating the live
-   * scientific state until the entire operation has succeeded. RAW source
-   * bytes are immutable evidence, so a staged aggregate shares that one
-   * ArrayBuffer reference instead of cloning hundreds of MB.
-   */
+    // Stage the aggregate without cloning immutable RAW bytes, which may be hundreds of megabytes.
   function stage(exp) {
     exp = normalize(exp);
     const staged = new ExperimentData(Schema.snapshot(exp, { includeSourceArchive: false }));
@@ -295,12 +285,7 @@ if (!item) return null; if (this.experiments.includes(item)) return {
 
   function hydrate(exp) { if (!exp || typeof exp !== 'object') return new ExperimentData(); return normalize(exp); }
 
-  /**
-   * Restore a persisted LabFlow snapshot. Unlike hydrate(), this is a trust
-   * boundary: external/persisted data must satisfy the current snapshot shape
-   * before defaults are applied. LabFlow intentionally has no legacy migration
-   * chain; incompatible snapshots fail with an actionable contract error.
-   */
+    // Persisted/external data crosses a trust boundary: validate the current snapshot before adding defaults.
   function restore(snapshot) {
     if (!LF.DataContracts || !LF.DataContracts.assertSnapshot) {
       throw new Error('LabFlow.DataContracts must be loaded before restoring a persisted ExperimentData snapshot.');

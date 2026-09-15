@@ -1,3 +1,7 @@
+/*
+ * SSE and stream parsing for compatible provider responses.
+ * Boundary: Streaming mechanics do not decide Action semantic success.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},Errors=LF.AITransportErrors;

@@ -1,3 +1,7 @@
+/*
+ * Shared UI orchestration for invoking Actions and presenting foreground lifecycle state.
+ * Boundary: Reflect runner state without creating a second job or queue system.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;

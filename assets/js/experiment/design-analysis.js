@@ -1,3 +1,7 @@
+/*
+ * Deterministic completeness and quality analysis over Design state.
+ * Boundary: Remain read-only; Design mutation belongs to DesignModel.
+ */
 (function () {
   'use strict';
 
@@ -22,10 +26,6 @@
     ).trim().replace(/\\/g, '/').replace(/\s+/g, ' ').toLowerCase();
   }
 
-  /*
-   * DesignAnalysis owns deterministic analysis and application of AI Design
-   * proposals. It does not call providers and it does not render UI.
-   */
   function designAnalysis(exp,revision){
     LF.CanonicalStore.ensure(exp);
     const devices=LF.DesignModel.devices(exp),solutions=LF.DesignModel.solutions(exp),source=LF.DesignModel.evidenceSummary(exp)||{};
@@ -105,9 +105,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:(proposa
     (d.stack||[]).forEach(add);});return out;}
   function applicableDesignFields(proposal,unknownFields){
     const wanted=new Set((unknownFields||[]).map(function(x){return String(x).toLowerCase();})),device=proposal&&proposal.devices&&proposal.devices[0]||{},solutions=proposal&&proposal.solutions||[],fields=[];
-    /* The Action already targets one selected experiment. A useful chemistry
-       proposal does not need the model to repeat a device→solution linkage just
-       to pass validation; the deterministic store/apply step owns that target. */
+
     if(wanted.has('solutions')&&solutions.some(function(sol){return[sol&&sol.solutes,sol&&sol.solvents].some(function(v){return String(v||'').trim();});}))fields.push('solutions');
     if(wanted.has('stack')){const assessment=LF.DesignModel.stackAssessment(device.stack||[]);if(assessment&&assessment.complete)fields.push('stack');}
     const process=device.process||proposal&&proposal.process||{};if(wanted.has('process')&&[process.coating,process.annealing,process.atmosphere,process.notes].some(function(v){return String(v||'').trim();}))fields.push('process');
@@ -560,9 +558,6 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:(proposa
     const now = new Date().toISOString();
     if (target && complete) LF.DesignModel.confirmInferredDevice(exp, id, now);
 
-    /* Acceptance commits the proposal values. An exhausted proposal that still
-       cannot satisfy the current completeness rule is discarded so a later
-       inference starts from the actual remaining domains. */
     LF.ActionData.removeProposal(exp, 'design.infer', id);
     LF.ActionData.setStatus(exp, 'design.infer', id, {
       state: complete ? 'accepted' : 'incomplete',

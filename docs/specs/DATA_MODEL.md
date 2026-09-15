@@ -1,192 +1,97 @@
 ---
-title: Data model contract
-section: Core architecture
-summary: Canonical ExperimentData hierarchy, record schemas, ownership, persistence and invariants.
+title: Scientific data model
+section: Scientific data
+summary: Canonical ExperimentData hierarchy, root ownership, persistence and mutation semantics.
 order: 10
 ---
 
-# Data model contract
+# Scientific data model
 
-## 1. Single aggregate root
+## Aggregate root
 
-`ExperimentData` is the only mutable scientific aggregate. JSON is a serialization format, not the internal API.
+`ExperimentData` is the only mutable scientific aggregate in LabFlow. Every scientific page, deterministic calculation, Action context and export projection reads the same aggregate.
 
-```text
-ExperimentData
-├─ source evidence
-├─ LabFlow Data records
-├─ deterministic analysis
-├─ Design
-├─ patches/findings
-├─ ActionData
-├─ interaction history
-└─ runtime projections
+```mermaid
+flowchart TD
+    ED[ExperimentData] --> SRC[source / files / blocks]
+    ED --> EXP[experiments]
+    ED --> S[samples]
+    ED --> R[runs]
+    ED --> M[measurements]
+    ED --> F[findings]
+    ED --> P[patches]
+    ED --> A[analysis + summaries]
+    ED --> D[design]
+    ED --> AD[actionData]
+    ED --> PM[pipeline metadata]
 ```
 
-The canonical shape comes only from `DomainSchema`.
+The exact current root contract is executable in `DomainSchema`; prose describes semantics and ownership rather than duplicating every default value.
 
-## 2. Scientific hierarchy
+## Acquisition hierarchy
 
-```text
-Experiment / condition
-└─ Sample / cell
-   └─ Run / acquisition session
-      └─ Measurement / repeated JV acquisition
-         ├─ FW scan
-         └─ RV scan
+```mermaid
+flowchart TD
+    E[Experiment] --> S[Sample / Cell]
+    S --> R[Run]
+    R --> M[Measurement]
+    M --> FW[FW scan]
+    M --> RV[RV scan]
 ```
 
-For `TEST_DATA/2026_01_22.zip` the regression contract is:
+Relations use stable LabFlow IDs. Source file paths remain provenance and may participate in evidence lookup, but file identity is not sample identity.
 
-```text
-5 experiments → 31 samples → 42 runs → 72 measurements
-```
+## Record construction
 
-## 3. Registered record kinds
+Canonical record defaults are created by `DomainSchema`. Importers and features must not reproduce record literals as independent definitions. Normalization may fill canonical structural defaults; it must not fabricate missing scientific evidence.
 
-`DomainSchema` currently registers:
+## Root ownership
 
-- `file`
-- `manifest_entry`
-- `format_evidence`
-- `auxiliary_evidence`
-- `experiment`
-- `sample`
-- `run`
-- `measurement`
-- `finding`
-- `block`
-- `patch`
-- `design_solution`
-- `design_layer`
-- `design_device`
+Use `LabFlow.Data.ownership()` for the live owner/layer/persistence table. The important boundary is:
 
-Use `DomainSchema.create(kind, seed)` / `normalize(kind, record)`. For top-level record kinds, `ExperimentData.addRecord(kind, seed)` stores the normalized record in the root declared by `DomainSchema.rootForRecordKind(kind)`.
+- import/source roots: importer/parser during canonical construction;
+- scientific/analysis roots: domain services and deterministic pipeline;
+- `design`: `DesignModel`;
+- corrections/patches: `DatasetCorrections`/model commit path;
+- `actionData`: `ActionData`;
+- runtime projections/caches: owning derived service;
+- UI state: outside the aggregate under `LF.State.state.ui`.
 
-Nested Design records remain owned by `DesignModel` rather than being inserted as independent roots.
+## RAW versus LabFlow Data
 
-## 4. Measurement semantics
+RAW is immutable source evidence. LabFlow Data is the reviewed interpretation/model derived from it.
 
-A `measurement` is one repeated JV acquisition/source file within a run. FW and RV are paired scan directions of that measurement.
+A correction changes LabFlow Data, not RAW. The correction is represented as a typed patch/provenance event so a reviewer can distinguish original evidence from interpretation changes.
 
-A scan may contain:
-- Voc (V)
-- Jsc (mA/cm²)
-- Vmpp (V)
-- Jmpp (mA/cm²)
-- Pmpp (mW/cm²)
-- Rs (Ω)
-- Rsh (Ω)
-- FF (%)
-- Efficiency/PCE (%)
+## Persistence
 
-Missing numeric data remains `null`; missing values are never normalized to zero.
+`DomainSchema.snapshot()` defines which aggregate roots persist. `DataModel.serialize()` produces the application snapshot. Runtime caches and UI state are excluded unless explicitly declared persistent by their owners.
 
-Curve points live under `measurement.curve.fw[]` / `measurement.curve.rv[]`.
+External/browser-persisted snapshots are untrusted input and must enter through `DataModel.restore()`, which validates the current snapshot contract before hydration. LabFlow intentionally does not maintain an open-ended migration ladder for obsolete POC shapes.
 
-## 5. Relations
+`DataModel.hydrate()` is for runtime objects already owned by the current application. It is not a permissive import path.
 
-Relations are ID-first and bidirectional where appropriate:
+## Revision and invalidation
 
-- experiment → `sampleIds`, `runIds`, `measurementIds`
-- sample → `experimentId`, `runIds`, `measurementIds`
-- run → `experimentId`, `sampleId`, `measurementIds`
-- measurement → `experimentId`, `sampleId`, `runId`
-- Design device → `experimentId`, `sampleIds`, `solutionIds`
+Scientific mutation advances revision through owner/model APIs and invalidates dependent projections. Derived projections register dependencies with `DerivedState`; they do not rely on pages remembering which caches to clear.
 
-Names (`experiment`, `sample`, `group`, `sampleNames`) are labels/caches and do not replace stable IDs.
+## Action output
 
-Blocks use generic typed refs:
+AI/user Action output is not inserted directly into scientific measurements or Design. Proposals/annotations/status live in `actionData` until an explicit deterministic apply path accepts a proposal into the owning scientific domain.
+
+## Cabinet and Knowledge Base
+
+Cabinet and KB are outside `ExperimentData` because they are reusable/reference state with different lifecycle and authority.
+
+When Cabinet content is applied to Design, a detached value snapshot becomes experiment-owned Design state and retains a source reference. KB content never becomes experiment evidence merely because it was retrieved for AI context.
+
+## Structure catalog
+
+`LF.Structures` documents cross-module shapes without owning them. Use:
 
 ```js
-refs: [
-  { kind: 'sample', id: 'sample_...' },
-  { kind: 'measurement', id: 'm_...' }
-]
+LabFlow.Data.structures()
+LabFlow.Data.structures({ owner: 'Cabinet' })
 ```
 
-Do not add a parallel `entities[]` collection.
-
-## 6. Patch/provenance contract
-
-`patches[]` is the persistent provenance of LabFlow Data changes. Every patch has one typed target and one operation (`set`, `add`, `remove`).
-
-An exact `measurement` target is measurement-scoped; it must not expand to sibling measurements of the same sample.
-
-A `group_mapping` changes the owning physical sample/experiment relation, so its applied provenance target is the `sample`, not one incidental measurement. The owner service updates that sample’s linked measurements and runs together, rebuilds backlinks and validates the graph before commit success.
-
-RAW bytes and original source records are never rewritten.
-
-## 7. ActionData contract
-
-Action outputs use one root:
-
-```js
-actionData: {
-  proposals: { '<action.id>': ... },
-  annotations: { '<action.id>': ... },
-  status: { '<action.id>': ... }
-}
-```
-
-`LF.ActionData` is the only API for this state. Action IDs are literal keys and may contain dots; code must not interpret them as property paths.
-
-ActionData is persisted because proposals/status must survive a browser reload, but it is not scientific source truth.
-
-Accepted dataset proposals are committed through `LF.DatasetCorrections.commitProposals()`. The service rejects non-canonical targets and no-ops, then performs revision/invalidation, deterministic recomputation and final contract validation before emitting the state notification used by rendering and autosave.
-
-## 8. Root ownership and persistence
-
-Inspect the authoritative table at runtime:
-
-```js
-LabFlow.Data.ownership()
-```
-
-Runtime caches such as pipeline trace, canonical index, review dossier, Design analysis and Experiment Brief are excluded from persisted snapshots and are rebuilt.
-
-## 9. Validation invariants
-
-`DataContracts.validate(exp)` checks:
-
-- required fields and `kind`;
-- unique record IDs;
-- valid relation targets;
-- parent/child backlinks;
-- parent consistency between measurement/run/sample/experiment;
-- typed block refs;
-- typed patch targets;
-- Design references;
-- the single ActionData boundary.
-
-Structural failure is `DATA_CONTRACT_INVALID` and pipeline execution fails closed.
-
-## 10. Public domain API
-
-Preferred queries:
-
-```js
-exp.experiment(ref)
-exp.sample(ref)
-exp.run(ref)
-exp.measurement(ref)
-exp.selectSamples(query)
-exp.selectMeasurements(query)
-exp.measurementsForSample(ref)
-exp.measurementsForExperiment(ref)
-exp.bestMeasurementForSample(ref)
-exp.inspect(ref)
-exp.tree()
-```
-
-Preferred mutations:
-
-```js
-exp.addRecord(kind, seed)
-exp.addPatch(...)
-exp.applyPatch(...)
-exp.setMismatchFactor(...)
-exp.reanalyze()
-```
-
-Do not mutate root arrays directly from UI code when an owning service/API exists.
+Adding metadata to the catalog does not change persistence or validation; those remain owner responsibilities.

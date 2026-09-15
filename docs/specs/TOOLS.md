@@ -1,41 +1,26 @@
 ---
 title: Tools and internal services
 section: AI and Actions
-summary: Defines stable read tools and internal Action-step tools; tools are implementation capabilities, not user-facing Actions.
+summary: Internal read/write capabilities used by Actions and Assistant; not researcher-facing Actions.
 order: 30
 ---
 
 # Tools and internal services
 
-## Read tools
+Tools are implementation capabilities. They exist to make execution boundaries explicit; they are not automatically user-facing workflow items.
 
-Read tools query the current canonical `ExperimentData`/indexes and may be used by the Assistant or internal code. Agent mode may invoke read-only tools but is prevented from invoking write tools.
+## Tool registry
 
-The exact catalog is available at runtime through `LabFlow.ToolRegistry`.
+`LabFlow.ToolRegistry` publishes deterministic tool definitions and execution metadata. Agent-visible tools are restricted by declared read/write capability; read-only Assistant/agent contexts must not gain write access by calling an internal function indirectly.
 
-## Current internal Action-step tools
+## Action-step tools
 
-These IDs support the current Action manifests:
+Current Action manifests use deterministic steps such as collecting ambiguities, validating comparison/design coverage, and storing proposals/annotations. Their exact IDs are implementation detail discoverable from the registry/manifests.
 
-```text
-dataset.collect-ambiguities      read
-dataset.store-corrections        write
+The important rule is ownership: a write step stores through the relevant owner (`ActionData`, Design apply service, correction service) rather than assigning arbitrary state.
 
-design.collect-selected          read
-design.validate-coverage         read
-design.store-proposal            write
+## Services that are not tools/Actions
 
-results.validate-comparison      read
-results.store-interpretation     write
-results.store-comparison         write
-```
+Import parsing, canonical naming, hierarchy linking, deterministic JV analysis, review construction, safe-cleanup detection, Design projection and NOMAD package preparation remain ordinary deterministic services/pipeline work.
 
-They are **not** separate Actions and should not appear as researcher workflow buttons.
-
-## Deterministic data services
-
-Naming normalization, safe-cleanup detection/application, hierarchy rebuild, JV analysis, canonical indexing, review analysis, Design projection and NOMAD preparation are local services/pipeline logic. Safe cleanup is accepted through Review, not wrapped in a fake Action.
-
-## Extension
-
-Action-step tools register beside their implementation through `ActionStepRegistry`, which also exposes them to `ToolRegistry` with explicit read/write metadata. Action execution resolves deterministic checkpoints through `ToolRegistry`; agent mode can invoke only tools explicitly marked read-only and agent-visible.
+Choose a Tool only when an execution system needs a named capability boundary. Do not create registry entries simply to avoid importing a normal helper.

@@ -1,3 +1,7 @@
+/*
+ * Validation, merge, retrieval, citation resolution and JSONL persistence for reference knowledge.
+ * Boundary: KB entries are reference context, never evidence that a current experiment has a property.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Log=LF.Logger?LF.Logger.scope('knowledge'):null;
@@ -170,6 +174,30 @@ async function saveJsonlFile(scope){
   return{mode:'download',fileName:filename,entries:scope==='all'?all().length:custom().length};
 }
 
+if(LF.Structures){
+  LF.Structures.define('knowledge.source',{
+    owner:'KnowledgeBase',layer:'reference',persistence:'jsonl_or_bundle',
+    description:'Traceable bibliographic source attached to a Knowledge Base entry.',
+    fields:{title:{type:'string',required:true},authors:{type:'string'},year:{type:'number',nullable:true},citation:{type:'string'},doi:{type:'string'},url:{type:'string'},note:{type:'string'}}
+  });
+  LF.Structures.define('knowledge.entry',{
+    owner:'KnowledgeBase',layer:'reference',persistence:'jsonl_or_bundle',
+    description:'Sourced reusable reference knowledge. It is never evidence that the current experiment used or exhibited the entry.',
+    variants:Object.keys(KINDS),
+    fields:{
+      id:{type:'string',required:true},kind:{type:'string',required:true,enum:Object.keys(KINDS)},
+      title:{type:'string',required:true},aliases:{type:'array'},tags:{type:'array'},summary:{type:'string'},
+      facts:{type:'array'},cautions:{type:'array'},related_ids:{type:'array'},
+      sources:{type:'array',required:true,itemType:'knowledge.source'},
+      status:{type:'string',required:true,enum:Object.keys(STATUSES)},origin:{type:'string',required:true},
+      created_at:{type:'string',required:true},updated_at:{type:'string',required:true}
+    }
+  });
+  LF.Structures.defineFromExample('knowledge.context',{
+    owner:'KnowledgeBase',layer:'ai_context',persistence:'runtime',
+    description:'Bounded scored Knowledge Base references supplied to AI; includes an explicit citation contract.'
+  },{entries:[],note:'',citation_contract:''},{required:['entries','note','citation_contract']});
+}
 LF.KnowledgeBase={
   kinds:function(){return clone(KINDS);},statuses:function(){return clone(STATUSES);},all:all,get:get,save:save,remove:remove,duplicate:duplicate,resetCustom:resetCustom,
   validate:function(e,forUse){return issues(e,forUse);},search:search,context:context,compactForAI:compactForAI,referenceIds:referenceIds,referencesFromText:referencesFromText,

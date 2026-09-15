@@ -1,11 +1,10 @@
+/*
+ * Local icon registry and rendering helpers.
+ * Boundary: Presentation-only and free of remote icon or font dependencies.
+ */
 (function () {
   'use strict';
 
-  /**
-   * Small vendored subset of Lucide Icons (ISC), kept as local path data so
-   * icons work from file:// without a package manager, font, CDN or request.
-   * Source and license: vendor/lucide/README.md and vendor/lucide/LICENSE.
-   */
   const LF = window.LabFlow = window.LabFlow || {};
   const PATHS = {
     'flask-conical':'<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/>',
@@ -33,14 +32,14 @@
     'trash-2':'<path d="M10 11v6M14 11v6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
   };
 
-  /** Return trusted inline SVG markup for one known local Lucide icon. */
+
   function icon(name, className) {
     if (!Object.prototype.hasOwnProperty.call(PATHS, name)) return '';
     const classes = 'icon' + (className ? ' ' + String(className).replace(/[^a-zA-Z0-9 _-]/g, '') : '');
     return '<svg class="' + classes + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + PATHS[name] + '</svg>';
   }
 
-  /** Hydrate static data-icon placeholders without network access. */
+
   function hydrate(root) {
     (root || document).querySelectorAll('[data-icon]').forEach(function (host) {
       const markup = icon(host.dataset.icon, host.dataset.iconClass || '');

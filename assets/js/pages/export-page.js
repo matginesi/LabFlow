@@ -1,3 +1,7 @@
+/*
+ * Render deterministic export and NOMAD readiness/package controls.
+ * Boundary: Export presentation does not mutate scientific source truth.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,S=LF.State,PS=LF.PageShell;

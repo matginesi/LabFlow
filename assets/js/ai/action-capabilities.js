@@ -1,3 +1,7 @@
+/*
+ * Resolve manifest bindings, guards, commands and recommendations for every Action surface.
+ * Boundary: Single preflight service; pages and Assistant must not recreate Action-ID logic.
+ */
 (function () {
   'use strict';
 

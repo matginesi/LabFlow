@@ -1,104 +1,93 @@
 # LabFlow
 
-LabFlow is a local-first browser application for importing experimental archives, turning them into one explicit scientific data model, calculating deterministic results, reviewing only genuine ambiguities, reconstructing experiment design, and preparing deterministic NOMAD-oriented exports.
+LabFlow is a local-first browser application for turning laboratory archives into an inspectable scientific data model, deterministic analysis, reviewable experiment Design, optional AI assistance, and deterministic export packages.
 
-The product is deliberately researcher-first: a normal import should require as few decisions as possible.
+The project is intentionally small: vanilla JavaScript, local CSS, static assets, and no application backend. Extensibility comes from explicit ownership contracts and registries rather than framework layers.
 
-## Researcher workflow
+## What LabFlow guarantees
 
-```text
-ZIP
- ↓
-automatic import + canonical naming
- ↓
-deterministic safe-cleanup detection
- ↓
-explicit acceptance when a safe correction is pending
- ↓
-Review only genuine semantic ambiguities
- ↓
-Results / Design / Export
+Four invariants define the product:
+
+1. **RAW input is immutable evidence.** Uploaded archive bytes and source paths are never rewritten by cleanup or AI.
+2. **`ExperimentData` is the only mutable scientific aggregate.** Features may project or index it, but may not create a parallel editable scientific model.
+3. **Deterministic work stays deterministic.** Parsing, normalization, linking, JV analysis, validation, safe-cleanup detection, summaries, and export preparation never require an AI provider.
+4. **AI output is non-authoritative until explicitly accepted.** AI may propose, interpret, compare, or answer; it does not silently alter scientific truth.
+
+These are executable constraints, not only documentation. The release validators and unit tests enforce the main ownership boundaries.
+
+## Research workflow
+
+```mermaid
+flowchart TD
+    U[Upload ZIP] --> I[Deterministic import and canonical naming]
+    I --> V[Structural validation and deterministic analysis]
+    V --> C[Safe corrections detected automatically]
+    C --> R[Researcher review and ambiguity resolution]
+    R --> O[Results]
+    O --> D[Design]
+    D --> E[Export]
 ```
 
-If deterministic evidence is sufficient, the researcher can go directly from import to Results. AI is optional and never blocks import.
+A clean archive can proceed directly to Results. AI availability is never a prerequisite for import or analysis.
 
-## Scientific data model
+## Scientific state
 
-The in-memory source of truth is one `ExperimentData` aggregate:
+The canonical hierarchy is:
 
-```text
-ExperimentData
-└─ experiments[]
-   └─ samples[]
-      └─ runs[]
-         └─ measurements[]
-            ├─ FW metrics + curve
-            └─ RV metrics + curve
+```mermaid
+flowchart TD
+    ED[ExperimentData] --> E[experiments]
+    E --> S[samples]
+    S --> R[runs]
+    R --> M[measurements]
+    M --> FW[FW metrics and curve]
+    M --> RV[RV metrics and curve]
 ```
 
-For the bundled JV fixture `2026_01_22.zip`, the expected hierarchy is:
+`DomainSchema` owns record shapes and persistence metadata. `DataModel` owns aggregate mechanics. `DataPipeline` owns deterministic refresh. `ActionData` owns persisted Action proposals and annotations. Cabinet and Knowledge Base are reference sources, not experiment evidence.
 
-```text
-5 experiments → 31 samples/cells → 42 runs → 72 measurements
+## Cabinet, Knowledge Base, AI, Actions, Assistant
+
+The cross-feature flow is deliberately one-way with explicit authority boundaries:
+
+```mermaid
+flowchart TD
+    C[Cabinet] --> RC[Reference context]
+    K[Knowledge Base] --> RC
+    RC --> AC[Action / Assistant context]
+    AC --> MO[Model output]
+    MO --> P[Proposal / annotation / answer]
+    P --> EA[Explicit acceptance]
+    EA --> OM[Owner-controlled mutation]
+    OM --> ED[ExperimentData]
 ```
 
-RAW source data is immutable. Corrections are patches on the LabFlow Data with provenance.
+Cabinet reuse writes Design only through `DesignModel` and copies detached snapshots. KB entries are cited reference knowledge. Action execution is governed by Action manifests and `ActionCapabilities`. The Assistant is read-only with respect to scientific state.
 
-## Architecture kernel
+## Repository map
 
-Contributor-facing stability is centered on five modules: `DomainSchema`, `ExperimentData`, `DataContracts`, `DerivedState` and `DataPipeline`. Action outputs use the separate `ActionData` store. See `docs/ARCHITECTURE.md` and `docs/guides/EXTENDING_LABFLOW.md`.
-
-## Deterministic pipeline
-
-Import runs one deterministic pipeline:
-
-1. `normalize`
-2. `link`
-3. `validate-structure`
-4. `analyze`
-5. `index`
-6. `review`
-7. `auto-cleanup`
-8. `project-design`
-9. `summarize`
-10. `validate-final`
-
-Canonical naming is automatic. Mechanically provable cleanup is detected deterministically by the pipeline, but changes LabFlow Data only after explicit researcher acceptance. The pipeline never calls an AI provider.
-
-## Actions
-
-Only user-facing capabilities are Actions. The current catalog is intentionally small:
-
-| Action | Purpose | Effect |
-|---|---|---|
-| `dataset.resolve-ambiguities` | Suggest resolutions for semantic ambiguities deterministic rules cannot settle | stores proposals only |
-| `design.infer` | Complete missing qualitative chemistry, device architecture and/or fabrication process by proposal | stores proposal only |
-| `results.interpret` | Interpret deterministic Results | stores derived annotation |
-| `results.compare` | Explain differences between selected result groups | stores derived annotation |
-| `assistant.chat` | Answer questions about current data/page | read-only |
-
-There is no “analyze dataset” Action: analysis is pipeline work. Safe mechanical cleanup is detected by the pipeline and accepted directly in Review; it is not an AI Action. NOMAD preparation is a deterministic service, not an Action.
-
-## Action contract
-
-Every Action declares:
-
-```text
-contract.target   → what it acts on
-contract.context  → what data it may read
-contract.result   → what it must return
-contract.effect   → what state it may write
-contract.guards   → when it is available
-execution         → how it runs and which step is the semantic result
+```mermaid
+flowchart TD
+    ROOT[LabFlow repository] --> EXP[assets/js/experiment: canonical model and schema]
+    ROOT --> DATA[assets/js/data: import, parsing and pipeline]
+    ROOT --> CAB[assets/js/cabinet: reusable lab references]
+    ROOT --> KB[assets/js/knowledge: JSONL knowledge]
+    ROOT --> AI[assets/js/ai: providers, Actions and Assistant]
+    ROOT --> PAGES[assets/js/pages: route renderers]
+    ROOT --> UI[assets/js/ui: shared UI primitives]
+    ROOT --> ACT[actions: manifests, prompts and schemas]
+    ROOT --> PROMPTS[prompts: deterministic and AI policies]
+    ROOT --> KNOW[knowledge: bundled KB]
+    ROOT --> DOCS[docs: canonical documentation]
+    ROOT --> TOOLS[tools: builders and validators]
+    ROOT --> TESTS[tests: unit and browser regression]
 ```
 
-AI structured output is validated before any proposal/annotation is stored. `design.infer` must cover every Design domain that is currently missing; stack coverage uses the same completeness predicate as the Design page, so a partial architecture stays inside the bounded retry flow instead of being stored as a successful suggestion. Accept/Accept all re-check the resulting Design state before labelling an experiment accepted.
+Generated JavaScript bundles are build artifacts. Edit their source Markdown/JSONL/manifest files and rebuild them; do not patch generated output by hand.
 
-`Complete all missing with AI` is only a queue over that same `design.infer` Action. Each experiment is executed and persisted independently, previous failures remain retryable from the same bulk control, and the Action Totem mirrors the real per-experiment state. A run cannot be reported as successful unless a proposal exists for that exact experiment; rate limits stop further requests and leave untouched experiments pending for the next run.
+## Runtime introspection
 
-## Data Console
-
-Open DevTools and run:
+From browser DevTools:
 
 ```js
 LabFlow.Data.help()
@@ -108,15 +97,44 @@ LabFlow.Data.validate()
 LabFlow.Data.pipeline()
 LabFlow.Data.actions()
 LabFlow.Data.contracts()
+LabFlow.Data.structures()
 ```
 
-See `docs/guides/DATA_CONSOLE.md` for the complete API.
+`LabFlow.Data.structures()` exposes the cross-module structure catalog: owner, layer, persistence class, required fields, and descriptive field metadata. It is documentation over the real owner contracts, not another store.
 
-## Privacy and storage
+## Run locally
 
-LabFlow is local-first. AI provider keys/preferences and optional NOMAD upload-stub settings remain local to the browser. RAW archives are kept as source evidence and are never modified by cleanup. Accepted scientific LabFlow Data changes carry revision/provenance metadata; the current NOMAD upload control is a non-networking stub.
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1
+```
 
-## Build and verify
+Open `http://127.0.0.1:8000/`. Do not browse to `0.0.0.0`; it is a bind address, not a client address.
+
+For a local OpenAI-compatible llama.cpp server, `labflow_engine.sh` provides the supported launcher and diagnostics. It binds to loopback by default and requires an explicit `--lan` opt-in for LAN exposure.
+
+## AI providers
+
+LabFlow calls the endpoint configured in Settings directly from the browser. There is no hidden provider relay or backend fallback. Browser CORS, authentication, quota, model, and server errors therefore remain distinguishable.
+
+OpenRouter (`openrouter/free`) is the static-POC default because it is compatible with the browser-only deployment model. Local OpenAI-compatible endpoints remain supported through provider adapters.
+
+Use:
+
+```js
+LabFlow.AIConsole.help()
+```
+
+for provider/model diagnostics without experiment data.
+
+## Build and verification
+
+The release gate is the preferred command:
+
+```bash
+./release_check.sh
+```
+
+For individual checks, see `docs/VALIDATION.md`. Relevant generated artifacts are rebuilt with:
 
 ```bash
 python tools/build_prompt_bundle.py
@@ -125,43 +143,21 @@ python tools/build_action_registry.py
 python tools/build_action_reference.py
 python tools/build_docs_bundle.py
 python tools/build_ui_kit_inline.py
-python tools/validate_action_contract.py
-python tools/validate_architecture_contract.py
-python tools/validate_state_contract.py
-python tools/validate_ui_contract.py
-python tools/validate_privacy_contract.py
-node tests/unit/run.js
 ```
 
-The generated bundles must be rebuilt after changing their source files.
-
-## Documentation
+## Documentation entry points
 
 Start with:
 
-- `docs/guides/GETTING_STARTED.md`
-- `docs/guides/RESEARCH_WORKFLOW.md`
-- `docs/specs/DATA_MODEL.md`
-- `docs/specs/PIPELINE.md`
-- `docs/specs/ACTIONS.md`
-- `docs/guides/DATA_CONSOLE.md`
-- `docs/guides/EXTENDING_LABFLOW.md`
+- `docs/README.md` — documentation map;
+- `docs/ARCHITECTURE.md` — authoritative ownership and dependency boundaries;
+- `docs/specs/DATA_MODEL.md` — scientific aggregate and persistence contract;
+- `docs/specs/PIPELINE.md` — deterministic lifecycle;
+- `docs/specs/ACTIONS.md` — Action contract and execution semantics;
+- `docs/guides/EXTENDING_LABFLOW.md` — extension recipes;
+- `docs/CONTRIBUTING.md` — change discipline and review expectations;
+- `docs/CODE_REVIEW.md` — reviewer-oriented checklist.
 
-## Run locally
+## Current scope
 
-LabFlow remains a static vanilla-JS application. Serve it with any ordinary static web server when developing locally, for example:
-
-```bash
-python3 -m http.server 8000 --bind 127.0.0.1
-```
-
-Reasoning preferences are capability-aware: LabFlow does not force reasoning off for unknown/dynamic router models, and a provider that explicitly requires reasoning gets one technical retry with its default reasoning mode. The browser POC defaults to OpenRouter (`openrouter/free`) because it works with the static GitHub Pages deployment; local model servers remain available through their dedicated adapters. AI providers are contacted directly from the browser. LabFlow has no provider relay/backend fallback. Therefore hosted providers must permit browser CORS for the LabFlow origin; when they do not, Detect and Save & test report the browser/network failure explicitly instead of pretending the provider is available.
-
-
-## llama.cpp on the local network
-
-`labflow_engine.sh` launches `llama-server` on `127.0.0.1:8080` by default; use `--lan` explicitly when another device must connect so another device on the same trusted LAN can reach it. The launcher also passes browser CORS origins when supported and prints the machine LAN/mDNS endpoints. Use `LABFLOW_CORS_ORIGINS` (or `--cors-origin`) for one exact LabFlow page origin, or `--github-pages` for the public POC; on Fedora, allow the selected TCP port through `firewalld` if the launcher reports it blocked. On the same machine use `http://127.0.0.1:8080/v1` and open the local LabFlow page as `http://127.0.0.1:<port>` or `http://localhost:<port>` — never browse to `0.0.0.0`. On another device use the host/private IP that the **browser device** can resolve (for example `http://fedora.local:8080/v1` or `http://192.168.x.x:8080/v1`).
-
-## AI provider console
-
-Open browser DevTools and run `LabFlow.AIConsole.help()` for provider/model diagnostics. See `docs/guides/AI_PROVIDER_CONSOLE.md`.
+This repository is a proof-of-concept, not a production LIMS. It deliberately avoids inventory management, remote multi-user synchronization, hidden server state, and automatic scientific claims that cannot be traced to source evidence or an explicit researcher decision.

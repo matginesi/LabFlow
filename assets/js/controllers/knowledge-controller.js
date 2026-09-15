@@ -1,3 +1,7 @@
+/*
+ * Bind Knowledge Base editing/import/export interactions to the KB owner API.
+ * Boundary: Do not validate or persist entries independently.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

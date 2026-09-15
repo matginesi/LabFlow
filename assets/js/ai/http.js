@@ -1,3 +1,7 @@
+/*
+ * Low-level direct-browser HTTP helpers shared by AI transport operations.
+ * Boundary: Preserve the distinction between browser/network failure and provider HTTP failure.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger.scope('ai');

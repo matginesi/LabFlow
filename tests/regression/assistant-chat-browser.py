@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provider-free browser regression for the Assistant message lifecycle."""
+"""Browser regression for Assistant conversation rendering, retry, abort and scroll behavior."""
 import sys
 import shutil
 from pathlib import Path
@@ -95,8 +95,8 @@ with sync_playwright() as p:
     details.wait_for(state="attached")
     check(details.count() == 1 and not details.evaluate("node => node.open"), "reasoning Details closed by default")
 
-    # A second turn must work after the first final State notification. This is
-    # the regression for the old stuck-spinner / dead-composer race.
+                                                                               
+                                                                    
     install_pending(page)
     page.evaluate("() => { LabFlow.Assistant.sendChat('And what should I do next?'); }")
     check(page.locator(".assistant-row").count() == 2, "second turn created exactly one new Assistant container")
@@ -110,7 +110,7 @@ with sync_playwright() as p:
     check("Review the remaining evidence" in page.locator(".assistant-row").last.inner_text(), "second answer rendered")
     check(not page.locator("#chatInput").is_disabled(), "composer re-enabled after second turn")
 
-    # Error reuses the pending response and exposes Retry.
+                                                          
     reset(page)
     page.evaluate("LabFlow.ActionRunner={isRunning:()=>false,run:()=>Promise.resolve({status:'error',code:'TEST_ERROR',message:'Provider unavailable',requestMeta:{}}),cancel:()=>true}")
     page.evaluate("() => { LabFlow.Assistant.sendChat('Fail safely'); }")
@@ -119,7 +119,7 @@ with sync_playwright() as p:
     check(page.locator(".chat-thinking-dot").count() == 0, "error left no spinner")
     check(page.locator("[data-retry-message]").count() == 1, "error exposes Retry")
 
-    # Abort clears transient UI through the ActionRunner cancellation contract.
+                                                                               
     reset(page)
     install_pending(page)
     page.evaluate("() => { LabFlow.Assistant.sendChat('Stop this'); }")
@@ -128,7 +128,7 @@ with sync_playwright() as p:
     check(page.locator(".chat-thinking-dot").count() == 0, "abort left no spinner")
     check(page.locator(".chat-cancelled").count() == 1, "abort marked the turn cancelled")
 
-    # Long content grows naturally; only the conversation owns vertical scrolling.
+                                                                                  
     reset(page)
     long_markdown = "\n\n".join(f"Paragraph {i}: scientific explanation with evidence and context." for i in range(80))
     page.evaluate("""text => {

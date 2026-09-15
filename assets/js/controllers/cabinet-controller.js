@@ -1,3 +1,7 @@
+/*
+ * Bind Cabinet page interactions to Cabinet and Design owner APIs.
+ * Boundary: Coordinate intent only; resource schema and Design mutation remain owner concerns.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};

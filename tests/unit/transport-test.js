@@ -351,8 +351,6 @@ module.exports = function (t, LF) {
     finally{global.fetch=oldFetch;delete LF.Storage;delete LF.AIProviders;}
   };
 
-
-
   t['llama.cpp connection probe disables reasoning even when model metadata is unknown'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let seen=null;
     global.location={protocol:'http:',origin:'http://127.0.0.1:8000'};
@@ -570,12 +568,6 @@ module.exports = function (t, LF) {
     try{const response=await AI.providerFetch('http://fedora.local:8080/v1/models',{method:'GET'},'llamacpp','models');assert(response.labflowTransport,'direct','LAN is direct');assert(calls.length,1,'one LAN request');assert(calls[0].url,'http://fedora.local:8080/v1/models','exact LAN endpoint');assert(calls[0].opts.targetAddressSpace,'local','Local Network Access target declared');}
     finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;}
   };
-
-
-
-
-
-
 
   t['local Detect throughput benchmark averages three measured samples after an excluded warm-up'] = async function () {
     const oldFetch=global.fetch,oldLocation=global.location;let calls=0,bodies=[];

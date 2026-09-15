@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Reproducible distributable gate: generated artifacts, contracts, unit tests and synthetic regressions.
+# Private fixtures, live providers and browser automation remain explicit optional evidence.
 set -euo pipefail
 cd "$(dirname "$0")"
 MODE="check"
@@ -71,6 +73,7 @@ DERIVED=(
   assets/js/ai/prompt-bundle.js
   assets/js/ai/action-registry.js
   assets/js/knowledge/kb-bundle.js
+  docs/reference/ACTION_RUNTIME_MATRIX.md
   assets/js/pages/docs-bundle.js
   assets/js/pages/ui-kit-inline.js
 )
@@ -85,6 +88,7 @@ printf 'Regenerating derived assets...\n'
 python3 tools/build_prompt_bundle.py >/dev/null
 python3 tools/build_action_registry.py >/dev/null
 python3 tools/build_knowledge_bundle.py >/dev/null
+python3 tools/build_action_reference.py >/dev/null
 python3 tools/build_docs_bundle.py >/dev/null
 python3 tools/build_ui_kit_inline.py >/dev/null
 for path in "${DERIVED[@]}"; do

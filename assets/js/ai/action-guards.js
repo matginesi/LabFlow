@@ -1,3 +1,7 @@
+/*
+ * Declarative guard evaluators for Action availability against resolved current state.
+ * Boundary: Guards decide availability; route affects recommendation only.
+ */
 (function () {
   'use strict';
 

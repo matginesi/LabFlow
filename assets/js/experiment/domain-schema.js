@@ -1,3 +1,7 @@
+/*
+ * Canonical scientific record factories, normalization, root ownership and persistence metadata.
+ * Boundary: Single source of default scientific record and root shape.
+ */
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};
@@ -6,10 +10,6 @@ const C=LF.Core,uid=C.uid;
 const now=function(){return new Date().toISOString();};
 const RECORDS={},ROOT={};
 
-/*
- * Canonical domain vocabulary. These values are data contracts, not UI copy.
- * Keep them here so records, validators and feature services share one spelling.
- */
 const VALUES=Object.freeze({
   recordStatus:Object.freeze({
     UNKNOWN:'unknown',
@@ -161,12 +161,12 @@ r.patchType=text(r.patchType||r.type||'value_change');const target=obj(r.target)
 });
 registerRecord('design_solution',{
   label:'Design solution',description:'One solution/formulation record in the researcher-editable Design projection.',idPrefix:'sol',required:['id','kind','status'],
-  defaults:function(){return{id:uid('sol'),kind:'design_solution',name:'',role:'',solutes:'',solvents:'',concentration:'',additives:'',preparation:'',evidence:'',status:'unknown',confidence:null,provenanceKind:'',cabinetRef:null,aiAssisted:false,aiAssistedAt:null};},
+  defaults:function(){return{id:uid('sol'),kind:'design_solution',name:'',role:'',solutes:'',solvents:'',concentration:'',additives:'',preparation:'',evidence:'',status:'unknown',confidence:null,provenanceKind:'',cabinetRef:null,userEdited:false,aiAssisted:false,aiAssistedAt:null};},
   normalize:function(r){r=obj(r);if(!r.id)r.id=uid('sol');r.kind='design_solution';
 ['name','role','solutes','solvents','concentration','additives','preparation','evidence','status',
     'provenanceKind'].forEach(function(k){r[k]=text(r[k]);});r.confidence=finiteOrNull(r.confidence);
-    r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;r.aiAssisted=!!r.aiAssisted;
-    r.aiAssistedAt=r.aiAssistedAt||null;return r;}
+    r.cabinetRef=r.cabinetRef&&typeof r.cabinetRef==='object'?r.cabinetRef:null;r.userEdited=!!r.userEdited;
+    r.aiAssisted=!!r.aiAssisted;r.aiAssistedAt=r.aiAssistedAt||null;return r;}
 });
 registerRecord('design_layer',{
   label:'Design layer',description:'One material/process layer in a Design device stack.',idPrefix:'layer',required:['id','kind','status'],
@@ -175,14 +175,15 @@ registerRecord('design_layer',{
 });
 registerRecord('design_device',{
   label:'Design experiment/device',description:'One Design projection for a logical experiment/device, linked to experiments/samples/solutions by stable IDs.',idPrefix:'device',required:['id','kind','solutionIds','sampleIds','stack','process','status'],relations:{experimentId:'experiment',sampleIds:'sample',solutionIds:'design_solution'},
-  defaults:function(){return{id:uid('device'),kind:'design_device',name:'',group:'',experimentId:'',sampleIds:[],sampleNames:[],isRef:false,solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},stackSourceRef:null,processSourceRef:null,status:'unknown',evidence:'',confidence:null,provenanceKind:''};},
+  defaults:function(){return{id:uid('device'),kind:'design_device',name:'',group:'',experimentId:'',sampleIds:[],sampleNames:[],isRef:false,solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},processProvenance:{},stackSourceRef:null,processSourceRef:null,cabinetAssisted:false,cabinetAssistedAt:null,status:'unknown',evidence:'',confidence:null,provenanceKind:''};},
   normalize:function(r){r=obj(r);if(!r.id)r.id=uid('device');r.kind='design_device';r.name=text(r.name);
 r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.sampleIds).map(text);
     r.sampleNames=arr(r.sampleNames).map(text);r.isRef=!!r.isRef;r.solutionIds=arr(r.solutionIds).map(text);
     r.stack=arr(r.stack).map(function(layer){return create('design_layer',layer);});
-    r.process=mergeDefaults({coating:'',annealing:'',atmosphere:'',notes:''},r.process);
+    r.process=mergeDefaults({coating:'',annealing:'',atmosphere:'',notes:''},r.process);r.processProvenance=obj(r.processProvenance);
     r.stackSourceRef=r.stackSourceRef&&typeof r.stackSourceRef==='object'?r.stackSourceRef:null;
     r.processSourceRef=r.processSourceRef&&typeof r.processSourceRef==='object'?r.processSourceRef:null;
+    r.cabinetAssisted=!!r.cabinetAssisted;r.cabinetAssistedAt=r.cabinetAssistedAt||null;
     r.status=text(r.status||'unknown');r.evidence=text(r.evidence);r.confidence=finiteOrNull(r.confidence);
     r.provenanceKind=text(r.provenanceKind);return r;}
 });
@@ -263,6 +264,33 @@ if(value instanceof ArrayBuffer)return value.slice(0);
   }if(Array.isArray(value))return value.map(cloneValue);const out={};
   Object.keys(value).forEach(function(k){out[k]=cloneValue(value[k]);});return out;}
 function snapshot(exp,options){exp=normalizeRoot(exp);options=options||{};const out={};persistentKeys().forEach(function(key){if(exp[key]===undefined)return;if(key==='raw'&&options.includeSourceArchive===false){const raw=cloneValue(exp.raw||{});raw.sourceArchive=null;out.raw=raw;return;}out[key]=cloneValue(exp[key]);});return out;}
+
+function registerStructureDefinitions(){
+  if(!LF.Structures)return;
+  kinds().forEach(function(kind){
+    const spec=RECORDS[kind],example=spec.defaults();
+    LF.Structures.defineFromExample('experiment.record.'+kind,{
+      owner:'DomainSchema',layer:'scientific_record',persistence:'persistent',description:spec.description||spec.label||kind
+    },example,{required:spec.required||[],relations:spec.relations||{}});
+  });
+  const example=createRoot({id:'experiment_contract'}),fields={},inferred=LF.Structures.fieldsFromExample(example);
+  rootFields().forEach(function(meta){
+    fields[meta.key]={
+      type:inferred[meta.key]?inferred[meta.key].type:(meta.recordKind?'array':meta.key==='id'?'string':'object'),
+      itemType:meta.recordKind||'',
+      owner:meta.owner,
+      layer:meta.layer,
+      persistence:meta.persistence,
+      description:meta.description||''
+    };
+  });
+  LF.Structures.define('experiment.aggregate',{
+    owner:'DomainSchema',layer:'aggregate_root',persistence:'mixed',
+    description:'The single mutable scientific aggregate. Field-level owner/layer/persistence metadata is authoritative.',
+    fields:fields
+  });
+}
+registerStructureDefinitions();
 
 LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootField:rootField,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,values:VALUES,scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};
 }());

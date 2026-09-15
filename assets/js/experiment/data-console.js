@@ -1,3 +1,7 @@
+/*
+ * Developer introspection facade over the live canonical model and contracts.
+ * Boundary: Delegate safe mutations to owners and never maintain a debug copy.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
@@ -64,7 +68,8 @@
     ['derived()', 'Inspect derived projection dependencies/invalidation'],
     ['actions()', 'List current Action capability contracts'],
     ['actionData(actionId?, targetId?)', 'Inspect persisted Action proposals/annotations/status without mutating them'],
-    ['contracts()', 'Inspect domain + pipeline + derived + Action contracts together'],
+    ['structures(filter?)', 'List all registered runtime/domain/workspace/AI data structures and ownership metadata'],
+    ['contracts()', 'Inspect structures + domain + pipeline + derived + Action contracts together'],
     ['help(topic?)', 'Print this guide; topic may be measurement, sample, run, scan…']
   ];
 
@@ -119,7 +124,8 @@ LF.ActionRegistry.actions?LF.ActionRegistry.actions():[]).map(function(id){
     guards:(c.guards||[]).slice(),resultStep:e.result_step||'',steps:(e.steps||[]).map(function(x){return{
     id:x.id,type:x.type,tool:x.tool||'',schema:x.schema||'',validateWith:x.validate_with||''};})};});}
   function actionData(actionId,targetId){const exp=need();if(!LF.ActionData)return null;if(!actionId)return LF.ActionData.snapshot(exp);const id=String(actionId),target=targetId==null?'':String(targetId);return{proposal:LF.ActionData.proposal(exp,id,target),annotation:LF.ActionData.annotation(exp,id),status:LF.ActionData.status(exp,id,target)};}
-  function contracts(){return{domain:schema(),pipeline:LF.DataPipeline&&LF.DataPipeline.stages?LF.DataPipeline.stages():[],derived:derived(),actions:actions()};}
+  function structures(filter){return LF.Structures&&LF.Structures.list?LF.Structures.list(filter||{}):[];}
+  function contracts(){return{structures:structures(),domain:schema(),pipeline:LF.DataPipeline&&LF.DataPipeline.stages?LF.DataPipeline.stages():[],derived:derived(),actions:actions()};}
   function types(){const fromContracts=LF.DataContracts&&LF.DataContracts.types?LF.DataContracts.types():[];return Array.from(new Set(Object.keys(TYPE_DOCS).concat(fromContracts)));}
   function describe(type) {
     const key=String(type||'').trim().toLowerCase(),contract=LF.DataContracts&&LF.DataContracts.describe?LF.DataContracts.describe(key):null,doc=TYPE_DOCS[key]||null;
@@ -159,6 +165,8 @@ required:(contract.required||[]).slice(),relations:Object.assign({},contract.rel
       '  LabFlow.Data.ownership()',
       '  LabFlow.Data.derived()',
       '  LabFlow.Data.actions()',
+      '  LabFlow.Data.structures()',
+      '  LabFlow.Data.structures({owner:"Cabinet"})',
       '  LabFlow.Data.actionData("design.infer", "<device-id>")',
       '  LabFlow.Data.current().measurementsForExperiment("N3")',
       '',
@@ -183,5 +191,5 @@ required:(contract.required||[]).slice(),relations:Object.assign({},contract.rel
 measurements:measurements,experiment:experiment,sample:sample,run:run,measurement:measurement,get:get,inspect:get,
     best:best,tree:tree,json:json,patch:patch,reanalyze:reanalyze,setMismatchFactor:setMismatchFactor,validate:validate,
     pipeline:pipeline,schema:schema,ownership:ownership,derived:derived,actions:actions,actionData:actionData,
-    contracts:contracts,types:types,describe:describe,help:help};
+    structures:structures,contracts:contracts,types:types,describe:describe,help:help};
 }());

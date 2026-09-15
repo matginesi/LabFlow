@@ -1,3 +1,7 @@
+/*
+ * Deterministic JV measurement and experiment analysis.
+ * Boundary: Authoritative numerical results derive from LabFlow Data, never model output.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};
@@ -7,7 +11,7 @@
 
   function rules() { return (LF.PromptRegistry && LF.PromptRegistry.effectiveRules && LF.PromptRegistry.effectiveRules()) || {}; }
 
-  /* All scientific collections live on the one canonical ExperimentData. */
+
   function listOf(exp, key) {
     return Array.isArray(exp && exp[key]) ? exp[key] : [];
   }
@@ -122,9 +126,7 @@
       if (!current || m.bestEff > current.bestEff) bySample.set(m.sample, m);
     });
     const bestBySample = Array.from(bySample.values()).sort(function (a,b) { return b.bestEff - a.bestEff; });
-    /* Experiment ranking is intentionally built from one representative per
-       sample first. Repeated JV acquisitions therefore do not give a sample
-       multiple chances to dominate its experiment. */
+
     const byExperiment = new Map();
     bestBySample.forEach(function (m) {
       const key = m.experiment || m.group || m.sample;
@@ -192,8 +194,6 @@
       return summarizeAnalysis(exp,end);
     }finally{activeAnalyses.delete(exp);}
   }
-
-
 
   function compact(m) {
     return { id:m.id, file:m.file, sample:m.sample, sampleId:m.sampleId||'', experiment:m.experiment||m.group||'',

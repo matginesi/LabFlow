@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the browser Action registry from actions/*/action.json + optional prompt.md."""
+"""Compile Action manifests, prompts and schemas into the browser Action registry."""
 from pathlib import Path
 import json, hashlib
 ROOT=Path(__file__).resolve().parents[1]

@@ -1,13 +1,12 @@
+/*
+ * Render bounded structured diagnostics and runtime snapshots.
+ * Boundary: Preserve sanitization and never reintroduce secret or unbounded RAW payloads.
+ */
 (function () {
   'use strict';
 
   const LF = window.LabFlow = window.LabFlow || {};
   const C = LF.Core;
-
-  /*
-   * Logs is a read-only projection of the already-redacted Logger buffer.
-   * Collection, redaction, export and clearing are owned outside this renderer.
-   */
 
   function filters() {
     const state = LF.State.state;
@@ -121,7 +120,7 @@ C.escapeHtml(new Date(entry.ts).toLocaleTimeString())+'</strong><span>'+C.escape
 
   function metric(label,number,sub) { return '<div class="metric"><div class="metric-label">'+label+'</div><div class="metric-value">'+number+'</div><div class="metric-sub">'+sub+'</div></div>'; }
 
-  /** Render one unified diagnostic view: metrics, errors and the filtered event stream. */
+
   function render(options) {
     const embedded=!!(options&&options.embedded);
     const active=filters(),all=LF.Logger.entries().slice().reverse();
@@ -179,13 +178,13 @@ scopeOptions+'</select><label class="sr-only" for="logSearch">Search logs</label
     if(!root||!root.querySelectorAll)return;root.querySelectorAll('details').forEach(function(details){const lazy=details.querySelector(':scope > .log-lazy-detail');if(!lazy)return;details.addEventListener('toggle',function(){if(details.open)hydrateLazyDetail(lazy);},{passive:true});if(details.open)hydrateLazyDetail(lazy);});
   }
 
-  /** Update the level filter; the app decides when to render again. */
+
   function setLevel(level){filters().level=level||'all';}
-  /** Update the diagnostic category filter. */
+
   function setCategory(category){filters().category=category||'all';}
-  /** Update the logger namespace filter. */
+
   function setScope(scope){filters().scope=scope||'all';}
-  /** Update the case-insensitive full-text filter. */
+
   function setQuery(query){filters().query=String(query||'');}
 
   LF.LogsPage={render:render,bind:bind,setLevel:setLevel,setCategory:setCategory,setScope:setScope,setQuery:setQuery};

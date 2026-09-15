@@ -1,3 +1,7 @@
+/*
+ * Render deterministic Results, curves, comparisons and result-focused Action entry points.
+ * Boundary: Metrics come from deterministic analysis and are not recalculated by the page.
+ */
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,S=LF.State,PS=LF.PageShell;
@@ -495,9 +499,7 @@ e.measurements.filter(function(m){return!m.excluded&&(bp.eligibleOnly===false||m
     const totalN=data.reduce(function(n,x){return n+(x.stats.fw?x.stats.fw.n:0)+(x.stats.rv?x.stats.rv.n:0);},0);
     const medians=data.map(function(x){const m=(x.stats.rv&&x.stats.rv.med!=null)?x.stats.rv.med:(x.stats.fw&&x.stats.fw.med!=null?x.stats.fw.med:null);return m;}).filter(Number.isFinite),medianSpan=medians.length?(C.fmt(Math.min.apply(null,medians),3)+' – '+C.fmt(Math.max.apply(null,medians),3)):'—';
     const best=data.slice().sort(function(a,b){const am=(a.stats.rv&&a.stats.rv.med!=null)?a.stats.rv.med:(a.stats.fw?a.stats.fw.med:-Infinity),bm=(b.stats.rv&&b.stats.rv.med!=null)?b.stats.rv.med:(b.stats.fw?b.stats.fw.med:-Infinity);return bm-am;})[0];
-    /* Reuse rule: when the calculated bundle is fresh and the view is the
-       full eligible/both-scans scope, per-scan table cells come from the bundle
-       (single source shared with NOMAD); otherwise from compareData. */
+
     const reuseBundle=!!(LF.AnalysisSummary&&LF.AnalysisSummary.fresh(e))&&bp.eligibleOnly!==false&&(bp.groups||[]).length>=all.length&&(!bp.direction||bp.direction==='both');
     const bundleGroups=reuseBundle?((LF.AnalysisSummary.ensure(e).groupStatistics)||[]):[];
     function scanCell(stats){if(!stats)return null;return{n:stats.n,med:stats.med,q1:stats.q1,q3:stats.q3,min:stats.min,max:stats.max};}

@@ -1,67 +1,44 @@
 ---
 title: Troubleshooting
 section: Researcher guide
-summary: Diagnose import, Action, provider and structured-output failures without confusing scientific uncertainty with technical errors.
-order: 40
+summary: Diagnose import, restore, AI/provider, Cabinet/KB and browser-runtime failures by boundary.
+order: 90
 ---
 
-# Troubleshooting LabFlow
+# Troubleshooting
 
-## Healthy import
+Diagnose the failing boundary first; do not treat every symptom as an AI or parser problem.
 
-A healthy import finishes without any AI request. Check:
+## Import fails before Results
 
-```js
-LabFlow.Data.summary()
-LabFlow.Data.validate()
-LabFlow.Data.pipeline()
-```
+Check Settings → Diagnostics for importer/parser/pipeline events. A structural contract failure should identify the invalid root/relation rather than continuing with partial scientific state.
 
-The pipeline should be `ready`; Review may still contain semantic decisions, which is not an import failure.
+Unknown files are normally preserved, not fatal. Duplicate basenames should remain distinct by full archive path.
 
-## Naming looks wrong
+## Restored workspace is rejected
 
-Inspect:
+Persisted scientific snapshots must satisfy the current snapshot contract. The POC intentionally fails obsolete/incompatible shapes rather than guessing a migration. Re-import the original RAW archive or use an export produced by the current build.
 
-```js
-LabFlow.Data.tree()
-LabFlow.Data.experiments()
-LabFlow.Data.samples()
-```
+## Provider test has no HTTP status
 
-Canonical naming is deterministic. If a scientific token is genuinely ambiguous, Review should expose it rather than silently guessing.
+The browser did not expose a provider response. Check endpoint URL, page origin/CORS/private-network permission and local server bind/firewall. Use `tools/ai_probe.py` to test the same endpoint outside browser CORS.
 
-## `MODEL_OUTPUT_INVALID`
+## Provider returns HTTP error
 
-This is a structured/semantic contract failure. Logs include invalid JSON/schema/semantic details where available. For `design.infer`, incomplete coverage is retried inside the same Action; only after bounded retries are exhausted does the selected experiment expose **Retry inference**.
+Authentication/quota/model/server statuses are provider failures. Read the sanitized provider message/request ID in Diagnostics; do not troubleshoot them as CORS.
 
-## `MODEL_OUTPUT_TRUNCATED`
+## Action request returns 200 but fails
 
-The model/server stopped before returning a complete usable output. Reduce model verbosity/context or use a model with sufficient completion capacity.
+The model response may be empty, truncated, malformed, schema-invalid or semantically incomplete. Diagnostics should show a rejected response linked to the transport request.
 
-## `MODEL_CONTEXT_LENGTH`
+## Cabinet item cannot be used
 
-The request exceeds the configured model/server context. Inspect the Action's bounded input/output budget and local server context size.
+The item may be incomplete/invalid for its kind or may not declare a Design application capability. Fix the item in Cabinet; do not bypass validation by editing Design internals.
 
-## `429` / rate limiting
+## KB source is not cited
 
-LabFlow surfaces provider throttling and does not create hidden automatic request loops. Retry later or use another configured provider/model.
+Only retrieved active validated entries are available to the model. A claim relying on KB should contain a valid `[KB:<id>]` marker. Missing/unknown markers are not converted into invented citations.
 
+## UI looks stale after replacing files
 
-## Local provider works on the computer but not from another device
-
-`127.0.0.1` and `localhost` point to the device running the browser. From a phone, they point to the phone, not to the workstation. In **Settings → Connection**, use a LAN-resolvable host such as `http://fedora:8080/v1`, `http://fedora.local:8080/v1`, or the workstation private IP. The server must listen on a LAN interface and allow the LabFlow origin with CORS.
-
-For llama.cpp on the same machine, keep the default `--host 127.0.0.1` with `--cors-origin localhost`. Use `--lan --cors-origin <exact LabFlow origin>` only when the browser runs on another device. Do not browse to `0.0.0.0`; it is a bind address, not a stable browser hostname. LM Studio must enable **Serve on Local Network** and CORS. Ollama must be exposed with `OLLAMA_HOST` and allow the LabFlow origin through `OLLAMA_ORIGINS`. If LabFlow is opened from an HTTPS host such as GitHub Pages, the browser may additionally require Local Network permission; if that browser cannot/does not allow HTTPS → HTTP LAN access, use an HTTPS model endpoint or a compatible local LabFlow origin.
-
-## Local provider works but model name shows a path
-
-Current LabFlow should display only the basename in user-visible model/log surfaces while retaining the exact full ID internally. A full visible path is a regression.
-
-## Design says Needs context
-
-For Design there is no separate successful “insufficient evidence” state. The Action attempts the missing domains and retries incomplete output internally. If all attempts fail, review the available evidence manually or use **Retry inference** for another provider run.
-
-## What to copy when reporting a bug
-
-Include the relevant log entries, Action ID, error code, pipeline status, and `LabFlow.Data.summary()` / `validate()` output. Do not include API keys.
+Check `LABFLOW_BUILD` in Diagnostics/runtime snapshot and ensure generated bundles were rebuilt. Browser cache/stale deployment should be distinguished from current-source behavior.

@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Small provider/model diagnostic client for LabFlow.
-
-Uses only the Python standard library. It is intentionally independent from the
-browser so it can distinguish provider/API problems from browser CORS policy.
-"""
+"""Probe AI providers from the terminal without browser CORS or experiment data."""
 from __future__ import annotations
 import argparse, json, os, sys, time, urllib.error, urllib.request
 

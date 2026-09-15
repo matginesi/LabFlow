@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+# Launch a local llama.cpp OpenAI-compatible server with explicit loopback/LAN and CORS behavior.
+# Environment variables override machine defaults so the script remains usable without source edits.
 set -euo pipefail
 
 PROG="$(basename "$0")"
 
-# Machine defaults can be overridden without editing this file.
 MODEL="${LABFLOW_MODEL:-$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotron-3-Nano-4B-GGUF/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf}"
 SERVER="${LABFLOW_LLAMA_SERVER:-$HOME/llama.cpp/build/bin/llama-server}"
 HOST="${LABFLOW_HOST:-127.0.0.1}"
@@ -27,7 +28,7 @@ HF_REPO=""
 HF_FILE=chat_template.jinja
 TEMPLATE_SOURCE="GGUF metadata / llama.cpp fallback"
 
-# Empty = do not force server defaults; LabFlow may choose per request.
+# Leave reasoning controls empty unless the operator explicitly wants server-wide defaults; LabFlow can then choose per request.
 REASONING=""
 REASONING_BUDGET=""
 REASONING_FORMAT=""

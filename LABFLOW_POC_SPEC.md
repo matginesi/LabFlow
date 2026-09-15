@@ -1,190 +1,142 @@
 # LabFlow POC specification
 
-## 1. Product objective
+## 1. Objective
 
-LabFlow turns a researcher-supplied archive into one inspectable LabFlow Data with deterministic Results, minimal review burden, explicit Design reconstruction, optional AI assistance and deterministic export preparation.
+LabFlow converts a researcher-supplied laboratory archive into one inspectable scientific aggregate with deterministic Results, minimal review burden, explicit Design reconstruction, optional AI assistance, reusable lab references, and deterministic export preparation.
 
-A successful import must not depend on AI availability.
+A successful import and deterministic analysis must not depend on network access or AI availability.
 
-## 2. Source of truth
+## 2. Product principles
 
-`ExperimentData` is the only scientific aggregate used by importer, pipeline, Results, Review, Design, Actions, Assistant and NOMAD services.
+- **Local first:** scientific state, parsing, analysis, validation and export preparation run in the browser.
+- **Evidence preserving:** RAW bytes and source paths remain immutable.
+- **One scientific truth:** `ExperimentData` is the only mutable scientific aggregate.
+- **Deterministic by default:** anything mechanically provable is handled without AI.
+- **Human authority:** ambiguous semantics and AI proposals remain reviewable.
+- **Traceable extension:** each cross-module structure declares an owner and persistence class.
 
-Hierarchy:
+## 3. Scientific model
 
-```text
-Experiment → Sample/Cell → Run → Measurement → FW/RV scans
+Canonical acquisition hierarchy:
+
+```mermaid
+flowchart LR
+    E[Experiment] --> S[Sample / Cell]
+    S --> R[Run]
+    R --> M[Measurement]
+    M --> F[FW / RV scans]
 ```
 
-RAW files are immutable. LabFlow Data changes are patch/provenance tracked.
+`DomainSchema` defines record/root contracts. `DataModel` owns aggregate mechanics. `DataContracts` validates graph invariants. `DerivedState` owns recomputable projection invalidation. `ActionData` is the only persisted Action-output store.
 
-## 2a. Architecture kernel
+## 4. Deterministic lifecycle
 
-The codebase must keep these responsibilities separate:
+The current pipeline is:
 
-- `DomainSchema`: canonical record/root definitions and persistence metadata;
-- `ExperimentData`: one aggregate/query/mutation API;
-- `DataContracts`: fail-closed graph/invariant validation;
-- `DerivedState`: declarative invalidation of recomputable projections;
-- `DataPipeline`: deterministic lifecycle;
-- `ActionData`: the only persisted store for Action proposals/annotations/status.
-
-No feature may introduce a parallel editable scientific model or ad-hoc Action-output root fields.
-
-## 3. Import and deterministic pipeline
-
-The import pipeline is:
-
-```text
-normalize
-→ link
-→ validate-structure
-→ analyze
-→ index
-→ review
-→ auto-cleanup
-→ project-design
-→ summarize
-→ validate-final
+```mermaid
+flowchart TD
+    N[Normalize] --> L[Link]
+    L --> VS[Validate structure]
+    VS --> A[Analyze]
+    A --> I[Index]
+    I --> R[Review]
+    R --> AC[Auto cleanup]
+    AC --> PD[Project design]
+    PD --> S[Summarize]
+    S --> VF[Validate final]
 ```
 
 Requirements:
 
-- canonical naming is automatic;
-- hierarchy/backlinks are rebuilt deterministically;
-- JV metrics/results are deterministic;
-- mechanically provable corrections are detected automatically, shown as pending, and applied only to LabFlow Data after explicit researcher acceptance;
-- every automatic correction has provenance;
-- semantic ambiguity is never guessed deterministically;
-- pipeline validation fails closed on an inconsistent domain graph;
-- the pipeline never performs an AI request.
+- canonical naming and hierarchy reconstruction are deterministic;
+- structural validation fails closed before dependent scientific calculations;
+- JV metrics, ranking, quality state and summaries are deterministic;
+- mechanically safe corrections may be detected automatically but require explicit acceptance before mutation;
+- applied corrections carry provenance and trigger deterministic refresh;
+- semantic uncertainty is represented as a finding/ambiguity rather than guessed;
+- pipeline code never invokes an AI provider.
 
-## 4. Review UX
+## 5. Review
 
-Review should demand researcher attention only when necessary:
+Review exists for decisions, not for exposing parser internals. It must:
 
-- show how many names/corrections were handled automatically;
-- show semantic ambiguities separately;
-- offer one `Resolve with AI` action when ambiguities exist;
-- store AI suggestions without auto-applying them;
-- allow `Apply all suggestions` plus individual review/override;
-- keep diagnostics/provenance available but secondary.
+- distinguish deterministic cleanup from semantic ambiguity;
+- show enough evidence to make each decision traceable;
+- allow safe corrections to be accepted explicitly;
+- allow AI only as a proposal mechanism for unresolved semantics;
+- preserve individual override/rejection paths;
+- permit clean datasets to proceed without unnecessary clicks.
 
-If no semantic ambiguity exists, the researcher should be able to proceed directly to Results.
+## 6. Results
 
-## 5. Results contract
+Results are derived exclusively from LabFlow Data and preserve JV semantics including FW/RV scans, core metrics, hysteresis, per-sample best measurement, group/experiment summaries, deterministic eligibility/quality state and raw curves when present.
 
-Results are calculated from the LabFlow Data and retain JV semantics from the reference analyzer:
+AI may interpret or compare deterministic Results but may not replace or recalculate authoritative measurements.
 
-- paired FW/RV scans;
-- Voc, Jsc, Vmpp, Jmpp, Pmpp, Rs, Rsh, FF, Eff;
-- hysteresis `(EffRV - EffFW) / EffRV` where defined;
-- best measurement per sample/cell;
-- group/experiment summaries and rankings;
-- deterministic quality/eligibility state;
-- raw FW/RV curve arrays when available.
+## 7. Design and Cabinet
 
-AI may interpret these results but may not recalculate or replace them.
+Design is experiment-owned scientific state. `DesignModel` is its write owner.
 
-## 6. Action catalog
+Lab Cabinet stores reusable laboratory references such as formulations, device stacks, process recipes, materials, substrates and instruments. Cabinet is not inventory, a LIMS, or a second experiment model. Applying a Cabinet item copies a detached snapshot into Design and records the Cabinet source reference.
 
-| Action | Target | Result | Effect |
+Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition.
+
+## 8. Knowledge Base
+
+The KB consists of a bundled baseline plus a browser-local editable JSONL overlay. Each entry is validated and can carry sources, facts, cautions, aliases and relations.
+
+The KB is reference knowledge. Assistant/Actions may retrieve bounded active entries, but experiment evidence always takes precedence. Model answers relying on KB entries use explicit `[KB:<id>]` references that the UI resolves to stored sources.
+
+## 9. Action catalog
+
+Current public Actions:
+
+| Action | Target | Semantic result | State effect |
 |---|---|---|---|
-| `dataset.resolve-ambiguities` | active semantic ambiguities | structured correction proposal | store proposal |
-| `design.infer` | one incomplete design experiment | structured qualitative design suggestion | store proposal |
-| `results.interpret` | current deterministic Results | structured interpretation | store derived annotation |
-| `results.compare` | 2+ selected result groups | structured comparison | store derived annotation |
-| `assistant.chat` | current page/experiment context | text answer | read-only |
+| `dataset.resolve-ambiguities` | unresolved review ambiguity | correction proposal | stores proposal |
+| `design.infer` | one incomplete design experiment | qualitative Design proposal | stores proposal |
+| `results.interpret` | deterministic Results | interpretation | stores annotation |
+| `results.compare` | selected Results groups | comparison | stores annotation |
+| `assistant.chat` | bounded page/experiment context | text answer | read-only |
 
-Anything that merely normalizes, analyzes, indexes, validates or exports belongs to deterministic pipeline/services rather than the Action catalog.
+Normalization, analysis, indexing, validation, safe cleanup and export remain deterministic services rather than Actions.
 
-## 7. Action manifest contract
+## 10. Action contract
 
-Every Action must declare:
+Each public Action declares target, context profile/scope, result format/schema, effect, guards, execution steps and UI metadata in `actions/<id>/action.json`.
 
-```text
-contract.target
-  kind
-  cardinality
+`ActionCapabilities` resolves bindings and guards before provider work. The Runner re-checks the same contract at execution time. Page routes influence recommendation only.
 
-contract.context
-  profile
-  scope
+AI structured output must satisfy the declared schema and semantic validators before it can be stored.
 
-contract.result
-  format
-  schema?
-  kind
+## 11. Assistant
 
-contract.effect
-  mode
-  writes[]
+The Assistant is a read-only conversational surface over bounded page/experiment context, Action capability metadata, bounded Action outputs, Cabinet context when relevant, and validated KB references. It may recommend Actions but must not claim an Action executed unless LabFlow actually ran it.
 
-contract.guards[]
+## 12. AI/provider boundary
 
-execution
-  mode
-  result_step
-  steps[]
+Providers are contacted directly from the browser using the configured endpoint. No hidden relay/fallback may change the request path. Provider/model configuration stays in the transport layer rather than scientific context.
 
-ui                   # public Actions
-  command
-  routes[]            # recommendation only
-  bindings?           # Action parameter -> application-state path
-```
+Provider failures, browser/CORS failures and model-output validation failures remain distinct diagnostic categories.
 
-The manifest is the source of truth for execution, target bindings, command discovery and UI introspection.
+## 13. Export and NOMAD
 
-## 8. Guard contract
+Export is a deterministic projection of validated current state. NOMAD mapping/package generation is local and deterministic. The current direct-upload control is explicitly a non-networking stub until a real connector exists.
 
-Current guard families include:
+## 14. Extensibility
 
-- `dataset.loaded`
-- `review.ambiguities_available`
-- `design.incomplete_target`
-- `results.available`
-- `results.compare_groups`
-- `assistant.question`
+A new cross-module feature must declare:
 
-`ActionCapabilities` resolves manifest bindings and evaluates these guards before any execution UI/provider check. Every public Action remains visible in the global catalog; the current page only changes whether it is recommended. Guard failure means the Action is unavailable for the current state, not that the provider failed. The Runner resolves/rechecks the same bindings and guards immediately before execution.
+- owner and mutation API;
+- persistence class;
+- dependency direction;
+- invalidation rules for derived state;
+- Action contract if researcher-facing;
+- structure-catalog metadata when the shape crosses module boundaries;
+- tests proving the new boundary.
 
-## 9. AI boundary
+Frameworks or abstraction layers are introduced only when they remove demonstrated duplication or make an invariant enforceable.
 
-AI is explicit and optional. It may:
+## 15. Release acceptance
 
-- resolve semantic ambiguity by proposal;
-- complete missing qualitative Design content by reviewable proposal;
-- bulk Design completion reuses the same per-experiment inference Action, verifies persistence for each target, and preserves pending/error states truthfully when a run stops or fails;
-- interpret deterministic Results;
-- compare selected Results groups;
-- answer read-only questions.
-
-It must not silently mutate RAW data, recalculate deterministic metrics, or fabricate missing quantitative evidence. Insufficient scientific evidence is a valid non-error outcome where the Action schema allows it.
-
-## 10. Extensibility
-
-A new Action is added under `actions/<action-id>/` with `action.json` and optional `prompt.md` / `schema.json`. Public Actions declare their command, recommended routes and any state bindings in the manifest. Registry discovery, capability preflight, context profiles, guards and Action-step tools are extensible without a central Action whitelist or Action-ID switches in the Assistant.
-
-A new deterministic transformation should normally be a `DataPipeline.register(...)` stage or internal service, not an Action.
-
-## 11. NOMAD
-
-NOMAD export is deterministic and built from the current validated LabFlow Data. It is not an AI Action. Export also exposes an explicitly labelled direct-upload stub; Settings may retain the future endpoint/account/token locally, but the stub performs no network request and no upload.
-
-## 12. Console API
-
-The running data model and contracts are inspectable through:
-
-```js
-LabFlow.Data.current()
-LabFlow.Data.summary()
-LabFlow.Data.tree()
-LabFlow.Data.validate()
-LabFlow.Data.pipeline()
-LabFlow.Data.actions()
-LabFlow.Data.contracts()
-```
-
-## 13. Validation
-
-A release must pass unit tests, Action/State/UI/Privacy validators, JavaScript syntax checks and the real JV fixture hierarchy regression.
+A distributable release must pass `./release_check.sh`. Private real-dataset integration checks and browser automation are additional gates when their fixtures/environment are available.

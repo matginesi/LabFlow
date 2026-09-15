@@ -1,3 +1,7 @@
+/*
+ * Structured bounded diagnostics with sanitization and console mirroring.
+ * Boundary: Remove secrets and unbounded payloads before events enter the buffer.
+ */
 (function () {
   'use strict';
 
@@ -307,14 +311,12 @@
     }, true);
   }
 
-  function installNetworkHook() { /* AI/network calls log themselves directly. */ }
 
   function installGlobalHooks() {
     if (installed) return;
     installed = true;
     installErrorHooks();
     installInteractionHooks();
-    installNetworkHook();
     info('logger', 'ready', environmentSnapshot());
   }
 

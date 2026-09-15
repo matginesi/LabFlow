@@ -1,3 +1,7 @@
+/*
+ * Load optional local assets needed only by specific routes or features.
+ * Boundary: Optional assets may fail gracefully; required architecture modules are not lazy fallbacks.
+ */
 (function () {
   'use strict';
   const LF = window.LabFlow = window.LabFlow || {};

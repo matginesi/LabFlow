@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the file://-safe inline UI Kit module from ui-kit.html.
-
-The standalone HTML remains the human-editable visual ground truth. The app shell
-cannot iframe it under file:// because sibling local documents have opaque origins
-in Chromium, so this script mirrors only the catalog <main> body into a JS template.
-"""
+"""Compile the local UI Kit reference into the in-application inline artifact."""
 from __future__ import annotations
 
 from hashlib import sha256
