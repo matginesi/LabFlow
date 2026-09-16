@@ -57,3 +57,13 @@ The infrastructure kinds are not copied into Design. They describe reusable comp
 - `file_format`: extensions/MIME types, producing software, format documentation, parser support and typical output size/count.
 
 A Workspace Process references these items by stable Cabinet ID. The Process definition is context; a concrete Measurement may additionally record the actual instrument/software/setup references as provenance.
+
+## Cabinet as a Design inference source
+
+Cabinet is the strongest reusable reference source below direct experiment evidence because it represents resources intentionally defined by the researcher for their laboratory. `design.infer` therefore retrieves Cabinet candidates by missing domain and prefers a compatible Cabinet resource over a generic literature archetype.
+
+A Cabinet-backed proposal is labelled `cabinet_reference` and cites `CABINET:<id>`. LabFlow verifies that the ID exists. The proposal remains review-only because “available in this laboratory” is not the same statement as “used in this experiment”.
+
+For small-model robustness, if the provider omits a domain while a valid Cabinet resource already describes it, the deterministic Design fallback may construct the review candidate directly from that resource. This is a **reference copy into a proposal**, not automatic acceptance into scientific Design.
+
+The Design UI exposes the source nature and calibrated confidence so a researcher can distinguish a Cabinet-backed candidate from experiment evidence, a KB archetype or unsupported model inference.

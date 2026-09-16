@@ -62,6 +62,13 @@ samples:items.length,devices:devices.length,solutions:solutions.length,
 let raw=String(item&&item.provenance_kind||item&&item.provenanceKind||item&&item.source||inherited||
     '').toLowerCase().trim();const evidence=String(item&&item.evidence||'').trim();
     if(raw==='raw_evidence'||raw==='source'||raw==='evidence'||raw==='mixed')raw=evidence?'experiment':'model_inference';
+    if(raw==='cabinet_reference'||raw==='cabinet_snapshot'){
+      const ids=[],re=/(?:^|[\s,;])CABINET:([A-Za-z0-9._:-]+)/g;let m;while((m=re.exec(evidence)))ids.push(m[1]);
+      if(!ids.length&&item&&item.cabinetRef&&item.cabinetRef.cabinetId)ids.push(String(item.cabinetRef.cabinetId));
+      if(!ids.length)return'model_inference';
+      if(LF.Cabinet&&typeof LF.Cabinet.get==='function'&&!ids.some(function(id){return !!LF.Cabinet.get(id);}))return'model_inference';
+      return'cabinet_reference';
+    }
     if(raw==='knowledge_reference'){
       const ids=[],re=/(?:^|[\s,;])KB:([A-Za-z0-9._:-]+)/g;let m;while((m=re.exec(evidence)))ids.push(m[1]);
       if(!ids.length)return'model_inference';
@@ -70,34 +77,50 @@ let raw=String(item&&item.provenance_kind||item&&item.provenanceKind||item&&item
     }
     return raw==='experiment'?'experiment':'model_inference';}
   function designConfidence(item,field){const map=item&&item.field_confidence&&typeof item.field_confidence==='object'?item.field_confidence:{},raw=Object.prototype.hasOwnProperty.call(map,field)?Number(map[field]):Number(item&&item.confidence);return Number.isFinite(raw)?Math.max(0,Math.min(1,raw)):null;}
+  function calibratedDesignConfidence(item,field,source,quantitative,supported){
+    const reported=designConfidence(item,field),base=source==='experiment'?(supported?0.97:0.9):source==='cabinet_reference'?0.86:source==='knowledge_reference'?0.74:0.52,
+      cap=source==='experiment'?0.99:source==='cabinet_reference'?0.91:source==='knowledge_reference'?0.82:0.62;
+    let value=reported==null?base:(base*0.7+reported*0.3);
+    if(quantitative&&!supported)value=Math.min(value,0.45);
+    return Math.max(0.05,Math.min(cap,value));
+  }
+  function selectionBasis(source){return source==='experiment'?'experiment evidence':source==='cabinet_reference'?'Lab Cabinet reference':source==='knowledge_reference'?'Knowledge Base reference':'model inference';}
   function fieldDecision(item,field){return(item&&Array.isArray(item.field_decisions)?item.field_decisions:[]).find(function(x){return String(x&&x.field||'')===String(field);})||null;}
   function autoApplyAllowed(item,field,value,inherited,manual){if(value==null||String(value).trim()==='')return false;
 if(manual)return true;const decision=fieldDecision(item,field);if(decision)return decision.auto_apply===true;
     const source=canonicalDesignSource(item,inherited),confidence=designConfidence(item,field),
     supported=source==='experiment'&&!!String(item&&item.evidence||'').trim(),
     hasSource=!!String(item&&item.provenance_kind||item&&item.provenanceKind||inherited||'').trim();
-    if(source==='knowledge_reference')return false;if(confidence==null)return!!supported||!hasSource;
+    if(source==='knowledge_reference'||source==='cabinet_reference')return false;if(confidence==null)return!!supported||!hasSource;
     return confidence>=0.75&&(!looksQuantitative(value)||supported);}
   function sanitizeDesignProposal(proposal){const stats={
 reviewOnlyQuantities:0,modelOnlyItems:0,knowledgeItems:0,autoApply:0,review:0,unresolved:Math.max((proposal.unknowns||[]).length,(proposal.unresolved_domains||[]).length)}
     ;function annotate(item,fields,inheritedSource){if(!item||typeof item!=='object')return;
     const directEvidence=String(item.evidence||'').trim(),declared=canonicalDesignSource(item,inheritedSource),
-    source=declared==='experiment'&&directEvidence?'experiment':declared==='knowledge_reference'?
-    'knowledge_reference':'model_inference';if(source==='model_inference')stats.modelOnlyItems++;
-    if(source==='knowledge_reference')stats.knowledgeItems++;item.provenance_kind=source;item.field_decisions=[];
+    source=declared==='experiment'&&directEvidence?'experiment':declared==='cabinet_reference'?
+    'cabinet_reference':declared==='knowledge_reference'?'knowledge_reference':'model_inference';if(source==='model_inference')stats.modelOnlyItems++;
+    if(source==='knowledge_reference')stats.knowledgeItems++;
+    if(source==='cabinet_reference')stats.cabinetItems=(stats.cabinetItems||0)+1;
+    item.provenance_kind=source;
+    item.selection_basis=selectionBasis(source);
+    item.confidence_basis='Calibrated by LabFlow from provenance strength; candidate suitability for review, not proof of experiment use.';
+    item.field_decisions=[];
     (fields||[]).forEach(function(entry){const field=typeof entry==='string'?entry:entry.field,
     value=typeof entry==='string'?item[field]:entry.value;if(value==null||String(value).trim()==='')return;
-    const confidence=designConfidence(item,field),quantitative=looksQuantitative(value),
-    supported=source==='experiment'&&!!directEvidence,
-    autoApply=source==='knowledge_reference'?false:(confidence!=null&&confidence>=0.75&&(!quantitative||supported)),
+    const quantitative=looksQuantitative(value),supported=source==='experiment'&&!!directEvidence,
+    reportedConfidence=designConfidence(item,field),confidence=calibratedDesignConfidence(item,field,source,quantitative,supported),
+    autoApply=(source==='knowledge_reference'||source==='cabinet_reference')?false:(reportedConfidence!=null&&reportedConfidence>=0.75&&(!quantitative||supported)),
     decision={field:field,value:String(value),source:source,confidence:confidence,auto_apply:autoApply,
     quantitative:quantitative,applied:false,skipped:''};item.field_decisions.push(decision);if(autoApply)stats.autoApply++;
-    else{stats.review++;if(quantitative&&!supported)stats.reviewOnlyQuantities++;}});}
+    else{stats.review++;if(quantitative&&!supported)stats.reviewOnlyQuantities++;}});if(item.field_decisions.length){item.reported_confidence=designConfidence(item,'');item.confidence=item.field_decisions.reduce(function(sum,d){return sum+Number(d.confidence||0);},0)/item.field_decisions.length;}}
     (proposal.solutions||[]).forEach(function(item){annotate(item,['name','role','solutes','solvents','concentration','additives','preparation']);});
     (proposal.devices||[]).forEach(function(device){const process=device.process||{};
-annotate(device,[{field:'solutions',value:(device.solution_names||[]).join(', ')},{
-      field:'coating',value:process.coating},{field:'annealing',value:process.annealing},{
-      field:'atmosphere',value:process.atmosphere},{field:'notes',value:process.notes}]);
+      if(process.confidence==null&&device.confidence!=null)process.confidence=device.confidence;
+      if(!String(process.evidence||'').trim()&&String(device.evidence||'').trim())process.evidence=device.evidence;
+      if(!String(process.provenance_kind||'').trim()&&String(device.provenance_kind||'').trim())process.provenance_kind=device.provenance_kind;
+      if(!String(process.reason||'').trim()&&String(device.reason||'').trim())process.reason=device.reason;
+annotate(device,[{field:'solutions',value:(device.solution_names||[]).join(', ')}]);
+      annotate(process,['coating','annealing','atmosphere','notes'],process.provenance_kind||device.provenance_kind);
       (device.stack||[]).forEach(function(layer){
       annotate(layer,['role','material','thickness','process'],device.provenance_kind);});});
     proposal.applicationSummary={auto_apply_count:stats.autoApply,review_count:stats.review,unresolved_count:stats.unresolved};return stats;
@@ -107,7 +130,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
     function add(item){(item&&item.field_decisions||[]).forEach(function(d){if(d.skipped==='existing')return;
     if(d.applied)out.auto_applied_count++;else if(d.auto_apply)out.auto_apply_count++;else out.review_count++;});
     }(proposal&&proposal.solutions||[]).forEach(add);(proposal&&proposal.devices||[]).forEach(function(d){add(d);
-    (d.stack||[]).forEach(add);});return out;}
+    add(d.process);(d.stack||[]).forEach(add);});return out;}
   function applicableDesignFields(proposal,unknownFields){
     const wanted=new Set((unknownFields||[]).map(function(x){return String(x).toLowerCase();})),device=proposal&&proposal.devices&&proposal.devices[0]||{},solutions=proposal&&proposal.solutions||[],fields=[];
 
@@ -427,8 +450,8 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
         target,
         src.process || {},
         ['coating', 'annealing', 'atmosphere', 'notes'],
-        src,
-        null,
+        src.process || src,
+        src.process && src.process.provenance_kind || src.provenance_kind,
         manual
       );
     }
@@ -446,7 +469,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
         : part === 'solutions' ? ['solutions'] : [];
       src.appliedParts[part] = part === 'stack'
         ? (src.stack || []).every(function (layer) { return decisionsComplete(layer); })
-        : decisionsComplete(src, partFields);
+        : part === 'process' ? decisionsComplete(src.process || src, partFields) : decisionsComplete(src, partFields);
     }
     return changed;
   }
@@ -558,19 +581,41 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
     }
 
     const target = LF.DesignModel.device(exp, id);
-    const remaining = target ? LF.DesignModel.missingDomains(exp, target) : [];
-    const complete = !!target && !remaining.length;
+    if (target) {
+      LF.DesignModel.acknowledgeUnknownDomains(
+        exp,
+        id,
+        proposal.unresolved_domains || [],
+        proposal.unknowns || [],
+        'researcher_accept_ai'
+      );
+    }
+    const scientificRemaining = target ? LF.DesignModel.missingDomains(exp, target) : [];
+    const pending = target && LF.DesignModel.pendingDomains ? LF.DesignModel.pendingDomains(exp, target) : scientificRemaining.slice();
+    const workflowComplete = !!target && !pending.length;
+    const scientificallyComplete = !!target && !scientificRemaining.length;
+    const state = scientificallyComplete ? 'accepted' : (workflowComplete ? 'reviewed' : 'incomplete');
     const now = new Date().toISOString();
-    if (target && complete) LF.DesignModel.confirmInferredDevice(exp, id, now);
+    if (target && workflowComplete) LF.DesignModel.confirmInferredDevice(exp, id, now);
 
     LF.ActionData.removeProposal(exp, 'design.infer', id);
     LF.ActionData.setStatus(exp, 'design.infer', id, {
-      state: complete ? 'accepted' : 'incomplete',
+      state: state,
       updatedAt: now,
-      message: complete ? '' : 'Still missing: ' + remaining.join(', ')
+      message: state === 'incomplete' ? 'Still pending: ' + pending.join(', ') :
+        (state === 'reviewed' ? 'Reviewed unknowns: ' + scientificRemaining.join(', ') : '')
     });
     markReviewing(exp);
-    return { changed: changed, deviceId: id, complete: complete, remaining: remaining };
+    return {
+      changed: changed,
+      deviceId: id,
+      complete: workflowComplete,
+      scientificallyComplete: scientificallyComplete,
+      reviewed: state === 'reviewed',
+      state: state,
+      remaining: pending,
+      scientificRemaining: scientificRemaining
+    };
   }
 
   function acceptAllDesignProposals(exp) {
@@ -581,6 +626,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
     const failed = [];
     const incomplete = [];
     const acceptedIds = [];
+    const reviewed = [];
     ids.forEach(function (id) {
       try {
         const out = acceptDesignProposal(exp, id, { distinctSolutions: true });
@@ -588,6 +634,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
         if (out.complete) {
           accepted++;
           acceptedIds.push(id);
+          if (out.reviewed) reviewed.push({ id: id, remaining: (out.scientificRemaining || []).slice() });
         } else {
           incomplete.push({ id: id, remaining: (out.remaining || []).slice() });
         }
@@ -599,6 +646,7 @@ auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max
       changed: changed,
       accepted: accepted,
       acceptedIds: acceptedIds,
+      reviewed: reviewed,
       incomplete: incomplete,
       failed: failed,
       total: ids.length

@@ -112,7 +112,7 @@ A Measurement has a generic scientific envelope (`technique`, `parameters`, `obs
 
 Cabinet and KB are outside `ExperimentData` because they are reusable/reference state with different lifecycle and authority.
 
-When Cabinet content is applied to Design, a detached value snapshot becomes experiment-owned Design state and retains a source reference. KB content never becomes experiment evidence merely because it was retrieved for AI context. Design proposals may record `knowledge_reference` provenance with an exact `KB:<id>` evidence marker; if a requested Design domain cannot be responsibly established, the proposal records it in `unresolved_domains` instead of fabricating a value.
+When Cabinet content is applied to Design, a detached value snapshot becomes experiment-owned Design state and retains a source reference. KB content never becomes experiment evidence merely because it was retrieved for AI context. Design proposals may record `knowledge_reference` provenance with an exact `KB:<id>` evidence marker. If no useful qualitative candidate can be responsibly established even after experiment/Cabinet/KB/model context, the proposal records the domain in `unresolved_domains` instead of fabricating a value. Researcher acceptance persists those domains on the Design device as reviewed known unknowns (`acknowledgedUnknownDomains` plus notes): they remain scientifically missing but stop being pending AI work until the corresponding domain is edited.
 
 ## Structure catalog
 
@@ -124,3 +124,24 @@ LabFlow.Data.structures({ owner: 'Cabinet' })
 ```
 
 Adding metadata to the catalog does not change persistence or validation; those remain owner responsibilities.
+
+
+### Conservative Design coverage fallback
+
+For `design.infer`, a syntactically valid response does not fail merely because a required Design domain was omitted or represented by an unusable partial candidate. LabFlow owns the deterministic requested-domain scope: after normalization, any required domain that is neither usefully populated nor explicitly unresolved is deterministically downgraded to an auditable unresolved known-unknown. Incomplete candidate content for that domain is discarded so it cannot be applied accidentally. This fallback adds no scientific facts and is intended to make small and large models behave consistently without encouraging fabrication.
+
+## Design proposal provenance metadata
+
+Review proposals preserve metadata that explains **why a candidate exists**, without making that metadata a second scientific truth store:
+
+- `provenance_kind` — `experiment`, `cabinet_reference`, `knowledge_reference`, `model_inference`;
+- `evidence` — current-experiment evidence text or exact `CABINET:<id>` / `KB:<id>` marker;
+- `selection_basis` — human-readable nature of the choice;
+- `reported_confidence` — model/reference confidence before LabFlow calibration when available;
+- `confidence` — provenance-calibrated candidate confidence;
+- `confidence_basis` — explanation of what the calibrated value represents;
+- `field_decisions[]` — per-field source, confidence, quantitative flag and automatic/review decision;
+- `validation.referenceFallbackDomains` — domains built deterministically from supplied references;
+- `validation.autoUnresolvedDomains` — domains conservatively downgraded to known unknowns.
+
+This metadata belongs to the proposal/review lifecycle. Only accepted Design values become experiment-owned Design state, carrying appropriate detached provenance snapshots/references through `DesignModel`.

@@ -105,12 +105,13 @@ module.exports=function(t,LF){
     LF.DesignModel=oldModel;
   };
 
-  t['Design validation retries an empty scientific suggestion instead of creating a second missing state']=function(){
+  t['Design validation converts an empty scientific domain into an auditable known unknown']=function(){
     const oldModel=LF.DesignModel;LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});
-    const proposal={status:'insufficient_evidence',summary:'Not enough source context',solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[],provenance_kind:'model_inference',confidence:.3,reason:'candidate only'}],unknowns:['stack']};
-    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){err=e;}finally{LF.DesignModel=oldModel;}
-    assert(err&&err.isContract===true,'empty Design output must trigger the Action retry path');
-    assert((err.validationErrors||[]).some(function(x){return /stack/i.test(String(x));}),'retry feedback names the missing domain');
+    const proposal={status:'insufficient_evidence',summary:'Not enough source context',solutions:[],devices:[{sample_names:['MODEL-GUESSED'],stack:[],provenance_kind:'model_inference',confidence:.3,reason:'candidate only'}],unresolved_domains:[],unknowns:['stack']};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'deviceA',sample_names:['A1'],unknown_fields:['stack']},infer:proposal},lastResult:proposal});
+    LF.DesignModel=oldModel;
+    assert(out.unresolved_domains.includes('stack'),'empty requested stack becomes a known unknown');
+    assert(out.validation.autoUnresolvedDomains.includes('stack'),'automatic downgrade remains auditable');
   };
 
   t['Design validation keeps qualitative model inference reviewable and exact quantities non-automatic']=function(){
@@ -216,7 +217,7 @@ module.exports=function(t,LF){
       {id:'done',sampleNames:[],solutionIds:['s1'],stack:[{role:'Transparent electrode',material:'ITO'},{role:'Electron transport',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'}},
       {id:'todo',sampleNames:[],solutionIds:[],stack:[],process:{}}
     ]}};
-    let completeBlocked=false;try{LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'done'}});}catch(err){completeBlocked=/already has solution chemistry, a complete device architecture and fabrication-process information/i.test(String(err.message));}
+    let completeBlocked=false;try{LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'done'}});}catch(err){completeBlocked=/no pending Design domains/i.test(String(err.message));}
     assert(completeBlocked,'complete experiment must not spend an AI request');
     const todo=LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'todo'}});
     assert(JSON.stringify(todo.unknown_fields.sort())===JSON.stringify(['solutions','stack','process'].sort()),'incomplete experiment declares its exact missing domains');
@@ -228,11 +229,12 @@ module.exports=function(t,LF){
     assert(out.unknown_fields.length===1&&out.unknown_fields[0]==='stack','partial absorber evidence should request the missing device architecture');
   };
 
-  t['Design semantic validation rejects a one-layer stack before storing the suggestion']=function(){
-    const proposal={status:'suggested',summary:'partial stack',solutions:[],stack:[{role:'Absorber',material:'Perovskite'}],process:{},unknowns:[]};
-    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
-    assert(err&&err.isContract===true,'one-layer stack must remain inside the bounded AI retry flow');
-    assert((err.validationErrors||[]).some(function(x){return /coherent qualitative device stack/i.test(String(x));}),'retry feedback should request a coherent stack');
+  t['Design semantic validation refuses to apply a one-layer stack and marks the domain unresolved']=function(){
+    const proposal={status:'suggested',summary:'partial stack',solutions:[],stack:[{role:'Absorber',material:'Perovskite'}],process:{},unresolved_domains:[],unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:proposal},lastResult:proposal});
+    assert(out.unresolved_domains.includes('stack'),'incoherent one-layer stack is unresolved');
+    assert(out.devices[0].stack.length===0,'incomplete stack candidate cannot be applied accidentally');
+    assert(out.validation.autoUnresolvedDomains.includes('stack'),'safe downgrade is visible in validation metadata');
   };
 
   t['Accept experiment applies only that saved suggestion and clears it from review']=function(){
@@ -291,7 +293,7 @@ module.exports=function(t,LF){
     assert(!map(exp).a,'exhausted partial proposal is cleared so Complete with AI can run again');
   };
 
-  t['A failed sparse Design attempt does not remove an independently stored success']=function(){
+  t['A sparse Design attempt can be downgraded safely without removing an independently stored success']=function(){
     const oldModel=LF.DesignModel,oldContext=LF.ContextBuilder;
     LF.DesignModel=Object.assign({},oldModel,{normalizeProposal:function(v){return v;}});LF.ContextBuilder={pack:function(){return{};}};
     const exp={design:{solutions:[],devices:[{id:'a',sampleNames:[],solutionIds:[],stack:[]},{id:'b',sampleNames:[],solutionIds:[],stack:[]}]}};
@@ -301,10 +303,10 @@ module.exports=function(t,LF){
       goodCtx.outputs.infer=LF.ActionSteps['design.validate-coverage'](goodCtx);LF.ActionSteps['design.store-proposal'](goodCtx);
       const sparse={status:'insufficient_evidence',summary:'B lacks context',solutions:[],devices:[{sample_names:[],stack:[],provenance_kind:'model_inference',confidence:.5,reason:'unknown'}],unknowns:['stack']};
       const sparseCtx={exp:exp,params:{deviceId:'b'},sourceRevision:1,outputs:{collect:{device_id:'b',sample_names:[],manual_variant:true,unknown_fields:['stack']},infer:sparse},lastResult:sparse};
-      let err=null;try{LF.ActionSteps['design.validate-coverage'](sparseCtx);}catch(e){err=e;}
-      assert(err&&err.isContract===true,'sparse second experiment must stay in retry flow');
+      const downgraded=LF.ActionSteps['design.validate-coverage'](sparseCtx);
+      assert(downgraded.unresolved_domains.includes('stack'),'sparse second experiment becomes an explicit known unknown');
       assert(map(exp).a&&status(exp,'a').state==='suggested','successful first proposal remains stored');
-      assert(!map(exp).b,'failed retry candidate is not stored as a second missing state');
+      assert(!map(exp).b,'validation alone does not overwrite or create another stored proposal');
     }finally{LF.DesignModel=oldModel;LF.ContextBuilder=oldContext;}
   };
 
@@ -339,18 +341,28 @@ module.exports=function(t,LF){
     assert(device.stack.length===5,'accepted stack must be applied');
   };
 
-  t['Name-only Design Action chemistry triggers an internal retry for a missing solution']=function(){
-    const proposal={status:'suggested',summary:'placeholder',solutions:[{name:'Perovskite ink'}],stack:[],process:{},unknowns:[]};
-    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
-    assert(err&&err.isContract===true,'name-only chemistry must stay in retry flow');
-    assert((err.validationErrors||[]).some(function(x){return /solutes.*solvents/i.test(String(x));}),'retry asks for useful chemistry');
+  t['Name-only Design chemistry is safely downgraded to unresolved instead of failing the Action']=function(){
+    const proposal={status:'suggested',summary:'placeholder',solutions:[{name:'Perovskite ink'}],stack:[],process:{},unresolved_domains:[],unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions']},infer:proposal},lastResult:proposal});
+    assert(out.unresolved_domains.includes('solutions'),'name-only chemistry becomes an explicit known unknown');
+    assert(out.solutions.length===0,'incomplete chemistry candidate is removed so it cannot be applied');
+    assert(out.validation.autoUnresolvedDomains.includes('solutions'),'deterministic fallback is auditable');
   };
 
-  t['Partial Design suggestion retries when solution chemistry is still missing']=function(){
-    const proposal={status:'suggested',summary:'stack and process only',solutions:[],stack:[{role:'Substrate',material:'glass/ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'},unknowns:[]};
-    let err=null;try{LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});}catch(e){err=e;}
-    assert(err&&err.isContract===true,'partial proposal must trigger a semantic contract retry');
-    assert((err.validationErrors||[]).some(function(x){return /solutes.*solvents/i.test(String(x));}),'retry feedback must explicitly request useful solution chemistry');
+  t['Partial Design suggestion preserves useful domains and safely marks omitted chemistry unresolved']=function(){
+    const proposal={status:'suggested',summary:'stack and process only',solutions:[],stack:[{role:'Substrate',material:'glass/ITO'},{role:'ETL',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'},unresolved_domains:[],unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});
+    assert(out.validation.applicableFields.includes('stack')&&out.validation.applicableFields.includes('process'),'valid stack/process remain reviewable');
+    assert(out.unresolved_domains.includes('solutions'),'omitted solution chemistry is conservatively unresolved');
+    assert(out.validation.autoUnresolvedDomains.includes('solutions'),'automatic unresolved downgrade is recorded');
+  };
+
+  t['Design coverage never fails when small model omits required solutions and stack']=function(){
+    const proposal={status:'suggested',summary:'Only process could be supported.',solutions:[],stack:[],process:{coating:'spin coating'},unresolved_domains:[],unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});
+    assert(out.validation.applicableFields.includes('process'),'supported process remains applicable');
+    assert(JSON.stringify(out.unresolved_domains.sort())===JSON.stringify(['solutions','stack']),'missing solutions and stack are deterministically unresolved');
+    assert(JSON.stringify(out.validation.autoUnresolvedDomains.sort())===JSON.stringify(['solutions','stack']),'automatic downgrade is explicit in validation metadata');
   };
 
   t['Design accepts an explicitly unresolved domain instead of forcing unsupported chemistry']=function(){
@@ -367,6 +379,74 @@ module.exports=function(t,LF){
     assert(out.validation.applicableFields.length===0,'no scientific values are fabricated');
     assert(out.validation.unresolvedDomains,['solutions','stack','process'],'all unresolved domains are explicit');
     assert(out.unknowns.length>=3,'LabFlow adds deterministic unresolved explanations when the model omits them');
+  };
+
+  t['Accepted unresolved Design domains become reviewed known unknowns, not an endless incomplete loop']=function(){
+    const exp={design:{status:'reviewing',solutions:[],devices:[{id:'u1',name:'U1',sampleNames:[],solutionIds:[],stack:[],process:{},status:'user_confirmed'}]}};
+    const raw={status:'suggested',summary:'No coherent supported candidate remains.',solutions:[],stack:[],process:{},unresolved_domains:['solutions','stack','process'],unknowns:['solutions: unknown','stack: unknown','process: unknown']};
+    const ctx={exp:exp,params:{deviceId:'u1'},sourceRevision:1,outputs:{collect:{device_id:'u1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:raw},lastResult:raw};
+    ctx.outputs.infer=LF.ActionSteps['design.validate-coverage'](ctx);LF.ActionSteps['design.store-proposal'](ctx);
+    const out=LF.DesignAnalysis.acceptProposal(exp,'u1'),dev=exp.design.devices[0];
+    assert(out.complete===true&&out.reviewed===true&&out.scientificallyComplete===false,'review acceptance closes workflow without pretending scientific completeness');
+    assert(status(exp,'u1').state==='reviewed','accepted unknowns get reviewed state');
+    assert(LF.DesignModel.missingDomains(exp,dev).length===3,'scientific gaps remain explicit');
+    assert(LF.DesignModel.pendingDomains(exp,dev).length===0,'reviewed gaps are no longer pending AI work');
+    assert(dev.acknowledgedUnknownDomains.length===3,'reviewed unknown domains persist on Design');
+    let blocked=false;try{LF.ActionSteps['design.collect-selected']({exp:exp,params:{deviceId:'u1'}});}catch(err){blocked=/no pending Design domains/i.test(String(err.message));}
+    assert(blocked,'reviewed unknowns are not immediately requested again');
+  };
+
+  t['Editing a reviewed unknown domain reopens only that Design domain']=function(){
+    const exp={design:{solutions:[],devices:[{id:'u2',name:'U2',sampleNames:[],solutionIds:[],stack:[],process:{},acknowledgedUnknownDomains:['solutions','stack','process'],status:'user_confirmed'}]}};
+    LF.DesignModel.updateDeviceProcessField(exp,'u2','notes','researcher changed process context');
+    const dev=exp.design.devices[0];
+    assert(!dev.acknowledgedUnknownDomains.includes('process'),'editing process invalidates prior process unknown acknowledgement');
+    assert(dev.acknowledgedUnknownDomains.includes('solutions')&&dev.acknowledgedUnknownDomains.includes('stack'),'unrelated reviewed unknowns remain acknowledged');
+    assert(LF.DesignModel.pendingDomains(exp,dev).length===0,'a now-populated process is not pending');
+    LF.DesignModel.updateDeviceProcessField(exp,'u2','notes','');
+    assert(LF.DesignModel.pendingDomains(exp,dev).length===1&&LF.DesignModel.pendingDomains(exp,dev)[0]==='process','clearing edited process makes only process pending again');
+  };
+
+  t['Design reference fallback prefers Cabinet resources before unresolved']=function(){
+    const oldContext=LF.ContextBuilder;
+    LF.ContextBuilder={pack:function(){return{
+      cabinet:{items:[{id:'cab-sol',kind:'solution',name:'Cabinet ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF + DMSO'},{id:'cab-stack',kind:'stack',name:'Cabinet stack',layers:[{role:'substrate',material:'ITO'},{role:'HTL',material:'2PACz'},{role:'absorber',material:'perovskite'},{role:'ETL',material:'C60'},{role:'electrode',material:'Ag'}]},{id:'cab-proc',kind:'protocol',name:'Cabinet process',coating:'spin coating',annealing:'thermal annealing',atmosphere:'N2'}],domain_candidates:{solutions:[{id:'cab-sol',kind:'solution',name:'Cabinet ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF + DMSO'}],stack:[{id:'cab-stack',kind:'stack',name:'Cabinet stack',layers:[{role:'substrate',material:'ITO'},{role:'HTL',material:'2PACz'},{role:'absorber',material:'perovskite'},{role:'ETL',material:'C60'},{role:'electrode',material:'Ag'}]}],process:[{id:'cab-proc',kind:'protocol',name:'Cabinet process',coating:'spin coating',annealing:'thermal annealing',atmosphere:'N2'}]}},
+      knowledge:{entries:[],domain_candidates:{solutions:[],stack:[],process:[]}}
+    };}};
+    try{
+      const raw={status:'suggested',summary:'small model omitted domains',solutions:[],stack:[],process:{},unresolved_domains:[],unknowns:[]};
+      const ctx={exp:{design:{solutions:[],devices:[{id:'d1',sampleNames:[],solutionIds:[],stack:[],process:{}}]}},params:{deviceId:'d1'},outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:raw},lastResult:raw};
+      const out=LF.ActionSteps['design.validate-coverage'](ctx);
+      assert(out.validation.referenceFallbackDomains.length===3,'Cabinet should fill all three omitted domains');
+      assert(out.validation.unresolvedDomains.length===0,'usable Cabinet references should prevent unresolved downgrade');
+      assert(out.solutions[0].provenance_kind==='cabinet_reference'&&/^CABINET:/.test(out.solutions[0].evidence),'solution nature should remain Cabinet reference');
+      assert(out.devices[0].stack.length>=3&&out.devices[0].stack[0].provenance_kind==='cabinet_reference','stack should come from Cabinet');
+      assert(out.devices[0].process.provenance_kind==='cabinet_reference','process should come from Cabinet');
+      assert(out.solutions[0].confidence>0.7&&out.solutions[0].confidence<0.95,'Cabinet confidence should be strong but not imply experiment proof');
+    }finally{LF.ContextBuilder=oldContext;}
+  };
+
+  t['Design reference fallback uses structured KB hints when Cabinet has no candidate']=function(){
+    const oldContext=LF.ContextBuilder;
+    LF.ContextBuilder={pack:function(){return{
+      cabinet:{items:[],domain_candidates:{solutions:[],stack:[],process:[]}},
+      knowledge:{entries:[
+        {id:'kb-sol',design_hint:{solution:{name:'Reference ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF + DMSO'},reference_confidence:.74}},
+        {id:'kb-stack',design_hint:{stack:[{role:'substrate',material:'ITO'},{role:'HTL',material:'2PACz'},{role:'absorber',material:'perovskite'},{role:'ETL',material:'C60'},{role:'electrode',material:'Ag'}],reference_confidence:.78}},
+        {id:'kb-proc',design_hint:{process:{coating:'spin coating',annealing:'thermal annealing',atmosphere:''},reference_confidence:.7}}
+      ],domain_candidates:{solutions:[],stack:[],process:[]}}
+    };}};
+    try{
+      const raw={status:'suggested',summary:'no useful model proposal',solutions:[],stack:[],process:{},unresolved_domains:[],unknowns:[]};
+      const ctx={exp:{design:{solutions:[],devices:[{id:'d2',sampleNames:[],solutionIds:[],stack:[],process:{}}]}},params:{deviceId:'d2'},outputs:{collect:{device_id:'d2',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:raw},lastResult:raw};
+      const out=LF.ActionSteps['design.validate-coverage'](ctx);
+      assert(out.validation.referenceFallbackDomains.length===3,'structured KB hints should fill omitted domains');
+      assert(out.validation.unresolvedDomains.length===0,'structured KB hints should be preferred over empty unresolved output');
+      assert(out.solutions[0].provenance_kind==='knowledge_reference'&&out.solutions[0].evidence==='KB:kb-sol','solution should retain KB nature');
+      assert(out.devices[0].stack[0].evidence==='KB:kb-stack','stack should cite exact KB source');
+      assert(out.devices[0].process.evidence==='KB:kb-proc','process should cite exact KB source');
+      assert(out.solutions[0].confidence<0.85,'KB confidence should stay below experiment-evidence confidence');
+    }finally{LF.ContextBuilder=oldContext;}
   };
 
 };

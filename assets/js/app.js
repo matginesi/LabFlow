@@ -519,15 +519,16 @@ const exp=S.state.experiment,count=Object.keys(LF.ActionData?LF.ActionData.propo
           '? LabFlow fills only empty chemistry, architecture and process fields; existing researcher or source values stay unchanged. You can edit accepted values immediately afterwards.',
           {title:'Accept all Design suggestions',confirmLabel:'Accept all',cancelLabel:'Cancel'});if(!ok)return;
           try{const out=LF.DesignAnalysis.acceptAllProposals(exp);if(out.changed)markModified('design');else markModified('ai');
-          (out.acceptedIds||[]).forEach(function(id){LF.ActionData.setStatus(exp,'design.infer',id,{
-          state:'accepted',updatedAt:new Date().toISOString(),message:''});});
+          const reviewedIds=new Set((out.reviewed||[]).map(function(item){return String(item.id);}));
+          (out.acceptedIds||[]).forEach(function(id){const reviewed=reviewedIds.has(String(id)),item=(out.reviewed||[]).find(function(x){return String(x.id)===String(id);});LF.ActionData.setStatus(exp,'design.infer',id,{
+          state:reviewed?'reviewed':'accepted',updatedAt:new Date().toISOString(),message:reviewed?'Reviewed unknowns: '+((item&&item.remaining)||[]).join(', '):''});});
           (out.incomplete||[]).forEach(function(item){LF.ActionData.setStatus(exp,'design.infer',item.id,{
-          state:'incomplete',updatedAt:new Date().toISOString(),message:'Still missing: '+(item.remaining||[]).join(', ')});});
+          state:'incomplete',updatedAt:new Date().toISOString(),message:'Still pending: '+(item.remaining||[]).join(', ')});});
           (out.failed||[]).forEach(function(item){LF.ActionData.setStatus(exp,'design.infer',item.id,{
           state:'error',updatedAt:new Date().toISOString(),message:item.message||'Accept failed'});});render();
           const issues=(out.incomplete||[]).length+(out.failed||[]).length,
-          msg='Accepted '+out.accepted+' experiment suggestion'+(out.accepted===1?'':'s')+((out.incomplete||
-          []).length?' · '+out.incomplete.length+' still incomplete':'')+((out.failed||
+          msg='Accepted '+out.accepted+' experiment suggestion'+(out.accepted===1?'':'s')+((out.reviewed||[]).length?' · '+out.reviewed.length+' reviewed with known unknowns':'')+((out.incomplete||
+          []).length?' · '+out.incomplete.length+' still pending':'')+((out.failed||
           []).length?' · '+out.failed.length+' failed':'')+'.';LF.UI.message(msg,issues?'warning':'success');
           }catch(err){LF.UI.message(err.message||String(err),'error');}return;}
         if(e.target.closest('#applyAcceptedDesignProposal')){try{const out=LF.DesignAnalysis.applyAccepted(S.state.experiment,S.state.ui.selectedDesignDeviceId);markModified('design');render();LF.UI.message('Applied '+(out.solutions+out.devices)+' accepted Design item(s).','success');}catch(err){LF.UI.message(err.message||String(err),'error');}return;}
@@ -546,11 +547,11 @@ if(applyDesignDevice){try{const out=LF.DesignAnalysis.applySelectedDevice(S.stat
 if(acceptDesignExperiment){try{const exp=S.state.experiment,out=LF.DesignAnalysis.acceptProposal(exp,
           acceptDesignExperiment.dataset.acceptDesignExperiment);if(out.changed)markModified('design');else markModified('ai');
           LF.ActionData.setStatus(exp,'design.infer',out.deviceId,{
-          state:out.complete?'accepted':'incomplete',updatedAt:new Date().toISOString(),
-          message:out.complete?'':'Still missing: '+(out.remaining||[]).join(', ')});render();
-          LF.UI.message(out.complete?'AI suggestion accepted. The experiment Design is complete.':
-          'AI values were accepted, but this older suggestion did not cover: '+(out.remaining||
-          []).join(', ')+'. Run Complete with AI once more for the remaining domains.',out.complete?'success':'warning');
+          state:out.state|| (out.complete?'accepted':'incomplete'),updatedAt:new Date().toISOString(),
+          message:out.state==='reviewed'?'Reviewed unknowns: '+(out.scientificRemaining||[]).join(', '):(out.complete?'':'Still pending: '+(out.remaining||[]).join(', '))});render();
+          LF.UI.message(out.state==='reviewed'?'AI suggestion accepted. Unsupported domains are recorded as reviewed known unknowns and will not be requested again unless the Design changes.':
+          (out.complete?'AI suggestion accepted. The experiment Design is complete.':
+          'AI values were accepted, but this suggestion did not cover: '+(out.remaining||[]).join(', ')+'. Run Complete with AI once more for the remaining domains.'),out.complete?'success':'warning');
           }catch(err){LF.UI.message(err.message||String(err),'error');}return;}
         const discardDesignExperiment=e.target.closest('[data-discard-design-experiment]');
 if(discardDesignExperiment){const exp=S.state.experiment,

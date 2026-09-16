@@ -23,3 +23,13 @@ order: 32
 - **Provenance** — origin and decision history associated with a value/change.
 - **Cabinet** — reusable lab reference definitions that can be copied into Design.
 - **KB** — reference knowledge used to support reasoning, not experiment evidence.
+
+### Design inference provenance terms
+
+- **Selection basis** — human-readable nature of why a Design candidate was proposed.
+- **Cabinet reference** — candidate derived from a verified reusable `CABINET:<id>` resource; review-only until accepted.
+- **Knowledge reference** — candidate derived from a verified sourced `KB:<id>` entry; review-only until accepted.
+- **Model inference** — qualitative model-generated candidate without a verified Cabinet/KB/current-experiment source.
+- **Reference fallback** — deterministic runtime step that materializes a valid supplied Cabinet/KB candidate when the model omitted the domain.
+- **Known unknown** — scientific information that remains unknown but has been explicitly reviewed so it is not repeatedly treated as unfinished workflow.
+- **Candidate confidence** — provenance-calibrated suitability of a proposed value for review, not probability that it was used in the current experiment.

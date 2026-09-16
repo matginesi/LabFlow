@@ -35,3 +35,15 @@ When an Assistant answer relies on a retrieved KB entry, the model is instructed
 ## Editing safely
 
 Prefer small factual entries with explicit cautions and source records. Avoid embedding transient UI instructions or experiment-specific claims in the KB; those belong in current scientific state/context instead.
+
+## Structured Design hints
+
+The bundled KB contains **97 scientific/reference entries** in the current 0.0.20 source set; the generated browser bundle also includes the eight selected LabFlow documentation guides, for **105 active bundled entries** in total.
+
+Design-oriented scientific entries may optionally carry a validated `design_hint`. This is deliberately more structured than prose retrieval so a small model or deterministic fallback does not need to reverse-engineer a recipe from paragraphs. Supported hint content includes qualitative solution composition, coherent stack layers and qualitative process families. Exact recipe values are omitted unless the source and intended use justify them.
+
+`design_hint.reference_confidence` is a curated prior for the usefulness of that reference as a Design candidate; it is still recalibrated by LabFlow at proposal time and never means “probability this experiment used it”.
+
+The KB now includes multiple reference architecture families, absorber-precursor families and process families so Design inference has useful alternatives instead of a single generic archetype. Retrieval remains bounded and domain-targeted; adding more entries should improve coverage without sending the full KB to the model.
+
+For the full precedence and confidence rules see `DESIGN_INFERENCE.md`.

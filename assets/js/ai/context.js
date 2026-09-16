@@ -76,6 +76,7 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
   }
   function budgetPack(obj,maxChars){
     maxChars=Math.max(1800,Number(maxChars)||14000);obj=sanitize(obj);let json=JSON.stringify(obj);if(json.length<=maxChars)return obj;
+    if(obj&&obj.context_pack&&obj.context_pack.profile==='design')return designBudgetPack(obj,maxChars);
     const copy=JSON.parse(json),trim=['evidence','findings','measurements','samples','results','relations','history','provenance'];
     trim.forEach(function(k){if(JSON.stringify(copy).length<=maxChars)return;if(Array.isArray(copy[k]))copy[k]=copy[k].slice(0,Math.max(2,Math.min(10,Math.floor(copy[k].length/2))));});
     copy.context_notice='Context was deterministically bounded to fit the active model. Use a narrower Tool/Action to retrieve omitted detail.';
@@ -88,6 +89,49 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     if(JSON.stringify(fallback).length<=maxChars)return fallback;
     return boundValue(fallback,80,2,8,0);
   }
+  function compactDesignDomainCandidates(value){
+    const out={solutions:[],stack:[],process:[]};
+    ['solutions','stack','process'].forEach(function(domain){
+      out[domain]=(value&&Array.isArray(value[domain])?value[domain]:[]).slice(0,2).map(function(entry){
+        if(!entry||typeof entry!=='object')return entry;
+        return{
+          id:entry.id||'',kind:entry.kind||'',name:entry.name||'',title:entry.title||'',role:entry.role||'',
+          solutes:entry.solutes||'',solvents:entry.solvents||'',additives:entry.additives||'',preparation:entry.preparation||'',
+          layers:Array.isArray(entry.layers)?entry.layers.slice(0,10):undefined,
+          coating:entry.coating||'',annealing:entry.annealing||'',atmosphere:entry.atmosphere||'',notes:entry.notes||'',
+          design_hint:entry.design_hint||null
+        };
+      });
+    });
+    return out;
+  }
+  function designBudgetPack(obj,maxChars){
+    maxChars=Math.max(3200,Number(maxChars)||14000);
+    const full=sanitize(obj||{}),cab=full.cabinet||{},kb=full.knowledge||{};
+    const essential={
+      context_pack:full.context_pack||{},source_contract:full.source_contract||{},experiment:full.experiment||{},data_state:full.data_state||{},
+      scope:full.scope||{},design_evidence_summary:full.design_evidence_summary||{},current_design:full.current_design||{},known_solutions:full.known_solutions||[],
+      cabinet:{domain_candidates:compactDesignDomainCandidates(cab.domain_candidates),retrieval:cab.retrieval||{},note:cab.note||'',citation_contract:cab.citation_contract||''},
+      knowledge:{domain_candidates:compactDesignDomainCandidates(kb.domain_candidates),retrieval:kb.retrieval||{},note:kb.note||'',citation_contract:kb.citation_contract||''},
+      samples:(full.samples||[]).slice(0,6),evidence:(full.evidence||[]).slice(0,6),source_context:full.source_context||{},
+      context_notice:full.context_notice||''
+    };
+    if(JSON.stringify(essential).length<=maxChars)return essential;
+    essential.evidence=(essential.evidence||[]).slice(0,3);
+    essential.samples=(essential.samples||[]).slice(0,3);
+    if(essential.source_context&&essential.source_context.measurement_files)essential.source_context.measurement_files=essential.source_context.measurement_files.slice(0,6);
+    if(JSON.stringify(essential).length<=maxChars)return essential;
+    essential.evidence=[]; essential.samples=[];
+    if(essential.source_context)essential.source_context={experiment:essential.source_context.experiment||{},source_design:essential.source_context.source_design||{}};
+    if(JSON.stringify(essential).length<=maxChars)return essential;
+    /* Keep Design reference candidates even under severe compaction: they are the deterministic
+       fallback contract, whereas generic evidence/detail can be recovered elsewhere. */
+    const bounded=boundValue(essential,180,3,18,0);
+    bounded.cabinet=essential.cabinet; bounded.knowledge=essential.knowledge; bounded.scope=essential.scope;
+    bounded.context_notice='Design context was compacted; structured Cabinet/Knowledge Base candidates were preserved.';
+    return bounded;
+  }
+
   function base(exp,profile){
     const sum=LF.CanonicalStore.summary(exp);
     return{
@@ -159,44 +203,114 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     out.samples=sampleIds.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean).map(sampleRef);
     out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:sampleIds.concat(measurementIds),limit:20}).map(compact);
     return budgetPack(out,12000);}
+
+  function designCabinetContext(baseQuery,missingDomains){
+    if(!LF.Cabinet)return null;
+    const specs={
+      solutions:{query:'solution formulation precursor solvent solute chemistry',kinds:['solution']},
+      stack:{query:'device stack architecture substrate contact transport absorber electrode',kinds:['stack','substrate','material']},
+      process:{query:'process protocol coating deposition annealing atmosphere fabrication',kinds:['protocol']}
+    },byId={},counts={solutions:0,stack:0,process:0},domainCandidates={solutions:[],stack:[],process:[]};
+    (missingDomains||[]).forEach(function(domain){
+      domain=String(domain||'').toLowerCase();const spec=specs[domain];if(!spec)return;
+      const ctx=LF.Cabinet.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:5});
+      const items=(ctx&&ctx.items||[]).slice(0,5);counts[domain]=items.length;
+      items.forEach(function(item){
+        const id=String(item&&item.id||'');if(!id)return;
+        if(!byId[id])byId[id]=item;
+        if(domainCandidates[domain].length<4)domainCandidates[domain].push(item);
+      });
+    });
+    return{
+      items:Object.keys(byId).map(function(id){return byId[id];}).slice(0,12),
+      domain_candidates:domainCandidates,
+      retrieval:{requested_domains:(missingDomains||[]).slice(),domain_matches:counts,total:Object.keys(byId).length},
+      note:'Researcher-curated reusable workspace resources. They are stronger than generic model inference but are not proof that the current experiment used them.',
+      citation_contract:'When a Design candidate materially relies on a Cabinet resource, set provenance_kind to cabinet_reference and cite its exact id in evidence as CABINET:<id>.'
+    };
+  }
+
   function designKnowledgeContext(baseQuery,missingDomains){
     if(!LF.KnowledgeBase)return null;
     const specs={
       solutions:{query:'solution formulation precursor solvent solute chemistry photovoltaic',kinds:['formulation','material','process']},
       stack:{query:'device architecture stack layer substrate contact electrode transport selective absorber photovoltaic',kinds:['architecture','material']},
       process:{query:'fabrication process coating deposition annealing atmosphere evaporation solution processing',kinds:['process','material']}
-    },byId={},counts={};
-    (missingDomains||[]).forEach(function(domain){
-      domain=String(domain||'').toLowerCase();const spec=specs[domain];if(!spec)return;
-      const ctx=LF.KnowledgeBase.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:4,minScore:2});
-      counts[domain]=(ctx&&ctx.entries||[]).length;
-      (ctx&&ctx.entries||[]).forEach(function(entry){
-        const id=String(entry&&entry.id||'');if(!id)return;
-        if(!byId[id])byId[id]={
-          id:id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,5),tags:(entry.tags||[]).slice(0,8),
-          summary:clip(entry.summary||'',180),facts:(entry.facts||[]).slice(0,2).map(function(x){return clip(x,180);}),
-          cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),
-          sources:(entry.sources||[]).slice(0,1).map(function(src){return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};}),relevant_domains:[]
-        };
-        if(!byId[id].relevant_domains.includes(domain))byId[id].relevant_domains.push(domain);
-      });
-    });
-    let entries=Object.keys(byId).map(function(id){return byId[id];});
-    if(!entries.length){
-      const fallback=LF.KnowledgeBase.context('photovoltaic device design architecture formulation fabrication '+String(baseQuery||''),{kinds:['architecture','formulation','process','material'],limit:8,minScore:2});
-      entries=(fallback&&fallback.entries||[]).slice(0,8).map(function(entry){return{
+    },counts={},selectedByDomain={solutions:[],stack:[],process:[]};
+
+    function supportsHint(entry,domain){
+      const hint=entry&&entry.design_hint;
+      if(!hint)return false;
+      if(domain==='solutions')return !!(hint.solution&&(hint.solution.solutes||hint.solution.solvents));
+      if(domain==='stack')return Array.isArray(hint.stack)&&hint.stack.length>=3;
+      if(domain==='process')return !!(hint.process&&[hint.process.coating,hint.process.annealing,hint.process.atmosphere,hint.process.notes].some(Boolean));
+      return false;
+    }
+    function compactEntry(entry){
+      return{
         id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,5),tags:(entry.tags||[]).slice(0,8),
         summary:clip(entry.summary||'',180),facts:(entry.facts||[]).slice(0,2).map(function(x){return clip(x,180);}),
-        cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),sources:(entry.sources||[]).slice(0,1).map(function(src){return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};}),relevant_domains:[]
-      };});
+        design_hint:entry.design_hint||null,cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),
+        sources:(entry.sources||[]).slice(0,1).map(function(src){
+          return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};
+        })
+      };
     }
-    entries=entries.slice(0,9);
+    function unique(entries){
+      const seen=new Set(),out=[];
+      (entries||[]).forEach(function(entry){const id=String(entry&&entry.id||'');if(!id||seen.has(id))return;seen.add(id);out.push(entry);});
+      return out;
+    }
+
+    (missingDomains||[]).forEach(function(domain){
+      domain=String(domain||'').toLowerCase();const spec=specs[domain];if(!spec)return;
+      const ctx=LF.KnowledgeBase.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:18,minScore:2});
+      const retrieved=(ctx&&ctx.entries||[]);
+      const structured=typeof LF.KnowledgeBase.all==='function'&&typeof LF.KnowledgeBase.compactForAI==='function'
+        ?LF.KnowledgeBase.all().filter(function(entry){
+          return entry&&entry.status==='active'&&spec.kinds.includes(entry.kind)&&supportsHint(entry,domain);
+        }).map(LF.KnowledgeBase.compactForAI):[];
+      const combined=unique(retrieved.concat(structured));
+      const preferred=combined.filter(function(entry){return supportsHint(entry,domain);});
+      const general=combined.filter(function(entry){return !supportsHint(entry,domain);});
+      selectedByDomain[domain]=preferred.slice(0,2).concat(general).slice(0,3).map(compactEntry);
+      counts[domain]=selectedByDomain[domain].length;
+    });
+
+    const domainCandidates={solutions:[],stack:[],process:[]};
+    Object.keys(domainCandidates).forEach(function(domain){
+      domainCandidates[domain]=(selectedByDomain[domain]||[]).slice(0,2).map(function(entry){
+        return{id:entry.id,kind:entry.kind,title:entry.title,design_hint:entry.design_hint||null};
+      });
+    });
+
+    const entries=[],seen=new Set();
+    function add(entry,domain){
+      const id=String(entry&&entry.id||'');if(!id||seen.has(id)||entries.length>=6)return;
+      seen.add(id);const item=Object.assign({},entry,{relevant_domains:[domain]});entries.push(item);
+    }
+    ['solutions','stack','process'].forEach(function(domain){(selectedByDomain[domain]||[]).slice(0,1).forEach(function(entry){add(entry,domain);});});
+    ['solutions','stack','process'].forEach(function(domain){(selectedByDomain[domain]||[]).forEach(function(entry){add(entry,domain);});});
+
     return{
       entries:entries,
+      domain_candidates:domainCandidates,
       retrieval:{requested_domains:(missingDomains||[]).slice(),domain_matches:counts,total:entries.length},
       note:'Reference knowledge only. It can support review candidates but is not evidence that the current experiment used these materials, architectures or processes.',
       citation_contract:'When a Design item materially relies on a supplied entry, set provenance_kind to knowledge_reference and put its exact id in evidence as KB:<id>. Never invent KB ids.'
     };
+  }
+
+  function designReferences(exp,deviceId,requestedDomains){
+    const device=(exp&&exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===String(deviceId||'');})||null;
+    if(!device)return{cabinet:null,knowledge:null,query:'',domains:[]};
+    const domains=Array.from(new Set((requestedDomains&&requestedDomains.length?requestedDomains:
+      (LF.DesignModel&&LF.DesignModel.pendingDomains?LF.DesignModel.pendingDomains(exp,device):[]))
+      .map(function(x){return String(x||'').toLowerCase();}).filter(function(x){return ['solutions','stack','process'].includes(x);})));
+    const linkedSolutions=(exp.design&&exp.design.solutions||[]).filter(function(sol){return(device.solutionIds||[]).includes(sol.id);});
+    const query=[clean(exp.meta&&exp.meta.name),clean(exp.meta&&exp.meta.sourceName),clean(device.name),clean(device.group),
+      (device.sampleNames||[]).join(' '),JSON.stringify(compact(device)),JSON.stringify(linkedSolutions.map(compact)),domains.join(' ')].join(' ');
+    return{cabinet:designCabinetContext(query,domains),knowledge:designKnowledgeContext(query,domains),query:query,domains:domains};
   }
 
   function packDesignEvidence(exp,opts){
@@ -223,9 +337,9 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     const designEvidence=evidence.filter(function(item){
       return designPattern.test(JSON.stringify(item));
     });
-    const missingDomains=LF.DesignModel&&LF.DesignModel.missingDomains
-      ?LF.DesignModel.missingDomains(exp,device)
-      :[];
+    const missingDomains=LF.DesignModel&&LF.DesignModel.pendingDomains
+      ?LF.DesignModel.pendingDomains(exp,device)
+      :(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]);
 
     out.scope={
       device_id:device.id,
@@ -244,15 +358,8 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     out.known_solutions=(exp.design&&exp.design.solutions||[])
       .filter(function(sol){return(device.solutionIds||[]).includes(sol.id);})
       .map(compact);
-    const designReferenceQuery=[
-      JSON.stringify(out.current_design||{}),
-      JSON.stringify(out.known_solutions||[]),
-      JSON.stringify(designEvidence||[]),
-      missingDomains.join(' ')
-    ].join(' ');
-    out.cabinet=LF.Cabinet?LF.Cabinet.context(designReferenceQuery,{
-      kinds:['solution','stack','protocol','substrate','material'],limit:12
-    }):null;
+    const refs=designReferences(exp,device.id,missingDomains);
+    out.cabinet=refs.cabinet;
     out.samples=sampleEntities.map(sampleRef);
     out.evidence=designEvidence;
     out.source_context={
@@ -276,14 +383,16 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     };
 
     if(LF.KnowledgeBase){
-      out.knowledge=designKnowledgeContext(designReferenceQuery,missingDomains);
+      out.knowledge=refs.knowledge;
+      out.design_evidence_summary.cabinet_entries=out.cabinet&&out.cabinet.items?out.cabinet.items.length:0;
+      out.design_evidence_summary.cabinet_domains=out.cabinet&&out.cabinet.retrieval?out.cabinet.retrieval.domain_matches:{};
       out.design_evidence_summary.knowledge_entries=out.knowledge&&out.knowledge.entries?out.knowledge.entries.length:0;
       out.design_evidence_summary.knowledge_domains=out.knowledge&&out.knowledge.retrieval?out.knowledge.retrieval.domain_matches:{};
       if(!designEvidence.length&&out.design_evidence_summary.knowledge_entries){
         out.design_evidence_summary.inference_basis='knowledge_reference_and_model_inference';
       }
     }
-    return budgetPack(out,10000);
+    return budgetPack(out,18000);
   }
   function packResults(exp,opts){opts=opts||{};const out=base(exp,'results',''),a=exp.analysis||{};
 out.results={summary:compact(a.summary||{}
@@ -315,10 +424,10 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
   function packDesign(exp,opts){
     const out=packDesignEvidence(exp,opts),id=String(opts&&opts.params&&opts.params.deviceId||''),device=(exp.design&&exp.design.devices||[]).find(function(item){return String(item.id)===id;})||null;
     if(!device||!out.scope)return out;
-    const missing=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[];
+    const missing=LF.DesignModel&&LF.DesignModel.pendingDomains?LF.DesignModel.pendingDomains(exp,device):(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]);
     out.scope.unknown_fields=Array.from(new Set((out.scope.unknown_fields||[]).concat(missing)));
-    out.scope.instruction='For every domain in unknown_fields, either provide a useful supported qualitative proposal or list the domain in unresolved_domains. ' +
-      'Do not invent chemistry, architecture or process merely to satisfy coverage. Experiment evidence is authoritative. Cabinet resources are reusable context, not experiment evidence. ' +
+    out.scope.instruction='For every domain in unknown_fields, prefer a useful review candidate. Use experiment evidence first, then cabinet.domain_candidates / cabinet.items, then knowledge.domain_candidates / knowledge.entries, then cautious qualitative model inference. ' +
+      'unresolved_domains is the last resort when no coherent review candidate can be formed; do not use unresolved merely because experiment-specific proof is absent. Experiment evidence is authoritative. Cabinet and Knowledge Base are reference context, not proof of use. Prefer exact Cabinet resources over KB archetypes when both are compatible. ' +
       'Knowledge Base entries are deliberately retrieved by missing domain; use them before generic model memory when relevant, cite exact KB:<id> values, and keep knowledge-supported values review-only. ' +
       'A stack proposal must be a coherent device architecture, not one isolated absorber layer. Leave unsupported exact quantities unknown.';
     return out;
@@ -336,7 +445,7 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
       'Shape example (data instance, not schema):',
       '{"status":"suggested","summary":"...","solutions":[],"stack":[],"process":{"coating":"","annealing":"","atmosphere":"","notes":""},"unresolved_domains":[],"unknowns":[]}',
       'For each requested Design domain, either populate it usefully or include its exact name in unresolved_domains.',
-      'Allowed provenance_kind values on scientific items are experiment, knowledge_reference, model_inference.',
+      'Allowed provenance_kind values on scientific items are experiment, cabinet_reference, knowledge_reference, model_inference.',
       'Return only the scientific data instance; do not output schema or validation metadata.',
       'Use strict JSON literals only: true, false, null. Never use Python True, False or None.'
     ].join('\n');
@@ -360,5 +469,5 @@ const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAs
     (req?'\n\n<user_request>\n'+req+'\n</user_request>':'');
     if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length,budgetChars:requestedMax||null});
     return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
-  LF.ContextBuilder={pack:pack,profiles:profiles,registerProfile:registerProfile};LF.ActionContext={build:build};
+  LF.ContextBuilder={pack:pack,profiles:profiles,registerProfile:registerProfile,designReferences:designReferences};LF.ActionContext={build:build};
 }());

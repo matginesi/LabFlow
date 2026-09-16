@@ -32,6 +32,106 @@
       .toLowerCase();
   }
 
+  function text(value){return String(value==null?'':value).trim();}
+
+  function proposalReferenceFallback(ctx, proposal, targetProposal, required) {
+    if (!LF.ContextBuilder) return [];
+    const deviceId = String(ctx.params && ctx.params.deviceId || ctx.outputs.collect && ctx.outputs.collect.device_id || '');
+    const refs = LF.ContextBuilder.designReferences
+      ? (LF.ContextBuilder.designReferences(ctx.exp, deviceId, required) || {})
+      : (LF.ContextBuilder.pack ? (LF.ContextBuilder.pack('design', { exp: ctx.exp, params: { deviceId: deviceId } }) || {}) : {});
+    const cabinet = refs.cabinet || {}, knowledge = refs.knowledge || {};
+    const filled = [];
+
+    function cabinetCandidates(domain) {
+      return cabinet.domain_candidates && Array.isArray(cabinet.domain_candidates[domain])
+        ? cabinet.domain_candidates[domain] : [];
+    }
+    function knowledgeCandidates(domain) {
+      const direct = knowledge.domain_candidates && Array.isArray(knowledge.domain_candidates[domain])
+        ? knowledge.domain_candidates[domain] : [];
+      const all = Array.isArray(knowledge.entries) ? knowledge.entries : [];
+      const seen = new Set(), out = [];
+      direct.concat(all).forEach(function (entry) {
+        const id = String(entry && entry.id || '');
+        if (!id || seen.has(id)) return;
+        seen.add(id); out.push(entry);
+      });
+      return out;
+    }
+    function referenceConfidence(value, fallback) {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0.45, Math.min(0.9, n)) : fallback;
+    }
+    function markSolution(source, provenance, evidence, confidence, reason) {
+      const candidate = {
+        name: text(source.name || source.title || 'Reference formulation'),
+        role: text(source.role || 'absorber precursor'),
+        solutes: text(source.solutes), solvents: text(source.solvents),
+        concentration: '', additives: text(source.additives), preparation: text(source.preparation),
+        evidence: evidence, confidence: confidence, provenance_kind: provenance,
+        reason: reason
+      };
+      if (!candidate.solutes && !candidate.solvents) return false;
+      proposal.solutions = [candidate];
+      targetProposal.solution_names = [candidate.name];
+      return true;
+    }
+    function markStack(layers, provenance, evidence, confidence, reason) {
+      layers = (layers || []).filter(function (layer) { return text(layer && (layer.role || layer.material)); });
+      if (layers.length < 3) return false;
+      const normalized = layers.slice(0, 12).map(function (layer) {
+        return { role: text(layer.role), material: text(layer.material), thickness: text(layer.thickness), process: text(layer.process), evidence: evidence, confidence: confidence, provenance_kind: provenance, reason: reason };
+      });
+      proposal.stack = normalized.slice();
+      targetProposal.stack = normalized.slice();
+      return true;
+    }
+    function markProcess(source, provenance, evidence, confidence, reason) {
+      const candidate = { coating:text(source.coating), annealing:text(source.annealing), atmosphere:text(source.atmosphere), notes:text(source.notes), evidence:evidence, confidence:confidence, provenance_kind:provenance, reason:reason };
+      if (![candidate.coating,candidate.annealing,candidate.atmosphere,candidate.notes].some(Boolean)) return false;
+      proposal.process = candidate;
+      targetProposal.process = Object.assign({}, candidate);
+      return true;
+    }
+
+    required.forEach(function (domain) {
+      if (domain === 'solutions') {
+        const cab = cabinetCandidates('solutions').find(function (item) { return item && item.kind === 'solution' && (text(item.solutes) || text(item.solvents)); });
+        if (cab && markSolution(cab, 'cabinet_reference', 'CABINET:' + cab.id, 0.86, 'Researcher-curated Cabinet formulation selected as the strongest available reusable reference.')) { filled.push(domain); return; }
+        const kb = knowledgeCandidates('solutions');
+        let best = kb.find(function (entry) { const h=entry&&entry.design_hint&&entry.design_hint.solution; return h&&text(h.solutes)&&text(h.solvents); });
+        if (best) {
+          const h=best.design_hint, conf=referenceConfidence(h.reference_confidence,0.72);
+          if (markSolution(h.solution,'knowledge_reference','KB:'+best.id,conf,'Structured Knowledge Base formulation selected as a literature-backed review candidate.')) { filled.push(domain); return; }
+        }
+        const soluteEntry = kb.find(function (entry) { const h=entry&&entry.design_hint&&entry.design_hint.solution; return h&&text(h.solutes); });
+        const solventEntry = kb.find(function (entry) { const h=entry&&entry.design_hint&&entry.design_hint.solution; return h&&text(h.solvents); });
+        if (soluteEntry || solventEntry) {
+          const sh=soluteEntry&&soluteEntry.design_hint&&soluteEntry.design_hint.solution||{}, vh=solventEntry&&solventEntry.design_hint&&solventEntry.design_hint.solution||{};
+          const ids=[]; if(soluteEntry)ids.push(soluteEntry.id); if(solventEntry&&(!soluteEntry||solventEntry.id!==soluteEntry.id))ids.push(solventEntry.id);
+          const src={name:text(sh.name||vh.name||'Reference absorber precursor'),role:text(sh.role||vh.role||'absorber precursor'),solutes:text(sh.solutes),solvents:text(vh.solvents),additives:text(sh.additives||vh.additives),preparation:text(sh.preparation||vh.preparation)};
+          const conf=Math.min(0.72,Math.max(0.58,(soluteEntry&&Number(soluteEntry.design_hint.reference_confidence)||0.62),(solventEntry&&Number(solventEntry.design_hint.reference_confidence)||0.62)));
+          if(markSolution(src,'knowledge_reference',ids.map(function(id){return 'KB:'+id;}).join('; '),conf,'Combined compatible structured Knowledge Base hints; exact recipe remains unknown.'))filled.push(domain);
+        }
+      } else if (domain === 'stack') {
+        const cab = cabinetCandidates('stack').find(function (item) { return item && item.kind === 'stack' && Array.isArray(item.layers) && item.layers.length >= 3; });
+        if (cab && markStack(cab.layers,'cabinet_reference','CABINET:'+cab.id,0.88,'Researcher-curated Cabinet stack selected as the strongest available reusable architecture.')) { filled.push(domain); return; }
+        const kb = knowledgeCandidates('stack').find(function (entry) { const h=entry&&entry.design_hint; return h&&Array.isArray(h.stack)&&h.stack.length>=3; });
+        if (kb) { const h=kb.design_hint, conf=referenceConfidence(h.reference_confidence,0.72); if(markStack(h.stack,'knowledge_reference','KB:'+kb.id,conf,'Structured Knowledge Base architecture selected as a literature-backed review candidate.'))filled.push(domain); }
+      } else if (domain === 'process') {
+        const cab = cabinetCandidates('process').find(function (item) { return item && item.kind === 'protocol' && [item.coating,item.annealing,item.atmosphere,item.notes].some(function(v){return text(v);}); });
+        if (cab && markProcess(cab,'cabinet_reference','CABINET:'+cab.id,0.86,'Researcher-curated Cabinet protocol selected as the strongest available reusable process reference.')) { filled.push(domain); return; }
+        const kb = knowledgeCandidates('process').find(function (entry) { const h=entry&&entry.design_hint&&entry.design_hint.process; return h&&[h.coating,h.annealing,h.atmosphere,h.notes].some(function(v){return text(v);}); });
+        if (kb) { const h=kb.design_hint, conf=referenceConfidence(h.reference_confidence,0.66); if(markProcess(h.process,'knowledge_reference','KB:'+kb.id,conf,'Structured Knowledge Base process family selected as a literature-backed review candidate.'))filled.push(domain); }
+      }
+    });
+    if (filled.length) {
+      proposal.reference_fallback = { domains: filled.slice(), cabinet_available: (cabinet.items||[]).length, knowledge_available: (knowledge.entries||[]).length };
+    }
+    return filled;
+  }
+
   function pipelineRefresh(exp, reason) {
     const pipeline = LF.DataPipeline.refresh(exp, { reason: reason || 'action' });
     return {
@@ -324,10 +424,10 @@
       });
       if (!device) throw new Error('Select one experiment first.');
 
-      const unknown = LF.DesignModel.missingDomains(exp, device);
+      const unknown = LF.DesignModel.pendingDomains ? LF.DesignModel.pendingDomains(exp, device) : LF.DesignModel.missingDomains(exp, device);
       if (!unknown.length) {
         throw new Error(
-          'This experiment already has solution chemistry, a complete device architecture and fabrication-process information.'
+          'This experiment has no pending Design domains. Any remaining unknowns have already been explicitly reviewed.'
         );
       }
 
@@ -386,49 +486,76 @@
           .filter(Boolean);
       }
 
-      LF.DesignAnalysis.sanitizeProposal(proposal);
       const required = Array.from(new Set((scope.unknown_fields || []).map(function (field) {
         return String(field).toLowerCase();
       }).filter(function(field){return ['solutions','stack','process'].includes(field);})));
-      const applicable = LF.DesignAnalysis.applicableFields(proposal, required);
+      let applicable = LF.DesignAnalysis.applicableFields(proposal, required);
+      const missingForFallback = required.filter(function(field){return !applicable.includes(field);});
+      const referenceFilled = proposalReferenceFallback(ctx, proposal, targetProposal, missingForFallback);
+      if(referenceFilled.length) applicable = LF.DesignAnalysis.applicableFields(proposal, required);
       const declaredUnresolved = Array.from(new Set((proposal.unresolved_domains || []).map(function(field){
         return String(field || '').toLowerCase();
       }).filter(function(field){return required.includes(field)&&!applicable.includes(field);})));
-      const missingRequired = required.filter(function (field) {
+
+      /*
+       * Coverage is fail-safe rather than fail-open. A valid structured model response may still
+       * forget to mirror an omitted domain into unresolved_domains, especially on small local
+       * models. LabFlow owns the deterministic scope, so any required domain that is neither
+       * scientifically useful nor explicitly unresolved is conservatively downgraded to an
+       * unresolved known-unknown instead of failing the whole Action or encouraging fabrication.
+       * Incomplete candidates for that domain are removed so they cannot be applied accidentally.
+       */
+      const autoUnresolved = required.filter(function (field) {
         return !applicable.includes(field) && !declaredUnresolved.includes(field);
       });
-
-      if (missingRequired.length) {
-        const labels = missingRequired.map(function (field) {
-          if (field === 'solutions') {
-            return 'solutions: provide qualitative chemistry with non-empty solutes and/or solvents, or add solutions to unresolved_domains when the supplied evidence/KB cannot support it';
-          }
-          if (field === 'stack') return 'stack: provide a coherent qualitative device stack, or add stack to unresolved_domains when it cannot be supported';
-          return 'process: provide at least one qualitative coating/annealing/atmosphere/notes field, or add process to unresolved_domains when it cannot be supported';
-        });
-        const error = new Error(
-          'Design inference left required domains neither populated nor explicitly unresolved: ' + missingRequired.join(', ') + '.'
-        );
-        error.code = 'MODEL_OUTPUT_INVALID';
-        error.isContract = true;
-        error.validationErrors = labels;
-        throw error;
-      }
-
-      proposal.unresolved_domains = declaredUnresolved;
-      proposal.unknowns = Array.isArray(proposal.unknowns) ? proposal.unknowns.slice(0, 10) : [];
-      declaredUnresolved.forEach(function(field){
-        const already=proposal.unknowns.some(function(text){return String(text||'').toLowerCase().includes(field);});
-        if(!already && proposal.unknowns.length<10)proposal.unknowns.push('Unresolved '+field+': no sufficiently supported proposal was established from the supplied experiment, Cabinet or Knowledge Base context.');
+      autoUnresolved.forEach(function(field){
+        if(field==='solutions'){
+          proposal.solutions=[];
+          targetProposal.solution_names=[];
+        }else if(field==='stack'){
+          proposal.stack=[];
+          targetProposal.stack=[];
+        }else if(field==='process'){
+          proposal.process={coating:'',annealing:'',atmosphere:'',notes:'',evidence:'',confidence:null,provenance_kind:'model_inference',reason:''};
+          targetProposal.process={coating:'',annealing:'',atmosphere:'',notes:'',evidence:'',confidence:null,provenance_kind:'model_inference',reason:''};
+        }
       });
 
+      const unresolvedDomains = Array.from(new Set(declaredUnresolved.concat(autoUnresolved)));
+      proposal.unresolved_domains = unresolvedDomains;
+      if(referenceFilled.length){
+        const labels=[];
+        const kinds=[];
+        (proposal.solutions||[]).forEach(function(x){if(x&&x.provenance_kind)kinds.push(x.provenance_kind);});
+        (targetProposal.stack||[]).forEach(function(x){if(x&&x.provenance_kind)kinds.push(x.provenance_kind);});
+        if(targetProposal.process&&targetProposal.process.provenance_kind)kinds.push(targetProposal.process.provenance_kind);
+        if(kinds.includes('cabinet_reference'))labels.push('Lab Cabinet');
+        if(kinds.includes('knowledge_reference'))labels.push('Knowledge Base');
+        if(kinds.includes('model_inference'))labels.push('model inference');
+        proposal.summary='Review-only Design candidate assembled from '+(labels.length?labels.join(' + '):'available references')+'.';
+      }
+      proposal.unknowns = Array.isArray(proposal.unknowns) ? proposal.unknowns.slice(0, 10) : [];
+      unresolvedDomains.forEach(function(field){
+        const already=proposal.unknowns.some(function(text){return String(text||'').toLowerCase().includes(field);});
+        if(already)return;
+        if(proposal.unknowns.length>=10)return;
+        if(autoUnresolved.includes(field)){
+          proposal.unknowns.push('Unresolved '+field+': LabFlow received no sufficiently complete review candidate for this required domain and conservatively marked it unresolved.');
+        }else{
+          proposal.unknowns.push('Unresolved '+field+': no sufficiently supported proposal was established from the supplied experiment, Cabinet or Knowledge Base context.');
+        }
+      });
+
+      LF.DesignAnalysis.sanitizeProposal(proposal);
       proposal.status = 'suggested';
       proposal.validation = {
         targetDeviceId: String(scope.device_id || ''),
         manualVariant: !!scope.manual_variant,
         applicableFields: applicable,
-        unresolvedDomains: declaredUnresolved.slice(),
-        unresolvedCount: (proposal.unknowns || []).length
+        unresolvedDomains: unresolvedDomains.slice(),
+        autoUnresolvedDomains: autoUnresolved.slice(),
+        referenceFallbackDomains: referenceFilled.slice(),
+        unresolvedCount: unresolvedDomains.length
       };
       return proposal;
     },

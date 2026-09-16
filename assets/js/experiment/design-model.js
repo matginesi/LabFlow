@@ -293,7 +293,7 @@
     }, seed || {}));
     design.solutions.push(record);
     const target = deviceId ? device(exp, deviceId) : null;
-    if (target && !target.solutionIds.includes(record.id)) target.solutionIds.push(record.id);
+    if (target && !target.solutionIds.includes(record.id)) { target.solutionIds.push(record.id); clearAcknowledgedUnknown(target,'solutions'); }
     return record;
   }
 
@@ -303,7 +303,9 @@
     if (!target) return null;
     design.solutions = design.solutions.filter(function (item) { return item !== target; });
     design.devices.forEach(function (item) {
+      const wasLinked=(item.solutionIds||[]).some(function(id){return String(id)===String(target.id);});
       item.solutionIds = (item.solutionIds || []).filter(function (id) { return String(id) !== String(target.id); });
+      if(wasLinked)clearAcknowledgedUnknown(item,'solutions');
     });
     return target;
   }
@@ -317,6 +319,7 @@
       provenanceKind: 'experiment'
     }, seed || {}));
     target.stack.push(layer);
+    clearAcknowledgedUnknown(target,'stack');
     target.status = STATUS.USER_CONFIRMED;
     return layer;
   }
@@ -327,6 +330,7 @@
     const position = Number(index);
     if (!Number.isInteger(position) || position < 0 || position >= target.stack.length) return null;
     const removed = target.stack.splice(position, 1)[0] || null;
+    clearAcknowledgedUnknown(target,'stack');
     target.status = STATUS.USER_CONFIRMED;
     return removed;
   }
@@ -337,6 +341,7 @@
     field = assertEditable('solution', field);
     target[field] = value;
     target.userEdited = true;
+    requireDesign(exp).devices.forEach(function(item){if((item.solutionIds||[]).some(function(id){return String(id)===String(target.id);}))clearAcknowledgedUnknown(item,'solutions');});
     target.status = STATUS.USER_CONFIRMED;
     return target;
   }
@@ -357,6 +362,7 @@
     field = assertEditable('layer', field);
     layer[field] = value;
     layer.status = STATUS.USER_CONFIRMED;
+    clearAcknowledgedUnknown(target,'stack');
     target.status = STATUS.USER_CONFIRMED;
     return layer;
   }
@@ -367,6 +373,7 @@
     field = assertEditable('process', field);
     target.process = Object.assign({ coating: '', annealing: '', atmosphere: '', notes: '' }, target.process || {});
     target.process[field] = value;
+    clearAcknowledgedUnknown(target,'process');
     target.processProvenance = target.processProvenance || {};
     target.processProvenance[field] = { status: STATUS.USER_CONFIRMED, evidence: 'User entry' };
     target.status = STATUS.USER_CONFIRMED;
@@ -397,6 +404,7 @@
     target.solutionIds = Array.isArray(target.solutionIds) ? target.solutionIds : [];
     if (linked && !target.solutionIds.includes(solutionId)) target.solutionIds.push(solutionId);
     if (!linked) target.solutionIds = target.solutionIds.filter(function (id) { return String(id) !== String(solutionId); });
+    clearAcknowledgedUnknown(target,'solutions');
     target.status = STATUS.USER_CONFIRMED;
     return target;
   }
@@ -443,6 +451,7 @@
     target.stack = (Array.isArray(layers) ? layers : []).map(function (layer) {
       return LF.DomainSchema.create('design_layer', sourcedLayerSeed(layer, meta));
     });
+    clearAcknowledgedUnknown(target,'stack');
     target.stackSourceRef = meta && meta.sourceRef || null;
     target.status = STATUS.USER_CONFIRMED;
     return target;
@@ -454,6 +463,7 @@
     const layer = LF.DomainSchema.create('design_layer', sourcedLayerSeed(seed, meta));
     const position = Math.max(0, Math.min(target.stack.length, Number.isInteger(Number(index)) ? Number(index) : target.stack.length));
     target.stack.splice(position, 0, layer);
+    clearAcknowledgedUnknown(target,'stack');
     target.status = STATUS.USER_CONFIRMED;
     return layer;
   }
@@ -464,6 +474,7 @@
     if (!target || !Number.isInteger(position) || position < 0 || position >= target.stack.length) return null;
     const previous = target.stack[position] || {};
     target.stack[position] = LF.DomainSchema.create('design_layer', sourcedLayerSeed(Object.assign({}, previous, seed || {}, { id: previous.id }), meta));
+    clearAcknowledgedUnknown(target,'stack');
     target.status = STATUS.USER_CONFIRMED;
     return target.stack[position];
   }
@@ -491,6 +502,7 @@
       changed++;
     });
     if (changed) {
+      clearAcknowledgedUnknown(target,'process');
       target.processSourceRef = options.sourceRef || target.processSourceRef || null;
       target.status = STATUS.USER_CONFIRMED;
     }
@@ -551,6 +563,7 @@
     const key = field === 'provenance_kind' ? 'provenanceKind' : String(field || '');
     if (!key) throw new Error('Design inference field is empty.');
     record[key] = value;
+    if(record.kind==='design_device'&&['stack'].includes(key))clearAcknowledgedUnknown(record,'stack');
     return record;
   }
 
@@ -559,6 +572,7 @@
     field = assertEditable('process', field);
     record.process = Object.assign({ coating: '', annealing: '', atmosphere: '', notes: '' }, record.process || {});
     record.process[field] = value;
+    clearAcknowledgedUnknown(record,'process');
     return record;
   }
 
@@ -588,6 +602,7 @@
   function replaceInferenceStack(record, stack) {
     if (!record || record.kind !== 'design_device') throw new Error('Design inference stack target must be a design_device.');
     record.stack = (stack || []).map(function (layer) { return LF.DomainSchema.create('design_layer', layer); });
+    clearAcknowledgedUnknown(record,'stack');
     return record.stack;
   }
 
@@ -658,6 +673,46 @@
     return missing;
   }
 
+  function acknowledgedUnknownDomains(device) {
+    return Array.from(new Set((device&&device.acknowledgedUnknownDomains||[]).map(function(value){
+      return normalized(value);
+    }).filter(function(value){return ['solutions','stack','process'].includes(value);})));
+  }
+
+  function pendingDomains(exp,device) {
+    const acknowledged=new Set(acknowledgedUnknownDomains(device));
+    return missingDomains(exp,device).filter(function(domain){return !acknowledged.has(domain);});
+  }
+
+  function clearAcknowledgedUnknown(device,domain) {
+    if(!device||!domain)return device;
+    domain=normalized(domain);
+    device.acknowledgedUnknownDomains=acknowledgedUnknownDomains(device).filter(function(value){return value!==domain;});
+    if(device.unknownDomainNotes&&typeof device.unknownDomainNotes==='object')delete device.unknownDomainNotes[domain];
+    if(!device.acknowledgedUnknownDomains.length){device.unknownsReviewedAt=null;device.unknownsReviewSource='';}
+    return device;
+  }
+
+  function acknowledgeUnknownDomains(exp,deviceId,domains,details,source) {
+    const target=device(exp,deviceId);
+    if(!target)throw new Error('Design experiment not found.');
+    const scientificMissing=new Set(missingDomains(exp,target));
+    const merged=new Set(acknowledgedUnknownDomains(target));
+    (domains||[]).map(normalized).filter(function(value){return scientificMissing.has(value);}).forEach(function(value){merged.add(value);});
+    target.acknowledgedUnknownDomains=Array.from(merged).filter(function(value){return scientificMissing.has(value);});
+    target.unknownDomainNotes=target.unknownDomainNotes&&typeof target.unknownDomainNotes==='object'?target.unknownDomainNotes:{};
+    const notes=Array.isArray(details)?details.map(clean).filter(Boolean):[];
+    target.acknowledgedUnknownDomains.forEach(function(domain){
+      const matched=notes.filter(function(note){return normalized(note).indexOf(domain)>=0;});
+      if(matched.length)target.unknownDomainNotes[domain]=matched.slice(0,4);
+      else if(!Array.isArray(target.unknownDomainNotes[domain])||!target.unknownDomainNotes[domain].length)target.unknownDomainNotes[domain]=['Reviewed as currently unknown.'];
+    });
+    Object.keys(target.unknownDomainNotes).forEach(function(domain){if(!target.acknowledgedUnknownDomains.includes(domain))delete target.unknownDomainNotes[domain];});
+    target.unknownsReviewedAt=target.acknowledgedUnknownDomains.length?new Date().toISOString():null;
+    target.unknownsReviewSource=target.acknowledgedUnknownDomains.length?String(source||'researcher_accept_ai'):'';
+    return target;
+  }
+
   function normalizeDesignProposal(raw) {
     const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
     function list(value) { return Array.isArray(value) ? value : value ? [value] : []; }
@@ -676,7 +731,7 @@ material:text(item.material||item.material_name||item.name||item.composition),
         evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),
         field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
         field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
-        provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),status:'ai_inferred'};
+        provenance_kind:text(item.provenance_kind||item.provenanceKind),reason:text(item.reason),selection_basis:text(item.selection_basis||item.selectionBasis),confidence_basis:text(item.confidence_basis||item.confidenceBasis),reported_confidence:confidence(item.reported_confidence||item.reportedConfidence),status:'ai_inferred'};
     }
     let solutionSource=source.solutions||source.formulations||source.recipes||source.solution_chemistry||source.solutionChemistry||source.chemistry||source.solution;
     if(solutionSource&&typeof solutionSource==='object'&&!Array.isArray(solutionSource)&&Array.isArray(solutionSource.solutions))solutionSource=solutionSource.solutions;
@@ -691,7 +746,7 @@ role:text(item.role||item.type||item.function),solutes:text(item.solutes||item.s
         field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
         field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
         provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),
-        reason:text(item.reason||item.rationale),status:'ai_inferred'};
+        reason:text(item.reason||item.rationale),selection_basis:text(item.selection_basis||item.selectionBasis),confidence_basis:text(item.confidence_basis||item.confidenceBasis),reported_confidence:confidence(item.reported_confidence||item.reportedConfidence),status:'ai_inferred'};
     });
     let deviceSource=source.devices||source.variants||source.device_variants||source.device;
     if(!deviceSource&&(source.device_stack||source.deviceStack||source.stack||source.layers||source.process))deviceSource={stack:source.device_stack||source.deviceStack||source.stack||source.layers,process:source.process||{},confidence:source.confidence,provenance_kind:source.provenance_kind||source.provenanceKind,reason:source.reason||source.rationale};
@@ -706,13 +761,13 @@ return {name:text(item.name||item.title||item.group||('Device '+(index+1))),
         notes:text(proc.notes),evidence:text(proc.evidence||item.evidence||item.source),
         confidence:confidence(proc.confidence!=null?proc.confidence:item.confidence),
         provenance_kind:text(proc.provenance_kind||proc.provenanceKind||item.provenance_kind||item.provenanceKind||
-        item.source_kind),reason:text(proc.reason||proc.rationale||item.reason||item.rationale)}
+        item.source_kind),reason:text(proc.reason||proc.rationale||item.reason||item.rationale),selection_basis:text(proc.selection_basis||proc.selectionBasis),confidence_basis:text(proc.confidence_basis||proc.confidenceBasis),reported_confidence:confidence(proc.reported_confidence||proc.reportedConfidence)}
         ,stack:list(item.stack||item.layers||item.device_stack||item.deviceStack).map(layer),
         evidence:text(item.evidence||item.source),confidence:confidence(item.confidence),
         field_confidence:fieldConfidence(item.field_confidence||item.fieldConfidence),
         field_decisions:fieldDecisions(item.field_decisions||item.fieldDecisions),
         provenance_kind:text(item.provenance_kind||item.provenanceKind||item.source_kind),
-        reason:text(item.reason||item.rationale),status:'ai_inferred'};
+        reason:text(item.reason||item.rationale),selection_basis:text(item.selection_basis||item.selectionBasis),confidence_basis:text(item.confidence_basis||item.confidenceBasis),reported_confidence:confidence(item.reported_confidence||item.reportedConfidence),status:'ai_inferred'};
     });
     const process=source.process&&typeof source.process==='object'?source.process:{};
     const coverage=source.coverage&&typeof source.coverage==='object'?source.coverage:{};
@@ -724,11 +779,11 @@ coverage:{input_experiments:Number(coverage.input_experiments)||0,
       coating:text(process.coating||process.deposition),annealing:text(process.annealing),atmosphere:text(process.atmosphere),
       notes:text(process.notes),evidence:text(process.evidence||process.source),confidence:confidence(process.confidence),
       provenance_kind:text(process.provenance_kind||process.provenanceKind||process.source_kind),
-      reason:text(process.reason||process.rationale)}
+      reason:text(process.reason||process.rationale),selection_basis:text(process.selection_basis||process.selectionBasis),confidence_basis:text(process.confidence_basis||process.confidenceBasis),reported_confidence:confidence(process.reported_confidence||process.reportedConfidence)}
       ,stack:list(source.stack||source.layers).map(layer),
       unresolved_domains:Array.from(new Set(list(source.unresolved_domains||source.unresolvedDomains||source.unresolved_domain||source.unresolvedDomain).map(function(v){return text(v).toLowerCase().trim();}).filter(function(v){return ['solutions','stack','process'].includes(v);}))),
       unknowns:list(source.unknowns||source.unresolved_details||source.unresolvedDetails||source.missing_details||source.missingDetails||source.missing).map(function(v){
-      return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);})};
+      return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);}),validation:source.validation&&typeof source.validation==='object'?source.validation:null,reference_fallback:source.reference_fallback&&typeof source.reference_fallback==='object'?source.reference_fallback:null};
   }
 
   LF.DesignModel = {
@@ -775,6 +830,10 @@ coverage:{input_experiments:Number(coverage.input_experiments)||0,
     evidenceRecords: designEvidenceRecords,
     parseDesignNote: parseDesignNote,
     stackAssessment: stackAssessment,
-    missingDomains: missingDomains
+    missingDomains: missingDomains,
+    pendingDomains: pendingDomains,
+    acknowledgedUnknownDomains: acknowledgedUnknownDomains,
+    acknowledgeUnknownDomains: acknowledgeUnknownDomains,
+    clearAcknowledgedUnknown: clearAcknowledgedUnknown
   };
 }());

@@ -31,3 +31,7 @@ flowchart TD
 The UI exposes a future upload target, but the current control is explicitly a stub. It performs no upload request. Browser-local NOMAD endpoint/account/token settings exist only to make the future integration contract visible.
 
 A real connector must replace the stub with an explicit network boundary, authentication behavior, upload status model and tests; it must not be implemented as a hidden side effect of package generation.
+
+## Design provenance in export
+
+Accepted Design values can originate from experiment evidence, reviewed Cabinet references, reviewed KB references or reviewed model inference. Export must preserve that provenance distinction whenever the target representation permits it. A reviewed reference-backed Design value is accepted LabFlow state, but its source nature should not be rewritten as if it came from RAW measurement evidence.

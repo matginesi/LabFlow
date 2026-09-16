@@ -61,13 +61,13 @@
 
     if (!device) return fail('Select one Design experiment first.');
 
-    const missing = LF.DesignModel && LF.DesignModel.missingDomains
-      ? LF.DesignModel.missingDomains(ctx.exp, device)
-      : [];
+    const missing = LF.DesignModel && LF.DesignModel.pendingDomains
+      ? LF.DesignModel.pendingDomains(ctx.exp, device)
+      : (LF.DesignModel && LF.DesignModel.missingDomains ? LF.DesignModel.missingDomains(ctx.exp, device) : []);
 
     return missing.length
       ? ok()
-      : fail('The selected experiment already has solution chemistry, a complete device architecture and fabrication-process information.');
+      : fail('The selected experiment has no pending Design domains. Any remaining unknowns have already been explicitly reviewed.');
   });
 
   register('results.available', function (ctx) {

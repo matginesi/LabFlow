@@ -69,6 +69,7 @@
             "type": "string",
             "enum": [
               "experiment",
+              "cabinet_reference",
               "knowledge_reference",
               "model_inference"
             ]
@@ -114,6 +115,7 @@
             "type": "string",
             "enum": [
               "experiment",
+              "cabinet_reference",
               "knowledge_reference",
               "model_inference"
             ]
@@ -153,6 +155,7 @@
           "type": "string",
           "enum": [
             "experiment",
+            "cabinet_reference",
             "knowledge_reference",
             "model_inference"
           ]

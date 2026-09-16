@@ -214,3 +214,27 @@ A new feature is acceptable when a reviewer can answer all of these without read
 - How is the structure discoverable at runtime?
 
 If those answers are unclear, the feature is not architecturally complete.
+
+## 13. Design inference reference architecture
+
+Design inference intentionally splits **generation** from **scientific authority**:
+
+```mermaid
+flowchart LR
+    EE[Experiment evidence] --> CP[Bounded Design context]
+    C[Cabinet] --> CP
+    K[Knowledge Base] --> CP
+    CP --> LLM[Configured model]
+    LLM --> N[Normalize + schema validation]
+    N --> RF[Deterministic reference fallback]
+    RF --> PC[Provenance + confidence calibration]
+    PC --> P[Stored review proposal]
+    P --> A[Researcher acceptance]
+    A --> DM[DesignModel]
+```
+
+`Context` retrieves Cabinet and KB candidates separately per missing Design domain. The model is never the authority for whether a reference is valid: `DesignAnalysis` verifies exact `CABINET:<id>` / `KB:<id>` markers and calibrates source nature. `ActionSteps` owns the deterministic reference fallback that can convert already supplied structured references into a proposal when a model omits them.
+
+This separation is important for model portability. Small models gain structured support instead of returning empty data; stronger models can synthesize richer candidates; neither can convert a reusable resource or literature reference into current-experiment evidence.
+
+Confidence is presentation/decision-support metadata over a proposal, not scientific state. The accepted value and its provenance are owned by `DesignModel`; the model's raw self-confidence has no authority by itself.

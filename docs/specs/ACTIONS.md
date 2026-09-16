@@ -81,3 +81,23 @@ Manifest execution may use deterministic read/write tools registered through the
 ## Extending
 
 To add an Action, create its directory, define the manifest, add prompt/schema only when required, implement deterministic context/tool support, rebuild registries/references, and add contract/behavior tests. Do not add an Action-ID switch to the Assistant or pages.
+
+## `design.infer` semantic contract
+
+`design.infer` is unusual because a valid result can contain a mix of evidence-backed values, reusable references, qualitative inference and explicit unknowns. The semantic validator therefore operates on the **normalized proposal**, not on raw provider text.
+
+For each requested domain (`solutions`, `stack`, `process`) the runtime performs:
+
+```mermaid
+flowchart TD
+    P[Useful normalized provider candidate?] -->|yes| K[Keep candidate]
+    P -->|no| C[Compatible valid Cabinet candidate?]
+    C -->|yes| CR[Create cabinet_reference candidate]
+    C -->|no| KB[Structured KB design_hint?]
+    KB -->|yes| KR[Create knowledge_reference candidate]
+    KB -->|no| U[Record unresolved known unknown]
+```
+
+The deterministic fallback uses only content already present in bounded reference context. It does not perform free-form scientific invention. `validation.referenceFallbackDomains` records domains supplied by this path; `validation.autoUnresolvedDomains` records domains that had to be downgraded to unresolved because neither provider output nor supplied references were sufficient.
+
+The provider may report confidence, but LabFlow calibrates it from provenance before UI display/application decisions. See `guides/DESIGN_INFERENCE.md`.

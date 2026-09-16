@@ -60,3 +60,15 @@ Minimum distributable evidence:
 ```
 
 Then add feature-specific browser or private-fixture evidence when the change touches those surfaces.
+
+## Design inference review checks
+
+When reviewing Design-inference changes, verify that:
+
+- Cabinet/KB context stays labelled reference context rather than experiment evidence;
+- a small-model optimization does not reduce useful reference-backed output to blanket unresolved domains;
+- a large-model optimization cannot bypass provenance verification or acceptance;
+- confidence remains provenance-calibrated and is not presented as scientific probability;
+- structured KB hints remain sourced and qualitative where exact values are unsupported;
+- deterministic fallback copies only validated supplied references;
+- generated action/prompt/KB/docs bundles are rebuilt from their canonical sources.

@@ -34,3 +34,15 @@ KB supplies reference knowledge; Assistant answers from bounded current context 
 ## Export
 
 Export packages current validated LabFlow Data and optional payloads deterministically. NOMAD preparation is local; remote upload is not implemented in the current POC.
+
+## Reviewing AI-completed Design
+
+A useful Design suggestion should be read as a set of sourced candidates, not as one opaque AI answer. Inspect the source nature beside each part:
+
+1. **Experiment evidence** — strongest authority for the current experiment.
+2. **Lab Cabinet** — researcher-curated reusable candidate; verify it was actually used.
+3. **Knowledge Base** — sourced reference/archetype; useful for reconstruction, never proof of use.
+4. **Model inference** — qualitative suggestion without a specific supplied reference.
+5. **Unresolved** — explicitly preserved scientific gap.
+
+The displayed confidence is calibrated candidate suitability. It is intentionally lower for generic references/inference and capped for unsupported numeric values. Accept only the parts you can justify; LabFlow keeps unresolved information explicit rather than requiring a fabricated completion.

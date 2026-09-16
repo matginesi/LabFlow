@@ -5,8 +5,8 @@
   "category": "design",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Complete missing qualitative Design domains for one selected experiment using source evidence first, compatible Cabinet context second, targeted Knowledge Base references third, and cautious model inference only when useful. Unsupported domains are explicitly unresolved instead of fabricated.",
-  "strategy": "One selected experiment per run. LabFlow deterministically defines missing domains and retrieves domain-targeted Knowledge Base references. The model may either populate each requested domain or explicitly mark it unresolved. Schema and semantic validation, bounded syntax repair and concise retries run before a reviewable proposal is stored; researcher/source values are never overwritten automatically.",
+  "purpose": "Complete missing qualitative Design domains for one selected experiment using source evidence first, compatible Cabinet context second, targeted Knowledge Base references third, and cautious model inference only when useful. A deterministic Design Reference Resolver independently preserves Cabinet/KB candidates so small-model omissions or prompt compaction cannot silently erase usable reference-backed suggestions.",
+  "strategy": "One selected experiment per run. LabFlow deterministically defines missing domains and resolves compact per-domain reference candidates independently of the model prompt. The same Design Reference Resolver feeds both model context and post-model semantic fallback, preventing context compaction from removing Cabinet/Knowledge Base candidates at validation time. The model may synthesize a richer proposal, but omitted or unresolved domains are filled from compatible Cabinet resources first and structured KB design hints second when available; only genuinely unsupported domains become auditable known unknowns. Researcher/source values are never overwritten automatically.",
   "policies": [
     "policy.scientific-provenance",
     "policy.structured-output"

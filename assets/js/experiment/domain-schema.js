@@ -230,7 +230,15 @@ registerRecord('design_layer',{
 });
 registerRecord('design_device',{
   label:'Design experiment/device',description:'One Design projection for a logical experiment/device, linked to experiments/samples/solutions by stable IDs.',idPrefix:'device',required:['id','kind','solutionIds','sampleIds','stack','process','status'],relations:{experimentId:'experiment',sampleIds:'sample',solutionIds:'design_solution'},
-  defaults:function(){return{id:uid('device'),kind:'design_device',name:'',group:'',experimentId:'',sampleIds:[],sampleNames:[],isRef:false,solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},processProvenance:{},stackSourceRef:null,processSourceRef:null,cabinetAssisted:false,cabinetAssistedAt:null,status:'unknown',evidence:'',confidence:null,provenanceKind:''};},
+  defaults:function(){
+    return{
+      id:uid('device'),kind:'design_device',name:'',group:'',experimentId:'',sampleIds:[],sampleNames:[],isRef:false,
+      solutionIds:[],stack:[],process:{coating:'',annealing:'',atmosphere:'',notes:''},processProvenance:{},
+      stackSourceRef:null,processSourceRef:null,cabinetAssisted:false,cabinetAssistedAt:null,
+      acknowledgedUnknownDomains:[],unknownDomainNotes:{},unknownsReviewedAt:null,unknownsReviewSource:'',
+      status:'unknown',evidence:'',confidence:null,provenanceKind:''
+    };
+  },
   normalize:function(r){r=obj(r);if(!r.id)r.id=uid('device');r.kind='design_device';r.name=text(r.name);
 r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.sampleIds).map(text);
     r.sampleNames=arr(r.sampleNames).map(text);r.isRef=!!r.isRef;r.solutionIds=arr(r.solutionIds).map(text);
@@ -239,6 +247,8 @@ r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.samp
     r.stackSourceRef=r.stackSourceRef&&typeof r.stackSourceRef==='object'?r.stackSourceRef:null;
     r.processSourceRef=r.processSourceRef&&typeof r.processSourceRef==='object'?r.processSourceRef:null;
     r.cabinetAssisted=!!r.cabinetAssisted;r.cabinetAssistedAt=r.cabinetAssistedAt||null;
+    r.acknowledgedUnknownDomains=Array.from(new Set(arr(r.acknowledgedUnknownDomains).map(function(v){return text(v).toLowerCase();}).filter(function(v){return ['solutions','stack','process'].includes(v);})));
+    r.unknownDomainNotes=obj(r.unknownDomainNotes);r.unknownsReviewedAt=r.unknownsReviewedAt||null;r.unknownsReviewSource=text(r.unknownsReviewSource);
     r.status=text(r.status||'unknown');r.evidence=text(r.evidence);r.confidence=finiteOrNull(r.confidence);
     r.provenanceKind=text(r.provenanceKind);return r;}
 });

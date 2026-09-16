@@ -17,8 +17,9 @@ For a researcher:
 2. [Research workflow](guides/RESEARCH_WORKFLOW.md)
 3. [Lab Cabinet](guides/LAB_CABINET.md)
 4. [Knowledge Base](guides/KNOWLEDGE_BASE.md)
-5. [AI assistance](guides/AI_ASSISTANCE.md)
-6. [Troubleshooting](guides/TROUBLESHOOTING.md)
+5. [Design inference and confidence](guides/DESIGN_INFERENCE.md)
+6. [AI assistance](guides/AI_ASSISTANCE.md)
+7. [Troubleshooting](guides/TROUBLESHOOTING.md)
 
 For a contributor or reviewer:
 
@@ -43,6 +44,7 @@ For a contributor or reviewer:
 | AI transport/provider behavior | `specs/AI_PROVIDERS.md` + provider/transport modules |
 | reusable lab resources | `guides/LAB_CABINET.md` + `Cabinet` registry |
 | reference knowledge | `guides/KNOWLEDGE_BASE.md` + JSONL schema/validator |
+| Design inference source hierarchy/confidence | `guides/DESIGN_INFERENCE.md` + `design.infer` runtime/validators |
 | UI primitives and interaction | `UI.md` + `.agent/skills/labflow-ui/SKILL.md` |
 | release gates | `VALIDATION.md` + validator/test source |
 
@@ -53,3 +55,8 @@ Executable manifests, schemas and validators take precedence over prose when a m
 The in-app Documentation route is generated from `docs/**/*.md` by `tools/build_docs_bundle.py`. `assets/js/pages/docs-bundle.js` is an artifact and must not be edited directly.
 
 The Action runtime matrix is generated from Action manifests. Rebuild generated references after source changes.
+
+
+## Design inference semantics
+
+The authoritative explanation of Design source hierarchy, Cabinet/KB reference fallback, known unknowns and confidence calibration is [Design inference and confidence](guides/DESIGN_INFERENCE.md). Keep other documentation consistent with that guide rather than redefining confidence ad hoc.

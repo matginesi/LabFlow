@@ -108,8 +108,8 @@ function publishActionUnavailable(d,out){if(!LF.Assistant||!LF.Assistant.addActi
 function publishSequenceResult(content,elapsed,error){if(!LF.Assistant||!LF.Assistant.addActionMessage)return;LF.Assistant.addActionMessage({actionId:'design.infer',actionTitle:'Complete experiment designs',content:String(content||''),latencyMs:elapsed||null,error:!!error,finishReason:error?'ACTION_SEQUENCE_FAILED':'complete'});}
 
 function designLinkedSolutions(exp,dev){const ids=new Set(dev&&dev.solutionIds||[]);return(exp&&exp.design&&exp.design.solutions||[]).filter(function(s){return ids.has(s.id);});}
-function designMissing(exp,dev){if(LF.DesignModel&&
-LF.DesignModel.missingDomains)return LF.DesignModel.missingDomains(exp,dev).length;
+function designMissing(exp,dev){if(LF.DesignModel&&LF.DesignModel.pendingDomains)return LF.DesignModel.pendingDomains(exp,dev).length;
+  if(LF.DesignModel&&LF.DesignModel.missingDomains)return LF.DesignModel.missingDomains(exp,dev).length;
   const solutions=designLinkedSolutions(exp,dev);let n=0;if(!solutions.length)n++;if(!(dev&&dev.stack||[]).length)n++;
   if(!dev||![dev.process&&dev.process.coating,dev.process&&dev.process.annealing,dev.process&&dev.process.atmosphere,
   dev.process&&dev.process.notes].some(function(v){return String(v||'').trim();}))n++;return n;}

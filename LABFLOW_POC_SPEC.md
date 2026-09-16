@@ -88,7 +88,7 @@ Design is experiment-owned scientific state. `DesignModel` is its write owner.
 
 Lab Cabinet stores reusable laboratory references such as formulations, device stacks, fabrication recipes, materials, substrates, instruments, acquisition software, setups and file-format profiles. Cabinet is not inventory, a LIMS, or a second experiment model. Applying a Cabinet item copies a detached snapshot into Design and records the Cabinet source reference.
 
-Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition. `design.infer` accepts a requested domain as covered either by a useful reviewable proposal or by an explicit `unresolved_domains` declaration when evidence/reference context is insufficient, so completion pressure never requires fabricated chemistry, architecture or process details.
+Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition. `design.infer` prefers a useful reviewable proposal using experiment evidence, Cabinet context, domain-targeted Knowledge Base references and then cautious qualitative model inference. `unresolved_domains` is used only when no coherent review candidate remains. Once the researcher accepts such an unresolved domain, LabFlow persists it as a reviewed known unknown: scientific incompleteness remains explicit, while workflow completeness prevents the same domain from being requested repeatedly unless it changes.
 
 ## 9. Knowledge Base
 
@@ -149,3 +149,24 @@ Frameworks or abstraction layers are introduced only when they remove demonstrat
 ## 16. Release acceptance
 
 A distributable release must pass `./release_check.sh`. Private real-dataset integration checks and browser automation are additional gates when their fixtures/environment are available.
+
+
+### Conservative Design coverage fallback
+
+For `design.infer`, a syntactically valid response does not fail merely because a required Design domain was omitted or represented by an unusable partial candidate. LabFlow owns the deterministic requested-domain scope: after normalization, any required domain that is neither usefully populated nor explicitly unresolved is deterministically downgraded to an auditable unresolved known-unknown. Incomplete candidate content for that domain is discarded so it cannot be applied accidentally. This fallback adds no scientific facts and is intended to make small and large models behave consistently without encouraging fabrication.
+
+## 16. Design inference authority and confidence
+
+`design.infer` must remain useful when direct Design evidence is sparse without silently fabricating certainty. Its source order is:
+
+1. current experiment evidence;
+2. compatible validated Lab Cabinet resources;
+3. domain-targeted active Knowledge Base entries with structured `design_hint` where available;
+4. cautious qualitative model inference;
+5. explicit unresolved known unknown.
+
+The model proposes; LabFlow owns provenance verification, normalization, semantic coverage, deterministic reference fallback, confidence calibration and application. A missing model field is therefore not automatically an empty result: if a validated Cabinet candidate or structured KB hint can responsibly fill the domain as a **review candidate**, the runtime may materialize it with its exact source marker. This fallback may never invent unsupported exact quantities.
+
+Design items expose their choice nature through `provenance_kind` / `selection_basis`. Cabinet references use `CABINET:<id>` evidence and KB references use `KB:<id>` evidence. IDs are verified; an invalid reference is downgraded rather than granted false authority.
+
+Confidence is provenance-calibrated candidate suitability, not proof of experiment use. Source nature dominates model self-confidence and unsupported quantitative values are capped conservatively. Cabinet and KB candidates remain review-only. See `docs/guides/DESIGN_INFERENCE.md` for the executable semantics.

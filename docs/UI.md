@@ -52,3 +52,7 @@ The instrument theme uses dark structural chrome around a light scientific canva
 ## Verification
 
 After UI changes, run `validate_ui_contract.py`, unit tests and the responsive browser audit when available. Search for obsolete/duplicate selectors when replacing a shared pattern so stale late overrides do not resurrect the previous layout.
+
+## Design suggestion source indicators
+
+Design proposal cards expose the **basis** of a choice (experiment, Lab Cabinet, Knowledge Base, model inference) and a calibrated confidence. The percentage is candidate suitability for review, not probability that the experiment used that candidate. See `guides/DESIGN_INFERENCE.md`.

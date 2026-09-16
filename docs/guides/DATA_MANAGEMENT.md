@@ -58,3 +58,14 @@ Measurements retain the current JV fields for deterministic JV analysis, but als
 ## Portability and privacy
 
 A normal LabFlow save contains `workspace.json` with the reusable scientific context, but contact names and email addresses are redacted by default. The explicit **Export data-management profile** action in Settings is intended for researcher-controlled sharing of the full project questionnaire/profile.
+
+## Relationship to Design reference data
+
+Workspace/Process describes the expected data-generating environment, while Cabinet and KB can also support Design reconstruction. These roles must not be conflated:
+
+- Workspace/Process: normal institutional/setup context;
+- Cabinet: reusable lab-specific definitions/resources;
+- KB: sourced general scientific reference;
+- Experiment Design: accepted experiment-specific scientific description.
+
+A Process reference to an instrument/setup does not prove that a specific Measurement used it, and a Cabinet/KB Design candidate does not prove that a specific device used that recipe. Concrete experiment provenance must remain explicit.

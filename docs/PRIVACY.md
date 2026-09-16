@@ -36,3 +36,7 @@ Cabinet and KB context remain labelled reference data so a model cannot legitima
 Credential-bearing headers/fields and common secret names are redacted before events enter the logger. Diagnostics may contain endpoint host/path, HTTP status, provider error codes/messages, request timing and bounded sanitized response details.
 
 A new network integration must document what leaves the browser, what credentials it uses, and how a user can tell that a request will occur.
+
+## Design reference provenance
+
+Design context may include researcher-curated Cabinet resources and sourced KB entries. They remain labelled reference data. Exact `CABINET:<id>` and `KB:<id>` markers identify provenance but do not reveal credentials and do not assert current-experiment use. Contact information from Workspace profiles is not required for Design inference.

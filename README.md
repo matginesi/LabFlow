@@ -67,6 +67,8 @@ flowchart TD
 
 Cabinet reuse writes Design only through `DesignModel` and copies detached snapshots. KB entries are cited reference knowledge. Action execution is governed by Action manifests and `ActionCapabilities`. The Assistant is read-only with respect to scientific state.
 
+For Design completion, a deterministic **Design Reference Resolver** selects small per-domain Cabinet/KB candidates and supplies the same logical candidates to both the model and the post-model validator. This prevents prompt compaction or weak small-model output from silently degrading a reference-backed Design into an empty suggestion.
+
 ## Repository map
 
 ```mermaid
@@ -164,3 +166,11 @@ Start with:
 ## Current scope
 
 This repository is a proof-of-concept, not a production LIMS. It deliberately avoids inventory management, remote multi-user synchronization, hidden server state, and automatic scientific claims that cannot be traced to source evidence or an explicit researcher decision.
+
+## Design inference: useful without hiding provenance
+
+Design completion follows a fixed authority hierarchy: **experiment evidence → compatible Cabinet resource → targeted Knowledge Base reference → cautious model inference → unresolved**. Cabinet/KB are deliberately useful instead of being ignored: Design context retrieves them per missing domain and the runtime can materialize a review candidate from a valid structured reference when a model omits that domain.
+
+Every proposal carries the nature of the choice (`experiment`, `cabinet_reference`, `knowledge_reference`, `model_inference`, or unresolved) and a calibrated confidence. Confidence is the suitability of the candidate for review, **not** the probability that the current experiment actually used that candidate. Cabinet and KB values remain review-only and never become experiment evidence merely because an AI used them.
+
+See `docs/guides/DESIGN_INFERENCE.md` for the full source hierarchy, confidence calibration, small-model fallback and known-unknown semantics.

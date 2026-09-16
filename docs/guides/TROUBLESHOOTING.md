@@ -42,3 +42,7 @@ Only retrieved active validated entries are available to the model. A claim rely
 ## UI looks stale after replacing files
 
 Check `LABFLOW_BUILD` in Diagnostics/runtime snapshot and ensure generated bundles were rebuilt. Browser cache/stale deployment should be distinguished from current-source behavior.
+
+## Design completes but suggestions are empty
+
+Inspect the Action/context logs before increasing model size. A healthy Design run should expose per-domain `cabinet.domain_candidates` and `knowledge.domain_candidates` when such references exist. The runtime should use deterministic reference fallback before blanket unresolved downgrade. If all domains become unresolved despite compatible structured references, run the Design/context unit tests and verify the generated KB/action/prompt bundles are current. See `DESIGN_INFERENCE.md`.

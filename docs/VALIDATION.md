@@ -57,3 +57,21 @@ A release should fail when generated output is stale rather than silently shippi
 ## Test-fixture policy
 
 Synthetic fixtures are deterministic and safe to distribute. Real/private archives remain local and ignored by Git. See `specs/TEST_FIXTURES.md`.
+
+## Design inference regression coverage
+
+Design regression tests must cover both correctness and usefulness. At minimum they verify:
+
+- strict JSON handling plus bounded `True`/`False`/`None` transport repair;
+- no raw JSON Schema leakage into the model prompt;
+- per-domain Cabinet and KB retrieval survives context bounding;
+- Cabinet is preferred over generic KB fallback when a compatible valid resource exists;
+- structured KB `design_hint` fallback is used before automatic unresolved downgrade;
+- exact Cabinet/KB IDs preserve `cabinet_reference` / `knowledge_reference` provenance;
+- invented reference IDs are downgraded to `model_inference`;
+- incomplete scientific candidates are never silently applied;
+- unsupported exact quantitative values stay review-only;
+- accepted known unknowns become workflow-reviewed without pretending to be scientifically known;
+- editing a reviewed domain reopens only that domain.
+
+A release that merely avoids Action errors but regresses Design proposals to systematically empty/unresolved output is not considered behaviorally correct.

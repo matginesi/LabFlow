@@ -13,6 +13,7 @@ APP_GUIDES = (
     "docs/guides/GETTING_STARTED.md",
     "docs/guides/RESEARCH_WORKFLOW.md",
     "docs/guides/AI_ASSISTANCE.md",
+    "docs/guides/DESIGN_INFERENCE.md",
     "docs/guides/AI_TOKENS_AND_RATE_LIMITS.md",
     "docs/guides/KNOWLEDGE_BASE.md",
     "docs/guides/LAB_CABINET.md",

@@ -10,7 +10,7 @@ function present(v){return String(v==null?'':v).trim().length>0;}
 function badge(v,t){return LF.PageShell.badge(v,t||'');}
 function sourceBadge(item){
   const provenance=String(item&&item.provenance_kind||item&&item.provenanceKind||'').toLowerCase(),s=String(item&&item.status||'').toLowerCase();
-  return provenance==='cabinet_snapshot'?badge('Cabinet','info'):
+  return provenance==='cabinet_snapshot'||provenance==='cabinet_reference'?badge('Cabinet','info'):
     provenance==='knowledge_reference'?badge('KB','info'):
     s==='user_confirmed'?badge('Researcher','success'):
     s==='raw_evidence'||s==='experiment'?badge('Source','info'):
@@ -19,17 +19,15 @@ function sourceBadge(item){
 function linkedSolutions(design,dev){const ids=new Set(dev&&dev.solutionIds||[]);return(design.solutions||[]).filter(function(s){return ids.has(s.id);});}
 function meaningfulProcess(p){return!!(p&&[p.coating,p.annealing,p.atmosphere,p.notes].some(present));}
 function completeness(dev,solutions,exp){
-const keys=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp||{design:{
-  solutions:solutions||[]}},dev):[],labels={
-  solutions:'solution chemistry',stack:'complete device architecture',process:'fabrication process'}
-  ,missing=keys.map(function(key){return labels[key]||key;});
-  return{missing:missing.length,missingFields:missing,missingDomains:keys,complete:missing.length===0};}
+const model=LF.DesignModel||{},scope=exp||{design:{solutions:solutions||[]}},scientific=model.missingDomains?model.missingDomains(scope,dev):[],pending=model.pendingDomains?model.pendingDomains(scope,dev):scientific.slice(),labels={
+  solutions:'solution chemistry',stack:'complete device architecture',process:'fabrication process'},missing=pending.map(function(key){return labels[key]||key;}),scientificMissing=scientific.map(function(key){return labels[key]||key;});
+  return{missing:missing.length,missingFields:missing,missingDomains:pending,scientificMissingDomains:scientific,scientificMissingFields:scientificMissing,complete:scientific.length===0,reviewed:scientific.length>0&&pending.length===0,workflowComplete:pending.length===0};}
 function measurementCount(exp,dev){const ids=new Set(dev&&dev.sampleIds||[]),names=new Set(dev&&dev.sampleNames||[]);return(exp.measurements||[]).filter(function(m){return ids.has(m.sampleId)||names.has(m.sample);}).length;}
 function proposalFor(exp,id){return LF.ActionData?LF.ActionData.proposal(exp,'design.infer',id):null;}
 function assistState(exp,id){return LF.ActionData?LF.ActionData.status(exp,'design.infer',id)||{}:{};}
 function meaningfulSolution(s){return!!(s&&[s.solutes,s.solvents].some(present));}
 function meaningfulLayer(l){return!!(l&&[l.role,l.material].some(present));}
-function proposalHasContent(p){const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};return!!(p&&((p.solutions||[]).some(meaningfulSolution)||(d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc)));}
+function proposalHasContent(p){const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};return!!(p&&((p.solutions||[]).some(meaningfulSolution)||(d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc)||(p.unresolved_domains||[]).length));}
 function proposalConfidence(p){const values=[];function add(v){const n=Number(v);
 if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));
   }(p&&p.solutions||[]).forEach(function(x){if(meaningfulSolution(x))add(x.confidence);});
@@ -37,11 +35,17 @@ if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));
   if((d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc))add(d.confidence);
   (d.stack||[]).forEach(function(x){if(meaningfulLayer(x))add(x.confidence);});
   if(meaningfulProcess(proc))add(proc.confidence);if(!values.length)return null;
-  return Math.round(values.reduce(function(a,b){return a+b;},0)/values.length*100);}
+  const unresolved=(p&&p.unresolved_domains||[]).length,avg=values.reduce(function(a,b){return a+b;},0)/values.length,
+    calibrated=Math.max(0,avg-(unresolved*0.04));
+  return Math.round(calibrated*100);}
+function proposalBasis(p){const labels={experiment:'Experiment evidence',cabinet_reference:'Lab Cabinet',knowledge_reference:'Knowledge Base',model_inference:'Model inference'},seen=[];
+  function add(item){const key=String(item&&item.provenance_kind||item&&item.provenanceKind||'').toLowerCase();if(labels[key]&&!seen.includes(labels[key]))seen.push(labels[key]);}
+  (p&&p.solutions||[]).filter(meaningfulSolution).forEach(add);const d=p&&p.devices&&p.devices[0]||{};(d.stack||[]).filter(meaningfulLayer).forEach(add);const proc=d.process||p&&p.process||{};if(meaningfulProcess(proc))add(proc);return seen;}
 function experimentState(exp,design,dev){
   const sols=linkedSolutions(design,dev),ready=completeness(dev,sols,exp),proposal=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
-  if(proposal&&proposalHasContent(proposal)){const score=proposalConfidence(proposal);return{kind:'proposal',label:'Suggested',detail:'AI suggestion ready to review'+(score!=null?' · '+score+'% confidence':''),ready:ready};}
+  if(proposal&&proposalHasContent(proposal)){const score=proposalConfidence(proposal),unresolved=(proposal.unresolved_domains||[]).length;return{kind:'proposal',label:'Suggested',detail:'AI suggestion ready to review'+(score!=null?' · '+score+'% confidence':'')+(unresolved?' · '+unresolved+' known unknown'+(unresolved===1?'':'s'):''),ready:ready};}
   if(ready.complete)return{kind:'complete',label:assist.state==='accepted'?'Accepted':'Ready',detail:assist.state==='accepted'?'Researcher accepted the AI suggestion':'Solution chemistry, stack and process available',ready:ready};
+  if(ready.reviewed)return{kind:'complete',label:'Reviewed',detail:'Known unknowns acknowledged: '+ready.scientificMissingFields.join(' · '),ready:ready};
   if(assist.state==='error')return{kind:'error',label:'Error',detail:assist.message||'AI suggestion failed',ready:ready};
   return{kind:'missing',label:'Incomplete',detail:ready.missingFields.join(' · '),ready:ready};
 }
@@ -65,8 +69,8 @@ esc(dev.name||'')+'" placeholder="Experiment name…"><span class="design-active
     facts.map(function(x){return '<span>'+esc(x)+'</span>';
     }).join('')+'</div><div class="design-active-actions"><span class="design-variant-card-status '+esc(st.kind)+'">'+esc(st.label)+'</span>'+
     (canRun?'<button class="button primary compact" type="button" data-action="design.infer" data-action-device="'+esc(dev.id)+'">'+actionLabel+
-    '</button>':'')+'</div>'+(st.ready&&st.ready.missingFields.length?'<div class="design-active-missing"><strong>Missing:</strong> '+
-    esc(st.ready.missingFields.join(' · '))+'</div>':'')+'</div>'; }
+    '</button>':'')+'</div>'+(st.ready&&st.ready.missingFields.length?'<div class="design-active-missing"><strong>Pending:</strong> '+
+    esc(st.ready.missingFields.join(' · '))+'</div>':(st.ready&&st.ready.reviewed?'<div class="design-active-missing"><strong>Known unknowns:</strong> '+esc(st.ready.scientificMissingFields.join(' · '))+' · reviewed</div>':''))+'</div>'; }
 function board(exp,design,devices,selected){
   const states=devices.map(function(d){return experimentState(exp,design,d);}),suggested=states.filter(function(s){return s.kind==='proposal';}).length,errors=states.filter(function(s){return s.kind==='error';}).length,untouched=states.filter(function(s){return s.kind==='missing';}).length,ready=states.filter(function(s){return s.kind==='complete';}).length;
   const bulkLabel=errors?'Retry & complete remaining':'Complete all missing with AI',
@@ -114,7 +118,7 @@ function stackGraphic(stack,ai){if(!stack||
   stack.slice().reverse().map(function(l,i){
   return '<div class="design-stack-layer"><span>'+esc(l.role||
   ('Layer '+(stack.length-i)))+'</span><strong>'+esc(l.material||
-  'Unknown material')+'</strong>'+(present(l.thickness)?'<small>'+esc(l.thickness)+'</small>':'')+'</div>';
+  'Unknown material')+'</strong>'+(present(l.thickness)?'<small>'+esc(l.thickness)+'</small>':'')+(ai?sourceBadge(l):'')+'</div>';
   }).join('')+'</div></div>';}
 function stackEditor(dev){const stack=dev.stack||[];
 return stackGraphic(stack,false)+(stack.length?'<div class="design-layer-edit-list">'+stack.map(function(l,i){
@@ -135,7 +139,7 @@ esc(p.annealing||'')+'" placeholder="temperature/time when known"></label><label
 function processSuggestion(p){if(!meaningfulProcess(p))return '<div class="design-empty-visual compact"><span>No process suggestion.</span></div>';
 const rows=[['Coating / deposition',p.coating],['Annealing',p.annealing],['Atmosphere',p.atmosphere],['Notes',
   p.notes]].filter(function(x){return present(x[1]);});
-  return '<div class="design-process-suggestion">'+rows.map(function(x){
+  return '<div class="design-process-suggestion">'+sourceBadge(p)+rows.map(function(x){
   return '<div><small>'+esc(x[0])+'</small><strong>'+esc(x[1])+'</strong></div>';}).join('')+'</div>'; }
 function cabinetPicker(kind){
   if(!LF.Cabinet)return'';
@@ -161,12 +165,12 @@ function proposalPanel(exp,dev){
   const p=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
   if(assist.state==='error'&&!p)return '<section class="panel design-suggestion-panel error"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Suggestion failed</h2><div class="meta">'+esc(assist.message||'The provider could not complete this experiment.')+' Retry from the active experiment strip above.</div></div></div></section>';
   if(!p)return'';
-  const pd=p.devices&&p.devices[0]||{},unknown=p.unknowns||[],solutions=(p.solutions||[]).filter(meaningfulSolution),score=proposalConfidence(p),matches=p.cabinetMatches||[];
+  const pd=p.devices&&p.devices[0]||{},unknown=p.unknowns||[],solutions=(p.solutions||[]).filter(meaningfulSolution),score=proposalConfidence(p),matches=p.cabinetMatches||[],basis=proposalBasis(p);
   const cabinetMatches=matches.length?'<div class="design-cabinet-matches"><strong>Cabinet matches</strong>'+matches.map(function(m){return '<span>'+esc(m.name)+' <button class="button ghost compact" type="button" data-use-cabinet-item="'+esc(m.cabinetId)+'">Use Cabinet snapshot</button></span>';}).join('')+'</div>':'';
   return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Review before accepting</h2><div class="meta">'+
-esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+'</div></div><div class="spacer"></div>'+
+esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+(basis.length?' · Basis: '+esc(basis.join(' + ')):'')+'</div></div><div class="spacer"></div>'+
     (score!=null?'<div class="design-ai-confidence"><span>AI confidence</span><strong>'+score+
-    '%</strong><small>Review before accepting.</small></div>':'')+
+    '%</strong><small>Calibrated candidate confidence from source nature; not proof of experiment use.</small></div>':'')+
     '<div class="row-wrap"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
     '">Accept experiment</button><button class="button ghost compact" type="button" data-discard-design-experiment="'+esc(dev.id)+
     '">Discard</button></div></div><div class="panel-body">'+cabinetMatches+
