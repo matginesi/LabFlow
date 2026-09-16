@@ -8,6 +8,7 @@
     "solutions",
     "stack",
     "process",
+    "unresolved_domains",
     "unknowns"
   ],
   "properties": {
@@ -162,6 +163,18 @@
         }
       },
       "additionalProperties": false
+    },
+    "unresolved_domains": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "enum": [
+          "solutions",
+          "stack",
+          "process"
+        ]
+      }
     },
     "unknowns": {
       "type": "array",

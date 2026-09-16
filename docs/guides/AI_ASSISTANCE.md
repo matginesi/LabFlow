@@ -12,7 +12,7 @@ AI is optional. Import, normalization, validation, JV analysis, safe-cleanup det
 ## Supported uses
 
 - **Resolve ambiguities:** propose semantic resolutions deterministic rules cannot prove.
-- **Complete Design:** propose missing qualitative chemistry, device stack and process content for one experiment.
+- **Complete Design:** propose missing qualitative chemistry, device stack and process content for one experiment. Design retrieval uses experiment evidence first, then compatible Cabinet resources and domain-targeted Knowledge Base references; unsupported domains may remain explicitly unresolved instead of being fabricated.
 - **Interpret Results:** explain deterministic summaries/findings.
 - **Compare Results:** explain differences among selected deterministic groups.
 - **Assistant:** answer questions from bounded current context and recommend existing Actions.
@@ -29,7 +29,9 @@ Provider/model/endpoint settings and transport controls stay outside scientific 
 
 ## Validation
 
-Structured Action output is parsed and validated before storage. A provider may return HTTP 200 and still fail the Action because output is truncated, malformed, schema-invalid or semantically incomplete.
+Structured Action output is parsed and validated before storage. A provider may return HTTP 200 and still fail the Action because output is truncated, malformed, schema-invalid or semantically incomplete. Design adds bounded transport repair for common small-model JSON mistakes (for example Python-style boolean/null literals outside quoted strings), but scientific values are never repaired or invented.
+
+For Design, each requested domain must be either usefully populated or explicitly listed in `unresolved_domains`. This lets LabFlow preserve good partial proposals without pressuring a model to invent unsupported chemistry, stack or process details.
 
 ## Bulk Design
 

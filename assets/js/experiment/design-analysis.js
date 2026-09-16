@@ -62,8 +62,13 @@ samples:items.length,devices:devices.length,solutions:solutions.length,
 let raw=String(item&&item.provenance_kind||item&&item.provenanceKind||item&&item.source||inherited||
     '').toLowerCase().trim();const evidence=String(item&&item.evidence||'').trim();
     if(raw==='raw_evidence'||raw==='source'||raw==='evidence'||raw==='mixed')raw=evidence?'experiment':'model_inference';
-    if(raw==='knowledge_reference')return /(?:^|[\s,;])KB:[A-Za-z0-9._:-]+/.test(evidence)?
-    'knowledge_reference':'model_inference';return raw==='experiment'?'experiment':'model_inference';}
+    if(raw==='knowledge_reference'){
+      const ids=[],re=/(?:^|[\s,;])KB:([A-Za-z0-9._:-]+)/g;let m;while((m=re.exec(evidence)))ids.push(m[1]);
+      if(!ids.length)return'model_inference';
+      if(LF.KnowledgeBase&&typeof LF.KnowledgeBase.get==='function'&&!ids.some(function(id){return !!LF.KnowledgeBase.get(id);}))return'model_inference';
+      return'knowledge_reference';
+    }
+    return raw==='experiment'?'experiment':'model_inference';}
   function designConfidence(item,field){const map=item&&item.field_confidence&&typeof item.field_confidence==='object'?item.field_confidence:{},raw=Object.prototype.hasOwnProperty.call(map,field)?Number(map[field]):Number(item&&item.confidence);return Number.isFinite(raw)?Math.max(0,Math.min(1,raw)):null;}
   function fieldDecision(item,field){return(item&&Array.isArray(item.field_decisions)?item.field_decisions:[]).find(function(x){return String(x&&x.field||'')===String(field);})||null;}
   function autoApplyAllowed(item,field,value,inherited,manual){if(value==null||String(value).trim()==='')return false;
@@ -74,7 +79,7 @@ if(manual)return true;const decision=fieldDecision(item,field);if(decision)retur
     if(source==='knowledge_reference')return false;if(confidence==null)return!!supported||!hasSource;
     return confidence>=0.75&&(!looksQuantitative(value)||supported);}
   function sanitizeDesignProposal(proposal){const stats={
-reviewOnlyQuantities:0,modelOnlyItems:0,knowledgeItems:0,autoApply:0,review:0,unresolved:(proposal.unknowns||[]).length}
+reviewOnlyQuantities:0,modelOnlyItems:0,knowledgeItems:0,autoApply:0,review:0,unresolved:Math.max((proposal.unknowns||[]).length,(proposal.unresolved_domains||[]).length)}
     ;function annotate(item,fields,inheritedSource){if(!item||typeof item!=='object')return;
     const directEvidence=String(item.evidence||'').trim(),declared=canonicalDesignSource(item,inheritedSource),
     source=declared==='experiment'&&directEvidence?'experiment':declared==='knowledge_reference'?
@@ -98,7 +103,7 @@ annotate(device,[{field:'solutions',value:(device.solution_names||[]).join(', ')
     proposal.applicationSummary={auto_apply_count:stats.autoApply,review_count:stats.review,unresolved_count:stats.unresolved};return stats;
   }
   function designApplicationSummary(proposal){const out={
-auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:(proposal&&proposal.unknowns||[]).length};
+auto_apply_count:0,auto_applied_count:0,review_count:0,unresolved_count:Math.max((proposal&&proposal.unknowns||[]).length,(proposal&&proposal.unresolved_domains||[]).length)};
     function add(item){(item&&item.field_decisions||[]).forEach(function(d){if(d.skipped==='existing')return;
     if(d.applied)out.auto_applied_count++;else if(d.auto_apply)out.auto_apply_count++;else out.review_count++;});
     }(proposal&&proposal.solutions||[]).forEach(add);(proposal&&proposal.devices||[]).forEach(function(d){add(d);

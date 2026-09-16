@@ -5,8 +5,8 @@
   "category": "design",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Complete every currently missing qualitative Design domain for one selected experiment using source evidence first, compatible Cabinet context second, and cautious model inference only for remaining gaps. Internal validation/retries run before the UI exposes its single Retry inference control.",
-  "strategy": "One selected experiment per run. LabFlow deterministically defines the missing domains, the model returns only those domains, and semantic validation uses the same completeness predicates as the Design UI before a proposal may be stored. Bounded internal retries receive exact missing-domain feedback. Acceptance re-checks the resulting Design state, and existing researcher/source values are never overwritten automatically.",
+  "purpose": "Complete missing qualitative Design domains for one selected experiment using source evidence first, compatible Cabinet context second, targeted Knowledge Base references third, and cautious model inference only when useful. Unsupported domains are explicitly unresolved instead of fabricated.",
+  "strategy": "One selected experiment per run. LabFlow deterministically defines missing domains and retrieves domain-targeted Knowledge Base references. The model may either populate each requested domain or explicitly mark it unresolved. Schema and semantic validation, bounded syntax repair and concise retries run before a reviewable proposal is stored; researcher/source values are never overwritten automatically.",
   "policies": [
     "policy.scientific-provenance",
     "policy.structured-output"

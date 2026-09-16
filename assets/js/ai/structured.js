@@ -44,6 +44,15 @@
       if (ch === '"') { quote = true; out += ch; continue; }
       if (ch === '/' && next === '/') { lineComment = true; changed = true; i++; continue; }
       if (ch === '/' && next === '*') { blockComment = true; changed = true; i++; continue; }
+      // Bounded transport repair for a frequent small-model failure: Python literals outside strings.
+      // This never changes quoted scientific content; it only restores JSON syntax.
+      const rest = source.slice(i);
+      const py = rest.match(/^(True|False|None)\b/);
+      const prev = i > 0 ? source[i - 1] : '';
+      if (py && !/[A-Za-z0-9_$]/.test(prev)) {
+        out += py[1] === 'True' ? 'true' : (py[1] === 'False' ? 'false' : 'null');
+        i += py[1].length - 1; changed = true; continue;
+      }
       out += ch;
     }
     let withoutTrailing = '', inString = false, isEscaped = false;
@@ -142,6 +151,7 @@
   function normalizeDesignSource(value, inherited) {
     const raw=String(value==null?'':value).trim().toLowerCase();
     if(raw==='experiment'||raw==='evidence'||raw==='source'||raw==='raw')return'experiment';
+    if(raw==='knowledge_reference'||raw==='knowledge'||raw==='kb'||raw==='reference')return'knowledge_reference';
     if(raw==='model_inference'||raw==='model'||raw==='inference'||raw==='ai')return'model_inference';
     return inherited||'model_inference';
   }
@@ -162,6 +172,10 @@
   }
   function designStringList(value, limit) {
     return designList(value).map(designText).filter(Boolean).slice(0,limit||99);
+  }
+  function designDomainList(value) {
+    const allowed=['solutions','stack','process'];
+    return Array.from(new Set(designStringList(value,12).map(function(x){return x.toLowerCase().trim();}).filter(function(x){return allowed.includes(x);}))).slice(0,3);
   }
   function designConfidence(value, fallback) {
     let n=Number(value);
@@ -259,7 +273,8 @@ annealing:designText(po.annealing||po.anneal),atmosphere:designText(po.atmospher
       solutions:solutions,
       stack:stack,
       process:process,
-      unknowns:designStringList(v.unknowns||v.unresolved||v.missing,10).map(function(x){return clip(x,160);})
+      unresolved_domains:designDomainList(v.unresolved_domains||v.unresolvedDomains||v.unresolved_domain||v.unresolvedDomain),
+      unknowns:designStringList(v.unknowns||v.unresolved_details||v.unresolvedDetails||v.missing_details||v.missingDetails||v.missing,10).map(function(x){return clip(x,160);})
     };
   }
   function resultText(value,max){

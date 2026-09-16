@@ -353,4 +353,20 @@ module.exports=function(t,LF){
     assert((err.validationErrors||[]).some(function(x){return /solutes.*solvents/i.test(String(x));}),'retry feedback must explicitly request useful solution chemistry');
   };
 
+  t['Design accepts an explicitly unresolved domain instead of forcing unsupported chemistry']=function(){
+    const proposal={status:'suggested',summary:'Stack and process are useful; chemistry is not established.',solutions:[],stack:[{role:'Substrate / transparent contact',material:'glass/ITO'},{role:'Electron transport layer',material:'SnO2'},{role:'Absorber',material:'Perovskite'}],process:{coating:'spin coating'},unresolved_domains:['solutions'],unknowns:['solutions: no supported precursor or solvent evidence']};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});
+    assert(out.validation.applicableFields.includes('stack')&&out.validation.applicableFields.includes('process'),'supported domains remain useful');
+    assert(out.validation.unresolvedDomains.includes('solutions'),'unsupported chemistry is explicit rather than fabricated');
+    assert(out.unresolved_domains.length===1,'only the unresolved domain is retained');
+  };
+
+  t['Design can safely return all requested domains unresolved when context is insufficient']=function(){
+    const proposal={status:'suggested',summary:'Available context does not establish fabrication design.',solutions:[],stack:[],process:{},unresolved_domains:['solutions','stack','process'],unknowns:[]};
+    const out=LF.ActionSteps['design.validate-coverage']({outputs:{collect:{device_id:'d1',sample_names:[],manual_variant:true,unknown_fields:['solutions','stack','process']},infer:proposal},lastResult:proposal});
+    assert(out.validation.applicableFields.length===0,'no scientific values are fabricated');
+    assert(out.validation.unresolvedDomains,['solutions','stack','process'],'all unresolved domains are explicit');
+    assert(out.unknowns.length>=3,'LabFlow adds deterministic unresolved explanations when the model omits them');
+  };
+
 };

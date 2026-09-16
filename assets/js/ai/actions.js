@@ -74,6 +74,13 @@ return'Previous attempt exhausted the completion budget. Return the final answer
   if(err&&err.isContract){const details=err.validationErrors&&
 err.validationErrors.length?err.validationErrors.join('\n'):String(err&&err.message||
     'The previous model output did not match the required contract.');
+    if(step&&step.schema==='design_suggestion'){
+      return('Previous Design result failed '+code+'.\n'+details+'\n\nReturn a NEW compact JSON object from scratch. Do not echo or repair the previous text. '+
+      'For each requested domain, either populate it usefully from experiment/Cabinet/Knowledge Base context or list the exact domain in unresolved_domains. '+
+      'Do not invent chemistry or exact recipe values merely to satisfy coverage. Use only strict JSON literals true, false, null; never Python True, False, None. '+
+      'Return only the scientific data instance and no schema or validation metadata. '+
+      'If you use Knowledge Base content, cite only supplied ids as KB:<id> and set provenance_kind to knowledge_reference.').trim().slice(0,3200);
+    }
     const modelOutput=String(err&&err.modelOutput||'').slice(0,4200);
     return('Previous model output failed '+code+'.\n'+details+(modelOutput?'\n\nPrevious assistant output only:\n'+
     modelOutput:'')).trim().slice(0,6000);}

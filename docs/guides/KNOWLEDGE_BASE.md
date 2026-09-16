@@ -30,6 +30,8 @@ KB content is reference knowledge, not evidence from the current experiment. If 
 
 When an Assistant answer relies on a retrieved KB entry, the model is instructed to append `[KB:<id>]`. The UI resolves that marker to stored source metadata. The model must not invent an ID, DOI, URL or citation.
 
+`design.infer` also uses the KB directly. Retrieval is targeted independently for missing `solutions`, `stack` and `process` domains so small local models receive a short relevant subset instead of the whole library. A Design item based on KB content is marked `knowledge_reference` and carries an exact `KB:<id>` in its evidence. These values are review-only and are never treated as proof that the current experiment used that material, architecture or process.
+
 ## Editing safely
 
 Prefer small factual entries with explicit cautions and source records. Avoid embedding transient UI instructions or experiment-specific claims in the KB; those belong in current scientific state/context instead.

@@ -726,7 +726,8 @@ coverage:{input_experiments:Number(coverage.input_experiments)||0,
       provenance_kind:text(process.provenance_kind||process.provenanceKind||process.source_kind),
       reason:text(process.reason||process.rationale)}
       ,stack:list(source.stack||source.layers).map(layer),
-      unknowns:list(source.unknowns||source.unresolved||source.missing).map(function(v){
+      unresolved_domains:Array.from(new Set(list(source.unresolved_domains||source.unresolvedDomains||source.unresolved_domain||source.unresolvedDomain).map(function(v){return text(v).toLowerCase().trim();}).filter(function(v){return ['solutions','stack','process'].includes(v);}))),
+      unknowns:list(source.unknowns||source.unresolved_details||source.unresolvedDetails||source.missing_details||source.missingDetails||source.missing).map(function(v){
       return typeof v==='object'?text(v.item||v.field||v.name||JSON.stringify(v)):text(v);})};
   }
 

@@ -112,7 +112,7 @@ A Measurement has a generic scientific envelope (`technique`, `parameters`, `obs
 
 Cabinet and KB are outside `ExperimentData` because they are reusable/reference state with different lifecycle and authority.
 
-When Cabinet content is applied to Design, a detached value snapshot becomes experiment-owned Design state and retains a source reference. KB content never becomes experiment evidence merely because it was retrieved for AI context.
+When Cabinet content is applied to Design, a detached value snapshot becomes experiment-owned Design state and retains a source reference. KB content never becomes experiment evidence merely because it was retrieved for AI context. Design proposals may record `knowledge_reference` provenance with an exact `KB:<id>` evidence marker; if a requested Design domain cannot be responsibly established, the proposal records it in `unresolved_domains` instead of fabricating a value.
 
 ## Structure catalog
 

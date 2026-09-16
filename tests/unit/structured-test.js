@@ -14,13 +14,14 @@ module.exports = function (t, LF) {
   t['parse accepts bare JSON'] = function(){assert(SO.parse('{"a":1}').value,{a:1},'bare JSON');};
   t['parse extracts fenced JSON'] = function(){assert(SO.parse('```json\n{"a":1}\n```').value,{a:1},'fenced JSON');};
   t['parse repairs comments and trailing commas'] = function(){const r=SO.parse('{//x\n"rows":[1,],}');assert(r.value,{rows:[1]},'repair');assert(r.repaired,true,'repaired flag');};
+  t['parse repairs Python JSON literals only outside quoted strings'] = function(){const r=SO.parse('{"ok": True, "off": False, "missing": None, "label": "False None True"}');assert(r.value,{ok:true,off:false,missing:null,label:'False None True'},'python literal repair');assert(r.repaired,true,'repaired flag');};
   t['parse diagnoses truncation'] = function(){const r=SO.parse('{"a":[');assert(r.value,null,'no value');assert(/truncat/i.test(r.diagnosis),true,'diagnosis');};
   t['Design schema requires explicit qualitative chemistry keys for solution suggestions'] = function(){
-    const errors=SO.validate('design_suggestion',{status:'suggested',summary:'x',solutions:[{name:'candidate',role:'absorber precursor',solutes:'perovskite precursor family',solvents:'polar aprotic solvent family',provenance_kind:'model_inference',confidence:.4,reason:'inferred'}],stack:[],process:{},unknowns:[]},{registry:LF.ActionRegistry});
+    const errors=SO.validate('design_suggestion',{status:'suggested',summary:'x',solutions:[{name:'candidate',role:'absorber precursor',solutes:'perovskite precursor family',solvents:'polar aprotic solvent family',provenance_kind:'model_inference',confidence:.4,reason:'inferred'}],stack:[],process:{},unresolved_domains:[],unknowns:[]},{registry:LF.ActionRegistry});
     assert(errors,[],'schema passes');
   };
   t['Design schema has one successful proposal state; missing coverage is retried by the Action']=function(){
-    const e=SO.validate('design_suggestion',{status:'insufficient_evidence',summary:'More source context is needed.',solutions:[],stack:[],process:{},unknowns:['stack materials unknown']},{registry:LF.ActionRegistry});
+    const e=SO.validate('design_suggestion',{status:'insufficient_evidence',summary:'More source context is needed.',solutions:[],stack:[],process:{},unresolved_domains:['solutions','stack','process'],unknowns:['stack materials unknown']},{registry:LF.ActionRegistry});
     if(!e.length)throw new Error('insufficient_evidence must not be a successful Design proposal state');
   };
   t['Design normalization reduces common provider variants to one canonical model-facing shape'] = function(){
@@ -31,6 +32,12 @@ module.exports = function (t, LF) {
     assert(v.solutions[0].provenance_kind,'model_inference','missing provenance becomes conservative model inference');
     assert(v.stack.length,2,'root device_stack normalized');
     assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'normalized provider output satisfies schema');
+  };
+  t['Design normalization preserves Knowledge Base provenance and unresolved domains'] = function(){
+    const v=SO.normalizeForSchema('design_suggestion',{solutions:[{name:'Referenced ink',role:'absorber precursor',solutes:'FAI + PbI2',solvents:'DMF + DMSO',provenance_kind:'knowledge_reference',evidence:'KB:formulation.perovskite-precursor-family'}],stack:[],process:{},unresolved_domains:['stack','process'],unknowns:['stack unresolved']});
+    assert(v.solutions[0].provenance_kind,'knowledge_reference','KB provenance must survive normalization');
+    assert(v.unresolved_domains,['stack','process'],'unresolved domains remain explicit');
+    assert(SO.validate('design_suggestion',v,{registry:LF.ActionRegistry}),[],'KB-backed canonical proposal satisfies schema');
   };
   t['Design normalization preserves chemistry when provider omits a display name'] = function(){
     const v=SO.normalizeForSchema('design_suggestion',{solutions:[{role:'absorber precursor',solutes:['FAI','PbI2'],solvents:['DMF','DMSO']}],stack:[],process:{},unknowns:[]});

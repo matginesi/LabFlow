@@ -15,10 +15,10 @@ def read_info():
 
 def transform(path, version, build):
     text=path.read_text(encoding='utf-8')
-    text=re.sub(r'(?<=\?v=)20\d\d\.\d\d\.\d\d-poc-r\d+',build,text)
+    text=re.sub(r'(?<=\?v=)20\d\d\.\d\d\.\d\d-(?:poc-r\d+|\d+\.\d+\.\d+)',build,text)
     if path.name=='ui-kit.html':
-        text=re.sub(r'LabFlow build 20\d\d\.\d\d\.\d\d-poc-r\d+',f'LabFlow build {build}',text)
-        text=re.sub(r'Prototype r\d+',version,text)
+        text=re.sub(r'LabFlow build 20\d\d\.\d\d\.\d\d-(?:poc-r\d+|\d+\.\d+\.\d+)',f'LabFlow build {build}',text)
+        text=re.sub(r'(?<=<strong>)(?:Prototype r\d+|\d+\.\d+\.\d+)(?=</strong>)',version,text)
     return text
 
 def main():

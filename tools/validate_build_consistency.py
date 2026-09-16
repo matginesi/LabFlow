@@ -12,9 +12,9 @@ for rel in ('index.html','ui-kit.html','assets/js/pages/ui-kit-inline.js'):
     p=ROOT/rel
     if not p.exists(): errors.append(f'missing {rel}'); continue
     text=p.read_text(encoding='utf-8')
-    for found in sorted(set(re.findall(r'20\d\d\.\d\d\.\d\d-poc-r\d+',text))):
+    for found in sorted(set(re.findall(r'20\d\d\.\d\d\.\d\d-(?:poc-r\d+|\d+\.\d+\.\d+)',text))):
         if found!=build:errors.append(f'{rel}: stale build {found} (expected {build})')
-    for found in sorted(set(re.findall(r'Prototype r\d+',text))):
+    for found in sorted(set(re.findall(r'<strong>(Prototype r\d+|\d+\.\d+\.\d+)</strong>',text))):
         if found!=version:errors.append(f'{rel}: stale version {found} (expected {version})')
 if errors:
     print('Build consistency: FAILED',file=sys.stderr)

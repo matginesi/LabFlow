@@ -387,24 +387,27 @@
       }
 
       LF.DesignAnalysis.sanitizeProposal(proposal);
-      const required = (scope.unknown_fields || []).map(function (field) {
+      const required = Array.from(new Set((scope.unknown_fields || []).map(function (field) {
         return String(field).toLowerCase();
-      });
+      }).filter(function(field){return ['solutions','stack','process'].includes(field);})));
       const applicable = LF.DesignAnalysis.applicableFields(proposal, required);
+      const declaredUnresolved = Array.from(new Set((proposal.unresolved_domains || []).map(function(field){
+        return String(field || '').toLowerCase();
+      }).filter(function(field){return required.includes(field)&&!applicable.includes(field);})));
       const missingRequired = required.filter(function (field) {
-        return !applicable.includes(field);
+        return !applicable.includes(field) && !declaredUnresolved.includes(field);
       });
 
       if (missingRequired.length) {
         const labels = missingRequired.map(function (field) {
           if (field === 'solutions') {
-            return 'solutions: return at least one qualitative formulation with non-empty solutes and/or solvents';
+            return 'solutions: provide qualitative chemistry with non-empty solutes and/or solvents, or add solutions to unresolved_domains when the supplied evidence/KB cannot support it';
           }
-          if (field === 'stack') return 'stack: return a coherent qualitative device stack';
-          return 'process: return at least one qualitative coating/annealing/atmosphere/notes field';
+          if (field === 'stack') return 'stack: provide a coherent qualitative device stack, or add stack to unresolved_domains when it cannot be supported';
+          return 'process: provide at least one qualitative coating/annealing/atmosphere/notes field, or add process to unresolved_domains when it cannot be supported';
         });
         const error = new Error(
-          'Design inference did not cover every missing domain: ' + missingRequired.join(', ') + '.'
+          'Design inference left required domains neither populated nor explicitly unresolved: ' + missingRequired.join(', ') + '.'
         );
         error.code = 'MODEL_OUTPUT_INVALID';
         error.isContract = true;
@@ -412,11 +415,19 @@
         throw error;
       }
 
+      proposal.unresolved_domains = declaredUnresolved;
+      proposal.unknowns = Array.isArray(proposal.unknowns) ? proposal.unknowns.slice(0, 10) : [];
+      declaredUnresolved.forEach(function(field){
+        const already=proposal.unknowns.some(function(text){return String(text||'').toLowerCase().includes(field);});
+        if(!already && proposal.unknowns.length<10)proposal.unknowns.push('Unresolved '+field+': no sufficiently supported proposal was established from the supplied experiment, Cabinet or Knowledge Base context.');
+      });
+
       proposal.status = 'suggested';
       proposal.validation = {
         targetDeviceId: String(scope.device_id || ''),
         manualVariant: !!scope.manual_variant,
         applicableFields: applicable,
+        unresolvedDomains: declaredUnresolved.slice(),
         unresolvedCount: (proposal.unknowns || []).length
       };
       return proposal;

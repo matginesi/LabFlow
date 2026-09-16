@@ -88,13 +88,13 @@ Design is experiment-owned scientific state. `DesignModel` is its write owner.
 
 Lab Cabinet stores reusable laboratory references such as formulations, device stacks, fabrication recipes, materials, substrates, instruments, acquisition software, setups and file-format profiles. Cabinet is not inventory, a LIMS, or a second experiment model. Applying a Cabinet item copies a detached snapshot into Design and records the Cabinet source reference.
 
-Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition.
+Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition. `design.infer` accepts a requested domain as covered either by a useful reviewable proposal or by an explicit `unresolved_domains` declaration when evidence/reference context is insufficient, so completion pressure never requires fabricated chemistry, architecture or process details.
 
 ## 9. Knowledge Base
 
 The KB consists of a bundled baseline plus a browser-local editable JSONL overlay. Each entry is validated and can carry sources, facts, cautions, aliases and relations.
 
-The KB is reference knowledge. Assistant/Actions may retrieve bounded active entries, but experiment evidence always takes precedence. Model answers relying on KB entries use explicit `[KB:<id>]` references that the UI resolves to stored sources.
+The KB is reference knowledge. Assistant/Actions may retrieve bounded active entries, but experiment evidence always takes precedence. Assistant prose relying on KB entries uses explicit `[KB:<id>]` references that the UI resolves to stored sources. `design.infer` retrieves short domain-targeted KB subsets for missing solutions/stack/process fields and marks KB-backed proposal items as `knowledge_reference` with exact `KB:<id>` evidence; those items remain review-only.
 
 ## 10. Action catalog
 

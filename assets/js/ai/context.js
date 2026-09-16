@@ -159,6 +159,46 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     out.samples=sampleIds.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean).map(sampleRef);
     out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:sampleIds.concat(measurementIds),limit:20}).map(compact);
     return budgetPack(out,12000);}
+  function designKnowledgeContext(baseQuery,missingDomains){
+    if(!LF.KnowledgeBase)return null;
+    const specs={
+      solutions:{query:'solution formulation precursor solvent solute chemistry photovoltaic',kinds:['formulation','material','process']},
+      stack:{query:'device architecture stack layer substrate contact electrode transport selective absorber photovoltaic',kinds:['architecture','material']},
+      process:{query:'fabrication process coating deposition annealing atmosphere evaporation solution processing',kinds:['process','material']}
+    },byId={},counts={};
+    (missingDomains||[]).forEach(function(domain){
+      domain=String(domain||'').toLowerCase();const spec=specs[domain];if(!spec)return;
+      const ctx=LF.KnowledgeBase.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:4,minScore:2});
+      counts[domain]=(ctx&&ctx.entries||[]).length;
+      (ctx&&ctx.entries||[]).forEach(function(entry){
+        const id=String(entry&&entry.id||'');if(!id)return;
+        if(!byId[id])byId[id]={
+          id:id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,5),tags:(entry.tags||[]).slice(0,8),
+          summary:clip(entry.summary||'',180),facts:(entry.facts||[]).slice(0,2).map(function(x){return clip(x,180);}),
+          cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),
+          sources:(entry.sources||[]).slice(0,1).map(function(src){return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};}),relevant_domains:[]
+        };
+        if(!byId[id].relevant_domains.includes(domain))byId[id].relevant_domains.push(domain);
+      });
+    });
+    let entries=Object.keys(byId).map(function(id){return byId[id];});
+    if(!entries.length){
+      const fallback=LF.KnowledgeBase.context('photovoltaic device design architecture formulation fabrication '+String(baseQuery||''),{kinds:['architecture','formulation','process','material'],limit:8,minScore:2});
+      entries=(fallback&&fallback.entries||[]).slice(0,8).map(function(entry){return{
+        id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,5),tags:(entry.tags||[]).slice(0,8),
+        summary:clip(entry.summary||'',180),facts:(entry.facts||[]).slice(0,2).map(function(x){return clip(x,180);}),
+        cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),sources:(entry.sources||[]).slice(0,1).map(function(src){return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};}),relevant_domains:[]
+      };});
+    }
+    entries=entries.slice(0,9);
+    return{
+      entries:entries,
+      retrieval:{requested_domains:(missingDomains||[]).slice(),domain_matches:counts,total:entries.length},
+      note:'Reference knowledge only. It can support review candidates but is not evidence that the current experiment used these materials, architectures or processes.',
+      citation_contract:'When a Design item materially relies on a supplied entry, set provenance_kind to knowledge_reference and put its exact id in evidence as KB:<id>. Never invent KB ids.'
+    };
+  }
+
   function packDesignEvidence(exp,opts){
     const out=base(exp,'design','');
     const params=opts.params||{};
@@ -236,13 +276,14 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     };
 
     if(LF.KnowledgeBase){
-      out.knowledge=LF.KnowledgeBase.context(designReferenceQuery,{
-        kinds:['material','architecture','formulation','process'],
-        limit:10,
-        minScore:2
-      });
+      out.knowledge=designKnowledgeContext(designReferenceQuery,missingDomains);
+      out.design_evidence_summary.knowledge_entries=out.knowledge&&out.knowledge.entries?out.knowledge.entries.length:0;
+      out.design_evidence_summary.knowledge_domains=out.knowledge&&out.knowledge.retrieval?out.knowledge.retrieval.domain_matches:{};
+      if(!designEvidence.length&&out.design_evidence_summary.knowledge_entries){
+        out.design_evidence_summary.inference_basis='knowledge_reference_and_model_inference';
+      }
     }
-    return budgetPack(out,7600);
+    return budgetPack(out,10000);
   }
   function packResults(exp,opts){opts=opts||{};const out=base(exp,'results',''),a=exp.analysis||{};
 out.results={summary:compact(a.summary||{}
@@ -276,14 +317,10 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
     if(!device||!out.scope)return out;
     const missing=LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[];
     out.scope.unknown_fields=Array.from(new Set((out.scope.unknown_fields||[]).concat(missing)));
-    out.scope.instruction='Complete EVERY domain in unknown_fields. If solutions is missing, a suggested response MUST include at least ' +
-      'one chemically useful formulation with non-empty solutes and/or solvents; stack/process alone is not sufficient.' +
-      ' A cautious qualitative model_inference formulation is allowed when exact recipe evidence is absent. A lone ' +
-      'absorber or “perovskite” layer is a partial stack, not a device architecture: propose the full plausible ' +
-      'qualitative layer sequence while preserving known layers. Include useful fabrication-method families; leave ' +
-      'unsupported quantities unknown. Experiment evidence is authoritative. Cabinet resources are optional reusable ' +
-      'context, not evidence. Knowledge Base entries are sourced reference knowledge, not evidence about this experiment;' +
-      ' cite KB ids when used and keep them review-only. Never invent sample identities, citations or exact quantities.';
+    out.scope.instruction='For every domain in unknown_fields, either provide a useful supported qualitative proposal or list the domain in unresolved_domains. ' +
+      'Do not invent chemistry, architecture or process merely to satisfy coverage. Experiment evidence is authoritative. Cabinet resources are reusable context, not experiment evidence. ' +
+      'Knowledge Base entries are deliberately retrieved by missing domain; use them before generic model memory when relevant, cite exact KB:<id> values, and keep knowledge-supported values review-only. ' +
+      'A stack proposal must be a coherent device architecture, not one isolated absorber layer. Leave unsupported exact quantities unknown.';
     return out;
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,results_compare:packResultsCompare};
@@ -291,12 +328,26 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
   function profiles(){return Object.keys(PACKERS).sort();}
   function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(base(exp,profile,opts.question||''),10000);}
   function profile(def){const declared=def&&def.contract&&def.contract.context&&clean(def.contract.context.profile);return declared||'generic';}
+  function compactOutputContract(schemaId){
+    if(schemaId!=='design_suggestion')return'';
+    return [
+      'Return exactly one compact JSON object and no Markdown.',
+      'Use only these top-level keys: status, summary, solutions, stack, process, unresolved_domains, unknowns.',
+      'Shape example (data instance, not schema):',
+      '{"status":"suggested","summary":"...","solutions":[],"stack":[],"process":{"coating":"","annealing":"","atmosphere":"","notes":""},"unresolved_domains":[],"unknowns":[]}',
+      'For each requested Design domain, either populate it usefully or include its exact name in unresolved_domains.',
+      'Allowed provenance_kind values on scientific items are experiment, knowledge_reference, model_inference.',
+      'Return only the scientific data instance; do not output schema or validation metadata.',
+      'Use strict JSON literals only: true, false, null. Never use Python True, False or None.'
+    ].join('\n');
+  }
   function system(def,step){const parts=[];(def.policies||[]).forEach(function(id){const p=policy(id);
 if(p)parts.push('# '+id.toUpperCase()+'\n\n'+p);});
     const prompt=LF.Storage&&LF.Storage.getEffectivePrompt?LF.Storage.getEffectivePrompt(def.id):(LF.ActionRegistry&&
     LF.ActionRegistry.prompt?LF.ActionRegistry.prompt(def.id):'');if(prompt)parts.push('# ACTION CONTRACT\n\n'+prompt);
-    if(step&&step.output==='json'&&step.schema){const schema=LF.ActionRegistry.schema(step.schema);
-    parts.push('# OUTPUT CONTRACT\n\nReturn exactly one JSON value matching this schema.\n\n'+JSON.stringify(schema));
+    if(step&&step.output==='json'&&step.schema){const concise=compactOutputContract(step.schema);
+      if(concise)parts.push('# OUTPUT CONTRACT\n\n'+concise);
+      else{const schema=LF.ActionRegistry.schema(step.schema);parts.push('# OUTPUT CONTRACT\n\nReturn exactly one JSON value matching this schema.\n\n'+JSON.stringify(schema));}
     }return parts.join('\n\n---\n\n');}
   function build(def,step,opts){opts=opts||{};
 const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?
