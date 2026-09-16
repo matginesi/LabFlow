@@ -28,6 +28,27 @@ flowchart TD
 
 The exact current root contract is executable in `DomainSchema`; prose describes semantics and ownership rather than duplicating every default value.
 
+
+## Workspace and Process context
+
+`ExperimentData` remains the only mutable scientific aggregate, but it is now linked to a separate browser-local scientific `Workspace` that describes the **data-generating environment**. This avoids duplicating laboratory infrastructure and responsibility metadata inside every experiment.
+
+```mermaid
+flowchart TD
+    U[User] --> W[Workspace]
+    W --> P[Scientific Process]
+    P --> E[ExperimentData]
+    E --> S[Sample]
+    S --> R[Run]
+    R --> M[Measurement]
+```
+
+A Workspace owns institution, role-based contacts, reusable locations, storage profiles and Process definitions. A Process describes one measurement/characterization/simulation/fabrication workflow: sample types, controlled variables, observables, locations, instruments, acquisition software, setups, output formats, typical frequency/size/capacity and sample-metadata/linkage policy.
+
+`Process` is deliberately distinct from `design.devices[].process`: the latter remains the fabrication/process description of one experiment Design.
+
+Experiments store only stable `workspaceId` and `processId` references in `meta`. Export packages may include a redacted Workspace snapshot; contact names and email addresses are excluded from scientific portability snapshots by default.
+
 ## Acquisition hierarchy
 
 ```mermaid
@@ -35,8 +56,10 @@ flowchart TD
     E[Experiment] --> S[Sample / Cell]
     S --> R[Run]
     R --> M[Measurement]
-    M --> FW[FW scan]
-    M --> RV[RV scan]
+    M --> Q[parameters / observables]
+    M --> TP[technique payload]
+    TP --> FW[JV FW scan]
+    TP --> RV[JV RV scan]
 ```
 
 Relations use stable LabFlow IDs. Source file paths remain provenance and may participate in evidence lookup, but file identity is not sample identity.
@@ -78,6 +101,12 @@ Scientific mutation advances revision through owner/model APIs and invalidates d
 ## Action output
 
 AI/user Action output is not inserted directly into scientific measurements or Design. Proposals/annotations/status live in `actionData` until an explicit deterministic apply path accepts a proposal into the owning scientific domain.
+
+## Measurement generalization
+
+A Measurement has a generic scientific envelope (`technique`, `parameters`, `observables`, setup/instrument/software/location references and sample-linkage evidence) while retaining current JV-specific FW/RV fields for compatibility with deterministic JV analysis. Importers may populate technique-specific payloads without making the root hierarchy technique-specific.
+
+`parameters` are acquisition conditions/settings; `observables` are recorded or derived quantities. Unknown vendor/parser fields may remain in `meta`, but stable scientific concepts should be promoted to explicit fields.
 
 ## Cabinet and Knowledge Base
 

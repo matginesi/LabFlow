@@ -43,14 +43,22 @@ try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returne
       const limit=new Error('Provider output exceeded the bounded work-unit size before completion.');
       limit.code='MODEL_OUTPUT_LIMIT_GUARD';limit.providerResponse=(state.content||state.reasoning).slice(-12000);throw limit;
       }state.usage=obj.usage||state.usage;state.events++;
-      if(onProgress){const elapsedMs=Math.round(performance.now()-started),
-      reported=state.usage&&Number.isFinite(Number(state.usage.completion_tokens))?Number(state.usage.completion_tokens):null,
-      tokens=reported==null?estimateTokens(state.content+state.reasoning):reported,
+      if(onProgress){const elapsedMs=Math.round(performance.now()-started),usage=state.usage||{},
+      reportedCompletion=Number.isFinite(Number(usage.completion_tokens))?Number(usage.completion_tokens):null,
+      reportedReasoning=usage.completion_tokens_details&&Number.isFinite(Number(usage.completion_tokens_details.reasoning_tokens))?
+        Number(usage.completion_tokens_details.reasoning_tokens):null,
+      estimatedAnswer=estimateTokens(state.content),estimatedReasoning=estimateTokens(state.reasoning),
+      completionTokens=reportedCompletion==null?estimatedAnswer+estimatedReasoning:reportedCompletion,
+      reasoningTokens=reportedReasoning==null?estimatedReasoning:reportedReasoning,
+      answerTokens=reportedCompletion!=null&&reportedReasoning!=null?Math.max(0,reportedCompletion-reportedReasoning):estimatedAnswer,
       generationMs=state.ttftMs==null?0:Math.max(0,elapsedMs-state.ttftMs),
-      rate=generationMs>=100?tokens/(generationMs/1000):null;
+      rate=generationMs>=100?completionTokens/(generationMs/1000):null;
       onProgress({content:state.content,reasoning:state.reasoning,finishReason:state.finishReason,usage:state.usage,
       events:state.events,meaningfulEvents:state.meaningfulEvents,bytes:state.bytes,ttftMs:state.ttftMs,elapsedMs,
-      generationMs,tokens,rate:Number.isFinite(rate)?rate:null,estimated:reported==null,budgetTokens:budgetTokens||null});
+      generationMs,tokens:completionTokens,completionTokens:completionTokens,answerTokens:answerTokens,
+      reasoningTokens:reasoningTokens,rate:Number.isFinite(rate)?rate:null,estimated:reportedCompletion==null,
+      completionEstimated:reportedCompletion==null,answerEstimated:!(reportedCompletion!=null&&reportedReasoning!=null),
+      reasoningEstimated:reportedReasoning==null,budgetTokens:budgetTokens||null});
       }return false;}
     function consume(final){const blocks=buffer.split(/\r?\n\r?\n/);if(final)buffer='';else buffer=blocks.pop()||'';let terminal=false;for(const block of blocks){const data=block.split(/\r?\n/).filter(line=>line.indexOf('data:')===0).map(line=>line.slice(5).trimStart()).join('\n');if(data&&event(data))terminal=true;}return terminal;}
     try{while(true){const part=await reader.read();if(part.done)break;state.bytes+=part.value.byteLength;

@@ -397,7 +397,7 @@
       outputState.textContent = activity.status === 'error'
         ? 'Full diagnostic detail'
         : activity.status === 'complete' ? 'Final response'
-          : activity.stream && activity.stream.active ? 'Streaming · ' + Math.round(Number(activity.stream.tokens)||0) + ' output tok'
+          : activity.stream && activity.stream.active ? 'Streaming · ' + Math.round(Number(activity.stream.completionTokens||activity.stream.tokens)||0) + ' completion tok'
             : 'Waiting for response';
     }
   }
@@ -409,28 +409,31 @@
     if (!panel) return;
     panel.hidden = !stream;
     if (!stream) return;
-    const tokens = Math.max(0, Number(stream.tokens) || 0);
+    const completionTokens = Math.max(0, Number(stream.completionTokens == null ? stream.tokens : stream.completionTokens) || 0);
+    const answerTokens = Math.max(0, Number(stream.answerTokens) || 0);
     const target = Math.max(0, Number(stream.targetTokens) || 0);
     const budget = Math.max(0, Number(stream.budgetTokens) || 0);
-    const denominator = target || budget;
-    const used = denominator ? Math.min(1, tokens / denominator) : 0;
+    const used = budget ? Math.min(1, completionTokens / budget) : 0;
     const percent = Math.round(used * 100);
     const state = stream.status === 'complete' ? 'Stream complete'
       : stream.status === 'interrupted' ? 'Stream interrupted'
-        : tokens > 0 ? 'Receiving provider output' : 'Waiting for first token';
+        : completionTokens > 0 ? 'Receiving provider output' : 'Waiting for first token';
     byId('activityStreamState').textContent = state;
     byId('activityStreamRate').textContent = Number(stream.rate) > 0 ? (stream.estimated === false ? '' : '~') + Number(stream.rate).toFixed(1) + ' tok/s' : 'rate pending';
     const inputEl=byId('activityStreamInput'),ceilingEl=byId('activityStreamCeiling');
     if(inputEl)inputEl.textContent=Number(stream.inputTokens)>0?'~'+Math.round(Number(stream.inputTokens)).toLocaleString()+' tok':'—';
-    if(ceilingEl)ceilingEl.textContent=budget?Math.round(budget).toLocaleString()+' tok':'—';
+    if(ceilingEl)ceilingEl.textContent=budget?
+      (stream.completionEstimated===false?'':'~')+Math.round(completionTokens).toLocaleString()+' / '+Math.round(budget).toLocaleString()+' tok':'—';
     byId('activityStreamTtft').textContent = Number.isFinite(Number(stream.ttftMs)) ? Math.round(Number(stream.ttftMs)) + ' ms' : 'waiting';
-    byId('activityStreamTokens').textContent = (stream.estimated === false ? '' : '~') + Math.round(tokens) + (target ? ' / ~' + target + ' target' : budget ? ' / ' + budget : '') + (budget&&target&&budget!==target?' · max '+budget:'') + ' tok';
+    byId('activityStreamTokens').textContent = (stream.answerEstimated===false?'':'~') + Math.round(answerTokens) +
+      (target ? ' / ~' + Math.round(target).toLocaleString() + ' target' : '') + ' tok';
     const bar = byId('activityStreamBar');
     const progress = byId('activityStreamProgress');
     if (bar) bar.style.width = (used * 100).toFixed(1) + '%';
     if (progress) {
       progress.setAttribute('aria-valuenow', String(percent));
-      progress.setAttribute('aria-valuetext', (stream.estimated === false ? '' : 'Estimated ') + Math.round(tokens) + (denominator ? ' of approximately ' + denominator : '') + ' target output tokens');
+      progress.setAttribute('aria-valuetext', (stream.completionEstimated === false ? '' : 'Estimated ') +
+        Math.round(completionTokens) + (budget ? ' of ' + Math.round(budget) : '') + ' completion budget tokens');
     }
   }
 

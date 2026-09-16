@@ -44,7 +44,28 @@
     instrumentType: { label: 'Type', type: 'text', placeholder: 'spin coater / evaporator / JV tester' },
     manufacturer: { label: 'Manufacturer', type: 'text', placeholder: 'optional' },
     model: { label: 'Model', type: 'text', placeholder: 'optional' },
-    settings: { label: 'Default settings', type: 'text', placeholder: 'optional' }
+    settings: { label: 'Default settings', type: 'text', placeholder: 'optional' },
+    serialNumber: { label: 'Serial number', type: 'text', placeholder: 'optional' },
+    firmware: { label: 'Firmware', type: 'text', placeholder: 'optional' },
+    locationRef: { label: 'Location reference', type: 'text', placeholder: 'Workspace location ID or name' },
+    acquisitionSoftwareRefs: { label: 'Acquisition software', type: 'csv', placeholder: 'Software IDs, comma separated' },
+    vendor: { label: 'Vendor', type: 'text', placeholder: 'optional' },
+    version: { label: 'Version', type: 'text', placeholder: 'optional' },
+    instrumentRefs: { label: 'Instrument references', type: 'csv', placeholder: 'Instrument IDs, comma separated' },
+    softwareRefs: { label: 'Software references', type: 'csv', placeholder: 'Software IDs, comma separated' },
+    outputFormatRefs: { label: 'Output format references', type: 'csv', placeholder: 'File-format IDs, comma separated' },
+    parallelCapacity: { label: 'Parallel capacity', type: 'text', placeholder: 'e.g. 8 cells / 4 channels' },
+    extensions: { label: 'Extensions', type: 'csv', placeholder: '.txt, .csv' },
+    mimeTypes: { label: 'MIME types', type: 'csv', placeholder: 'text/plain' },
+    producerSoftwareRef: { label: 'Producer software', type: 'text', placeholder: 'Software ID or name' },
+    encoding: { label: 'Encoding', type: 'text', placeholder: 'UTF-8' },
+    delimiter: { label: 'Delimiter', type: 'text', placeholder: 'tab / comma / semicolon' },
+    documentationRefs: { label: 'Format documentation', type: 'csv', placeholder: 'Document names or references' },
+    parserStatus: { label: 'Parser status', type: 'text', placeholder: 'supported / planned / unknown' },
+    parserId: { label: 'Parser ID', type: 'text', placeholder: 'optional' },
+    parserVersion: { label: 'Parser version', type: 'text', placeholder: 'optional' },
+    typicalFileSize: { label: 'Typical file size', type: 'text', placeholder: 'e.g. 250 KB' },
+    typicalFilesPerRun: { label: 'Typical files per run', type: 'text', placeholder: 'e.g. 2' }
   });
 
   const KINDS = Object.freeze({
@@ -93,9 +114,32 @@
     instrument: {
       label: 'Instrument', plural: 'Instruments', group: 'reference', icon: 'settings-2',
       description: 'A reusable instrument or device reference and its usual settings.',
-      fields: ['instrumentType', 'manufacturer', 'model', 'settings'],
+      fields: ['instrumentType', 'manufacturer', 'model', 'serialNumber', 'firmware', 'locationRef', 'acquisitionSoftwareRefs', 'settings'],
       summary: ['manufacturer', 'model', 'instrumentType'],
       designTargets: [], directUse: false, requiredFields: [], requiredAny: []
+    },
+    software: {
+      label: 'Acquisition software', plural: 'Acquisition software', group: 'infrastructure', icon: 'code-2',
+      description: 'Software used to control instruments or acquire scientific data.',
+      fields: ['vendor', 'version', 'instrumentRefs', 'outputFormatRefs'],
+      summary: ['vendor', 'version'],
+      designTargets: [], directUse: false, requiredFields: [], requiredAny: []
+    },
+    setup: {
+      label: 'Measurement setup', plural: 'Measurement setups', group: 'infrastructure', icon: 'network',
+      description: 'A reusable data-generating setup composed of instruments, software and a location.',
+      fields: ['instrumentRefs', 'softwareRefs', 'locationRef', 'parallelCapacity', 'settings'],
+      summary: ['parallelCapacity', 'locationRef'],
+      designTargets: [], directUse: false, requiredFields: [], requiredAny: ['instrumentRefs', 'softwareRefs'],
+      requiredAnyMessage: 'Add at least one instrument or acquisition software reference.'
+    },
+    file_format: {
+      label: 'File format', plural: 'File formats', group: 'infrastructure', icon: 'file-code-2',
+      description: 'A reusable output-format profile linking producer software, documentation and parser support.',
+      fields: ['extensions', 'mimeTypes', 'producerSoftwareRef', 'instrumentRefs', 'encoding', 'delimiter', 'documentationRefs', 'parserStatus', 'parserId', 'parserVersion', 'typicalFileSize', 'typicalFilesPerRun'],
+      summary: ['extensions', 'parserStatus', 'typicalFileSize'],
+      designTargets: [], directUse: false, requiredFields: [], requiredAny: ['extensions', 'mimeTypes'],
+      requiredAnyMessage: 'Add at least one extension or MIME type.'
     }
   });
 
@@ -138,7 +182,9 @@
     out.createdAt = out.createdAt || now();
     out.updatedAt = out.updatedAt || out.createdAt;
     KINDS[kind].fields.forEach(function (field) {
+      const def = FIELDS[field] || {};
       if (field === 'layers') out.layers = arr(out.layers).map(normalizeLayer);
+      else if (def.type === 'csv') out[field] = Array.from(new Set((Array.isArray(out[field]) ? out[field] : clean(out[field]).split(',')).map(clean).filter(Boolean)));
       else out[field] = clean(out[field]);
     });
     if (kind === 'material' && !out.materialClass) out.materialClass = 'material';

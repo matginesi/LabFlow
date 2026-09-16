@@ -14,7 +14,7 @@ function nav(active,s,a){
   const groups=[['AI',[['provider','AI connection','Service & model'],['assistant','Assistant',
 'Conversation preferences'],['actions','AI tools',defs.length+' available'],['knowledge','Knowledge Base',
     kb.active+' ready']]],['Export',[['nomad','NOMAD','Export & connection']]],['Workspace',[['workspace','Workspace',
-    'Appearance & profile']]],['Advanced',[['diagnostics','Diagnostics','Support tools'],['ui-kit','UI Kit',
+    'Profile & data management']]],['Advanced',[['diagnostics','Diagnostics','Support tools'],['ui-kit','UI Kit',
     'Design reference']]]];
   return'<aside class="settings-rail"><nav class="settings-nav" aria-label="Settings sections">'+
 groups.map(function(group){return'<div class="settings-nav-group"><div class="settings-nav-label">'+group[0]+'</div>'+
@@ -57,7 +57,7 @@ C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{retu
     +field('Service address','<input class="input mono" id="aiEndpoint" type="url" required value="'+C.escapeHtml(s.endpoint)+'">'+endpointHint,true)
     +field('Reasoning mode',thinkingControl)
     +field('Wait time · seconds','<input class="input" id="aiInactivityTimeout" type="number" min="15" max="600" step="5" value="'+Math.round(s.inactivityTimeoutMs/1000)+'">')
-    +field('Response limit','<input class="input" id="aiMaxOutputTokensCap" type="number" min="0" max="1048576" step="256" value="'+Number(s.maxOutputTokensCap||0)+'"><div class="help">Leave 0 to let each AI tool choose its normal limit.</div>')
+    +field('Completion limit','<input class="input" id="aiMaxOutputTokensCap" type="number" min="0" max="1048576" step="256" value="'+Number(s.maxOutputTokensCap||0)+'"><div class="help">Optional hard ceiling for answer + reasoning tokens sent to the provider. Leave 0 to use the Action and model limits.</div>')
     +'</div><label class="switch-row"><input type="checkbox" id="aiStreaming" '+(s.streaming?'checked':'')+'> Show responses while they are being generated</label></div></details>'
     +'<div class="settings-savebar"><span class="help">Save when the connection is ready.</span><div class="row-wrap">' +
       '<button type="button" class="button" id="saveAiSettings">Save</button><button type="button" class="button primary" id="testAiConnection">Save &amp; test</button></div></div>'
@@ -177,36 +177,97 @@ C.escapeHtml(token||'')+'" autocomplete="off" placeholder="Paste token…"><labe
     +'</div></section></div>';
 }
 
-function workspacePanel(p){
-  return '<div class="stack workspace-settings-simple"><div class="settings-workspace-grid">'
-    +'<section class="panel"><div class="panel-head"><h3 class="h2">Appearance</h3></div><div class="panel-body stack">'
-    +'<div class="settings-theme-choice"><div><strong>Dark</strong><span>High-contrast workspace for regular use.</span></div><button type="button" class="button" data-theme-choice="instrument">Use dark</button></div>'
-    +'<div class="settings-theme-choice"><div><strong>Light</strong><span>Bright workspace with the same layout.</span></div><button type="button" class="button" data-theme-choice="light">Use light</button></div>'
-    +'<div class="help">Theme changes apply immediately.</div></div></section>'
+function workspacePanel(p,w){
+  w=w||{contacts:[],locations:[],storageProfiles:[],processes:[]};
+  const contacts=Array.isArray(w.contacts)?w.contacts:[],locations=Array.isArray(w.locations)?w.locations:[],storages=Array.isArray(w.storageProfiles)?w.storageProfiles:[],processes=Array.isArray(w.processes)?w.processes:[];
+  const contact=function(role){return contacts.find(function(item){return item.role===role;})||{};},responsible=contact('data_responsible'),parser=contact('parser_contact'),contributor=contact('plugin_contributor'),storage=storages[0]||{};
+  const state=LF.State.state;state.ui=state.ui||{};
+  let selectedId=state.ui.settingsWorkspaceProcessId||'',selected=processes.find(function(item){return item.id===selectedId;})||processes[0]||null;
+  if(selected&&state.ui.settingsWorkspaceProcessId!==selected.id)state.ui.settingsWorkspaceProcessId=selected.id;
+  const cabinet=LF.Cabinet&&LF.Cabinet.all?LF.Cabinet.all():[];
+  function list(items){return(items||[]).join(', ');}
+  function options(kind,selectedIds){selectedIds=selectedIds||[];return cabinet.filter(function(item){return item.kind===kind;}).map(function(item){return'<option value="'+C.escapeHtml(item.id)+'" '+(selectedIds.includes(item.id)?'selected':'')+'>'+C.escapeHtml(item.name||item.id)+'</option>';}).join('');}
+  function locationOptions(selectedIds){selectedIds=selectedIds||[];return locations.map(function(item){return'<option value="'+C.escapeHtml(item.id)+'" '+(selectedIds.includes(item.id)?'selected':'')+'>'+C.escapeHtml(item.name||item.id)+'</option>';}).join('');}
+  function storageOptions(selectedIds){selectedIds=selectedIds||[];return storages.map(function(item){return'<option value="'+C.escapeHtml(item.id)+'" '+(selectedIds.includes(item.id)?'selected':'')+'>'+C.escapeHtml(item.name||item.id)+'</option>';}).join('');}
+  const processEditor=selected?'<div class="stack"><div class="form-grid">'
+    +field('Process name','<input class="input" id="workspaceProcessName" value="'+C.escapeHtml(selected.name||'')+'">')
+    +field('Kind','<select class="select" id="workspaceProcessKind">'+['measurement','characterization','simulation','fabrication','other'].map(function(k){return'<option value="'+k+'" '+(selected.kind===k?'selected':'')+'>'+C.escapeHtml(k)+'</option>';}).join('')+'</select>')
+    +field('Description','<textarea class="textarea" id="workspaceProcessDescription" rows="3">'+C.escapeHtml(selected.description||'')+'</textarea>',true)
+    +field('Sample types','<input class="input" id="workspaceProcessSampleTypes" value="'+C.escapeHtml(list(selected.sampleTypes))+'" placeholder="perovskite cell, module, film">',true)
+    +field('Controlled variables','<textarea class="textarea mono" id="workspaceProcessVariables" rows="5" placeholder="Scan rate | V/s | Controlled scan speed">'+C.escapeHtml(LF.Workspace.quantityLines(selected.variables))+'</textarea>',true)
+    +field('Observables','<textarea class="textarea mono" id="workspaceProcessObservables" rows="5" placeholder="Voc | V | Open-circuit voltage">'+C.escapeHtml(LF.Workspace.quantityLines(selected.observables))+'</textarea>',true)
+    +field('Typical measurement frequency','<input class="input" id="workspaceProcessFrequency" value="'+C.escapeHtml(selected.typicalFrequency||'')+'" placeholder="e.g. 20 runs/day">')
+    +field('Typical output size','<input class="input" id="workspaceProcessOutputSize" value="'+C.escapeHtml(selected.typicalOutputSize||'')+'" placeholder="e.g. 5 MB/run">')
+    +field('Parallel capacity','<input class="input" id="workspaceProcessParallelCapacity" type="number" min="0" value="'+C.escapeHtml(selected.parallelCapacity==null?'':selected.parallelCapacity)+'">')
+    +field('Metadata location','<input class="input" id="workspaceProcessMetadataLocation" value="'+C.escapeHtml(selected.metadataPolicy&&selected.metadataPolicy.metadataLocation||'')+'" placeholder="ELN, filename, sidecar JSON…">')
+    +field('Sample linkage','<select class="select" id="workspaceProcessLinkageMethod">'+
+      ['unknown','filename','directory','embedded_metadata','external_log','manual','hybrid'].map(function(k){
+        const v=selected.metadataPolicy&&selected.metadataPolicy.sampleLinkage&&selected.metadataPolicy.sampleLinkage.method||'unknown';
+        return'<option value="'+k+'" '+(v===k?'selected':'')+'>'+C.escapeHtml(k)+'</option>';
+      }).join('')+'</select>')
+    +field('Linkage rule','<input class="input" id="workspaceProcessLinkageRule" value="'+C.escapeHtml(selected.metadataPolicy&&selected.metadataPolicy.sampleLinkage&&selected.metadataPolicy.sampleLinkage.rule||'')+'" placeholder="Describe how files are linked to samples">',true)
+    +field('Test locations','<select class="select" id="workspaceProcessLocations" multiple size="4">'+locationOptions(selected.locationIds)+'</select>')
+    +field('Storage profiles','<select class="select" id="workspaceProcessStorage" multiple size="4">'+storageOptions(selected.storageProfileIds)+'</select>')
+    +field('Instruments','<select class="select" id="workspaceProcessInstruments" multiple size="5">'+options('instrument',selected.instrumentIds)+'</select>')
+    +field('Acquisition software','<select class="select" id="workspaceProcessSoftware" multiple size="5">'+options('software',selected.softwareIds)+'</select>')
+    +field('Setups','<select class="select" id="workspaceProcessSetups" multiple size="5">'+options('setup',selected.setupIds)+'</select>')
+    +field('Output formats','<select class="select" id="workspaceProcessFormats" multiple size="5">'+options('file_format',selected.outputFormatIds)+'</select>')
+    +field('Notes','<textarea class="textarea" id="workspaceProcessNotes" rows="3">'+C.escapeHtml(selected.notes||'')+'</textarea>',true)
+    +'</div><div class="settings-savebar"><span class="help">Variables and observables use one item per line: <code>Name | unit | description</code>.</span><div class="row-wrap"><button type="button" class="button danger" id="workspaceDeleteProcess">Delete process</button><button type="button" class="button primary" id="saveWorkspaceProcess">Save process</button></div></div></div>'
+    :'<div class="empty">No scientific Process is defined yet. Create one for a measurement, characterization, simulation or fabrication workflow.</div>';
+  return '<div class="stack workspace-settings-simple">'
+    +'<section class="panel"><div class="panel-head"><div><h3 class="h2">Scientific workspace</h3><div class="meta">Institution, responsibilities and normal data-management context.</div></div></div><div class="panel-body stack"><div class="form-grid">'
+    +field('Workspace name','<input class="input" id="workspaceName" value="'+C.escapeHtml(w.name||'')+'">')
+    +field('Institution','<input class="input" id="workspaceInstitution" value="'+C.escapeHtml(w.institution||'')+'">')
+    +field('Description','<textarea class="textarea" id="workspaceDescription" rows="3">'+C.escapeHtml(w.description||'')+'</textarea>',true)
+    +field('Data responsible · name','<input class="input" id="workspaceResponsibleName" value="'+C.escapeHtml(responsible.name||'')+'">')
+    +field('Data responsible · email','<input class="input" type="email" id="workspaceResponsibleEmail" value="'+C.escapeHtml(responsible.email||'')+'">')
+    +field('Parser contact · name','<input class="input" id="workspaceParserName" value="'+C.escapeHtml(parser.name||'')+'">')
+    +field('Parser contact · email','<input class="input" type="email" id="workspaceParserEmail" value="'+C.escapeHtml(parser.email||'')+'">')
+    +field('Plugin contributor · name','<input class="input" id="workspaceContributorName" value="'+C.escapeHtml(contributor.name||'')+'">')
+    +field('Plugin contributor · email','<input class="input" type="email" id="workspaceContributorEmail" value="'+C.escapeHtml(contributor.email||'')+'">')
+    +field('Test locations','<textarea class="textarea" id="workspaceLocations" rows="4" placeholder="One laboratory/site per line">'+C.escapeHtml(locations.map(function(item){return item.name;}).join('\n'))+'</textarea>',true)
+    +field('Normal storage type','<select class="select" id="workspaceStorageType">'+['local_machine','network_share','institutional_storage','cloud','eln','repository','other'].map(function(k){return'<option value="'+k+'" '+((storage.type||'other')===k?'selected':'')+'>'+C.escapeHtml(k)+'</option>';}).join('')+'</select>')
+    +field('Normal storage location','<input class="input" id="workspaceStorageLocation" value="'+C.escapeHtml(storage.locationHint||'')+'" placeholder="NAS path, institutional repository, cloud area…">')
+    +field('Backup policy','<input class="input" id="workspaceBackupPolicy" value="'+C.escapeHtml(storage.backupPolicy||'')+'">')
+    +field('Retention policy','<input class="input" id="workspaceRetentionPolicy" value="'+C.escapeHtml(storage.retentionPolicy||'')+'">')
+    +'</div><div class="settings-savebar"><span class="help">Credentials are never stored in Workspace profiles. '+
+      'Contacts are excluded from scientific export snapshots by default.</span><div class="row-wrap">'+
+      '<button type="button" class="button" id="workspaceExportProfile">Export data-management profile</button>'+
+      '<button type="button" class="button primary" id="saveWorkspaceProfile">Save workspace</button>'+
+      '</div></div></div></section>'
+    +'<section class="panel"><div class="panel-head"><div><h3 class="h2">Scientific Processes</h3><div class="meta">Reusable definitions of the systems that generate data. These are distinct from device fabrication Design fields.</div></div><div class="spacer"></div><button type="button" class="button" id="workspaceAddProcess">Add process</button></div><div class="panel-body stack">'
+    +(processes.length?'<label class="field"><span>Process</span><select class="select" id="workspaceProcessSelect">'+processes.map(function(item){return'<option value="'+C.escapeHtml(item.id)+'" '+(selected&&selected.id===item.id?'selected':'')+'>'+C.escapeHtml(item.name||item.id)+'</option>';}).join('')+'</select></label>':'')+processEditor+'</div></section>'
+    +'<div class="settings-workspace-grid">'
+    +'<section class="panel"><div class="panel-head"><h3 class="h2">Appearance</h3></div><div class="panel-body stack">'+
+      '<div class="settings-theme-choice"><div><strong>Dark</strong><span>High-contrast workspace for regular use.</span></div>'+
+      '<button type="button" class="button" data-theme-choice="instrument">Use dark</button></div>'+
+      '<div class="settings-theme-choice"><div><strong>Light</strong><span>Bright workspace with the same layout.</span></div>'+
+      '<button type="button" class="button" data-theme-choice="light">Use light</button></div>'+
+      '<div class="help">Theme changes apply immediately.</div></div></section>'
     +'<section class="panel"><div class="panel-head"><h3 class="h2">Researcher profile</h3></div><div class="panel-body stack"><div class="form-grid">'
-    +field('Name','<input class="input" id="userName" value="'+C.escapeHtml(p.name||'')+'">')
-    +field('Organization','<input class="input" id="userOrganization" value="'+C.escapeHtml(p.organization||'')+'">')
-    +field('Email','<input class="input" id="userEmail" type="email" value="'+C.escapeHtml(p.email||'')+'">')
+    +field('Name','<input class="input" id="userName" value="'+C.escapeHtml(p.name||'')+'">')+field('Organization','<input class="input" id="userOrganization" value="'+C.escapeHtml(p.organization||'')+'">')+field('Email','<input class="input" id="userEmail" type="email" value="'+C.escapeHtml(p.email||'')+'">')
     +'</div><div class="settings-savebar"><span class="help">Used only where LabFlow needs author information.</span><button type="button" class="button primary" id="saveUserProfile">Save profile</button></div></div></section>'
-    +'<section class="panel settings-local-data-panel"><div class="panel-head"><div><h3 class="h2">Data on this ' +
-      'browser</h3><div class="meta">Local workspace, source ZIP and browser preferences.</div></div></div><div ' +
-      'class="panel-body stack"><div class="notice info compact-notice"><strong>Your source stays local.</strong><span>' +
-      'The original ZIP and working experiment are stored in this browser. Session-only credentials disappear when ' +
-      'the browser session ends.</span></div><div class="settings-storage-status" id="browserStorageStatus" ' +
-      'aria-live="polite"><span>Storage use</span><strong>Not checked</strong><small>Check when diagnosing browser ' +
-      'quota or large local datasets.</small></div><div class="settings-savebar"><span class="help">Use this on a ' +
-      'shared computer or when you want a completely fresh LabFlow.</span><div class="row-wrap"><button type="button" ' +
-      'class="button" id="checkBrowserStorage">Check storage</button><button type="button" class="button danger" ' +
-      'id="clearLocalLabFlowData">Clear local LabFlow data</button></div></div></div></section>'
-    +'<section class="panel settings-about-panel"><div class="panel-head"><div><h3 class="h2">About LabFlow</h3><div ' +
-      'class="meta">Release information for this installation.</div></div><div class="spacer"></div><span class="badge ' +
-      'info">Prototype</span></div><div class="panel-body"><div class="settings-about-grid"><div><span>Version</span><strong>'+C.escapeHtml(releaseInfo().label)+'</strong></div><div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div></div></div></section>'
+    +'<section class="panel settings-local-data-panel"><div class="panel-head"><div><h3 class="h2">Data on this browser</h3>'+
+      '<div class="meta">Local workspace, source ZIP and browser preferences.</div></div></div><div class="panel-body stack">'+
+      '<div class="notice info compact-notice"><strong>Your source stays local.</strong><span>The original ZIP and working experiment '+
+      'are stored in this browser. Session-only credentials disappear when the browser session ends.</span></div>'+
+      '<div class="settings-storage-status" id="browserStorageStatus" aria-live="polite"><span>Storage use</span><strong>Not checked</strong>'+
+      '<small>Check when diagnosing browser quota or large local datasets.</small></div><div class="settings-savebar">'+
+      '<span class="help">Use this on a shared computer or when you want a completely fresh LabFlow.</span><div class="row-wrap">'+
+      '<button type="button" class="button" id="checkBrowserStorage">Check storage</button>'+
+      '<button type="button" class="button danger" id="clearLocalLabFlowData">Clear local LabFlow data</button></div></div></div></section>'
+    +'<section class="panel settings-about-panel"><div class="panel-head"><div><h3 class="h2">About LabFlow</h3>'+
+      '<div class="meta">Release information for this installation.</div></div><div class="spacer"></div>'+
+      '<span class="badge info">Prototype</span></div><div class="panel-body"><div class="settings-about-grid">'+
+      '<div><span>Version</span><strong>'+C.escapeHtml(releaseInfo().label)+'</strong></div>'+
+      '<div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div></div></div></section>'
     +'</div></div>';
 }
 function stepCard(step){const ai=step.type==='AI',inp=Number(step.max_input_tokens)||0,
 mn=Number(step.min_output_tokens)||0,tg=Number(step.target_output_tokens)||0,mx=Number(step.max_output_tokens)||0,
-  budget=ai&&mx?(' · input ≤ '+(inp?inp.toLocaleString():'default')+' tok · output '+(mn?mn.toLocaleString()+' → ':'')+
-  (tg?tg.toLocaleString()+' → ':'')+mx.toLocaleString()+' tok min/target/max'):'',
+  budget=ai&&mx?(' · input ≤ '+(inp?inp.toLocaleString():'default')+' tok · answer '+(mn?mn.toLocaleString()+' → ':'')+
+  (tg?tg.toLocaleString()+' → ':'')+mx.toLocaleString()+' tok reserve/target/max'):'',
   deadline=ai&&step.deadline_ms?(' · '+Math.round(Number(step.deadline_ms)/1000)+'s max'):'',
   retries=ai&&step.max_retries!=null?(' · retry '+Number(step.max_retries)):'',
   thinking=ai?(' · thinking preference '+String(step.thinking||'auto')):'',
@@ -312,7 +373,10 @@ function uiKitPanel(){
     return'<div class="notice '+(failed?'danger':'info')+'"><strong>'+(failed?'UI Kit could not be loaded.':'Loading UI Kit…')+'</strong><span>'+(failed?C.escapeHtml(failed.message||String(failed)):'This maintenance reference is loaded only when you open it.')+'</span></div>';
   }
   const ui=LF.State.state.ui||{};
-  return '<section class="panel settings-uikit-tools"><div class="panel-body settings-uikit-toolbar"><label class="field"><span>Search</span><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" placeholder="Search patterns…" value="'+C.escapeHtml(ui.uiKitQuery||'')+'"></label><label class="field"><span>Category</span><select class="select" id="uiKitGlobalFilter"><option ' +
+  return '<section class="panel settings-uikit-tools"><div class="panel-body settings-uikit-toolbar">'+
+    '<label class="field"><span>Search</span><input class="input" id="uiKitGlobalSearch" type="search" autocomplete="off" '+
+    'placeholder="Search patterns…" value="'+C.escapeHtml(ui.uiKitQuery||'')+'"></label>'+
+    '<label class="field"><span>Category</span><select class="select" id="uiKitGlobalFilter"><option ' +
     'value="all">All patterns</option><option value="core">Core UI</option><option value="workflow">Workflow</option>' +
     '<option value="data">Scientific data</option><option value="ai">AI & actions</option><option value="system">' +
     'System pages</option></select></label><div class="settings-uikit-count"><span>Visible</span><strong id="uiKitGlobalCount">—</strong></div></div></section>'+LF.UIKitInline.render();
@@ -323,7 +387,7 @@ const allowed=['provider','actions','assistant','knowledge','nomad','workspace',
     requested=state.ui.settingsSection||'provider',active=allowed.includes(requested)?requested:'provider',
     s=LF.Storage.getAiSettings(),key=LF.Storage.getApiKey(s.provider,s.endpoint),
     keyRemembered=LF.Storage.isApiKeyRemembered?LF.Storage.isApiKeyRemembered(s.provider,s.endpoint):false,
-    p=LF.Storage.getUserProfile(),a=LF.Storage.getAssistantSettings(),n=LF.Storage.getNomadSettings(),
+    p=LF.Storage.getUserProfile(),w=LF.Workspace&&LF.Workspace.current?LF.Workspace.current():{},a=LF.Storage.getAssistantSettings(),n=LF.Storage.getNomadSettings(),
     nt=LF.Storage.getNomadToken(n.apiEndpoint),
     ntRemembered=LF.Storage.isNomadTokenRemembered?LF.Storage.isNomadTokenRemembered(n.apiEndpoint):false;
     if(state.ui.settingsSection!==active)state.ui.settingsSection=active;
@@ -332,8 +396,8 @@ key,keyRemembered)],assistant:['Assistant','Choose how LabFlow keeps recent conv
     assistantPanel(a)],actions:['AI tools','Choose and run the AI tools available in LabFlow.',false,actionsPanel()],
     knowledge:['Knowledge Base','Manage the scientific references available to LabFlow.',false,knowledgePanel()],
     nomad:['NOMAD','Prepare NOMAD exports and, if needed, connection details.',true,nomadPanel(n,nt,ntRemembered)],
-    workspace:['Workspace','Choose appearance, researcher information and view the LabFlow version.',true,
-    workspacePanel(p)],diagnostics:['Diagnostics','Use these tools only when troubleshooting LabFlow.',false,
+    workspace:['Workspace','Define the laboratory Workspace, data responsibilities, scientific Processes and local preferences.',true,
+    workspacePanel(p,w)],diagnostics:['Diagnostics','Use these tools only when troubleshooting LabFlow.',false,
     diagnosticsPanel()], 'ui-kit':['UI Kit','Design reference for LabFlow interface maintenance.',false,uiKitPanel()]};
   const current=config[active]||config.provider,wide=active==='diagnostics'||active==='ui-kit',
 section=sectionHead(current[0],current[1],current[2])+sectionBody(current[3],wide);

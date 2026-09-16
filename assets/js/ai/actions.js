@@ -95,7 +95,7 @@ Object.keys(meta||{}).slice(-24).forEach(function(key){const m=meta[key]||{};
   finalizeMs:m.finalizeMs,httpRequests:m.httpRequests,ttftMs:m.ttftMs,tokensPerSecond:m.tokensPerSecond,
   streamed:!!m.streamed,responseBytes:m.responseBytes,usage:m.usage||null,finishReason:m.finishReason||'',
   answerMaxTokens:m.answerMaxTokens||null,completionBudgetTokens:m.completionBudgetTokens||null,
-  reasoningReserveTokens:m.reasoningReserveTokens||null};});return out;}
+  reasoningReserveTokens:m.reasoningReserveTokens||null,tokenBudget:m.tokenBudget||null};});return out;}
 function recordHistory(run,status,code){const e=expOf();if(!e)return;LF.State.ensureDerived(e);
 const entry=e.derived.actions[run.actionId]||{runs:[]};entry.lastStatus=status;entry.lastRunAt=new Date().toISOString();
   entry.runs.push({runId:run.runId,status:status,code:code||'',sourceRevision:run.sourceRevision,startedAt:run.startedAt,
@@ -135,12 +135,19 @@ const id=String(step&&step.validate_with||'').trim();if(!id)return value;
 async function modelCapability(settings){return LF.AI.resolveModelCapabilities?LF.AI.resolveModelCapabilities({provider:settings.provider,endpoint:settings.endpoint,model:settings.model}):null;}
 function positive(value){const n=Math.floor(Number(value)||0);return n>0?n:null;}
 function tokenProfile(step,workItem,hardCap){
-  step=step||{};const max=positive(hardCap)||positive(step.max_output_tokens)||4096,min=Math.min(max,positive(step.min_output_tokens)||Math.min(768,max)),declaredTarget=Math.min(max,positive(step.target_output_tokens)||max);
+  step=step||{};const maximum=positive(hardCap)||positive(step.max_output_tokens)||4096,
+    minimumReserve=Math.min(maximum,positive(step.min_output_tokens)||Math.min(768,maximum)),
+    declaredTarget=Math.min(maximum,positive(step.target_output_tokens)||maximum);
   let target=declaredTarget;const words=positive(workItem&&workItem.target_words);
-  if(words){const byWords=Math.ceil(words*1.65+220);target=Math.max(min,Math.min(declaredTarget,byWords));}
+  if(words){const byWords=Math.ceil(words*1.65+220);target=Math.max(minimumReserve,Math.min(declaredTarget,byWords));}
 
-  const request=step.output==='json'?max:Math.max(min,Math.min(max,Math.ceil(target*1.35+256)));
-  return{minTokens:min,targetTokens:target,maxTokens:max,requestTokens:request,targetWords:words||null};
+  const request=step.output==='json'?maximum:Math.max(minimumReserve,Math.min(maximum,Math.ceil(target*1.35+256)));
+  return{
+    minimumAnswerReserveTokens:minimumReserve,answerTargetTokens:target,answerMaximumTokens:maximum,
+    answerRequestTokens:request,targetWords:words||null,
+    // Compatibility aliases for Action manifests/tests; UI/runtime code should prefer the semantic names above.
+    minTokens:minimumReserve,targetTokens:target,maxTokens:maximum,requestTokens:request
+  };
 }
 function outputCeiling(capability,settings,hardCap){
   const values=[positive(hardCap),positive(capability&&capability.maxOutputTokens),positive(settings&&settings.maxOutputTokensCap)].filter(Boolean);
@@ -187,11 +194,22 @@ async function budgetFor(messages,settings,step,workItem,hardCap,knownCapability
 LF.AI.estimateTokens((messages||[]).map(function(m){return m.content||'';
     }).join('\n')):0),capability=knownCapability||await modelCapability(settings),profile=tokenProfile(step,workItem,
     hardCap),ceiling=providerCompletionCeiling(capability,settings,inputTokens),
-    answerRequest=ceiling?Math.min(profile.requestTokens,ceiling):profile.requestTokens,
-    target=ceiling?Math.min(profile.targetTokens,ceiling):profile.targetTokens,reserve=reasoningHeadroom(profile,capability,
+    answerRequest=ceiling?Math.min(profile.answerRequestTokens,ceiling):profile.answerRequestTokens,
+    target=ceiling?Math.min(profile.answerTargetTokens,ceiling):profile.answerTargetTokens,reserve=reasoningHeadroom(profile,capability,
     thinkingPolicy),desired=Math.max(answerRequest+reserve,positive(minCompletionTokens)||0),
-    completionRequest=ceiling?Math.min(desired,ceiling):desired;
-  return{capability:capability,inputTokens:inputTokens,answerRequestTokens:Math.max(16,Math.floor(answerRequest)),requestMax:Math.max(16,Math.floor(completionRequest||answerRequest||profile.maxTokens)),targetTokens:Math.max(16,Math.floor(target||answerRequest||profile.targetTokens)),reasoningReserveTokens:reserve,profile:profile,ceiling:ceiling||null};
+    completionRequest=ceiling?Math.min(desired,ceiling):desired,
+    normalizedAnswerRequest=Math.max(16,Math.floor(answerRequest)),
+    normalizedTarget=Math.max(16,Math.floor(target||answerRequest||profile.answerTargetTokens)),
+    normalizedCompletion=Math.max(16,Math.floor(completionRequest||answerRequest||profile.answerMaximumTokens));
+  const tokenBudget={
+    input:{estimated:Math.max(0,Math.round(inputTokens||0))},
+    answer:{minimumReserve:profile.minimumAnswerReserveTokens,target:normalizedTarget,maximum:profile.answerMaximumTokens,request:normalizedAnswerRequest},
+    completion:{requestLimit:normalizedCompletion,reasoningReserve:Math.max(0,Math.floor(reserve||0)),providerCeiling:ceiling||null},
+    model:{contextWindow:positive(capability&&capability.contextWindow),outputCapacity:positive(capability&&capability.maxOutputTokens)}
+  };
+  return{capability:capability,inputTokens:inputTokens,answerRequestTokens:normalizedAnswerRequest,
+    requestMax:normalizedCompletion,targetTokens:normalizedTarget,reasoningReserveTokens:tokenBudget.completion.reasoningReserve,
+    profile:profile,ceiling:ceiling||null,tokenBudget:tokenBudget};
 }
 function truncatedError(response,completionBudgetTokens){
   const usage=response&&response.usage||null,reasoningObserved=!!(response&&response.reasoningObserved||response&&response.reasoning),reasoningTokens=usage&&positive(usage.reasoningTokens)||0;
@@ -214,7 +232,10 @@ actionThinking=requestOptions.thinkingMode||step.thinking||'auto',
     reason:'Action policy'},b=await budgetFor(messages,settings,step,requestOptions.workItem||null,
     requestOptions.actionCap||null,capability,thinkingPolicy,requestOptions.minCompletionTokens||null),
     explicit=positive(requestOptions.maxTokens),maxTokens=explicit?Math.min(explicit,b.requestMax):b.requestMax,
-    targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),schema=requestOptions.schema||null,
+    targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),effectiveTokenBudget=Object.assign({},b.tokenBudget,{
+      answer:Object.assign({},b.tokenBudget&&b.tokenBudget.answer||{}, {target:targetTokens}),
+      completion:Object.assign({},b.tokenBudget&&b.tokenBudget.completion||{}, {requestLimit:maxTokens||b.requestMax})
+    }),schema=requestOptions.schema||null,
     providerSchema=step.provider_schema===false?null:schema,spec=LF.AI.buildRequest({
     messages:messages,stream:!!requestOptions.stream,maxTokens:maxTokens||null,timeoutMs:step.timeout_ms||null,
     hardTimeoutMs:step.deadline_ms||null,jsonMode:!!requestOptions.jsonMode,jsonSchema:providerSchema,
@@ -224,23 +245,23 @@ actionThinking=requestOptions.thinkingMode||step.thinking||'auto',
   if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,retryBoost:positive(requestOptions.minCompletionTokens)||null,thinkingEffective:thinkingPolicy.effective||'auto'});
   if(opts.onRequest)opts.onRequest({actionId:run.actionId,stepId:step.id,index:run.currentIndex,
 workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,phase:requestOptions.phase||'response',
-    request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,
-    reasoningReserveTokens:b.reasoningReserveTokens,modelCapability:b.capability,tokenProfile:b.profile,
-    inputTokens:b.inputTokens,inputCapTokens:positive(step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS});
+    request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget,
+    modelCapability:b.capability,tokenProfile:b.profile,inputTokens:b.inputTokens,
+    inputCapTokens:positive(step.max_input_tokens)||DEFAULT_INPUT_CAP_TOKENS});
   try{
     const response=await LF.AI.send(spec,{
 label:run.actionId+'.'+step.id+'.'+(requestOptions.phase||'response'),onProgress:progress?function(p){
       if(opts.onProgress)opts.onProgress(Object.assign({},p,{
       stepId:step.id,index:run.currentIndex,workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,
       targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,budgetTokens:maxTokens||null,
-      inputTokens:b.inputTokens,phase:requestOptions.phase||'response'}));}:undefined});
-    run.requestMeta[key]=Object.assign(requestMeta(response),{answerTargetTokens:targetTokens,answerMaxTokens:b.answerRequestTokens,completionBudgetTokens:maxTokens,reasoningReserveTokens:b.reasoningReserveTokens});return response;
+      tokenBudget:effectiveTokenBudget,inputTokens:b.inputTokens,phase:requestOptions.phase||'response'}));}:undefined});
+    run.requestMeta[key]=Object.assign(requestMeta(response),{answerTargetTokens:targetTokens,answerMaxTokens:b.answerRequestTokens,completionBudgetTokens:maxTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget});return response;
   }catch(err){
     if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'){
 err.completionBudgetTokens=positive(err.completionBudgetTokens)||maxTokens;
       run.requestMeta[key]=Object.assign(run.requestMeta[key]||{},{
       finishReason:err.finishReason||'length',completionBudgetTokens:maxTokens,answerTargetTokens:targetTokens,
-      answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,usage:err.usage||null,
+      answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget,usage:err.usage||null,
       reasoningObserved:!!err.reasoningObserved,reasoningControlRequests:Number(err.reasoningControlRequests)||0,
       reasoningControlOk:err.reasoningControlOk===true});}
     throw err;
@@ -436,5 +457,5 @@ if(LF.Structures){
     }
   });
 }
-LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},failed:function(){return failedRun;},effective:effective,usesAi:usesAi,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
+LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},failed:function(){return failedRun;},effective:effective,usesAi:usesAi,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,budgetFor:budgetFor,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
 }());

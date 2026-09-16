@@ -66,8 +66,8 @@ if(e.target.id==='cabinetSearch'){S.state.ui.cabinetQuery=e.target.value;clearTi
     searchTimer=setTimeout(function(){ctx.render();const input=document.getElementById('cabinetSearch');
     if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}},160);return true;
     }const field=e.target.closest('[data-cabinet-field]');if(field){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);
-    if(item){const key=field.dataset.cabinetField,
-    value=key==='tags'?field.value.split(',').map(x=>x.trim()).filter(Boolean):field.value,patch={};patch[key]=value;
+    if(item){const key=field.dataset.cabinetField,def=(LF.Cabinet.fields(item.kind)||[]).find(function(x){return x.name===key;}),
+    value=key==='tags'||def&&def.type==='csv'?field.value.split(',').map(x=>x.trim()).filter(Boolean):field.value,patch={};patch[key]=value;
     LF.Cabinet.update(item.id,patch);}return true;}const layerField=e.target.closest('[data-cabinet-layer-field]');
     if(layerField){const item=LF.Cabinet.get(S.state.ui.cabinetSelectedId);
     if(item&&item.kind==='stack'){const layers=(item.layers||[]).map(x=>Object.assign({}
@@ -76,7 +76,7 @@ if(e.target.id==='cabinetSearch'){S.state.ui.cabinetQuery=e.target.value;clearTi
     }}return true;}return false;}
   async function handleFileChange(e,ctx){if(!e.target||e.target.id!=='cabinetImportFile')return false;
 const file=e.target.files&&e.target.files[0];if(!file)return true;
-    try{const max=LF.Cabinet.limits?LF.Cabinet.limits().backupChars:2*1024*1024;
+    try{const max=LF.Cabinet.limits?LF.Cabinet.limits().maxBackupChars:2*1024*1024;
     if(file.size>max)throw new Error('Cabinet backup exceeds the '+Math.round(max/1024/1024)+' MB browser limit.');
     const text=await file.text(),out=LF.Cabinet.importState(text,'merge');ctx.state.state.ui.cabinetSelectedId=null;
     ctx.state.state.ui.cabinetKind='all';ctx.render();

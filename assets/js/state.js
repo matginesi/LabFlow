@@ -62,7 +62,7 @@
 
   const state = {
     user: { name: '', organization: '', email: '' },
-    workspace: { theme: 'instrument' },
+    workspace: {},
     project: {},
     experiment: emptyExperiment(),
     actionRun: null,
@@ -140,7 +140,7 @@ if(!entry||!Array.isArray(entry.runs))return;
     state.experiment = exp || emptyExperiment();
     state.experiment = LF.DataModel.hydrate(state.experiment);
     ensureExperiment('set');
-
+    if (LF.Workspace && LF.Workspace.bindExperiment) LF.Workspace.bindExperiment(state.experiment);
 
     if (rawArchive && state.experiment.raw && !(state.experiment.raw.sourceArchive instanceof ArrayBuffer && state.experiment.raw.sourceArchive.byteLength)) {
       state.experiment.raw.sourceArchive = rawArchive;

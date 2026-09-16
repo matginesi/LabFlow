@@ -111,19 +111,74 @@ registerRecord('run',{
   normalize:function(r){r=obj(r);if(!r.id)r.id=uid('run');r.kind='run';r.path=text(r.path);r.label=text(r.label);r.sampleId=text(r.sampleId);r.sample=text(r.sample);r.experimentId=text(r.experimentId);r.experiment=text(r.experiment);r.measurementIds=arr(r.measurementIds).map(text);r.evidencePaths=arr(r.evidencePaths).map(text);return r;}
 });
 function normalizeScan(v){if(v==null)return null;v=obj(v);const out={file:text(v.file),direction:text(v.direction),voc:finiteOrNull(v.voc),jsc:finiteOrNull(v.jsc),vmpp:finiteOrNull(v.vmpp),jmpp:finiteOrNull(v.jmpp),pmpp:finiteOrNull(v.pmpp),rs:finiteOrNull(v.rs),rsh:finiteOrNull(v.rsh),ff:finiteOrNull(v.ff),eff:finiteOrNull(v.eff),provenance:text(v.provenance)};return out;}
+function normalizeQuantity(v,fallbackRole){
+  v=obj(v);
+  return{
+    id:text(v.id||v.name||v.symbol).toLowerCase().replace(/[^a-z0-9_.-]+/g,'_'),
+    name:text(v.name||v.symbol||v.id),symbol:text(v.symbol),role:text(v.role||fallbackRole||'observable'),
+    value:v.value==null?null:(typeof v.value==='number'?finiteOrNull(v.value):v.value),unit:text(v.unit),
+    direction:text(v.direction),source:text(v.source),description:text(v.description),provenance:text(v.provenance)
+  };
+}
+function jvObservables(r){
+  const units={voc:'V',jsc:'mA/cm²',vmpp:'V',jmpp:'mA/cm²',pmpp:'mW/cm²',rs:'Ohm',rsh:'Ohm',ff:'%',eff:'%'},
+  labels={voc:'Voc',jsc:'Jsc',vmpp:'Vmpp',jmpp:'Jmpp',pmpp:'Pmpp',rs:'Rs',rsh:'Rsh',ff:'FF',eff:'PCE'},out=[];
+  ['fw','rv'].forEach(function(direction){
+    const scan=r[direction];if(!scan)return;
+    Object.keys(units).forEach(function(key){
+      if(scan[key]==null)return;
+      out.push(normalizeQuantity({
+        id:'jv_'+direction+'_'+key,name:labels[key],role:'observable',value:scan[key],unit:units[key],
+        direction:direction.toUpperCase(),source:scan.provenance||r.source||'parsed_jv',
+        provenance:scan.file||r.path||r.file
+      },'observable'));
+    });
+  });
+  return out;
+}
+function metadataParameters(meta){
+  const out=[];
+  Object.keys(obj(meta)).filter(function(key){
+    return /setting|scan|voltage|temperature|temp|illumination|light|area|delay|step|bias|range/i.test(key);
+  }).slice(0,64).forEach(function(key){
+    out.push(normalizeQuantity({
+      id:'meta_'+key,name:key,role:'condition',value:meta[key],source:'raw_metadata',provenance:key
+    },'condition'));
+  });
+  return out;
+}
+function normalizeSampleLinkage(v,r){
+  v=obj(v);let method=text(v.method);
+  if(!method){
+    if(r.identitySource==='filename')method='filename';
+    else if(/internal|metadata/i.test(text(r.identitySource)))method='embedded_metadata';
+    else method='unknown';
+  }
+  const evidence=arr(v.evidencePaths).map(text).filter(Boolean);
+  return{
+    method:method,rule:text(v.rule||(r.identitySource?'Canonical identity recovered from '+r.identitySource+'.':'')),
+    sourceField:text(v.sourceField||r.identitySource),evidencePaths:evidence.length?evidence:(r.path?[text(r.path)]:[]),
+    confidence:finiteOrNull(v.confidence)
+  };
+}
 registerRecord('measurement',{
-  label:'JV measurement',description:'One repeated JV acquisition/source file inside a run; FW/RV are scans of this same measurement, not separate experiments.',idPrefix:'m',required:['id','kind','sampleId','experimentId'],relations:{experimentId:'experiment',sampleId:'sample',runId:'run'},
+  label:'Measurement',description:'One repeated scientific acquisition/source file inside a run. Technique-specific payload remains explicit; JV FW/RV scans are preserved for current analysis.',idPrefix:'m',required:['id','kind','sampleId','experimentId'],relations:{experimentId:'experiment',sampleId:'sample',runId:'run'},
   defaults:function(){return{id:uid('m'),kind:'measurement',file:'',rawFile:'',path:'',rawSample:'',sample:'',
-sampleAliases:[],identitySource:'',sampleId:'',experiment:'',experimentId:'',group:'',runId:'',position:'',cell:'',
-    sequence:null,isRef:false,fw:null,rv:null,curve:{fw:[],rv:[]},meta:{}
+  sampleAliases:[],identitySource:'',sampleLinkage:{method:'unknown',rule:'',sourceField:'',evidencePaths:[],confidence:null},sampleId:'',experiment:'',experimentId:'',group:'',runId:'',position:'',cell:'',
+    sequence:null,isRef:false,technique:'unknown',parameters:[],observables:[],setupRef:'',instrumentRefs:[],softwareRef:'',locationRef:'',startedAt:null,endedAt:null,
+    fw:null,rv:null,curve:{fw:[],rv:[]},meta:{}
     ,source:'',excluded:false,recoveries:[],flags:[],blockingFlags:[],qualityStatus:'unknown',rankingEligible:false,
     bestEff:null,bestDirection:'',hysteresis:null,jscDiffPct:null,effDiffPct:null};},
   normalize:function(r){r=obj(r);if(!r.id)r.id=uid('m');r.kind='measurement';
 ['file','rawFile','path','rawSample','sample','identitySource','sampleId','experiment','experimentId','group','runId',
-    'position','cell','source','qualityStatus','bestDirection'].forEach(function(k){r[k]=text(r[k]);});
+    'position','cell','source','qualityStatus','bestDirection','technique','setupRef','softwareRef','locationRef'].forEach(function(k){r[k]=text(r[k]);});
     r.sampleAliases=arr(r.sampleAliases).map(text);r.sequence=r.sequence==null?null:Number(r.sequence);r.isRef=!!r.isRef;
     r.fw=normalizeScan(r.fw);r.rv=normalizeScan(r.rv);r.curve=obj(r.curve);r.curve.fw=arr(r.curve.fw);
-    r.curve.rv=arr(r.curve.rv);r.meta=obj(r.meta);r.excluded=!!r.excluded;r.recoveries=arr(r.recoveries);
+    r.curve.rv=arr(r.curve.rv);r.meta=obj(r.meta);if(!r.technique||r.technique==='unknown'){if(r.fw||r.rv||r.curve.fw.length||r.curve.rv.length)r.technique='jv';else r.technique='unknown';}
+    r.parameters=arr(r.parameters).map(function(item){return normalizeQuantity(item,'condition');});if(!r.parameters.length&&r.technique==='jv')r.parameters=metadataParameters(r.meta);
+    r.observables=arr(r.observables).map(function(item){return normalizeQuantity(item,'observable');});if(!r.observables.length&&r.technique==='jv')r.observables=jvObservables(r);
+    r.instrumentRefs=arr(r.instrumentRefs).map(text).filter(Boolean);r.sampleLinkage=normalizeSampleLinkage(r.sampleLinkage,r);r.startedAt=r.startedAt||null;r.endedAt=r.endedAt||null;
+    r.excluded=!!r.excluded;r.recoveries=arr(r.recoveries);
     r.flags=arr(r.flags);r.blockingFlags=arr(r.blockingFlags);r.rankingEligible=!!r.rankingEligible;
     ['bestEff','hysteresis','jscDiffPct','effDiffPct'].forEach(function(k){r[k]=r[k]==null?null:finiteOrNull(r[k]);});
     return r;}
@@ -223,7 +278,7 @@ r.group=text(r.group);r.experimentId=text(r.experimentId);r.sampleIds=arr(r.samp
 function createRoot(seed){
   seed=obj(seed);const root={
     id:text(seed.id)||uid('exp'),
-    meta:{name:'',createdAt:now(),modifiedAt:null,sourceName:'',sourceSize:0,sourceModifiedAt:null,sourceType:'',importMethod:''},
+    meta:{schemaVersion:2,workspaceId:'',processId:'',name:'',createdAt:now(),modifiedAt:null,sourceName:'',sourceSize:0,sourceModifiedAt:null,sourceType:'',importMethod:''},
     raw:{sourceArchive:null,sourceName:'',sha256:''},
     files:[],blocks:[],patches:[],manifest:[],rawFormatEvidence:[],auxiliaryEvidence:[],experiments:[],samples:[],runs:[],measurements:[],findings:[],
     analysisSettings:{mismatchFactor:1},analysis:{summary:{},bestBySample:[],bestByExperiment:[],topNonRef:[],topRef:[]},
@@ -235,7 +290,7 @@ function createRoot(seed){
 }
 function normalizeRoot(exp){
   exp=obj(exp);if(!exp.id)exp.id=uid('exp');
-  exp.meta=mergeDefaults({name:'',createdAt:now(),modifiedAt:null,sourceName:'',sourceSize:0,sourceModifiedAt:null,sourceType:'',importMethod:''},exp.meta);
+  exp.meta=mergeDefaults({schemaVersion:2,workspaceId:'',processId:'',name:'',createdAt:now(),modifiedAt:null,sourceName:'',sourceSize:0,sourceModifiedAt:null,sourceType:'',importMethod:''},exp.meta);exp.meta.schemaVersion=Math.max(2,Number(exp.meta.schemaVersion)||0);exp.meta.workspaceId=text(exp.meta.workspaceId);exp.meta.processId=text(exp.meta.processId);
   exp.raw=mergeDefaults({sourceArchive:null,sourceName:'',sha256:''},exp.raw);
   rootFields().forEach(function(meta){if(!meta.recordKind)return;exp[meta.key]=arr(exp[meta.key]).map(function(record){return normalize(meta.recordKind,record);});});
   exp.analysisSettings=mergeDefaults({mismatchFactor:1},exp.analysisSettings);

@@ -16,6 +16,7 @@
     API_KEYS: 'labflow.ai.keys',
     ACTION_OVERRIDES: 'labflow.action.overrides',
     USER_PROFILE: 'labflow.user.profile',
+    WORKSPACE_PROFILE: 'labflow.workspace.profile',
     UI_SETTINGS: 'labflow.ui.settings',
     EXPORT_SETTINGS: 'labflow.export.settings',
     CABINET: 'labflow.cabinet',
@@ -365,6 +366,23 @@
     write(LOCAL_KEYS.USER_PROFILE, Object.assign({}, getUserProfile(), value || {}));
   }
 
+  function getWorkspaceProfileState() {
+    const raw = read(LOCAL_KEYS.WORKSPACE_PROFILE, {});
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? clone(raw) : {};
+  }
+
+  function saveWorkspaceProfileState(value) {
+    const payload = clone(value && typeof value === 'object' && !Array.isArray(value) ? value : {}) || {};
+    payload.updatedAt = new Date().toISOString();
+    const ok = write(LOCAL_KEYS.WORKSPACE_PROFILE, payload);
+    if (ok) Log.info('workspace-profile.saved', {
+      id: payload.id || '',
+      institution: payload.institution || '',
+      processes: Array.isArray(payload.processes) ? payload.processes.length : 0
+    });
+    return ok;
+  }
+
   function getUiSettings() {
     return Object.assign(
       { assistantOpen: false, theme: 'instrument' },
@@ -668,6 +686,7 @@
     getActionOverride: getActionOverride, validateActionOverride: validateActionOverride, saveActionOverride: saveActionOverride, resetActionOverride: resetActionOverride,
     getEffectiveAction: getEffectiveAction, getEffectivePrompt: getEffectivePrompt,
     getUserProfile: getUserProfile, saveUserProfile: saveUserProfile,
+    getWorkspaceProfileState: getWorkspaceProfileState, saveWorkspaceProfileState: saveWorkspaceProfileState,
     getUiSettings: getUiSettings, saveUiSettings: saveUiSettings,
     getExportSettings: getExportSettings, saveExportSettings: saveExportSettings,
     getNomadSettings: getNomadSettings, saveNomadSettings: saveNomadSettings,

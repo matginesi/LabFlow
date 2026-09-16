@@ -15,7 +15,15 @@ A successful import and deterministic analysis must not depend on network access
 - **Human authority:** ambiguous semantics and AI proposals remain reviewable.
 - **Traceable extension:** each cross-module structure declares an owner and persistence class.
 
-## 3. Scientific model
+## 3. Workspace and scientific Process
+
+LabFlow uses the product hierarchy **User → Workspace → Process → Experiment**. Workspace is browser-local scientific context, not a second experiment database. It contains institution, role-based responsibilities, test locations, normal storage descriptors and reusable Process definitions.
+
+A scientific Process describes a data-generating workflow (measurement, characterization, simulation, fabrication or other) and can declare sample types, controlled variables, observables, typical frequency/output size/capacity, metadata/linkage policy and stable references to Cabinet instruments, acquisition software, setups and file formats.
+
+This Process is distinct from the per-device fabrication `Design.process`. Experiments bind to the reusable context through `meta.workspaceId` and `meta.processId`.
+
+## 4. Scientific model
 
 Canonical acquisition hierarchy:
 
@@ -24,12 +32,13 @@ flowchart LR
     E[Experiment] --> S[Sample / Cell]
     S --> R[Run]
     R --> M[Measurement]
-    M --> F[FW / RV scans]
+    M --> Q[parameters / observables]
+    M --> F[technique-specific payload; current JV FW / RV scans]
 ```
 
 `DomainSchema` defines record/root contracts. `DataModel` owns aggregate mechanics. `DataContracts` validates graph invariants. `DerivedState` owns recomputable projection invalidation. `ActionData` is the only persisted Action-output store.
 
-## 4. Deterministic lifecycle
+## 5. Deterministic lifecycle
 
 The current pipeline is:
 
@@ -56,7 +65,7 @@ Requirements:
 - semantic uncertainty is represented as a finding/ambiguity rather than guessed;
 - pipeline code never invokes an AI provider.
 
-## 5. Review
+## 6. Review
 
 Review exists for decisions, not for exposing parser internals. It must:
 
@@ -67,27 +76,27 @@ Review exists for decisions, not for exposing parser internals. It must:
 - preserve individual override/rejection paths;
 - permit clean datasets to proceed without unnecessary clicks.
 
-## 6. Results
+## 7. Results
 
 Results are derived exclusively from LabFlow Data and preserve JV semantics including FW/RV scans, core metrics, hysteresis, per-sample best measurement, group/experiment summaries, deterministic eligibility/quality state and raw curves when present.
 
 AI may interpret or compare deterministic Results but may not replace or recalculate authoritative measurements.
 
-## 7. Design and Cabinet
+## 8. Design and Cabinet
 
 Design is experiment-owned scientific state. `DesignModel` is its write owner.
 
-Lab Cabinet stores reusable laboratory references such as formulations, device stacks, process recipes, materials, substrates and instruments. Cabinet is not inventory, a LIMS, or a second experiment model. Applying a Cabinet item copies a detached snapshot into Design and records the Cabinet source reference.
+Lab Cabinet stores reusable laboratory references such as formulations, device stacks, fabrication recipes, materials, substrates, instruments, acquisition software, setups and file-format profiles. Cabinet is not inventory, a LIMS, or a second experiment model. Applying a Cabinet item copies a detached snapshot into Design and records the Cabinet source reference.
 
 Cabinet content may be supplied as optional context to `design.infer`; reuse context is never evidence that an experiment actually used that recipe or device definition.
 
-## 8. Knowledge Base
+## 9. Knowledge Base
 
 The KB consists of a bundled baseline plus a browser-local editable JSONL overlay. Each entry is validated and can carry sources, facts, cautions, aliases and relations.
 
 The KB is reference knowledge. Assistant/Actions may retrieve bounded active entries, but experiment evidence always takes precedence. Model answers relying on KB entries use explicit `[KB:<id>]` references that the UI resolves to stored sources.
 
-## 9. Action catalog
+## 10. Action catalog
 
 Current public Actions:
 
@@ -101,7 +110,7 @@ Current public Actions:
 
 Normalization, analysis, indexing, validation, safe cleanup and export remain deterministic services rather than Actions.
 
-## 10. Action contract
+## 11. Action contract
 
 Each public Action declares target, context profile/scope, result format/schema, effect, guards, execution steps and UI metadata in `actions/<id>/action.json`.
 
@@ -109,21 +118,21 @@ Each public Action declares target, context profile/scope, result format/schema,
 
 AI structured output must satisfy the declared schema and semantic validators before it can be stored.
 
-## 11. Assistant
+## 12. Assistant
 
 The Assistant is a read-only conversational surface over bounded page/experiment context, Action capability metadata, bounded Action outputs, Cabinet context when relevant, and validated KB references. It may recommend Actions but must not claim an Action executed unless LabFlow actually ran it.
 
-## 12. AI/provider boundary
+## 13. AI/provider boundary
 
 Providers are contacted directly from the browser using the configured endpoint. No hidden relay/fallback may change the request path. Provider/model configuration stays in the transport layer rather than scientific context.
 
 Provider failures, browser/CORS failures and model-output validation failures remain distinct diagnostic categories.
 
-## 13. Export and NOMAD
+## 14. Export and NOMAD
 
-Export is a deterministic projection of validated current state. NOMAD mapping/package generation is local and deterministic. The current direct-upload control is explicitly a non-networking stub until a real connector exists.
+Export is a deterministic projection of validated current state. Portable saves include a redacted Workspace snapshot when available. NOMAD mapping/package generation is local and deterministic and carries stable Workspace/Process identifiers plus generic measurement technique metadata alongside optional JV metrics. The current direct-upload control is explicitly a non-networking stub until a real connector exists.
 
-## 14. Extensibility
+## 15. Extensibility
 
 A new cross-module feature must declare:
 
@@ -137,6 +146,6 @@ A new cross-module feature must declare:
 
 Frameworks or abstraction layers are introduced only when they remove demonstrated duplication or make an invariant enforceable.
 
-## 15. Release acceptance
+## 16. Release acceptance
 
 A distributable release must pass `./release_check.sh`. Private real-dataset integration checks and browser automation are additional gates when their fixtures/environment are available.

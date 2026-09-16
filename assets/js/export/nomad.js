@@ -14,7 +14,7 @@
 
   function yamlString(value) { return '"'+String(value==null?'':value).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n')+'"'; }
   function yamlStrings(values){return '['+(values||[]).map(yamlString).join(', ')+']';}
-  function yamlNumbers(values){return '['+(values||[]).map(function(value){return Number.isFinite(Number(value))?String(Number(value)):'null';}).join(', ')+']';}
+  function yamlNumbers(values){return '['+(values||[]).map(function(value){return value==null||value===''?'null':Number.isFinite(Number(value))?String(Number(value)):'null';}).join(', ')+']';}
   const A = LF.Analysis;
     function nomadPlan(exp) {
     return exp && exp.nomad && exp.nomad.mappingPlan && typeof exp.nomad.mappingPlan === 'object' ? exp.nomad.mappingPlan : null;
@@ -22,9 +22,14 @@
 
 
   function exportOptionsSignature(settings){return JSON.stringify({includeRaw:!!(settings&&settings.includeRaw),includeDerived:!!(settings&&settings.includeDerived)});}
+  function workspaceContext(exp){
+    const workspace=LF.Workspace&&LF.Workspace.current?LF.Workspace.current():null,id=exp&&exp.meta&&exp.meta.workspaceId||'',processId=exp&&exp.meta&&exp.meta.processId||'';
+    if(!workspace||String(workspace.id)!==String(id))return{workspace:null,process:null};
+    return{workspace:workspace,process:(workspace.processes||[]).find(function(item){return String(item.id)===String(processId);})||null};
+  }
 
   function buildMapping(exp){
-    const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=(A.measurementsOf(exp)||[]).filter(function(m){return!m.excluded;}),samples=A.samplesOf(exp)||[];
+    const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=(A.measurementsOf(exp)||[]).filter(function(m){return!m.excluded;}),samples=A.samplesOf(exp)||[],workspaceInfo=workspaceContext(exp),workspace=workspaceInfo.workspace,process=workspaceInfo.process;
     const exported=measurements.filter(function(m){return Number.isFinite(Number(m.bestEff));});
     function row(nomadPath,labflowPath,value,required,note){
       const disabled=value&&value.__disabled===true,actual=disabled?'':value,missing=!disabled&&(actual==null||actual===''||(Array.isArray(actual)&&!actual.length));
@@ -41,6 +46,12 @@
     const rows=[
       row('data.m_def','NOMAD schema reference',SCHEMA_REFERENCE,true,'Custom schema entry reference'),
       row('data.experiment_name','meta.name',exp.meta&&exp.meta.name,true),
+      row('data.workspace_id','meta.workspaceId',exp.meta&&exp.meta.workspaceId||'',false),
+      row('data.workspace_name','workspace.name',workspace&&workspace.name||'',false),
+      row('data.institution','workspace.institution',workspace&&workspace.institution||'',false),
+      row('data.process_id','meta.processId',exp.meta&&exp.meta.processId||'',false),
+      row('data.process_name','workspace.processes[].name',process&&process.name||'',false),
+      row('data.process_kind','workspace.processes[].kind',process&&process.kind||'',false),
       row('data.source_file','meta.sourceName',exp.meta&&exp.meta.sourceName,true),
       row('data.working_revision','sync.revision',Number(exp.sync&&exp.sync.revision||0),true),
       row('data.sample_count','samples.length',samples.length,true),
@@ -48,10 +59,14 @@
       row('data.eligible_measurement_count','measurements[].rankingEligible',exported.filter(function(x){return x.rankingEligible!==false;}).length,true),
       row('data.best_efficiency','measurements[].bestEff',exported.length?Math.max.apply(null,exported.map(function(x){return Number(x.bestEff);})):null,false),
       row('data.sample_names','samples[].name',samples.map(function(x){return x.name;}),true),
-      row('data.measurement_ids','measurements[].id',exported.map(function(x){return x.id;}),true),
-      row('data.measurement_samples','measurements[].sample',exported.map(function(x){return x.sample;}),true),
-      row('data.measurement_efficiencies','measurements[].bestEff',exported.map(function(x){return Number(x.bestEff);}),true),
-      row('data.measurement_quality','measurements[].qualityStatus',exported.map(function(x){return x.qualityStatus||'unknown';}),true),
+      row('data.measurement_ids','measurements[].id',measurements.map(function(x){return x.id;}),true),
+      row('data.measurement_samples','measurements[].sample',measurements.map(function(x){return x.sample;}),true),
+      row('data.measurement_techniques','measurements[].technique',measurements.map(function(x){return x.technique||'unknown';}),true),
+      row('data.measurement_efficiencies','measurements[].bestEff',measurements.map(function(x){return Number.isFinite(Number(x.bestEff))?Number(x.bestEff):null;}),false),
+      row('data.measurement_quality','measurements[].qualityStatus',measurements.map(function(x){return x.qualityStatus||'unknown';}),true),
+      row('data.instrument_refs','workspace.processes[].instrumentIds',process&&process.instrumentIds||[],false),
+      row('data.acquisition_software_refs','workspace.processes[].softwareIds',process&&process.softwareIds||[],false),
+      row('data.output_format_refs','workspace.processes[].outputFormatIds',process&&process.outputFormatIds||[],false),
       row('data.provenance_file','generated','metadata/provenance.json',true),
       row('data.canonical_table_file','generated',settings.includeDerived?'derived/measurements.csv':{__disabled:true},false),
       row('data.raw_source_file','raw.sourceArchive',settings.includeRaw?'raw/source.zip':{__disabled:true},false),
@@ -90,13 +105,25 @@
   function schemaYaml() {
     return [
       'definitions:',
-      '  name: LabFlow Perovskite Experiment (prototype)',
+      '  name: LabFlow Scientific Experiment (prototype)',
       '  sections:',
       '    LabFlowExperiment:',
       '      base_sections:',
       '        - nomad.datamodel.data.EntryData',
       '      quantities:',
       '        experiment_name:',
+      '          type: str',
+      '        workspace_id:',
+      '          type: str',
+      '        workspace_name:',
+      '          type: str',
+      '        institution:',
+      '          type: str',
+      '        process_id:',
+      '          type: str',
+      '        process_name:',
+      '          type: str',
+      '        process_kind:',
       '          type: str',
       '        source_file:',
       '          type: str',
@@ -120,11 +147,23 @@
       '        measurement_samples:',
       '          type: str',
       "          shape: ['*']",
+      '        measurement_techniques:',
+      '          type: str',
+      "          shape: ['*']",
       '        measurement_efficiencies:',
       '          type: float',
       "          shape: ['*']",
       '          unit: percent',
       '        measurement_quality:',
+      '          type: str',
+      "          shape: ['*']",
+      '        instrument_refs:',
+      '          type: str',
+      "          shape: ['*']",
+      '        acquisition_software_refs:',
+      '          type: str',
+      "          shape: ['*']",
+      '        output_format_refs:',
       '          type: str',
       "          shape: ['*']",
       '        provenance_file:',
@@ -149,6 +188,12 @@
       'data:',
       '  m_def: '+yamlString(v('data.m_def',SCHEMA_REFERENCE)),
       '  experiment_name: '+yamlString(v('data.experiment_name','')),
+      '  workspace_id: '+yamlString(v('data.workspace_id','')),
+      '  workspace_name: '+yamlString(v('data.workspace_name','')),
+      '  institution: '+yamlString(v('data.institution','')),
+      '  process_id: '+yamlString(v('data.process_id','')),
+      '  process_name: '+yamlString(v('data.process_name','')),
+      '  process_kind: '+yamlString(v('data.process_kind','')),
       '  source_file: '+yamlString(v('data.source_file','')),
       '  working_revision: '+Number(v('data.working_revision',0)),
       '  sample_count: '+Number(v('data.sample_count',0)),
@@ -158,8 +203,12 @@
       '  sample_names: '+yamlStrings(v('data.sample_names',[])),
       '  measurement_ids: '+yamlStrings(v('data.measurement_ids',[])),
       '  measurement_samples: '+yamlStrings(v('data.measurement_samples',[])),
+      '  measurement_techniques: '+yamlStrings(v('data.measurement_techniques',[])),
       '  measurement_efficiencies: '+yamlNumbers(v('data.measurement_efficiencies',[])),
       '  measurement_quality: '+yamlStrings(v('data.measurement_quality',[])),
+      '  instrument_refs: '+yamlStrings(v('data.instrument_refs',[])),
+      '  acquisition_software_refs: '+yamlStrings(v('data.acquisition_software_refs',[])),
+      '  output_format_refs: '+yamlStrings(v('data.output_format_refs',[])),
       '  provenance_file: '+yamlString(v('data.provenance_file','metadata/provenance.json')),
       '  canonical_table_file: '+yamlString(v('data.canonical_table_file','')),
       '  raw_source_file: '+yamlString(v('data.raw_source_file','')),
@@ -245,7 +294,7 @@ format:'labflow-provenance',experimentId:exp.id,
   }
 
   function packageManifest(exp,settings,validation,files){const plan=ensureMapping(exp);
-return {format:'labflow-nomad-staging',generatedAt:new Date().toISOString(),experimentId:exp.id,
+return {format:'labflow-nomad-staging',formatVersion:2,generatedAt:new Date().toISOString(),experimentId:exp.id,workspaceId:exp.meta&&exp.meta.workspaceId||'',processId:exp.meta&&exp.meta.processId||'',
     experimentName:exp.meta.name,dataState:{
     basis:(exp.patches||[]).length?'LabFlow data with tracked changes':'Imported data interpretation',
     revision:exp.sync&&exp.sync.revision||0,appliedChanges:(exp.patches||[]).length,rawImmutable:true},missingInformation:{
@@ -270,6 +319,7 @@ return {format:'labflow-nomad-staging',generatedAt:new Date().toISOString(),expe
     zip.file('metadata/labflow_experiment.json',C.safeJson(working,2));
     zip.file('metadata/patches.json',C.safeJson({patches:exp.patches||[]},2));
     zip.file('metadata/provenance.json',C.safeJson(provenanceSnapshot(exp),2));
+    if(LF.Workspace&&LF.Workspace.snapshot)zip.file('metadata/workspace.json',C.safeJson(LF.Workspace.snapshot({includeContacts:false}),2));
     if(LF.Export&&LF.Export.canonicalSnapshot)zip.file('metadata/canonical.json',C.safeJson(LF.Export.canonicalSnapshot(exp),2));
     if(plan)zip.file('metadata/mapping_plan.json',C.safeJson(plan,2));
     if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp,{excludeExcluded:true}));zip.file('derived/analysis.json',C.safeJson({analysis:A.analysisOf(exp),analysisSummary:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):null},2));}

@@ -32,19 +32,22 @@ A clean archive can proceed directly to Results. AI availability is never a prer
 
 ## Scientific state
 
-The canonical hierarchy is:
+The product model is:
 
 ```mermaid
 flowchart TD
-    ED[ExperimentData] --> E[experiments]
+    U[User] --> W[Scientific Workspace]
+    W --> P[Process]
+    P --> ED[ExperimentData]
+    ED --> E[experiments]
     E --> S[samples]
     S --> R[runs]
     R --> M[measurements]
-    M --> FW[FW metrics and curve]
-    M --> RV[RV metrics and curve]
+    M --> Q[parameters / observables]
+    M --> JV[optional JV FW/RV payload]
 ```
 
-`DomainSchema` owns record shapes and persistence metadata. `DataModel` owns aggregate mechanics. `DataPipeline` owns deterministic refresh. `ActionData` owns persisted Action proposals and annotations. Cabinet and Knowledge Base are reference sources, not experiment evidence.
+`DomainSchema` owns record shapes and persistence metadata. `DataModel` owns aggregate mechanics. `DataPipeline` owns deterministic refresh. `ActionData` owns persisted Action proposals and annotations. Workspace/Process, Cabinet and Knowledge Base are separate reference/context sources, not measurement evidence. Workspace describes institution, responsibilities and the normal data-generating setup; Process definitions reference reusable Cabinet infrastructure.
 
 ## Cabinet, Knowledge Base, AI, Actions, Assistant
 

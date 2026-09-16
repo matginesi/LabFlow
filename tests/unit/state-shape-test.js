@@ -20,7 +20,7 @@ module.exports = function (t, LF) {
   t['state has the canonical nested shape'] = function () {
     assert(Object.keys(S.state).sort(), ['actionRun', 'experiment', 'project', 'ui', 'user', 'workspace'], 'state top-level keys');
     assert(S.state.user.name, '', 'user default');
-    assert(S.state.workspace.theme, 'instrument', 'workspace theme default');
+    assert(S.state.workspace, {}, 'workspace scientific profile is loaded by Workspace owner during app init');
     assert(S.state.project, {}, 'project slot');
     assert(S.state.actionRun, null, 'actionRun starts null');
     assert(typeof S.state.ui.route, 'string', 'ui.route');

@@ -7,7 +7,7 @@ order: 36
 
 # Lab Cabinet
 
-Lab Cabinet is a browser-local library for definitions you repeatedly use in Design: formulations, device stacks, process recipes, substrates, materials/chemicals and instrument references.
+Lab Cabinet is a browser-local library for reusable laboratory definitions: formulations, device stacks, fabrication recipes, substrates, materials/chemicals, instruments, acquisition software, setups and output file formats.
 
 It is intentionally **not** inventory management, stock control, ERP or a LIMS.
 
@@ -29,7 +29,7 @@ The highest-value reusable resources are usually:
 - complete device stacks;
 - fabrication/process recipes.
 
-Materials, substrates and instruments are available for laboratories that want finer reusable references, but they are not prerequisites for using Cabinet.
+Materials and substrates support finer Design references. Instruments, acquisition software, setups and file-format profiles form the reusable data-infrastructure catalog referenced by scientific Workspace Processes.
 
 ## Design integration
 
@@ -46,3 +46,14 @@ Incomplete resources can remain in Cabinet while being edited. Only resources sa
 ## Storage and portability
 
 Cabinet is stored independently from an experiment workspace and can be exported/imported as JSON. Experiment portability remains the responsibility of the normal LabFlow export.
+
+## Data-infrastructure resources
+
+The infrastructure kinds are not copied into Design. They describe reusable components of a data-generating Process:
+
+- `instrument`: instrument type, manufacturer/model, serial/firmware, location and acquisition-software references;
+- `software`: acquisition software/vendor/version and supported instruments/formats;
+- `setup`: a composed station referencing instruments/software/formats and optional parallel capacity;
+- `file_format`: extensions/MIME types, producing software, format documentation, parser support and typical output size/count.
+
+A Workspace Process references these items by stable Cabinet ID. The Process definition is context; a concrete Measurement may additionally record the actual instrument/software/setup references as provenance.

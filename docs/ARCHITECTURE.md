@@ -15,6 +15,7 @@ LabFlow has no application server owning scientific state.
 
 ```mermaid
 flowchart TD
+    W[Scientific Workspace / Process context] --> ED[ExperimentData]
     RAW[RAW ZIP bytes: immutable] --> IP[Importer / Parser]
     DS[DomainSchema] --> ED[ExperimentData]
     DC[DataContracts] --> ED
@@ -84,6 +85,10 @@ Owns reviewed dataset-correction semantics, patch/provenance commit and any cano
 
 Owns persisted Action proposals, annotations and Action status. Action output must not leak into ad-hoc scientific root fields.
 
+### `Workspace`
+
+Owns the browser-local scientific environment: institution, role contacts, locations, storage descriptors and reusable scientific Process definitions. It is contextual/reference state, not measurement evidence. Experiments bind to it by stable `workspaceId`/`processId`. Workspace contacts are excluded from scientific export snapshots by default.
+
 ### `Cabinet`
 
 Owns reusable laboratory reference resources and their browser-local storage contract. Cabinet is outside scientific truth until a resource is explicitly copied into Design through `DesignModel`.
@@ -108,7 +113,7 @@ Every cross-module structure should fall into one of these classes:
 |---|---|---|
 | scientific persistent | serialized with current experiment | measurements, Design, patches |
 | Action persistent | reviewable Action output | proposals, annotations, statuses |
-| reference persistent | separate reusable browser-local data | Cabinet, custom KB JSONL |
+| reference persistent | separate reusable browser-local data | scientific Workspace/Processes, Cabinet, custom KB JSONL |
 | preference persistent | browser-local configuration | provider/UI/NOMAD settings |
 | runtime derived | recomputable/session-only | indexes, pipeline trace, active run |
 | UI runtime | presentation/session-only | route, selection, open panels |
@@ -135,7 +140,16 @@ Archive bytes and RAW paths are immutable. LabFlow stores normalized/canonical i
 
 A transformation that would require rewriting RAW evidence is out of scope for the current architecture.
 
-## 7. Cabinet and KB boundary
+## 7. Workspace, Cabinet and KB boundary
+
+The three browser-local reference domains are intentionally separate:
+
+- **Workspace/Process:** describes where/how data is normally generated and managed;
+- **Cabinet:** reusable laboratory resources and infrastructure definitions;
+- **KB:** general/reference knowledge.
+
+A Process may reference Cabinet instruments, acquisition software, setups and file-format definitions by stable ID. These references describe the expected acquisition environment; they do not prove that a specific measurement used a resource unless experiment evidence or measurement provenance says so.
+
 
 Cabinet and KB solve different problems:
 

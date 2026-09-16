@@ -1,21 +1,17 @@
-# Local source/test archives
+# Generated/distributable archives and private source fixtures
 *.zip
 *.ZIP
-ORIGINAL_REQUEST/
-TEST_DATA/
 **/ORIGINAL_REQUEST/
 **/TEST_DATA/
+
+# Local runtime/editor noise
+__pycache__/
+*.py[cod]
+.DS_Store
+.vscode/
+.idea/
 
 # Secrets
 .env
 .env.*
 !.env.example
-
-# Python cache
-__pycache__/
-*.py[cod]
-
-# Local editor / OS noise
-.DS_Store
-.vscode/
-.idea/

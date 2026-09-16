@@ -21,9 +21,11 @@ function weighted(d,index,fraction){const ss=actionSteps(d),w=ss.map(function(x)
 function unitFraction(workIndex,workTotal,phaseFraction){const total=Math.max(1,Number(workTotal)||1),idx=clamp(workIndex,0,total-1);return clamp((idx+clamp(phaseFraction,0,1))/total,0,1);}
 function actionProgress(d,index,workIndex,workTotal,phaseFraction){return weighted(d,Math.max(0,Number(index)||0),unitFraction(workIndex,workTotal,phaseFraction));}
 function streamFraction(p){const text=String(p&&((p.content||'')+(p.reasoning||''))||''),
-tokens=Number.isFinite(Number(p&&p.tokens))?Math.max(0,Number(p.tokens)):Math.max(0,Math.ceil(text.length/4)),
-  target=Math.max(1,Number(p&&p.targetTokens)||Number(p&&p.budgetTokens)||tokens||1),tokenRatio=clamp(tokens/target,0,1),
-  fine=clamp(tokenRatio,0,.985);return{fraction:.20+.62*fine,tokens:tokens,target:target};}
+completionTokens=Number.isFinite(Number(p&&p.completionTokens))?Math.max(0,Number(p.completionTokens)):
+  (Number.isFinite(Number(p&&p.tokens))?Math.max(0,Number(p.tokens)):Math.max(0,Math.ceil(text.length/4))),
+  budget=Math.max(1,Number(p&&p.tokenBudget&&p.tokenBudget.completion&&p.tokenBudget.completion.requestLimit)||
+    Number(p&&p.budgetTokens)||Number(p&&p.maxTokens)||Number(p&&p.targetTokens)||completionTokens||1),tokenRatio=clamp(completionTokens/budget,0,1),
+  fine=clamp(tokenRatio,0,.985);return{fraction:.20+.62*fine,tokens:completionTokens,budget:budget};}
 function phaseFraction(phase){return({prepare:.08,request:.14,waiting:.18,work:.25,validate:.90,store:.95,complete:.98})[phase]||.05;}
 function params(el){const p={};if(!el)return p;if(el.dataset.actionMode)p.mode=el.dataset.actionMode;if(el.dataset.actionDevice)p.deviceId=el.dataset.actionDevice;if(el.dataset.actionSample)p.sampleName=el.dataset.actionSample;return p;}
 function resultText(v){if(Array.isArray(v)&&v.every(function(x){return typeof x==='string';}))return v.join('\n\n---\n\n');return v&&typeof v==='object'?JSON.stringify(v,null,2):String(v==null?'':v);}
@@ -139,16 +141,20 @@ lastWork={index:Math.min(wi,wt-1),total:wt};
       stage:(info.label?'Preparing '+info.label:'Preparing work unit'),
       progressLabel:wt>1?'Unit '+unit+' / '+wt:'Preparing checkpoint'});},
     onPhase:function(info){const pf=phaseFraction(info.phase),local=pos(info,pf),unit=Number(info.workTotal)>1?' · unit '+(Number(info.workIndex||0)+1)+' / '+Number(info.workTotal):'';emit(local,{stage:info.label||String(info.phase||'Working'),progressLabel:'Checkpoint '+(Number(info.index||0)+1)+' / '+actionSteps(d).length+unit});},
-    onRequest:function(info){const local=pos(info,.18),target=Number(info.targetTokens)||0,
-max=Number(info.maxTokens)||0;emit(local,{
+    onRequest:function(info){const local=pos(info,.18),budget=info.tokenBudget||{},answer=budget.answer||{},
+completion=budget.completion||{},target=Number(answer.target||info.targetTokens)||0,
+answerMax=Number(answer.maximum||info.answerMaxTokens)||0,reasoningReserve=Number(completion.reasoningReserve||info.reasoningReserveTokens)||0,
+requestLimit=Number(completion.requestLimit||info.maxTokens)||0;emit(local,{
       stage:'Waiting for model · '+info.stepId,
       progressLabel:(Number(info.workTotal)>1?'Unit '+(Number(info.workIndex||
       0)+1)+' / '+info.workTotal+' · ':'')+'request sent',showAiTrace:true,request:JSON.stringify(info.request,null,2),
       requestIsJson:true,details:{'AI checkpoint':info.stepId,
       'Estimated input':Number(info.inputTokens)>0?Math.round(Number(info.inputTokens)).toLocaleString()+' tok':'—',
       'Action input cap':Number(info.inputCapTokens)>0?Math.round(Number(info.inputCapTokens)).toLocaleString()+' tok':'—',
-      'Output target':target?target.toLocaleString()+' tok':'provider default',
-      'Request ceiling':max?max.toLocaleString()+' tok':'provider default',
+      'Answer target':target?target.toLocaleString()+' tok':'provider default',
+      'Answer maximum':answerMax?answerMax.toLocaleString()+' tok':'provider default',
+      'Reasoning reserve':reasoningReserve?reasoningReserve.toLocaleString()+' tok':'none',
+      'Completion request limit':requestLimit?requestLimit.toLocaleString()+' tok':'provider default',
       'Model output capacity':info.modelCapability&&
       info.modelCapability.maxOutputTokens?Number(info.modelCapability.maxOutputTokens).toLocaleString()+' tok':'unknown'}});
       },
@@ -161,12 +167,18 @@ const retry=Number(p.retryInMs||0)>0?' Provider Retry-After: about '+Math.max(1,
         'The provider rejected this request with a rate limit. LabFlow did not retry it and created no local cooldown.',
         response:'No Action state was changed.'+retry,responseIsJson:false,stream:{active:false,status:'rate-limit'}});return;}
       const fine=streamFraction(p),local=pos(p,fine.fraction),stream=p.content||p.reasoning||'',unit=Number(p.workTotal)>1?' · unit '+(Number(p.workIndex||0)+1)+' / '+p.workTotal:'';
-      const shownTokens=Number.isFinite(Number(p.tokens))?Number(p.tokens):fine.tokens;
+      const completionTokens=Number.isFinite(Number(p.completionTokens))?Number(p.completionTokens):
+        (Number.isFinite(Number(p.tokens))?Number(p.tokens):fine.tokens),budget=p.tokenBudget||{},answerBudget=budget.answer||{},
+        completionBudget=budget.completion||{},requestLimit=Number(completionBudget.requestLimit||p.maxTokens||p.budgetTokens||fine.budget)||0;
 emit(local,{stage:fine.tokens?'Receiving model response':'Waiting for first token',
-        progressLabel:'Streaming'+unit+' · '+shownTokens+' / ~'+fine.target+' tok',response:stream||'Waiting for model output…',
-        responseIsJson:false,stream:{active:true,status:'streaming',ttftMs:p.ttftMs,tokens:shownTokens,rate:p.rate,
-        estimated:p.estimated!==false,inputTokens:p.inputTokens||null,budgetTokens:p.maxTokens||p.budgetTokens||null,
-        targetTokens:p.targetTokens||null}});
+        progressLabel:'Streaming'+unit+' · '+Math.round(completionTokens)+(requestLimit?' / '+Math.round(requestLimit):'')+' tok budget',response:stream||'Waiting for model output…',
+        responseIsJson:false,stream:{active:true,status:'streaming',ttftMs:p.ttftMs,tokens:completionTokens,
+        completionTokens:completionTokens,answerTokens:Number.isFinite(Number(p.answerTokens))?Number(p.answerTokens):null,
+        reasoningTokens:Number.isFinite(Number(p.reasoningTokens))?Number(p.reasoningTokens):null,rate:p.rate,
+        estimated:p.estimated!==false,completionEstimated:p.completionEstimated!==false,
+        answerEstimated:p.answerEstimated!==false,reasoningEstimated:p.reasoningEstimated!==false,
+        inputTokens:p.inputTokens||null,budgetTokens:requestLimit||null,targetTokens:Number(answerBudget.target||p.targetTokens)||null,
+        tokenBudget:budget}});
     }
   };
 }

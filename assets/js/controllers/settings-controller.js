@@ -6,6 +6,9 @@
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{};
   function value(id){const el=document.getElementById(id);return el?el.value:null;}
+  function selectedValues(id){const el=document.getElementById(id);return el?Array.from(el.selectedOptions||[]).map(function(option){return option.value;}).filter(Boolean):[];}
+  function splitList(text){return String(text||'').split(/[\n,;]/).map(function(item){return item.trim();}).filter(Boolean);}
+  function downloadJson(name,data){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},500);}
   function nomadProfile(){const webUrl=value('nomadWebUrl').trim(),apiEndpoint=value('nomadApiEndpoint').trim(),
 web=new URL(webUrl),api=new URL(apiEndpoint),local=u=>['localhost','127.0.0.1','::1','[::1]'].includes(u.hostname);
     if(!['http:','https:'].includes(web.protocol)||!['http:',
@@ -26,6 +29,53 @@ web=new URL(webUrl),api=new URL(apiEndpoint),local=u=>['localhost','127.0.0.1','
   async function handleClick(e,ctx){
     const S=ctx.state,render=ctx.render;
     if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:value('userName').trim(),organization:value('userOrganization').trim(),email:value('userEmail').trim()});LF.UI.message('Profile saved.','success');render();return true;}
+    if(e.target.closest('#saveWorkspaceProfile')){
+      try{
+        const institution=String(value('workspaceInstitution')||'').trim();
+        LF.Workspace.save({name:String(value('workspaceName')||'').trim(),institution:institution,description:String(value('workspaceDescription')||'').trim()});
+        LF.Workspace.setRoleContact('data_responsible',{name:value('workspaceResponsibleName'),email:value('workspaceResponsibleEmail'),institution:institution});
+        LF.Workspace.setRoleContact('parser_contact',{name:value('workspaceParserName'),email:value('workspaceParserEmail'),institution:institution});
+        LF.Workspace.setRoleContact('plugin_contributor',{name:value('workspaceContributorName'),email:value('workspaceContributorEmail'),institution:institution});
+        LF.Workspace.setLocationsFromNames(value('workspaceLocations'));
+        LF.Workspace.setPrimaryStorage({name:'Primary laboratory storage',type:value('workspaceStorageType'),locationHint:value('workspaceStorageLocation'),institution:institution,backupPolicy:value('workspaceBackupPolicy'),retentionPolicy:value('workspaceRetentionPolicy')});
+        if(S.state.experiment)LF.Workspace.bindExperiment(S.state.experiment,S.state.experiment.meta&&S.state.experiment.meta.processId);
+        LF.UI.message('Scientific Workspace saved.','success');render();
+      }catch(err){LF.UI.message('Workspace not saved: '+(err.message||String(err)),'error');}
+      return true;
+    }
+    if(e.target.closest('#workspaceExportProfile')){
+      try{downloadJson('labflow-data-management-profile.json',LF.Workspace.readyPvSummary());LF.UI.message('Data-management profile exported.','success');}
+      catch(err){LF.UI.message('Profile export failed: '+(err.message||String(err)),'error');}
+      return true;
+    }
+    if(e.target.closest('#workspaceAddProcess')){
+      try{const item=LF.Workspace.addProcess({name:'New scientific process',kind:'measurement'});S.state.ui.settingsWorkspaceProcessId=item.id;LF.UI.message('Scientific Process created.','success');render();}
+      catch(err){LF.UI.message('Process could not be created: '+(err.message||String(err)),'error');}
+      return true;
+    }
+    if(e.target.closest('#workspaceDeleteProcess')){
+      const id=String(S.state.ui.settingsWorkspaceProcessId||value('workspaceProcessSelect')||'');
+      if(id&&await LF.UI.confirmAction('Delete this reusable scientific Process definition? Existing experiment measurements are not deleted.',{title:'Delete scientific Process',confirmLabel:'Delete process',danger:true})){
+        LF.Workspace.removeProcess(id);S.state.ui.settingsWorkspaceProcessId='';LF.UI.message('Scientific Process deleted.','success');render();
+      }
+      return true;
+    }
+    if(e.target.closest('#saveWorkspaceProcess')){
+      try{
+        const id=String(S.state.ui.settingsWorkspaceProcessId||value('workspaceProcessSelect')||'');
+        if(!id)throw new Error('Select or create a Process first.');
+        LF.Workspace.updateProcess(id,{
+          name:String(value('workspaceProcessName')||'').trim(),kind:value('workspaceProcessKind'),description:value('workspaceProcessDescription'),sampleTypes:splitList(value('workspaceProcessSampleTypes')),
+          variables:LF.Workspace.parseQuantityLines(value('workspaceProcessVariables'),'controlled_variable'),observables:LF.Workspace.parseQuantityLines(value('workspaceProcessObservables'),'observable'),
+          typicalFrequency:value('workspaceProcessFrequency'),typicalOutputSize:value('workspaceProcessOutputSize'),parallelCapacity:value('workspaceProcessParallelCapacity'),
+          locationIds:selectedValues('workspaceProcessLocations'),storageProfileIds:selectedValues('workspaceProcessStorage'),instrumentIds:selectedValues('workspaceProcessInstruments'),softwareIds:selectedValues('workspaceProcessSoftware'),setupIds:selectedValues('workspaceProcessSetups'),outputFormatIds:selectedValues('workspaceProcessFormats'),
+          metadataPolicy:{metadataLocation:value('workspaceProcessMetadataLocation'),sampleLinkage:{method:value('workspaceProcessLinkageMethod'),rule:value('workspaceProcessLinkageRule')}},notes:value('workspaceProcessNotes')
+        });
+        if(S.state.experiment&&(!S.state.experiment.meta||!S.state.experiment.meta.processId))LF.Workspace.bindExperiment(S.state.experiment,id);
+        LF.UI.message('Scientific Process saved.','success');render();
+      }catch(err){LF.UI.message('Process not saved: '+(err.message||String(err)),'error');}
+      return true;
+    }
     if(e.target.closest('#checkBrowserStorage')){const host=document.getElementById('browserStorageStatus');
 if(host)host.innerHTML='<span>Storage use</span><strong>Checking…</strong><small>Reading this browser origin only.</small>';
       try{const info=await LF.Storage.storageStatus(),
@@ -104,7 +154,17 @@ enabled:document.getElementById('logEnabled').checked,level:value('logLevel'),
     if(e.target.closest('#reanalyzeDataset')){ctx.refreshPipeline(S.state.experiment,'manual-review');render();LF.UI.message('Data checks refreshed.','success');return true;}
     return false;
   }
-  function handleChange(e,ctx){if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return true;}if(e.target.id==='aiModelSelect'){const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return true;}if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);ctx.render();return true;}return false;}
+  function handleChange(e,ctx){
+    if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return true;}
+    if(e.target.id==='aiModelSelect'){
+      const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return true;
+    }
+    if(e.target.id==='workspaceProcessSelect'){
+      ctx.state.state.ui.settingsWorkspaceProcessId=e.target.value;ctx.render();return true;
+    }
+    if(e.target.id==='logScopeFilter'){LF.LogsPage.setScope(e.target.value);ctx.render();return true;}
+    return false;
+  }
   function handleInput(e,ctx){if(e.target.id==='aiEndpoint'){LF.AISettings.decorate&&LF.AISettings.decorate();
 return true;}if(e.target.id==='aiKey'){LF.AISettings.syncModelControls&&LF.AISettings.syncModelControls();return true;
     }if(e.target.id==='logSearch'){LF.LogsPage.setQuery(e.target.value);clearTimeout(handleInput._timer);

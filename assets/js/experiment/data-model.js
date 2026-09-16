@@ -301,6 +301,7 @@ if (!item) return null; if (this.experiments.includes(item)) return {
     exp.meta.sourceName = String(opts.sourceName || ''); exp.meta.sourceSize = Number(opts.bytes ? opts.bytes.byteLength : 0);
     exp.meta.sourceModifiedAt = opts.sourceModifiedAt || null; exp.meta.sourceType = opts.sourceType || 'application/zip';
     exp.raw.sourceArchive = opts.bytes instanceof ArrayBuffer ? opts.bytes : null; exp.raw.sourceName = exp.meta.sourceName;
+    if (LF.Workspace && LF.Workspace.bindExperiment) LF.Workspace.bindExperiment(exp, opts.processId);
     return exp;
   }
   function addFile(exp, seed) { return addRecord(exp, 'file', seed); }

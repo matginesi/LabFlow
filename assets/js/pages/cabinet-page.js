@@ -37,7 +37,7 @@ function kindFields(item){
   return LF.Cabinet.fields(item.kind).filter(function(def){return def.name!=='layers';}).map(function(def){
     return def.type==='textarea'
       ?textarea(def.label,def.name,item[def.name],def.placeholder,def.rows)
-      :field(def.label,def.name,item[def.name],def.placeholder,!!def.wide);
+      :field(def.label,def.name,def.type==='csv'&&Array.isArray(item[def.name])?item[def.name].join(', '):item[def.name],def.placeholder,!!def.wide);
   }).join('');
 }
 function stackEditor(item){
@@ -60,7 +60,7 @@ rows.map(function(layer,i){return '<div class="cabinet-stack-line"><span class="
 }
 function shelf(rows,selected){
   if(!rows.length)return '<div class="cabinet-empty-shelf"><span class="cabinet-empty-mark" data-icon="flask-conical" aria-hidden="true">' +
-    '</span><div><strong>Nothing saved here yet</strong><span>Save a formulation, device stack or process from Design, or create a reusable resource here.</span></div></div>';
+    '</span><div><strong>Nothing saved here yet</strong><span>Save a formulation, setup, file format or laboratory reference here, or capture reusable Design recipes.</span></div></div>';
   return '<div class="cabinet-shelf-list" role="listbox" aria-label="Cabinet resources">'+rows.map(function(item){
     const def=kinds()[item.kind]||{},problems=LF.Cabinet.validate(item),active=String(item.id)===String(selected),state=problems.length?'Needs details':'Ready',tags=(item.tags||[]).slice(0,2);
     return '<button class="cabinet-resource-tile kind-'+esc(item.kind)+(active?' selected':'')+
@@ -109,7 +109,7 @@ field('Tags','tags',(selected.tags||[]).join(', '),'comma separated',true)+texta
 }
 function typeOptions(defs,current,includeAll){
   let html=includeAll?'<option value="all" '+(current==='all'?'selected':'')+'>All resource types</option>':'';
-  const groups=[['design','Design recipes'],['reference','Lab references']];
+  const groups=[['design','Design recipes'],['infrastructure','Data infrastructure'],['reference','Lab references']];
   groups.forEach(function(group){
     const rows=Object.keys(defs).filter(function(kind){return defs[kind]&&defs[kind].group===group[0];});
     if(rows.length)html+='<optgroup label="'+esc(group[1])+'">'+rows.map(function(kind){const d=defs[kind];return '<option value="'+kind+'" '+(current===kind?'selected':'')+'>'+esc(d.label)+'</option>';}).join('')+'</optgroup>';
@@ -160,7 +160,11 @@ typeOptions(defs,'',false)+'</select><button class="button primary" type="button
     'are separate from experiment ZIP exports.</span></div><div class="row-wrap"><button class="button ghost compact" ' +
     'type="button" id="cabinetImport">Import JSON</button><input type="file" id="cabinetImportFile" accept="application/json,' +
     '.json" hidden><button class="button ghost compact" type="button" id="cabinetExport" '+(total?'':'disabled')+'>Export JSON</button></div></div></div></details></div></section>';
-  return '<section class="page cabinet-page">'+LF.PageShell.pageHead('Lab Cabinet','Save the lab recipes you reuse, then apply them to future Design experiments.','<button class="button compact" type="button" data-route="experiment-design" '+(LF.PageShell.hasExperiment()?'':'disabled')+'>Open Design</button>')+capturePanel(exp,defs)+catalog+editor(selected,exp,issues,usage)+'</section>';
+  return '<section class="page cabinet-page">'+LF.PageShell.pageHead(
+    'Lab Cabinet','Keep reusable lab recipes, instruments, acquisition software, setups and file formats in one workspace library.',
+    '<button class="button compact" type="button" data-route="experiment-design" '+
+      (LF.PageShell.hasExperiment()?'':'disabled')+'>Open Design</button>'
+  )+capturePanel(exp,defs)+catalog+editor(selected,exp,issues,usage)+'</section>';
 }
 LF.CabinetPage={render:render};
 }());

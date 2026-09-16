@@ -756,6 +756,8 @@ if(proposalDeviceField){const proposal=selectedDesignProposal(),
     LF.Logger.installGlobalHooks();const end=Log.timer('init',{href:location.href,protocol:location.protocol});
     try{
       S.state.ui.route='experiment-import';S.state.ui.assistantOpen=window.innerWidth>1100&&LF.Storage.getUiSettings().assistantOpen===true;LF.Theme.apply(LF.Storage.getUiSettings().theme,false);
+      S.state.user=LF.Storage.getUserProfile?LF.Storage.getUserProfile():S.state.user;
+      S.state.workspace=LF.Workspace&&LF.Workspace.current?LF.Workspace.current():S.state.workspace;
 
       const saved=LF.Storage.loadExperiment?await LF.Storage.loadExperiment():null;
       let workspaceRestoreError=null;

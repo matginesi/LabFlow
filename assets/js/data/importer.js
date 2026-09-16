@@ -409,7 +409,16 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
       const isRef = P.isReference(sample);
       const s = sampleRecord(sample, fileKey, group, isRef);
       const canonicalFile = P.canonicalFileName ? P.canonicalFileName(fileKey) : fileKey;
-      const m = DS.create('measurement', { file: canonicalFile, rawFile: fileKey, path: path || '', rawSample: fileKey, sample: sample, sampleAliases: Array.from(new Set([fileKey, canonicalFile].filter(Boolean))), identitySource: 'filename', group: group, isRef: isRef, fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {}, source: 'summary', excluded: false, recoveries: [] });
+      const m = DS.create('measurement', {
+        file: canonicalFile, rawFile: fileKey, path: path || '', rawSample: fileKey, sample: sample,
+        sampleAliases: Array.from(new Set([fileKey, canonicalFile].filter(Boolean))), identitySource: 'filename',
+        sampleLinkage: {
+          method: 'filename', rule: 'Sample identity recovered from the configured filename convention.',
+          sourceField: 'filename', evidencePaths: path ? [path] : [], confidence: null
+        },
+        group: group, isRef: isRef, technique: 'jv', fw: fw, rv: rv, curve: { fw: [], rv: [] }, meta: {},
+        source: 'summary', excluded: false, recoveries: []
+      });
       s.measurementIds.push(m.id);
       return m;
     }
@@ -451,7 +460,8 @@ return{account:function(path,bytes,isText){const n=Math.max(0,Number(bytes)||0);
         m = DS.create('measurement', { file: canonicalFile, rawFile: entry.name, path: entry.path,
 rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([entry.name, canonicalFile,
           parsed.sample].filter(Boolean))), identitySource: parsed.sample!==unknownLabel?'jv-internal-device':'filename',
-          group: group, isRef: isRef, fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file',
+          sampleLinkage: { method: parsed.sample!==unknownLabel?'embedded_metadata':'filename', rule: parsed.sample!==unknownLabel?'Sample identity recovered from the JV file internal device field.':'Sample identity recovered from the configured filename convention.', sourceField: parsed.sample!==unknownLabel?'jv-internal-device':'filename', evidencePaths: [entry.path], confidence: null },
+          group: group, isRef: isRef, technique: 'jv', fw: null, rv: null, curve: parsed.curve, meta: parsed.meta, source: 'jv-file',
           excluded: false, recoveries: [] });
         s.measurementIds.push(m.id);
         measurementMap.set(entry.path, m);

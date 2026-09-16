@@ -64,7 +64,9 @@ function validateRecordShape(errors,warnings,record,kind,path){
   Object.keys(spec.relations||{}).forEach(function(field){if(Array.isArray(record&&record[field]))duplicates(record[field]).forEach(function(v){add(errors,'DUPLICATE_RELATION',kind+' '+id+' contains duplicate '+field+' reference '+v+'.',record,path+'.'+field);});});
   if(kind==='measurement'){
     if(record.sequence!=null&&!Number.isFinite(Number(record.sequence)))add(warnings,'MEASUREMENT_SEQUENCE_INVALID','Measurement sequence is not numeric.',record,path+'.sequence');
-    if(!record.fw&&!record.rv&&!(record.curve&&((record.curve.fw||[]).length||(record.curve.rv||[]).length)))add(warnings,'MEASUREMENT_SCAN_MISSING','Measurement has no parsed FW/RV metrics or curve.',record,path);
+    if((record.technique==='jv'||record.fw||record.rv)&&!record.fw&&!record.rv&&!(record.curve&&((record.curve.fw||[]).length||(record.curve.rv||[]).length)))add(warnings,'MEASUREMENT_SCAN_MISSING','JV measurement has no parsed FW/RV metrics or curve.',record,path);
+    if(!Array.isArray(record.parameters))add(errors,'MEASUREMENT_PARAMETERS_INVALID','Measurement parameters must be an array.',record,path+'.parameters');
+    if(!Array.isArray(record.observables))add(errors,'MEASUREMENT_OBSERVABLES_INVALID','Measurement observables must be an array.',record,path+'.observables');
   }
   if(kind==='patch'){
     if(!record.target||!record.target.kind||!record.target.id)add(errors,'PATCH_TARGET_REQUIRED','Patch '+id+' requires a typed target {kind,id}.',record,path+'.target');

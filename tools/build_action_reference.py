@@ -48,7 +48,7 @@ def main():
         "---",
         "title: Action runtime matrix",
         "section: AI and Actions",
-        "summary: Generated reference for current Action input/output token budgets, retry policy and inference deadlines.",
+        "summary: Generated reference for current Action input and answer budgets, retry policy and inference deadlines.",
         "order: 40",
         "---",
         "",
@@ -58,7 +58,7 @@ def main():
         "",
         "The table below describes **LabFlow operational budgets**, not the theoretical limits of a provider model. A model may support a much larger context or output window; each Action still works inside its own smaller contract.",
         "",
-        "| Action / AI step | Role | Type | Max input | Target output | Output ceiling | Retries | Inference deadline |",
+        "| Action / AI step | Role | Type | Max input | Answer target | Answer maximum | Retries | Inference deadline |",
         "|---|---|---|---:|---:|---:|---|---:|",
     ]
     for row in rows:
@@ -69,8 +69,8 @@ def main():
         "## How to read the table",
         "",
         "- **Max input** is the Action-level prompt/context ceiling after deterministic Context Pack construction and compaction.",
-        "- **Target output** is the normal requested completion size for that work unit.",
-        "- **Output ceiling** is the Action hard ceiling before model/provider/user clamping.",
+        "- **Answer target** is the desired final-answer size for that work unit.",
+        "- **Answer maximum** is the Action hard ceiling for the final answer. The provider completion request can be larger when reasoning headroom is reserved, and can still be clamped by model/context/user limits.",
         "- **Retries** are semantic Action validation/rewrite retries only. Provider rate-limit responses are never retried automatically by the transport.",
         "- **Inference deadline** starts when the HTTP request starts. LabFlow does not add provider pacing before the request.",
         "",

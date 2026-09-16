@@ -51,7 +51,16 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     out.unshift({role:m.role,content:content,route:clean(m.route||''),page:clean(m.page||''),view:clean(m.view||'')});
     chars+=content.length;}return out;}
   function findingRef(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',title:clean(f.title),detail:clip(f.detail,360),target:clean(f.target),measurement_id:f.measurementId||'',status:f.status||'open'};}
-  function measurementRef(m){return{id:m.id||'',sample:clean(m.sample),group:clean(m.group),is_ref:!!m.isRef,file:clean(m.path||m.file),quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,hysteresis:m.hysteresis,fw:compact(m.fw||null),rv:compact(m.rv||null)};}
+  function measurementRef(m){
+    return{
+      id:m.id||'',sample:clean(m.sample),group:clean(m.group),is_ref:!!m.isRef,file:clean(m.path||m.file),
+      technique:clean(m.technique||'unknown'),quality:m.qualityStatus||'',eligible:!!m.rankingEligible,
+      parameters:take(m.parameters,16).map(compact),observables:take(m.observables,20).map(compact),
+      setup_ref:clean(m.setupRef),instrument_refs:take(m.instrumentRefs,12).map(clean),software_ref:clean(m.softwareRef),
+      location_ref:clean(m.locationRef),sample_linkage:compact(m.sampleLinkage||null),best_efficiency:m.bestEff,
+      hysteresis:m.hysteresis,fw:compact(m.fw||null),rv:compact(m.rv||null)
+    };
+  }
   function sampleRef(s){return{id:s.id||'',name:clean(s.name),aliases:take(s.aliases||[s.rawName],6).map(clean),group:clean(s.group),is_ref:!!s.isRef,measurement_ids:take(s.measurementIds,20)};}
   function boundValue(value,stringLimit,arrayLimit,keyLimit,depth){
     depth=Number(depth)||0;if(value==null||typeof value==='number'||typeof value==='boolean')return value;
@@ -88,9 +97,11 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
         actions:'persisted workflow outputs; proposals remain review-only until accepted',
         cabinet:'researcher-curated workspace reference; never experiment evidence',
         knowledge:'sourced general reference; never experiment evidence',
-        history:'conversation context only'
+        history:'conversation context only',
+        workspace:'researcher-defined data-generating environment and Process definitions; context, not measurement evidence'
       },
-      experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),summary:sum},
+      experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),workspace_id:clean(exp.meta&&exp.meta.workspaceId),process_id:clean(exp.meta&&exp.meta.processId),summary:sum},
+      workspace:LF.Workspace&&LF.Workspace.compact?LF.Workspace.compact():null,
       data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()
     };
   }
