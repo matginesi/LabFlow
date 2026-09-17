@@ -1628,6 +1628,11 @@ body.ui-kit-page{ overflow: hidden; }
   .page{padding-inline:8px!important}
   .page-nav-button{gap:7px;padding-inline:8px}
   .page-nav-copy strong{font-size:var(--font-xs)}
+  .settings-page,.settings-layout,.settings-content,.settings-section-body{width:100%;max-width:100%;min-width:0}
+  .settings-layout{grid-template-columns:minmax(0,1fr)!important}
+  .settings-page .panel,.settings-page .panel-body,.settings-page .form-grid,.settings-page .field{width:100%;max-width:100%;min-width:0}
+  .settings-page .settings-advanced-body .form-grid,.settings-page .settings-advanced-body>.switch-row{max-width:calc(100vw - 60px)!important}
+  .export-page small{min-width:0;max-width:100%;overflow-wrap:anywhere}
 }
 
 .workflow-page-nav{position:sticky;top:0;z-index:24;margin:0 0 10px;padding:7px;border-color:var(--border-strong);background:color-mix(in srgb,var(--surface) 96%,var(--bg));box-shadow:0 5px 12px color-mix(in srgb,var(--text) 10%,transparent);backdrop-filter:blur(8px)}
@@ -1908,7 +1913,7 @@ body.ui-kit-page{ overflow: hidden; }
 @media(max-width:1050px){.projection-columns,.export-data-drawer-grid,.export-secondary-tools{grid-template-columns:1fr}.projection-workbench-head,.export-data-drawers-head{align-items:flex-start;flex-direction:column}.projection-readiness{justify-items:start}.projection-readiness small{text-align:left}}
 @media(max-width:560px){.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}
 
-/* Export 0.0.28: NOMAD-first workflow with explicit metadata priorities and Action CTA. */
+/* NOMAD-first workflow with explicit metadata priorities and Action CTA. */
 .export-nomad-mission>.panel-body{gap:9px}
 .export-mission-status{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
 .export-mission-status>div:first-child{display:grid;gap:2px;min-width:0;flex:1}

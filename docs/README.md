@@ -27,11 +27,12 @@ For a contributor or reviewer:
 2. [Data model](specs/DATA_MODEL.md)
 3. [Deterministic pipeline](specs/PIPELINE.md)
 4. [Actions](specs/ACTIONS.md)
-5. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
-6. [Extending LabFlow](guides/EXTENDING_LABFLOW.md)
-7. [Contributing](CONTRIBUTING.md)
-8. [Code review](CODE_REVIEW.md)
-9. [Validation](VALIDATION.md)
+5. [AI context hygiene](CONTEXT_HYGIENE.md)
+6. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
+7. [Extending LabFlow](guides/EXTENDING_LABFLOW.md)
+8. [Contributing](CONTRIBUTING.md)
+9. [Code review](CODE_REVIEW.md)
+10. [Validation](VALIDATION.md)
 
 ## Authority map
 
@@ -41,6 +42,7 @@ For a contributor or reviewer:
 | scientific record shape/persistence | `specs/DATA_MODEL.md` + `DomainSchema` |
 | deterministic lifecycle | `specs/PIPELINE.md` + `DataPipeline` registry |
 | Action behavior | `specs/ACTIONS.md` + `actions/*/action.json` |
+| semantic AI context | `CONTEXT_HYGIENE.md` + `assets/js/ai/context.js` |
 | AI transport/provider behavior | `specs/AI_PROVIDERS.md` + provider/transport modules |
 | reusable lab resources | `guides/LAB_CABINET.md` + `Cabinet` registry |
 | reference knowledge | `guides/KNOWLEDGE_BASE.md` + JSONL schema/validator |

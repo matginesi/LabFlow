@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Reproducible distributable gate: generated artifacts, contracts, unit tests and synthetic regressions.
-# Private fixtures, live providers and browser automation remain explicit optional evidence.
+# Reproducible distributable gate: generated artifacts, contracts, unit tests and a responsive browser audit.
+# Private fixtures and live providers remain explicit optional evidence.
 set -euo pipefail
 cd "$(dirname "$0")"
 MODE="check"
@@ -14,7 +14,7 @@ for arg in "$@"; do
 Usage: ./release_check.sh [--fix] [--full]
 
   --fix   regenerate derived assets and accept the generated result
-  --full  additionally run browser regressions against a local HTTP server
+  --full  additionally run the responsive browser audit against a local HTTP server
 
 Without --fix, stale generated assets fail closed. Without --full, browser
 regressions are not run and the check says so explicitly.
@@ -129,15 +129,11 @@ if command -v node >/dev/null 2>&1; then
 fi
 
 if [[ "$FULL" -eq 1 ]]; then
-  printf 'Running browser regressions...\n'
+  printf 'Running responsive browser audit...\n'
   python3 -m http.server 8765 --bind 127.0.0.1 >"$TMP/http.log" 2>&1 & SERVER_PID=$!
   for _ in {1..40}; do curl -fsS http://127.0.0.1:8765/ >/dev/null 2>&1 && break; sleep 0.1; done
   export LABFLOW_TEST_BASE_URL=http://127.0.0.1:8765
   python3 tools/test_responsive_browser.py
-  python3 tests/regression/action-state-propagation-browser.py
-  python3 tests/regression/assistant-chat-browser.py http://127.0.0.1:8765
-  python3 tests/regression/assistant-chat-lifecycle-browser.py
-  python3 tests/regression/message-totem-browser.py
 else
   printf 'BROWSER TESTS: NOT RUN (use ./release_check.sh --full).\n'
 fi

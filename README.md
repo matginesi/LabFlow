@@ -58,14 +58,15 @@ flowchart TD
     C[Cabinet] --> RC[Reference context]
     K[Knowledge Base] --> RC
     RC --> AC[Action / Assistant context]
-    AC --> MO[Model output]
+    AC --> CB[Task-specific context builder]
+    CB --> MO[Model output]
     MO --> P[Proposal / annotation / answer]
     P --> EA[Explicit acceptance]
     EA --> OM[Owner-controlled mutation]
     OM --> ED[ExperimentData]
 ```
 
-Cabinet reuse writes Design only through `DesignModel` and copies detached snapshots. KB entries are cited reference knowledge. Action execution is governed by Action manifests and `ActionCapabilities`. The Assistant is read-only with respect to scientific state.
+Cabinet reuse writes Design only through `DesignModel` and copies detached snapshots. KB entries are cited reference knowledge. Action execution is governed by Action manifests and `ActionCapabilities`. The Assistant is read-only with respect to scientific state. Assistant context is intentionally broad and page-aware; every Action uses an explicit minimal context containing only the evidence needed for that task. Provider, endpoint, model, credential, timing and request-log metadata never enter semantic model context.
 
 For Design completion, a deterministic **Design Reference Resolver** selects small per-domain Cabinet/KB candidates and supplies the same logical candidates to both the model and the post-model validator. This prevents prompt compaction or weak small-model output from silently degrading a reference-backed Design into an empty suggestion.
 
@@ -131,9 +132,9 @@ LabFlow.AIConsole.help()
 
 for provider/model diagnostics without experiment data.
 
-## Build and verification
+## Verification and source-derived bundles
 
-The release gate is the preferred command:
+The release gate is the preferred command. It validates generated-source consistency, JavaScript, contracts, context hygiene, import/export behavior and static assets; Python is maintenance tooling, not an application runtime dependency.
 
 ```bash
 ./release_check.sh
@@ -159,6 +160,7 @@ Start with:
 - `docs/specs/DATA_MODEL.md` — scientific aggregate and persistence contract;
 - `docs/specs/PIPELINE.md` — deterministic lifecycle;
 - `docs/specs/ACTIONS.md` — Action contract and execution semantics;
+- `docs/CONTEXT_HYGIENE.md` — Action-by-Action context boundaries and measured compaction;
 - `docs/guides/EXTENDING_LABFLOW.md` — extension recipes;
 - `docs/CONTRIBUTING.md` — change discipline and review expectations;
 - `docs/CODE_REVIEW.md` — reviewer-oriented checklist.

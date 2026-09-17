@@ -102,31 +102,31 @@ def main() -> int:
         page = browser.new_page(viewport={"width": 1440, "height": 900})
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
-        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        page.wait_for_timeout(250)
 
                                                                               
                                                                               
-        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
         assert not page.locator("#mobileNavToggle").is_visible()
         assert not page.locator("#assistantPanel").is_visible()
         page.set_viewport_size({"width": 900, "height": 800})
         page.wait_for_timeout(220)
-        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
+        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
         assert page.locator("#mobileNavToggle").is_visible()
         page.locator("#mobileNavToggle").click()
-        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
-        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        page.wait_for_timeout(250)
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
         page.locator("#sidebarDismiss").click()
-        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
-        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x < 0")
+        page.wait_for_timeout(250)
+        assert page.locator("#primarySidebar").bounding_box()["x"] < 0
         page.set_viewport_size({"width": 1440, "height": 900})
-        page.wait_for_function("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
-        assert page.evaluate("document.querySelector('#primarySidebar').getBoundingClientRect().x >= 0")
+        page.wait_for_timeout(250)
+        assert page.locator("#primarySidebar").bounding_box()["x"] >= 0
 
                                                                      
         findings.append(page.evaluate(AUDIT_JS))
         page.locator("#datasetInput").set_input_files(str(ZIP_PATH))
-        page.wait_for_function("window.LabFlow.State.state.ui.route === 'experiment-import'")
+        page.locator(".nav-link[data-route='experiment-import'].active").wait_for(state="visible")
         page.wait_for_timeout(200)
         page.evaluate("window.LabFlow.UI.activityHide()")
         if page.locator("#assistantClose").is_visible():

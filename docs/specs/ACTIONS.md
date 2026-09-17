@@ -65,6 +65,23 @@ For JSON Actions:
 
 A malformed, truncated or semantically rejected response remains a failed/retryable Action result; it is never stored as success.
 
+## Context profiles
+
+Assistant and Action contexts are deliberately different:
+
+| Profile | Included | Deliberately omitted |
+|---|---|---|
+| `chat` | bounded page state, relevant experiment records/results, Action catalog/output, memory, targeted Cabinet/KB references | provider credentials and transport/request diagnostics |
+| `ambiguity` | selected findings, affected records and evidence | broad Workspace, rankings and unrelated findings |
+| `results` | deterministic result summary/statistics, eligible rankings, anomalies and relevant findings | Workspace, Cabinet, KB and export state |
+| `results_compare` | selected groups, deterministic statistics, selected measurement evidence and linked findings | unselected groups, global rankings and administrative/reference context |
+| `design` | selected Design target, missing domains, source evidence and per-domain Cabinet/KB candidates | global results, unrelated findings and export readiness |
+| `export` | missing field descriptors/allowed IDs plus field-specific Workspace, Process, Cabinet or KB support | generic experiment brief, performance rankings, curves and unrelated findings |
+
+Every semantic request carries a compact authority contract: experiment evidence is authoritative; Workspace is researcher-defined context; Cabinet and KB are references rather than experiment evidence; AI output remains review-only until accepted. Runtime context-profile names, source revisions and budget flags are logged/used by LabFlow but are not serialized into the model context.
+
+The context logger records the Action ID/profile, estimated input tokens, semantic bytes and included/omitted top-level sections. These diagnostics never feed a later prompt.
+
 ## Effects
 
 Actions may write `ActionData`, interaction history, or call a deterministic owner-controlled apply operation after explicit user acceptance. They do not directly mutate arbitrary scientific roots.
@@ -107,4 +124,3 @@ The provider may report confidence, but LabFlow calibrates it from provenance be
 ## Export preparation transport normalization
 
 `export.prepare` keeps a strict semantic schema, but LabFlow canonicalizes harmless provider-shape noise before schema validation. In particular, `value: null` on an `unresolved` item is discarded because unresolved fields have no export value. Common casing/alias variants for projection, field id and source kind are normalized. This repair never synthesizes scientific metadata or converts an unresolved field into a suggestion.
-

@@ -24,7 +24,7 @@
     if(raw&&raw.data&&typeof raw.data==='object')out.data=compact(raw.data);
     return out;
   }
-  function dataState(exp){const sync=exp.sync||{},patches=exp.patches||[];return{basis:patches.length?'labflow_data_with_changes':'imported_data_interpretation',source_archive:exp.meta&&exp.meta.sourceName||'',revision:Number(sync.revision||0),applied_changes:patches.length};}
+  function dataState(exp){const patches=exp.patches||[];return{basis:patches.length?'labflow_data_with_changes':'imported_data_interpretation',source_archive:exp.meta&&exp.meta.sourceName||'',applied_changes:patches.length};}
   function sharedBrief(exp){const b=LF.ExperimentBrief&&
 LF.ExperimentBrief.ensure?LF.ExperimentBrief.ensure(exp):exp.experimentBrief||null;if(!b)return null;
     const d=b.deterministic||{},det={scope:sanitize(d.scope||{}),performance:sanitize(Object.assign({},d.performance||{},{
@@ -76,7 +76,7 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
   }
   function budgetPack(obj,maxChars){
     maxChars=Math.max(1800,Number(maxChars)||14000);obj=sanitize(obj);let json=JSON.stringify(obj);if(json.length<=maxChars)return obj;
-    if(obj&&obj.context_pack&&obj.context_pack.profile==='design')return designBudgetPack(obj,maxChars);
+    if(obj&&obj.design_evidence_summary&&obj.current_design)return designBudgetPack(obj,maxChars);
     const copy=JSON.parse(json),trim=['evidence','findings','measurements','samples','results','relations','history','provenance'];
     trim.forEach(function(k){if(JSON.stringify(copy).length<=maxChars)return;if(Array.isArray(copy[k]))copy[k]=copy[k].slice(0,Math.max(2,Math.min(10,Math.floor(copy[k].length/2))));});
     copy.context_notice='Context was deterministically bounded to fit the active model. Use a narrower Tool/Action to retrieve omitted detail.';
@@ -85,7 +85,7 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
       {s:900,a:12,k:32},{s:600,a:10,k:26},{s:420,a:8,k:22},{s:280,a:6,k:18},{s:180,a:4,k:14},{s:110,a:3,k:10}
     ];
     for(const level of levels){const bounded=boundValue(copy,level.s,level.a,level.k,0);bounded.context_notice=copy.context_notice;if(JSON.stringify(bounded).length<=maxChars)return bounded;}
-    const fallback={context_pack:boundValue(copy.context_pack||{},120,4,12,0),experiment:boundValue(copy.experiment||{},180,4,14,0),data_state:boundValue(copy.data_state||{},120,4,12,0),experiment_brief:boundValue(copy.experiment_brief||{},140,3,12,0),context_notice:copy.context_notice,omitted_detail:true};
+    const fallback={source_contract:boundValue(copy.source_contract||{},120,4,12,0),experiment:boundValue(copy.experiment||{},180,4,14,0),data_state:boundValue(copy.data_state||{},120,4,12,0),experiment_brief:boundValue(copy.experiment_brief||{},140,3,12,0),context_notice:copy.context_notice,omitted_detail:true};
     if(JSON.stringify(fallback).length<=maxChars)return fallback;
     return boundValue(fallback,80,2,8,0);
   }
@@ -109,7 +109,7 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     maxChars=Math.max(3200,Number(maxChars)||14000);
     const full=sanitize(obj||{}),cab=full.cabinet||{},kb=full.knowledge||{};
     const essential={
-      context_pack:full.context_pack||{},source_contract:full.source_contract||{},experiment:full.experiment||{},data_state:full.data_state||{},
+      source_contract:full.source_contract||{},experiment:full.experiment||{},
       scope:full.scope||{},design_evidence_summary:full.design_evidence_summary||{},current_design:full.current_design||{},known_solutions:full.known_solutions||[],
       cabinet:{domain_candidates:compactDesignDomainCandidates(cab.domain_candidates),retrieval:cab.retrieval||{},note:cab.note||'',citation_contract:cab.citation_contract||''},
       knowledge:{domain_candidates:compactDesignDomainCandidates(kb.domain_candidates),retrieval:kb.retrieval||{},note:kb.note||'',citation_contract:kb.citation_contract||''},
@@ -132,18 +132,20 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     return bounded;
   }
 
-  function base(exp,profile){
+  function sourceContract(){return{
+    experiment:'authoritative current-experiment evidence',
+    workspace:'researcher-defined context, not measurement evidence',
+    cabinet:'reusable researcher-curated reference, not experiment evidence',
+    knowledge:'general sourced reference, not experiment evidence',
+    ai_proposal:'review-only until accepted'
+  };}
+  function actionBase(exp){
+    return{source_contract:sourceContract(),experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name)}};
+  }
+  function assistantBase(exp){
     const sum=LF.CanonicalStore.summary(exp);
     return{
-      context_pack:{profile:profile,source_revision:sum.revision,budgeted:true},
-      source_contract:{
-        experiment:'authoritative current-experiment data/evidence',
-        actions:'persisted workflow outputs; proposals remain review-only until accepted',
-        cabinet:'researcher-curated workspace reference; never experiment evidence',
-        knowledge:'sourced general reference; never experiment evidence',
-        history:'conversation context only',
-        workspace:'researcher-defined data-generating environment and Process definitions; context, not measurement evidence'
-      },
+      source_contract:sourceContract(),
       experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),workspace_id:clean(exp.meta&&exp.meta.workspaceId),process_id:clean(exp.meta&&exp.meta.processId),summary:sum},
       workspace:LF.Workspace&&LF.Workspace.compact?LF.Workspace.compact():null,
       data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()
@@ -160,7 +162,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     const e=LF.CanonicalStore.record(exp,id)||LF.CanonicalStore.sample(exp,id);if(e&&e.id)out.push(e.id);
     else out.push(String(id));}});if(Array.isArray(s.groups)){(exp.samples||[]).filter(function(x){
     return s.groups.includes(x.group);}).forEach(function(x){out.push(x.id);});}return Array.from(new Set(out));}
-  function packChat(exp,opts){const q=clean(opts.question),out=base(exp,'chat',q),pc=out.page_context||{}
+  function packChat(exp,opts){const q=clean(opts.question),out=assistantBase(exp),pc=out.page_context||{}
 ,related=relatedFromQuestion(exp,q),ids=related.ids.concat(pageEntityIds(exp,pc));
     const selectedMeasurement=(exp.measurements||[]).find(function(m){
     return String(m.id)===String(pc.selected&&pc.selected.measurement||'');});
@@ -198,7 +200,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
     out.history=chatMemory(exp);
     return budgetPack(out,opts.maxChars||14000);}
-  function packAmbiguity(exp,opts){const out=base(exp,'ambiguity',''),collect=opts.collect||{}
+  function packAmbiguity(exp,opts){const out=actionBase(exp),collect=opts.collect||{}
 ,ids=(collect.finding_ids||[]).map(String),
     findings=(exp.datasetAnalysis&&exp.datasetAnalysis.ambiguousFindings||[]).filter(function(f){
     return ids.includes(String(f.id));}),measurementIds=findings.map(function(f){return String(f.measurementId||'');
@@ -321,7 +323,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
   }
 
   function packDesignEvidence(exp,opts){
-    const out=base(exp,'design','');
+    const out=actionBase(exp);
     const params=opts.params||{};
     const device=(exp.design&&exp.design.devices||[]).find(function(d){
       return String(d.id)===String(params.deviceId||'');
@@ -401,7 +403,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     }
     return budgetPack(out,18000);
   }
-  function packResults(exp,opts){opts=opts||{};const out=base(exp,'results',''),a=exp.analysis||{};
+  function packResults(exp,opts){opts=opts||{};const out=actionBase(exp),a=exp.analysis||{};
 out.results={summary:compact(a.summary||{}
     ),statistics:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?compact(LF.AnalysisSummary.ensure(exp)):null,
     top_non_ref:take(a.topNonRef,10),top_ref:take(a.topRef,10),best_by_sample:take(a.bestBySample,40)};
@@ -411,7 +413,7 @@ out.results={summary:compact(a.summary||{}
     return budgetPack(out,16000);}
   function comparisonStats(values){return LF.AnalysisSummary&&LF.AnalysisSummary.stats?LF.AnalysisSummary.stats(values):null;}
   function packResultsCompare(exp,opts){opts=opts||{};
-const out=base(exp,'results_compare',''),p=opts.params||{}
+const out=actionBase(exp),p=opts.params||{}
     ,groups=(Array.isArray(p.groups)?p.groups:[]).map(String).filter(Boolean),metric=String(p.metric||'eff'),
     direction=String(p.direction||'both'),eligibleOnly=p.eligibleOnly!==false,
     factor=Number(exp.analysis&&exp.analysis.summary&&exp.analysis.summary.mismatchFactor)||1;
@@ -425,7 +427,11 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
     rv:direction==='fw'?null:comparisonStats(rv),quality:{valid:ms.filter(function(m){return m.qualityStatus==='valid';
     }).length,review:ms.filter(function(m){return m.qualityStatus==='review';
     }).length,blocked:ms.filter(function(m){return m.qualityStatus==='blocked';}).length}};});
-    out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,16).map(findingRef);
+    const selectedMeasurements=(exp.measurements||[]).filter(function(m){return groups.includes(String(m.group||'').trim()||'Ungrouped');});
+    const measurementIds=new Set(selectedMeasurements.map(function(m){return String(m.id||'');}));
+    const sampleNames=new Set(selectedMeasurements.map(function(m){return String(m.sample||'');}));
+    out.evidence=selectedMeasurements.slice(0,24).map(function(m){return{id:m.id||'',sample:clean(m.sample),group:clean(m.group),quality:m.qualityStatus||'',eligible:!!m.rankingEligible};});
+    out.findings=(exp.findings||[]).filter(function(f){const target=String(f.target||'');return f.status!=='resolved'&&(measurementIds.has(String(f.measurementId||''))||measurementIds.has(target)||sampleNames.has(target));}).slice(0,12).map(findingRef);
     out.instruction='Compare only the selected groups using the supplied deterministic statistics. Do not infer unprovided fabrication causes as facts.';
     return budgetPack(out,9000);}
   function packDesign(exp,opts){
@@ -441,12 +447,12 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
   }
   function packExport(exp,opts){
     opts=opts||{};
-    const out=base(exp,'export','');
+    const out=actionBase(exp);
     const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
       ?LF.ExportProjections.preparationContext(exp)
       :{nomad:{missing:[]},readypv:{missing:[]},allowed_fields:{nomad:[],readypv:[]}};
     const missing=(prep.nomad&&prep.nomad.missing||[]).concat(prep.readypv&&prep.readypv.missing||[]);
-    const query=[clean(exp.meta&&exp.meta.name),missing.map(function(f){return f.label||f.id;}).join(' ')].join(' ');
+    const fieldIds=missing.map(function(f){return String(f.id||'');}),query=[clean(exp.meta&&exp.meta.name),missing.map(function(f){return f.label||f.id;}).join(' ')].join(' ');
     out.export_projection={
       primary_goal:'Prepare the current experiment for NOMAD staging/export. Ready-PV is secondary.',
       nomad:prep.nomad,
@@ -454,19 +460,31 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
       allowed_fields:prep.allowed_fields,
       rule:'Suggestions are export-only overrides. Never rewrite canonical scientific data.'
     };
-    if(LF.Cabinet)out.cabinet=LF.Cabinet.context(query,{limit:10});
-    if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(query,{limit:8,minScore:2});
-    out.action_outputs=LF.ActionData&&LF.ActionData.assistantContext
-      ?LF.ActionData.assistantContext(exp,{limit:6}):{items:[]};
+    const workspace=LF.Workspace&&LF.Workspace.current?LF.Workspace.current():null;
+    const processId=exp.meta&&exp.meta.processId,process=workspace&&(workspace.processes||[]).find(function(item){return String(item.id)===String(processId||'');});
+    const needsContacts=fieldIds.some(function(id){return /^contact\./.test(id);});
+    const needsWorkspace=fieldIds.some(function(id){return /^contact\.(institution|name|email|parser|plugin)$|^storage\.|^samples\.locations$|^remarks\.|^data\.(workspace_name|institution)$/.test(id);});
+    const needsProcess=fieldIds.some(function(id){return /^measured\.|^samples\.|^metadata\.|^instruments\.|^data\.(process_name|process_kind|instrument_refs|acquisition_software_refs|output_format_refs|measurement_techniques|notes)$/.test(id);});
+    const cabinetKinds=[];
+    if(fieldIds.some(function(id){return /instrument/.test(id);}))cabinetKinds.push('instrument','setup');
+    if(fieldIds.some(function(id){return /software/.test(id);}))cabinetKinds.push('software');
+    if(fieldIds.some(function(id){return /format|docs/.test(id);}))cabinetKinds.push('file_format');
+    if(needsWorkspace&&workspace)out.workspace={id:workspace.id||'',name:workspace.name||'',institution:workspace.institution||'',description:workspace.description||'',locations:take(workspace.locations,12),storage_profiles:take(workspace.storageProfiles,8),contacts:needsContacts?take(workspace.contacts,12):[]};
+    if(needsProcess&&process)out.process=compact(process);
+    if(cabinetKinds.length&&LF.Cabinet)out.cabinet=LF.Cabinet.context(query,{kinds:Array.from(new Set(cabinetKinds)),limit:8});
+    if(fieldIds.some(function(id){return /^measured\.description$|^data\.notes$/.test(id);})&&LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(query,{limit:4,minScore:2});
     return budgetPack(out,16000);
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,
     results_compare:packResultsCompare,export:packExport};
   function registerProfile(name,fn){name=clean(name).toLowerCase();if(!name||typeof fn!=='function')throw new Error('Context profile requires name and function.');if(PACKERS[name])throw new Error('Context profile already registered: '+name);PACKERS[name]=fn;return name;}
   function profiles(){return Object.keys(PACKERS).sort();}
-  function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(base(exp,profile,opts.question||''),10000);}
+  function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(actionBase(exp),10000);}
   function profile(def){const declared=def&&def.contract&&def.contract.context&&clean(def.contract.context.profile);return declared||'generic';}
   function compactOutputContract(schemaId){
+    if(schemaId==='export_preparation')return 'Return one JSON object with: status, summary, suggestions[], unresolved[], warnings[]. Each suggestion has projection, field_id, value, source_kind, confidence, evidence. Each unresolved item has projection, field_id, reason and no value. Use only supplied allowed_fields.';
+    if(schemaId==='results_comparison')return 'Return one JSON object with: status, groups[], summary, contrasts[], hypotheses[], limitations[], next_checks[]. Preserve selected group names exactly.';
+    if(schemaId==='results_interpretation')return 'Return one JSON object with: status, summary, observations[], hypotheses[], limitations[], next_checks[]. Evidence must identify supplied deterministic facts.';
     if(schemaId!=='design_suggestion')return'';
     return [
       'Return exactly one compact JSON object and no Markdown.',
@@ -496,7 +514,14 @@ const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAs
     let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);
     const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+
     (req?'\n\n<user_request>\n'+req+'\n</user_request>':'');
-    if(Log)Log.debug('build',{action:def.id,profile:prof,contextChars:user.length,budgetChars:requestedMax||null});
+    if(Log){
+      const included=Object.keys(ctx),known=['workspace','process','page_context','experiment_brief','results','groups',
+        'measurements','samples','findings','evidence','cabinet','knowledge','export_projection','action_outputs','history'],
+        semanticBytes=typeof TextEncoder==='function'?new TextEncoder().encode(user).length:user.length;
+      Log.info('context.profile',{actionId:def.id,profile:prof,estimatedTokens:Math.ceil(user.length/4),
+        semanticContextBytes:semanticBytes,included:included,
+        omitted:known.filter(function(key){return !Object.prototype.hasOwnProperty.call(ctx,key);})});
+    }
     return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
   LF.ContextBuilder={pack:pack,profiles:profiles,registerProfile:registerProfile,designReferences:designReferences};LF.ActionContext={build:build};
 }());

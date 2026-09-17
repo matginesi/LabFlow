@@ -170,6 +170,23 @@ Actions produce one of three semantic classes:
 
 Structured AI output is schema-validated and may additionally pass semantic validation before storage. Provider success (HTTP 200) is not equivalent to Action success.
 
+### Semantic context boundary
+
+Provider transport and semantic model input are separate structures:
+
+```mermaid
+flowchart LR
+    S[Scientific/reference state] --> C[Explicit context builder]
+    C --> M[messages: semantic content only]
+    P[Provider settings] --> T[HTTP transport]
+    R[Runtime request metadata] --> L[Diagnostics/logs]
+    M --> T
+```
+
+The Assistant may receive bounded page context, conversation memory and several authority-labelled sources. Actions receive a small task-specific object. Runtime revision guards, prompt-budget flags, provider/model/endpoint configuration, credentials, browser routing, request IDs, timings and token counters remain outside `messages`.
+
+Structured Actions keep full JSON Schema in the deterministic validator. Small-model-sensitive Actions use a compact semantic output shape in the prompt rather than repeating schema implementation keywords.
+
 ## 9. Dependency direction
 
 High-level allowed direction:

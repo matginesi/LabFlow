@@ -35,7 +35,7 @@ Key validators protect:
 
 Private real-dataset fixtures under `TEST_DATA/` provide additional integration evidence but are intentionally excluded from the distributable repository/gate.
 
-Browser automation requires an environment that allows Playwright to reach the local static server. A browser-policy failure to navigate localhost is an environment limitation, not application evidence; record it separately rather than relabeling it as a test failure.
+Browser automation requires an environment that allows Playwright to reach the local static server. `--full` runs one responsive startup/workflow audit across supported routes and viewports; component lifecycle and Action-state behavior remain in the self-contained JavaScript suites. A browser-policy failure to navigate localhost is an environment limitation, not application evidence; record it separately rather than relabeling it as a test failure.
 
 Live provider tests are also separate because they require credentials, provider availability, quota and browser network permission.
 
