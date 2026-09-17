@@ -343,7 +343,6 @@
     if (requestState) {
       requestState.textContent = activity.request ? 'Prepared request · key redacted' : 'No request data';
     }
-    const technical=byId('activityTechnical');if(technical)technical.open=false;
     renderStable(request, (activity.requestIsJson ? 'json:' : 'text:') + activity.request, function () {
       request.classList.toggle('json-response', activity.requestIsJson);
       if (activity.requestIsJson) request.innerHTML = requestActivityHtml(activity.request || '{}');
@@ -537,6 +536,11 @@
       const element = byId(id);
       if (element) element.innerHTML = '';
     });
+
+    // User-controlled diagnostic disclosure must survive progress/SSE re-renders.
+    // Reset it only when the Activity Totem lifecycle itself is reset.
+    const technical = byId('activityTechnical');
+    if (technical) technical.open = false;
 
     const trace = byId('activityAiTrace');
     if (trace) {

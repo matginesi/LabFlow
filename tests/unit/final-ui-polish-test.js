@@ -18,6 +18,7 @@ module.exports=function(t){
   const uiKitInline=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
   const actionUi=fs.readFileSync(path.join(root,'assets/js/ai/action-ui.js'),'utf8');
   const feedback=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
+  const reviewPanel=fs.readFileSync(path.join(root,'assets/js/pages/review-panel.js'),'utf8');
   const transport=fs.readFileSync(path.join(root,'assets/js/ai/transport.js'),'utf8');
 
   t['Every route uses one canonical page frame width']=function(){
@@ -49,6 +50,13 @@ module.exports=function(t){
     assert(uiCss.includes('.activity-head-actions[data-status="error"] #activityRetry'),true,'error retry occupies primary row');
     assert(uiCss.includes('min-height: var(--control-h)'),true,'mobile touch target');
     assert(uiCss.includes('overflow: visible'),true,'no command-strip scrolling');
+  };
+
+
+  t['Review Check again stays visibly button-shaped and aligned on phones']=function(){
+    assert(reviewPanel.includes('class="button compact review-recheck"'),true,'Check again uses bordered secondary button');
+    assert(reviewPanel.includes('button ghost compact review-recheck'),false,'Check again is not borderless ghost');
+    assert(css.includes('.review-recheck{width:100%;margin-left:0}'),true,'mobile Check again uses stable full-width alignment');
   };
 
   t['Message feedback uses one canonical Message Totem implementation']=function(){

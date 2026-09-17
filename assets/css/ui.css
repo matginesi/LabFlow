@@ -271,8 +271,12 @@ body.activity-open { overflow: hidden; }
 .activity-stage-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .activity-stage-row strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-sm); }
 .activity-message { min-height: 14px; overflow-wrap: anywhere; }
-.activity-technical { border-top: 1px solid var(--border); }
-.activity-technical > summary { padding: 8px 10px; color: var(--text-muted); font-size: var(--font-xs); font-weight: 650; cursor: pointer; }
+.activity-technical { border-top: 1px solid var(--border); background: var(--surface); }
+.activity-technical > summary { display:flex; align-items:center; gap:7px; min-height:34px; padding:8px 10px; color:var(--text-muted); font-size:var(--font-xs); font-weight:700; cursor:pointer; list-style:none; user-select:none; }
+.activity-technical > summary::-webkit-details-marker { display:none; }
+.activity-technical > summary::before { content:"›"; flex:0 0 auto; font-size:15px; line-height:1; transform:rotate(0deg); transition:transform .12s ease; }
+.activity-technical[open] > summary { border-bottom:1px solid var(--border); background:var(--surface-2); color:var(--text); }
+.activity-technical[open] > summary::before { transform:rotate(90deg); }
 .activity-details { display: grid; grid-template-columns: minmax(82px,.4fr) minmax(0,1.1fr) minmax(82px,.4fr) minmax(0,1.1fr); column-gap: 8px; margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: var(--font-xs); }
 .activity-details dt, .activity-details dd { margin: 0; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .activity-details dt { color: var(--text-muted); }

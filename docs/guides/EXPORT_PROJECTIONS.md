@@ -1,6 +1,6 @@
 # Export: NOMAD-first workflow and on-demand projections
 
-LabFlow 0.0.30 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
+LabFlow 0.0.31 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
 
 `export.prepare` retrieves support deterministically from the missing field IDs. Contact fields receive relevant Workspace contacts; measurement-description fields may receive the bound Process and targeted wording references; instrument/software/format fields may receive matching Process/Cabinet resources. It never receives the generic Experiment Brief, efficiency rankings, result comparisons, anomalies or curves.
 

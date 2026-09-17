@@ -1894,7 +1894,7 @@ body.ui-kit-page{ overflow: hidden; }
   .upload-source-preserved{margin-left:44px}
   .review-overview-main{align-items:flex-start;flex-wrap:wrap}
   .review-overview-copy{flex-basis:calc(100% - 54px)}
-  .review-recheck{margin-left:50px}
+  .review-recheck{width:100%;margin-left:0}
   .review-secondary .review-advanced-grid{grid-template-columns:1fr}
 }
 @media(max-width:430px){
@@ -1904,7 +1904,7 @@ body.ui-kit-page{ overflow: hidden; }
   .upload-source-preserved{margin-left:44px}
   .review-state-mark{width:34px;height:34px;flex-basis:34px}
   .review-overview-copy{flex-basis:calc(100% - 46px)}
-  .review-recheck{margin-left:46px;width:calc(100% - 46px)}
+  .review-recheck{width:100%;margin-left:0}
 }
 
 

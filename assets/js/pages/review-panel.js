@@ -81,7 +81,7 @@ const planIndex=rawProps.indexOf(p),matches=proposalMeasurements(e,p),conf=Math.
     'items need')+' your attention':'Everything looks ready')+'</h2><p>'+
     (attention?'Review the highlighted items below before continuing.':
     'No issues require your attention. You can continue to Results.')+
-    '</p></div><button class="button ghost compact review-recheck" type="button" id="reanalyzeDataset">' +
+    '</p></div><button class="button compact review-recheck" type="button" id="reanalyzeDataset">' +
       'Check again</button></div><div class="review-key-facts" aria-label="Imported data summary"><div><span>Samples</span><strong>'+
 Number(a.summary&&a.summary.samples||e.samples.length)+'</strong></div><div><span>Measurements</span><strong>'+
         Number(a.summary&&a.summary.measurements||

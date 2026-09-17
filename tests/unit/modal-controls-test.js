@@ -21,5 +21,16 @@ module.exports=function(t){
     assert(feedback.includes("event.key === 'Escape'")&&feedback.includes('openModalSurface'),true,'shared modal Escape handler');
     assert(app.includes("ev.key==='Escape'&&!LF.UI.isActivityOpen()&&S.state.ui.resultInspectorId"),true,'inspector Escape handler');
   };
+
+  t['Action Technical details stays under user control while progress re-renders']=function(){
+    assert(feedback.includes("const technical = byId('activityTechnical');"),true,'technical disclosure is explicitly reset with the Activity lifecycle');
+    assert(feedback.includes("if (technical) technical.open = false;"),true,'new Activity starts collapsed');
+    const payloadBody=feedback.slice(feedback.indexOf('function renderActivityPayloads()'),feedback.indexOf('function hasActiveCancellationTarget()'));
+    assert(payloadBody.includes('technical.open=false')||payloadBody.includes('technical.open = false'),false,'payload/progress render must not close user-open diagnostics');
+  };
+  t['Confirmation Cancel is a bordered secondary control']=function(){
+    assert(html.includes('class="button" type="button" id="messageTotemCancel"'),true,'Cancel uses canonical bordered button');
+    assert(html.includes('class="button ghost" type="button" id="messageTotemCancel"'),false,'Cancel is not borderless ghost');
+  };
   return t;
 };
