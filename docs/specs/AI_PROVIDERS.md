@@ -27,6 +27,12 @@ These categories must not be collapsed into a generic “AI failed” path in di
 
 Model IDs are preserved internally. Filesystem-like local model IDs may be shortened only for UI display.
 
+### GLM / Zhipu AI preset
+
+The `glm` preset is intentionally thin: it reuses the generic OpenAI-compatible transport and adds only the official Zhipu endpoint, Bearer-key requirement, `glm-4.7-flash` default, JSON mode capability and the provider-native `thinking.type = enabled|disabled` mapping. The model field remains editable and connection checking probes the exact configured model directly; LabFlow does not require catalogue discovery for this preset.
+
+Default endpoint: `https://open.bigmodel.cn/api/paas/v4/chat/completions`.
+
 ## Settings
 
 AI settings are browser-local preferences. Credentials are stored separately by provider/endpoint and are redacted from logs. Saving provider configuration does not change scientific state.
@@ -64,3 +70,8 @@ An HTTP 200 response rejected by structured/semantic validation is logged as a r
 ## Console API
 
 Use `LabFlow.AIConsole` for provider diagnosis without experiment data. See `guides/AI_PROVIDER_CONSOLE.md`.
+
+
+## Provider settings draft behavior
+
+Provider form edits are drafts until **Save** or a successful **Save & test**. Changing the provider, API-key persistence checkbox, reasoning preference, streaming option, or other connection fields must not re-render the Settings form from the previously persisted provider. **Save & test** probes the configuration visible at the start of the operation and persists that verified provider/model/endpoint only after the probe succeeds.

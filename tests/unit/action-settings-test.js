@@ -40,6 +40,13 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
     assert(LF.AIProviders.openai.modelSelect===true&&LF.AIProviders.openai.modelCatalogueRequired===true,'OpenAI Detect uses the official model catalogue');
     assert(LF.AIProviders.gemini.modelSelect===true&&LF.AIProviders.gemini.modelCatalogueRequired===true,'Gemini Detect uses the OpenAI-compatible model catalogue');
+    assert(LF.AIProviders.glm.endpoint==='https://open.bigmodel.cn/api/paas/v4/chat/completions','GLM uses the official Zhipu Chat Completions endpoint');
+    assert(LF.AIProviders.glm.model==='glm-4.7-flash','GLM preset defaults to glm-4.7-flash');
+    assert(LF.AIProviders.glm.keyRequired===true,'GLM API key required');
+    assert(LF.AIProviders.glm.modelSelect!==true,'GLM keeps exact model entry editable instead of depending on catalogue discovery');
+    assert(LF.AIProviders.glm.supportsJsonMode===true,'GLM structured JSON mode is declared');
+    assert(LF.AIProviders.glm.thinkingModes.off.thinking.type==='disabled'&&LF.AIProviders.glm.thinkingModes.on.thinking.type==='enabled','GLM thinking maps to Zhipu thinking.type');
+    assert(LF.AIProviders.glm.connectionTestThinkingMode==='off'&&LF.AIProviders.glm.connectionTestMaxTokens===64,'GLM connection probe stays small and disables thinking');
     assert(LF.AIProviders.ollama.modelSelect===true,'Ollama Detect exposes discovered local models');
     assert(LF.AIProviders.lmstudio.modelSelect===true,'LM Studio Detect exposes discovered local models');
     assert(LF.AIProviders.llamacpp.modelSelect===true,'llama.cpp Detect exposes served local models');

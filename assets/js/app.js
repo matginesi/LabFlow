@@ -645,7 +645,7 @@ if(row){S.state.ui.selectedMeasurementId=row.dataset.measurementRow;
       try {
         if(LF.KnowledgeController&&LF.KnowledgeController.handleChange(e,{state:S,render:render}))return;
         if(LF.CabinetController&&LF.CabinetController.handleChange(e,{state:S,renderStable:renderWithStableAnchor}))return;
-        if(LF.SettingsController&&LF.SettingsController.handleChange(e,{state:S,render:render}))return;{S.state.ui=S.state.ui||{};S.state.ui.settingsKnowledgeKind=e.target.value||'all';render();return;}
+        if(LF.SettingsController&&LF.SettingsController.handleChange(e,{state:S,render:render}))return;
         if(e.target.id==='uiKitGlobalFilter'){S.state.ui.uiKitFilter=e.target.value||'all';applyUiKitFilter();return;}
         if(e.target.id==='docsSection'){S.state.ui.docsSection=e.target.value||'all';LF.DocsPage.apply(document.getElementById('main'));return;}
         if(e.target.id==='designDeviceSelect'){S.state.ui.selectedDesignDeviceId=e.target.value;activateDesignProposal(S.state.ui.selectedDesignDeviceId);render();return;}

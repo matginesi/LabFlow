@@ -107,7 +107,7 @@ module.exports=function(t,LF){
   t['Every built-in provider requiring credentials fails Detect before AI calls when its visible key is empty']=async function(){
     const required=LF.AIProviderList.filter(function(provider){return provider.keyRequired===true;}).map(function(provider){return provider.id;});
     const oldAI=LF.AI,oldUI=LF.UI;let calls=0,events=[];LF.AI={listModels:async function(){calls++;return{models:['x']};},testConnection:async function(){calls++;return{ok:true};}};LF.UI=activityUI(events);
-    try{for(const providerId of required){localStorage.clear();events.length=0;const p=LF.AIProviders[providerId],form=installForm(LF,{provider:providerId,endpoint:p.endpoint,apiKey:'',model:''});try{const result=await LF.AISettings.detectModel();assert(result,[],providerId+' Detect fails');assert(!!lastEvent(events,'error'),true,providerId+' ends in Action Totem error');assert(/API key/i.test(lastEvent(events,'error').payload.response),true,providerId+' explains missing key');assert(events.some(function(e){return e.kind==='message';}),false,providerId+' does not emit Message Totem');}finally{form.restore();}}assert(calls,0,'no provider network helper called without required credentials');}
+    try{for(const providerId of required){localStorage.clear();events.length=0;const p=LF.AIProviders[providerId],form=installForm(LF,{provider:providerId,endpoint:p.endpoint,apiKey:'',model:p.model||''});try{const result=await LF.AISettings.detectModel();assert(result,[],providerId+' Detect fails');assert(!!lastEvent(events,'error'),true,providerId+' ends in Action Totem error');assert(/API key/i.test(lastEvent(events,'error').payload.response),true,providerId+' explains missing key');assert(events.some(function(e){return e.kind==='message';}),false,providerId+' does not emit Message Totem');}finally{form.restore();}}assert(calls,0,'no provider network helper called without required credentials');}
     finally{LF.AI=oldAI;LF.UI=oldUI;localStorage.clear();}
   };
 
@@ -122,6 +122,23 @@ module.exports=function(t,LF){
     LF.AI={testConnection:async function(){const error=new Error('Failed to fetch');error.isNetwork=true;error.providerId='openrouter';error.phase='chat';throw error;}};
     LF.UI=activityUI(events);
     try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'openai','previous provider retained');assert(saved.endpoint,'https://saved.example/v1/chat/completions','previous endpoint retained');assert(saved.model,'saved-model','previous model retained');assert(LF.Storage.getApiKey('openai','https://saved.example/v1/chat/completions'),'saved-key','previous key retained');assert(!!lastEvent(events,'error'),true,'failure uses Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
+    finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+
+  t['GLM Save persists the selected provider instead of reverting to the previously saved local provider']=function(){
+    localStorage.clear();LF.Storage.saveAiSettings({provider:'llamacpp',endpoint:LF.AIProviders.llamacpp.endpoint,model:'local-model',thinkingMode:'auto',streaming:true,inactivityTimeoutMs:90000,maxOutputTokensCap:0});
+    const form=installForm(LF,{provider:'glm',endpoint:LF.AIProviders.glm.endpoint,apiKey:'glm-key',model:'glm-4.7-flash'});
+    const oldUI=LF.UI;LF.UI={message:function(){}};
+    try{const saved=LF.AISettings.saveFromForm({toast:false});assert(saved.provider,'glm','visible GLM provider persisted');assert(saved.endpoint,LF.AIProviders.glm.endpoint,'GLM endpoint persisted');assert(saved.model,'glm-4.7-flash','GLM model persisted');assert(LF.Storage.getAiSettings().provider,'glm','stored provider remains GLM');}
+    finally{LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+
+  t['GLM Save & test probes and persists the exact visible GLM configuration']=async function(){
+    localStorage.clear();LF.Storage.saveAiSettings({provider:'llamacpp',endpoint:LF.AIProviders.llamacpp.endpoint,model:'local-model',thinkingMode:'auto',streaming:true,inactivityTimeoutMs:90000,maxOutputTokensCap:0});
+    const form=installForm(LF,{provider:'glm',endpoint:LF.AIProviders.glm.endpoint,apiKey:'glm-key',model:'glm-4.7-flash'}),button=makeElement('');button.textContent='Save & test';
+    const oldAI=LF.AI,oldUI=LF.UI;let probeArgs=null,events=[];
+    LF.AI={testConnection:async function(opts){probeArgs=Object.assign({},opts);return{ok:true,model:opts.model,elapsedMs:8,transport:'direct'};}};LF.UI=activityUI(events);
+    try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(probeArgs.provider,'glm','GLM is probed');assert(probeArgs.endpoint,LF.AIProviders.glm.endpoint,'GLM endpoint is probed');assert(probeArgs.model,'glm-4.7-flash','GLM model is probed');assert(probeArgs.apiKey,'glm-key','GLM key is probed');assert(saved.provider,'glm','GLM remains selected after persistence');assert(saved.endpoint,LF.AIProviders.glm.endpoint,'saved GLM endpoint');assert(saved.model,'glm-4.7-flash','saved GLM model');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 

@@ -21,6 +21,18 @@ module.exports = function (t, LF) {
     assert(AI.resolveChatUrl(''), '', 'empty');
   };
 
+  t['GLM 4.7 Flash capability and thinking payload use the Zhipu contract'] = function () {
+    const cap=AI.knownCapability('glm','glm-4.7-flash');
+    assert(cap.contextWindow,200000,'GLM context window');
+    assert(cap.maxOutputTokens,128000,'GLM max output');
+    assert(cap.reasoningStatus,'optional','GLM thinking can be enabled or disabled');
+    const provider={id:'glm',safeThinkingOverrideWhenUnknown:true,thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}}};
+    const off={},on={};
+    AI.applyThinkingMode(off,provider,'off');AI.applyThinkingMode(on,provider,'on');
+    assert(off.thinking,{type:'disabled'},'GLM thinking off payload');
+    assert(on.thinking,{type:'enabled'},'GLM thinking on payload');
+  };
+
   t['validateHttpUrl accepts http/https and rejects others'] = function () {
     assert(AI.validateHttpUrl('http://127.0.0.1:11434/v1'), 'http://127.0.0.1:11434/v1', 'http local');
     let threw = false;

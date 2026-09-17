@@ -349,6 +349,7 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
   }
   function knownCapability(providerId,model){
     const id=String(providerId||'').toLowerCase(),m=String(model||'').toLowerCase();
+    if(id==='glm'&&/^glm-4\.7-flash(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:200000,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['off','on'],reasoningDefault:'on',source:'Zhipu AI GLM-4.7-Flash specification'};
     if(id==='openai'){
       if(/^gpt-5-pro(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,reasoningStatus:'required',reasoningAllowedOptions:['high'],reasoningDefault:'high',source:'OpenAI model specification'};
       if(/^gpt-5\.(?:[1-9]|\d{2,})(?:[.-]|$)/.test(m))return{maxOutputTokens:128000,contextWindow:null,exactOutput:true,reasoningStatus:'optional',reasoningAllowedOptions:['none','low','medium','high'],reasoningDefault:'none',source:'OpenAI model specification'};

@@ -5,6 +5,7 @@ import argparse, json, os, sys, time, urllib.error, urllib.request
 
 PROVIDERS = {
     'openrouter': {'chat':'https://openrouter.ai/api/v1/chat/completions','models':'https://openrouter.ai/api/v1/models','model':'openrouter/free','env':'OPENROUTER_API_KEY'},
+    'glm': {'chat':'https://open.bigmodel.cn/api/paas/v4/chat/completions','models':'https://open.bigmodel.cn/api/paas/v4/models','model':'glm-4.7-flash','env':'GLM_API_KEY'},
 }
 
 def request(url, key, method='GET', payload=None, timeout=60):

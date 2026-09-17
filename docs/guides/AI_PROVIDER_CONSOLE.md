@@ -28,6 +28,9 @@ Example:
 export OPENROUTER_API_KEY='...'
 python tools/ai_probe.py openrouter --list-models --free-only
 python tools/ai_probe.py openrouter --model openrouter/free
+
+export GLM_API_KEY='...'
+python tools/ai_probe.py glm --model glm-4.7-flash
 ```
 
 The diagnostic tools never intentionally print the API key.

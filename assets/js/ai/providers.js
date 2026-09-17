@@ -28,6 +28,14 @@ endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRe
       id:'gemini', name:'Google Gemini', catalogueFallbackToConfiguredModel:true, endpoint:'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model:'gemini-3.7-flash', keyRequired:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Google Gemini model', supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true,
       note:'Gemini OpenAI-compatible endpoint.'
     },
+    glm: {
+      id:'glm', name:'GLM / Zhipu AI', endpoint:'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      model:'glm-4.7-flash', keyRequired:true, supportsStreaming:true, tokenParam:'max_tokens',
+      supportsTemperature:true, supportsJsonMode:true, safeThinkingOverrideWhenUnknown:true, thinkingPromptGuard:true,
+      thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}},
+      requestTimeoutMs:300000, connectionTestTimeoutMs:45000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off',
+      note:'Zhipu AI OpenAI-compatible Chat Completions endpoint. Default: glm-4.7-flash.'
+    },
     ollama: {
       id:'ollama', name:'Ollama', local:true, endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false,
 modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'Ollama model', supportsStreaming:true,

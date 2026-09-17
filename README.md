@@ -110,7 +110,7 @@ LabFlow.Data.structures()
 ## Run locally
 
 ```bash
-python3 -m http.server 8000 --bind 127.0.0.1
+python -m http.server 8000 --bind 127.0.0.1
 ```
 
 Open `http://127.0.0.1:8000/`. Do not browse to `0.0.0.0`; it is a bind address, not a client address.
@@ -121,7 +121,7 @@ For a local OpenAI-compatible llama.cpp server, `labflow_engine.sh` provides the
 
 LabFlow calls the endpoint configured in Settings directly from the browser. There is no hidden provider relay or backend fallback. Browser CORS, authentication, quota, model, and server errors therefore remain distinguishable.
 
-OpenRouter (`openrouter/free`) is the static-POC default because it is compatible with the browser-only deployment model. Local OpenAI-compatible endpoints remain supported through provider adapters.
+OpenRouter (`openrouter/free`) is the static-POC default because it is compatible with the browser-only deployment model. The built-in **GLM / Zhipu AI** preset targets `glm-4.7-flash` through the official `open.bigmodel.cn` Chat Completions endpoint; the exact model field remains editable and does not depend on catalogue discovery. Local OpenAI-compatible endpoints remain supported through provider adapters.
 
 Use:
 
