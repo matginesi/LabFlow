@@ -35,6 +35,51 @@ function mappingTable(plan){
   const rows=(plan.mappings||[]).map(function(m){return '<tr><td>'+PS.badge(m.status,m.status==='mapped'?'success':m.status==='missing'?'warning':'')+'</td><td class="mono">'+safe(m.labflow_path||'')+'</td><td class="mono">'+safe(m.nomad_path||'')+'</td><td>'+safe(m.value_summary||'')+'</td></tr>';}).join('');
   return '<div class="table-wrap export-mapping-table"><table class="data-table dense-table"><thead><tr><th>Status</th><th>LabFlow field</th><th>NOMAD field</th><th>Current value</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
+function sourceBadge(source){
+  source=String(source||'MISSING').toUpperCase();
+  const tone=source==='OVERRIDE'?'warning':source==='EXPERIMENT'?'success':source==='MISSING'?'danger':source==='CABINET'?'info':'';
+  return PS.badge(source,tone);
+}
+function projectionField(field,kind,editing){
+  const value=LF.ExportProjections.display(field.value),missing=!value,required=field.required?'<span class="projection-required">required</span>':field.recommended?'<span class="projection-recommended">recommended</span>':'';
+  const editor=editing&&field.editable!==false?'<textarea class="projection-input" rows="'+(Array.isArray(field.value)||value.length>70?'3':'2')+'" data-projection-input="'+safe(field.id)+'" aria-label="'+safe(field.label)+'">'+safe(value)+'</textarea>':
+    '<div class="projection-value '+(missing?'is-missing':'')+'">'+(missing?'— Not available —':safe(value).replace(/\n/g,'<br>'))+'</div>';
+  return '<div class="projection-field" data-field-id="'+safe(field.id)+'"><div class="projection-field-head"><strong>'+safe(field.label)+'</strong><span class="projection-field-meta">'+required+sourceBadge(field.source)+'</span></div>'+editor+(field.note?'<small>'+safe(field.note)+'</small>':'')+'</div>';
+}
+function projectionColumn(kind,projection){
+  const editing=String(S.state.ui.exportProjectionEdit||'')===kind,overrideCount=Object.keys(LF.ExportProjections.overrides(kind)||{}).length,r=projection.readiness||{},tone=r.score>=90?'success':r.score>=70?'warning':'danger';
+  const actions=editing?'<button class="button primary compact" type="button" data-projection-save="'+kind+'">Save overrides</button><button class="button compact" type="button" data-projection-cancel="'+kind+'">Cancel</button>':
+    '<button class="button compact" type="button" data-projection-edit="'+kind+'">Edit projection</button>';
+  const reset=overrideCount?'<button class="button ghost compact" type="button" data-projection-reset="'+kind+'">Reset '+overrideCount+' override'+(overrideCount===1?'':'s')+'</button>':'';
+  const sections=(projection.sections||[]).map(function(sec){return '<section class="projection-section"><h3>'+safe(sec.name)+'</h3>'+sec.fields.map(function(f){return projectionField(f,kind,editing);}).join('')+'</section>';}).join('');
+  let exportActions='';
+  if(kind==='nomad')exportActions='<button class="button compact" type="button" data-projection-download="nomad" data-projection-format="json">JSON</button><button class="button compact" type="button" data-projection-download="nomad" data-projection-format="yaml">YAML</button>';
+  else exportActions='<button class="button compact" type="button" data-projection-download="readypv" data-projection-format="json">JSON</button><button class="button compact" type="button" data-projection-copy="readypv" data-projection-format="text">Copy form answers</button>';
+  const previewFormat=kind==='nomad'?'json':'text',preview=LF.ExportProjections.serialize(kind,S.state.experiment,previewFormat).slice(0,12000);
+  const readinessCopy=Number(r.requiredMissing||0)?Number(r.requiredMissing)+' required missing':
+    Number(r.recommendedMissing||0)?Number(r.recommendedMissing)+' recommended missing':'Mapped locally';
+  return '<article class="panel projection-column" data-projection-kind="'+kind+'">'+
+    '<div class="panel-head projection-head"><div><span class="eyebrow">'+safe(projection.title)+'</span>'+
+    '<h2 class="h2">'+safe(projection.subtitle)+'</h2>'+
+    '<div class="meta">Canonical LabFlow data → '+safe(projection.title)+
+    ' projection. Overrides never rewrite ExperimentData.</div></div>'+
+    '<div class="projection-readiness"><strong class="status-'+tone+'">Ready '+Number(r.score||0)+'%</strong>'+
+    '<small>'+readinessCopy+'</small></div></div>'+
+    '<div class="panel-body projection-body"><div class="projection-toolbar"><div class="row-wrap">'+actions+reset+
+    '</div><div class="row-wrap">'+exportActions+'</div></div>'+sections+
+    '<details class="projection-preview"><summary>Machine-readable preview</summary><pre>'+safe(preview)+
+    '</pre></details></div></article>';
+}
+function projectionWorkbench(exp){
+  if(!LF.ExportProjections)return'';
+  const nomad=LF.ExportProjections.nomad(exp),readypv=LF.ExportProjections.readyPv(exp);
+  return '<section class="projection-workbench"><div class="projection-workbench-head"><div>'+
+    '<span class="eyebrow">Structured projections</span><h2 class="h2">NOMAD + Ready-PV</h2>'+
+    '<div class="meta">Two views of the same LabFlow data. Optional edits are export-only overrides and can be '+
+    'reset at any time.</div></div><button class="button compact" type="button" data-export-refresh>'+
+    'Refresh projections</button></div><div class="projection-columns">'+projectionColumn('nomad',nomad)+
+    projectionColumn('readypv',readypv)+'</div></section>';
+}
 function remediation(exp,validation){
   const audit=validation.audit||{},danger=audit.unresolvedDanger||[],incomplete=audit.incompletePatches||[],focus=String(S.state.ui.exportFocus||''),openDanger=focus==='danger-findings'?' open':'',openProv=focus==='patch-provenance'?' open':'';
   if(!danger.length&&!incomplete.length)return'';
@@ -108,7 +153,7 @@ PS.badge(validation.status,statusTone(validation.status))+
     '<div class="export-summary-strip"><div><span>Experiment</span><strong>'+safe(exp.meta&&exp.meta.name||
     'Current experiment')+'</strong></div><div><span>Changes</span><strong>'+patches+
     '</strong></div><div><span>NOMAD</span><strong class="status-'+statusTone(validation.status)+'">'+
-    safe(validation.status)+'</strong></div></div>'+save+nomad+nomadUploadStub(nomadSettings,
+    safe(validation.status)+'</strong></div></div>'+projectionWorkbench(exp)+save+nomad+nomadUploadStub(nomadSettings,
     nomadToken)+remediate+'</section>';
 }
 LF.ExportPage={render:render};

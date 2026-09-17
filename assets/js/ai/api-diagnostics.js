@@ -48,6 +48,7 @@
     if(c==='1312')return' The selected model is temporarily under high traffic. Retry later.';
     if(c==='1302')return' Provider concurrency is saturated. Retry later.';
     if(c==='1303')return' Provider request frequency is too high. Retry later.';
+    if(c==='1305')return' The provider traffic limit was reached. Retry later; LabFlow does not retry automatically.';
     if(status===429)return' The provider rate limit was reached. LabFlow does not retry automatically.';
     if(status>=500)return' The provider reported a server-side error.';
     if(c==='1261'||c==='MODEL_CONTEXT_LENGTH')return' The loaded model context window was exceeded.';
@@ -64,6 +65,12 @@ LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:''),provider=LF.AIP
       'Retry or increase the inactivity timeout if the local model is still loading.':
       'The provider did not expose a response before the deadline. Retry once; if curl succeeds while the browser does not, inspect browser CORS/network policy.';
       }
+    else if(status===429||e.rateLimited){
+      category=e.rateLimited&&e.rateLimitRetryable===false?'Provider quota':'Rate limit';
+      const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);
+      if(code==='1305')next='Zhipu reported traffic limit code 1305. Retry later; LabFlow will not loop or retry automatically.';
+      else next=retryMs?'Retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'Retry later or use another provider.';
+    }
     else if(e.isNetwork||(!status&&/reach|network|fetch|cors|preflight|blocked/i.test(String(e.message||'')))){
       const providerId=e.providerId||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().provider:'');
       category=localProvider(providerId)?(providerId==='llamacpp'&&bindAddressOrigin()?'Local origin mismatch':'Local endpoint unreachable'):'Browser / network';
@@ -80,8 +87,6 @@ e.message||''))){category='Thinking compatibility';
     else if(status===400&&/(?:failed|unable) to load model|model (?:is )?not (?:found|loaded)|invalid (?:request[^.]* )?model/i.test(String(e.providerMessage||e.message||''))){category='Model unavailable';next='The provider could not load the configured model. Load/select a valid model in the provider, then Detect or Save & test again.';}
     else if(status===401||status===403){category='Authentication';next='Check the API key or provider permissions.';}
     else if(status===404){category='Endpoint / model';next='Check the endpoint path and configured model.';}
-    else if(e.rateLimited&&e.rateLimitRetryable===false){category='Provider quota';next='The provider quota/window is exhausted. Check its reset status or use another provider.';}
-    else if(status===429||e.rateLimited){category='Rate limit';const retryMs=Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);next=retryMs?'Retry after about '+Math.max(1,Math.ceil(retryMs/1000))+' s.':'Retry later or use another provider.';}
     else if(status>=500){category='Provider server';next='Check provider status/logs and retry.';}
     return{category:category,next:next,status:status||'',providerCode:code};
   }

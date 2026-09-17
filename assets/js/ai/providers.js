@@ -33,8 +33,8 @@ endpoint:'https://api.openai.com/v1/chat/completions', model:'gpt-5-mini', keyRe
       model:'glm-4.7-flash', keyRequired:true, supportsStreaming:true, tokenParam:'max_tokens',
       supportsTemperature:true, supportsJsonMode:true, safeThinkingOverrideWhenUnknown:true, thinkingPromptGuard:true,
       thinkingModes:{off:{thinking:{type:'disabled'}},on:{thinking:{type:'enabled'}}},
-      requestTimeoutMs:300000, connectionTestTimeoutMs:45000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off',
-      note:'Zhipu AI OpenAI-compatible Chat Completions endpoint. Default: glm-4.7-flash.'
+      requestTimeoutMs:300000, connectionTestTimeoutMs:30000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off',
+      note:'Zhipu AI OpenAI-compatible Chat Completions endpoint. Official endpoint: open.bigmodel.cn/api/paas/v4/chat/completions. Default: glm-4.7-flash.'
     },
     ollama: {
       id:'ollama', name:'Ollama', local:true, endpoint:'http://127.0.0.1:11434/v1', model:'gemma3', keyRequired:false,

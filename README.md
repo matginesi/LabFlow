@@ -110,7 +110,7 @@ LabFlow.Data.structures()
 ## Run locally
 
 ```bash
-python -m http.server 8000 --bind 127.0.0.1
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
 Open `http://127.0.0.1:8000/`. Do not browse to `0.0.0.0`; it is a bind address, not a client address.
@@ -174,3 +174,8 @@ Design completion follows a fixed authority hierarchy: **experiment evidence →
 Every proposal carries the nature of the choice (`experiment`, `cabinet_reference`, `knowledge_reference`, `model_inference`, or unresolved) and a calibrated confidence. Confidence is the suitability of the candidate for review, **not** the probability that the current experiment actually used that candidate. Cabinet and KB values remain review-only and never become experiment evidence merely because an AI used them.
 
 See `docs/guides/DESIGN_INFERENCE.md` for the full source hierarchy, confidence calibration, small-model fallback and known-unknown semantics.
+
+
+### Export projections
+
+The Export workspace includes side-by-side NOMAD and Ready-PV projections. Both are deterministic views of canonical LabFlow data; optional edits are export-only overrides and do not modify the scientific source of truth. Ready-PV can be exported as JSON or copied in questionnaire-ready text, while NOMAD projection overrides flow into the generated archive YAML.

@@ -85,7 +85,7 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
   }
   function updateProviderActivity(options){if(LF.UI&&typeof LF.UI.activityUpdate==='function')LF.UI.activityUpdate(options||{});}
   function finishProviderActivity(options){if(LF.UI&&typeof LF.UI.activityFinish==='function')LF.UI.activityFinish(Object.assign({holdMs:0},options||{}));}
-  function failProviderActivity(error,options){if(LF.UI&&typeof LF.UI.activityError==='function')LF.UI.activityError(error,Object.assign({holdMs:0},options||{}));}
+  function failProviderActivity(error,options){if(LF.UI&&typeof LF.UI.activityError==='function')LF.UI.activityError(error,Object.assign({holdMs:3600},options||{}));}
 
   function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
@@ -244,7 +244,13 @@ endpoint:settings.endpoint,remember:rememberKey});
       if(useActivity)updateProviderActivity({stepId:'probe',stepStatus:'active',stage:'Testing the LLM',message:'Sending a minimal Chat Completions request to '+(provider.name||providerId)+'.',progress:.52,details:{Model:modelLabel(providerId,selected),Transport:'direct'}});
       Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'chat-probe',status:'start',model:selected});
       const probe=await LF.AI.testConnection({provider:providerId,endpoint:endpoint,model:selected,apiKey:apiKey,diagnosticId:diagnosticId});
-      if(probe&&probe.rateLimited)throw new Error((provider.name||providerId)+' is reachable but rate limited; LabFlow cannot verify the model right now.');
+      if(probe&&probe.rateLimited){
+        const error=new Error((provider.name||providerId)+' is reachable but rate limited; LabFlow cannot verify the model right now.');
+        error.providerId=providerId;error.phase='chat-probe';error.status=Number(probe.status)||429;
+        error.providerCode=String(probe.providerCode||'');error.rateLimited=true;
+        error.retryAfterMs=Number(probe.retryAfterMs)||0;error.rateLimitKind=probe.rateLimitKind||'rate_limit';
+        throw error;
+      }
       if(!probe||probe.ok!==true)throw new Error((provider.name||providerId)+' did not pass the connection probe.');
       if(useActivity)updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:(probe.elapsedMs?Math.round(probe.elapsedMs)+' ms':'Live response received'),stepId:'probe',stage:'Resolving capabilities',progress:.78});
       Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'chat-probe',status:'ok',model:selected,elapsedMs:probe.elapsedMs||null,transport:probe.transport||'direct'});
@@ -303,9 +309,9 @@ message:(provider.name||providerId)+' is reachable and the model answered the li
       updateProviderActivity({stepId:'probe',stepStatus:'active',stage:'Testing the LLM',message:'Sending a minimal Chat Completions request to '+(provider.name||config.providerId)+'.',progress:.34,details:{Provider:provider.name||config.providerId,Endpoint:endpointHost(config.endpoint),Model:modelLabel(config.providerId,config.model),Transport:'direct'}});
       const result=await LF.AI.testConnection({provider:config.providerId,endpoint:config.endpoint,model:config.model,apiKey:config.apiKey,diagnosticId:diagnosticId});
       if(result.rateLimited){
-        const retryS=Number(result.retryAfterMs||0)>0?Math.max(1,Math.ceil(Number(result.retryAfterMs)/1000)):0,text=(provider.name||config.providerId)+' is reachable but rate limited'+(retryS?' · retry after about '+retryS+' s':'')+'. Settings were not changed.';
-        Log.warn('connection-test.rate-limited',{diagnosticId:diagnosticId,provider:config.providerId,model:config.model,endpoint:endpointHost(config.endpoint),retryAfterMs:result.retryAfterMs||0});
-        const error=new Error(text);error.providerId=config.providerId;error.phase='chat-probe';
+        const retryS=Number(result.retryAfterMs||0)>0?Math.max(1,Math.ceil(Number(result.retryAfterMs)/1000)):0,code=String(result.providerCode||''),text=(provider.name||config.providerId)+' is reachable but '+(code==='1305'?'Zhipu traffic-limited the request (code 1305)':'rate limited')+(retryS?' · retry after about '+retryS+' s':'')+'. Settings were not changed.';
+        Log.warn('connection-test.rate-limited',{diagnosticId:diagnosticId,provider:config.providerId,model:config.model,endpoint:endpointHost(config.endpoint),providerCode:code,retryAfterMs:result.retryAfterMs||0});
+        const error=new Error(text);error.providerId=config.providerId;error.phase='chat-probe';error.status=Number(result.status)||429;error.providerCode=code;error.rateLimited=true;error.retryAfterMs=Number(result.retryAfterMs)||0;
         failProviderActivity(error,{stage:'Connection not ready',message:'The live probe was rate limited.',response:text,details:{Provider:provider.name||config.providerId,Endpoint:endpointHost(config.endpoint),Model:modelLabel(config.providerId,config.model),Phase:'chat-probe',Diagnostic:diagnosticId}});
         return result;
       }

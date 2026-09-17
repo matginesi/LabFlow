@@ -631,7 +631,7 @@ reasoningObserved:!!reasoning,elapsedMs:elapsed,prepareMs:spec.prepareMs||0,
       if(!isRateLimitError(err))throw err;
       const elapsed=Math.round(performance.now()-started),retryMs=Math.max(0,Number(err.retryAfterMs)||0);
       Log.info('connection-test.timing',{provider:cfg.settings.provider,model:cfg.settings.model,result:'reachable-rate-limited',prepareMs:spec.prepareMs||0,totalMs:elapsed,httpRequests:1,retryAfterMs:retryMs||null});
-      return{ok:false,reachable:true,rateLimited:true,retryAfterMs:retryMs,providerCode:String(err.providerCode||''),
+      return{ok:false,reachable:true,rateLimited:true,rateLimitKind:err.rateLimitKind||'rate_limit',retryAfterMs:retryMs,providerCode:String(err.providerCode||''),
 providerMessage:String(err.providerMessage||''),status:Number(err.status)||429,elapsedMs:elapsed,
         requestElapsedMs:err.elapsedMs,model:cfg.settings.model,provider:cfg.settings.provider,
         thinkingMode:spec.thinkingMode||'auto',content:'',usage:null,finishReason:'',requestId:err.requestId||'',

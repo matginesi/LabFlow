@@ -428,9 +428,14 @@
 
   function getExportSettings() {
     const raw = read(LOCAL_KEYS.EXPORT_SETTINGS, {});
+    const overrides = raw.projectionOverrides && typeof raw.projectionOverrides === 'object' ? raw.projectionOverrides : {};
     return {
       includeRaw: raw.includeRaw !== false,
-      includeDerived: raw.includeDerived !== false
+      includeDerived: raw.includeDerived !== false,
+      projectionOverrides: {
+        nomad: overrides.nomad && typeof overrides.nomad === 'object' ? clone(overrides.nomad) : {},
+        readypv: overrides.readypv && typeof overrides.readypv === 'object' ? clone(overrides.readypv) : {}
+      }
     };
   }
 

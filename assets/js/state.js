@@ -40,6 +40,7 @@
       pceDistributionZoom: 1,
       selectedDesignDeviceId: null,
       resultInspectorId: null,
+      exportProjectionEdit: '',
       cabinetKind: 'all',
       cabinetQuery: '',
       cabinetSelectedId: null,

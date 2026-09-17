@@ -6,6 +6,7 @@
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};
 function provider(id){id=String(id||LF.Storage.getAiSettings().provider||'');const p=LF.AIProviders[id];if(!p)throw new Error('Unknown provider: '+id);return p;}
+function help(){const text='LabFlow.AIConsole providers() | models(provider) | probe(provider, model, options) | doctor(provider, options)';console.info(text);return text;}
 function safeSettings(id,model,endpoint){const p=provider(id),saved=LF.Storage.getAiSettings();return{provider:p.id,model:String(model||saved.model||p.model||''),endpoint:String(endpoint||p.endpoint||saved.endpoint||''),keyConfigured:!!LF.Storage.getApiKey(p.id),local:p.local===true};}
 async function models(id,options){options=options||{};
 const p=provider(id),s=safeSettings(p.id,options.model,options.endpoint),result=await LF.AI.listModels(p.id,s.endpoint,

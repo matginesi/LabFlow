@@ -21,7 +21,7 @@
   }
 
 
-  function exportOptionsSignature(settings){return JSON.stringify({includeRaw:!!(settings&&settings.includeRaw),includeDerived:!!(settings&&settings.includeDerived)});}
+  function exportOptionsSignature(settings){return JSON.stringify({includeRaw:!!(settings&&settings.includeRaw),includeDerived:!!(settings&&settings.includeDerived),projectionOverrides:settings&&settings.projectionOverrides&&settings.projectionOverrides.nomad||{}});}
   function workspaceContext(exp){
     const workspace=LF.Workspace&&LF.Workspace.current?LF.Workspace.current():null,id=exp&&exp.meta&&exp.meta.workspaceId||'',processId=exp&&exp.meta&&exp.meta.processId||'';
     if(!workspace||String(workspace.id)!==String(id))return{workspace:null,process:null};
@@ -31,14 +31,19 @@
   function buildMapping(exp){
     const settings=LF.Storage.getExportSettings(),analysis=A.analysisOf(exp)||{},summary=analysis.summary||{},measurements=(A.measurementsOf(exp)||[]).filter(function(m){return!m.excluded;}),samples=A.samplesOf(exp)||[],workspaceInfo=workspaceContext(exp),workspace=workspaceInfo.workspace,process=workspaceInfo.process;
     const exported=measurements.filter(function(m){return Number.isFinite(Number(m.bestEff));});
+    const nomadOverrides=settings&&settings.projectionOverrides&&settings.projectionOverrides.nomad||{};
     function row(nomadPath,labflowPath,value,required,note){
-      const disabled=value&&value.__disabled===true,actual=disabled?'':value,missing=!disabled&&(actual==null||actual===''||(Array.isArray(actual)&&!actual.length));
+      const hasOverride=Object.prototype.hasOwnProperty.call(nomadOverrides,nomadPath),candidate=hasOverride?nomadOverrides[nomadPath]:value,
+      disabled=candidate&&candidate.__disabled===true,actual=disabled?'':candidate,missing=!disabled&&(actual==null||actual===''||(Array.isArray(actual)&&!actual.length));
       return {
         nomad_path:nomadPath,
         labflow_path:labflowPath,
         status:disabled?'disabled':missing?'missing':'mapped',
         required:!!required,
         value:disabled?null:actual,
+        base_value:value&&value.__disabled===true?null:value,
+        overridden:hasOverride,
+        source_nature:hasOverride?'OVERRIDE':'',
         value_summary:disabled?'not included':Array.isArray(actual)?actual.length+' values':String(actual==null?'':actual),
         note:note||''
       };

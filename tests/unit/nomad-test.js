@@ -67,5 +67,9 @@ module.exports=function(t,LF){
     assert(plan.mappings.find(function(x){return x.nomad_path==='data.measurement_count';}).value,1,'measurement count reflects active scientific rows');
   };
 
+  t['NOMAD projection overrides flow into the deterministic mapping and YAML without mutating ExperimentData']=function(){
+    const e=exp();exportSettings.projectionOverrides={nomad:{'data.experiment_name':'Publication Name'},readypv:{}};const plan=LF.NomadExport.ensureMapping(e),row=plan.mappings.find(function(x){return x.nomad_path==='data.experiment_name';}),yaml=LF.NomadExport.dataYaml(e,null,plan);assert(row.value,'Publication Name','override value');assert(row.overridden,true,'override marker');truthy(yaml.indexOf('experiment_name: "Publication Name"')>=0,'YAML uses override');assert(e.meta.name,'Demo','canonical experiment untouched');exportSettings.projectionOverrides={nomad:{},readypv:{}};
+  };
+
   return t;
 };

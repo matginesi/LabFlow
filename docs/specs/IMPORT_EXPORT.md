@@ -26,3 +26,8 @@ Export reads validated current LabFlow Data and builds a deterministic external 
 ## NOMAD
 
 NOMAD mapping/package preparation is another deterministic export projection. See `../NOMAD.md`. The current upload control is a non-networking stub.
+
+
+## Export projection workbench (0.0.23)
+
+The Export page exposes two deterministic human-readable projections: NOMAD and Ready-PV. Both are derived from canonical LabFlow data. Optional edits are persisted as `projectionOverrides` in export preferences and never mutate ExperimentData, Workspace, Process or Cabinet. NOMAD overrides participate in the generated mapping/YAML; Ready-PV overrides participate in Ready-PV JSON/plain-text answers. See `docs/guides/EXPORT_PROJECTIONS.md`.

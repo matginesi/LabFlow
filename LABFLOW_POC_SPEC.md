@@ -170,3 +170,20 @@ The model proposes; LabFlow owns provenance verification, normalization, semanti
 Design items expose their choice nature through `provenance_kind` / `selection_basis`. Cabinet references use `CABINET:<id>` evidence and KB references use `KB:<id>` evidence. IDs are verified; an invalid reference is downgraded rather than granted false authority.
 
 Confidence is provenance-calibrated candidate suitability, not proof of experiment use. Source nature dominates model self-confidence and unsupported quantitative values are capped conservatively. Cabinet and KB candidates remain review-only. See `docs/guides/DESIGN_INFERENCE.md` for the executable semantics.
+
+## 17. Export projection workbench
+
+The Export page exposes two side-by-side deterministic projections of the same canonical LabFlow state: **NOMAD** and **Ready-PV**. Neither projection is a second scientific store.
+
+- NOMAD is experiment-oriented and is derived from `ExperimentData` plus Workspace/Process context.
+- Ready-PV is data-management-oriented and is derived primarily from Workspace, Process and Cabinet, with deterministic experiment fallbacks where appropriate.
+- Projection fields expose their source nature (`EXPERIMENT`, `WORKSPACE`, `PROCESS`, `CABINET`, `DERIVED`, `OVERRIDE`, or `MISSING`).
+- Optional edits are stored only as export overrides. They do not rewrite ExperimentData, Workspace, Process or Cabinet.
+- NOMAD overrides must flow into the generated archive YAML; Ready-PV overrides must flow into JSON and questionnaire-ready copied text.
+- Readiness is deterministic field completeness, not AI confidence or a probability of scientific truth.
+
+See `docs/guides/EXPORT_PROJECTIONS.md` for the mapping and privacy rules.
+
+## 18. GLM provider diagnostics
+
+The built-in `glm` provider uses the official Zhipu Chat Completions endpoint and defaults to `glm-4.7-flash`. Connection checks are bounded by a finite hard deadline and never retry a provider rate limit automatically. HTTP 429 responses preserve provider/status/code metadata through Settings diagnostics; in particular, a Zhipu `1305` response is reported as a remote provider rate/traffic limit and must never be reclassified as a local-network failure.

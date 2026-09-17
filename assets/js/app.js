@@ -287,6 +287,10 @@ LF.UI.activityStart({title:'Export LabFlow ZIP',kind:'ZIP',stage:'Building porta
     }catch(err){Log.error('export.labflow-failed',{error:err});LF.UI.activityError(err);
     LF.UI.message(err.message||String(err),'error');}}
   function saveExportOptions(){LF.Storage.saveExportSettings(Object.assign({},LF.Storage.getExportSettings(),{includeRaw:document.getElementById('nomadRaw').checked,includeDerived:document.getElementById('nomadDerived').checked}));LF.UI.message('Export options saved.','success');}
+  function projectionEntries(kind){const out={};document.querySelectorAll('[data-projection-kind="'+kind+'"] [data-projection-input]').forEach(function(node){out[node.dataset.projectionInput]=node.value;});return out;}
+  function saveProjectionOverrides(kind){if(!hasExperiment()||!LF.ExportProjections)return;LF.ExportProjections.saveFieldEdits(kind,S.state.experiment,projectionEntries(kind));S.state.ui.exportProjectionEdit='';render();LF.UI.message((kind==='nomad'?'NOMAD':'Ready-PV')+' export overrides saved. Canonical LabFlow data was not changed.','success');}
+  function downloadProjection(kind,format){if(!hasExperiment()||!LF.ExportProjections)return;const text=LF.ExportProjections.serialize(kind,S.state.experiment,format),blob=C.textBlob(text,format==='json'?'application/json;charset=utf-8':format==='yaml'?'text/yaml;charset=utf-8':'text/plain;charset=utf-8');C.downloadBlob(blob,LF.ExportProjections.filename(kind,S.state.experiment,format));}
+  function copyProjection(kind,format){if(!hasExperiment()||!LF.ExportProjections)return;const ok=C.copyText(LF.ExportProjections.serialize(kind,S.state.experiment,format));LF.UI.message(ok?'Ready-PV form answers copied.':'Could not copy the projection.',''+(ok?'success':'warning'));}
   async function exportNomadEntry(){if(!hasExperiment())return;flushDrafts();try{LF.NomadExport.exportEntry(S.state.experiment);LF.UI.message('NOMAD entry exported.','success');}catch(err){Log.error('export.nomad-entry-failed',{error:err});LF.UI.message(err.message||String(err),'error');}}
   async function exportNomadZip(){if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;
 LF.UI.activityStart({title:'Export NOMAD ZIP',kind:'ZIP',stage:'Preparing NOMAD package',progress:.04,details:{
@@ -387,6 +391,20 @@ if(!hasExperiment())throw new Error('No experiment is loaded.');
         if(e.target.closest('#exportNomadEntry')){exportNomadEntry();return;}
         if(e.target.closest('#exportNomadZip')){await exportNomadZip();return;}
         if(e.target.closest('#saveExportOptions')){saveExportOptions();render();return;}
+        const projectionEdit=e.target.closest('[data-projection-edit]');if(projectionEdit){S.state.ui.exportProjectionEdit=projectionEdit.dataset.projectionEdit||'';render();return;}
+        const projectionCancel=e.target.closest('[data-projection-cancel]');if(projectionCancel){S.state.ui.exportProjectionEdit='';render();return;}
+        const projectionSave=e.target.closest('[data-projection-save]');if(projectionSave){saveProjectionOverrides(projectionSave.dataset.projectionSave);return;}
+        const projectionReset=e.target.closest('[data-projection-reset]');
+        if(projectionReset){const kind=projectionReset.dataset.projectionReset;
+          const confirmed=await LF.UI.confirmAction(
+            'Reset all '+(kind==='nomad'?'NOMAD':'Ready-PV')+' export-only overrides?',
+            {title:'Reset export overrides',confirmLabel:'Reset overrides'});
+          if(confirmed){LF.ExportProjections.reset(kind);S.state.ui.exportProjectionEdit='';render();
+            LF.UI.message('Projection overrides reset.','success');}
+          return;
+        }
+        const projectionDownload=e.target.closest('[data-projection-download]');if(projectionDownload){downloadProjection(projectionDownload.dataset.projectionDownload,projectionDownload.dataset.projectionFormat||'json');return;}
+        const projectionCopy=e.target.closest('[data-projection-copy]');if(projectionCopy){copyProjection(projectionCopy.dataset.projectionCopy,projectionCopy.dataset.projectionFormat||'text');return;}
         const exportOption=e.target.closest('[data-export-option]');
 if(exportOption){const settings=Object.assign({}
           ,LF.Storage.getExportSettings()),key=exportOption.dataset.exportOption,
@@ -564,7 +582,13 @@ if(discardDesignExperiment){const exp=S.state.experiment,
         const useCabinetItem=e.target.closest('[data-use-cabinet-item]');if(useCabinetItem){
           try{
             const exp=ensureExperimentShape(S.state.experiment),item=LF.Cabinet&&LF.Cabinet.get(useCabinetItem.dataset.useCabinetItem),dev=(exp.design.devices||[]).find(function(x){return String(x.id)===String(S.state.ui.selectedDesignDeviceId);})||(exp.design.devices||[])[0];if(!item||!dev){LF.UI.message('No Design experiment or Cabinet resource is available.','warning');return;}
-            if(item.kind==='stack'&&(dev.stack||[]).length){const ok=await LF.UI.confirmAction('Replace the current stack for “'+(dev.name||'this experiment')+'” with a snapshot of “'+item.name+'” from Lab Cabinet? The current experiment values will be replaced, but the Cabinet item remains independent.',{title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});if(!ok)return;}
+            if(item.kind==='stack'&&(dev.stack||[]).length){
+              const ok=await LF.UI.confirmAction(
+                'Replace the current stack for “'+(dev.name||'this experiment')+'” with a snapshot of “'+item.name+
+                '” from Lab Cabinet? The current experiment values will be replaced, but the Cabinet item remains independent.',
+                {title:'Use Cabinet stack',confirmLabel:'Replace stack',cancelLabel:'Cancel'});
+              if(!ok)return;
+            }
             const out=LF.Cabinet.applyToDesign(exp,dev.id,item.id,{replace:true});if(out.changed){S.state.ui.selectedDesignDeviceId=dev.id;markModified('design');S.state.ui.designCabinetPicker='';render();LF.UI.message('Applied Cabinet snapshot: '+item.name+'.','success');}else LF.UI.message('The selected Cabinet resource adds no new Design values.','info');
           }catch(err){LF.UI.message('Cabinet resource could not be applied: '+(err&&err.message||String(err)),'error');}
           return;

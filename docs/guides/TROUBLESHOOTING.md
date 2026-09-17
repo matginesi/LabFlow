@@ -46,3 +46,10 @@ Check `LABFLOW_BUILD` in Diagnostics/runtime snapshot and ensure generated bundl
 ## Design completes but suggestions are empty
 
 Inspect the Action/context logs before increasing model size. A healthy Design run should expose per-domain `cabinet.domain_candidates` and `knowledge.domain_candidates` when such references exist. The runtime should use deterministic reference fallback before blanket unresolved downgrade. If all domains become unresolved despite compatible structured references, run the Design/context unit tests and verify the generated KB/action/prompt bundles are current. See `DESIGN_INFERENCE.md`.
+
+
+## GLM check does not complete or returns 429
+
+The GLM provider check has a hard deadline and must terminate with success, timeout, authentication failure, browser/network failure, or provider rate-limit feedback. A Zhipu HTTP 429 (including provider code `1305`) means the remote service was reached but is currently traffic/rate limited; it is not a llama.cpp/local-endpoint error. LabFlow does not automatically retry the check in a loop.
+
+If the form reports that the GLM API key is missing, enter the key in the visible Settings form before pressing Check/Save & test. The key is intentionally not inferred from another provider.

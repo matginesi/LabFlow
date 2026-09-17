@@ -3,6 +3,7 @@ require('../../assets/js/logger.js');
 require('../../assets/js/core.js');
 require('../../assets/js/storage.js');
 require('../../assets/js/ai/providers.js');
+require('../../assets/js/ai/api-diagnostics.js');
 require('../../assets/js/ai/settings.js');
 function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
 
@@ -150,4 +151,12 @@ module.exports=function(t,LF){
     try{await LF.AISettings.testConnection(button);const saved=LF.Storage.getAiSettings();assert(saved.provider,'openrouter','saved provider');assert(saved.endpoint,'https://visible-save.example/v1/chat/completions','saved endpoint');assert(saved.model,'meta/model','saved model');assert(probeArgs.provider,'openrouter','probe provider');assert(probeArgs.endpoint,saved.endpoint,'probe exact endpoint');assert(probeArgs.model,saved.model,'probe exact model');assert(probeArgs.apiKey,'save-key','probe exact current key');assert(!!lastEvent(events,'start'),true,'Save & test opens Action Totem');assert(!!lastEvent(events,'finish'),true,'Save & test finishes Action Totem');assert(events.some(function(e){return e.kind==='message';}),false,'Save & test does not use Message Totem');}
     finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
+  t['GLM Detect reports Zhipu 1305 as a rate limit rather than a local-network failure']=async function(){
+    localStorage.clear();const form=installForm(LF,{provider:'glm',endpoint:LF.AIProviders.glm.endpoint,apiKey:'glm-key',model:'glm-4.7-flash'});const oldAI=LF.AI,oldUI=LF.UI;let events=[];
+    LF.AI={testConnection:async function(){return{ok:false,reachable:true,rateLimited:true,status:429,providerCode:'1305',providerMessage:'traffic limit',retryAfterMs:0};},resolveModelCapabilities:async function(){throw new Error('must not resolve capabilities');}};LF.UI=activityUI(events);
+    try{const result=await LF.AISettings.detectModel();assert(result,[],'rate limited Detect returns no catalogue');const failure=lastEvent(events,'error');assert(!!failure,true,'rate limit uses Action Totem error');assert(failure.payload.message,'Rate limit','rate limit category preserved');assert(/1305|traffic/i.test(failure.payload.response),true,'Zhipu traffic-limit code is visible');assert(/Local endpoint unreachable/i.test(failure.payload.message||''),false,'must not be classified as local endpoint');}
+    finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+  t['GLM connection probe has a finite hard timeout']=function(){assert(LF.AIProviders.glm.connectionTestTimeoutMs<=30000,true,'GLM connection test deadline');};
+
 };
