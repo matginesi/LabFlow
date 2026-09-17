@@ -441,7 +441,19 @@
         return true;
       }).slice(0, 24);
       value.unresolved = (Array.isArray(value.unresolved) ? value.unresolved : []).filter(function (item) {
-        return item && allowed[item.projection] && allowed[item.projection].has(String(item.field_id || ''));
+        if (!item || !allowed[item.projection] || !allowed[item.projection].has(String(item.field_id || ''))) return false;
+        item.reason = text(item.reason).slice(0, 240);
+        if (item.source_kind) {
+          item.source_kind = Object.prototype.hasOwnProperty.call(caps, item.source_kind)
+            ? item.source_kind : 'model_inference';
+        }
+        if (item.confidence != null) {
+          const raw = Number(item.confidence);
+          const cap = caps[item.source_kind || 'model_inference'];
+          item.confidence = Math.max(0, Math.min(cap, Number.isFinite(raw) ? raw : cap));
+        }
+        item.evidence = (Array.isArray(item.evidence) ? item.evidence : []).map(text).filter(Boolean).slice(0, 5);
+        return true;
       }).slice(0, 24);
       value.warnings = (Array.isArray(value.warnings) ? value.warnings : []).map(text).filter(Boolean).slice(0, 12);
       value.status = value.suggestions.length ? 'suggested' : 'limited';

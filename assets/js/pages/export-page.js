@@ -64,6 +64,34 @@ function issueList(validation){
       '<span>'+safe(p.message)+'</span></div>'+fixControls(p.fix)+'</article>';
   }).join('')+'</div>';
 }
+function metadataNeeds(exp){
+  if(!LF.ExportProjections||!LF.ExportProjections.preparationContext)return'';
+  const prep=LF.ExportProjections.preparationContext(exp),a=actionState('export.prepare');
+  const nomad=prep.nomad&&prep.nomad.missing||[],readypv=prep.readypv&&prep.readypv.missing||[];
+  function count(items,key){return items.filter(function(x){return!!x[key];}).length;}
+  function chips(items,kind,requiredOnly){
+    return items.filter(function(x){return requiredOnly?x.required:x.recommended;}).slice(0,8).map(function(x){
+      return '<span class="export-need-chip '+(x.required?'required':'recommended')+'"><b>'+safe(kind)+'</b> · '+safe(x.label)+'</span>';
+    }).join('');
+  }
+  const nReq=count(nomad,'required'),nRec=count(nomad,'recommended');
+  const rReq=count(readypv,'required'),rRec=count(readypv,'recommended');
+  const required=chips(nomad,'NOMAD',true)+chips(readypv,'Ready-PV',true);
+  const recommended=chips(nomad,'NOMAD',false)+chips(readypv,'Ready-PV',false);
+  const total=nomad.length+readypv.length;
+  if(!total)return '<section class="export-metadata-needs complete"><div><span class="eyebrow">Metadata needed</span>'+ 
+    '<strong>No required or recommended export metadata is missing.</strong></div></section>';
+  return '<section class="export-metadata-needs '+(nReq?'has-nomad-required':'')+'"><div class="export-metadata-needs-head"><div>'+ 
+    '<span class="eyebrow">Metadata needed</span><strong>'+(nReq?nReq+' NOMAD required field'+(nReq===1?'':'s')+' missing':'No required NOMAD fields missing')+'</strong>'+ 
+    '<span>'+nRec+' NOMAD recommended · '+rReq+' Ready-PV required · '+rRec+' Ready-PV recommended</span></div>'+ 
+    (a.available?'<button class="button primary" type="button" data-action="export.prepare">Prepare missing metadata with AI</button>':
+      '<button class="button primary" type="button" disabled>Prepare missing metadata with AI</button>')+'</div>'+ 
+    (required?'<div class="export-need-chips">'+required+'</div>':'')+
+    '<details class="export-metadata-more"><summary>Show all metadata still needed <small>'+total+' fields</small></summary>'+ 
+    (recommended?'<div class="export-need-chips recommended-list">'+recommended+'</div>':'<div class="meta">No recommended fields are missing.</div>')+
+    (!a.available?'<div class="notice warning compact-notice">'+safe(a.reason||'The export preparation Action is not currently available.')+'</div>':'')+
+    '</details></section>';
+}
 function mappingTable(plan){
   const rows=(plan.mappings||[]).map(function(m){
     return '<tr><td>'+PS.badge(m.status,m.status==='mapped'?'success':m.status==='missing'?'warning':'')+'</td>'+
@@ -198,7 +226,6 @@ function nomadMission(exp,settings,validation,plan){
   const blocking=problems.filter(function(x){return x.severity==='blocking';}).length;
   const mapped=(plan.mappings||[]).filter(function(x){return x.status==='mapped';}).length;
   const missing=(plan.mappings||[]).filter(function(x){return x.status==='missing';}).length;
-  const prep=actionState('export.prepare');
   const status=validation.status==='ready'?'Ready for staging':validation.status==='review'?'Ready with warnings':'Needs attention';
   const next=blocked?'Resolve the blocking issues before creating the NOMAD package.':
     'Create the NOMAD package, inspect it if needed, then upload it to your NOMAD instance.';
@@ -210,10 +237,7 @@ function nomadMission(exp,settings,validation,plan){
     ' missing · '+blocking+' blocking</span></div><div class="export-nomad-actions">'+ 
     '<button type="button" class="button primary" id="exportNomadZip" '+(blocked?'disabled':'')+'>Export NOMAD package</button>'+ 
     '<button type="button" class="button" id="exportNomadEntry" '+(blocked?'disabled':'')+'>Entry YAML</button></div></div>'+ 
-    '<div class="export-mission-ai"><div><strong>Metadata preparation</strong><span>'+ 
-    (prep.available?'Use the export Action to fill only evidence-backed missing metadata as reviewable overrides.':safe(prep.reason))+
-    '</span></div>'+(prep.available?'<button class="button compact" type="button" data-action="export.prepare">Prepare metadata with AI</button>':'')+
-    '</div>'+preparationProposal(exp)+issueList(validation)+
+    metadataNeeds(exp)+preparationProposal(exp)+issueList(validation)+
     '<details class="export-options-details"><summary>Package options <small>'+(settings.includeRaw?'RAW':'no RAW')+' · '+ 
     (settings.includeDerived?'analysis tables':'no analysis tables')+'</small></summary><div class="export-option-grid">'+
     '<label class="export-option"><input type="checkbox" id="nomadRaw" '+(settings.includeRaw?'checked':'')+'><span>'+ 

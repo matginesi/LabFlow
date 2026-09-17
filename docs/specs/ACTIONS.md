@@ -102,3 +102,9 @@ flowchart TD
 The deterministic fallback uses only content already present in bounded reference context. It does not perform free-form scientific invention. `validation.referenceFallbackDomains` records domains supplied by this path; `validation.autoUnresolvedDomains` records domains that had to be downgraded to unresolved because neither provider output nor supplied references were sufficient.
 
 The provider may report confidence, but LabFlow calibrates it from provenance before UI display/application decisions. See `guides/DESIGN_INFERENCE.md`.
+
+
+## Export preparation transport normalization
+
+`export.prepare` keeps a strict semantic schema, but LabFlow canonicalizes harmless provider-shape noise before schema validation. In particular, `value: null` on an `unresolved` item is discarded because unresolved fields have no export value. Common casing/alias variants for projection, field id and source kind are normalized. This repair never synthesizes scientific metadata or converts an unresolved field into a suggestion.
+

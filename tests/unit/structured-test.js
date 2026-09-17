@@ -77,6 +77,33 @@ module.exports = function (t, LF) {
   };
   t['Design structured recovery refuses unrelated prose'] = function(){assert(SO.recoverForSchema('design_suggestion','I cannot answer this request.'),null,'unrelated prose stays invalid');};
   t['structured Action contracts reject transport-only fields instead of storing them']=function(){const value=SO.normalizeForSchema('dataset_corrections',{summary:'ok',proposals:[],unresolved:[],reasoning_control:true,reasoning_format:'deepseek',response_format:{type:'json_object'}}),errors=SO.validate('dataset_corrections',value,{registry:LF.ActionRegistry});if(!errors.some(function(x){return /unexpected field (reasoning_control|reasoning_format|response_format)/.test(x);}))throw new Error('transport metadata must fail the semantic schema: '+JSON.stringify(errors));};
+  t['Export preparation schema accepts provenance metadata on unresolved fields']=function(){
+    const out={status:'limited',summary:'Missing metadata remains.',suggestions:[],unresolved:[{projection:'nomad',field_id:'data.institution',reason:'Workspace institution missing.',source_kind:'workspace',confidence:.95,evidence:['workspace:w1']}],warnings:[]};
+    assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'unresolved provenance metadata is schema-valid');
+  };
+  t['Export preparation normalization drops null values from unresolved provider variants']=function(){
+    const raw={status:'suggested',summary:'Prepare export metadata.',suggestions:[],unresolved:[{
+      projection:'nomad',field_id:'data.institution',reason:'No institution is available.',source_kind:'workspace',
+      confidence:.9,evidence:['workspace:w1'],value:null
+    }],warnings:[]};
+    const out=SO.normalizeForSchema('export_preparation',raw);
+    if(Object.prototype.hasOwnProperty.call(out.unresolved[0],'value'))throw new Error('unresolved value:null must be discarded');
+    assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'normalized unresolved item satisfies schema');
+  };
+  t['Export preparation normalization canonicalizes harmless provider aliases without opening the contract']=function(){
+    const raw={status:'LIMITED',summary:'Missing.',suggestions:[],unresolved:[{
+      projection:'Ready-PV',fieldId:'contact.institution',reason:'Missing institution.',sourceKind:'kb',
+      confidence:'74%',evidence:'KB:institution-reference',value:null,extra_transport_field:'drop me'
+    }],warnings:['Check workspace.'],transport_meta:{ignored:true}};
+    const out=SO.normalizeForSchema('export_preparation',raw);
+    assert(out.unresolved[0].projection,'readypv','projection alias');
+    assert(out.unresolved[0].field_id,'contact.institution','field alias');
+    assert(out.unresolved[0].source_kind,'knowledge_reference','source alias');
+    assert(out.unresolved[0].confidence,.74,'percentage confidence');
+    if(Object.prototype.hasOwnProperty.call(out,'transport_meta'))throw new Error('top-level transport noise must be discarded');
+    if(Object.prototype.hasOwnProperty.call(out.unresolved[0],'extra_transport_field'))throw new Error('item transport noise must be discarded');
+    assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'canonical export proposal satisfies schema');
+  };
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

@@ -26,8 +26,24 @@ A Knowledge Base reference is not evidence that the experiment used a material, 
 - Prefer NOMAD suggestions when the same fact helps both projections.
 - Keep values short and export-ready.
 - If evidence is insufficient, leave the field out of `suggestions` and add it to `unresolved`.
+- Each `unresolved` item must contain `projection`, `field_id`, and `reason`. It may also contain `source_kind`, `confidence`, and `evidence` when useful.
+- Never put `value` in an `unresolved` item. An unresolved field has no export value yet; do not emit `value: null`.
 - `source_kind` must describe the strongest source actually used: `experiment`, `workspace`, `process`, `cabinet_reference`, `knowledge_reference`, or `model_inference`.
 - `evidence` must point to a supplied identifier/path/field, not a made-up citation.
 - Confidence means confidence that the proposed export value is a reasonable representation of supplied information, not probability that an unobserved scientific fact is true.
 
-Return JSON only.
+Return JSON only. Use this semantic shape:
+
+```json
+{
+  "status": "suggested",
+  "summary": "...",
+  "suggestions": [],
+  "unresolved": [
+    {"projection": "nomad", "field_id": "data.institution", "reason": "No supported value found."}
+  ],
+  "warnings": []
+}
+```
+
+Do not add schema keywords or transport fields.

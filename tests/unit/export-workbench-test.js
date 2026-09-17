@@ -16,6 +16,12 @@ module.exports=function(t,LF,ctx){
     assert(page.includes("const open=editing?' open':''"),'projection should open only while editing');
     assert(!page.includes('projection-workbench'),'old always-visible workbench must stay removed');
   };
+  t['Export highlights required metadata and exposes the preparation Action as a primary CTA']=function(){
+    assert(page.includes('Metadata needed'),'metadata priority card missing');
+    assert(page.includes('Prepare missing metadata with AI'),'primary export Action CTA missing');
+    assert(page.includes('export-need-chip'),'required/recommended metadata chips missing');
+    assert(page.includes('Show all metadata still needed'),'secondary missing fields must stay expandable');
+  };
   t['Ready-PV remains a secondary on-demand projection']=function(){
     assert(page.includes("projectionDrawer('readypv',readypv)"),'Ready-PV drawer missing');
     assert(page.includes('Detailed NOMAD and Ready-PV data views stay closed until you need them.'),'Ready-PV should stay secondary to NOMAD preparation');

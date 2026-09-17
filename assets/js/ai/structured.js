@@ -323,10 +323,93 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
     return null;
   }
 
+  function exportPreparationList(value) {
+    return Array.isArray(value) ? value : (value == null ? [] : [value]);
+  }
+  function exportPreparationText(value, max) {
+    const out=String(value == null ? '' : value).trim();
+    return max && out.length > max ? out.slice(0, max) : out;
+  }
+  function exportPreparationProjection(value) {
+    const raw=exportPreparationText(value,32).toLowerCase().replace(/[ _-]+/g,'');
+    return raw==='readypv'?'readypv':(raw==='nomad'?'nomad':exportPreparationText(value,32).toLowerCase());
+  }
+  function exportPreparationSource(value) {
+    const raw=exportPreparationText(value,64).toLowerCase().replace(/[ -]+/g,'_');
+    if(raw==='cabinet'||raw==='cabinet_resource')return'cabinet_reference';
+    if(raw==='knowledge'||raw==='kb'||raw==='reference')return'knowledge_reference';
+    if(raw==='model'||raw==='ai'||raw==='inference')return'model_inference';
+    return raw;
+  }
+  function exportPreparationConfidence(value) {
+    let n=Number(value);
+    if(!Number.isFinite(n)&&typeof value==='string'&&/%/.test(value))n=parseFloat(value)/100;
+    if(Number.isFinite(n)&&n>1&&n<=100)n/=100;
+    return Number.isFinite(n)?Math.max(0,Math.min(1,n)):value;
+  }
+  function exportPreparationEvidence(value) {
+    return exportPreparationList(value).map(function(item){
+      return exportPreparationText(item,180);
+    }).filter(Boolean).slice(0,5);
+  }
+  function normalizeExportPreparation(value) {
+    if(!value||typeof value!=='object'||Array.isArray(value))return value;
+    let v=value;
+    ['result','proposal','output'].some(function(key){
+      if(v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){v=v[key];return true;}
+      return false;
+    });
+    const out={};
+    if(Object.prototype.hasOwnProperty.call(v,'status'))out.status=exportPreparationText(v.status,32).toLowerCase();
+    if(Object.prototype.hasOwnProperty.call(v,'summary'))out.summary=exportPreparationText(v.summary,500);
+    if(Object.prototype.hasOwnProperty.call(v,'suggestions')){
+      out.suggestions=exportPreparationList(v.suggestions).map(function(item){
+        if(!item||typeof item!=='object'||Array.isArray(item))return item;
+        const x={};
+        if('projection'in item)x.projection=exportPreparationProjection(item.projection);
+        if('field_id'in item||'fieldId'in item||'field'in item){
+          x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
+        }
+        if('value'in item)x.value=item.value;
+        if('source_kind'in item||'sourceKind'in item){
+          x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
+        }
+        if('confidence'in item)x.confidence=exportPreparationConfidence(item.confidence);
+        if('reason'in item)x.reason=exportPreparationText(item.reason,260);
+        if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
+        return x;
+      }).slice(0,24);
+    }
+    if(Object.prototype.hasOwnProperty.call(v,'unresolved')){
+      out.unresolved=exportPreparationList(v.unresolved).map(function(item){
+        if(!item||typeof item!=='object'||Array.isArray(item))return item;
+        const x={};
+        if('projection'in item)x.projection=exportPreparationProjection(item.projection);
+        if('field_id'in item||'fieldId'in item||'field'in item){
+          x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
+        }
+        if('reason'in item)x.reason=exportPreparationText(item.reason,240);
+        if('source_kind'in item||'sourceKind'in item){
+          x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
+        }
+        if('confidence'in item)x.confidence=exportPreparationConfidence(item.confidence);
+        if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
+        return x;
+      }).slice(0,24);
+    }
+    if(Object.prototype.hasOwnProperty.call(v,'warnings')){
+      out.warnings=exportPreparationList(v.warnings).map(function(item){
+        return exportPreparationText(item,260);
+      }).filter(Boolean).slice(0,12);
+    }
+    return out;
+  }
+
   function normalizeForSchema(schemaId, value) {
     if (schemaId === 'design_suggestion') return normalizeDesignProposal(value);
     if (schemaId === 'results_interpretation') return normalizeResultsInterpretation(value);
     if (schemaId === 'results_comparison') return normalizeResultsComparison(value);
+    if (schemaId === 'export_preparation') return normalizeExportPreparation(value);
     if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
     const v = Object.assign({}, value);
     if (schemaId === 'dataset_corrections') {

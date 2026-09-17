@@ -1908,7 +1908,7 @@ body.ui-kit-page{ overflow: hidden; }
 @media(max-width:1050px){.projection-columns,.export-data-drawer-grid,.export-secondary-tools{grid-template-columns:1fr}.projection-workbench-head,.export-data-drawers-head{align-items:flex-start;flex-direction:column}.projection-readiness{justify-items:start}.projection-readiness small{text-align:left}}
 @media(max-width:560px){.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}
 
-/* Export 0.0.24: NOMAD-first workflow; projection data stays on demand. */
+/* Export 0.0.26: NOMAD-first workflow with explicit metadata priorities and Action CTA. */
 .export-nomad-mission>.panel-body{gap:9px}
 .export-mission-status{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
 .export-mission-status>div:first-child{display:grid;gap:2px;min-width:0;flex:1}
@@ -1969,4 +1969,26 @@ body.ui-kit-page{ overflow: hidden; }
 .export-tool-drawer[open]>summary{border-bottom:1px solid var(--border);background:var(--surface-2)}
 .export-tool-body{display:grid;gap:8px;padding:10px 12px}
 .export-tool-body p{margin:0;color:var(--text-muted);font-size:var(--font-sm)}
-@media(max-width:640px){.export-mission-status,.export-mission-ai{align-items:stretch;flex-direction:column}.export-nomad-actions{justify-content:stretch}.export-nomad-actions .button,.export-mission-ai>.button{width:100%}.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}
+
+.export-metadata-needs{display:grid;gap:8px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
+.export-metadata-needs.has-nomad-required{border-color:color-mix(in srgb,var(--danger) 48%,var(--border));background:color-mix(in srgb,var(--danger) 5%,var(--surface-2))}
+.export-metadata-needs.complete{background:color-mix(in srgb,var(--success) 5%,var(--surface-2))}
+.export-metadata-needs-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.export-metadata-needs-head>div{display:grid;gap:2px;min-width:0}
+.export-metadata-needs-head strong{font-size:var(--font-sm)}
+.export-metadata-needs-head span:not(.eyebrow){color:var(--text-muted);font-size:var(--font-xs)}
+.export-need-chips{display:flex;gap:5px;flex-wrap:wrap}
+.export-need-chip{display:inline-flex;align-items:center;padding:4px 7px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:var(--font-xs);line-height:1.25}
+.export-need-chip.required{border-color:color-mix(in srgb,var(--danger) 45%,var(--border));color:var(--text)}
+.export-need-chip.required b{color:var(--danger)}
+.export-need-chip.recommended{color:var(--text-muted)}
+.export-metadata-more{border-top:1px solid var(--border);padding-top:6px}
+.export-metadata-more>summary{display:flex;gap:8px;justify-content:space-between;cursor:pointer;font-size:var(--font-xs);font-weight:700}
+.export-metadata-more>summary small{color:var(--text-muted);font-weight:500}
+.export-metadata-more[open]>.export-need-chips,.export-metadata-more[open]>.notice,.export-metadata-more[open]>.meta{margin-top:7px}
+.projection-field:has(.projection-required)+.projection-field{}
+.projection-field:has(.projection-value.is-missing) .projection-required{font-weight:900}
+.projection-field:has(.projection-value.is-missing):has(.projection-required){background:color-mix(in srgb,var(--danger) 4%,var(--surface))}
+.projection-field:has(.projection-value.is-missing):has(.projection-recommended){background:color-mix(in srgb,var(--warning) 3%,var(--surface))}
+
+@media(max-width:640px){.export-mission-status,.export-mission-ai,.export-metadata-needs-head{align-items:stretch;flex-direction:column}.export-nomad-actions{justify-content:stretch}.export-nomad-actions .button,.export-mission-ai>.button{width:100%}.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}

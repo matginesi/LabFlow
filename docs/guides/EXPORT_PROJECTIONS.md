@@ -1,6 +1,6 @@
 # Export: NOMAD-first workflow and on-demand projections
 
-LabFlow 0.0.24 makes **NOMAD staging/export the primary Export-page workflow**. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
+LabFlow 0.0.26 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
 
 ```mermaid
 flowchart TD
@@ -76,3 +76,14 @@ On Export, the Assistant prioritizes NOMAD blockers and the smallest useful next
 ## Direct upload
 
 Local NOMAD staging/export is implemented. Direct browser upload remains a separate connector boundary and is still explicitly marked as not implemented. No token or data is sent by the upload stub.
+
+
+## Metadata needed
+
+The Export page keeps a compact always-visible **Metadata needed** card above the detailed projections. Missing NOMAD required fields are highlighted first; NOMAD recommended and Ready-PV required/recommended fields remain visible as counts and in an expandable list. The primary **Prepare missing metadata with AI** button executes `export.prepare` directly. The detailed NOMAD and Ready-PV field views remain collapsed until inspection or editing is needed.
+
+`export.prepare` treats unresolved metadata as a valid outcome. Unresolved items may include provenance metadata (`source_kind`, `confidence`, `evidence`) in addition to `projection`, `field_id`, and `reason`; LabFlow validates and calibrates those values before storing the proposal.
+
+### Robust structured-output boundary
+
+`export.prepare` validates a canonical proposal after a bounded deterministic transport normalization. Harmless small-model variants such as `value: null` inside `unresolved` are removed before contract validation; aliases such as `fieldId`/`sourceKind` are canonicalized. This does not fill missing metadata, weaken the allowed-field whitelist, or modify LabFlow Data. Unsupported metadata remains unresolved.
