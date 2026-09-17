@@ -1,6 +1,6 @@
 # Export: NOMAD-first workflow and on-demand projections
 
-LabFlow 0.0.26 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
+LabFlow 0.0.28 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
 
 ```mermaid
 flowchart TD
@@ -87,3 +87,12 @@ The Export page keeps a compact always-visible **Metadata needed** card above th
 ### Robust structured-output boundary
 
 `export.prepare` validates a canonical proposal after a bounded deterministic transport normalization. Harmless small-model variants such as `value: null` inside `unresolved` are removed before contract validation; aliases such as `fieldId`/`sourceKind` are canonicalized. This does not fill missing metadata, weaken the allowed-field whitelist, or modify LabFlow Data. Unsupported metadata remains unresolved.
+
+## Correcting missing or wrong mapped metadata
+
+`Metadata needed` and `Mapping details` expose two distinct remediation paths:
+
+- **Fix source** opens the canonical LabFlow location that owns the value, such as Workspace/Process, Cabinet, or source-data review. Use this when the underlying LabFlow metadata is genuinely missing or wrong.
+- **Override export** opens the exact projection field in edit mode. Use this when the source data is intentionally left unchanged and only the NOMAD/Ready-PV representation needs a local export correction.
+
+Mapping details exposes these controls for already-mapped fields as well as missing ones, so an incorrect mapping can be corrected without first deleting the value. Export overrides never rewrite RAW, ExperimentData, Workspace, Process or Cabinet.

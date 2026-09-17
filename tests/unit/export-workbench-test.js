@@ -22,6 +22,13 @@ module.exports=function(t,LF,ctx){
     assert(page.includes('export-need-chip'),'required/recommended metadata chips missing');
     assert(page.includes('Show all metadata still needed'),'secondary missing fields must stay expandable');
   };
+  t['Missing metadata and mapping details expose source fixes and export overrides']=function(){
+    assert(page.includes('data-export-source-route'),'canonical source fix control missing');
+    assert(page.includes('data-export-override-field'),'export override control missing');
+    assert(page.includes('Edit Workspace')||page.includes('Edit source'),'Workspace source remediation missing');
+    assert(page.includes('Open Cabinet'),'Cabinet source remediation missing');
+    assert(page.includes('<th>Update</th>'),'mapping details update column missing');
+  };
   t['Ready-PV remains a secondary on-demand projection']=function(){
     assert(page.includes("projectionDrawer('readypv',readypv)"),'Ready-PV drawer missing');
     assert(page.includes('Detailed NOMAD and Ready-PV data views stay closed until you need them.'),'Ready-PV should stay secondary to NOMAD preparation');

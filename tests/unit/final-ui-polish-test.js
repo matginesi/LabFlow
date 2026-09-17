@@ -173,13 +173,13 @@ module.exports=function(t){
     assert(html.includes('id="resetAll"'),true,'visible reset control');assert(html.includes('topbar-reset')&&html.includes('Reset session'),true,'reset is prominent in topbar');assert(css.includes('.topbar .button.topbar-reset'),true,'topbar reset overrides normal transparent topbar buttons');
   };
 
-  t['Local development canonicalizes bind-address URLs and llama.cpp uses one safe CORS origin']=function(){
+  t['Local development canonicalizes bind-address URLs and llama.cpp permits LabFlow browser origins']=function(){
     const engine=fs.readFileSync(path.join(root,'labflow_engine.sh'),'utf8');
     assert(app.includes("location.hostname!=='0.0.0.0'"),true,'0.0.0.0 browser origin is detected');
     assert(app.includes("url.hostname='127.0.0.1'"),true,'bind address redirects to loopback');
-    assert(engine.includes('LABFLOW_CORS_ORIGINS:-localhost'),true,'localhost is the safe same-machine default');
-    assert(engine.includes('--github-pages'),true,'GitHub Pages has an explicit CORS mode');
-    assert(engine.includes('use one CORS origin only'),true,'multi-origin llama.cpp pitfall is rejected');
+    assert(engine.includes('CORS_ORIGINS="${LABFLOW_CORS_ORIGINS:-}"'),true,'same-machine launcher leaves CORS at llama-server default');
+    assert(engine.includes('--github-pages'),false,'no special GitHub Pages launcher mode');
+    assert(engine.includes('use one explicit CORS origin only'),true,'multi-origin CORS bug is guarded');
     assert(engine.includes('http://127.0.0.1:* http://localhost:*'),false,'invalid wildcard-port CORS list removed');
   };
   return t;

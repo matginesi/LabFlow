@@ -9,7 +9,7 @@ MODEL="${LABFLOW_MODEL:-$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotro
 SERVER="${LABFLOW_LLAMA_SERVER:-$HOME/llama.cpp/build/bin/llama-server}"
 HOST="${LABFLOW_HOST:-127.0.0.1}"
 PORT="${LABFLOW_PORT:-8080}"
-CORS_ORIGINS="${LABFLOW_CORS_ORIGINS:-localhost}"
+CORS_ORIGINS="${LABFLOW_CORS_ORIGINS:-}"
 
 CTX=65536
 PARALLEL=1
@@ -73,9 +73,9 @@ Core:
 Server:
   -H, --host HOST              bind host (default: 127.0.0.1, local only)
   -p, --port PORT              bind port (default: 8080)
-      --cors-origin ORIGIN      one allowed browser origin (default: localhost)
-      --cors-origins ORIGIN     legacy alias of --cors-origin
-      --github-pages            allow the LabFlow GitHub Pages origin
+      --cors-origin ORIGIN      explicit browser CORS origin override
+      --cors-origins ORIGIN     alias of --cors-origin
+                               default: use llama-server CORS behavior
       --lan                     opt in to LAN binding (0.0.0.0) with warning
       --timeout SEC            request timeout (default: 600)
       --sse-ping SEC           SSE ping interval (default: 15)
@@ -117,7 +117,7 @@ Environment: LABFLOW_MODEL, LABFLOW_LLAMA_SERVER, LABFLOW_HOST, LABFLOW_PORT, LA
 Examples:
   $PROG -m ~/models/model.gguf
   $PROG -m ~/models/model.gguf --no-thinking
-  $PROG --github-pages                                      # GitHub Pages -> local llama.cpp
+  $PROG                                                     # works with local LabFlow and GitHub Pages
   $PROG --lan --cors-origin http://192.168.1.20:8000        # LabFlow served from another LAN device
   $PROG --dry-run -- --repeat-penalty 1.1
 EOF_USAGE
@@ -146,7 +146,6 @@ parse_args() {
             --lan) HOST=0.0.0.0; LAN_MODE=true; shift ;;
             -p|--port) need "$@"; PORT="$2"; shift 2 ;;
             --cors-origin|--cors-origins) need "$@"; CORS_ORIGINS="$2"; shift 2 ;;
-            --github-pages) CORS_ORIGINS="https://matginesi.github.io"; shift ;;
             --timeout) need "$@"; TIMEOUT="$2"; shift 2 ;;
             --sse-ping|--sse-ping-interval) need "$@"; SSE_PING="$2"; shift 2 ;;
             --flash-attn) need "$@"; FLASH_ATTN="$2"; shift 2 ;;
@@ -270,18 +269,25 @@ validate() {
         warn "this llama-server build does not expose --cors-origins; browser CORS will use the server default"
         CORS_ORIGINS=""
     fi
-    if [[ "$CORS_ORIGINS" == *","* || "$CORS_ORIGINS" =~ [[:space:]] ]]; then
-        die "use one CORS origin only (or 'localhost' / '*'); current llama.cpp builds can emit an invalid Access-Control-Allow-Origin header for multi-origin values"
-    fi
-    if [[ "$CORS_ORIGINS" != "localhost" && "$CORS_ORIGINS" != "*" && ! "$CORS_ORIGINS" =~ ^https?://[^/[:space:]]+$ ]]; then
-        die "CORS origin must be 'localhost', '*', or one exact http(s) origin without a path"
-    fi
-    if [[ "$CORS_ORIGINS" == "*" ]]; then
-        warn "CORS is open to every browser origin; prefer 'localhost' or one exact LabFlow origin"
+    if [[ -n "$CORS_ORIGINS" ]]; then
+        if [[ "$CORS_ORIGINS" =~ [[:space:]] ]]; then
+            die "CORS origins must not contain spaces"
+        fi
+        # Current llama-server builds/documentation advertise comma-separated origins, but some
+        # releases emit the whole list as Access-Control-Allow-Origin. Keep LabFlow overrides
+        # to one exact origin (or the special localhost/* values) so browsers receive valid CORS.
+        [[ "$CORS_ORIGINS" != *,* ]] || die "use one explicit CORS origin only; omit --cors-origin for automatic local + GitHub Pages support"
+        if [[ "$CORS_ORIGINS" != "localhost" && "$CORS_ORIGINS" != "*" && ! "$CORS_ORIGINS" =~ ^https?://[^/[:space:]]+$ ]]; then
+            die "CORS origin must be 'localhost', '*', or one exact http(s) origin without a path"
+        fi
+        if [[ "$CORS_ORIGINS" == "*" ]]; then
+            warn "CORS is open to every browser origin"
+        fi
     fi
     if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
         [[ "$LAN_MODE" == true || -n "${LABFLOW_HOST:-}" ]] || warn "network-wide bind requested; use --lan when this is intentional"
-        [[ "$CORS_ORIGINS" != "localhost" ]] || warn "LAN binding is enabled but CORS still accepts localhost only; remote LabFlow clients need --cors-origin <their exact origin>"
+        [[ -n "$CORS_ORIGINS" ]] || die "LAN binding requires --cors-origin <exact LabFlow origin>"
+        [[ "$CORS_ORIGINS" != "localhost" ]] || warn "LAN binding with localhost-only CORS will reject remote LabFlow clients"
     fi
 }
 
@@ -320,8 +326,10 @@ summary() {
     printf '  template   %s\n' "$TEMPLATE_SOURCE"
     printf '  reasoning  %s  budget=%s  format=%s\n' "${REASONING:-default}" "${REASONING_BUDGET:-default}" "${REASONING_FORMAT:-auto}"
     printf '  bind       %s:%s\n' "$HOST" "$PORT"
-    printf '  CORS       %s\n' "${CORS_ORIGINS:-server default}"
-    [[ "$CORS_ORIGINS" == "localhost" ]] && printf '  browser    open local LabFlow as http://127.0.0.1:<port> or http://localhost:<port> (not 0.0.0.0)\n'
+    printf '  CORS       %s\n' "${CORS_ORIGINS:-llama-server default (browser-origin compatible)}"
+    if [[ -z "$CORS_ORIGINS" && "$HOST" == "127.0.0.1" ]]; then
+        printf '  browser    same launcher supports local LabFlow and https://matginesi.github.io/LabFlow/\n'
+    fi
     if [[ "$HOST" == "0.0.0.0" || "$HOST" == "::" ]]; then
         [[ -n "$local_host" ]] && printf '  hostname   http://%s:%s/v1\n' "$local_host" "$PORT"
         [[ -n "$local_host" ]] && printf '  mDNS       http://%s.local:%s/v1\n' "${local_host%%.*}" "$PORT"

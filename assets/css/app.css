@@ -1908,7 +1908,7 @@ body.ui-kit-page{ overflow: hidden; }
 @media(max-width:1050px){.projection-columns,.export-data-drawer-grid,.export-secondary-tools{grid-template-columns:1fr}.projection-workbench-head,.export-data-drawers-head{align-items:flex-start;flex-direction:column}.projection-readiness{justify-items:start}.projection-readiness small{text-align:left}}
 @media(max-width:560px){.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}
 
-/* Export 0.0.26: NOMAD-first workflow with explicit metadata priorities and Action CTA. */
+/* Export 0.0.28: NOMAD-first workflow with explicit metadata priorities and Action CTA. */
 .export-nomad-mission>.panel-body{gap:9px}
 .export-mission-status{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2)}
 .export-mission-status>div:first-child{display:grid;gap:2px;min-width:0;flex:1}
@@ -1991,4 +1991,15 @@ body.ui-kit-page{ overflow: hidden; }
 .projection-field:has(.projection-value.is-missing):has(.projection-required){background:color-mix(in srgb,var(--danger) 4%,var(--surface))}
 .projection-field:has(.projection-value.is-missing):has(.projection-recommended){background:color-mix(in srgb,var(--warning) 3%,var(--surface))}
 
-@media(max-width:640px){.export-mission-status,.export-mission-ai,.export-metadata-needs-head{align-items:stretch;flex-direction:column}.export-nomad-actions{justify-content:stretch}.export-nomad-actions .button,.export-mission-ai>.button{width:100%}.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}}
+@media(max-width:640px){.export-mission-status,.export-mission-ai,.export-metadata-needs-head{align-items:stretch;flex-direction:column}.export-nomad-actions{justify-content:stretch}.export-nomad-actions .button,.export-mission-ai>.button{width:100%}.projection-toolbar{align-items:stretch;flex-direction:column}.projection-toolbar>.row-wrap{width:100%}.projection-toolbar .button{flex:1}.projection-field-head{align-items:flex-start;flex-direction:column}.projection-field-meta{justify-content:flex-start}.export-need-item{align-items:flex-start;flex-direction:column}.export-need-actions,.export-mapping-actions{justify-content:flex-start}}
+
+/* Export source/override remediation controls. */
+.export-need-chips{display:grid;gap:5px;align-items:start}
+.export-need-item{display:flex;align-items:center;gap:6px;justify-content:space-between;min-width:0;padding:3px 4px;border-radius:var(--radius-sm)}
+.export-need-item.required{background:color-mix(in srgb,var(--danger) 4%,transparent)}
+.export-need-item.recommended{background:color-mix(in srgb,var(--warning) 2%,transparent)}
+.export-need-actions,.export-mapping-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.export-field-action{white-space:nowrap}
+.export-mapping-table table{min-width:860px}
+.export-mapping-row.status-missing td{background:color-mix(in srgb,var(--warning) 2%,transparent)}
+.projection-field.export-field-focus{outline:2px solid color-mix(in srgb,var(--accent) 38%,transparent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 5%,var(--surface))}

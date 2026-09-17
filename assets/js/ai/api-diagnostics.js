@@ -14,9 +14,9 @@
   function canonicalLocalPage(){const port=pagePort();return 'http://127.0.0.1'+(port?':'+port:'');}
   function llamaCppGuidance(endpoint){
     const target=String(endpoint||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().endpoint:'')||''),space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(target):'';
-    if(bindAddressOrigin())return 'Open LabFlow as '+canonicalLocalPage()+' (or localhost) instead of '+pageOrigin()+'. 0.0.0.0 is a server bind address and creates a different browser origin. On the same machine keep llama-server on 127.0.0.1 and use --cors-origin localhost.';
-    if(space==='loopback'&&localPageHost(pageHost()))return 'Confirm llama-server is running at the configured loopback endpoint. On the same machine keep --host 127.0.0.1 and use --cors-origin localhost; --lan is not required.';
-    if(space==='loopback'&&/^https:\/\/matginesi\.github\.io$/i.test(pageOrigin()))return 'The endpoint is on this browser device. Start the LabFlow launcher with --github-pages (or --cors-origin https://matginesi.github.io) and allow Local Network access if the browser asks.';
+    if(bindAddressOrigin())return 'Open LabFlow as '+canonicalLocalPage()+' (or localhost) instead of '+pageOrigin()+'. 0.0.0.0 is a server bind address and creates a different browser origin. On the same machine keep llama-server on 127.0.0.1 and start ./labflow_engine.sh normally.';
+    if(space==='loopback'&&localPageHost(pageHost()))return 'Confirm llama-server is running at the configured loopback endpoint. On the same machine start ./labflow_engine.sh normally; --lan and a CORS override are not required.';
+    if(space==='loopback'&&/^https:\/\/matginesi\.github\.io$/i.test(pageOrigin()))return 'The endpoint is on this browser device. Start ./labflow_engine.sh normally. In Chrome, allow Local Network / loopback access for matginesi.github.io when prompted; if it was denied earlier, restore it in the site permissions and retry.';
     if(space==='loopback')return "127.0.0.1 points to the device running this browser. If llama-server runs on another computer, use that computer's .local name or private IP and start it with --lan plus --cors-origin "+(pageOrigin()||'<LabFlow origin>')+'.';
     return 'Confirm llama-server is reachable at the configured address and allows exactly this LabFlow origin with CORS. Use --lan only when the browser is on another device.';
   }
@@ -32,7 +32,7 @@
     if(localProvider(providerId)){
       const target=String(endpoint||(LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings().endpoint:'')||''),space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(target):'',securePage=typeof location!=='undefined'&&location.protocol==='https:';
       const providerHint=providerId==='lmstudio'?' Enable Serve on Local Network and CORS when LabFlow runs on another device.':providerId==='llamacpp'?' '+llamaCppGuidance(target):' Expose Ollama on the LAN with OLLAMA_HOST and allow the LabFlow origin with OLLAMA_ORIGINS.';
-      const browserHint=securePage&&space==='local'?' If the browser asks for Local Network access, allow it; some browsers may still require an HTTPS endpoint or a compatible local origin.':'';
+      const browserHint=securePage&&(space==='local'||space==='loopback')?' If the browser asks for Local Network access, allow it; some browsers may still require an HTTPS endpoint or a compatible local origin.':'';
       const loopbackHint=space==='loopback'?' A loopback endpoint points to the device running this browser, not to another computer on the Wi-Fi/LAN.':'';
       return label+' ended before LabFlow could read an HTTP response from '+name+'. Check network reachability, bind address and browser-origin policy.'+loopbackHint+providerHint+browserHint;
     }

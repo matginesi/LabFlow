@@ -40,6 +40,13 @@ function providerPanel(s,key,remembered){
     (s.thinkingMode==='off'?'selected':'')+'>Prefer off</option><option value="on" '+(s.thinkingMode==='on'?'selected':'')+
     '>Prefer on</option></select><div class="help">Automatic is recommended. The selected model may still require its own reasoning mode.</div>';
   const endpointHint=activeProvider.local?'<div class="help" id="aiEndpointHint">For a model running on this computer, the default local address is usually correct.</div>':'';
+  let githubLocalHint='';try{if(activeProvider.id==='llamacpp'&&location&&/^https:\/\/matginesi\.github\.io$/i.test(location.origin)){
+    githubLocalHint='<div class="notice info compact-notice settings-local-bridge"><strong>GitHub Pages → local llama.cpp.</strong> '+
+      'Keep the endpoint on <code>http://127.0.0.1:8080/v1</code> and start the bundled launcher normally with '+
+      '<code>./labflow_engine.sh</code>. The same launcher works for local LabFlow and GitHub Pages. '+
+      'When Chrome asks whether this site may access services on your local device, choose Allow. '+
+      '<button class="button ghost compact" type="button" data-copy-github-llama>Copy launcher</button></div>';
+  }}catch(_){}
   const keyHelp=activeProvider.keyRequired?'Required for this service.':activeProvider.optionalKey?'Only needed when this service requires authentication.':'No API key is needed for this service.';
   return '<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Service &amp; model</h3><div class="meta">'+C.escapeHtml(activeProvider.name||s.provider)+'</div></div><div class="spacer"></div><span class="badge info" id="aiConnectivityBadge">Not checked</span></div>'
     +'<div class="panel-body stack">'
@@ -52,6 +59,7 @@ C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{retu
       '</div><label class="switch-row compact-switch"><input type="checkbox" id="aiRememberKey" '+(remembered?'checked':'')+
       '> Remember this key on this browser</label><div class="help">Otherwise the key lasts only for this browser session. Changing the service host requires its own key.</div></div>'
     +'</div>'
+    +githubLocalHint
     +'<div class="settings-connection-summary" id="aiConnectivitySummary"><div><strong>Status</strong><span id="aiConnectivityText">Check the connection when you are ready.</span></div></div>'
     +'<details class="settings-advanced"><summary>Advanced connection settings</summary><div class="settings-advanced-body stack"><div class="form-grid">'
     +field('Service address','<input class="input mono" id="aiEndpoint" type="url" required value="'+C.escapeHtml(s.endpoint)+'">'+endpointHint,true)

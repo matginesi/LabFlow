@@ -391,9 +391,20 @@ if(!hasExperiment())throw new Error('No experiment is loaded.');
         if(e.target.closest('#exportNomadEntry')){exportNomadEntry();return;}
         if(e.target.closest('#exportNomadZip')){await exportNomadZip();return;}
         if(e.target.closest('#saveExportOptions')){saveExportOptions();render();return;}
-        const projectionEdit=e.target.closest('[data-projection-edit]');if(projectionEdit){S.state.ui.exportProjectionEdit=projectionEdit.dataset.projectionEdit||'';render();return;}
-        const projectionCancel=e.target.closest('[data-projection-cancel]');if(projectionCancel){S.state.ui.exportProjectionEdit='';render();return;}
-        const projectionSave=e.target.closest('[data-projection-save]');if(projectionSave){saveProjectionOverrides(projectionSave.dataset.projectionSave);return;}
+        const exportSource=e.target.closest('[data-export-source-route]');
+        if(exportSource){const target=exportSource.dataset.exportSourceRoute||'settings',section=exportSource.dataset.exportSourceSection||'';
+          if(target==='settings'&&section)S.state.ui.settingsSection=section;S.setRoute(target);return;}
+        const exportOverride=e.target.closest('[data-export-override-field]');
+        if(exportOverride){const kind=exportOverride.dataset.exportOverrideKind||'nomad',fieldId=exportOverride.dataset.exportOverrideField||'';
+          S.state.ui.exportProjectionEdit=kind;S.state.ui.exportProjectionFocus=fieldId;render();
+          requestAnimationFrame(function(){const drawer=document.querySelector('[data-projection-kind="'+kind+'"]');if(drawer)drawer.open=true;
+            const nodes=drawer?drawer.querySelectorAll('[data-field-id]'):[];let target=null;nodes.forEach(function(node){if(node.dataset.fieldId===fieldId)target=node;});
+            if(target){const section=target.closest('details');if(section)section.open=true;target.classList.add('export-field-focus');
+              const input=target.querySelector('[data-projection-input]');if(input)input.focus();if(target.scrollIntoView)target.scrollIntoView({behavior:'smooth',block:'center'});}
+          });return;}
+        const projectionEdit=e.target.closest('[data-projection-edit]');if(projectionEdit){S.state.ui.exportProjectionEdit=projectionEdit.dataset.projectionEdit||'';S.state.ui.exportProjectionFocus='';render();return;}
+        const projectionCancel=e.target.closest('[data-projection-cancel]');if(projectionCancel){S.state.ui.exportProjectionEdit='';S.state.ui.exportProjectionFocus='';render();return;}
+        const projectionSave=e.target.closest('[data-projection-save]');if(projectionSave){S.state.ui.exportProjectionFocus='';saveProjectionOverrides(projectionSave.dataset.projectionSave);return;}
         const projectionReset=e.target.closest('[data-projection-reset]');
         if(projectionReset){const kind=projectionReset.dataset.projectionReset;
           const confirmed=await LF.UI.confirmAction(
@@ -483,6 +494,8 @@ if(q==='jv'){S.state.ui.resultsJvMode='single';S.state.ui.curveView='single';S.s
         const designCard=e.target.closest('[data-design-select]');if(designCard){S.state.ui.selectedDesignDeviceId=designCard.dataset.designSelect;activateDesignProposal(S.state.ui.selectedDesignDeviceId);render();return;}
         const settingsSection=e.target.closest('[data-settings-section]');if(settingsSection){S.state.ui.settingsSection=settingsSection.dataset.settingsSection;render();const main=document.getElementById('main');if(main)main.scrollTop=0;return;}
         if(e.target.closest('[data-open-diagnostics]')){S.state.ui.settingsSection='diagnostics';S.setRoute('settings');return;}
+        if(e.target.closest('[data-copy-github-llama]')){const text='./labflow_engine.sh';
+          const ok=C.copyText(text);LF.UI.message(ok?'LabFlow llama.cpp launcher copied.':'Could not copy launcher command.',ok?'success':'warning');return;}
         if(e.target.closest('#openNomadSettings')){S.state.ui.settingsSection='nomad';S.setRoute('settings');return;}
         if(e.target.closest('#uploadNomadStub')){LF.UI.message('Direct NOMAD upload is not implemented yet. The configured credentials were not used and no data was sent.','info','NOMAD upload');return;}
         const actionEditor=e.target.closest('[data-action-editor]');if(actionEditor){S.state.ui.settingsActionId=actionEditor.dataset.actionEditor;render();return;}

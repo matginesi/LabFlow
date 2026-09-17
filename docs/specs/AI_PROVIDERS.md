@@ -75,3 +75,17 @@ Use `LabFlow.AIConsole` for provider diagnosis without experiment data. See `gui
 ## Provider settings draft behavior
 
 Provider form edits are drafts until **Save** or a successful **Save & test**. Changing the provider, API-key persistence checkbox, reasoning preference, streaming option, or other connection fields must not re-render the Settings form from the previously persisted provider. **Save & test** probes the configuration visible at the start of the operation and persists that verified provider/model/endpoint only after the probe succeeds.
+
+## GitHub Pages → local llama.cpp
+
+The published `https://matginesi.github.io/LabFlow/` build can use a `llama-server` running on the same computer at `http://127.0.0.1:8080/v1`. Use the same launcher as local LabFlow:
+
+```bash
+./labflow_engine.sh
+```
+
+The launcher stays bound to `127.0.0.1` and intentionally leaves CORS at the normal llama-server default. Current llama-server defaults to `*` and, with CORS credentials enabled, reflects the requesting browser origin. This avoids the multi-origin `Access-Control-Allow-Origin` incompatibility seen in some llama-server builds while allowing both a local LabFlow page and the published GitHub Pages origin. Do not add a multi-origin `--cors-origins` list for the same-machine workflow.
+
+Chrome gates requests from a public HTTPS page to loopback behind Local Network Access permission. If Chrome asks whether `matginesi.github.io` may access services on the local device, allow it. If permission was denied earlier, restore the site permission and retry. LabFlow marks the fetch as loopback/local-network access and never routes it through a relay.
+
+For LAN mode (`--lan`), use one explicit `--cors-origin <exact LabFlow origin>` because the server is no longer loopback-only.

@@ -17,6 +17,30 @@ function sourceBadge(source){
     source==='MISSING'?'danger':source==='CABINET'?'info':'';
   return PS.badge(source,tone);
 }
+function sourceFix(kind,id,source,path){
+  const key=String(id||''),nature=String(source||'').toUpperCase(),p=String(path||'').toLowerCase();
+  if(nature==='WORKSPACE'||nature==='PROCESS'||/^contact\.|^storage\.|^metadata\.|^remarks\./.test(key)||
+      p.indexOf('workspace.')===0||p.indexOf('meta.processid')===0){
+    return{route:'settings',section:'workspace',label:nature==='PROCESS'?'Edit Process':'Edit Workspace'};
+  }
+  if(nature==='CABINET'||/^instruments\./.test(key))return{route:'cabinet',label:'Open Cabinet'};
+  if(nature==='EXPERIMENT'||nature==='DERIVED'||/^(measurements|samples|sync|raw|meta\.source)/.test(p)){
+    return{route:'experiment-import',label:'Review source'};
+  }
+  if(kind==='nomad'&&/^data\.(institution|workspace_|process_)/.test(key)){
+    return{route:'settings',section:'workspace',label:'Edit source'};
+  }
+  return null;
+}
+function sourceFixButton(kind,id,source,path){
+  const fix=sourceFix(kind,id,source,path);if(!fix)return'';
+  return '<button class="button ghost compact export-field-action" type="button" data-export-source-route="'+
+    safe(fix.route)+'"'+(fix.section?' data-export-source-section="'+safe(fix.section)+'"':'')+'>'+safe(fix.label)+'</button>';
+}
+function overrideButton(kind,id,label){
+  return '<button class="button compact export-field-action" type="button" data-export-override-field="'+safe(id)+
+    '" data-export-override-kind="'+safe(kind)+'">'+safe(label||'Override export')+'</button>';
+}
 function fixControls(fix){
   if(!fix)return'';
   const label=safe(fix.label||'Resolve');
@@ -70,8 +94,11 @@ function metadataNeeds(exp){
   const nomad=prep.nomad&&prep.nomad.missing||[],readypv=prep.readypv&&prep.readypv.missing||[];
   function count(items,key){return items.filter(function(x){return!!x[key];}).length;}
   function chips(items,kind,requiredOnly){
-    return items.filter(function(x){return requiredOnly?x.required:x.recommended;}).slice(0,8).map(function(x){
-      return '<span class="export-need-chip '+(x.required?'required':'recommended')+'"><b>'+safe(kind)+'</b> · '+safe(x.label)+'</span>';
+    const projection=kind==='NOMAD'?'nomad':'readypv';
+    return items.filter(function(x){return requiredOnly?x.required:x.recommended;}).slice(0,12).map(function(x){
+      return '<div class="export-need-item '+(x.required?'required':'recommended')+'"><span class="export-need-chip '+
+        (x.required?'required':'recommended')+'"><b>'+safe(kind)+'</b> · '+safe(x.label)+'</span><span class="export-need-actions">'+
+        sourceFixButton(projection,x.id,x.source,'')+overrideButton(projection,x.id,'Override')+'</span></div>';
     }).join('');
   }
   const nReq=count(nomad,'required'),nRec=count(nomad,'recommended');
@@ -94,14 +121,19 @@ function metadataNeeds(exp){
 }
 function mappingTable(plan){
   const rows=(plan.mappings||[]).map(function(m){
-    return '<tr><td>'+PS.badge(m.status,m.status==='mapped'?'success':m.status==='missing'?'warning':'')+'</td>'+
-      '<td class="mono">'+safe(m.labflow_path||'')+'</td><td class="mono">'+safe(m.nomad_path||'')+'</td>'+
-      '<td>'+safe(m.value_summary||'')+'</td></tr>';
+    const source=m.overridden?'OVERRIDE':(/workspace|process/i.test(String(m.labflow_path||''))?'WORKSPACE':
+      /measurement|sample|sync|raw|meta/i.test(String(m.labflow_path||''))?'EXPERIMENT':'DERIVED');
+    const actions='<div class="export-mapping-actions">'+sourceFixButton('nomad',m.nomad_path,source,m.labflow_path)+
+      overrideButton('nomad',m.nomad_path,m.overridden?'Edit override':'Override')+'</div>';
+    return '<tr class="export-mapping-row status-'+safe(m.status||'')+'"><td>'+PS.badge(m.status,m.status==='mapped'?'success':
+      m.status==='missing'?'warning':'')+'</td><td class="mono">'+safe(m.labflow_path||'')+'</td><td class="mono">'+
+      safe(m.nomad_path||'')+'</td><td>'+safe(m.value_summary||'')+'</td><td>'+actions+'</td></tr>';
   }).join('');
   return '<div class="table-wrap export-mapping-table"><table class="data-table dense-table">'+
-    '<thead><tr><th>Status</th><th>LabFlow field</th><th>NOMAD field</th><th>Current value</th></tr></thead>'+
+    '<thead><tr><th>Status</th><th>LabFlow field</th><th>NOMAD field</th><th>Current value</th><th>Update</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table></div>';
 }
+
 function projectionField(field,editing){
   const value=LF.ExportProjections.display(field.value),missing=!value;
   const need=field.required?'<span class="projection-required">required</span>':

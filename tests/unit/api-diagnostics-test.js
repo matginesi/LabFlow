@@ -37,5 +37,18 @@ module.exports=function(t,LF){
     assert(/not.*0\.0\.0\.0|instead of http:\/\/0\.0\.0\.0/i.test(out.next),true,'bind-address explanation');
     if(previous===undefined)delete global.location;else global.location=previous;
   };
+
+  t['GitHub Pages llama.cpp loopback failures explain CORS and local-network access']=function(){
+    const previous=global.location;
+    global.location={hostname:'matginesi.github.io',origin:'https://matginesi.github.io',port:'',protocol:'https:'};
+    LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1'};}};
+    LF.AI=LF.AI||{};LF.AI.targetAddressSpace=function(){return'loopback';};
+    const out=LF.AIDiagnostics.errorSummary({isNetwork:true,providerId:'llamacpp',url:'http://127.0.0.1:8080/v1/models',message:'Failed to fetch'});
+    assert(out.category,'Local endpoint unreachable','category');
+    assert(/start \.\/labflow_engine\.sh normally/i.test(out.next),true,'single launcher guidance');
+    assert(/matginesi\.github\.io/i.test(out.next),true,'GitHub Pages permission guidance');
+    assert(/Local Network/i.test(out.next),true,'local network permission guidance');
+    if(previous===undefined)delete global.location;else global.location=previous;
+  };
   return t;
 };
