@@ -1,6 +1,8 @@
 /*
  * ExperimentData aggregate mechanics, queries, staging, commit, serialization and restore.
  * Boundary: Validate persisted/external snapshots before hydration; feature policy remains in owner services.
+ * Shape: User → Workspace → Process binds one ExperimentData aggregate whose stable
+ * Experiment → Sample → Run → Measurement identities survive every projection.
  */
 (function () {
   'use strict';

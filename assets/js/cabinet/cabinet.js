@@ -1,6 +1,8 @@
 /*
  * Registry, validation, persistence and reuse semantics for laboratory reference resources.
  * Boundary: Cabinet is reference state; Design application delegates to DesignModel using detached values.
+ * Flow: accepted/current experiment Design → reviewed reusable snapshot → Cabinet;
+ * the reverse path copies a detached reference and never rewrites historical experiments.
  */
 (function () {
   'use strict';
@@ -434,6 +436,56 @@
     });
   }
 
+  function normalizedName(value){return clean(value).toLowerCase().replace(/\s+/g,' ');}
+  function semanticSignature(item){
+    const normalized=normalize(item),fields=(KINDS[normalized.kind]&&KINDS[normalized.kind].fields)||[];
+    return JSON.stringify(fields.map(function(field){
+      if(field==='layers')return arr(normalized.layers).map(function(layer){return [layer.role,layer.material,layer.thickness,layer.process].map(normalizedName);});
+      const value=normalized[field];return Array.isArray(value)?value.map(normalizedName).sort():normalizedName(value);
+    }));
+  }
+
+  /* Accepted/current Design is canonical experiment state. AI proposals remain in ActionData
+     until explicitly applied, so this collector cannot silently promote them into Cabinet. */
+  function designImportPreview(exp){
+    const DM=designModel(),devices=DM.devices(exp),solutions=DM.solutions(exp),candidates=[],seenSolutions=new Set();
+    function add(key,kind,seed,deviceIds){
+      const candidate={id:key,kind:kind,name:seed.name,seed:seed,deviceIds:deviceIds||[],signature:semanticSignature(Object.assign({kind:kind},seed))};
+      const exact=state.items.find(function(item){return item.kind===kind&&semanticSignature(item)===candidate.signature;});
+      const conflict=!exact&&state.items.find(function(item){return item.kind===kind&&normalizedName(item.name)===normalizedName(candidate.name);});
+      candidate.match=exact?'exact':conflict?'conflict':'new';candidate.existingId=(exact||conflict||{}).id||'';
+      candidate.defaultAction=exact?'skip':conflict?'review':'add';candidates.push(candidate);
+    }
+    devices.forEach(function(device){
+      arr(device.solutionIds).forEach(function(id){if(seenSolutions.has(String(id)))return;const solution=solutions.find(function(x){return String(x.id)===String(id);});if(!solution||!solutionMeaningful(solution))return;seenSolutions.add(String(id));
+        const linked=devices.filter(function(d){return arr(d.solutionIds).some(function(sid){return String(sid)===String(id);});}).map(function(d){return d.id;});
+        add('solution:'+id,'solution',{name:solution.name||'Saved formulation',role:solution.role,solutes:solution.solutes,solvents:solution.solvents,concentration:solution.concentration,additives:solution.additives,preparation:solution.preparation},linked);});
+      if(arr(device.stack).some(function(layer){return clean(layer&&layer.role)||clean(layer&&layer.material);}))add('stack:'+device.id,'stack',{name:(device.name||'Experiment')+' stack',layers:arr(device.stack).map(function(layer){return{role:layer.role,material:layer.material,thickness:layer.thickness,process:layer.process};})},[device.id]);
+      if(processMeaningful(device.process))add('protocol:'+device.id,'protocol',{name:(device.name||'Experiment')+' process',coating:device.process.coating,annealing:device.process.annealing,atmosphere:device.process.atmosphere,notes:device.process.notes},[device.id]);
+    });
+    if(Log){const conflictCount=candidates.filter(function(x){return x.match==='conflict';}).length;
+      Log.info('design-import.preview',{experimentId:exp&&exp.id||'',candidates:candidates.length,newItems:candidates.filter(function(x){return x.match==='new';}).length,exact:candidates.filter(function(x){return x.match==='exact';}).length,conflicts:conflictCount});
+      if(conflictCount)Log.warn('design-import.conflict',{experimentId:exp&&exp.id||'',count:conflictCount});}
+    return{experimentId:exp&&exp.id||'',createdAt:now(),candidates:candidates};
+  }
+
+  function commitDesignImport(exp,preview,decisions){
+    decisions=decisions||{};const result={added:0,overwritten:0,skipped:0,
+      conflicts:arr(preview&&preview.candidates).filter(function(x){return x.match==='conflict';}).length,items:[]};
+    const undecided=arr(preview&&preview.candidates).filter(function(candidate){
+      return(decisions[candidate.id]||candidate.defaultAction)==='review';
+    });
+    if(undecided.length)throw new Error('Choose Skip, Overwrite, or Add as new for every possible conflict.');
+    arr(preview&&preview.candidates).forEach(function(candidate){const action=decisions[candidate.id]||candidate.defaultAction;
+      if(action==='skip'){result.skipped++;return;}
+      const stamp=now(),origin={source:'experiment_design',experimentId:exp&&exp.id||preview.experimentId||'',deviceIds:candidate.deviceIds.slice(),capturedAt:stamp},seed=Object.assign({},clone(candidate.seed),{tags:['from-design'],origin:origin,notes:candidate.seed.notes||'Saved from accepted/current LabFlow Design.'});
+      let item;if(action==='overwrite'&&candidate.existingId){item=update(candidate.existingId,Object.assign({},seed,{updatedAt:stamp}));result.overwritten++;}
+      else{item=create(candidate.kind,seed);result.added++;}result.items.push(item);
+    });
+    if(Log){if(result.conflicts)Log.warn('design-import.conflict',{experimentId:exp&&exp.id||'',count:result.conflicts});Log.info('design-import.commit',{experimentId:exp&&exp.id||'',added:result.added,overwritten:result.overwritten,skipped:result.skipped});}
+    return result;
+  }
+
   function matchProposal(proposal) {
     proposal = proposal && typeof proposal === 'object' ? proposal : {};
     const matches = [], cabinetSolutions = search('', { kind: 'solution', forAI: true }),
@@ -612,6 +664,7 @@
     duplicate: duplicate, validate: validate, normalize: normalize, snapshot: snapshot,
     applyToDesign: applyToDesign, saveDesignSolution: saveDesignSolution, saveDesignStack: saveDesignStack,
     saveDesignProtocol: saveDesignProtocol, matchProposal: matchProposal, compactForAI: compactForAI,
+    designImportPreview: designImportPreview, commitDesignImport: commitDesignImport,
     context: context, usage: usage, exportState: exportState, importState: importState, reset: reset
   };
 

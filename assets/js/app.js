@@ -31,6 +31,7 @@
   let curveSearchTimer=0;
   const lazyAssetRefresh = new Set();
   let renderedScrollContext='',stableAnchorGeneration=0;
+  let resetAvailableLogged=null;
   function workspaceUiSnapshot(){const ui=S.state.ui||{};return{route:ui.route||'experiment-import',resultsTab:ui.resultsTab||'overview',selectedMeasurementId:ui.selectedMeasurementId||null,selectedDesignDeviceId:ui.selectedDesignDeviceId||null};}
   function knowledgeFormEntry(){const kb=LF.KnowledgeBase,id=S.state.ui&&S.state.ui.settingsKnowledgeId,
 existing=id&&id!=='__new__'?kb.get(id):null;
@@ -184,6 +185,9 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     document.getElementById('topbarTitle').textContent=routeTitle(S.state.ui.route);document.getElementById('topbarSubtitle').textContent=hasExperiment()?S.state.experiment.meta.name:'No experiment loaded';
     renderModelStatus();
     renderAppRelease();
+    const resetButton=document.getElementById('resetAll'),resetAvailable=S.hasResettableSessionState(S.state);
+    if(resetButton){resetButton.disabled=!resetAvailable;resetButton.setAttribute('aria-disabled',String(!resetAvailable));}
+    if(resetAvailableLogged!==resetAvailable){resetAvailableLogged=resetAvailable;Log.info('session.reset.available',{available:resetAvailable});}
     const shell=document.querySelector('.app-shell'),assistant=document.getElementById('assistantPanel'),
 toggle=document.getElementById('assistantToggle');
       if(shell)shell.classList.toggle('assistant-closed',!S.state.ui.assistantOpen);
@@ -291,12 +295,30 @@ LF.UI.activityStart({title:'Export LabFlow ZIP',kind:'ZIP',stage:'Building porta
   function saveProjectionOverrides(kind){if(!hasExperiment()||!LF.ExportProjections)return;LF.ExportProjections.saveFieldEdits(kind,S.state.experiment,projectionEntries(kind));S.state.ui.exportProjectionEdit='';render();LF.UI.message((kind==='nomad'?'NOMAD':'Ready-PV')+' export overrides saved. Canonical LabFlow data was not changed.','success');}
   function downloadProjection(kind,format){if(!hasExperiment()||!LF.ExportProjections)return;const text=LF.ExportProjections.serialize(kind,S.state.experiment,format),blob=C.textBlob(text,format==='json'?'application/json;charset=utf-8':format==='yaml'?'text/yaml;charset=utf-8':'text/plain;charset=utf-8');C.downloadBlob(blob,LF.ExportProjections.filename(kind,S.state.experiment,format));}
   function copyProjection(kind,format){if(!hasExperiment()||!LF.ExportProjections)return;const ok=C.copyText(LF.ExportProjections.serialize(kind,S.state.experiment,format));LF.UI.message(ok?'Ready-PV form answers copied.':'Could not copy the projection.',''+(ok?'success':'warning'));}
-  async function exportNomadEntry(){if(!hasExperiment())return;flushDrafts();try{LF.NomadExport.exportEntry(S.state.experiment);LF.UI.message('NOMAD entry exported.','success');}catch(err){Log.error('export.nomad-entry-failed',{error:err});LF.UI.message(err.message||String(err),'error');}}
+  async function confirmNomadExport(exp,label){const validation=LF.NomadExport.validate(exp,exp.raw&&exp.raw.sourceArchive),problems=validation.problems||[],blocking=problems.filter(function(x){return x.severity==='blocking';}),missing=problems.filter(function(x){return x.severity!=='blocking';});
+    Log.info('nomad.export.validation',{status:validation.status,blocking:blocking.length,required:missing.filter(function(x){return x.severity==='required';}).length,recommended:missing.filter(function(x){return x.severity==='recommended';}).length});
+    if(blocking.length){LF.UI.message('NOMAD export is blocked: '+blocking[0].message,'error');return false;}
+    if(!missing.length)return'export';const body='<p>The scientific data can still be exported, but the metadata will be less complete.</p><ul>'+missing.slice(0,8).map(function(item){return'<li><strong>'+C.escapeHtml(String(item.severity).toUpperCase())+'</strong> · '+C.escapeHtml(item.message)+'</li>';}).join('')+'</ul>';
+    const choice=await LF.UI.confirmAction('NOMAD metadata incomplete',{title:'NOMAD metadata incomplete',eyebrow:'Export readiness',bodyHtml:body,cancelLabel:'Cancel',alternateLabel:'Prepare metadata',alternateValue:'prepare',confirmLabel:label||'Export anyway',confirmValue:'export',tone:'warning'});
+    if(choice==='prepare'){Log.info('nomad.export.confirm-incomplete',{choice:'prepare',missing:missing.length});if(LF.ActionUI)LF.ActionUI.run('export.prepare');return false;}
+    if(choice==='export'){Log.info('nomad.export.confirm-incomplete',{choice:'export-anyway',missing:missing.length});return'export';}
+    Log.info('nomad.export.confirm-incomplete',{choice:'cancel',missing:missing.length});return false;
+  }
+  async function exportNomadEntry(){
+    if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;
+    if(await confirmNomadExport(exp,'Export anyway')!=='export')return;
+    try{const blob=LF.NomadExport.exportEntry(exp);Log.info('nomad.export.completed',{
+      format:'entry',bytes:blob.size,validation:exp.nomad&&exp.nomad.validation&&exp.nomad.validation.status
+    });LF.UI.message('NOMAD entry exported.','success');
+    }catch(err){Log.error('export.nomad-entry-failed',{error:err});LF.UI.message(err.message||String(err),'error');}
+  }
   async function exportNomadZip(){if(!hasExperiment())return;flushDrafts();const exp=S.state.experiment;
+if(await confirmNomadExport(exp,'Export anyway')!=='export')return;
 LF.UI.activityStart({title:'Export NOMAD ZIP',kind:'ZIP',stage:'Preparing NOMAD package',progress:.04,details:{
     Experiment:exp.meta.name}});try{await LF.NomadExport.exportZip(exp,exp.raw&&exp.raw.sourceArchive,function(info){
     LF.UI.activityUpdate({stage:info.stage,progress:info.progress,details:{Experiment:exp.meta.name}});});
     LF.UI.activityFinish({message:'NOMAD staging ZIP created from current LabFlow Data.',holdMs:0});
+    Log.info('nomad.export.completed',{format:'zip',validation:exp.nomad&&exp.nomad.validation&&exp.nomad.validation.status});
     }catch(err){Log.error('export.nomad-zip-failed',{error:err});LF.UI.activityError(err);
     LF.UI.message(err.message||String(err),'error');}}
 
@@ -374,6 +396,7 @@ if(!hasExperiment())throw new Error('No experiment is loaded.');
         const pceZoom=e.target.closest('[data-pce-zoom]');if(pceZoom){const mode=pceZoom.dataset.pceZoom,current=Math.max(1,Math.min(4,Number(S.state.ui.pceDistributionZoom)||1));S.state.ui.pceDistributionZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         const curveZoom=e.target.closest('[data-curve-zoom]');if(curveZoom){const mode=curveZoom.dataset.curveZoom,current=Math.max(1,Math.min(4,Number(S.state.ui.curveZoom)||1));S.state.ui.curveZoom=mode==='reset'?1:mode==='in'?Math.min(4,current+.5):Math.max(1,current-.5);render();return;}
         if(e.target.closest('#resetAll')){
+          if(!S.hasResettableSessionState(S.state))return;
           const confirmed=await LF.UI.confirmAction(
             'The persisted LabFlow session, action history, chat, Design state and RAW snapshot will be cleared. Provider, API key and theme preferences are kept.',
             {title:'Reset current session',confirmLabel:'Reset session',danger:true}
@@ -382,8 +405,10 @@ if(!hasExperiment())throw new Error('No experiment is loaded.');
           S.resetSession();
           S.state.ui.pceDistributionZoom=1;
           if(LF.Storage&&LF.Storage.clearSavedExperiment)await LF.Storage.clearSavedExperiment();
+          if(LF.ExportProjections){LF.ExportProjections.reset('nomad');LF.ExportProjections.reset('readypv');}
           if(LF.PageContext)LF.PageContext.clear();
           render();
+          Log.info('session.reset.executed',{route:S.state.ui.route});
           LF.UI.message('Session reset. Ready for a new ZIP.','info');
           return;
         }

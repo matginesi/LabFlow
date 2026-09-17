@@ -208,8 +208,11 @@ input[type="file"]::file-selector-button { min-height: var(--control-h-compact);
 .message-totem-head strong { display: block; overflow-wrap: anywhere; font-size: var(--font-sm); line-height: 1.3; }
 .message-totem-head .eyebrow { display: block; margin-bottom: 2px; }
 .message-totem-body { padding: 9px 11px 10px; color: var(--text-muted); font-size: var(--font-xs); line-height: 1.45; overflow-wrap: anywhere; }
+.message-totem-body-rich { max-height: min(52vh, 32rem); overflow: auto; color: var(--text); }
+.message-totem-body-rich .field { margin: 7px 0; }
 .message-totem-actions { display: flex; justify-content: flex-end; gap: var(--space-2); padding: 9px 11px 10px; border-top: 1px solid var(--border); }
 .message-shade .message-totem { width: min(460px,calc(100vw - 28px)); }
+.message-shade .message-totem.rich { width: min(640px,calc(100vw - 28px)); }
 .message-region .message-totem.info { background: var(--info-soft); border-color: var(--info-border); }
 .message-region .message-totem.success { background: var(--success-soft); border-color: var(--success-border); }
 .message-region .message-totem.warning { background: var(--warning-soft); border-color: var(--warning-border); }
@@ -268,6 +271,8 @@ body.activity-open { overflow: hidden; }
 .activity-stage-row { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .activity-stage-row strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-sm); }
 .activity-message { min-height: 14px; overflow-wrap: anywhere; }
+.activity-technical { border-top: 1px solid var(--border); }
+.activity-technical > summary { padding: 8px 10px; color: var(--text-muted); font-size: var(--font-xs); font-weight: 650; cursor: pointer; }
 .activity-details { display: grid; grid-template-columns: minmax(82px,.4fr) minmax(0,1.1fr) minmax(82px,.4fr) minmax(0,1.1fr); column-gap: 8px; margin: 0; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: var(--font-xs); }
 .activity-details dt, .activity-details dd { margin: 0; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .activity-details dt { color: var(--text-muted); }
@@ -385,7 +390,7 @@ body:has(.app-shell:not(.assistant-closed)) .message-region { right: calc(var(--
   .activity-history { padding: 7px; }
 }
 @media (max-width: 560px) {
-  .message-totem-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .message-totem-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
   .message-totem-actions .button { width: 100%; min-height: var(--control-h); }
   .activity-details { grid-template-columns: 1fr; }
   .activity-details dt { padding-bottom: 0; border-bottom: 0; }

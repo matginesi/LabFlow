@@ -304,14 +304,14 @@ if(id==='design.infer'){const deviceId=String(opts.params&&opts.params.deviceId|
     }if(Number.isFinite(Number(meta.tokensPerSecond)))details['Output rate']=Number(meta.tokensPerSecond).toFixed(1)+
     ' tok/s';LF.UI.activityFinish({message:out.designApplied?'Design completed · '+out.designApplied.changed+
     ' filled automatically · '+out.designApplied.review+' need review · '+out.designApplied.unresolved+
-    ' unresolved.':'Action completed.',response:resultText(shown)||'Completed.',responseIsJson:isJson,details:details,
-    holdMs:0});if(!opts.suppressChat)publishActionResult(d,out,elapsed);
+    ' unresolved.':id==='export.prepare'&&out.aiOutput?'Prepared '+((out.aiOutput.suggestions||[]).length)+' suggestion'+((out.aiOutput.suggestions||[]).length===1?'':'s')+' · '+((out.aiOutput.unresolved||[]).length)+' unresolved field'+((out.aiOutput.unresolved||[]).length===1?'':'s')+'.':'Action completed.',response:resultText(shown)||'Completed.',responseIsJson:isJson,details:details,
+    closeLabel:id==='export.prepare'?'Review result':'Close',holdMs:0});if(!opts.suppressChat)publishActionResult(d,out,elapsed);
     }else if(out.status==='aborted'){LF.UI.activityFinish({message:'Action stopped by user.',response:'Stopped.',holdMs:0});
     }else if(out.status==='unavailable'){LF.UI.activityFinish({
     message:'Action unavailable.',response:out.message||'A prerequisite is not satisfied.',details:{
     Action:id,Status:'Unavailable'},holdMs:0});if(!opts.suppressChat)publishActionUnavailable(d,out);
     }else{const err=out.error instanceof Error?out.error:new Error(out.message||'Action failed.');
-    LF.UI.activityError(err,Object.assign({message:'Checkpoint failed: '+(out.failedStep||'unknown'),
+    LF.UI.activityError(err,Object.assign({message:out.message||'The Action could not complete.',
     response:'## Action error\n\n'+(out.message||
     err.message)+(out.code?'\n\n`'+out.code+'`':'')+
     (id==='design.infer'?'\n\nUse the single **Retry inference** control on the active Design experiment.':''),details:{

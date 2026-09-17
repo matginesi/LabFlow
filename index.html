@@ -7,17 +7,17 @@
   <meta name="theme-color" content="#0D1F3D">
   <meta name="referrer" content="no-referrer">
   <title>LabFlow</title>
-  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.17-0.0.29" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.17-0.0.29">
-  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.17-0.0.29">
-  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.17-0.0.29">
+  <link rel="icon" href="assets/icons/labflow-favicon.svg?v=2026.09.17-0.0.30" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/tokens.css?v=2026.09.17-0.0.30">
+  <link rel="stylesheet" href="assets/css/ui.css?v=2026.09.17-0.0.30">
+  <link rel="stylesheet" href="assets/css/app.css?v=2026.09.17-0.0.30">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
   <div class="app-shell">
     <aside class="sidebar" id="primarySidebar" aria-label="Primary navigation">
       <div class="brand">
-        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.17-0.0.29" alt=""></span>
+        <span class="brand-logo" aria-hidden="true"><img src="assets/icons/labflow-mark.svg?v=2026.09.17-0.0.30" alt=""></span>
         <span class="brand-copy"><strong>Lab<span>Flow</span></strong><small>Manage experiments. Accelerate discovery.</small></span>
         <button class="sidebar-dismiss" id="sidebarDismiss" type="button" aria-label="Close navigation"><span data-icon="x" aria-hidden="true"></span></button>
       </div>
@@ -42,7 +42,7 @@
         <button class="button ghost compact mobile-nav-toggle" type="button" id="mobileNavToggle" aria-label="Open navigation" aria-controls="primarySidebar" aria-expanded="false"><span data-icon="menu" aria-hidden="true"></span></button>
         <div class="topbar-title"><strong id="topbarTitle">Upload</strong><span id="topbarSubtitle">No experiment loaded</span></div>
         <div class="topbar-page-context" id="topbarPageContext" hidden></div>
-        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save</button><button class="button primary compact" type="button" id="exportWorkingCopy" hidden>Export</button><button class="button danger compact button-with-icon topbar-reset" type="button" id="resetAll" title="Reset the current LabFlow session"><span data-icon="trash-2" aria-hidden="true"></span><span class="topbar-reset-label">Reset session</span></button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
+        <div class="spacer"></div><span class="working-copy-state" id="workingCopyState" hidden></span><button class="button compact" type="button" id="saveWorkingCopy" hidden>Save</button><button class="button primary compact" type="button" id="exportWorkingCopy" hidden>Export</button><button class="button danger compact button-with-icon topbar-reset" type="button" id="resetAll" title="Reset the current LabFlow session" disabled aria-disabled="true"><span data-icon="trash-2" aria-hidden="true"></span><span class="topbar-reset-label">Reset session</span></button><button class="button compact button-with-icon" type="button" data-theme-toggle>Light theme</button><button class="button compact button-with-icon" type="button" id="assistantToggle"><span data-icon="message-square" aria-hidden="true"></span><span>Assistant</span></button>
       </header>
       <main class="main-area" id="main"></main>
     </section>
@@ -73,18 +73,11 @@
         <div class="activity-head-actions" id="activityHeadActions" data-status="running"><button class="button compact activity-button" type="button" id="activityLogs" hidden>View logs</button><button class="button primary compact activity-button" type="button" id="activityRetry" hidden>Retry checkpoint</button><button class="button danger compact activity-button" type="button" id="activityCancel" hidden>Cancel action</button><button class="button primary compact activity-button" type="button" id="activityClose" hidden>Close</button></div>
       </div>
       <div class="activity-progress-shell"><div class="activity-progress-meta"><span>Overall progress</span><strong class="activity-percent" id="activityPercent">0%</strong></div><div class="progress activity-progress" id="activityProgress" role="progressbar" aria-label="Action progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityBar"></span></div></div>
-      <div class="activity-stream" id="activityStream" hidden><div class="activity-stream-head"><span class="badge ai">LIVE SSE</span><strong id="activityStreamState">Waiting for first token</strong><span id="activityStreamRate">—</span></div><div class="progress activity-stream-progress" id="activityStreamProgress" role="progressbar" aria-label="Completion budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityStreamBar"></span></div><div class="activity-stream-stats"><span>Input <strong id="activityStreamInput">—</strong></span><span>First token <strong id="activityStreamTtft">waiting</strong></span><span>Answer <strong id="activityStreamTokens">~0 / — tok</strong></span><span>Budget <strong id="activityStreamCeiling">—</strong></span></div></div>
       <div class="activity-current">
         <div class="activity-stage-row"><span class="badge" id="activityKind">LOCAL</span><strong id="activityStage">Starting</strong></div>
         <div class="meta activity-message" id="activityMessage">Preparing action…</div>
       </div>
-      <dl class="activity-details" id="activityDetails"></dl>
-      <div class="activity-checklist" id="activityChecklist"></div>
-      <div class="activity-ai-trace" id="activityAiTrace" hidden>
-        <details class="activity-disclosure activity-request"><summary><span>Data sent to provider</span><strong id="activityRequestState">Prepared request · key redacted</strong></summary><div id="activityRequest" class="activity-request-body">—</div></details>
-        <details class="activity-disclosure activity-output"><summary><span id="activityOutputLabel">Provider output</span><strong id="activityOutputState">Waiting for response</strong></summary><div id="activityResponse" class="activity-response">—</div></details>
-      </div>
-      <div class="activity-history" id="activityHistory"></div>
+      <details class="activity-technical" id="activityTechnical"><summary>Technical details</summary><div class="activity-stream" id="activityStream" hidden><div class="activity-stream-head"><span class="badge ai">LIVE SSE</span><strong id="activityStreamState">Waiting for first token</strong><span id="activityStreamRate">—</span></div><div class="progress activity-stream-progress" id="activityStreamProgress" role="progressbar" aria-label="Completion budget used" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="activityStreamBar"></span></div><div class="activity-stream-stats"><span>Input <strong id="activityStreamInput">—</strong></span><span>First token <strong id="activityStreamTtft">waiting</strong></span><span>Answer <strong id="activityStreamTokens">~0 / — tok</strong></span><span>Budget <strong id="activityStreamCeiling">—</strong></span></div></div><dl class="activity-details" id="activityDetails"></dl><div class="activity-checklist" id="activityChecklist"></div><div class="activity-ai-trace" id="activityAiTrace" hidden><details class="activity-disclosure activity-request"><summary><span>Data sent to provider</span><strong id="activityRequestState">Prepared request · key redacted</strong></summary><div id="activityRequest" class="activity-request-body">—</div></details><details class="activity-disclosure activity-output"><summary><span id="activityOutputLabel">Provider output</span><strong id="activityOutputState">Waiting for response</strong></summary><div id="activityResponse" class="activity-response">—</div></details></div><div class="activity-history" id="activityHistory"></div></details>
     </section>
   </div>
 
@@ -102,78 +95,78 @@
     <section class="message-totem info" id="messageTotem" role="dialog" aria-modal="true" aria-labelledby="messageTotemTitle" aria-describedby="messageTotemBody">
       <div class="message-totem-head"><span class="message-totem-marker" aria-hidden="true"></span><div><span class="eyebrow" id="messageTotemEyebrow">LabFlow</span><strong id="messageTotemTitle">Confirm action</strong></div></div>
       <div class="message-totem-body" id="messageTotemBody"></div>
-      <div class="message-totem-actions"><button class="button ghost" type="button" id="messageTotemCancel">Cancel</button><button class="button primary" type="button" id="messageTotemConfirm">Confirm</button></div>
+      <div class="message-totem-actions"><button class="button ghost" type="button" id="messageTotemCancel">Cancel</button><button class="button" type="button" id="messageTotemAlternate" hidden>Alternate</button><button class="button primary" type="button" id="messageTotemConfirm">Confirm</button></div>
     </section>
   </div>
-  <script src="assets/js/build-info.js?v=2026.09.17-0.0.29"></script>
+  <script src="assets/js/build-info.js?v=2026.09.17-0.0.30"></script>
   <script src="vendor/mathjax/es5/tex-svg-full.js"></script>
   <script src="vendor/jszip/jszip.min.js"></script>
-  <script src="assets/js/ui/icons.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/logger.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/core.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data-structures.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/math.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/domain-schema.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/data-model.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/action-data.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/derived-state.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/data-contracts.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/state.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/page-context.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/storage.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/workspace/workspace.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/knowledge/kb-bundle.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/knowledge/knowledge-base.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ui/theme.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/providers.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/api-diagnostics.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/prompt-bundle.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/action-registry.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/contracts.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/tools/registry.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/structured.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/action-guards.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/action-capabilities.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/parser.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/canonical-store.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/importer.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/analysis.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/analysis-summary.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/design-model.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/cabinet/cabinet.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/dataset-corrections.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/design-analysis.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/data/pipeline.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/context.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/http.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/errors.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/stream.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/transport.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/console.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/settings.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/export/export.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/export/nomad.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/export/projections.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/action-steps.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/actions.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/experiment/data-console.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ui/feedback.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/logs-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/settings-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/design-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/cabinet-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/shared.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/review-panel.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/import-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/results-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/export-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/lazy-assets.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/pages/docs-page.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/action-ui.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/ai/assistant.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/controllers/knowledge-controller.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/controllers/cabinet-controller.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/controllers/settings-controller.js?v=2026.09.17-0.0.29"></script>
-  <script src="assets/js/app.js?v=2026.09.17-0.0.29"></script>
+  <script src="assets/js/ui/icons.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/logger.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/core.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data-structures.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/math.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/domain-schema.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/data-model.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/action-data.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/derived-state.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/data-contracts.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/state.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/page-context.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/storage.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/workspace/workspace.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/knowledge/kb-bundle.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/knowledge/knowledge-base.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ui/theme.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/providers.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/api-diagnostics.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/prompt-bundle.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/action-registry.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/contracts.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/tools/registry.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/structured.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/action-guards.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/action-capabilities.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/parser.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/canonical-store.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/importer.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/analysis.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/analysis-summary.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/design-model.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/cabinet/cabinet.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/dataset-corrections.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/design-analysis.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/data/pipeline.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/context.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/http.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/errors.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/stream.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/transport.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/console.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/settings.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/export/export.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/export/nomad.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/export/projections.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/action-steps.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/actions.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/experiment/data-console.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ui/feedback.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/logs-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/settings-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/design-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/cabinet-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/shared.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/review-panel.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/import-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/results-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/export-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/lazy-assets.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/pages/docs-page.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/action-ui.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/ai/assistant.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/controllers/knowledge-controller.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/controllers/cabinet-controller.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/controllers/settings-controller.js?v=2026.09.17-0.0.30"></script>
+  <script src="assets/js/app.js?v=2026.09.17-0.0.30"></script>
 </body>
 </html>

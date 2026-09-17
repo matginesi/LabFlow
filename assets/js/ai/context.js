@@ -186,18 +186,26 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     out.design=designId?compact((exp.design&&exp.design.devices||[]).find(function(d){
     return String(d.id)===String(designId);})||null):null;
     if(pc.page==='Export'){
-      const plan=exp.nomad&&exp.nomad.mappingPlan||{};
+      /* Export-page chat gets readiness and next actions, not the Results pack or a full
+         projection dump. This keeps local-model context centered on the export decision. */
+      delete out.results;delete out.samples;delete out.measurements;delete out.findings;delete out.evidence;
+      const plan=exp.nomad&&exp.nomad.mappingPlan||{},validation=exp.nomad&&exp.nomad.validation||{};
       const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
         ?LF.ExportProjections.preparationContext(exp):null;
-      out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',
-        missing:take(plan.missing,12)};
-      out.export_projection=prep?compact(prep):null;
+      const problems=validation.problems||[],pending=LF.ActionData&&LF.ActionData.proposal?LF.ActionData.proposal(exp,'export.prepare',''):null;
+      function problemMessages(severities){return problems.filter(function(x){return severities.includes(x.severity);
+      }).map(function(x){return x.message;}).slice(0,6);}
+      out.nomad={status:validation.status||plan.readiness||'',blocking:problemMessages(['blocking']),
+        required:problemMessages(['required']),recommended:problemMessages(['recommended','warning']),
+        can_export_anyway:validation.status!=='blocked'};
+      out.export_projection=prep?{allowed_fields:prep.allowed_fields,nomad:{missing:take(prep.nomad&&prep.nomad.missing,12)},readypv:{missing:take(prep.readypv&&prep.readypv.missing,12)}}:null;
+      out.export_prepare={pending:!!pending,suggestions:pending&&pending.suggestions?pending.suggestions.length:0,unresolved:pending&&pending.unresolved?pending.unresolved.length:0};
       out.export_assistant_rule='Prioritize NOMAD readiness and the smallest current blocker. Ready-PV is secondary. '+
-        'When export.prepare is available, recommend /prepare-export for missing export metadata rather than inventing values.';
+        'Explain whether export can proceed anyway. When export.prepare is available, recommend /prepare-export for missing export metadata rather than inventing values.';
     }
     const referenceQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
-    if(LF.Cabinet)out.cabinet=LF.Cabinet.context(referenceQuery,{limit:6});
-    if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
+    if(pc.page!=='Export'&&LF.Cabinet)out.cabinet=LF.Cabinet.context(referenceQuery,{limit:6});
+    if(pc.page!=='Export'&&LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
     out.history=chatMemory(exp);
     return budgetPack(out,opts.maxChars||14000);}
   function packAmbiguity(exp,opts){const out=actionBase(exp),collect=opts.collect||{}

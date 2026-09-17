@@ -33,12 +33,14 @@ let rawValue=parsed.value,note=parsed.strategy||'JSON';
   );}}if(!rawValue){if(Log)Log.warn('output.invalid-json',{
   schema:step&&step.schema||'',diagnosis:parsed&&parsed.diagnosis||'',outputPreview:String(content||'').slice(0,1200)});
   const e=LF.StructuredOutput.contractError(step.schema,null,{text:content,parseResult:parsed});e.modelOutput=content;
-  throw e;}const normalized=step.schema&&LF.StructuredOutput.normalizeForSchema?
-  LF.StructuredOutput.normalizeForSchema(step.schema,rawValue):rawValue;
+  throw e;}const normalizedResult=step.schema&&LF.StructuredOutput.normalizeForSchemaWithReport?
+  LF.StructuredOutput.normalizeForSchemaWithReport(step.schema,rawValue):{value:step.schema&&LF.StructuredOutput.normalizeForSchema?
+  LF.StructuredOutput.normalizeForSchema(step.schema,rawValue):rawValue,report:null},normalized=normalizedResult.value;
+  if(Log&&normalizedResult.report&&normalizedResult.report.normalized)Log.info('output.normalized',Object.assign({schema:step.schema},normalizedResult.report));
   if(step.schema){const errors=LF.StructuredOutput.validate(step.schema,normalized,{registry:LF.ActionRegistry});
-  if(errors.length){if(Log)Log.warn('output.invalid-contract',{
+  if(errors.length){if(Log){Log.warn('output.invalid-contract',{
   schema:step.schema,errors:errors.slice(0,12),parseStrategy:parsed.strategy||'JSON',
-  outputPreview:String(content||'').slice(0,1200)});
+  outputPreview:String(content||'').slice(0,1200)});Log.warn('output.validation-failed',{schema:step.schema,errors:errors.slice(0,12)});}
   const e=LF.StructuredOutput.contractError(step.schema,normalized,{providerResponse:errors.join('\n')+'\n\n'+content});
   e.validationErrors=errors;e.modelOutput=content;throw e;}}return{value:normalized,note:note};}
 function requestMeta(r){const p=r.thinkingPolicy||{};
@@ -363,6 +365,7 @@ async function runUnitWithRetry(run,step,opts,item,index,total){
       }else semanticRetryNo++;
       const wait=isTruncation||err&&err.isContract?250:AUTO_RETRY_DELAYS[Math.min(Math.max(0,semanticRetryNo-1),AUTO_RETRY_DELAYS.length-1)];
       run.retryFeedback[key]=feedbackFor(err,step);totalAttemptNo++;
+      if(Log)Log.warn('output.retry',{actionId:run.actionId,step:step.id,attempt:totalAttemptNo,kind:kind,code:code,delayMs:wait});
       if(opts.onAutoRetry)opts.onAutoRetry({actionId:run.actionId,step:step.id,index:run.currentIndex,total:stepsOf(run.def).length,workIndex:index,workTotal:total,attempt:totalAttemptNo,maxAttempts:(Number(step.max_retries)||0)+2,retryKind:kind,delayMs:wait,code:code,message:String(err&&err.message||err),completionBudgetTokens:run.retryCompletionBudget[key]||null});
       await delay(wait);
     }

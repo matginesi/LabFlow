@@ -1,5 +1,7 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/ai/action-registry.js');
+require('../../assets/js/ai/structured.js');
 require('../../assets/js/ai/actions.js');
 
 function assert(actual, expected, label) {
@@ -28,6 +30,16 @@ module.exports=function(t,LF){
 
   t['automatic checkpoint retry policy is finite: 5s then 10s'] = function(){
     assert(LF.ActionRunner.autoRetryDelays,[5000,10000],'retry delays');
+  };
+
+  t['realistic small-model export preparation completes after deterministic normalization without retry']=async function(){
+    const exp={id:'exp_export',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},realStructured=LF.StructuredOutput,realRegistry=LF.ActionRegistry,realSteps=LF.ActionSteps;
+    const def={id:'export.prepare.fixture',contract:{context:{profile:'test',scope:'export'},result:{format:'json',schema:'export_preparation',kind:'proposal'},effect:{mode:'store_proposal',writes:[]},guards:[]},execution:{mode:'hybrid',result_step:'prepare',steps:[{id:'prepare',type:'AI',output:'json',schema:'export_preparation',max_output_tokens:512,max_retries:1},{id:'store',type:'DETERMINISTIC',fn:'fixture.store'}]}};let calls=0;
+    LF.Storage={getEffectiveAction:function(){return def;},getAiSettings:function(){return{provider:'llamacpp',model:'Nemotron-4B',streaming:false,maxOutputTokensCap:0};}};LF.ActionContext={build:function(){return{context:{},messageList:[{role:'user',content:'prepare missing export metadata'}]};}};
+    LF.State={state:{experiment:exp,ui:{route:'experiment-export'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};LF.ActionSteps={'fixture.store':function(ctx){exp.saved=ctx.outputs.prepare;return{stored:true};}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(){return 30;},buildRequest:function(x){return x;},send:async function(){calls++;return{content:JSON.stringify({status:'LIMITED',summary:'Workspace metadata unavailable.',suggestions:[],unresolved:[{projection:'NOMAD',fieldId:'data.institution',reason:'No institution found.',sourceKind:'workspace',confidence:'74%',evidence:['workspace:w1'],value:null,diagnostic:'harmless'}],warnings:[]}),finishReason:'stop'};}};
+    try{const out=await LF.ActionRunner.run('export.prepare.fixture');assert(out.status,'done','completed Action state');assert(calls,1,'safe shape repair avoids retry');assert(exp.saved.unresolved[0].field_id,'data.institution','normalized proposal stored');if(Object.prototype.hasOwnProperty.call(exp.saved.unresolved[0],'value'))throw new Error('null unresolved value reached storage');}
+    finally{LF.StructuredOutput=realStructured;LF.ActionRegistry=realRegistry;LF.ActionSteps=realSteps;}
   };
 
   t['adaptive token profile uses work size but stays inside Action min target and max']=function(){

@@ -104,6 +104,16 @@ module.exports = function (t, LF) {
     if(Object.prototype.hasOwnProperty.call(out.unresolved[0],'extra_transport_field'))throw new Error('item transport noise must be discarded');
     assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'canonical export proposal satisfies schema');
   };
+  t['Export preparation normalization reports realistic small-model repairs without retry']=function(){
+    const raw={result:{status:'LIMITED',summary:'Nemotron-style unresolved metadata.',suggestions:[],unresolved:[{projection:'NOMAD',fieldId:'data.institution',reason:'Not present in workspace.',sourceKind:'workspace',confidence:'74%',evidence:['workspace:w1'],value:null,analysis_note:'not a proposal'}],warnings:[]}},normalized=SO.normalizeForSchemaWithReport('export_preparation',raw);
+    assert(SO.validate('export_preparation',normalized.value,{registry:LF.ActionRegistry}),[],'realistic normalized payload reaches valid contract');
+    assert(normalized.report.removedNullValues,1,'null value removed');
+    if(normalized.report.canonicalizedKeys<2||normalized.report.normalized<4)throw new Error('normalization report missed safe repairs');
+  };
+  t['Export preparation does not hide a non-null value attached to unresolved']=function(){
+    const out=SO.normalizeForSchema('export_preparation',{status:'limited',summary:'unsafe shape',suggestions:[],unresolved:[{projection:'nomad',field_id:'data.institution',reason:'unknown',value:'Invented University'}],warnings:[]}),errors=SO.validate('export_preparation',out,{registry:LF.ActionRegistry});
+    if(!errors.some(function(x){return /unexpected field value/.test(x);}))throw new Error('non-null unresolved value must remain visible to strict validation');
+  };
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){
     const v=SO.normalizeForSchema('dataset_corrections',{proposals:[{patch_type:'reference_classification',target:'measurement:1'}]});

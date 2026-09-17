@@ -44,6 +44,10 @@ Without a provider configured you can still import data, review findings, inspec
 
 AI is reserved for explicit Actions and Assistant questions where interpretation or semantic inference is useful. Its output remains non-authoritative until the relevant owner-controlled acceptance step.
 
+## Reset session
+
+**Reset session** enables only when LabFlow has session-owned work to clear: an imported experiment/RAW snapshot, revisions or review state, Design, Action proposals/history, chat, export overrides, or relevant transient workflow state. Reset clears that work and the saved workspace. Provider configuration, API credentials, theme, Workspace, Cabinet, Knowledge Base and other intentionally persistent preferences remain. Those settings alone do not enable Reset.
+
 ## Useful console command
 
 ```js

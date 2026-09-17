@@ -1,7 +1,7 @@
 ---
 title: AI context hygiene
 section: AI and Actions
-summary: Semantic context boundaries, task-specific retrieval and representative context compaction in LabFlow 0.0.29.
+summary: Semantic context boundaries, task-specific retrieval and representative context compaction in LabFlow 0.0.30.
 order: 12
 ---
 

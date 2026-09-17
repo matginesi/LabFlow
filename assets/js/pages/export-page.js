@@ -83,8 +83,9 @@ function issueList(validation){
       '<span>The current LabFlow data can be staged for export.</span></div>';
   }
   return '<div class="export-issues">'+problems.map(function(p){
+    const issueLabel={blocking:'Blocks export',required:'Required metadata',recommended:'Recommended metadata',optional:'Optional metadata'}[p.severity]||'Review';
     return '<article class="export-issue '+(p.severity==='blocking'?'danger':'warning')+'">'+
-      '<div class="export-issue-copy"><strong>'+(p.severity==='blocking'?'Blocks export':'Review')+'</strong>'+
+      '<div class="export-issue-copy"><strong>'+issueLabel+'</strong>'+
       '<span>'+safe(p.message)+'</span></div>'+fixControls(p.fix)+'</article>';
   }).join('')+'</div>';
 }

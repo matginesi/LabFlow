@@ -37,6 +37,8 @@ Cabinet never assigns Design fields directly. Application goes through `DesignMo
 
 Only Cabinet kinds declaring an applicable Design capability are offered for reuse. The page reads fields, labels, summaries, grouping and capabilities from the Cabinet registry rather than maintaining a second UI-specific schema.
 
+**Add experiment designs to Cabinet** collects reusable formulations, stacks and processes from every accepted/current Design group. It does not read unapplied `design.infer` proposals. A compact review classifies candidates by normalized kind/name/content as **NEW**, **EXACT MATCH**, or **POSSIBLE CONFLICT**. Exact matches default to skip; conflicts require skip, overwrite, or add-as-new. Imported resources retain `experiment_design`, experiment ID, device IDs, and capture timestamps as reference provenance. They remain reusable Cabinet resources, not measurement evidence.
+
 ## Validity and AI context
 
 Incomplete resources can remain in Cabinet while being edited. Only resources satisfying the Cabinet validator are eligible for application or bounded AI context.

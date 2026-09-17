@@ -1,6 +1,8 @@
 /*
  * Declarative deterministic lifecycle planner and executor from normalization through final validation.
  * Boundary: Stages are deterministic, dependency-ordered and may not call AI providers.
+ * Lifecycle: immutable RAW → parsed records → derived analysis → review projection;
+ * only explicit owner commits turn reviewed choices into accepted scientific state.
  */
 (function () {
   'use strict';

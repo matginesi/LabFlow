@@ -50,6 +50,11 @@ module.exports=function(t,LF){
     assert(rawProblem.fix.option,'includeRaw','fix targets the RAW option');
     exportSettings.includeRaw=false;
   };
+  t['Missing required metadata is reviewable while technical blockers still block']=function(){
+    const e=exp();e.meta.workspaceId='';const plan=LF.NomadExport.ensureMapping(e),institution=plan.mappings.find(function(x){return x.nomad_path==='data.workspace_id';});if(institution)institution.status='missing';
+    const v=LF.NomadExport.validate(e,null);truthy(v.status!=='blocked','metadata incompleteness can export anyway');
+    e.measurements=[];const blocked=LF.NomadExport.validate(e,null);assert(blocked.status,'blocked','no measurements remains a technical blocker');
+  };
 
   t['NOMAD provenance audit uses patchType rather than obsolete type field']=function(){
     const e=exp();e.patches=[{id:'p1',kind:'patch',patchType:'sample_mapping',source:'user',createdAt:'2026-09-09T00:00:00Z',reason:'Confirmed mapping',evidence:['researcher evidence']}];

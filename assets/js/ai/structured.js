@@ -352,11 +352,14 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
       return exportPreparationText(item,180);
     }).filter(Boolean).slice(0,5);
   }
-  function normalizeExportPreparation(value) {
+  /* Transport-shape repair runs before the strict schema and semantic allow-list.
+     It may canonicalize representation, but never invent a value or field id. */
+  function normalizeExportPreparation(value, report) {
+    report=report||{normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0};
     if(!value||typeof value!=='object'||Array.isArray(value))return value;
     let v=value;
     ['result','proposal','output'].some(function(key){
-      if(v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){v=v[key];return true;}
+      if(v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){v=v[key];report.normalized++;return true;}
       return false;
     });
     const out={};
@@ -369,14 +372,18 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
         if('projection'in item)x.projection=exportPreparationProjection(item.projection);
         if('field_id'in item||'fieldId'in item||'field'in item){
           x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
+          if(!('field_id'in item)){report.canonicalizedKeys++;report.normalized++;}
         }
         if('value'in item)x.value=item.value;
         if('source_kind'in item||'sourceKind'in item){
           x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
+          if(!('source_kind'in item)){report.canonicalizedKeys++;report.normalized++;}
         }
-        if('confidence'in item)x.confidence=exportPreparationConfidence(item.confidence);
+        if('confidence'in item){x.confidence=exportPreparationConfidence(item.confidence);if(x.confidence!==item.confidence){report.normalized++;}}
         if('reason'in item)x.reason=exportPreparationText(item.reason,260);
         if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
+        const supported=new Set(['projection','field_id','fieldId','field','value','source_kind','sourceKind','confidence','reason','evidence']);
+        Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
         return x;
       }).slice(0,24);
     }
@@ -387,13 +394,18 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
         if('projection'in item)x.projection=exportPreparationProjection(item.projection);
         if('field_id'in item||'fieldId'in item||'field'in item){
           x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
+          if(!('field_id'in item)){report.canonicalizedKeys++;report.normalized++;}
         }
         if('reason'in item)x.reason=exportPreparationText(item.reason,240);
         if('source_kind'in item||'sourceKind'in item){
           x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
+          if(!('source_kind'in item)){report.canonicalizedKeys++;report.normalized++;}
         }
-        if('confidence'in item)x.confidence=exportPreparationConfidence(item.confidence);
+        if('confidence'in item){x.confidence=exportPreparationConfidence(item.confidence);if(x.confidence!==item.confidence){report.normalized++;}}
         if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
+        if('value'in item){if(item.value==null){report.removedNullValues++;report.normalized++;}else{x.value=item.value;}}
+        const supported=new Set(['projection','field_id','fieldId','field','reason','source_kind','sourceKind','confidence','evidence','value']);
+        Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
         return x;
       }).slice(0,24);
     }
@@ -403,6 +415,12 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
       }).filter(Boolean).slice(0,12);
     }
     return out;
+  }
+
+  function normalizeForSchemaWithReport(schemaId,value){
+    const report={normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0};
+    const normalized=schemaId==='export_preparation'?normalizeExportPreparation(value,report):normalizeForSchema(schemaId,value);
+    return{value:normalized,report:report};
   }
 
   function normalizeForSchema(schemaId, value) {
@@ -455,6 +473,7 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
     parse: parse,
     validate: validate,
     normalizeForSchema: normalizeForSchema,
+    normalizeForSchemaWithReport: normalizeForSchemaWithReport,
     recoverForSchema: recoverForSchema,
     contractError: contractError
   };

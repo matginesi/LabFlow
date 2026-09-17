@@ -105,20 +105,24 @@
   function closeConfirmation(result){
     if(!confirmPending)return;const pending=confirmPending;confirmPending=null;
     const shade=byId('messageShade');if(shade)closeModalSurface(shade);
-    Log.info('confirm', {message:pending.message.slice(0,300),result:!!result});pending.resolve(!!result);
+    Log.info('confirm', {message:pending.message.slice(0,300),result:String(result)});pending.resolve(result);
   }
 
 
   function confirmAction(message, options) {
     options=options||{};if(confirmPending)closeConfirmation(false);
-    const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel');
+    const shade=byId('messageShade'),totem=byId('messageTotem'),title=byId('messageTotemTitle'),body=byId('messageTotemBody'),eyebrow=byId('messageTotemEyebrow'),confirm=byId('messageTotemConfirm'),cancel=byId('messageTotemCancel'),alternate=byId('messageTotemAlternate');
     if(!shade||!title||!body||!confirm||!cancel)return Promise.resolve(false);
-    const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');body.textContent=text(message);if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
+    const tone=options.danger?'danger':(options.tone||'info');title.textContent=text(options.title||'Confirm action');
+    if(options.bodyHtml){body.innerHTML=options.bodyHtml;body.classList.add('message-totem-body-rich');if(totem)totem.classList.add('rich');}else{body.textContent=text(message);body.classList.remove('message-totem-body-rich');if(totem)totem.classList.remove('rich');}
+    if(eyebrow)eyebrow.textContent=text(options.eyebrow||'LabFlow confirmation');if(totem)totem.className='message-totem '+tone;confirm.textContent=text(options.confirmLabel||'Confirm');cancel.textContent=text(options.cancelLabel||'Cancel');
     confirm.className='button '+(options.danger?'danger':'primary');
     return new Promise(function(resolve){
       const previousFocus=document.activeElement;
       confirmPending={resolve:resolve,message:text(message),previousFocus:previousFocus};
-      confirm.onclick=function(){closeConfirmation(true);};cancel.onclick=function(){closeConfirmation(false);};shade.onclick=function(event){if(event.target===shade)closeConfirmation(false);};
+      confirm.onclick=function(){closeConfirmation(Object.prototype.hasOwnProperty.call(options,'confirmValue')?options.confirmValue:true);};cancel.onclick=function(){closeConfirmation(Object.prototype.hasOwnProperty.call(options,'cancelValue')?options.cancelValue:false);};
+      if(alternate){alternate.hidden=!options.alternateLabel;alternate.textContent=text(options.alternateLabel||'');alternate.onclick=options.alternateLabel?function(){closeConfirmation(Object.prototype.hasOwnProperty.call(options,'alternateValue')?options.alternateValue:'alternate');}:null;}
+      shade.onclick=function(event){if(event.target===shade)closeConfirmation(Object.prototype.hasOwnProperty.call(options,'cancelValue')?options.cancelValue:false);};
       openModalSurface(shade,{focus:confirm,previousFocus:previousFocus,onEscape:function(){closeConfirmation(false);}});
     });
   }
@@ -339,6 +343,7 @@
     if (requestState) {
       requestState.textContent = activity.request ? 'Prepared request · key redacted' : 'No request data';
     }
+    const technical=byId('activityTechnical');if(technical)technical.open=false;
     renderStable(request, (activity.requestIsJson ? 'json:' : 'text:') + activity.request, function () {
       request.classList.toggle('json-response', activity.requestIsJson);
       if (activity.requestIsJson) request.innerHTML = requestActivityHtml(activity.request || '{}');

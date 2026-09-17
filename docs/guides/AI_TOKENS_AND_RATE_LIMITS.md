@@ -11,7 +11,7 @@ Each Action has an operational input ceiling, an answer reserve/target/maximum, 
 
 LabFlow keeps **answer** and **completion** budgets distinct. `min_output_tokens` is the minimum answer space protected while fitting context, `target_output_tokens` is the desired answer size, and `max_output_tokens` is the Action's answer maximum. The provider request may be larger when reasoning headroom is needed; that larger value is the **completion request limit** and covers answer + reasoning. The optional global **Completion limit** clamps that provider request.
 
-The Action Totem follows the same semantics: **Answer** compares answer tokens with the answer target, while **Budget** and its progress bar compare total completion tokens (answer + reasoning) with the completion request limit. Provider-reported usage is shown exactly when available; otherwise LabFlow marks token counts as estimates.
+The Action Totem defaults to researcher-facing stage, progress, result/failure summary and primary controls. Provider/model identity, token budgets, timing, HTTP/stream information, request preview and structured-output diagnostics remain available under **Technical details**. Provider-reported usage is shown exactly when available; otherwise LabFlow marks token counts as estimates.
 
 Use the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md) for current values rather than duplicating numbers in prose.
 

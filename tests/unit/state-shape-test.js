@@ -172,6 +172,20 @@ module.exports = function (t, LF) {
     assert(run.requestMeta.resolve.usage.totalTokens,10,'usage metadata preserved');
   };
 
+  t['reset availability follows session-owned state and ignores preferences']=function(){
+    S.resetSession();const previous=LF.Storage;LF.Storage={getExportSettings:function(){return{projectionOverrides:{nomad:{},readypv:{}}};}};
+    assert(S.hasResettableSessionState(S.state),false,'pristine state');
+    LF.Storage.getAiSettings=function(){return{provider:'llamacpp',theme:'light'};};
+    assert(S.hasResettableSessionState(S.state),false,'preferences do not count');
+    S.setExperiment(LF.DataModel.create({bytes:new Uint8Array([1]).buffer,sourceName:'session.zip'}));
+    assert(S.hasResettableSessionState(S.state),true,'import counts');
+    S.resetSession();S.state.experiment.derived.chat.conversation.push({role:'user',content:'hello'});
+    assert(S.hasResettableSessionState(S.state),true,'chat counts');
+    S.resetSession();LF.Storage.getExportSettings=function(){return{projectionOverrides:{nomad:{'data.institution':'Lab'},readypv:{}}};};
+    assert(S.hasResettableSessionState(S.state),true,'export override counts');
+    LF.Storage=previous;S.resetSession();
+  };
+
   t['dataset and analysis touches invalidate the statistics bundle'] = function () {
     const exp = LF.DataModel.create({ sourceName: 'bundle.zip' });
     exp.analysisSummary = { sourceRevision: 0 };

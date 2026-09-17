@@ -7,8 +7,37 @@
   const LF=window.LabFlow=window.LabFlow||{};
   let searchTimer=null;
   function message(text,type){LF.UI.message(text,type||'info');}
+  function designImportReview(preview){const esc=LF.Core.escapeHtml;
+    const intro='<div class="cabinet-import-review"><p>Review reusable resources from every current Design. '+
+      'Unapplied AI proposals are excluded.</p><div class="row-wrap"><button class="button ghost compact" '+
+      'type="button" data-design-import-bulk="new">Select all new</button><button class="button ghost compact" '+
+      'type="button" data-design-import-bulk="skip-duplicates">Skip all duplicates</button><button class="button '+
+      'ghost compact" type="button" data-design-import-bulk="overwrite">Overwrite selected duplicates</button></div>';
+    return intro+preview.candidates.map(function(item){const status=item.match==='new'?'NEW':item.match==='exact'?
+      'EXACT MATCH':'POSSIBLE CONFLICT',options=item.match==='new'?'<option value="add" selected>Add</option>'+
+      '<option value="skip">Skip</option>':item.match==='exact'?'<option value="skip" selected>Skip existing</option>'+
+      '<option value="add">Add as new</option>':'<option value="review" selected>Choose…</option><option value="skip">'+
+      'Skip existing</option><option value="overwrite">Overwrite existing</option><option value="add">Add as new</option>';
+      return '<label class="field cabinet-import-row"><span><strong>'+esc(item.name)+'</strong> · '+esc(item.kind)+' · '+status+'</span><select data-design-import-choice="'+esc(item.id)+'" data-match="'+item.match+'">'+options+'</select></label>';}).join('')+'</div>';}
   async function handleClick(e,ctx){
     const S=ctx.state,render=ctx.render;
+    if(e.target.closest('#addAllDesignsCabinet')){try{if(!ctx.hasExperiment())throw new Error('Open an experiment first.');
+      const exp=ctx.ensureExperimentShape(S.state.experiment),preview=LF.Cabinet.designImportPreview(exp);if(!preview.candidates.length){message('No accepted/current reusable Design entries are available.','info');return true;}
+      const pending=LF.UI.confirmAction('Review experiment Designs',{title:'Add experiment designs to Cabinet',eyebrow:'Cabinet import',bodyHtml:designImportReview(preview),confirmLabel:'Add selected',cancelLabel:'Cancel'}),body=document.getElementById('messageTotemBody');
+      if(body)body.addEventListener('click',function(event){const bulk=event.target.closest('[data-design-import-bulk]');
+        if(!bulk)return;body.querySelectorAll('[data-design-import-choice]').forEach(function(select){
+          const match=select.dataset.match,mode=bulk.dataset.designImportBulk;
+          if(mode==='new'&&match==='new')select.value='add';
+          if(mode==='skip-duplicates'&&match!=='new')select.value='skip';
+          if(mode==='overwrite'&&match==='conflict')select.value='overwrite';
+        });
+      });
+      const confirmed=await pending;if(!confirmed)return true;const decisions={};
+      document.querySelectorAll('[data-design-import-choice]').forEach(function(select){
+        decisions[select.dataset.designImportChoice]=select.value;
+      });const out=LF.Cabinet.commitDesignImport(exp,preview,decisions);render();
+      message('Cabinet updated: '+out.added+' added, '+out.overwritten+' overwritten, '+out.skipped+' skipped.','success');
+      }catch(err){message(err&&err.message||String(err),'error');}return true;}
     const select=e.target.closest('[data-cabinet-select]');if(select){S.state.ui.cabinetSelectedId=select.dataset.cabinetSelect;render();return true;}
     if(e.target.closest('#cabinetAddItem')){const el=document.getElementById('cabinetNewKind'),kind=el&&el.value||'solution',item=LF.Cabinet.create(kind,{});S.state.ui.cabinetKind=kind;S.state.ui.cabinetSelectedId=item.id;render();return true;}
     if(e.target.closest('#cabinetSaveCurrentSolution')){try{

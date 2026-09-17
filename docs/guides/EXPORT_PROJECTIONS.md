@@ -1,6 +1,6 @@
 # Export: NOMAD-first workflow and on-demand projections
 
-LabFlow 0.0.29 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
+LabFlow 0.0.30 keeps **NOMAD staging/export as the primary Export-page workflow** and makes missing metadata priorities explicit before the detailed projections. NOMAD and Ready-PV remain projections of the same canonical LabFlow data, but their detailed fields are now secondary inspection tools and stay collapsed until the researcher opens them.
 
 `export.prepare` retrieves support deterministically from the missing field IDs. Contact fields receive relevant Workspace contacts; measurement-description fields may receive the bound Process and targeted wording references; instrument/software/format fields may receive matching Process/Cabinet resources. It never receives the generic Experiment Brief, efficiency rankings, result comparisons, anomalies or curves.
 
@@ -71,6 +71,8 @@ Ready-PV remains secondary to NOMAD on this page and follows the questionnaire s
 
 Readiness is a deterministic completeness score over required/recommended fields. It is not an AI confidence score and must not be interpreted as probability that scientific claims are correct.
 
+Validation labels issues as **blocking**, **required**, **recommended**, or **optional**. Blocking means a package cannot be constructed safely (for example, there are no exportable measurements). Missing required/recommended metadata opens the existing confirmation Totem with **Cancel**, **Prepare metadata**, and **Export anyway**. Continuing records the known validation result in the package manifest and logs; it never fills canonical data or invents metadata.
+
 ## Assistant behavior
 
 On Export, the Assistant prioritizes NOMAD blockers and the smallest useful next step. When `export.prepare` is available, it may recommend `/prepare-export`. It should not dump the entire projection or fabricate metadata to improve readiness.
@@ -88,7 +90,7 @@ The Export page keeps a compact always-visible **Metadata needed** card above th
 
 ### Robust structured-output boundary
 
-`export.prepare` validates a canonical proposal after a bounded deterministic transport normalization. Harmless small-model variants such as `value: null` inside `unresolved` are removed before contract validation; aliases such as `fieldId`/`sourceKind` are canonicalized. This does not fill missing metadata, weaken the allowed-field whitelist, or modify LabFlow Data. Unsupported metadata remains unresolved.
+`export.prepare` uses this order: JSON extraction → deterministic transport/shape normalization → strict JSON Schema validation → semantic allowed-field/current-missing validation → proposal storage. Harmless small-model variants such as `value: null` inside `unresolved`, `fieldId`, `sourceKind`, projection casing, and percentage confidence strings are normalized before validation. A non-null unresolved `value` remains invalid instead of being converted into a suggestion. Only failures that remain after deterministic normalization may consume the single bounded retry, with the exact validation error and a minimal previous-output excerpt.
 
 ## Correcting missing or wrong mapped metadata
 

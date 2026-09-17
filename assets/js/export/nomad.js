@@ -243,7 +243,8 @@
   function validate(exp,rawArchive){
     const issues=[],warnings=[],problems=[];
     function problem(code,message,fix){issues.push(message);problems.push({code:code,severity:'blocking',message:message,fix:fix||null});}
-    function warning(code,message,fix){warnings.push(message);problems.push({code:code,severity:'warning',message:message,fix:fix||null});}
+    function warning(code,message,fix,category){warnings.push(message);problems.push({code:code,severity:category||'recommended',message:message,fix:fix||null});}
+    function required(code,message,fix){warnings.push(message);problems.push({code:code,severity:'required',message:message,fix:fix||null});}
     if(!exp||!exp.id)return {status:'blocked',issues:['No experiment is loaded.'],warnings:[],problems:[{code:'no_experiment',severity:'blocking',message:'No experiment is loaded.',fix:{kind:'route',route:'experiment-import',label:'Upload experiment'}}],checks:{schemaReference:SCHEMA_REFERENCE},checkedAt:new Date().toISOString()};
     const plan=ensureMapping(exp);
     const settings=LF.Storage.getExportSettings(),audit=correctionAudit(exp);
@@ -257,7 +258,9 @@
     if(audit.pending.length)warning('pending_corrections',audit.pending.length+' correction proposal(s) remain pending review.',{kind:'focus',target:'pending-corrections',label:'Inspect here'});
     if(audit.incompletePatches.length)warning('patch_provenance',audit.incompletePatches.length+' applied patch record(s) have incomplete reason/evidence provenance.',{kind:'focus',target:'patch-provenance',label:'Inspect here'});
     const requiredMissing=(plan.mappings||[]).filter(function(x){return x.required&&x.status!=='mapped';});
-    if(requiredMissing.length)problem('required_mapping_missing',requiredMissing.length+' required NOMAD mapping field(s) are missing.',{kind:'route',route:'experiment-import',label:'Review missing data',fields:requiredMissing.map(function(x){return x.labflow_path;})});
+    if(requiredMissing.length)required('required_mapping_missing',requiredMissing.length+' required NOMAD metadata field(s) are missing.',{kind:'action',action:'export.prepare',label:'Prepare metadata',fields:requiredMissing.map(function(x){return x.nomad_path;})});
+    const recommendedMissing=(plan.mappings||[]).filter(function(x){return !x.required&&x.status==='missing';});
+    if(recommendedMissing.length)warning('recommended_mapping_missing',recommendedMissing.length+' recommended NOMAD metadata field(s) are missing.',{kind:'action',action:'export.prepare',label:'Prepare metadata',fields:recommendedMissing.map(function(x){return x.nomad_path;})},'recommended');
     const finiteRows=(measurements||[]).filter(function(m){return Number.isFinite(Number(m.bestEff));});
     const ids=new Set(),duplicates=[];finiteRows.forEach(function(m){if(ids.has(String(m.id)))duplicates.push(m.id);ids.add(String(m.id));});
     if(duplicates.length)problem('duplicate_measurement_ids',duplicates.length+' duplicate canonical measurement ID(s) would make the NOMAD entry ambiguous.',{kind:'route',route:'experiment-import',label:'Review measurement identity'});
@@ -275,7 +278,10 @@ warnings:warnings,problems:problems,checks:{
       acceptedUnapplied:audit.acceptedUnapplied.length,pendingCorrections:audit.pending.length,
       incompletePatchProvenance:audit.incompletePatches.length,mappedFields:(plan.mappings||[]).filter(function(x){
       return x.status==='mapped';}).length,missingFields:(plan.mappings||[]).filter(function(x){return x.status==='missing';
-      }).length},checkedAt:new Date().toISOString()};
+      }).length,blocking:problems.filter(function(x){return x.severity==='blocking';}).length,
+      requiredMissing:problems.filter(function(x){return x.severity==='required';}).length,
+      recommendedMissing:problems.filter(function(x){return x.severity==='recommended';}).length,
+      optionalMissing:problems.filter(function(x){return x.severity==='optional';}).length},checkedAt:new Date().toISOString()};
     exp.nomad=exp.nomad||{};exp.nomad.validation=result;return result;
   }
 

@@ -203,6 +203,24 @@ if(!entry||!Array.isArray(entry.runs))return;
 
   function currentExperiment(reason){ return ensureExperiment(reason||'current'); }
 
+  /* Reset availability follows state that Reset actually owns. Preferences and credentials
+     deliberately live outside this selector; export-only overrides are included because
+     resetSession clears them through their owning projection service. */
+  function hasResettableSessionState(applicationState) {
+    const current=applicationState||state,exp=current&&current.experiment||{},ui=current&&current.ui||{};
+    const nonEmpty=function(value){return Array.isArray(value)?value.length>0:!!(value&&typeof value==='object'&&Object.keys(value).length);};
+    const raw=exp.raw||{},derived=exp.derived||{},actionData=exp.actionData||{};
+    const scientific=['experiments','samples','runs','measurements','files','blocks','evidence','findings','patches'];
+    if(raw.sourceArchive||raw.sourceName||scientific.some(function(key){return nonEmpty(exp[key]);}))return true;
+    if(Number(exp.sync&&exp.sync.revision||0)>0||nonEmpty(exp.design&&exp.design.devices)||nonEmpty(exp.design&&exp.design.solutions))return true;
+    if(nonEmpty(actionData.proposals)||nonEmpty(actionData.annotations)||nonEmpty(actionData.status)||nonEmpty(derived.actions))return true;
+    if(nonEmpty(derived.chat&&derived.chat.conversation)||current.actionRun)return true;
+    if(['exportProjectionEdit','exportProjectionFocus','designCabinetPicker'].some(function(key){return !!ui[key];}))return true;
+    if(LF.Storage&&LF.Storage.getExportSettings){const settings=LF.Storage.getExportSettings(),overrides=settings&&settings.projectionOverrides||{};
+      if(nonEmpty(overrides.nomad)||nonEmpty(overrides.readypv))return true;}
+    return false;
+  }
+
   function resetSession() {
     state.experiment = emptyExperiment();
     state.actionRun = null;
@@ -260,6 +278,7 @@ if(!entry||!Array.isArray(entry.runs))return;
     commitDraft: commitDraft,
     commitAllDrafts: commitAllDrafts,
     currentExperiment: currentExperiment,
+    hasResettableSessionState: hasResettableSessionState,
     resetSession: resetSession
   };
 }());

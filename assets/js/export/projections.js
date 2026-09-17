@@ -1,6 +1,7 @@
 /*
  * Human-readable export projections for NOMAD and Ready-PV.
  * Boundary: LabFlow canonical data stays authoritative; optional projection overrides affect export views only.
+ * Flow: canonical LabFlow data → NOMAD/Ready-PV projection → optional export-only override → export.
  */
 (function(){
 'use strict';

@@ -209,8 +209,12 @@ picker=LF.State&&LF.State.state&&LF.State.state.ui&&LF.State.state.ui.designCabi
   return '<section class="page design-page design-table-page">'+
 (options.workflowHead?options.workflowHead('Design Experiment',
     'Build chemistry, stack and process for the next experiment.',
-    '<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
-      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>'):options.pageHead('Design Experiment','Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
+    '<button class="button compact" type="button" id="addAllDesignsCabinet">Add experiment designs to Cabinet</button><button class="button compact" type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
+      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" '+
+      'id="removeSelectedDevice" type="button">Remove selected</button>'):options.pageHead('Design Experiment',
+      'Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" '+
+      'id="addAllDesignsCabinet">Add experiment designs to Cabinet</button><button class="button compact" '+
+      'type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
       'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>')+options.stepper)+board(exp,design,devices,selected)+proposal+(picker?cabinetPicker(picker):'')+
     '<div class="design-two-column"><details class="panel design-work-panel" '+(chemOpen?'open':'')+
 '><summary class="panel-head"><div><span class="eyebrow">01 · Solution chemistry</span><h2 class="h2">Solutions ' +
