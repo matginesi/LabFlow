@@ -154,12 +154,13 @@ if(!entry||!Array.isArray(entry.runs))return;
   }
 
   function touch(scope) {
+    const options=arguments.length>1&&arguments[1]&&typeof arguments[1]==='object'?arguments[1]:{};
     const exp = ensureExperiment('before-touch');
     if (!exp.id) return exp;
     const changeScope = scope || 'metadata';
     LF.DataModel.touch(exp, changeScope);
     {
-      const invalidated=LF.DerivedState.invalidate(exp,changeScope);
+      const invalidated=LF.DerivedState.invalidate(exp,changeScope,options||{});
       if(invalidated.length)Log.debug('derived.invalidated',{scope:changeScope,projections:invalidated});
     }
     ensureExperiment('after-touch:' + String(changeScope));

@@ -169,11 +169,12 @@ function proposalPanel(exp,dev){
   const cabinetMatches=matches.length?'<div class="design-cabinet-matches"><strong>Cabinet matches</strong>'+matches.map(function(m){return '<span>'+esc(m.name)+' <button class="button ghost compact" type="button" data-use-cabinet-item="'+esc(m.cabinetId)+'">Use Cabinet snapshot</button></span>';}).join('')+'</div>':'';
   return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Review before accepting</h2><div class="meta">'+
 esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+(basis.length?' · Basis: '+esc(basis.join(' + ')):'')+'</div></div><div class="spacer"></div>'+
+    '<div class="design-suggestion-review">'+
     (score!=null?'<div class="design-ai-confidence"><span>AI confidence</span><strong>'+score+
     '%</strong><small>Calibrated candidate confidence from source nature; not proof of experiment use.</small></div>':'')+
-    '<div class="row-wrap"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
-    '">Accept experiment</button><button class="button ghost compact" type="button" data-discard-design-experiment="'+esc(dev.id)+
-    '">Discard</button></div></div><div class="panel-body">'+cabinetMatches+
+    '<div class="row-wrap design-suggestion-actions"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
+    '">Accept experiment</button><button class="button compact" type="button" data-discard-design-experiment="'+esc(dev.id)+
+    '">Discard</button></div></div></div><div class="panel-body">'+cabinetMatches+
     '<div class="design-suggestion-grid"><div><span class="eyebrow">Solution chemistry</span>'+
     (solutions.length?'<div class="design-chem-grid">'+solutions.map(function(s){return chemistryGraphic(s,true);
     }).join('')+'</div>':'<div class="design-empty-visual compact"><span>No solution suggestion.</span></div>')+
@@ -202,9 +203,10 @@ picker=LF.State&&LF.State.state&&LF.State.state.ui&&LF.State.state.ui.designCabi
     selectedState=experimentState(exp,design,selected),
     missingFields=selectedState&&selectedState.ready&&
     Array.isArray(selectedState.ready.missingFields)?selectedState.ready.missingFields:[],
-    chemOpen=missingFields.some(function(x){return /solution|solute|solvent|chem/i.test(String(x));
-    }),stackOpen=missingFields.some(function(x){return /stack|layer/i.test(String(x));
-    }),processOpen=missingFields.some(function(x){return /process|coating|anneal|atmos/i.test(String(x));});
+    hasProposal=!!proposalFor(exp,selected.id),
+    chemOpen=hasProposal||missingFields.some(function(x){return /solution|solute|solvent|chem/i.test(String(x));
+    }),stackOpen=hasProposal||missingFields.some(function(x){return /stack|layer/i.test(String(x));
+    }),processOpen=hasProposal||missingFields.some(function(x){return /process|coating|anneal|atmos/i.test(String(x));});
   if(LF.PageContext)LF.PageContext.publish('Design',{view:'Experiment design',selected:{experiment:selected.id},visible:['solutions:'+linkedSolutions(design,selected).length,'layers:'+(selected.stack||[]).length,'cabinet:'+((LF.Cabinet&&LF.Cabinet.all().length)||0)]});
   return '<section class="page design-page design-table-page">'+
 (options.workflowHead?options.workflowHead('Design Experiment',

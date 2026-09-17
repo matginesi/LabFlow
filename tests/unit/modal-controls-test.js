@@ -7,6 +7,8 @@ module.exports=function(t){
   const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const feedback=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
   const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
+  const uiCss=fs.readFileSync(path.join(root,'assets/css/ui.css'),'utf8');
+  const designPage=fs.readFileSync(path.join(root,'assets/js/pages/design-page.js'),'utf8');
   t['modal surfaces expose explicit cancel or close controls']=function(){
     assert(html.includes('id="activityCancel"'),true,'Action cancel button');
     assert(html.includes('id="activityClose"'),true,'Action close button');
@@ -31,6 +33,13 @@ module.exports=function(t){
   t['Confirmation Cancel is a bordered secondary control']=function(){
     assert(html.includes('class="button" type="button" id="messageTotemCancel"'),true,'Cancel uses canonical bordered button');
     assert(html.includes('class="button ghost" type="button" id="messageTotemCancel"'),false,'Cancel is not borderless ghost');
+  };
+  t['Hidden optional Totem actions cannot become empty visible buttons']=function(){
+    assert(uiCss.includes('.button[hidden] { display: none !important; }'),true,'hidden wins over generic button display');
+  };
+  t['Design Discard uses a bordered secondary control']=function(){
+    assert(designPage.includes('<button class="button compact" type="button" data-discard-design-experiment='),true,'Discard is bordered');
+    assert(designPage.includes('<button class="button ghost compact" type="button" data-discard-design-experiment='),false,'Discard is not ghost');
   };
   return t;
 };

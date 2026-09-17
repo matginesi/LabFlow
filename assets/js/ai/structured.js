@@ -330,95 +330,147 @@ if(!v||typeof v!=='object'||Array.isArray(v))return value;
     const out=String(value == null ? '' : value).trim();
     return max && out.length > max ? out.slice(0, max) : out;
   }
-  function exportPreparationProjection(value) {
+  function exportPreparationFieldId(item) {
+    if(!item||typeof item!=='object')return'';
+    return exportPreparationText(
+      item.field_id!=null?item.field_id:
+      (item.fieldId!=null?item.fieldId:(item.field!=null?item.field:(item.path!=null?item.path:item.id))),140
+    );
+  }
+  function exportPreparationProjection(value, fieldId) {
     const raw=exportPreparationText(value,32).toLowerCase().replace(/[ _-]+/g,'');
-    return raw==='readypv'?'readypv':(raw==='nomad'?'nomad':exportPreparationText(value,32).toLowerCase());
+    if(raw==='readypv'||raw==='readypvprofile'||raw==='readyphotovoltaics')return'readypv';
+    if(raw==='nomad')return'nomad';
+    const id=exportPreparationText(fieldId,140).toLowerCase();
+    if(/^data\./.test(id))return'nomad';
+    if(/^(contact|measured|samples|instruments|storage|metadata|remarks)\./.test(id))return'readypv';
+    return'';
   }
   function exportPreparationSource(value) {
     const raw=exportPreparationText(value,64).toLowerCase().replace(/[ -]+/g,'_');
-    if(raw==='cabinet'||raw==='cabinet_resource')return'cabinet_reference';
-    if(raw==='knowledge'||raw==='kb'||raw==='reference')return'knowledge_reference';
-    if(raw==='model'||raw==='ai'||raw==='inference')return'model_inference';
-    return raw;
+    if(raw==='experiment'||raw==='raw'||raw==='measurement')return'experiment';
+    if(raw==='workspace'||raw==='laboratory'||raw==='lab')return'workspace';
+    if(raw==='process'||raw==='workflow'||raw==='protocol')return'process';
+    if(raw==='cabinet'||raw==='cabinet_resource'||raw==='cabinet_reference')return'cabinet_reference';
+    if(raw==='knowledge'||raw==='kb'||raw==='reference'||raw==='knowledge_reference')return'knowledge_reference';
+    if(raw==='model'||raw==='ai'||raw==='inference'||raw==='model_inference')return'model_inference';
+    return'';
   }
-  function exportPreparationConfidence(value) {
+  function exportPreparationConfidence(value, fallback) {
     let n=Number(value);
     if(!Number.isFinite(n)&&typeof value==='string'&&/%/.test(value))n=parseFloat(value)/100;
     if(Number.isFinite(n)&&n>1&&n<=100)n/=100;
-    return Number.isFinite(n)?Math.max(0,Math.min(1,n)):value;
+    return Number.isFinite(n)?Math.max(0,Math.min(1,n)):(fallback==null?0.45:fallback);
   }
   function exportPreparationEvidence(value) {
     return exportPreparationList(value).map(function(item){
       return exportPreparationText(item,180);
     }).filter(Boolean).slice(0,5);
   }
-  /* Transport-shape repair runs before the strict schema and semantic allow-list.
-     It may canonicalize representation, but never invent a value or field id. */
+  function exportPreparationValue(item) {
+    if(!item||typeof item!=='object')return undefined;
+    let value=Object.prototype.hasOwnProperty.call(item,'value')?item.value:
+      (Object.prototype.hasOwnProperty.call(item,'proposed_value')?item.proposed_value:
+      (Object.prototype.hasOwnProperty.call(item,'proposedValue')?item.proposedValue:
+      (Object.prototype.hasOwnProperty.call(item,'suggestion')?item.suggestion:undefined)));
+    if(value&&typeof value==='object'&&!Array.isArray(value)){
+      if(Object.prototype.hasOwnProperty.call(value,'value'))value=value.value;
+      else if(Object.prototype.hasOwnProperty.call(value,'text'))value=value.text;
+      else if(Object.prototype.hasOwnProperty.call(value,'name'))value=value.name;
+      else return undefined;
+    }
+    if(Array.isArray(value))value=value.filter(function(v){return ['string','number','boolean'].includes(typeof v);}).slice(0,32);
+    return value;
+  }
+  function exportPreparationHasValue(value) {
+    if(value==null)return false;
+    if(Array.isArray(value))return value.some(function(v){return String(v==null?'':v).trim()!=='';});
+    if(typeof value==='string')return value.trim()!=='';
+    return typeof value==='number'||typeof value==='boolean';
+  }
+  function exportPreparationReason(item, max, fallback) {
+    return exportPreparationText(item&&(
+      item.reason!=null?item.reason:(item.rationale!=null?item.rationale:(item.note!=null?item.note:item.message))
+    ),max)||fallback;
+  }
+  /*
+   * Export preparation is intentionally tolerant at the transport-shape boundary.
+   * Small local models often return the right scientific meaning with harmless JSON variations.
+   * This normalizer canonicalizes those variations before the strict schema and semantic allow-list.
+   * It never invents a field id or export value; unsupported/empty suggestions become unresolved.
+   */
   function normalizeExportPreparation(value, report) {
-    report=report||{normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0};
+    report=report||{normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0,convertedToUnresolved:0,droppedItems:0};
+    if(Array.isArray(value)&&value.length===1&&value[0]&&typeof value[0]==='object'&&!Array.isArray(value[0])){value=value[0];report.normalized++;}
     if(!value||typeof value!=='object'||Array.isArray(value))return value;
     let v=value;
-    ['result','proposal','output'].some(function(key){
+    ['result','proposal','output','data'].some(function(key){
       if(v[key]&&typeof v[key]==='object'&&!Array.isArray(v[key])){v=v[key];report.normalized++;return true;}
       return false;
     });
-    const out={};
-    if(Object.prototype.hasOwnProperty.call(v,'status'))out.status=exportPreparationText(v.status,32).toLowerCase();
-    if(Object.prototype.hasOwnProperty.call(v,'summary'))out.summary=exportPreparationText(v.summary,500);
-    if(Object.prototype.hasOwnProperty.call(v,'suggestions')){
-      out.suggestions=exportPreparationList(v.suggestions).map(function(item){
-        if(!item||typeof item!=='object'||Array.isArray(item))return item;
-        const x={};
-        if('projection'in item)x.projection=exportPreparationProjection(item.projection);
-        if('field_id'in item||'fieldId'in item||'field'in item){
-          x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
-          if(!('field_id'in item)){report.canonicalizedKeys++;report.normalized++;}
-        }
-        if('value'in item)x.value=item.value;
-        if('source_kind'in item||'sourceKind'in item){
-          x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
-          if(!('source_kind'in item)){report.canonicalizedKeys++;report.normalized++;}
-        }
-        if('confidence'in item){x.confidence=exportPreparationConfidence(item.confidence);if(x.confidence!==item.confidence){report.normalized++;}}
-        if('reason'in item)x.reason=exportPreparationText(item.reason,260);
-        if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
-        const supported=new Set(['projection','field_id','fieldId','field','value','source_kind','sourceKind','confidence','reason','evidence']);
-        Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
-        return x;
-      }).slice(0,24);
+    const suggestions=[],unresolved=[];
+    function pushUnresolved(item,fieldId,projection,reason){
+      if(!fieldId||!projection){report.droppedItems++;report.normalized++;return;}
+      const x={projection:projection,field_id:fieldId,reason:exportPreparationText(reason,240)||'No supported export value was established.'};
+      const source=exportPreparationSource(item&&(
+        item.source_kind!=null?item.source_kind:(item.sourceKind!=null?item.sourceKind:item.source)
+      ));
+      if(source)x.source_kind=source;
+      if(item&&item.confidence!=null)x.confidence=exportPreparationConfidence(item.confidence,0.45);
+      const evidence=exportPreparationEvidence(item&&(item.evidence!=null?item.evidence:(item.sources!=null?item.sources:item.basis)));
+      if(evidence.length)x.evidence=evidence;
+      unresolved.push(x);
     }
-    if(Object.prototype.hasOwnProperty.call(v,'unresolved')){
-      out.unresolved=exportPreparationList(v.unresolved).map(function(item){
-        if(!item||typeof item!=='object'||Array.isArray(item))return item;
-        const x={};
-        if('projection'in item)x.projection=exportPreparationProjection(item.projection);
-        if('field_id'in item||'fieldId'in item||'field'in item){
-          x.field_id=exportPreparationText(item.field_id||item.fieldId||item.field,140);
-          if(!('field_id'in item)){report.canonicalizedKeys++;report.normalized++;}
-        }
-        if('reason'in item)x.reason=exportPreparationText(item.reason,240);
-        if('source_kind'in item||'sourceKind'in item){
-          x.source_kind=exportPreparationSource(item.source_kind||item.sourceKind);
-          if(!('source_kind'in item)){report.canonicalizedKeys++;report.normalized++;}
-        }
-        if('confidence'in item){x.confidence=exportPreparationConfidence(item.confidence);if(x.confidence!==item.confidence){report.normalized++;}}
-        if('evidence'in item)x.evidence=exportPreparationEvidence(item.evidence);
-        if('value'in item){if(item.value==null){report.removedNullValues++;report.normalized++;}else{x.value=item.value;}}
-        const supported=new Set(['projection','field_id','fieldId','field','reason','source_kind','sourceKind','confidence','evidence','value']);
-        Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
-        return x;
-      }).slice(0,24);
-    }
-    if(Object.prototype.hasOwnProperty.call(v,'warnings')){
-      out.warnings=exportPreparationList(v.warnings).map(function(item){
-        return exportPreparationText(item,260);
-      }).filter(Boolean).slice(0,12);
-    }
-    return out;
+    exportPreparationList(v.suggestions!=null?v.suggestions:(v.proposals!=null?v.proposals:v.values)).forEach(function(item){
+      if(!item||typeof item!=='object'||Array.isArray(item)){report.droppedItems++;report.normalized++;return;}
+      const fieldId=exportPreparationFieldId(item),projection=exportPreparationProjection(item.projection||item.target||item.profile,fieldId),value=exportPreparationValue(item);
+      if(!fieldId||!projection){report.droppedItems++;report.normalized++;return;}
+      if(!exportPreparationHasValue(value)){
+        pushUnresolved(item,fieldId,projection,exportPreparationReason(item,240,'No supported value was returned for this field.'));
+        report.convertedToUnresolved++;report.normalized++;
+        return;
+      }
+      const source=exportPreparationSource(item.source_kind!=null?item.source_kind:(item.sourceKind!=null?item.sourceKind:item.source))||'model_inference';
+      const x={
+        projection:projection,
+        field_id:fieldId,
+        value:value,
+        source_kind:source,
+        confidence:exportPreparationConfidence(item.confidence,source==='model_inference'?0.45:0.6),
+        reason:exportPreparationReason(item,260,'Review-only export metadata suggestion based on the supplied context.'),
+        evidence:exportPreparationEvidence(item.evidence!=null?item.evidence:(item.sources!=null?item.sources:item.basis))
+      };
+      if(!Object.prototype.hasOwnProperty.call(item,'field_id')||!Object.prototype.hasOwnProperty.call(item,'source_kind'))report.canonicalizedKeys++;
+      const supported=new Set(['projection','target','profile','field_id','fieldId','field','path','id','value','proposed_value','proposedValue','suggestion','source_kind','sourceKind','source','confidence','reason','rationale','note','message','evidence','sources','basis']);
+      Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
+      suggestions.push(x);
+    });
+    exportPreparationList(v.unresolved!=null?v.unresolved:(v.missing!=null?v.missing:v.unknowns)).forEach(function(item){
+      if(typeof item==='string'){report.droppedItems++;report.normalized++;return;}
+      if(!item||typeof item!=='object'||Array.isArray(item)){report.droppedItems++;report.normalized++;return;}
+      const fieldId=exportPreparationFieldId(item),projection=exportPreparationProjection(item.projection||item.target||item.profile,fieldId);
+      if(!Object.prototype.hasOwnProperty.call(item,'field_id')&&(item.fieldId!=null||item.field!=null||item.path!=null||item.id!=null)){report.canonicalizedKeys++;report.normalized++;}
+      if(!Object.prototype.hasOwnProperty.call(item,'source_kind')&&item.sourceKind!=null){report.canonicalizedKeys++;report.normalized++;}
+      if(Object.prototype.hasOwnProperty.call(item,'value')){
+        if(item.value==null)report.removedNullValues++;
+        report.normalized++;
+      }
+      const supported=new Set(['projection','target','profile','field_id','fieldId','field','path','id','reason','rationale','note','message','source_kind','sourceKind','source','confidence','evidence','sources','basis','value']);
+      Object.keys(item).forEach(function(key){if(!supported.has(key)){report.removedMetadata++;report.normalized++;}});
+      pushUnresolved(item,fieldId,projection,exportPreparationReason(item,240,'No supported export value was established.'));
+    });
+    const warnings=exportPreparationList(v.warnings!=null?v.warnings:v.warning).map(function(item){
+      return exportPreparationText(item&&typeof item==='object'?(item.message||item.reason||item.text):item,260);
+    }).filter(Boolean).slice(0,12);
+    const status=suggestions.length?'suggested':'limited';
+    const summary=exportPreparationText(v.summary||v.assessment||v.description,500)||(
+      suggestions.length?'Prepared review-only export metadata suggestions.':'No evidence-backed export metadata suggestion could be prepared.'
+    );
+    return{status:status,summary:summary,suggestions:suggestions.slice(0,24),unresolved:unresolved.slice(0,24),warnings:warnings};
   }
 
   function normalizeForSchemaWithReport(schemaId,value){
-    const report={normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0};
+    const report={normalized:0,removedNullValues:0,canonicalizedKeys:0,removedMetadata:0,convertedToUnresolved:0,droppedItems:0};
     const normalized=schemaId==='export_preparation'?normalizeExportPreparation(value,report):normalizeForSchema(schemaId,value);
     return{value:normalized,report:report};
   }

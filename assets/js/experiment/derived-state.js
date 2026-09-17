@@ -13,14 +13,16 @@ if(REGISTRY.some(function(x){return x.id===id;}))throw new Error('Duplicate deri
   row.dependsOn=Array.isArray(row.dependsOn)?row.dependsOn.slice():[];
   row.paths=Array.isArray(row.paths)?row.paths.slice():[];REGISTRY.push(row);return row;}
 function matches(row,scope){return row.dependsOn.includes('*')||row.dependsOn.includes(String(scope||'metadata'));}
-function invalidate(exp,scope){if(!exp)return[];const changed=[];REGISTRY.forEach(function(row){if(!matches(row,scope))return;let touched=false;if(typeof row.invalidate==='function')touched=row.invalidate(exp,scope)!==false||touched;row.paths.forEach(function(path){touched=removePath(exp,path)||touched;});if(touched)changed.push(row.id);});return changed;}
+function invalidate(exp,scope,options){if(!exp)return[];const changed=[],opts=options||{};REGISTRY.forEach(function(row){if(!matches(row,scope))return;let touched=false;if(typeof row.invalidate==='function')touched=row.invalidate(exp,scope,opts)!==false||touched;row.paths.forEach(function(path){touched=removePath(exp,path)||touched;});if(touched)changed.push(row.id);});return changed;}
 function describe(){return REGISTRY.map(function(row){return{id:row.id,dependsOn:row.dependsOn.slice(),paths:row.paths.slice(),description:row.description};});}
 register('canonical-index',{dependsOn:['dataset','analysis','design','metadata'],paths:['canonical'],description:'Canonical read index/evidence graph.'});
 register('review-analysis',{dependsOn:['dataset'],paths:['datasetAnalysis'],description:'Deterministic review dossier and ambiguity selection.'});
 register('analysis-summary',{dependsOn:['dataset','analysis'],paths:['analysisSummary','experimentBrief'],description:'Results summaries and AI interpretations derived from current scientific values.',invalidate:function(exp){if(!LF.ActionData)return false;const a=LF.ActionData.removeAnnotation(exp,'results.interpret');const b=LF.ActionData.removeAnnotation(exp,'results.compare');return a||b;}});
 register('ambiguity-proposals',{dependsOn:['dataset'],paths:[],description:'AI ambiguity proposals tied to one dataset revision.',invalidate:function(exp){return LF.ActionData?LF.ActionData.removeProposal(exp,'dataset.resolve-ambiguities'):false;}});
 register('design-analysis',{dependsOn:['dataset','design'],paths:['designAnalysis'],
-description:'Design projections/proposals tied to current experiment/design state.',invalidate:function(exp){
+description:'Design projections/proposals tied to current experiment/design state.',invalidate:function(exp,scope,options){
+  // Accepting one device is a local mutation: preserve sibling AI proposals so each experiment can be reviewed independently.
+  if(options&&options.preserveDesignProposals)return false;
   if(!LF.ActionData)return false;const root=LF.ActionData.ensure(exp),
   had=Object.prototype.hasOwnProperty.call(root.proposals,
   'design.infer')||Object.prototype.hasOwnProperty.call(root.status,'design.infer');

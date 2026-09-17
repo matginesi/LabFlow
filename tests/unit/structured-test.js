@@ -110,9 +110,20 @@ module.exports = function (t, LF) {
     assert(normalized.report.removedNullValues,1,'null value removed');
     if(normalized.report.canonicalizedKeys<2||normalized.report.normalized<4)throw new Error('normalization report missed safe repairs');
   };
-  t['Export preparation does not hide a non-null value attached to unresolved']=function(){
-    const out=SO.normalizeForSchema('export_preparation',{status:'limited',summary:'unsafe shape',suggestions:[],unresolved:[{projection:'nomad',field_id:'data.institution',reason:'unknown',value:'Invented University'}],warnings:[]}),errors=SO.validate('export_preparation',out,{registry:LF.ActionRegistry});
-    if(!errors.some(function(x){return /unexpected field value/.test(x);}))throw new Error('non-null unresolved value must remain visible to strict validation');
+  t['Export preparation treats any value attached to unresolved as non-authoritative transport noise']=function(){
+    const out=SO.normalizeForSchema('export_preparation',{status:'limited',summary:'unsafe shape',suggestions:[],unresolved:[{projection:'nomad',field_id:'data.institution',reason:'unknown',value:'Invented University'}],warnings:[]});
+    if(Object.prototype.hasOwnProperty.call(out.unresolved[0],'value'))throw new Error('unresolved must never carry an export value');
+    assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'unresolved remains schema-valid without promoting the value');
+  };
+  t['Export preparation completes conservative defaults for realistic small-model suggestion variants']=function(){
+    const raw={status:'complete',description:'Candidate metadata.',proposals:[{target:'NOMAD',fieldId:'data.institution',proposedValue:'University laboratory',source:'workspace'}],missing:[{field:'contact.email',reason:'No contact email found.'}],warning:{message:'Review before export.'}};
+    const out=SO.normalizeForSchema('export_preparation',raw);
+    assert(out.status,'suggested','status derived from usable suggestions');
+    assert(out.suggestions[0].projection,'nomad','projection inferred/canonicalized');
+    assert(out.suggestions[0].source_kind,'workspace','source canonicalized');
+    assert(out.suggestions[0].evidence,[],'evidence safely defaults empty');
+    assert(out.unresolved[0].projection,'readypv','projection inferred from Ready-PV field id');
+    assert(SO.validate('export_preparation',out,{registry:LF.ActionRegistry}),[],'realistic small-model variant is repaired before strict validation');
   };
   t['unknown schema fails closed'] = function(){assert(SO.validate('missing',{} )[0],'SCHEMA_UNKNOWN:missing','unknown schema');};
   t['dataset correction normalization fills safe structural defaults'] = function(){

@@ -449,4 +449,19 @@ module.exports=function(t,LF){
     }finally{LF.ContextBuilder=oldContext;}
   };
 
+
+  t['Accepting one Design inference preserves sibling pending proposals']=function(){
+    const exp={design:{status:'reviewing',solutions:[],devices:[
+      {id:'a',name:'A',sampleNames:['A1'],solutionIds:[],stack:[],process:{},status:'user_confirmed'},
+      {id:'b',name:'B',sampleNames:['B1'],solutionIds:[],stack:[],process:{},status:'user_confirmed'}
+    ]}};
+    put(exp,{targetDeviceId:'a',solutions:[],devices:[{id:'a',sample_names:['A1'],stack:[{role:'ETL',material:'SnO2'}],process:{coating:'spin'}}],unresolved_domains:['solutions'],unknowns:['solutions unknown']},'a');
+    put(exp,{targetDeviceId:'b',solutions:[],devices:[{id:'b',sample_names:['B1'],stack:[{role:'ETL',material:'TiO2'}],process:{coating:'spin'}}],unresolved_domains:['solutions'],unknowns:['solutions unknown']},'b');
+    LF.DesignAnalysis.acceptProposal(exp,'a');
+    LF.DerivedState.invalidate(exp,'design',{preserveDesignProposals:true});
+    assert(!LF.ActionData.proposal(exp,'design.infer','a'),'accepted target proposal is removed');
+    assert(!!LF.ActionData.proposal(exp,'design.infer','b'),'sibling proposal remains available for review');
+  };
+
+
 };

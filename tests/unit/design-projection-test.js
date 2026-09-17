@@ -70,6 +70,8 @@ module.exports=function(t,LF,env){
     const html3=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
     assert(/Review before accepting/.test(html3)&&/Accept experiment/.test(html3),'pending AI suggestion should have one explicit per-experiment acceptance path');
     assert(!/Retry AI|Retry inference/.test(html3)&&/Discard/.test(html3),'a valid proposal is accepted or discarded; it does not expose a duplicate retry control');
+    assert((html3.match(/<details class="panel design-work-panel[^"]*" open/g)||[]).length===3,'all three Design editors open automatically while reviewing an inference');
+    assert(/class="button compact" type="button" data-discard-design-experiment/.test(html3),'Discard is a bordered secondary control');
     LF.ActionData.removeProposal(current,'design.infer',selected.id);LF.ActionData.setStatus(current,'design.infer',selected.id,{state:'error',message:'provider failed after internal retries'});
     const html4=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
     assert((html4.match(/Retry inference/g)||[]).length===1,'an exhausted selected experiment must expose exactly one Retry inference control');

@@ -224,11 +224,11 @@ else if(S.state.ui.route==='experiment-results')html=LF.ResultsPage.render(S.sta
 
   function refreshPipeline(exp,reason){if(!LF.DataPipeline||!LF.DataPipeline.refresh)throw new Error('LabFlow.DataPipeline is unavailable.');return LF.DataPipeline.refresh(exp,{reason:reason||'app'});}
 
-  function markModified(scope){
+  function markModified(scope,options){
     if(!hasExperiment())return;
     const mutationScope=scope||'metadata',exp=S.state.experiment;
     if(mutationScope==='ai'){if(S.notify)S.notify('ai');return;}
-    S.touch(mutationScope);
+    S.touch(mutationScope,options||{});
     if(mutationScope==='dataset'||mutationScope==='analysis'||mutationScope==='design')refreshPipeline(exp,'mutation:'+mutationScope);
   }
 
@@ -619,7 +619,7 @@ if(applyDesignDevice){try{const out=LF.DesignAnalysis.applySelectedDevice(S.stat
           'success');}catch(err){LF.UI.message(err.message||String(err),'error');}return;}
         const acceptDesignExperiment=e.target.closest('[data-accept-design-experiment]');
 if(acceptDesignExperiment){try{const exp=S.state.experiment,out=LF.DesignAnalysis.acceptProposal(exp,
-          acceptDesignExperiment.dataset.acceptDesignExperiment);if(out.changed)markModified('design');else markModified('ai');
+          acceptDesignExperiment.dataset.acceptDesignExperiment);if(out.changed)markModified('design',{preserveDesignProposals:true});else markModified('ai');
           LF.ActionData.setStatus(exp,'design.infer',out.deviceId,{
           state:out.state|| (out.complete?'accepted':'incomplete'),updatedAt:new Date().toISOString(),
           message:out.state==='reviewed'?'Reviewed unknowns: '+(out.scientificRemaining||[]).join(', '):(out.complete?'':'Still pending: '+(out.remaining||[]).join(', '))});render();

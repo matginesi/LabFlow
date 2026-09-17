@@ -38,7 +38,7 @@ Prefer small factual entries with explicit cautions and source records. Avoid em
 
 ## Structured Design hints
 
-The bundled KB contains **97 scientific/reference entries** in the current 0.0.31 source set; the generated browser bundle also includes the selected LabFlow documentation guides.
+The bundled KB contains **97 scientific/reference entries** in the current 0.0.32 source set; the generated browser bundle also includes the selected LabFlow documentation guides.
 
 Design-oriented scientific entries may optionally carry a validated `design_hint`. This is deliberately more structured than prose retrieval so a small model or deterministic fallback does not need to reverse-engineer a recipe from paragraphs. Supported hint content includes qualitative solution composition, coherent stack layers and qualitative process families. Exact recipe values are omitted unless the source and intended use justify them.
 
