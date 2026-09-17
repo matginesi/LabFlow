@@ -10,13 +10,13 @@ function assert(ok,msg){if(!ok)throw new Error(msg||'assertion failed');}
 module.exports=function(t,LF){
   t['Actions catalog includes every executable Action including Assistant']=function(){
     const ids=LF.ActionRegistry.actions();
-    ['assistant.chat','dataset.resolve-ambiguities','design.infer','results.compare','results.interpret'].forEach(function(id){assert(ids.includes(id),id+' missing from registry');});
-    assert(ids.length===5,'expected five real Actions');
+    ['assistant.chat','dataset.resolve-ambiguities','design.infer','export.prepare','results.compare','results.interpret'].forEach(function(id){assert(ids.includes(id),id+' missing from registry');});
+    assert(ids.length===6,'expected six real Actions');
   };
   t['Every AI Action has bounded context/output and explicit semantic result step']=function(){
     const defs=LF.ActionRegistry.actions().map(function(id){return LF.ActionRegistry.action(id);});
     defs.forEach(function(def){const steps=LF.ActionRegistry.steps(def),resultStep=String(def.execution&&def.execution.result_step||'');assert(!!resultStep,def.id+' missing result_step');assert(steps.some(function(step){return step.id===resultStep;}),def.id+' result_step not declared');steps.filter(function(step){return step.type==='AI';}).forEach(function(step){assert(Number(step.max_input_tokens)>0,def.id+'/'+step.id+' missing input cap');assert(Number(step.max_output_tokens)>0,def.id+'/'+step.id+' missing output cap');assert(['off','auto','on'].includes(step.thinking),def.id+'/'+step.id+' missing thinking policy');});});
-    assert(LF.ActionRegistry.actions().length,5,'only researcher-facing capabilities are Actions');
+    assert(LF.ActionRegistry.actions().length,6,'only researcher-facing capabilities are Actions');
   };
 
   t['Assistant uses a lightweight bounded request by default']=function(){

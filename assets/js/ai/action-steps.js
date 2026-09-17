@@ -411,6 +411,72 @@
       };
     },
 
+    'export.validate-preparation': function (ctx) {
+      const value = ctx.candidate || ctx.outputs.prepare || ctx.lastResult || {};
+      const prep = LF.ExportProjections && LF.ExportProjections.preparationContext
+        ? LF.ExportProjections.preparationContext(ctx.exp) : null;
+      if (!prep) throw new Error('Export projections are unavailable.');
+      const allowed = {
+        nomad: new Set(prep.allowed_fields && prep.allowed_fields.nomad || []),
+        readypv: new Set(prep.allowed_fields && prep.allowed_fields.readypv || [])
+      };
+      const caps = {
+        experiment: 0.97, workspace: 0.93, process: 0.91,
+        cabinet_reference: 0.88, knowledge_reference: 0.74, model_inference: 0.56
+      };
+      const seen = new Set();
+      value.suggestions = (Array.isArray(value.suggestions) ? value.suggestions : []).filter(function (item) {
+        if (!item || !allowed[item.projection] || !allowed[item.projection].has(String(item.field_id || ''))) return false;
+        const key = item.projection + ':' + item.field_id;
+        if (seen.has(key)) return false;
+        const rendered = Array.isArray(item.value) ? item.value.join(' ').trim() : String(item.value == null ? '' : item.value).trim();
+        if (!rendered) return false;
+        seen.add(key);
+        item.source_kind = Object.prototype.hasOwnProperty.call(caps, item.source_kind)
+          ? item.source_kind : 'model_inference';
+        const raw = Number(item.confidence);
+        item.confidence = Math.max(0, Math.min(caps[item.source_kind], Number.isFinite(raw) ? raw : caps[item.source_kind]));
+        item.reason = text(item.reason).slice(0, 260);
+        item.evidence = (Array.isArray(item.evidence) ? item.evidence : []).map(text).filter(Boolean).slice(0, 5);
+        return true;
+      }).slice(0, 24);
+      value.unresolved = (Array.isArray(value.unresolved) ? value.unresolved : []).filter(function (item) {
+        return item && allowed[item.projection] && allowed[item.projection].has(String(item.field_id || ''));
+      }).slice(0, 24);
+      value.warnings = (Array.isArray(value.warnings) ? value.warnings : []).map(text).filter(Boolean).slice(0, 12);
+      value.status = value.suggestions.length ? 'suggested' : 'limited';
+      value.summary = text(value.summary).slice(0, 500) || (value.suggestions.length
+        ? 'Prepared review-only export metadata suggestions.'
+        : 'No evidence-backed export metadata suggestion could be prepared.');
+      value.validation = {
+        suggestions: value.suggestions.length,
+        unresolved: value.unresolved.length,
+        allowedNomad: allowed.nomad.size,
+        allowedReadyPv: allowed.readypv.size
+      };
+      return value;
+    },
+
+    'export.store-preparation': function (ctx) {
+      const value = ctx.outputs.prepare || ctx.lastResult;
+      if (!value || typeof value !== 'object') throw new Error('The export preparation proposal is empty.');
+      value.sourceRevision = ctx.sourceRevision;
+      value.generatedAt = new Date().toISOString();
+      value.applied = false;
+      LF.ActionData.setProposal(ctx.exp, 'export.prepare', '', value);
+      LF.ActionData.setStatus(ctx.exp, 'export.prepare', '', {
+        state: value.suggestions && value.suggestions.length ? 'suggested' : 'limited',
+        updatedAt: value.generatedAt,
+        message: value.summary || ''
+      });
+      return {
+        stored: true,
+        status: value.status,
+        suggestions: (value.suggestions || []).length,
+        unresolved: (value.unresolved || []).length
+      };
+    },
+
     'design.collect-selected': function (ctx) {
       const exp = ctx.exp;
       const current = Number(exp.sync && exp.sync.revision || 0);
@@ -610,6 +676,8 @@
   const actionStepTools = {
     'dataset.collect-ambiguities': { domain: 'dataset', access: 'read' },
     'dataset.store-corrections': { domain: 'dataset', access: 'write', writes: ['experiment.actionData.proposals.dataset.resolve-ambiguities'] },
+    'export.validate-preparation': { domain: 'export', access: 'read' },
+    'export.store-preparation': { domain: 'export', access: 'write', writes: ['experiment.actionData.proposals.export.prepare','experiment.actionData.status.export.prepare'] },
     'design.collect-selected': { domain: 'design', access: 'read' },
     'design.validate-coverage': { domain: 'design', access: 'read' },
     'design.store-proposal': { domain: 'design', access: 'write', writes: ['experiment.actionData.proposals.design.infer','experiment.actionData.status.design.infer'] },

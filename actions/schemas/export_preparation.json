@@ -1,0 +1,94 @@
+{
+  "id": "export_preparation",
+  "title": "Export metadata preparation proposal",
+  "type": "object",
+  "required": ["status", "summary", "suggestions", "unresolved", "warnings"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["suggested", "limited"]
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "suggestions": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "required": ["projection", "field_id", "value", "source_kind", "confidence", "reason", "evidence"],
+        "properties": {
+          "projection": {
+            "type": "string",
+            "enum": ["nomad", "readypv"]
+          },
+          "field_id": {
+            "type": "string",
+            "maxLength": 140
+          },
+          "value": {
+            "type": ["string", "number", "boolean", "array"],
+            "items": {
+              "type": ["string", "number", "boolean"]
+            }
+          },
+          "source_kind": {
+            "type": "string",
+            "enum": ["experiment", "workspace", "process", "cabinet_reference", "knowledge_reference", "model_inference"]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 260
+          },
+          "evidence": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "string",
+              "maxLength": 180
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "unresolved": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "required": ["projection", "field_id", "reason"],
+        "properties": {
+          "projection": {
+            "type": "string",
+            "enum": ["nomad", "readypv"]
+          },
+          "field_id": {
+            "type": "string",
+            "maxLength": 140
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 240
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "maxLength": 260
+      }
+    }
+  },
+  "additionalProperties": false
+}

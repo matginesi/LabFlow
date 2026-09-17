@@ -49,7 +49,19 @@ selected_ai_suggestion:dev?compact(proposals[dev.id]||null):null,
     }
     if(route==='experiment-export'){
       const plan=exp.nomad&&exp.nomad.mappingPlan||{};
-      return{readiness:plan.readiness||'',missing:take(plan.missing,30).map(compact),validation:compact(exp.nomad&&exp.nomad.validation||null),mapping_count:Array.isArray(plan.mappings)?plan.mappings.length:0};
+      const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
+        ?LF.ExportProjections.preparationContext(exp):null;
+      const proposal=LF.ActionData&&LF.ActionData.proposal
+        ?LF.ActionData.proposal(exp,'export.prepare',''):null;
+      return{
+        primary_goal:'Prepare the current experiment for NOMAD staging/export.',
+        readiness:plan.readiness||'',
+        missing:take(plan.missing,30).map(compact),
+        validation:compact(exp.nomad&&exp.nomad.validation||null),
+        mapping_count:Array.isArray(plan.mappings)?plan.mappings.length:0,
+        projections:compact(prep),
+        preparation_proposal:compact(proposal)
+      };
     }
 
 

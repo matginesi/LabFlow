@@ -183,9 +183,16 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     const designId=pc.selected&&pc.selected.experiment;
     out.design=designId?compact((exp.design&&exp.design.devices||[]).find(function(d){
     return String(d.id)===String(designId);})||null):null;
-    if(pc.page==='Export'){const plan=exp.nomad&&exp.nomad.mappingPlan||{};
-    out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',
-    missing:take(plan.missing,12)};}
+    if(pc.page==='Export'){
+      const plan=exp.nomad&&exp.nomad.mappingPlan||{};
+      const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
+        ?LF.ExportProjections.preparationContext(exp):null;
+      out.nomad={validation:compact(exp.nomad&&exp.nomad.validation||null),readiness:plan.readiness||'',
+        missing:take(plan.missing,12)};
+      out.export_projection=prep?compact(prep):null;
+      out.export_assistant_rule='Prioritize NOMAD readiness and the smallest current blocker. Ready-PV is secondary. '+
+        'When export.prepare is available, recommend /prepare-export for missing export metadata rather than inventing values.';
+    }
     const referenceQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
     if(LF.Cabinet)out.cabinet=LF.Cabinet.context(referenceQuery,{limit:6});
     if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
@@ -432,7 +439,29 @@ const out=base(exp,'results_compare',''),p=opts.params||{}
       'A stack proposal must be a coherent device architecture, not one isolated absorber layer. Leave unsupported exact quantities unknown.';
     return out;
   }
-  const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,results_compare:packResultsCompare};
+  function packExport(exp,opts){
+    opts=opts||{};
+    const out=base(exp,'export','');
+    const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
+      ?LF.ExportProjections.preparationContext(exp)
+      :{nomad:{missing:[]},readypv:{missing:[]},allowed_fields:{nomad:[],readypv:[]}};
+    const missing=(prep.nomad&&prep.nomad.missing||[]).concat(prep.readypv&&prep.readypv.missing||[]);
+    const query=[clean(exp.meta&&exp.meta.name),missing.map(function(f){return f.label||f.id;}).join(' ')].join(' ');
+    out.export_projection={
+      primary_goal:'Prepare the current experiment for NOMAD staging/export. Ready-PV is secondary.',
+      nomad:prep.nomad,
+      readypv:prep.readypv,
+      allowed_fields:prep.allowed_fields,
+      rule:'Suggestions are export-only overrides. Never rewrite canonical scientific data.'
+    };
+    if(LF.Cabinet)out.cabinet=LF.Cabinet.context(query,{limit:10});
+    if(LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(query,{limit:8,minScore:2});
+    out.action_outputs=LF.ActionData&&LF.ActionData.assistantContext
+      ?LF.ActionData.assistantContext(exp,{limit:6}):{items:[]};
+    return budgetPack(out,16000);
+  }
+  const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,
+    results_compare:packResultsCompare,export:packExport};
   function registerProfile(name,fn){name=clean(name).toLowerCase();if(!name||typeof fn!=='function')throw new Error('Context profile requires name and function.');if(PACKERS[name])throw new Error('Context profile already registered: '+name);PACKERS[name]=fn;return name;}
   function profiles(){return Object.keys(PACKERS).sort();}
   function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(base(exp,profile,opts.question||''),10000);}

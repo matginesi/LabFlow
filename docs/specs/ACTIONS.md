@@ -15,11 +15,12 @@ An Action is a researcher-facing capability with an explicit target, bounded con
 |---|---|---|
 | `dataset.resolve-ambiguities` | propose resolutions for semantic review ambiguity | proposal |
 | `design.infer` | propose missing qualitative Design content for one experiment | proposal |
+| `export.prepare` | prepare missing export metadata as reviewable projection overrides | proposal |
 | `results.interpret` | explain deterministic Results | derived annotation |
 | `results.compare` | compare selected deterministic result groups | derived annotation |
 | `assistant.chat` | answer from bounded current context | read-only answer |
 
-Safe cleanup, JV analysis, indexing and NOMAD package preparation are deterministic services, not Actions.
+Safe cleanup, JV analysis, indexing and NOMAD package generation remain deterministic services. `export.prepare` is an Action only because it proposes reviewable metadata wording/values for missing export projection fields; it never builds or uploads the package itself.
 
 ## Manifest
 

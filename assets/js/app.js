@@ -405,6 +405,24 @@ if(!hasExperiment())throw new Error('No experiment is loaded.');
         }
         const projectionDownload=e.target.closest('[data-projection-download]');if(projectionDownload){downloadProjection(projectionDownload.dataset.projectionDownload,projectionDownload.dataset.projectionFormat||'json');return;}
         const projectionCopy=e.target.closest('[data-projection-copy]');if(projectionCopy){copyProjection(projectionCopy.dataset.projectionCopy,projectionCopy.dataset.projectionFormat||'text');return;}
+        if(e.target.closest('[data-export-apply-preparation]')){
+          const exp=S.state.experiment,proposal=LF.ActionData&&LF.ActionData.proposal(exp,'export.prepare','');
+          if(!proposal){LF.UI.message('No export preparation proposal is available.','info');return;}
+          const applied=LF.ExportProjections.applyPreparation(exp,proposal);
+          proposal.applied=true;proposal.appliedAt=new Date().toISOString();proposal.appliedFields=applied;
+          LF.ActionData.setStatus(exp,'export.prepare','',{state:'applied',updatedAt:proposal.appliedAt,
+            message:applied.length+' export override'+(applied.length===1?'':'s')+' applied.'});
+          if(exp.nomad){exp.nomad.mappingPlan=null;exp.nomad.validation=null;}
+          render();
+          LF.UI.message(applied.length?('Applied '+applied.length+' export-only metadata suggestion'+
+            (applied.length===1?'':'s')+'.'):'No still-missing field could be filled.',''+(applied.length?'success':'info'));
+          return;
+        }
+        if(e.target.closest('[data-export-discard-preparation]')){
+          const exp=S.state.experiment;
+          if(LF.ActionData){LF.ActionData.removeProposal(exp,'export.prepare','');LF.ActionData.removeStatus(exp,'export.prepare','');}
+          render();LF.UI.message('Export metadata proposal discarded.','info');return;
+        }
         const exportOption=e.target.closest('[data-export-option]');
 if(exportOption){const settings=Object.assign({}
           ,LF.Storage.getExportSettings()),key=exportOption.dataset.exportOption,

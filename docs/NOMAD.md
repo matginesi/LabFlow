@@ -7,7 +7,7 @@ order: 50
 
 # NOMAD integration
 
-NOMAD support is a deterministic interoperability projection, not an AI Action and not a second scientific model.
+NOMAD mapping, validation and package generation are deterministic interoperability services, not a second scientific model. The optional `export.prepare` Action can propose review-only export metadata overrides before deterministic staging.
 
 ```mermaid
 flowchart TD
@@ -28,7 +28,7 @@ flowchart TD
 
 ## Upload status
 
-The UI exposes a future upload target, but the current control is explicitly a stub. It performs no upload request. Browser-local NOMAD endpoint/account/token settings exist only to make the future integration contract visible.
+The Export page is NOMAD-first: readiness, blockers, metadata preparation and local package generation appear before detailed projections. The UI also exposes a future upload target, but the current direct-upload control is explicitly a stub. It performs no upload request. Browser-local NOMAD endpoint/account/token settings exist only to make the future integration contract visible.
 
 A real connector must replace the stub with an explicit network boundary, authentication behavior, upload status model and tests; it must not be implemented as a hidden side effect of package generation.
 

@@ -176,6 +176,6 @@ Every proposal carries the nature of the choice (`experiment`, `cabinet_referenc
 See `docs/guides/DESIGN_INFERENCE.md` for the full source hierarchy, confidence calibration, small-model fallback and known-unknown semantics.
 
 
-### Export projections
+### Export and NOMAD
 
-The Export workspace includes side-by-side NOMAD and Ready-PV projections. Both are deterministic views of canonical LabFlow data; optional edits are export-only overrides and do not modify the scientific source of truth. Ready-PV can be exported as JSON or copied in questionnaire-ready text, while NOMAD projection overrides flow into the generated archive YAML.
+The Export workspace is NOMAD-first: readiness, blockers, optional AI metadata preparation and package generation are the primary workflow. Detailed NOMAD and Ready-PV projections stay collapsed until inspection/editing is needed. Both remain deterministic views of canonical LabFlow data; manual edits and accepted `export.prepare` suggestions are export-only overrides and never modify scientific source truth. Ready-PV can be exported as JSON or copied in questionnaire-ready text, while NOMAD overrides flow into the generated archive YAML.

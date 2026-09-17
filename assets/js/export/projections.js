@@ -149,5 +149,41 @@ function projectionObject(kind,exp){
 function readyPvText(exp){const p=readyPv(exp),lines=[];p.sections.forEach(function(sec){lines.push(sec.name);sec.fields.forEach(function(f){lines.push(f.label+':');lines.push(display(f.value)||'');lines.push('');});});return lines.join('\n').trim()+'\n';}
 function serialize(kind,exp,format){format=String(format||'json');if(kind==='nomad'&&format==='yaml')return LF.NomadExport.dataYaml(exp,settings(),LF.NomadExport.ensureMapping(exp));if(kind==='readypv'&&format==='text')return readyPvText(exp);return JSON.stringify(projectionObject(kind,exp),null,2)+'\n';}
 function filename(kind,exp,format){const base=C.safeName(exp&&exp.meta&&exp.meta.name||'experiment');if(kind==='nomad')return base+(format==='yaml'?'_nomad.archive.yaml':'_nomad_projection.json');if(format==='text')return base+'_readypv_answers.txt';return base+'_readypv_profile.json';}
-LF.ExportProjections={projection:projection,nomad:nomad,readyPv:readyPv,display:display,saveFieldEdits:saveFieldEdits,reset:reset,serialize:serialize,filename:filename,projectionObject:projectionObject,readyPvText:readyPvText,overrides:overrides};
+function preparationFields(kind,exp){
+  const p=projection(kind,exp);
+  return (p.fields||[]).filter(function(f){return f.editable!==false&&(f.required||f.recommended)&&empty(f.value);}).map(function(f){
+    return{id:f.id,label:f.label,required:!!f.required,recommended:!!f.recommended,source:f.source,base_value:clone(f.baseValue)};
+  });
+}
+function preparationContext(exp){
+  const n=nomad(exp),r=readyPv(exp);
+  return{
+    nomad:{readiness:n.readiness,missing:preparationFields('nomad',exp)},
+    readypv:{readiness:r.readiness,missing:preparationFields('readypv',exp)},
+    allowed_fields:{
+      nomad:preparationFields('nomad',exp).map(function(f){return f.id;}),
+      readypv:preparationFields('readypv',exp).map(function(f){return f.id;})
+    }
+  };
+}
+function applyPreparation(exp,proposal){
+  proposal=proposal&&typeof proposal==='object'?proposal:{};
+  const suggestions=Array.isArray(proposal.suggestions)?proposal.suggestions:[],applied=[];
+  ['nomad','readypv'].forEach(function(kind){
+    const p=projection(kind,exp),byId={};
+    (p.fields||[]).forEach(function(f){byId[f.id]=f;});
+    const map=overrides(kind);
+    suggestions.filter(function(item){return item&&item.projection===kind;}).forEach(function(item){
+      const f=byId[item.field_id];
+      if(!f||f.editable===false||!empty(f.value))return;
+      const value=clone(item.value);
+      if(empty(value))return;
+      map[f.id]=value;
+      applied.push({projection:kind,field_id:f.id});
+    });
+    saveOverrides(kind,map);
+  });
+  return applied;
+}
+LF.ExportProjections={projection:projection,nomad:nomad,readyPv:readyPv,display:display,saveFieldEdits:saveFieldEdits,reset:reset,serialize:serialize,filename:filename,projectionObject:projectionObject,readyPvText:readyPvText,overrides:overrides,preparationContext:preparationContext,applyPreparation:applyPreparation};
 }());

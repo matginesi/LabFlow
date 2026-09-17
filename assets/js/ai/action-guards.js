@@ -70,6 +70,18 @@
       : fail('The selected experiment has no pending Design domains. Any remaining unknowns have already been explicitly reviewed.');
   });
 
+  register('export.metadata_needs_attention', function (ctx) {
+    if (!LF.ExportProjections || !LF.ExportProjections.preparationContext) {
+      return fail('Export projection services are unavailable.');
+    }
+    const prep = LF.ExportProjections.preparationContext(ctx.exp);
+    const nomad = prep && prep.allowed_fields && prep.allowed_fields.nomad || [];
+    const readypv = prep && prep.allowed_fields && prep.allowed_fields.readypv || [];
+    return nomad.length || readypv.length
+      ? ok()
+      : fail('The current export projections have no missing required or recommended metadata to prepare.');
+  });
+
   register('results.available', function (ctx) {
     return ctx.exp && ctx.exp.analysis && ctx.exp.analysis.summary && (ctx.exp.measurements || []).length
       ? ok()

@@ -69,6 +69,15 @@ function resultSummary(d,out){
     return lines.join('\n');
   }
 
+  if(d&&d.id==='export.prepare'&&out&&out.aiOutput&&typeof out.aiOutput==='object'){
+    const proposal=out.aiOutput;
+    if(proposal.summary)lines.push(String(proposal.summary));
+    lines.push('- export-only suggestions: '+((proposal.suggestions||[]).length));
+    lines.push('- unresolved fields: '+((proposal.unresolved||[]).length));
+    lines.push('Review the proposal on **Export**. Applying it creates projection overrides only; canonical scientific data is unchanged.');
+    return lines.join('\n');
+  }
+
   if(value&&typeof value==='object'){
     Object.keys(value).slice(0,10).forEach(function(k){
       const v=value[k];

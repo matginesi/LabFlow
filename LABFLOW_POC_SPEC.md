@@ -171,18 +171,23 @@ Design items expose their choice nature through `provenance_kind` / `selection_b
 
 Confidence is provenance-calibrated candidate suitability, not proof of experiment use. Source nature dominates model self-confidence and unsupported quantitative values are capped conservatively. Cabinet and KB candidates remain review-only. See `docs/guides/DESIGN_INFERENCE.md` for the executable semantics.
 
-## 17. Export projection workbench
+## 17. NOMAD-first Export workspace
 
-The Export page exposes two side-by-side deterministic projections of the same canonical LabFlow state: **NOMAD** and **Ready-PV**. Neither projection is a second scientific store.
+The Export page is organized around the primary LabFlow interoperability goal: prepare the current experiment for **NOMAD**. Detailed NOMAD and Ready-PV projections are secondary inspection/edit surfaces and stay closed by default.
 
+- NOMAD readiness, blockers and package generation appear first.
 - NOMAD is experiment-oriented and is derived from `ExperimentData` plus Workspace/Process context.
-- Ready-PV is data-management-oriented and is derived primarily from Workspace, Process and Cabinet, with deterministic experiment fallbacks where appropriate.
-- Projection fields expose their source nature (`EXPERIMENT`, `WORKSPACE`, `PROCESS`, `CABINET`, `DERIVED`, `OVERRIDE`, or `MISSING`).
-- Optional edits are stored only as export overrides. They do not rewrite ExperimentData, Workspace, Process or Cabinet.
-- NOMAD overrides must flow into the generated archive YAML; Ready-PV overrides must flow into JSON and questionnaire-ready copied text.
-- Readiness is deterministic field completeness, not AI confidence or a probability of scientific truth.
+- Ready-PV remains available as a secondary data-management projection derived primarily from Workspace, Process and Cabinet.
+- Projection sections are collapsible; the page must not render a wall of metadata in the primary view.
+- Optional edits are export-only overrides and never rewrite ExperimentData, Workspace, Process or Cabinet.
+- NOMAD overrides flow into the generated archive YAML; Ready-PV overrides flow into JSON and questionnaire-ready copied text.
+- Readiness is deterministic field completeness, not AI confidence.
 
-See `docs/guides/EXPORT_PROJECTIONS.md` for the mapping and privacy rules.
+`export.prepare` (`/prepare-export`) is a review-only Action for missing export metadata. It receives only bounded Export context and a deterministic allow-list of currently missing required/recommended projection fields. Its output is filtered against that allow-list and can be applied only as explicit export overrides. Unsupported metadata remains unresolved rather than invented.
+
+The Assistant on Export prioritizes NOMAD blockers and may recommend `export.prepare`; it must treat Ready-PV as secondary and must not fabricate metadata to improve readiness.
+
+See `docs/guides/EXPORT_PROJECTIONS.md` for the mapping, Action, provenance and privacy rules.
 
 ## 18. GLM provider diagnostics
 
