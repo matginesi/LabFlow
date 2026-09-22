@@ -53,6 +53,10 @@ Loopback server defaults should remain loopback. LAN exposure is explicit throug
 
 Reasoning/thinking controls are provider capabilities, not scientific context. LabFlow applies only allowlisted fields for the selected provider/policy.
 
+For current `llama.cpp`, LabFlow keeps the server-level reasoning budget unset and controls it per request. Final-only Actions (`thinking: "off"`) send a hard `thinking_budget_tokens: 0` in addition to the chat-template/effort disable hints; reasoning-enabled Actions receive a finite per-request reasoning budget derived from the Action contract. This keeps the answer budget separate from hidden reasoning and prevents a small hybrid model from consuming the entire completion budget before emitting the final result. Do not start the LabFlow llama.cpp server with a fixed `--reasoning-budget` if per-Action reasoning policy is required, because a command-line budget takes precedence over the request field.
+
+Structured llama.cpp Actions use llama.cpp's schema-constrained `response_format` shape and LabFlow still validates the returned JSON/schema/semantics after generation. Grammar/schema-constrained generation is a generation aid, not a replacement for application-side validation.
+
 Dynamic routers and unknown models are not assumed to support a disable-reasoning field. When an endpoint explicitly rejects a request because reasoning is mandatory, transport may perform one compatibility retry without the disable override. This is a transport compatibility retry, not an Action semantic retry.
 
 ## Context and output limits

@@ -11,6 +11,10 @@ Each Action has an operational input ceiling, an answer reserve/target/maximum, 
 
 LabFlow keeps **answer** and **completion** budgets distinct. `min_output_tokens` is the minimum answer space protected while fitting context, `target_output_tokens` is the desired answer size, and `max_output_tokens` is the Action's answer maximum. The provider request may be larger when reasoning headroom is needed; that larger value is the **completion request limit** and covers answer + reasoning. The optional global **Completion limit** clamps that provider request.
 
+A final-only Action (`thinking: "off"`) reserves **zero** hidden reasoning headroom. Providers with a hard per-request reasoning budget (currently llama.cpp) receive a zero reasoning budget for that Action. A reasoning-enabled/required Action receives a separate finite reasoning budget and a completion request sized for `answer + reasoning`. This policy is intentionally model-size agnostic: small and large models obey the same Action contract.
+
+If a final-only response is truncated, the semantic retry asks for a more compact final result but does **not** increase the completion budget merely to give unexpected reasoning more room. For reasoning-enabled Actions, bounded retry growth may still be used when provider usage shows that the declared completion budget was genuinely insufficient.
+
 The Action Totem defaults to researcher-facing stage, progress, result/failure summary and primary controls. Provider/model identity, token budgets, timing, HTTP/stream information, request preview and structured-output diagnostics remain available under **Technical details**. Provider-reported usage is shown exactly when available; otherwise LabFlow marks token counts as estimates.
 
 Use the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md) for current values rather than duplicating numbers in prose.

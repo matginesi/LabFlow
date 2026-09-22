@@ -483,6 +483,47 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
+  t['llama.cpp final-only structured request hard-stops reasoning and uses JSON Schema'] = function () {
+    LF.Storage = {
+      getAiSettings: function () { return { provider: 'llamacpp', endpoint: 'http://127.0.0.1:8080/v1', model: 'qwen', temperature: 0, maxTokens: 512, inactivityTimeoutMs: 60000, streaming: false, thinkingMode: 'off' }; },
+      getApiKey: function () { return ''; }
+    };
+    LF.AIProviders = { llamacpp: {
+      id: 'llamacpp', local: true, keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true,
+      supportsTemperature: true, supportsJsonMode: true, supportsJsonSchema: true, jsonSchemaStyle: 'llamacpp', jsonSchemaStrict: false,
+      supportsReasoningControl: true, supportsReasoningBudget: true, reasoningBudgetParam: 'thinking_budget_tokens',
+      thinkingPromptGuard: true,
+      thinkingModes: { off: { reasoning_effort: 'none', chat_template_kwargs: { enable_thinking: false, reasoning_effort: 'none' } } }
+    } };
+    const schema = { type: 'object', required: ['ok'], properties: { ok: { type: 'boolean' } } };
+    try {
+      const spec = AI.buildRequest({ messages: [{ role: 'user', content: 'Return JSON only.' }], stream: false,
+        maxTokens: 256, thinkingMode: 'off', guardThinking: true, reasoningBudgetTokens: 0,
+        jsonMode: true, jsonSchema: schema, jsonSchemaName: 'labflow_action' });
+      assert(spec.body.thinking_budget_tokens, 0, 'hard reasoning budget');
+      assert(spec.body.reasoning_effort, 'none', 'soft reasoning disable remains as defense in depth');
+      assert(spec.body.chat_template_kwargs.enable_thinking, false, 'template thinking disabled');
+      assert(spec.body.response_format.type, 'json_object', 'llama.cpp constrained JSON response');
+      assert(spec.body.response_format.schema, schema, 'llama.cpp direct schema payload');
+    } finally { delete LF.Storage; delete LF.AIProviders; }
+  };
+
+  t['llama.cpp reasoning-on request receives a finite per-request reasoning budget'] = function () {
+    LF.Storage = {
+      getAiSettings: function () { return { provider: 'llamacpp', endpoint: 'http://127.0.0.1:8080/v1', model: 'qwen', temperature: 0, maxTokens: 2048, inactivityTimeoutMs: 60000, streaming: false, thinkingMode: 'on' }; },
+      getApiKey: function () { return ''; }
+    };
+    LF.AIProviders = { llamacpp: { id: 'llamacpp', local: true, keyRequired: false, tokenParam: 'max_tokens', supportsStreaming: true,
+      supportsTemperature: true, supportsReasoningBudget: true, reasoningBudgetParam: 'thinking_budget_tokens',
+      thinkingModes: { on: { reasoning_effort: 'medium', chat_template_kwargs: { enable_thinking: true, reasoning_effort: 'medium' } } } } };
+    try {
+      const spec = AI.buildRequest({ messages: [{ role: 'user', content: 'Resolve ambiguity.' }], stream: false,
+        maxTokens: 1600, thinkingMode: 'on', reasoningBudgetTokens: 900 });
+      assert(spec.body.thinking_budget_tokens, 900, 'bounded reasoning budget');
+      assert(spec.body.reasoning_effort, 'medium', 'reasoning mode retained');
+    } finally { delete LF.Storage; delete LF.AIProviders; }
+  };
+
   t['LM Studio structured Actions use JSON Schema response format'] = function () {
     LF.Storage = {
       getAiSettings: function () { return { provider: 'lmstudio', endpoint: 'http://127.0.0.1:1234/v1', model: 'local-model', temperature: 0.2, maxTokens: 4096, inactivityTimeoutMs: 180000, streaming: true }; },

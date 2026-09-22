@@ -149,7 +149,7 @@
     Log.info('request.start',{requestLogId:requestLogId,label:label,provider:providerId,phase:'chat',endpoint:url,
 model:body.model,stream:!!body.stream,messages:(body.messages||[]).length,messageChars:msgChars,
       bodyChars:requestBody.length,maxTokens:maxTokens,
-      thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',timeoutMs:limit,hardTimeoutMs:hardLimit||null,
+      thinking:body.thinking&&body.thinking.type||body.reasoning_effort||'auto',reasoningBudgetTokens:Number.isFinite(Number(body.thinking_budget_tokens))?Number(body.thinking_budget_tokens):null,timeoutMs:limit,hardTimeoutMs:hardLimit||null,
       origin:pageOrigin(),localTarget:isLocalAddress(url),targetAddressSpace:targetAddressSpace(url)||'public',
       localNetworkAccessApi:supportsLocalNetworkAccess()});
     Log.debug('request.semantic',{requestLogId:requestLogId,messages:diagnosticSemanticMessages(body)});
@@ -579,7 +579,7 @@ cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,ca
     const timeoutMs=Math.max(15000,Math.min(120000,Math.floor(Number(options.timeoutMs)||60000)));
     const prompt='Generate a continuous sequence of short lowercase words separated by spaces until the output limit is reached. Output words only. Do not explain, number, format, or stop early.';
     async function run(maxTokens,label){
-      const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off',guardThinking:true});
+      const spec=buildRequest({config:cfg,messages:[{role:'user',content:prompt}],stream:options.stream!==false,maxTokens:maxTokens,timeoutMs:timeoutMs,hardTimeoutMs:timeoutMs,temperature:0,thinkingMode:'off',guardThinking:true,reasoningBudgetTokens:provider.supportsReasoningBudget===true?0:null});
       try{return await send(spec,{label:label});}
       catch(err){
 
@@ -613,7 +613,8 @@ content:'',reasoning:String(err.reasoning||''),model:err.model||model,provider:p
     const started=performance.now(),cfg=diagnosticRequestConfig(providerId,endpoint,model,apiKey),hard=Math.max(5000,Math.min(120000,Number(provider.connectionTestTimeoutMs)||30000));
     Log.info('connection-test.start',{provider:providerId,endpoint:endpoint,model:model,keyConfigured:!!String(apiKey||'').trim(),origin:pageOrigin()});
     const probe=connectionProbePolicy(cfg.provider);
-    const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,guardThinking:probe.thinkingMode==='off',connectionTest:true});
+    const spec=buildRequest({config:cfg,messages:[{role:'user',content:connectionTestPrompt()}],stream:false,maxTokens:probe.maxTokens,timeoutMs:hard,hardTimeoutMs:hard,temperature:0,thinkingMode:probe.thinkingMode,guardThinking:probe.thinkingMode==='off',
+      reasoningBudgetTokens:probe.thinkingMode==='off'&&cfg.provider.supportsReasoningBudget===true?0:null,connectionTest:true});
     let r;
     try{r=await send(spec,{label:'AI connection test',connectionTest:true,onProgress:typeof options.onProgress==='function'?options.onProgress:undefined});}
     catch(err){
@@ -663,12 +664,22 @@ responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finali
     if(opts.maxTokens!=null)body[tokenParam]=Math.max(16,Math.floor(Number(opts.maxTokens)));
     if(provider.supportsTemperature!==false)body.temperature=Number.isFinite(Number(opts.temperature))?Number(opts.temperature):(Number.isFinite(Number(settings.temperature))?Number(settings.temperature):0.7);
     const thinking=applyThinkingMode(body,provider,requestedThinking);
+    if(provider.supportsReasoningBudget===true&&opts.reasoningBudgetTokens!=null){
+      const budget=Math.max(0,Math.floor(Number(opts.reasoningBudgetTokens)||0)),param=provider.reasoningBudgetParam||'thinking_budget_tokens';
+      body[param]=budget;
+    }
     if(thinking.applied==='off'&&provider.supportsReasoningControl===true&&wantsStreaming)body.reasoning_control=true;
     if(String(provider.id||settings.provider||'').toLowerCase()==='llamacpp'){
       const capability=opts.modelCapability&&typeof opts.modelCapability==='object'?opts.modelCapability:{},explicitFormat=String(opts.reasoningFormat||''),detectedFormat=String(capability.reasoningParserFormat||''),lfmFallback=/lfm2(?:\.5)?/i.test(String(model||''))?'deepseek':'',format=explicitFormat||detectedFormat||lfmFallback;
       if(format)body.reasoning_format=format;
     }
-    if(opts.jsonSchema&&provider.supportsJsonSchema){const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';body.response_format={type:'json_schema',json_schema:{name:name,strict:provider.jsonSchemaStrict===true,schema:opts.jsonSchema}};}else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
+    if(opts.jsonSchema&&provider.supportsJsonSchema){
+      const name=String(opts.jsonSchemaName||'labflow_output').replace(/[^A-Za-z0-9_-]/g,'_').slice(0,64)||'labflow_output';
+      // llama.cpp documents a direct response_format.schema shape and converts it to a generation grammar.
+      // Other OpenAI-compatible providers retain the nested json_schema envelope they advertise.
+      if(provider.jsonSchemaStyle==='llamacpp')body.response_format={type:'json_object',schema:opts.jsonSchema};
+      else body.response_format={type:'json_schema',json_schema:{name:name,strict:provider.jsonSchemaStrict===true,schema:opts.jsonSchema}};
+    }else if(opts.jsonMode&&provider.supportsJsonMode)body.response_format={type:'json_object'};
     const providerTimeout=Math.max(5000,Number(provider.requestTimeoutMs)||90000);
     const timeoutMs=opts.connectionTest?Math.max(5000,Number(opts.timeoutMs)||15000):Math.max(Number(settings.inactivityTimeoutMs)||90000,providerTimeout,Math.max(0,Number(opts.timeoutMs)||0));
     const hardTimeoutMs=Math.max(0,Number(opts.hardTimeoutMs)||Number(provider.requestDeadlineMs)||0);
@@ -735,7 +746,7 @@ provider:spec.settings.provider,model:logModel(spec.settings.provider,obj.model|
 emptyError.requestElapsedMs=r.elapsedMs;emptyError.generationMs=generationMs;emptyError.ttftMs=ttftMs;
         emptyError.tokensPerSecond=tps;emptyError.usage=normalizedUsage;emptyError.model=obj.model||spec.settings.model;
         emptyError.requestedMaxTokens=positiveInt(spec.body.max_completion_tokens||spec.body.max_tokens||
-        spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';
+        spec.body.max_output_tokens);emptyError.thinkingMode=spec.thinkingMode||'auto';emptyError.thinkingPolicy=spec.thinkingPolicy||null;
         emptyError.reasoningObserved=reasoningObserved;emptyError.reasoningControlRequests=controlRequests;
         emptyError.reasoningControlOk=r.reasoningControlResult&&r.reasoningControlResult.ok===true;
       throw emptyError;

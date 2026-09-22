@@ -30,7 +30,12 @@ set -euo pipefail
 
 PROG="$(basename "$0")"
 
-DEFAULT_MODEL="$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotron-3-Nano-4B-GGUF/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
+# DEFAULT_MODEL="$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotron-3-Nano-4B-GGUF/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
+# DEFAULT_MODEL="/data/models/granite-4.0-h-tiny/granite-4.0-h-tiny-Q4_K_M.gguf"
+# DEFAULT_MODEL="/data/models/Qwen3.5-0.8B-Q4_0.gguf"
+# DEFAULT_MODEL="/data/models/gemma-3-270m-it-q4_k_m.gguf"  <- NA MERDA
+DEFAULT_MODEL="/data/models/LFM2-350M-Q4_K_M.gguf"
+
 MODEL="${LABFLOW_MODEL:-$DEFAULT_MODEL}"
 SERVER="${LABFLOW_LLAMA_SERVER:-llama-server}"
 HOST="${LABFLOW_HOST:-127.0.0.1}"
@@ -56,6 +61,8 @@ TEMPLATE_SOURCE="GGUF metadata / llama.cpp fallback"
 
 # Leave reasoning controls empty unless explicitly requested.
 # LabFlow can then choose per request when supported by the model/server.
+# In current llama.cpp, a fixed --reasoning-budget takes precedence over the
+# per-request thinking_budget_tokens field, so the default must remain unset.
 REASONING=""
 REASONING_BUDGET=""
 REASONING_FORMAT=""

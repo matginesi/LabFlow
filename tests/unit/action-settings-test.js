@@ -57,6 +57,8 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.llamacpp.recommendedRuntime.parallelSlots===1,'llama.cpp LabFlow profile uses one server slot');
     assert(LF.AIProviders.llamacpp.recommendedRuntime.contextWindow===65536,'llama.cpp LabFlow profile uses a 65K runtime context');
     assert(LF.AIProviders.llamacpp.thinkingModes.off.reasoning_effort==='none','llama.cpp reasoning-off mode disables reasoning effort');assert(LF.AIProviders.llamacpp.thinkingModes.off.chat_template_kwargs.enable_thinking===false,'llama.cpp reasoning-off mode disables template thinking when supported');assert(LF.AIProviders.llamacpp.supportsReasoningControl===true,'llama.cpp can stop ignored reasoning at runtime');
+    assert(LF.AIProviders.llamacpp.supportsReasoningBudget===true&&LF.AIProviders.llamacpp.reasoningBudgetParam==='thinking_budget_tokens','llama.cpp exposes per-request hard reasoning budgets');
+    assert(LF.AIProviders.llamacpp.supportsJsonSchema===true&&LF.AIProviders.llamacpp.jsonSchemaStyle==='llamacpp','llama.cpp uses its native schema-constrained response format');
     assert(LF.AIProviders.ollama.local===true&&LF.AIProviders.lmstudio.local===true&&LF.AIProviders.llamacpp.local===true,'local provider behavior is declared in the registry');
     assert(!LF.AIProviderList.some(function(provider){return Object.prototype.hasOwnProperty.call(provider,'modelLoadLabel');}),'providers do not define separate detect labels');
     assert(LF.AIProviders.lmstudio.optionalKey===true,'LM Studio can use its own optional API token');

@@ -31,6 +31,21 @@ module.exports=function(t,LF){
       'completion request may exceed answer maximum when reasoning needs headroom');
   };
 
+  t['reasoning-off Action does not reserve hidden reasoning tokens on an optional reasoner']=async function(){
+    LF.AI=LF.AI||{};
+    LF.AI.estimatePromptTokens=function(){return 80;};
+    const budget=await LF.ActionRunner.budgetFor(
+      [{role:'user',content:'extract JSON'}],
+      {maxOutputTokensCap:0},
+      {output:'json',min_output_tokens:128,target_output_tokens:384,max_output_tokens:768},
+      null,768,{contextWindow:4096,maxOutputTokens:2048,reasoningStatus:'optional'},
+      {capability:'optional',effective:'off'},null
+    );
+    assert(budget.tokenBudget.completion.reasoningReserve,0,'strict-off reasoning reserve');
+    assert(budget.tokenBudget.completion.requestLimit,budget.tokenBudget.answer.request,
+      'strict-off completion equals answer request');
+  };
+
   t['non-reasoning model does not add hidden completion headroom']=async function(){
     LF.AI=LF.AI||{};
     LF.AI.estimatePromptTokens=function(){return 50;};

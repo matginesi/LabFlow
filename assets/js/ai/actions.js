@@ -183,19 +183,30 @@ function providerCompletionCeiling(capability,settings,inputTokens){
 }
 function reasoningHeadroom(profile,capability,thinkingPolicy){
   const status=String(thinkingPolicy&&thinkingPolicy.capability||capability&&capability.reasoningStatus||'unknown'),effective=String(thinkingPolicy&&thinkingPolicy.effective||'auto'),target=Math.max(16,Number(profile&&profile.targetTokens)||0);
-  if(status==='none')return 0;
+  // A strict final-only Action must not donate its answer budget to hidden reasoning. Providers that can hard-limit
+  // reasoning receive a separate per-request budget; unknown/required reasoners still get explicit headroom below.
+  if(status==='none'||effective==='off')return 0;
   if(effective==='required'||effective==='on')return Math.max(1024,Math.ceil(target*1.5));
-
   return Math.max(512,Math.ceil(target));
+}
+function hardReasoningBudget(profile,capability,thinkingPolicy,provider){
+  if(!(provider&&provider.supportsReasoningBudget===true))return null;
+  const status=String(thinkingPolicy&&thinkingPolicy.capability||capability&&capability.reasoningStatus||'unknown'),effective=String(thinkingPolicy&&thinkingPolicy.effective||'auto');
+  if(status==='none'||effective==='off')return 0;
+  if(effective==='required'||effective==='on')return reasoningHeadroom(profile,capability,thinkingPolicy);
+  return null;
 }
 function truncationRetryBudget(err,profile){
   const prior=positive(err&&err.completionBudgetTokens)||positive(err&&err.requestedMaxTokens)||positive(profile&&
-profile.requestTokens)||512,usage=err&&err.usage||{}
-    ,observedCompletion=positive(usage.completionTokens)||0,reportedReasoning=positive(usage.reasoningTokens)||0,
+profile.requestTokens)||512,usage=err&&err.usage||{},policy=err&&err.thinkingPolicy||{},effective=String(policy.effective||
+err&&err.thinkingMode||'auto');
+  // When reasoning is explicitly off, a truncation retry is a compactness retry, not permission to spend more
+  // completion tokens. This prevents small hybrid models from receiving a larger runway for runaway thinking.
+  if(effective==='off')return prior;
+  const observedCompletion=positive(usage.completionTokens)||0,reportedReasoning=positive(usage.reasoningTokens)||0,
     estimatedReasoning=LF.AI&&LF.AI.estimateTokens?LF.AI.estimateTokens(err&&err.reasoning||''):Math.ceil(String(err&&
     err.reasoning||'').length/4),reasoning=Math.max(reportedReasoning,estimatedReasoning),
     answer=positive(profile&&profile.requestTokens)||prior;
-
   return Math.max(Math.ceil(prior*1.7),answer+Math.max(1024,Math.ceil(reasoning*1.5))+384,observedCompletion+Math.ceil(answer*.75)+384);
 }
 async function budgetFor(messages,settings,step,workItem,hardCap,knownCapability,thinkingPolicy,minCompletionTokens){
@@ -228,30 +239,31 @@ function truncatedError(response,completionBudgetTokens){
     ex.providerResponse=response&&response.content||'';ex.reasoning=response&&response.reasoning||'';ex.usage=usage;
     ex.finishReason=response&&response.finishReason||'length';
     ex.completionBudgetTokens=positive(completionBudgetTokens)||null;ex.reasoningObserved=reasoningObserved;
+    ex.thinkingPolicy=response&&response.thinkingPolicy||null;ex.thinkingMode=response&&response.thinkingMode||'auto';
     ex.reasoningTokens=reasoningTokens||null;
     ex.reasoningControlRequests=Number(response&&response.reasoningControlRequests)||0;
     ex.reasoningControlOk=response&&response.reasoningControlOk===true;return ex;
 }
 async function sendModel(run,step,opts,key,messages,settings,requestOptions,progress){
-  const capability=requestOptions.capability||await modelCapability(settings),
+  const capability=requestOptions.capability||await modelCapability(settings),provider=(LF.AIProviders&&LF.AIProviders[settings.provider])||{},
 actionThinking=requestOptions.thinkingMode||step.thinking||'auto',
     thinkingPolicy=LF.AI.resolveThinkingPolicy?LF.AI.resolveThinkingPolicy(capability,actionThinking,settings.thinkingMode,
-    (LF.AIProviders&&LF.AIProviders[settings.provider])||{}):{
+    provider):{
     requested:actionThinking,transportMode:actionThinking,capability:'unknown',effective:actionThinking,
     reason:'Action policy'},b=await budgetFor(messages,settings,step,requestOptions.workItem||null,
     requestOptions.actionCap||null,capability,thinkingPolicy,requestOptions.minCompletionTokens||null),
     explicit=positive(requestOptions.maxTokens),maxTokens=explicit?Math.min(explicit,b.requestMax):b.requestMax,
-    targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),effectiveTokenBudget=Object.assign({},b.tokenBudget,{
+    targetTokens=Math.min(b.targetTokens,b.answerRequestTokens),reasoningBudgetTokens=hardReasoningBudget(b.profile,capability,thinkingPolicy,provider),effectiveTokenBudget=Object.assign({},b.tokenBudget,{
       answer:Object.assign({},b.tokenBudget&&b.tokenBudget.answer||{}, {target:targetTokens}),
-      completion:Object.assign({},b.tokenBudget&&b.tokenBudget.completion||{}, {requestLimit:maxTokens||b.requestMax})
+      completion:Object.assign({},b.tokenBudget&&b.tokenBudget.completion||{}, {requestLimit:maxTokens||b.requestMax,reasoningHardLimit:reasoningBudgetTokens})
     }),schema=requestOptions.schema||null,
     providerSchema=step.provider_schema===false?null:schema,spec=LF.AI.buildRequest({
     messages:messages,stream:!!requestOptions.stream,maxTokens:maxTokens||null,timeoutMs:step.timeout_ms||null,
     hardTimeoutMs:step.deadline_ms||null,jsonMode:!!requestOptions.jsonMode,jsonSchema:providerSchema,
     jsonSchemaName:requestOptions.schemaName||step.schema||run.actionId,temperature:requestOptions.temperature,
     thinkingMode:thinkingPolicy.transportMode,thinkingPolicy:thinkingPolicy,modelCapability:capability,
-    guardThinking:thinkingPolicy.transportMode==='off'});
-  if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,retryBoost:positive(requestOptions.minCompletionTokens)||null,thinkingEffective:thinkingPolicy.effective||'auto'});
+    reasoningBudgetTokens:reasoningBudgetTokens,guardThinking:thinkingPolicy.transportMode==='off'});
+  if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,reasoningHardLimitTokens:reasoningBudgetTokens,retryBoost:positive(requestOptions.minCompletionTokens)||null,thinkingEffective:thinkingPolicy.effective||'auto'});
   if(opts.onRequest)opts.onRequest({actionId:run.actionId,stepId:step.id,index:run.currentIndex,
 workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,phase:requestOptions.phase||'response',
     request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget,
@@ -267,7 +279,7 @@ label:run.actionId+'.'+step.id+'.'+(requestOptions.phase||'response'),onProgress
     run.requestMeta[key]=Object.assign(requestMeta(response),{answerTargetTokens:targetTokens,answerMaxTokens:b.answerRequestTokens,completionBudgetTokens:maxTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget});return response;
   }catch(err){
     if(err&&err.code==='MODEL_OUTPUT_TRUNCATED'){
-err.completionBudgetTokens=positive(err.completionBudgetTokens)||maxTokens;
+err.completionBudgetTokens=positive(err.completionBudgetTokens)||maxTokens;err.thinkingPolicy=err.thinkingPolicy||thinkingPolicy;err.thinkingMode=err.thinkingMode||thinkingPolicy.effective||thinkingPolicy.transportMode||'auto';
       run.requestMeta[key]=Object.assign(run.requestMeta[key]||{},{
       finishReason:err.finishReason||'length',completionBudgetTokens:maxTokens,answerTargetTokens:targetTokens,
       answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget,usage:err.usage||null,

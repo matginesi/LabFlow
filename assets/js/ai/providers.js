@@ -57,8 +57,9 @@ keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:tr
       id:'llamacpp', name:'llama.cpp', local:true, endpoint:'http://127.0.0.1:8080/v1', model:'local-model',
 keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:true, modelSelectLabel:'llama.cpp model',
         supportsStreaming:true, tokenParam:'max_tokens', supportsTemperature:true, supportsJsonMode:true,
+        supportsJsonSchema:true, jsonSchemaStyle:'llamacpp', jsonSchemaStrict:false, supportsReasoningBudget:true, reasoningBudgetParam:'thinking_budget_tokens',
         requestTimeoutMs:300000, connectionTestTimeoutMs:15000, connectionTestMaxTokens:64, connectionTestThinkingMode:'off',
-        connectionTestAcceptReasoningOnly:true, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true,
+        connectionTestAcceptReasoningOnly:false, safeThinkingOverrideWhenUnknown:true, supportsReasoningControl:true,
         thinkingPromptGuard:true, recommendedRuntime:{parallelSlots:1,contextWindow:65536}, thinkingModes:{off:{
         reasoning_effort:'none',chat_template_kwargs:{enable_thinking:false,reasoning_effort:'none'}},on:{
         reasoning_effort:'medium',chat_template_kwargs:{enable_thinking:true,reasoning_effort:'medium'}}},
@@ -79,7 +80,8 @@ keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:tr
         endpoint: { type: 'string', required: true }, model: { type: 'string', required: true },
         keyRequired: { type: 'boolean' }, optionalKey: { type: 'boolean' }, local: { type: 'boolean' },
         supportsStreaming: { type: 'boolean' }, supportsJsonMode: { type: 'boolean' },
-        supportsJsonSchema: { type: 'boolean' }, supportsTemperature: { type: 'boolean' },
+        supportsJsonSchema: { type: 'boolean' }, jsonSchemaStyle: { type: 'string' }, supportsTemperature: { type: 'boolean' },
+        supportsReasoningBudget: { type: 'boolean' }, reasoningBudgetParam: { type: 'string' },
         tokenParam: { type: 'string' }, thinkingModes: { type: 'object' }, note: { type: 'string' }
       }
     });
