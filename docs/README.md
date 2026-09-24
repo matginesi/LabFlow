@@ -48,7 +48,7 @@ LabFlow is deterministic-first. RAW evidence and canonical experiment data are p
 | scientific reference knowledge | `knowledge/kb.jsonl`, KB validator, `guides/KNOWLEDGE_BASE.md` |
 | Design source hierarchy | `design.infer` runtime, `guides/DESIGN_INFERENCE.md` |
 | Results calculations | analysis modules, `guides/RESULTS_ANALYSIS.md` |
-| UI behavior | `UI.md`, `ui-kit.html`, `.agent/skills/labflow-ui/SKILL.md` |
+| UI behavior | `UI.md`, `assets/js/pages/ui-kit-inline.js`, `.agent/skills/labflow-ui/SKILL.md` |
 | release quality | validators/tests, `VALIDATION.md` |
 
 Executable manifests, schemas and validators take precedence over prose if a mismatch is found; the documentation should then be corrected.
@@ -59,9 +59,9 @@ The in-app Documentation bundle and Action runtime matrix are generated. Do not 
 
 - `assets/js/pages/docs-bundle.js`
 - `docs/reference/ACTION_RUNTIME_MATRIX.md`
-- generated Action/KB/UI bundles
+- generated Action/KB bundles
 
-Use the builders or `./release_check.sh --fix` after changing source documentation, manifests, prompts, Knowledge Base records, or UI Kit source.
+Use the builders or `./release_check.sh --fix` after changing source documentation, manifests, prompts or Knowledge Base records. The UI Kit catalogue is authored source, so edit it directly and verify with `./release_check.sh`.
 
 ## Browser Local AI
 

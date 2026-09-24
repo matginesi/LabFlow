@@ -8,7 +8,7 @@ module.exports=function(t){
   const tokens=fs.readFileSync(path.join(root,'assets/css/tokens.css'),'utf8');
   const theme=fs.readFileSync(path.join(root,'assets/js/ui/theme.js'),'utf8');
   const cabinet=fs.readFileSync(path.join(root,'assets/js/pages/cabinet-page.js'),'utf8');
-  const kit=fs.readFileSync(path.join(root,'ui-kit.html'),'utf8');
+  const kit=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
   const skill=fs.readFileSync(path.join(root,'.agent/skills/labflow-ui/SKILL.md'),'utf8');
 
   t['Shared density is tokenized instead of page-specific']=function(){

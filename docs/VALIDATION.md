@@ -34,13 +34,13 @@ Use the full browser audit when the environment can launch/navigate a local page
 
 `release_check.sh` prints an environment banner (mode, commit and dirty state, tool versions, step count), runs numbered steps with per-step timing, stops at the first failure with the failing step named on stderr, and ends with a summary that lists every step, its duration, the total time and what was skipped. The exit status is the gate; `--help` documents the flags.
 
-Step order matters for the asset cache revision: the contract/documentation bundles are regenerated **first**, the revision is then stamped from those regenerated sources, and the UI Kit inline bundle is rebuilt **last** from the stamped `ui-kit.html`. Stamping before regeneration would leave the revision describing a tree that no longer exists, so a `--fix` run followed by a plain check would fail.
+Step order matters for the asset cache revision: the contract/documentation bundles are regenerated **first**, then the revision is stamped from those regenerated sources. Stamping before regeneration would leave the revision describing a tree that no longer exists, so a `--fix` run followed by a plain check would fail.
 
 The gate also compiles `tools/*.py` and syntax-checks `tools/*.js`, and runs the structured-output parser regression (`tools/test_structured_json.js`) alongside the unit suites. When `node` is unavailable those steps are reported as skipped instead of silently passing.
 
 ## Asset cache revision
 
-`assets/js/build-info.js` owns `LABFLOW_VERSION` (human release label), `LABFLOW_BUILD` (human build label) and `LABFLOW_ASSET_REV`. The revision is a deterministic hash of `index.html`, `ui-kit.html`, the CSS and the authored JavaScript, excluding `build-info.js` and the generated `ui-kit-inline.js` (which embeds a hash of `ui-kit.html`). `tools/sync_build_metadata.py` stamps it into every `?v=` query in `index.html`/`ui-kit.html`, so any source change produces a new cache key and browsers fetch fresh CSS/JS once they receive the new HTML.
+`assets/js/build-info.js` owns `LABFLOW_VERSION` (human release label), `LABFLOW_BUILD` (human build label) and `LABFLOW_ASSET_REV`. The revision is a deterministic hash of `index.html`, the CSS and the authored JavaScript including the UI Kit catalogue, excluding only `build-info.js` (the revision owner). `tools/sync_build_metadata.py` stamps it into every `?v=` query in `index.html`, so any source change produces a new cache key and browsers fetch fresh CSS/JS once they receive the new HTML.
 
 ```bash
 python3 tools/sync_build_metadata.py --write   # stamp (also run by ./release_check.sh --fix)
@@ -61,7 +61,7 @@ Settings → About shows Version, Build and the Assets revision, and provides **
 - Action manifests, guards and generated registry;
 - prompt bundle consistency;
 - Knowledge Base schema/bundle consistency;
-- documentation and UI Kit generated assets;
+- documentation generated assets and the authored UI Kit catalogue;
 - source hygiene/readability;
 - tooling syntax (`tools/*.py` compiled, `tools/*.js` syntax-checked);
 - deterministic pipeline/import regressions and the structured-output parser regression;
@@ -72,7 +72,7 @@ The gate stops at the first failure and names the failing step, so a red run poi
 
 ## Generated files
 
-Do not patch generated artifacts to make a test pass. Change their source, rebuild, then verify. Important generated files include Action registry/prompt bundle, KB bundle, docs bundle, UI Kit inline bundle and Action runtime matrix.
+Do not patch generated artifacts to make a test pass. Change their source, rebuild, then verify. Important generated files include Action registry/prompt bundle, KB bundle, docs bundle and Action runtime matrix. The UI Kit catalogue is authored source, not a generated artifact.
 
 ## Provider failure tests
 

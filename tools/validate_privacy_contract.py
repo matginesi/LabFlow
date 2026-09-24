@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-HTML_FILES = (ROOT / "index.html", ROOT / "ui-kit.html")
+HTML_FILES = (ROOT / "index.html",)
 FETCH_OWNERS = [Path("assets/js/ai/http.js"), Path("assets/js/ai/transport.js")]
 FORBIDDEN_APIS = {
     "document.cookie": re.compile(r"document\s*\.\s*cookie"),

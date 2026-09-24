@@ -36,8 +36,12 @@ const providerId=providerIdFromForm(),meta=modelCatalogueMeta[providerId]||{}
   function syncModelControls(models,options){options=options||{};
 const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AIProviders.custom,input=field('aiModel'),
     select=field('aiModelSelect'),button=field('detectProviderModel'),hint=field('aiModelHint'),key=field('aiKey');
-    if(!input||!select)return;if(!options.manualFallback&&(!Array.isArray(models)||!models.length)&&
-    Array.isArray(modelCatalogues[providerId]))models=modelCatalogues[providerId].slice();
+    if(!input||!select)return;if(!options.manualFallback&&(!Array.isArray(models)||!models.length)){
+    // Browser Local owns its catalogue locally, so a rebuild must read the live list: a cached
+    // Check result would silently drop a model added afterwards and can empty the select.
+    if(provider.browserRuntime===true&&LF.BrowserLocal&&typeof LF.BrowserLocal.catalog==='function'){
+    models=LF.BrowserLocal.catalog().map(function(entry){return String(entry&&entry.id||'');}).filter(Boolean);
+    }else if(Array.isArray(modelCatalogues[providerId]))models=modelCatalogues[providerId].slice();}
     if(select.dataset.provider!==providerId){delete select.dataset.manualFallback;delete select.dataset.catalogueCount;
     select.dataset.provider=providerId;select.replaceChildren();
     }if(options.manualFallback){select.dataset.manualFallback='true';modelCatalogueFallbacks[providerId]=true;

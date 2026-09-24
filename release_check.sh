@@ -54,7 +54,6 @@ DERIVED=(
   assets/js/knowledge/kb-bundle.js
   docs/reference/ACTION_RUNTIME_MATRIX.md
   assets/js/pages/docs-bundle.js
-  assets/js/pages/ui-kit-inline.js
 )
 
 backup_synthetic_fixtures(){
@@ -93,7 +92,7 @@ backup_synthetic_fixtures
 trap cleanup EXIT
 
 STEP_INDEX=0
-STEP_TOTAL=7
+STEP_TOTAL=6
 [[ "$NODE_AVAILABLE" -eq 1 ]] && STEP_TOTAL=$((STEP_TOTAL + 5))
 [[ "$FULL" -eq 1 ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
 STEP_LABEL=""
@@ -166,15 +165,10 @@ python3 tools/build_action_reference.py >/dev/null
 python3 tools/build_docs_bundle.py >/dev/null
 step_done
 
-# The cache revision is derived from generated bundles, so it is stamped only after
-# they are regenerated; the UI Kit inline bundle is excluded from the revision and is
-# rebuilt afterwards from the stamped ui-kit.html.
+# The cache revision is derived from the regenerated bundles, so it is stamped only
+# after they are rebuilt; the UI Kit catalogue is authored source and needs no rebuild.
 step "Build metadata stamped and current"
 if [[ "$MODE" == "fix" ]]; then python3 tools/sync_build_metadata.py --write; else python3 tools/sync_build_metadata.py; fi
-step_done
-
-step "Regenerate UI Kit inline bundle"
-python3 tools/build_ui_kit_inline.py >/dev/null
 step_done
 
 step "Generated assets are current"

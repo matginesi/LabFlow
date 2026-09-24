@@ -10,7 +10,7 @@ import argparse,hashlib,re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 INFO=ROOT/'assets/js/build-info.js'
-SOURCE_FILES=(ROOT/'index.html',ROOT/'ui-kit.html')
+SOURCE_FILES=(ROOT/'index.html',)
 
 def read_info():
     text=INFO.read_text(encoding='utf-8')
@@ -30,9 +30,8 @@ def source_rev():
     paths+=sorted((ROOT/'assets/css').glob('*.css'))
     paths+=sorted((ROOT/'assets/js').rglob('*.js'))
     for path in paths:
-        # build-info.js is the revision owner; ui-kit-inline.js embeds a hash of ui-kit.html,
-        # which itself carries the cache key, so both must stay out of the digest.
-        if path.name in ('build-info.js','ui-kit-inline.js'): continue
+        # build-info.js is the revision owner and cannot be part of its own digest.
+        if path.name=='build-info.js': continue
         digest.update(path.relative_to(ROOT).as_posix().encode('utf-8'));digest.update(b'\0')
         digest.update(normalized(path.read_text(encoding='utf-8')).encode('utf-8'));digest.update(b'\0')
     return digest.hexdigest()[:12]
@@ -45,28 +44,21 @@ def write_rev(rev):
         text=text.rstrip('\n')+f'\nwindow.LABFLOW_ASSET_REV="{rev}";\n'
     INFO.write_text(text,encoding='utf-8')
 
-def transform(path, version, build, rev):
-    text=path.read_text(encoding='utf-8')
-    text=re.sub(r'(?<=\?v=)[A-Za-z0-9._+-]+',rev,text)
-    if path.name=='ui-kit.html':
-        text=re.sub(r'LabFlow build [^"\'<>\s]+',f'LabFlow build {build}',text)
-        text=re.sub(r'(?<=<strong>)(?:Prototype r\d+|\d+\.\d+\.\d+)(?=</strong>)',version,text)
-    return text
+def transform(path, rev):
+    return re.sub(r'(?<=\?v=)[A-Za-z0-9._+-]+',rev,path.read_text(encoding='utf-8'))
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--write',action='store_true');args=ap.parse_args()
     version,build,stored=read_info();computed=source_rev()
     if args.write:
         if computed!=stored: write_rev(computed)
-        for name in ('index.html','ui-kit.html'):
-            path=ROOT/name;path.write_text(transform(path,version,build,computed),encoding='utf-8')
+        page=ROOT/'index.html';page.write_text(transform(page,computed),encoding='utf-8')
         print(f'Build metadata: OK ({version} · {build} · assets {computed})')
         return
     rev=stored or computed;stale=[]
     if computed!=stored: stale.append('assets/js/build-info.js')
-    for name in ('index.html','ui-kit.html'):
-        path=ROOT/name
-        if path.read_text(encoding='utf-8')!=transform(path,version,build,rev): stale.append(name)
+    page=ROOT/'index.html'
+    if page.read_text(encoding='utf-8')!=transform(page,rev): stale.append('index.html')
     if stale:
         print('Build metadata is stale: '+', '.join(sorted(set(stale))));raise SystemExit(1)
     print(f'Build metadata: OK ({version} · {build} · assets {rev})')

@@ -15,7 +15,7 @@ module.exports=function(t){
   const controller=fs.readFileSync(path.join(root,'assets/js/controllers/settings-controller.js'),'utf8');
   const settings=fs.readFileSync(path.join(root,'assets/js/ai/settings.js'),'utf8');
   const css=fs.readFileSync(path.join(root,'assets/css/components.css'),'utf8');
-  const kit=fs.readFileSync(path.join(root,'ui-kit.html'),'utf8');
+  const kit=fs.readFileSync(path.join(root,'assets/js/pages/ui-kit-inline.js'),'utf8');
 
   t['Browser Local models render as cards with source and state']=function(){
     assert(page.includes("'<div class=\"browser-model-cards\">'"),true,'card grid');
@@ -59,6 +59,18 @@ module.exports=function(t){
     assert(css.includes('.browser-model-card-actions'),true,'card action layout');
     assert(kit.includes('browser-model-cards')&&kit.includes('browser-model-card'),true,'UI Kit shows the card pattern');
     assert(kit.includes('browser-model-stats'),false,'UI Kit no longer shows the removed stat grid');
+  };
+  t['A detached or stale model always reaches the blocking setup Totem']=function(){
+    const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
+    assert(app.includes("title:'Install local AI model'"),true,'blocking install Totem exists');
+    assert(app.includes('shadeBlur:true'),true,'setup Totem keeps the blurred backdrop');
+    assert(app.includes("if(!checked.cached&&selectedModel&&selectedModel.source==='file')"),true,'detached uploaded file branch');
+    assert(app.includes("browser-local.detached-file"),true,'detached file is reported');
+    assert(app.includes('return startBrowserLocal(forceDownload);'),true,'detached file falls back to the bundled model setup');
+    assert(app.includes('settings.model=fallback;LF.Storage.saveAiSettings(settings);'),true,'a stale catalogue id falls back to the bundled model');
+    assert(app.includes('if(!totemShown)openSetupTotem(ready,true);'),true,'a model that is not ready always opens the setup Totem');
+    assert(app.includes('if(!totemShown&&LF.UI&&LF.UI.activityStart)openSetupTotem(LF.BrowserLocal.state(),true);'),true,'a startup failure still opens the setup Totem');
+    assert(app.includes("stage:'Selected model unavailable'"),true,'an unavailable model opens the Totem with a retry');
   };
   return t;
 };

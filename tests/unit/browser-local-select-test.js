@@ -68,6 +68,27 @@ module.exports=function(t){
     assert(option('unknown-model').textContent,'unknown-model','unknown id falls back to itself');
   };
 
+  t['A model added after a Check stays selectable on the next rebuild']=function(){
+    reset();
+    // A Check caches the catalogue as it existed before the new model was added.
+    LF.AISettings.syncModelControls(['lfm2.5-350m-q4_k_m']);
+    assert(nodes.aiModelSelect.value,'lfm2.5-350m-q4_k_m','check selects the cached default');
+    CATALOGUE.push({id:'new-tiny-q4',name:'New Tiny · Q4_K_M',source:'file'});
+    try{
+      nodes.aiModelSelect.value='new-tiny-q4'; // providerPanel rendered the added model as selected
+      LF.AISettings.syncModelControls(null,{preserveHint:true}); // decorate() runs on every settings render
+      assert(nodes.aiModelSelect.options.some(function(item){return item.value==='new-tiny-q4';}),true,'added model stays in the select');
+      assert(nodes.aiModelSelect.value,'new-tiny-q4','selection survives the rebuild');
+    }finally{CATALOGUE.pop();}
+  };
+
+  t['A rebuild never leaves the model select empty while the catalogue has models']=function(){
+    reset();
+    LF.AISettings.syncModelControls(null,{preserveHint:true});
+    assert(nodes.aiModelSelect.options.length>0,true,'select keeps its catalogue options');
+    assert(nodes.aiModelSelect.value,'lfm2.5-350m-q4_k_m','a model stays selected');
+  };
+
   t['Check compatibility reuses one path and refreshes the cache inventory']=async function(){
     reset();
     nodes.aiModelSelect.value='qwen3-0.6b-q8_0';

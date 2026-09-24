@@ -203,9 +203,13 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
       autoWarmup:settings.browserLocalAutoWarmup!==false,preferWebGPU:settings.browserLocalPreferWebGPU!==false});
     const requested=String(settings.model||'');
     if(requested&&LF.BrowserLocal.hasModel&&!LF.BrowserLocal.hasModel(requested)){
-      Log.warn('browser-local.unknown-model',{model:requested});
-      if(LF.UI&&LF.UI.message)LF.UI.message('The selected Browser Local model is not in the catalogue. Choose a model in Settings → AI connection.','warning','Local AI unavailable');
-      return null;
+      // A catalogue id that no longer exists must not strand local AI: fall back to the bundled
+      // model and let the normal setup Totem download, load and warm it.
+      const fallback=LF.BrowserLocal.defaultModel&&LF.BrowserLocal.defaultModel.id;
+      Log.warn('browser-local.unknown-model',{model:requested,fallback:fallback||''});
+      if(!fallback)return null;
+      settings.model=fallback;LF.Storage.saveAiSettings(settings);
+      if(LF.UI&&LF.UI.message)LF.UI.message('The previously selected Browser Local model is no longer in the catalogue. LabFlow is preparing the bundled model.','info','Local AI');
     }
     let unsubscribe=null,totemShown=false,showTimer=null;
     function openSetupTotem(local,install){
@@ -231,10 +235,28 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     try{
       const checked=await LF.BrowserLocal.check(settings.model);
       renderModelStatus();
-      if(checked.status==='error'){if(LF.UI&&LF.UI.message)LF.UI.message(checked.error||'The selected Browser Local model is unavailable.','warning','Local AI unavailable');return checked;}
+      if(checked.status==='error'){
+        const reason=checked.error||'The selected Browser Local model is unavailable.';
+        if(!totemShown)openSetupTotem(checked,true);
+        if(totemShown&&LF.UI&&LF.UI.activityError)LF.UI.activityError(new Error(reason),{
+          stage:'Selected model unavailable',message:reason,response:'Choose another model in Settings → AI connection.',
+          details:{Model:browserModelLabel(checked)},onRetry:function(){return startBrowserLocal(true);},retryLabel:'Retry setup',closeLabel:'Choose another model'
+        });
+        else if(LF.UI&&LF.UI.message)LF.UI.message(reason,'warning','Local AI unavailable');
+        return checked;
+      }
       const selectedModel=LF.BrowserLocal.resolveModel(settings.model);
       if(!checked.cached&&selectedModel&&selectedModel.source==='file'){
-        // Uploaded files are session-scoped: ask for the file again instead of downloading anything.
+        // Uploaded bytes are session-scoped and cannot be downloaded again. Ending on a warning
+        // would strand local AI, so prepare the bundled model through the normal setup Totem and
+        // tell the researcher how to re-attach the uploaded file.
+        const fallback=LF.BrowserLocal.defaultModel&&LF.BrowserLocal.defaultModel.id;
+        Log.warn('browser-local.detached-file',{model:selectedModel.id,fallback:fallback||''});
+        if(fallback){
+          settings.model=fallback;LF.Storage.saveAiSettings(settings);
+          if(LF.UI&&LF.UI.message)LF.UI.message('The uploaded “'+selectedModel.name+'” is not attached in this session. LabFlow is preparing the bundled model; re-attach the file in Settings → AI connection to use it again.','info','Local AI');
+          return startBrowserLocal(forceDownload);
+        }
         if(LF.UI&&LF.UI.message)LF.UI.message('The uploaded GGUF is not attached in this session. Open Settings → AI connection and choose the file again.','warning','Local AI unavailable');
         return checked;
       }
@@ -249,6 +271,7 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
       renderModelStatus();
       if(!ready.cached){
         const reason=ready.note||'The selected Browser Local model must be downloaded before local AI can run.';
+        if(!totemShown)openSetupTotem(ready,true);
         if(totemShown&&LF.UI&&LF.UI.activityError){
           const retry=function(){return startBrowserLocal(true);};
           LF.UI.activityError(new Error(reason),{stage:'Model download required',message:reason,response:'The local model is required for Browser Local.',details:{Model:browserModelLabel(ready),Cache:'Not installed'},onRetry:retry,retryLabel:'Download model',closeLabel:'Choose another provider'});
@@ -264,6 +287,7 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
       if(showTimer){window.clearTimeout(showTimer);showTimer=null;}
       renderModelStatus();
       Log.warn('browser-local.startup-failed',{error:error});
+      if(!totemShown&&LF.UI&&LF.UI.activityStart)openSetupTotem(LF.BrowserLocal.state(),true);
       if(totemShown&&LF.UI&&LF.UI.activityError){
         LF.UI.activityError(error,{stage:'Local model setup failed',message:String(error&&error.message||error),response:String(error&&error.message||error),onRetry:function(){return startBrowserLocal(true);},retryLabel:'Retry setup',closeLabel:'Close'});
       }else if(LF.UI&&LF.UI.message){

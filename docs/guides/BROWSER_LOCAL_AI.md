@@ -42,7 +42,7 @@ Card actions:
 
 **Refresh cache** updates every card from the wllama cache. Adding a model (URL or local file) lives under **Add a model**; runtime switches and **Clear all Browser Local models** live under **Cache & runtime**.
 
-Selecting a model in the **Model** select is the same as the card **Use** action: it makes that model active and runs the compatibility check automatically. Adding a URL model or an uploaded file checks it immediately, so a freshly added model never waits for a manual **Check compatibility**. The select always shows catalogue names; the cache key stays internal.
+Selecting a model in the **Model** select is the same as the card **Use** action: it makes that model active and runs the compatibility check automatically. Adding a URL model or an uploaded file checks it immediately and lists it in the **Model** select right away, so a freshly added model never waits for a manual **Check compatibility**. The select always shows catalogue names; the cache key stays internal.
 
 Removing a cached URL model never deletes its catalogue definition, so it can be downloaded again.
 
@@ -73,11 +73,11 @@ check browser cache
   -> ready
 ```
 
-Startup always follows the **selected** model, never the bundled default as a substitute:
+Startup follows the **selected** model when it can be obtained:
 
 - a selected URL model that is missing is the model that gets downloaded, and the setup Totem names it;
-- a selected uploaded file cannot be downloaded — if its bytes are not attached in this session, LabFlow asks for the file again and downloads nothing;
-- if the stored model id is no longer in the catalogue, startup reports **Selected model unavailable** and stops instead of silently falling back to the bundled default.
+- a selected uploaded file cannot be downloaded. If its bytes are not attached in this session (for example after clearing the browser cache), LabFlow says so and prepares the bundled model through the normal setup Totem instead of stopping on a warning; re-attach the file in Settings → AI connection and select it again to use it;
+- if the stored model id is no longer in the catalogue, startup says so and prepares the bundled model through the same setup Totem.
 
 Loading, warming and the WebGPU → WASM CPU fallback apply to whichever model is selected, and the other catalogue entries stay untouched.
 
@@ -85,7 +85,7 @@ If the selected GGUF is already cached, load and warm-up can continue without in
 
 When the model is cached, the same setup Totem covers the runtime/cache/adapter check when it is not instantaneous: after a short grace period it appears as a loading Totem with a blurred backdrop, so a fast start stays uninterrupted while a slow load is explicit instead of leaving the interface apparently idle.
 
-Automatic download and automatic warm-up can be disabled independently. When automatic download is disabled, the blocking setup Totem stays at the required-download checkpoint and exposes an explicit **Download model** retry action instead of degrading to a passive warning. Browser Data Saver also prevents an implicit large transfer; an explicit user retry may override that preference for this one download.
+Automatic download and automatic warm-up can be disabled independently. When automatic download is disabled, the blocking setup Totem stays at the required-download checkpoint and exposes an explicit **Download model** retry action instead of degrading to a passive warning. Browser Data Saver also prevents an implicit large transfer; an explicit user retry may override that preference for this one download. Startup never degrades to a passive warning: a missing, detached or unavailable model always surfaces the blurred setup Totem with an explicit next action.
 
 ## WebGPU and WASM fallback
 

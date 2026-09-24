@@ -73,10 +73,11 @@ for path in [
 
                                                                                        
                                                                               
-# Generated bundles have separate builders; readability checks apply to authored JavaScript only.
-GENERATED = {'action-registry.js', 'prompt-bundle.js', 'kb-bundle.js', 'docs-bundle.js', 'ui-kit-inline.js'}
+# Generated bundles have separate builders and the UI Kit catalogue is bulk markup:
+# readability line limits apply to authored, hand-formatted JavaScript only.
+BULK = {'action-registry.js', 'prompt-bundle.js', 'kb-bundle.js', 'docs-bundle.js', 'ui-kit-inline.js'}
 for path in sorted((ROOT / 'assets/js').rglob('*.js')):
-    if path.name in GENERATED:
+    if path.name in BULK:
         continue
     long_lines = [
         index for index, line in enumerate(path.read_text(encoding='utf-8', errors='ignore').splitlines(), start=1)

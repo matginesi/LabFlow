@@ -23,7 +23,7 @@ Cabinet, Knowledge Base, Settings, Logs, Documentation and UI Kit support that w
 - `assets/css/ui.css`: shared controls, panels, tables, badges and Totem shell
 - `assets/css/components.css`: compact runtime metrics, Results insight cards and Design completion primitives shared by production and UI Kit
 - `assets/css/app.css`: application/page composition
-- `ui-kit.html` and `.agent/skills/labflow-ui/SKILL.md`: implementation examples/rules
+- `assets/js/pages/ui-kit-inline.js` and `.agent/skills/labflow-ui/SKILL.md`: implementation examples/rules
 
 ## Action Totem
 
@@ -71,4 +71,4 @@ Run UI validators, unit tests and the browser audit when available. When replaci
 
 ## UI Kit parity
 
-`ui-kit.html` loads the same shared styles as production. Reusable components added to production must be represented in the UI Kit; examples must not depend on a private stylesheet or stale generated copy. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit source.
+The UI Kit catalogue is authored source in `assets/js/pages/ui-kit-inline.js` and renders inside Settings with the same shared styles as production; there is no separate standalone page to keep in sync. Reusable components added to production must be represented in the catalogue; examples must not depend on a private stylesheet. Edit the catalogue module directly, then run `./release_check.sh`.

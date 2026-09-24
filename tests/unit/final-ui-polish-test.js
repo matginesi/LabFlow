@@ -1,5 +1,5 @@
 'use strict';
-const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const fs=require('fs'),path=require('path');
 function assert(actual,expected,label){if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error((label||'assert')+': expected '+JSON.stringify(expected)+' got '+JSON.stringify(actual));}
 module.exports=function(t){
   const root=path.resolve(__dirname,'../..');
@@ -149,15 +149,16 @@ module.exports=function(t){
     assert(html.includes('data-route="ui-kit"'),false,'UI Kit is not a primary navigation route');
     assert(app.includes("document.querySelector('.ui-kit-frame')"),false,'no iframe dependency in app shell');
     assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
-    assert(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8').includes('assets/css/components.css'),true,'UI Kit loads the same shared component styles');
+    assert(html.includes('assets/css/components.css'),true,'UI Kit renders inside the app shell that loads the shared component styles');
     assert(uiKitInline.includes('id="documentation-pattern"'),true,'full catalog includes patterns after nested main elements');
     assert(uiKitInline.includes('id="assistant-reasoning"')&&uiKitInline.includes('id="interaction-states"'),true,'UI Kit includes reasoning and interaction-state references');
     assert(uiKitInline.includes("root.querySelectorAll('[data-ui-kit-group]')"),true,'inline filters operate in host document');
     assert(html.includes('assets/js/pages/ui-kit-inline.js'),false,'inline catalog is not part of the startup payload');
     const lazyAssets=fs.readFileSync(path.join(root,'assets/js/pages/lazy-assets.js'),'utf8');
     assert(lazyAssets.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog is loaded only when Settings opens UI Kit');
-    const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
-    assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
+    assert(!fs.existsSync(path.join(root,'ui-kit.html')),true,'standalone UI Kit page is retired');
+    assert(!fs.existsSync(path.join(root,'tools/build_ui_kit_inline.py')),true,'UI Kit inline generator is retired');
+    assert(!fs.existsSync(path.join(root,'assets/js/pages/ui-kit-page.js')),true,'standalone UI Kit page script is retired');
     assert(html.includes('id="saveWorkingCopy"')||html.includes('id="exportWorkingCopy"'),false,'obsolete hidden working-copy controls are not shipped');
   };
 

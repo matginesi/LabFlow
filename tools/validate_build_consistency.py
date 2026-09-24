@@ -10,7 +10,7 @@ build=re.search(r'LABFLOW_BUILD\s*=\s*["\']([^"\']+)',info).group(1)
 rev_match=re.search(r'LABFLOW_ASSET_REV\s*=\s*["\']([^"\']+)',info)
 asset_rev=rev_match.group(1) if rev_match else ''
 errors=[]
-for rel in ('index.html','ui-kit.html','assets/js/pages/ui-kit-inline.js'):
+for rel in ('index.html','assets/js/pages/ui-kit-inline.js'):
     p=ROOT/rel
     if not p.exists(): errors.append(f'missing {rel}'); continue
     text=p.read_text(encoding='utf-8')

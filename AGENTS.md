@@ -57,10 +57,9 @@ Never edit these as source of truth:
 - `assets/js/ai/prompt-bundle.js`
 - `assets/js/knowledge/kb-bundle.js`
 - `assets/js/pages/docs-bundle.js`
-- `assets/js/pages/ui-kit-inline.js`
 - generated Action references
 
-Change manifests/Markdown/JSONL/source HTML and rebuild with the corresponding tool.
+Change manifests/Markdown/JSONL/source HTML and rebuild with the corresponding tool. The UI Kit catalogue (`assets/js/pages/ui-kit-inline.js`) is authored source, not a generated artifact.
 
 ## Comments and documentation
 
