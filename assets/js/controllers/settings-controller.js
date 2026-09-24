@@ -27,6 +27,34 @@ web=new URL(webUrl),api=new URL(apiEndpoint),local=u=>['localhost','127.0.0.1','
     return n.toFixed(n>=100?0:n>=10?1:2)+' '+units[index];
   }
 
+  // Single compatibility path: the Check button and an automatic model selection must report identically.
+  async function checkBrowserModel(modelId,ctx,options){
+    options=options||{};
+    const report=await LF.BrowserLocal.compatibility(modelId);
+    if(LF.BrowserLocal.refreshCache)await LF.BrowserLocal.refreshCache();
+    if(options.silent!==true){
+      const issue=(report.problems||[]).concat(report.warnings||[])[0];
+      LF.UI.message(report.ok?'Compatibility check passed.':'Compatibility check needs attention: '+(issue||'review the report.'),report.ok?'success':'warning');
+    }
+    if(ctx&&typeof ctx.render==='function')ctx.render();
+    return report;
+  }
+  // Choosing a model in the select means the same as the card "Use" action: make it current, then check it.
+  // Debounced so keyboard navigation across options runs one check for the resting model.
+  function selectBrowserModel(modelId,ctx){
+    const provider=LF.AIProviders&&LF.AIProviders[value('aiProvider')];
+    if(!provider||provider.browserRuntime!==true)return false;
+    if(!LF.BrowserLocal||typeof LF.BrowserLocal.hasModel!=='function'||!LF.BrowserLocal.hasModel(modelId))return false;
+    const settings=LF.Storage.getAiSettings();settings.model=modelId;LF.Storage.saveAiSettings(settings);
+    clearTimeout(selectBrowserModel._timer);
+    selectBrowserModel._timer=setTimeout(function(){
+      checkBrowserModel(modelId,ctx,{silent:true}).catch(function(err){
+        LF.UI.message('Compatibility check failed: '+(err.message||String(err)),'error');
+      });
+    },180);
+    return true;
+  }
+
   async function handleClick(e,ctx){
     const S=ctx.state,render=ctx.render;
     if(e.target.closest('#saveUserProfile')){LF.Storage.saveUserProfile({name:value('userName').trim(),organization:value('userOrganization').trim(),email:value('userEmail').trim()});LF.UI.message('Profile saved.','success');render();return true;}
@@ -176,59 +204,52 @@ enabled:document.getElementById('logEnabled').checked,level:value('logLevel'),
       setTimeout(function(){const select=document.getElementById('aiModelSelect'),field=document.getElementById('aiModel');if(select)select.value=row.id;if(field)field.value=row.id;},0);
     }catch(err){LF.UI.message('Local GGUF could not be added: '+(err.message||String(err)),'error');}return true;}
     if(e.target.closest('#browserLocalCheckModel')){try{
-      const model=value('aiModelSelect')||value('aiModel'),report=await LF.BrowserLocal.compatibility(model);
-      const issue=(report.problems||[]).concat(report.warnings||[])[0];
-      LF.UI.message(report.ok?'Compatibility check passed.':'Compatibility check needs attention: '+(issue||'review the report.'),report.ok?'success':'warning');
-      render();
+      await checkBrowserModel(value('aiModelSelect')||value('aiModel'),ctx);
     }catch(err){LF.UI.message('Compatibility check failed: '+(err.message||String(err)),'error');}return true;}
     if(e.target.closest('#browserLocalRefreshCache')){try{await LF.BrowserLocal.refreshCache();render();}catch(err){LF.UI.message('Model cache could not be listed: '+(err.message||String(err)),'error');}return true;}
-    const cacheRemove=e.target.closest('[data-browser-local-cache-remove]');
-    if(cacheRemove){try{
-      const entry=LF.BrowserLocal.resolveModel(cacheRemove.dataset.browserLocalCacheRemove);
-      const confirmed=await LF.UI.confirmAction(
-        entry.source==='file'?'Detach “'+entry.name+'” from this session? The catalogue entry stays and the file is never uploaded.':'Remove “'+entry.name+'” from the browser model cache? The catalogue entry stays and it can be downloaded again.',
-        {title:entry.source==='file'?'Detach local GGUF':'Remove cached model',confirmLabel:'Remove',danger:true});
-      if(confirmed){await LF.BrowserLocal.removeCached(entry.id);await LF.BrowserLocal.refreshCache();LF.UI.message('Browser model removed from this browser.','success');render();}
-    }catch(err){LF.UI.message('Browser model could not be removed: '+(err.message||String(err)),'error');}return true;}
-    if(e.target.closest('#browserLocalRemoveDefinition')){
-      const model=value('aiModelSelect')||value('aiModel'),entry=LF.BrowserLocal.resolveModel(model);
-      if(entry&&entry.bundled!==true&&await LF.UI.confirmAction(
-        'Remove this custom GGUF from the Browser Local catalogue? A cached copy is not removed automatically.',
-        {title:'Remove model definition',confirmLabel:'Remove from catalogue',danger:true})){
-        LF.BrowserLocal.removeModelDefinition(model);
-        const settings=LF.Storage.getAiSettings();settings.model=LF.BrowserLocal.defaultModel.id;
-        LF.Storage.saveAiSettings(settings);render();
-        LF.UI.message('Custom model definition removed. The default Browser Local model is selected.','success');
-      }
-      return true;
-    }
-    if(e.target.closest('#browserLocalDownload')){
+    const cardAction=e.target.closest('[data-browser-local-use],[data-browser-local-load],[data-browser-local-download],[data-browser-local-remove],[data-browser-local-forget]');
+    if(cardAction){
+      const data=cardAction.dataset;
       try{
-        LF.AISettings.saveFromForm({toast:false});
-        const model=value('aiModelSelect')||value('aiModel');await LF.BrowserLocal.download(model);
-        await LF.BrowserLocal.compatibility(model);await LF.BrowserLocal.refreshCache();
-        LF.UI.message('Browser model downloaded, cached and checked for compatibility.','success');render();
-      }catch(err){LF.UI.message('Model download failed: '+(err.message||String(err)),'error');}
-      return true;
-    }
-    if(e.target.closest('#browserLocalLoad')){
-      try{
-        LF.AISettings.saveFromForm({toast:false});const model=value('aiModelSelect')||value('aiModel');
-        const ready=await LF.BrowserLocal.ensureReady({modelId:model,autoDownload:true,warmup:true,force:true});
-        await LF.BrowserLocal.refreshCache();
-        LF.UI.message('Browser Local ready · '+(ready.backend||'runtime ready')+'.','success');render();
-      }catch(err){LF.UI.message('Browser Local could not start: '+(err.message||String(err)),'error');}
-      return true;
-    }
-    if(e.target.closest('#browserLocalRemove')){
-      const model=value('aiModelSelect')||value('aiModel'),entry=LF.BrowserLocal.resolveModel(model),isFile=!!(entry&&entry.source==='file');
-      const confirmed=await LF.UI.confirmAction(
-        isFile?'Detach this uploaded GGUF from the session? The catalogue entry stays and the file is never uploaded.':'Remove this GGUF from the browser cache? The model definition remains available for downloading again.',
-        {title:isFile?'Detach local GGUF':'Remove cached model',confirmLabel:'Remove',danger:true});
-      if(confirmed){
-        try{await LF.BrowserLocal.removeCached(model);await LF.BrowserLocal.refreshCache();LF.UI.message(isFile?'Uploaded GGUF detached from this session.':'Cached GGUF removed.','success');render();}
-        catch(err){LF.UI.message('Cached model could not be removed: '+(err.message||String(err)),'error');}
-      }
+        if(data.browserLocalUse){
+          const selected=LF.Storage.getAiSettings();selected.model=data.browserLocalUse;LF.Storage.saveAiSettings(selected);
+          await LF.BrowserLocal.compatibility(data.browserLocalUse);await LF.BrowserLocal.refreshCache();
+          LF.UI.message(LF.BrowserLocal.resolveModel(data.browserLocalUse).name+' selected.','success');render();return true;
+        }
+        if(data.browserLocalDownload){
+          LF.AISettings.saveFromForm({toast:false});
+          await LF.BrowserLocal.download(data.browserLocalDownload);
+          await LF.BrowserLocal.compatibility(data.browserLocalDownload);await LF.BrowserLocal.refreshCache();
+          LF.UI.message('Browser model downloaded, cached and checked for compatibility.','success');render();return true;
+        }
+        if(data.browserLocalLoad){
+          LF.AISettings.saveFromForm({toast:false});
+          const ready=await LF.BrowserLocal.ensureReady({modelId:data.browserLocalLoad,autoDownload:true,warmup:true,force:true});
+          await LF.BrowserLocal.refreshCache();
+          LF.UI.message('Browser Local ready · '+(ready.backend||'runtime ready')+'.','success');render();return true;
+        }
+        if(data.browserLocalRemove){
+          const entry=LF.BrowserLocal.resolveModel(data.browserLocalRemove),file=entry.source==='file';
+          const confirmed=await LF.UI.confirmAction(
+            file?'Detach “'+entry.name+'” from this session? The catalogue entry stays and the file is never uploaded.':'Remove “'+entry.name+'” from the browser model cache? The catalogue entry stays and it can be downloaded again.',
+            {title:file?'Detach local GGUF':'Remove cached model',confirmLabel:'Remove',danger:true});
+          if(confirmed){await LF.BrowserLocal.removeCached(entry.id);await LF.BrowserLocal.refreshCache();LF.UI.message(file?'Uploaded GGUF detached from this session.':'Cached GGUF removed.','success');render();}
+          return true;
+        }
+        if(data.browserLocalForget){
+          const entry=LF.BrowserLocal.resolveModel(data.browserLocalForget);
+          if(entry.bundled!==true&&await LF.UI.confirmAction(
+            'Remove “'+entry.name+'” from the Browser Local catalogue? A cached copy is not removed automatically.',
+            {title:'Remove model definition',confirmLabel:'Remove from catalogue',danger:true})){
+            LF.BrowserLocal.removeModelDefinition(entry.id);
+            const settings=LF.Storage.getAiSettings();
+            if(String(settings.model)===String(entry.id)){settings.model=LF.BrowserLocal.defaultModel.id;LF.Storage.saveAiSettings(settings);}
+            await LF.BrowserLocal.refreshCache();render();
+            LF.UI.message('Model definition removed from the catalogue.','success');
+          }
+          return true;
+        }
+      }catch(err){LF.UI.message('Browser model action failed: '+(err.message||String(err)),'error');}
       return true;
     }
     if(e.target.closest('#browserLocalClearCache')){
@@ -248,7 +269,8 @@ enabled:document.getElementById('logEnabled').checked,level:value('logLevel'),
   function handleChange(e,ctx){
     if(e.target.id==='aiProvider'){LF.AISettings.selectProvider(e.target.value);return true;}
     if(e.target.id==='aiModelSelect'){
-      const input=document.getElementById('aiModel');if(input)input.value=e.target.value;return true;
+      const input=document.getElementById('aiModel');if(input)input.value=e.target.value;
+      selectBrowserModel(e.target.value,ctx);return true;
     }
     if(e.target.id==='browserLocalModelFile'){
       const label=document.getElementById('browserLocalModelFileLabel'),file=e.target.files&&e.target.files[0];

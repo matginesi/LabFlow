@@ -28,6 +28,8 @@ Fresh browser settings select `browserlocal` with `LFM2.5-350M-Q4_K_M.gguf`. `as
 
 The default GGUF is downloaded from the official LiquidAI Hugging Face repository only when it is absent from the browser cache and automatic download is allowed. wllama is pinned to 3.6.1. WebGPU is preferred; the same GGUF is reloaded with `n_gpu_layers: 0` when GPU load, warm-up or a pre-output inference fails. LabFlow never silently falls back from Browser Local to a hosted provider.
 
+Startup follows the **selected** catalogue model, not the bundled default: a missing selected URL model is the one that gets downloaded (and the setup Totem names it), a selected uploaded file asks for the file again instead of downloading anything, and a stored model id that is no longer in the catalogue fails closed as *Selected model unavailable* rather than being replaced by the default.
+
 Additional HTTP(S) GGUF definitions can be added in Settings. Definitions are tiny metadata records; model bytes are downloaded only when requested.
 
 ## Provider registry

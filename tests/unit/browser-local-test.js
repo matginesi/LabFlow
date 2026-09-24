@@ -198,6 +198,38 @@ module.exports=function(t){
     LF.BrowserLocal.removeModelDefinition(row.id);
   };
 
+  t['startup follows the selected custom URL model instead of the bundled default']=async function(){
+    cached=[];mode='normal';loadOptions=[];downloads=0;inferenceFailures=0;blobLoads=0;resetSettings();
+    await LF.BrowserLocal._resetForTests();
+    localStorage.removeItem('labflow.browser-local.models');
+    const custom=LF.BrowserLocal.addModel('https://models.example/research-small-Q4_K_M.gguf','Research Small');
+    const settings=LF.Storage.getAiSettings();settings.model=custom.id;LF.Storage.saveAiSettings(settings);
+    assert(LF.BrowserLocal.hasModel(custom.id),true,'catalogue knows the selected model');
+    const ready=await LF.BrowserLocal.ensureReady({force:true,autoDownload:true});
+    assert(downloads,1,'one download');
+    assert(cached.some(function(m){return m.url===custom.url;}),true,'the selected model was downloaded');
+    assert(cached.some(function(m){return m.url===LF.BrowserLocal.defaultModel.url;}),false,'the bundled default was not downloaded');
+    assert(ready.status,'ready','ready with the selected model');
+    assert(ready.modelName||LF.BrowserLocal.state().modelName,'Research Small','selected model name is reported');
+    LF.BrowserLocal.removeModelDefinition(custom.id);
+  };
+
+  t['a stale selected model id fails closed instead of downloading the bundled default']=async function(){
+    cached=[];mode='normal';loadOptions=[];downloads=0;inferenceFailures=0;resetSettings();
+    await LF.BrowserLocal._resetForTests();
+    localStorage.removeItem('labflow.browser-local.models');
+    assert(LF.BrowserLocal.hasModel('gone'),false,'unknown id is not in the catalogue');
+    const checked=await LF.BrowserLocal.check('gone');
+    assert(checked.status,'error','unknown id reports an error state');
+    assert(!!checked.error,true,'unknown id reports an actionable message');
+    let message='';
+    try{await LF.BrowserLocal.ensureReady({force:true,modelId:'gone'});}
+    catch(error){message=String(error&&error.message||error);}
+    assert(/not in the catalogue/.test(message),true,'ensureReady rejects the stale id');
+    assert(downloads,0,'nothing was downloaded');
+    assert(cached.length,0,'no model was cached');
+  };
+
   t['a cached URL model can be inspected and removed through the cache inventory']=async function(){
     cached=[];mode='normal';loadOptions=[];downloads=0;inferenceFailures=0;resetSettings();
     await LF.BrowserLocal._resetForTests();
@@ -227,6 +259,7 @@ module.exports=function(t){
     const state=await LF.BrowserLocal.ensureReady({force:true});
     assert(state.cached,false,'no cached bytes after detach');
     assert(downloads,0,'detached file never triggers a download');
+    assert(cached.length,0,'the bundled default is not downloaded instead');
     LF.BrowserLocal.removeModelDefinition(row.id);
   };
 };

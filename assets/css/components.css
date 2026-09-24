@@ -20,6 +20,11 @@
 .browser-model-manager-head h3{margin:2px 0 0;font-size:1rem}.browser-model-progress{display:grid;gap:6px}.browser-model-progress .progress-track{height:7px;border-radius:999px;overflow:hidden;background:var(--surface)}
 .browser-model-progress .progress-track span{display:block;height:100%;min-width:0;background:var(--accent);transition:width .18s ease}
 .browser-model-progress-meta{font-size:.78rem;color:var(--text-muted)}.browser-model-progress-meta strong{color:var(--text)}
-.browser-model-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.browser-model-stats>div{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
-.browser-model-stats span{display:block;font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}.browser-model-stats strong{display:block;margin-top:3px;overflow-wrap:anywhere}
-@media(max-width:760px){.browser-model-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.browser-model-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:9px}
+.browser-model-card{display:grid;gap:8px;min-width:0;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.browser-model-card.selected{border-color:color-mix(in srgb,var(--accent) 46%,var(--border));box-shadow:inset 3px 0 0 var(--accent)}
+.browser-model-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;min-width:0}
+.browser-model-card-head strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--font-sm)}
+.browser-model-card-meta{display:flex;flex-wrap:wrap;gap:3px 9px;color:var(--text-muted);font-size:var(--font-micro)}
+.browser-model-card-meta span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.browser-model-card-actions{display:flex;flex-wrap:wrap;gap:5px}

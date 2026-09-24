@@ -16,7 +16,9 @@
 
   function providerIdFromForm(){return(field('aiProvider')&&field('aiProvider').value)||LF.Storage.getAiSettings().provider;}
   function activeModelField(providerId){const provider=LF.AIProviders[providerId||providerIdFromForm()]||LF.AIProviders.custom;return provider.modelSelect&&field('aiModelSelect')&&!field('aiModelSelect').hidden?field('aiModelSelect'):field('aiModel');}
-  function modelLabel(providerId,value){const raw=String(value==null?'':value),meta=modelCatalogueMeta[providerId]&&modelCatalogueMeta[providerId][raw],base=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(providerId,raw):raw;return meta&&meta.free?base+' · Free':base;}
+  // Browser Local ids are cache keys, not research names: prefer the catalogue name in every select/label rebuild.
+  function browserModelName(providerId,id){if(providerId!=='browserlocal'||!LF.BrowserLocal||typeof LF.BrowserLocal.catalog!=='function')return'';const rows=LF.BrowserLocal.catalog();for(let i=0;i<rows.length;i++){const row=rows[i];if(row&&String(row.id)===String(id)&&row.name)return String(row.name);}return'';}
+  function modelLabel(providerId,value){const raw=String(value==null?'':value),meta=modelCatalogueMeta[providerId]&&modelCatalogueMeta[providerId][raw],base=browserModelName(providerId,raw)||(LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(providerId,raw):raw);return meta&&meta.free?base+' · Free':base;}
   function localProvider(providerId){const provider=LF.AIProviders[providerId||providerIdFromForm()]||LF.AIProviders.custom;return provider.local===true;}
   function setInputModel(input,providerId,value){if(!input)return;const raw=String(value||'');if(localProvider(providerId)&&raw){input.dataset.rawModel=raw;input.value=modelLabel(providerId,raw);}else{delete input.dataset.rawModel;input.value=raw;}}
   function modelValue(providerId){const model=activeModelField(providerId);if(!model)return'';const shown=String(model.value||'').trim(),raw=String(model.dataset&&model.dataset.rawModel||'').trim();if(raw&&shown===modelLabel(providerId,raw))return raw;return shown;}
@@ -110,14 +112,9 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
     const st=LF.BrowserLocal.state(),pct=Math.max(0,Math.min(100,Math.round((Number(st.progress)||0)*100)));
     const detail=st.status==='downloading'&&st.totalBytes?
       ' · '+formatBytes(st.downloadedBytes)+' / '+formatBytes(st.totalBytes):'';
-    const storage=st.storageQuota?formatBytes(st.storageUsage)+' / '+formatBytes(st.storageQuota):'Browser managed';
-    const persistence=st.storagePersistent===true?'Persistent':
-      st.storagePersistent===false?'Best effort':'Browser managed';
     const map={
       browserLocalStage:st.stage||'Idle',browserLocalProgressText:pct+'%'+detail,
-      browserLocalCache:st.cached?'Ready':'Missing',browserLocalBackend:st.backend||'Not loaded',
-      browserLocalWebgpu:st.webgpuAvailable?'Available':'Not detected',browserLocalSize:formatBytes(st.modelBytes),
-      browserLocalStorage:storage,browserLocalPersistence:persistence,browserLocalNote:st.error||st.note||''
+      browserLocalNote:st.error||st.note||''
     };
     Object.keys(map).forEach(function(id){const el=field(id);if(el)el.textContent=map[id];});
     const bar=field('browserLocalProgressBar');if(bar)bar.style.width=pct+'%';
@@ -127,11 +124,6 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
       badge.className='badge '+(st.status==='ready'?'success':st.status==='error'?'danger':
         ['checking','downloading','loading','warming'].includes(st.status)?'warning':'info');
     }
-    const busy=['checking','downloading','loading','warming'].includes(st.status);
-    const download=field('browserLocalDownload'),load=field('browserLocalLoad'),remove=field('browserLocalRemove');
-    if(download)download.disabled=busy;
-    if(load)load.disabled=busy||!st.cached;
-    if(remove)remove.disabled=busy||!st.cached;
   }
 
   function decorate() {

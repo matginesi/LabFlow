@@ -242,6 +242,8 @@
     return [DEFAULT_MODEL].concat(custom.filter(function (x) { return x.id !== DEFAULT_MODEL.id; }));
   }
   function resolveModel(id) { const key = String(id || DEFAULT_MODEL.id); return catalog().find(function (x) { return x.id === key; }) || DEFAULT_MODEL; }
+  // A selected catalogue id must never be silently replaced by the bundled default.
+  function hasModel(id) { const key = String(id || ''); return !!key && catalog().some(function (x) { return String(x.id) === key; }); }
   function addModel(url, name) {
     const row = normalizeCustom({ url: url, name: name }); if (!row) throw new Error('Enter a complete http(s) URL ending in .gguf.');
     const rows = readCustom().map(normalizeCustom).filter(Boolean).filter(function (x) { return x.url !== row.url; }); rows.push(row); writeCustom(rows); return row;
@@ -304,6 +306,10 @@
     return rows.find(function (x) { return String(x.url || '') === model.url; }) || null;
   }
   async function check(modelId) {
+    if (modelId && !hasModel(modelId)) {
+      emit({ status: 'error', stage: 'Selected model unavailable', modelId: String(modelId), modelName: '', error: 'The selected Browser Local model is not in the catalogue. Choose a model in Settings → AI connection.', note: '', progress: 0, checkedAt: Date.now() });
+      return getState();
+    }
     const model = resolveModel(modelId || (LF.Storage && LF.Storage.getAiSettings ? LF.Storage.getAiSettings().model : DEFAULT_MODEL.id));
     emit({ status: 'checking', stage: 'Checking model cache', modelId: model.id, modelName: model.name, error: '', progress: 0.05 });
     if (model.source === 'file') {
@@ -433,6 +439,13 @@
   function settings() { return LF.Storage && LF.Storage.getAiSettings ? LF.Storage.getAiSettings() : {}; }
   async function ensureReady(options) {
     options = options || {}; const s = settings(), modelId = options.modelId || s.model || DEFAULT_MODEL.id, model = resolveModel(modelId);
+    // The bundled default is used only when no model was requested; a stale selected id fails closed.
+    if (modelId && !hasModel(modelId)) {
+      const error = new Error('The selected Browser Local model is not in the catalogue. Choose a model in Settings → AI connection.');
+      emit({ status: 'error', stage: 'Selected model unavailable', error: String(error.message), note: '', progress: 0 });
+      Log.warn('ready.unknown-model', { model: String(modelId) });
+      throw error;
+    }
     if (initPromise && !options.force) return initPromise;
     initPromise = (async function () {
       try {
@@ -656,6 +669,7 @@
   LF.BrowserLocal = {
     version: WLLAMA_VERSION, defaultModel: DEFAULT_MODEL, moduleUrl: MODULE_URL, wasmUrl: WASM_URL,
     state: getState, subscribe: subscribe, catalog: catalog, resolveModel: resolveModel, addModel: addModel,
+    hasModel: hasModel,
     addModelFromFile: addModelFromFile, removeModelDefinition: removeModelDefinition,
     check: check, download: download, ensureReady: ensureReady,
     startup: startup, warmup: warmup, removeCached: removeCached, clearCache: clearCache, cachedModels: cachedModels,

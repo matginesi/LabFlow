@@ -30,19 +30,25 @@ The Browser Local catalogue accepts two kinds of GGUF entries:
 
 ## Cache management
 
-Settings → AI connection → **Model cache & runtime** lists every catalogue entry with its source, size and state (cached, not cached, or not attached). Actions:
+Settings → AI connection shows **one card per catalogue model**. Each card carries the source (Bundled, URL model, Uploaded file), the file name, size, architecture and quantization, and a state badge (Loaded, Cached, Not cached, Not attached, Not checked).
 
-- **Download / repair** caches the selected URL model.
-- **Load & warm** loads the selected model (cached URL entry or attached file) and runs the warm-up probe.
-- **Remove cached model** / **Detach file** releases the selected entry from this browser without deleting its catalogue definition.
-- **Refresh cache** lists the models currently stored by wllama. Per-row **Remove** releases one entry.
-- **Clear all Browser Local models** empties the wllama cache and detaches every uploaded file.
+Card actions:
+
+- **Use** makes a non-selected model the active Browser Local model.
+- **Download** caches the active URL model (and repairs an interrupted download).
+- **Load & warm** loads the active model (cached URL entry or attached file) and runs the warm-up probe.
+- **Remove** / **Detach** releases that model from this browser without deleting its catalogue definition.
+- **Forget** deletes a custom catalogue definition; the bundled default cannot be removed.
+
+**Refresh cache** updates every card from the wllama cache. Adding a model (URL or local file) lives under **Add a model**; runtime switches and **Clear all Browser Local models** live under **Cache & runtime**.
+
+Selecting a model in the **Model** select is the same as the card **Use** action: it makes that model active and runs the compatibility check automatically. Adding a URL model or an uploaded file checks it immediately, so a freshly added model never waits for a manual **Check compatibility**. The select always shows catalogue names; the cache key stays internal.
 
 Removing a cached URL model never deletes its catalogue definition, so it can be downloaded again.
 
 ## Compatibility check
 
-LabFlow inspects the GGUF header before use and reports the result in the model panel:
+LabFlow inspects the GGUF header before use and reports the result in the model panel. The check runs automatically whenever the active model changes (Model select, card **Use**, add, download) and can be re-run at any time with **Check compatibility**:
 
 - GGUF signature and version (1, 2 or 3);
 - `general.architecture` and `general.file_type` (shown as a quantization label such as `Q4_K_M`);
@@ -66,6 +72,14 @@ check browser cache
   -> warm-up probe
   -> ready
 ```
+
+Startup always follows the **selected** model, never the bundled default as a substitute:
+
+- a selected URL model that is missing is the model that gets downloaded, and the setup Totem names it;
+- a selected uploaded file cannot be downloaded — if its bytes are not attached in this session, LabFlow asks for the file again and downloads nothing;
+- if the stored model id is no longer in the catalogue, startup reports **Selected model unavailable** and stops instead of silently falling back to the bundled default.
+
+Loading, warming and the WebGPU → WASM CPU fallback apply to whichever model is selected, and the other catalogue entries stay untouched.
 
 If the selected GGUF is already cached, load and warm-up can continue without interrupting the normal workflow. If the model is missing, LabFlow opens a blocking setup Totem for the one-time download. The Totem shows overall progress, bytes downloaded, transfer speed, ETA, cache state, load state and warm-up state. It does not show LLM token telemetry because model setup is not an Assistant/Action inference turn.
 

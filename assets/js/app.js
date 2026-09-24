@@ -159,12 +159,16 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     return minutes+'m '+String(rest).padStart(2,'0')+'s';
   }
 
+  function selectedBrowserModel(){const settings=LF.Storage&&LF.Storage.getAiSettings?LF.Storage.getAiSettings():{};return LF.BrowserLocal&&LF.BrowserLocal.resolveModel?LF.BrowserLocal.resolveModel(settings.model):null;}
+  function browserModelLabel(local){const model=selectedBrowserModel();return(local&&local.modelName)||(model&&model.name)||'GGUF model';}
+  function browserModelBytes(local){const model=selectedBrowserModel();return(local&&(local.totalBytes||local.modelBytes))||(model&&model.expectedBytes)||null;}
+
   function browserLocalSetupSteps(local){
     const status=String(local&&local.status||'');
     const cached=!!(local&&local.cached),loaded=!!(local&&local.loaded),warmed=!!(local&&local.warmed);
     return [
       {id:'check',label:'Check browser runtime and model cache',status:'done',note:'Browser Local selected'},
-      {id:'download',label:'Download default GGUF',status:cached?'done':status==='downloading'?'active':'pending',note:cached?'Cached':status==='downloading'?formatBrowserBytes(local.downloadedBytes)+' / '+formatBrowserBytes(local.totalBytes):''},
+      {id:'download',label:'Download selected GGUF',status:cached?'done':status==='downloading'?'active':'pending',note:cached?'Cached':status==='downloading'?formatBrowserBytes(local.downloadedBytes)+' / '+formatBrowserBytes(local.totalBytes):''},
       {id:'load',label:'Load model',status:loaded?'done':status==='loading'||status==='loaded'?'active':'pending',note:loaded?(local.backend||'Loaded'):''},
       {id:'warm',label:'Warm up runtime',status:warmed||status==='ready'?'done':status==='warming'?'active':'pending',note:warmed?'Ready':''}
     ];
@@ -174,9 +178,10 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     if(!LF.UI||!LF.UI.isActivityOpen||!LF.UI.isActivityOpen())return;
     const rate=Number(local&&local.downloadBytesPerSecond)||0;
     const speed=rate>0?formatBrowserBytes(rate)+'/s':'';
+    const name=browserModelLabel(local);
     const details={
-      Model:local.modelName||'LFM2.5 350M · Q4_K_M',
-      'Model size':formatBrowserBytes(local.totalBytes||local.modelBytes||LF.BrowserLocal.defaultModel.expectedBytes),
+      Model:name,
+      'Model size':formatBrowserBytes(browserModelBytes(local)),
       Downloaded:formatBrowserBytes(local.downloadedBytes||0),
       ETA:formatBrowserEta(local.downloadEtaSeconds),
       Cache:local.cached?'Ready':'Preparing',
@@ -184,7 +189,7 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     };
     if(Number.isFinite(Number(local.storageUsage)))details['Browser storage']=formatBrowserBytes(local.storageUsage)+' / '+formatBrowserBytes(local.storageQuota);
     LF.UI.activityUpdate({
-      kind:'SETUP',stage:local.stage||'Preparing local model',message:local.status==='downloading'?'Downloading the default GGUF into the browser model cache. LabFlow will continue after the model is ready.':'Preparing the default local AI model.',
+      kind:'SETUP',stage:local.stage||'Preparing local model',message:local.status==='downloading'?'Downloading '+name+' into the browser model cache. LabFlow will continue after the model is ready.':'Preparing '+name+'.',
       progress:Number(local.progress)||0,progressLabel:local.status==='ready'?'Ready':'Local model setup',speed:speed,details:details,
       steps:browserLocalSetupSteps(local)
     });
@@ -196,22 +201,28 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     if(provider.browserRuntime!==true)return;
     Log.info('browser-local.startup',{model:settings.model,autoDownload:settings.browserLocalAutoDownload!==false,
       autoWarmup:settings.browserLocalAutoWarmup!==false,preferWebGPU:settings.browserLocalPreferWebGPU!==false});
+    const requested=String(settings.model||'');
+    if(requested&&LF.BrowserLocal.hasModel&&!LF.BrowserLocal.hasModel(requested)){
+      Log.warn('browser-local.unknown-model',{model:requested});
+      if(LF.UI&&LF.UI.message)LF.UI.message('The selected Browser Local model is not in the catalogue. Choose a model in Settings → AI connection.','warning','Local AI unavailable');
+      return null;
+    }
     let unsubscribe=null,totemShown=false,showTimer=null;
     function openSetupTotem(local,install){
       if(totemShown||!LF.UI||!LF.UI.activityStart)return;
       totemShown=true;
-      const name=(local&&local.modelName)||'LFM2.5 350M · Q4_K_M';
+      const name=browserModelLabel(local);
       LF.UI.activityStart(install?{
         title:'Install local AI model',subtitle:'One-time Browser Local setup',kind:'SETUP',stage:'Model download required',
-        message:'The default GGUF is not cached. LabFlow will download it, load the runtime and warm the model before continuing.',
+        message:name+' is not cached. LabFlow will download it, load the runtime and warm the model before continuing.',
         progress:.02,progressLabel:'Local model setup',indeterminate:false,cancellable:false,showAiTrace:false,shadeBlur:true,
-        details:{Model:name,'Model size':formatBrowserBytes(LF.BrowserLocal.defaultModel.expectedBytes),Cache:'Not installed'},
+        details:{Model:name,'Model size':formatBrowserBytes(browserModelBytes(local)),Cache:'Not installed'},
         steps:browserLocalSetupSteps(local||{})
       }:{
         title:'Prepare local AI model',subtitle:'Browser Local startup',kind:'SETUP',stage:(local&&local.stage)||'Checking model, adapter and cache',
         message:'LabFlow is checking the browser runtime, the model cache and the local adapter before local AI becomes available.',
         progress:Number(local&&local.progress)||.1,progressLabel:'Local model setup',indeterminate:false,cancellable:false,showAiTrace:false,shadeBlur:true,
-        details:{Model:name,'Model size':formatBrowserBytes(LF.BrowserLocal.defaultModel.expectedBytes),Cache:local&&local.cached?'Ready':'Preparing'},
+        details:{Model:name,'Model size':formatBrowserBytes(browserModelBytes(local)),Cache:local&&local.cached?'Ready':'Preparing'},
         steps:browserLocalSetupSteps(local||{})
       });
       updateBrowserLocalSetupTotem(local||{});
@@ -220,7 +231,14 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     try{
       const checked=await LF.BrowserLocal.check(settings.model);
       renderModelStatus();
-      // A download opens the setup Totem immediately; a cached load/warm-up only opens it when it is not instant.
+      if(checked.status==='error'){if(LF.UI&&LF.UI.message)LF.UI.message(checked.error||'The selected Browser Local model is unavailable.','warning','Local AI unavailable');return checked;}
+      const selectedModel=LF.BrowserLocal.resolveModel(settings.model);
+      if(!checked.cached&&selectedModel&&selectedModel.source==='file'){
+        // Uploaded files are session-scoped: ask for the file again instead of downloading anything.
+        if(LF.UI&&LF.UI.message)LF.UI.message('The uploaded GGUF is not attached in this session. Open Settings → AI connection and choose the file again.','warning','Local AI unavailable');
+        return checked;
+      }
+      // Downloading the selected model opens the setup Totem immediately; a cached load/warm-up only when it is not instant.
       if(!checked.cached)openSetupTotem(checked,true);
       else showTimer=window.setTimeout(function(){openSetupTotem(LF.BrowserLocal.state(),false);},600);
       const allowDownload=forceDownload===true||settings.browserLocalAutoDownload!==false;
@@ -233,13 +251,13 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
         const reason=ready.note||'The selected Browser Local model must be downloaded before local AI can run.';
         if(totemShown&&LF.UI&&LF.UI.activityError){
           const retry=function(){return startBrowserLocal(true);};
-          LF.UI.activityError(new Error(reason),{stage:'Model download required',message:reason,response:'The local model is required for Browser Local.',details:{Model:ready.modelName||settings.model,Cache:'Not installed'},onRetry:retry,retryLabel:'Download model',closeLabel:'Choose another provider'});
+          LF.UI.activityError(new Error(reason),{stage:'Model download required',message:reason,response:'The local model is required for Browser Local.',details:{Model:browserModelLabel(ready),Cache:'Not installed'},onRetry:retry,retryLabel:'Download model',closeLabel:'Choose another provider'});
         }else if(LF.UI&&LF.UI.message){LF.UI.message(reason,'warning','Local AI unavailable');}
         return ready;
       }
       Log.info('browser-local.ready',{status:ready.status,model:ready.modelId,backend:ready.backend||'',cached:ready.cached});
       if(totemShown&&LF.UI&&LF.UI.activityFinish){
-        LF.UI.activityFinish({stage:'Local AI ready',message:'The GGUF is cached, loaded and warmed.',progress:1,progressLabel:'Ready',holdMs:900,details:{Model:ready.modelName||settings.model,Cache:'Ready',Backend:ready.backend||'WASM CPU','Model size':formatBrowserBytes(ready.modelBytes||ready.totalBytes)}});
+        LF.UI.activityFinish({stage:'Local AI ready',message:'The GGUF is cached, loaded and warmed.',progress:1,progressLabel:'Ready',holdMs:900,details:{Model:browserModelLabel(ready),Cache:'Ready',Backend:ready.backend||'WASM CPU','Model size':formatBrowserBytes(ready.modelBytes||ready.totalBytes)}});
       }
       return ready;
     }catch(error){
