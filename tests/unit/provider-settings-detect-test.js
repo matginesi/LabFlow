@@ -68,6 +68,15 @@ module.exports=function(t,LF){
     }finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
   };
 
+  t['Detect surfaces real probe token telemetry instead of synthetic step speed']=async function(){
+    localStorage.clear();const form=installForm(LF,{provider:'openrouter',endpoint:LF.AIProviders.openrouter.endpoint,apiKey:'or-key',model:LF.AIProviders.openrouter.model});
+    const oldAI=LF.AI,oldUI=LF.UI;let events=[];
+    LF.AI={listModels:async function(){return{models:[LF.AIProviders.openrouter.model],entries:[],loadedModels:[]};},testConnection:async function(opts){return{ok:true,model:opts.model,elapsedMs:40,tokensPerSecond:25,usage:{completionTokens:4,answerTokens:3,reasoningTokens:1,estimated:false}};},resolveModelCapabilities:async function(){return{source:'test'};}};
+    LF.UI=activityUI(events);
+    try{await LF.AISettings.detectModel();const telemetry=events.filter(function(e){return e.kind==='update'&&e.payload&&e.payload.stream;}).pop();assert(!!telemetry,true,'probe publishes stream telemetry');assert(telemetry.payload.stream.completionTokens,4,'completion tokens');assert(telemetry.payload.stream.rate,25,'real token rate');assert(telemetry.payload.stream.budgetTokens,LF.AIProviders.openrouter.connectionTestMaxTokens||64,'connection probe budget');assert(Object.prototype.hasOwnProperty.call(telemetry.payload,'speed'),false,'no synthetic step/s speed');}
+    finally{LF.AI=oldAI;LF.UI=oldUI;form.restore();localStorage.clear();}
+  };
+
   t['Detect fails closed before network access when a required provider key is missing']=async function(){
     localStorage.clear();const form=installForm(LF,{provider:'openrouter',endpoint:LF.AIProviders.openrouter.endpoint,apiKey:'',model:''});
     const oldAI=LF.AI,oldUI=LF.UI;let networkCalls=0,events=[];

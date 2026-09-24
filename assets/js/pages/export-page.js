@@ -112,8 +112,8 @@ function metadataNeeds(exp){
   return '<section class="export-metadata-needs '+(nReq?'has-nomad-required':'')+'"><div class="export-metadata-needs-head"><div>'+ 
     '<span class="eyebrow">Metadata needed</span><strong>'+(nReq?nReq+' NOMAD required field'+(nReq===1?'':'s')+' missing':'No required NOMAD fields missing')+'</strong>'+ 
     '<span>'+nRec+' NOMAD recommended · '+rReq+' Ready-PV required · '+rRec+' Ready-PV recommended</span></div>'+ 
-    (a.available?'<button class="button primary" type="button" data-action="export.prepare">Prepare missing metadata with AI</button>':
-      '<button class="button primary" type="button" disabled>Prepare missing metadata with AI</button>')+'</div>'+ 
+    (a.available?'<button class="button primary" type="button" data-action="export.prepare">Prepare missing metadata</button>':
+      '<button class="button primary" type="button" disabled>Prepare missing metadata</button>')+'</div>'+ 
     (required?'<div class="export-need-chips">'+required+'</div>':'')+
     '<details class="export-metadata-more"><summary>Show all metadata still needed <small>'+total+' fields</small></summary>'+ 
     (recommended?'<div class="export-need-chips recommended-list">'+recommended+'</div>':'<div class="meta">No recommended fields are missing.</div>')+
@@ -212,7 +212,7 @@ function preparationProposal(exp){
       safe(item.source_kind||'')+' · '+pct+'%</td></tr>';
   }).join('');
   return '<section class="export-ai-proposal"><div class="export-ai-proposal-head"><div>'+ 
-    '<strong>AI metadata preparation</strong><span>'+safe(proposal.summary||'Review the export-only suggestions.')+'</span>'+ 
+    '<strong>Prepared metadata</strong><span>'+safe(proposal.summary||'Review the export-only suggestions.')+'</span>'+ 
     '</div>'+PS.badge(applied?'applied':suggestions.length+' suggestions',applied?'success':'info')+'</div>'+ 
     (suggestions.length?'<div class="row-wrap">'+
       (applied?'':'<button class="button primary compact" type="button" data-export-apply-preparation>Apply export overrides</button>')+

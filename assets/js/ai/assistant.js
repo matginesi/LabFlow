@@ -1,6 +1,6 @@
 /*
- * Assistant UI/controller built on the read-only assistant.chat Action and capability catalog.
- * Boundary: Recommend declared Actions without silently mutating scientific state or claiming unexecuted work.
+ * Assistant UI/controller with deterministic routing and a bounded provider fallback.
+ * Boundary: LabFlow resolves scope and facts first; the model is used only for questions that need interpretation.
  */
 (function(){
 'use strict';
@@ -14,24 +14,66 @@ function parseJson(text){const raw=String(text||'').trim();if(!/^[\[{]/.test(raw
 function jsonHtml(v){const raw=JSON.stringify(v,null,2),highlighted=C.highlightCode?C.highlightCode(raw,'json'):C.escapeHtml(raw);return '<div class="structured-response"><pre class="json-highlight"><code>'+highlighted+'</code></pre></div>';}
 function fmtMs(ms){const n=Number(ms);return Number.isFinite(n)?(n<1000?Math.round(n)+' ms':(n/1000).toFixed(n<10000?1:0)+' s'):'—';}
 function fmtBytes(value){const n=Number(value);if(!Number.isFinite(n))return'—';if(n<1024)return Math.round(n)+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(1)+' MB';}
+function routeBadge(m){const mode=String(m.executionMode||(m.model==='deterministic'?'local':'')||'').toLowerCase();
+  if(mode==='local')return '<span class="chat-route-badge local" title="Answered by LabFlow without a provider request">LOCAL · 0 tokens</span>';
+  if(mode==='routed-local')return '<span class="chat-route-badge local" title="Intent classified by a tiny provider request; answer computed by LabFlow">LOCAL · LLM router</span>';
+  if(mode==='llm')return '<span class="chat-route-badge ai" title="Answered with the configured AI provider">LLM</span>';
+  return'';}
+function requestContextMeta(info){const request=info&&info.request||{},body=request.body||{},messages=Array.isArray(body.messages)?body.messages:[],meta={
+  messageCount:messages.length,messageChars:messages.reduce(function(n,m){return n+String(m&&m.content||'').length;},0),
+  inputTokens:Number(info&&info.inputTokens)||null,inputCapTokens:Number(info&&info.inputCapTokens)||null,
+  maxTokens:Number(info&&info.maxTokens)||null,targetTokens:Number(info&&info.targetTokens)||null,
+  reasoningReserveTokens:Number(info&&info.reasoningReserveTokens)||0,allowedKbIds:[],knowledgeCount:0,evidenceCount:0,
+  measurementCount:0,sampleCount:0};
+  const user=messages.filter(function(m){return m&&m.role==='user';}).map(function(m){return String(m.content||'');}).join('\n');
+  const match=user.match(/<research_context_pack>\s*([\s\S]*?)\s*<\/research_context_pack>/i);
+  if(match)try{const ctx=JSON.parse(match[1]),entries=ctx&&ctx.knowledge&&Array.isArray(ctx.knowledge.entries)?ctx.knowledge.entries:[],facts=ctx&&ctx.facts||{};
+    meta.allowedKbIds=entries.map(function(x){return String(x&&x.id||'');}).filter(Boolean);meta.knowledgeCount=meta.allowedKbIds.length;
+    meta.evidenceCount=Array.isArray(facts.open_findings)?facts.open_findings.length:0;meta.measurementCount=Array.isArray(facts.measurements)?facts.measurements.length:0;
+    meta.sampleCount=Array.isArray(facts.samples)?facts.samples.length:0;
+  }catch(_){}
+  return meta;}
+function validateKbAnswer(text,allowedIds){const raw=String(text||''),allowed=new Set((allowedIds||[]).map(String)),ids=[],re=/\[KB\\?:([A-Za-z0-9._:-]+)\]/g;let m;
+  while((m=re.exec(raw)))if(!ids.includes(m[1]))ids.push(m[1]);const invalid=ids.filter(function(id){return!allowed.has(id);});
+  if(!invalid.length)return{ok:true,content:raw,citations:ids,invalid:[]};
+  return{ok:false,content:'I could not verify the Knowledge Base references returned by the model, so LabFlow rejected that answer instead of presenting it as grounded. Please retry or ask a narrower question.',citations:ids,invalid:invalid};}
+function captureRequest(run,info){const meta=requestContextMeta(info);run.requestContext=meta;run.allowedKbIds=meta.allowedKbIds;}
+function syncAssistantPhase(run,info){if(!active||active!==run)return;const phase=String(info&&info.phase||'');
+  if(phase==='prepare')updateTransient(run,'LLM · Preparing context');
+  else if(phase==='request')updateTransient(run,'LLM · Waiting for provider');
+  else if(phase==='validate')updateTransient(run,'LLM · Validating answer');
+}
 function answerHtml(m){const clean=compact(m.content||''),detected=!m.structured?parseJson(clean):null;if(m.structured||detected)return jsonHtml(m.structured||detected);return clean?C.markdown(clean):'';}
 function copyButton(id){return '<button class="button ghost compact icon-only chat-copy" type="button" data-copy-message="'+C.escapeHtml(id)+'" aria-label="Copy message" title="Copy">'+(LF.Icons?LF.Icons.icon('copy'):'⧉')+'</button>';}
-function detailRows(m){const u=m.usage||{},rows=[];function row(label,value){if(value==null||value==='')return;
+function detailRows(m){const u=m.usage||{},rows=[],providerUsed=Number(m.requestCount)>0||m.executionMode==='llm'||m.executionMode==='routed-local';function row(label,value){if(value==null||value==='')return;
 rows.push('<div><dt>'+C.escapeHtml(label)+'</dt><dd>'+C.escapeHtml(String(value))+'</dd></div>');
-  }if(m.provider||m.model)row('Provider / model',
-  (m.provider||'—')+' / '+(C.modelDisplayName?C.modelDisplayName(m.provider,m.model||'—'):(m.model||'—')));
+  }if(m.executionMode){const label=m.executionMode==='local'?'Deterministic · no provider':m.executionMode==='routed-local'?'Deterministic answer · LLM intent router':'LLM answer';row('Execution',label);}
+  if(m.routeReason)row('Route',m.routeReason);
+  if(m.intent)row('Intent',m.intent);if(m.scopeLabel)row('Scope',m.scopeLabel);
+  if(providerUsed&&(m.provider||m.model))row('Provider / model',(m.provider||'—')+' / '+(C.modelDisplayName?C.modelDisplayName(m.provider,m.model||'—'):(m.model||'—')));
   if(Number.isFinite(Number(m.latencyMs)))row('Total turn',fmtMs(m.latencyMs));
-  if(Number(m.requestCount)>0)row('Provider calls',Number(m.requestCount));
-  if(Number.isFinite(Number(m.providerElapsedMs)))row('Provider time',fmtMs(m.providerElapsedMs));
-  if(Number.isFinite(Number(m.ttftMs)))row('Final TTFT',fmtMs(m.ttftMs));
-  if(Number.isFinite(Number(m.tokensPerSecond)))row('Throughput',Number(m.tokensPerSecond).toFixed(1)+' tok/s');
-  if(Number.isFinite(Number(u.totalTokens)))row('Usage',
-  Number(u.promptTokens||0).toLocaleString()+' input · '+Number(u.completionTokens||
-  0).toLocaleString()+' output · '+Number(u.totalTokens).toLocaleString()+' total'+(u.estimated?' · estimated':''));
-  if(Number.isFinite(Number(m.responseBytes)))row('Response payloads',fmtBytes(m.responseBytes));
-  if(m.streamed!=null)row('Transport',m.streamed?'Streamed':'Non-streaming');
-  if(m.finishReason)row('Finish reason',m.finishReason);if(m.requestId)row('Request ID',m.requestId);
-  if(m.requestLogId)row('Log correlation',m.requestLogId);return rows;}
+  if(providerUsed&&Number(m.requestCount)>0)row('Provider calls',Number(m.requestCount));
+  if(Number(m.routerCalls)>0)row('Intent-router calls',Number(m.routerCalls));
+  if(providerUsed&&Number.isFinite(Number(m.providerElapsedMs)))row('Provider time',fmtMs(m.providerElapsedMs));
+  if(providerUsed&&Number.isFinite(Number(m.ttftMs)))row('Final TTFT',fmtMs(m.ttftMs));
+  if(providerUsed&&Number.isFinite(Number(m.tokensPerSecond)))row('Throughput',Number(m.tokensPerSecond).toFixed(1)+' tok/s');
+  if(providerUsed&&(m.thinkingMode||m.thinkingEffective))row('Reasoning',[(m.thinkingMode||'auto')+' requested',m.thinkingEffective?m.thinkingEffective+' effective':'',m.reasoningObserved?'observed':''].filter(Boolean).join(' · '));
+  if(providerUsed&&Number.isFinite(Number(u.totalTokens)))row('Usage',Number(u.promptTokens||0).toLocaleString()+' input · '+Number(u.completionTokens||0).toLocaleString()+' output · '+Number(u.totalTokens).toLocaleString()+' total'+(u.estimated?' · estimated':''));
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.contextTokens)))row('Answer context input',Math.round(Number(m.contextTokens)).toLocaleString()+' tok');
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.contextChars)))row('Answer context size',Math.round(Number(m.contextChars)).toLocaleString()+' chars');
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.completionBudgetTokens)))row('Answer output budget',Math.round(Number(m.completionBudgetTokens)).toLocaleString()+' tok');
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.answerTargetTokens)))row('Answer target',Math.round(Number(m.answerTargetTokens)).toLocaleString()+' tok');
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.reasoningReserveTokens)))row('Reasoning reserve',Math.round(Number(m.reasoningReserveTokens)).toLocaleString()+' tok');
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.contextMessageCount)))row('Answer context messages',Number(m.contextMessageCount));
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.evidenceItemsSupplied)))row('Evidence items supplied',Number(m.evidenceItemsSupplied));
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.measurementsSupplied)))row('Measurements supplied',Number(m.measurementsSupplied));
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.samplesSupplied)))row('Samples supplied',Number(m.samplesSupplied));
+  if(m.executionMode==='llm'&&Number.isFinite(Number(m.kbEntriesSupplied)))row('KB entries supplied',Number(m.kbEntriesSupplied));
+  if(m.executionMode==='llm'&&m.groundingWarning)row('Grounding',m.groundingWarning);
+  if(providerUsed&&Number.isFinite(Number(m.responseBytes)))row('Response payloads',fmtBytes(m.responseBytes));
+  if(providerUsed&&m.streamed!=null)row('Answer transport',m.executionMode==='llm'?(m.streamed?'Streamed':'Non-streaming'):'Non-streaming router');
+  if(m.finishReason)row('Finish reason',m.finishReason);if(providerUsed&&m.requestId)row('Request ID',m.requestId);
+  if(providerUsed&&m.requestLogId)row('Log correlation',m.requestLogId);return rows;}
 function detailsHtml(m,event){const reasoning=compact(m.reasoning||''),rows=detailRows(m),
 structured=event&&m.structured?jsonHtml(m.structured):'';if(!reasoning&&!rows.length&&!structured)return'';
   return '<details class="chat-details"><summary>Details</summary><div class="chat-details-body">'+
@@ -52,7 +94,7 @@ const refs=LF.KnowledgeBase.referencesFromText(m&&m.content||'');if(!refs.length
   return '<details class="chat-kb-sources"><summary>Knowledge Base sources · '+refs.length+
   '</summary><div class="chat-kb-source-list">'+rows+'</div></details>';}
 function assistantInnerHtml(m){const pending=m.state==='requesting'&&!compact(m.content||''),failed=m.state==='error',
-cancelled=m.state==='cancelled';return '<div class="chat-message-label"><strong>Assistant</strong><span class="spacer"></span>'+
+cancelled=m.state==='cancelled';return '<div class="chat-message-label"><strong>Assistant</strong>'+routeBadge(m)+'<span class="spacer"></span>'+
   (m.state==='complete'?copyButton(m.id):'')+'</div>'+
   (pending?transientHtml(m):'<div class="chat-transient" data-chat-status hidden></div>')+
   '<div class="chat-body markdown-view" data-chat-body'+(!m.content?' hidden':'')+'>'+answerHtml(m)+'</div>'+
@@ -126,7 +168,8 @@ function syncFinal(run){const log=document.getElementById('chatLog'),pinned=isNe
 function addActionMessage(payload){payload=payload||{};const exp=LF.State&&LF.State.state&&LF.State.state.experiment;
 if(!exp||!exp.id)return null;const failed=!!payload.error,unavailable=!!payload.unavailable,item=push(exp,{
   role:'system',content:compact(payload.content||''),structured:payload.structured||null,error:failed,
-  unavailable:unavailable,eventTitle:String(payload.actionTitle||payload.actionId||
+  unavailable:unavailable,executionMode:payload.executionMode||(payload.provider||payload.model||payload.usage?'llm':'local'),
+  eventTitle:String(payload.actionTitle||payload.actionId||
   'Action')+(failed?' failed':unavailable?' unavailable':' completed'),actionId:String(payload.actionId||''),
   actionTitle:String(payload.actionTitle||payload.actionId||'Action'),model:payload.model||'',
   provider:payload.provider||'',latencyMs:payload.latencyMs||null,providerElapsedMs:payload.providerElapsedMs||null,
@@ -136,27 +179,39 @@ if(!exp||!exp.id)return null;const failed=!!payload.error,unavailable=!!payload.
   requestId:payload.requestId||'',requestLogId:payload.requestLogId||'',
   tools:Array.isArray(payload.tools)?payload.tools:[]},false);render();
   if(LF.State&&LF.State.notify)LF.State.notify('assistant');return item;}
-function aggregateRunMeta(out,settings,elapsed){const entries=Object.keys(out&&out.requestMeta||{}).map(function(key){
+function addUsage(target,source){source=source||{};['promptTokens','completionTokens','totalTokens','cachedTokens'].forEach(function(k){if(Number.isFinite(Number(source[k])))target[k]+=Number(source[k]);});target.estimated=target.estimated||!!source.estimated;}
+function routerTelemetry(classified,settings){const r=classified&&classified.response||{},usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};addUsage(usage,r.usage||{});return{
+  model:r.model||settings.model,provider:r.provider||settings.provider,providerElapsedMs:Number(r.latencyMs)||0,
+  ttftMs:Number(r.ttftMs)||null,tokensPerSecond:Number(r.tokensPerSecond)||null,thinkingMode:r.thinkingPolicy&&r.thinkingPolicy.requested||r.thinkingMode||'off',
+  thinkingEffective:r.thinkingPolicy&&r.thinkingPolicy.effective||r.thinkingMode||'off',reasoningObserved:!!r.reasoningObserved,
+  usage:usage.totalTokens||usage.promptTokens||usage.completionTokens?usage:null,requestCount:1,routerCalls:1,
+  responseBytes:Number(r.responseBytes)||0,requestId:r.requestId||'',requestLogId:r.requestLogId||'',streamed:false,
+  finishReason:r.finishReason||'',routerInputTokens:Number(classified&&classified.inputTokens)||null
+};}
+function aggregateRunMeta(out,settings,elapsed,routerMeta){const entries=Object.keys(out&&out.requestMeta||{}).map(function(key){
 return{key:key,meta:out.requestMeta[key]||{}};
-  }),last=(entries[entries.length-1]||{}).meta||{},usage={
-  promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};
-  let seen=false,providerElapsedMs=0,responseBytes=0;entries.forEach(function(x){const m=x.meta||{},u=m.usage||{};
-  ['promptTokens','completionTokens','totalTokens','cachedTokens'].forEach(function(k){if(Number.isFinite(Number(u[k]))){
-  usage[k]+=Number(u[k]);seen=true;}});usage.estimated=usage.estimated||!!u.estimated;
+  }),last=(entries[entries.length-1]||{}).meta||{},usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};
+  let seen=false,providerElapsedMs=Number(routerMeta&&routerMeta.providerElapsedMs)||0,responseBytes=Number(routerMeta&&routerMeta.responseBytes)||0;
+  if(routerMeta&&routerMeta.usage){addUsage(usage,routerMeta.usage);seen=true;}
+  entries.forEach(function(x){const m=x.meta||{},u=m.usage||{};if(Object.keys(u).length){addUsage(usage,u);seen=true;}
   if(Number.isFinite(Number(m.latencyMs)))providerElapsedMs+=Number(m.latencyMs);
   if(Number.isFinite(Number(m.responseBytes)))responseBytes+=Number(m.responseBytes);});
-  return{model:last.model||settings.model,provider:last.provider||settings.provider,latencyMs:elapsed,
-  providerElapsedMs:providerElapsedMs||null,ttftMs:last.ttftMs||null,tokensPerSecond:last.tokensPerSecond||null,
-  streamed:!!last.streamed,usage:seen?usage:null,finishReason:last.finishReason||'',requestCount:entries.length||1,
-  responseBytes:responseBytes||null,requestId:last.requestId||'',requestLogId:last.requestLogId||''};}
-async function runTurn(exp,text,message){const settings=LF.Storage.getAiSettings(),run={
-started:performance.now(),message:message,controller:null,clock:null,firstContentLogged:false};active=run;
-  message.state='requesting';message.content='';message.error=false;message.statusLabel='Thinking';
+  return{model:last.model||routerMeta&&routerMeta.model||settings.model,provider:last.provider||routerMeta&&routerMeta.provider||settings.provider,latencyMs:elapsed,
+  providerElapsedMs:providerElapsedMs||null,ttftMs:last.ttftMs||routerMeta&&routerMeta.ttftMs||null,tokensPerSecond:last.tokensPerSecond||routerMeta&&routerMeta.tokensPerSecond||null,
+  thinkingMode:last.thinkingRequested||last.thinkingMode||routerMeta&&routerMeta.thinkingMode||'',thinkingEffective:last.thinkingEffective||routerMeta&&routerMeta.thinkingEffective||'',
+  reasoningObserved:!!last.reasoningObserved||!!(routerMeta&&routerMeta.reasoningObserved),streamed:entries.length?!!last.streamed:false,usage:seen?usage:null,
+  finishReason:last.finishReason||routerMeta&&routerMeta.finishReason||'',requestCount:entries.length+Number(routerMeta&&routerMeta.requestCount||0),routerCalls:Number(routerMeta&&routerMeta.routerCalls||0),responseBytes:responseBytes||null,
+  requestId:last.requestId||routerMeta&&routerMeta.requestId||'',requestLogId:last.requestLogId||routerMeta&&routerMeta.requestLogId||''};}
+async function runTurn(exp,text,message,plan){const settings=LF.Storage.getAiSettings(),assistantSettings=LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings():{},run={
+started:performance.now(),message:message,controller:null,clock:null,firstContentLogged:false,requestContext:null,allowedKbIds:[],plan:plan||{}};active=run;
+  message.state='requesting';message.content='';message.error=false;message.statusLabel='Preparing provider request';message.executionMode='llm';
+  message.routeReason=run.plan.reason||'Deterministic routing selected provider fallback.';message.intent=run.plan.intent||'';message.scopeLabel=run.plan.scope&&run.plan.scope.page||'';message.provider=settings.provider;message.model=settings.model;
   if(Log)Log.info('turn.start',{messageId:message.id,provider:settings.provider,model:settings.model,
   questionChars:String(text||'').length});render({forceBottom:true});
   run.clock=setInterval(function(){if(active===run&&message.state==='requesting'&&!message.content)updateTransient(run,
-  'Thinking · '+fmtMs(performance.now()-run.started));},500);let out=null;
-  try{out=await Promise.race([LF.ActionRunner.run('assistant.chat',{userText:text,onProgress:function(p){
+  'LLM · Thinking · '+fmtMs(performance.now()-run.started));},500);let out=null;
+  try{out=await Promise.race([LF.ActionRunner.run('assistant.chat',{userText:text,params:{assistantPlan:run.plan},thinkingMode:assistantSettings.thinkingMode||'off',
+  onPhase:function(info){syncAssistantPhase(run,info);},onRequest:function(info){captureRequest(run,info);},onProgress:function(p){
   if(!run.firstContentLogged&&p&&compact(p.content||'')){run.firstContentLogged=true;
   if(Log)Log.info('turn.first-content',{messageId:message.id,elapsedMs:Math.round(performance.now()-run.started)});
   }syncProgress(run,p);}}),new Promise(function(_,reject){run.watchdog=window.setTimeout(function(){try{
@@ -165,22 +220,31 @@ started:performance.now(),message:message,controller:null,clock:null,firstConten
   reject(e);},95000);})]);const elapsed=Math.round(performance.now()-run.started);
   if(out&&out.status==='done'){let finalMeta=null;
   Object.keys(out.requestMeta||{}).forEach(function(k){finalMeta=out.requestMeta[k]||finalMeta;});
-  Object.assign(message,{state:'complete',content:compact(out.result||message.content||''),
-  reasoning:compact(finalMeta&&finalMeta.reasoning||message.reasoning||''),error:false}
-  ,aggregateRunMeta(out,settings,elapsed));
+  const raw=compact(out.result||message.content||''),grounding=validateKbAnswer(raw,run.allowedKbIds||[]),requestMeta=run.requestContext||{};
+  const safeContent=grounding.ok?grounding.content:(run.plan&&run.plan.fallback||grounding.content);
+  Object.assign(message,{state:'complete',content:compact(safeContent),
+  reasoning:compact(finalMeta&&finalMeta.reasoning||message.reasoning||''),error:false,executionMode:'llm',
+  contextTokens:requestMeta.inputTokens||null,contextChars:requestMeta.messageChars||null,
+  completionBudgetTokens:requestMeta.maxTokens||null,answerTargetTokens:requestMeta.targetTokens||null,
+  reasoningReserveTokens:requestMeta.reasoningReserveTokens||0,contextMessageCount:requestMeta.messageCount||0,
+  evidenceItemsSupplied:requestMeta.evidenceCount||0,measurementsSupplied:requestMeta.measurementCount||0,
+  samplesSupplied:requestMeta.sampleCount||0,kbEntriesSupplied:requestMeta.knowledgeCount||0,
+  groundingWarning:grounding.ok?'':('Rejected unsupported KB citation'+(grounding.invalid.length===1?'':'s')+': '+grounding.invalid.join(', '))}
+  ,aggregateRunMeta(out,settings,elapsed,run.plan&&run.plan.routerTelemetry));
+  if(!grounding.ok)message.finishReason='grounding_fallback';
   if(Log)Log.info('turn.done',{messageId:message.id,elapsedMs:elapsed,requests:message.requestCount||1,
-  ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length});
+  ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length,grounding:grounding.ok?'passed':'rejected'});
   }else if(out&&(out.status==='cancelled'||out.status==='aborted')){Object.assign(message,{
-  state:'cancelled',content:'',error:false,finishReason:'cancelled',latencyMs:elapsed});
+  state:'cancelled',content:'',error:false,finishReason:'cancelled',latencyMs:elapsed,executionMode:'llm'});
   if(Log)Log.info('turn.cancelled',{messageId:message.id,elapsedMs:elapsed});
   }else{Object.assign(message,{state:'error',content:compact(out&&out.message||'Assistant request failed.'),error:true,
   model:settings.model,provider:settings.provider,latencyMs:elapsed,requestCount:Object.keys(out&&out.requestMeta||{}
-  ).length||null,finishReason:out&&out.code||'ASSISTANT_FAILED'});
+  ).length||null,finishReason:out&&out.code||'ASSISTANT_FAILED',executionMode:'llm'});
   if(Log)Log.warn('turn.failed',{messageId:message.id,elapsedMs:elapsed,code:message.finishReason,message:message.content}
   );LF.UI.message(message.content,'error');
   }}catch(error){Object.assign(message,{state:error&&error.name==='AbortError'?'cancelled':'error',
   content:error&&error.name==='AbortError'?'':String(error&&error.message||error||'Assistant request failed.'),
-  error:!(error&&error.name==='AbortError'),model:settings.model,provider:settings.provider,
+  error:!(error&&error.name==='AbortError'),model:settings.model,provider:settings.provider,executionMode:'llm',
   latencyMs:Math.round(performance.now()-run.started),finishReason:error&&error.code||'ASSISTANT_FAILED'});
   if(Log)(message.error?Log.error:Log.info)('turn.exception',{
   messageId:message.id,elapsedMs:message.latencyMs,code:message.finishReason,error:error});
@@ -190,6 +254,7 @@ started:performance.now(),message:message,controller:null,clock:null,firstConten
   try{syncFinal(run);}catch(renderError){if(Log)Log.error('turn.final-render-failed',{
   messageId:message.id,error:renderError});try{render({forceBottom:true});}catch(_){}}finally{setComposer(true);
   if(LF.State&&LF.State.notify)LF.State.notify('assistant');}}}
+function deterministicAnswer(exp,text){const decision=LF.AssistantCore&&LF.AssistantCore.localAnswer?LF.AssistantCore.localAnswer(exp,text):null;return decision&&decision.answer||null;}
 function commandAction(text){const raw=String(text||'').trim(),lower=raw.toLowerCase();if(lower==='/actions'){toggleActionMenu();return true;}const id=LF.ActionCapabilities&&LF.ActionCapabilities.resolveCommand?LF.ActionCapabilities.resolveCommand(raw):'';if(!id)return false;runAction(id,raw);return true;}
 function runAction(id,sourceText){if(active||runnerBusy()||!LF.ActionUI||!LF.ActionUI.run)return Promise.resolve(null);
 const capability=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(id):null,
@@ -198,14 +263,65 @@ const capability=LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.Action
   }const exp=LF.State.ensureExperiment('assistant-action:'+id);if(!exp.id)return Promise.resolve(null);
   if(sourceText)push(exp,{role:'user',content:sourceText},false);setActionMenu(false);render({forceBottom:true});
   return LF.ActionUI.run(id,'',{params:capability.params,fromAssistant:true});}
-function sendChat(text){if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();text=String(text||'').trim();
-if(!text||active||runnerBusy())return;if(commandAction(text))return;if(!configured())return;
+function applyLocalMessage(message,decision,meta,elapsed){meta=meta||{};Object.assign(message,{state:'complete',content:decision.answer,error:false,
+  executionMode:meta.requestCount?'routed-local':'local',routeReason:decision.reason,intent:decision.intent||'',
+  scopeLabel:decision.scope&&decision.scope.page||'',localSource:decision.source,latencyMs:Math.round(elapsed||0),
+  finishReason:meta.requestCount?'routed-local':'deterministic'},meta.requestCount?meta:{requestCount:0,usage:{promptTokens:0,completionTokens:0,totalTokens:0,estimated:false}});}
+async function resolveNaturalTurn(exp,text,message,initial){const settings=LF.Storage.getAiSettings(),routeRun={started:performance.now(),message:message,controller:null,phase:'route'};active=routeRun;
+  message.state='requesting';message.content='';message.error=false;message.statusLabel='Routing request';message.executionMode='routing';message.provider=settings.provider;message.model=settings.model;message.scopeLabel=initial&&initial.scope&&initial.scope.page||'';
+  render({forceBottom:true});setComposer(true);
+  try{
+    const classified=await LF.AssistantCore.classify(text,initial.scope),rmeta=routerTelemetry(classified,settings),plan=LF.AssistantCore.planFromRoute(exp,text,classified.route,initial.scope);
+    plan.routerTelemetry=rmeta;
+    if(plan.mode==='local'){
+      applyLocalMessage(message,plan,rmeta,performance.now()-routeRun.started);if(classified.response&&classified.response.reasoning)message.reasoning=compact(classified.response.reasoning);
+      if(Log)Log.info('route.local',{messageId:message.id,intent:plan.intent,scope:message.scopeLabel,providerCalls:1});
+      active=null;syncFinal(routeRun);setComposer(true);if(LF.State&&LF.State.notify)LF.State.notify('assistant');
+      return{status:'done',result:plan.answer,deterministic:true,routed:true};
+    }
+    if(Log)Log.info('route.provider-answer',{messageId:message.id,intent:plan.intent,scope:plan.scope&&plan.scope.page||'',providerCallsBeforeAnswer:1});
+    active=null;message.executionMode='llm';message.statusLabel='Preparing bounded answer';message.routeReason=plan.reason;message.intent=plan.intent||'';message.scopeLabel=plan.scope&&plan.scope.page||'';
+    return runTurn(exp,text,message,plan);
+  }catch(error){
+    active=null;
+    Object.assign(message,{
+      state:error&&error.name==='AbortError'?'cancelled':'error',
+      content:error&&error.name==='AbortError'?'':String(error&&error.message||error||'Assistant routing failed.'),
+      error:!(error&&error.name==='AbortError'),provider:settings.provider,model:settings.model,
+      executionMode:'llm',latencyMs:Math.round(performance.now()-routeRun.started),
+      finishReason:error&&error.code||'ASSISTANT_ROUTE_FAILED'
+    });
+    if(message.error){if(Log)Log.error('route.failed',{messageId:message.id,error:error});LF.UI.message(message.content,'error');}
+    syncFinal(routeRun);setComposer(true);if(LF.State&&LF.State.notify)LF.State.notify('assistant');return null;
+  }
+}
+async function sendChat(text){
+  if(LF.State&&LF.State.commitAllDrafts)LF.State.commitAllDrafts();
+  text=String(text||'').trim();if(!text||active||runnerBusy())return;
+  if(commandAction(text))return;
   const exp=LF.State.ensureExperiment('action:assistant.chat');if(!exp.id)return;
+  const initial=LF.AssistantCore&&LF.AssistantCore.initialPlan?LF.AssistantCore.initialPlan(exp,text):null,decision=initial&&initial.mode==='local'?initial:null;
+  if(!decision&&!configured())return;
   push(exp,{role:'user',content:text},false);
-  const message=push(exp,{role:'assistant',content:'',state:'requesting',retryText:text,statusLabel:'Thinking'},false);
-  return runTurn(exp,text,message);}
-function retryMessage(id){if(active||runnerBusy()||!configured())return;const exp=LF.State.state.experiment,m=conversation(exp).find(function(x){return x.id===id&&x.role==='assistant'&&x.state==='error';});if(m)return runTurn(exp,m.retryText||'',m);}
-function cancel(){if(!active)return;if(LF.ActionRunner&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();else if(active.controller)active.controller.abort();}
+  if(decision){const message=push(exp,{role:'assistant',content:'',state:'requesting',retryText:text},false);applyLocalMessage(message,decision,null,0);render({forceBottom:true});if(LF.State&&LF.State.notify)LF.State.notify('assistant');return{status:'done',result:decision.answer,deterministic:true};}
+  const settings=LF.Storage.getAiSettings(),message=push(exp,{role:'assistant',content:'',state:'requesting',retryText:text,statusLabel:'Routing request',executionMode:'routing',routeReason:initial&&initial.reason||'Natural-language intent routing.',scopeLabel:initial&&initial.scope&&initial.scope.page||'',provider:settings.provider,model:settings.model},false);
+  return resolveNaturalTurn(exp,text,message,initial||{scope:LF.AssistantCore.scope(exp)});
+}
+function retryMessage(id){
+  if(active||runnerBusy()||!configured())return;
+  const exp=LF.State.state.experiment,m=conversation(exp).find(function(x){
+    return x.id===id&&x.role==='assistant'&&x.state==='error';
+  });
+  if(!m)return;
+  const text=m.retryText||'',initial=LF.AssistantCore&&LF.AssistantCore.initialPlan
+    ?LF.AssistantCore.initialPlan(exp,text):{mode:'route',scope:LF.AssistantCore.scope(exp)};
+  if(initial.mode==='local'){
+    applyLocalMessage(m,initial,null,0);render({forceBottom:true});
+    return Promise.resolve({status:'done',result:initial.answer,deterministic:true});
+  }
+  return resolveNaturalTurn(exp,text,m,initial);
+}
+function cancel(){if(!active)return;if(LF.ActionRunner&&LF.ActionRunner.isRunning&&LF.ActionRunner.isRunning()&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();else if(LF.AI&&LF.AI.abort)LF.AI.abort();else if(active.controller)active.controller.abort();}
 function bind(){document.addEventListener('click',function(e){const c=e.target.closest('[data-copy-message]');
 if(c){const m=conversation(LF.State.state.experiment).find(function(x){return x.id===c.dataset.copyMessage;});
   if(m)C.copyText(m.structured?JSON.stringify(m.structured,null,2):m.content);return;
@@ -232,10 +348,10 @@ if(LF.Structures){
       id:{type:'string',required:true},createdAt:{type:'string',required:true},route:{type:'string'},
       page:{type:'string'},view:{type:'string'},role:{type:'string',required:true,enum:['user','assistant','system']},
       content:{type:'string'},structured:{type:'object',nullable:true},state:{type:'string'},error:{type:'boolean'},
-      actionId:{type:'string'},model:{type:'string'},provider:{type:'string'},usage:{type:'object',nullable:true},
-      finishReason:{type:'string'}
+      actionId:{type:'string'},model:{type:'string'},provider:{type:'string'},executionMode:{type:'string'},routeReason:{type:'string'},
+      usage:{type:'object',nullable:true},finishReason:{type:'string'}
     }
   });
 }
-LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,isActive:function(){return!!active;},cancel:cancel};
+LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,deterministicAnswer:deterministicAnswer,plan:function(exp,text){return LF.AssistantCore&&LF.AssistantCore.initialPlan?LF.AssistantCore.initialPlan(exp,text):null;},isActive:function(){return!!active;},cancel:cancel};
 }());

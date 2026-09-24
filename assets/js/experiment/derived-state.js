@@ -17,7 +17,14 @@ function invalidate(exp,scope,options){if(!exp)return[];const changed=[],opts=op
 function describe(){return REGISTRY.map(function(row){return{id:row.id,dependsOn:row.dependsOn.slice(),paths:row.paths.slice(),description:row.description};});}
 register('canonical-index',{dependsOn:['dataset','analysis','design','metadata'],paths:['canonical'],description:'Canonical read index/evidence graph.'});
 register('review-analysis',{dependsOn:['dataset'],paths:['datasetAnalysis'],description:'Deterministic review dossier and ambiguity selection.'});
-register('analysis-summary',{dependsOn:['dataset','analysis'],paths:['analysisSummary','experimentBrief'],description:'Results summaries and AI interpretations derived from current scientific values.',invalidate:function(exp){if(!LF.ActionData)return false;const a=LF.ActionData.removeAnnotation(exp,'results.interpret');const b=LF.ActionData.removeAnnotation(exp,'results.compare');return a||b;}});
+register('analysis-summary',{dependsOn:['dataset','analysis'],paths:['analysisSummary','experimentBrief'],
+  description:'Results summaries and deterministic interpretations derived from current scientific values.',
+  invalidate:function(exp){
+    if(!LF.ActionData)return false;
+    const a=LF.ActionData.removeAnnotation(exp,'results.interpret');
+    const b=LF.ActionData.removeAnnotation(exp,'results.compare');
+    return a||b;
+  }});
 register('ambiguity-proposals',{dependsOn:['dataset'],paths:[],description:'AI ambiguity proposals tied to one dataset revision.',invalidate:function(exp){return LF.ActionData?LF.ActionData.removeProposal(exp,'dataset.resolve-ambiguities'):false;}});
 register('design-analysis',{dependsOn:['dataset','design'],paths:['designAnalysis'],
 description:'Design projections/proposals tied to current experiment/design state.',invalidate:function(exp,scope,options){

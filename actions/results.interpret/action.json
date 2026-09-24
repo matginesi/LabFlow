@@ -5,12 +5,9 @@
   "category": "results",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Produce a structured scientific interpretation of deterministic Results without recalculating or modifying measurements.",
-  "strategy": "The model receives deterministic summary statistics, rankings, anomalies and open findings. It must separate observations from hypotheses, cite evidence identifiers where available, and expose limitations and next checks.",
-  "policies": [
-    "policy.scientific-provenance",
-    "policy.structured-output"
-  ],
+  "purpose": "Build a deterministic, evidence-backed interpretation of the current Results without calling an AI provider.",
+  "strategy": "LabFlow summarizes calculated quality, rankings, FW/RV agreement, reproducibility and descriptive relationships from the current deterministic analysis. No causal mechanism is inferred.",
+  "policies": [],
   "contract": {
     "target": {
       "kind": "results_bundle",
@@ -37,28 +34,21 @@
     ]
   },
   "execution": {
-    "mode": "hybrid",
-    "result_step": "interpret",
+    "mode": "deterministic",
+    "result_step": "build",
     "steps": [
       {
-        "id": "interpret",
-        "type": "AI",
-        "prompt": "prompt.md",
-        "output": "json",
-        "schema": "results_interpretation",
-        "thinking": "off",
-        "timeout_ms": 120000,
-        "max_output_tokens": 1400,
-        "deadline_ms": 120000,
-        "max_retries": 1,
-        "min_output_tokens": 100,
-        "target_output_tokens": 600,
-        "max_input_tokens": 9000
+        "id": "build",
+        "type": "DETERMINISTIC",
+        "tool": "results.build-interpretation",
+        "capture_result": true,
+        "weight": 0.82
       },
       {
         "id": "store",
         "type": "DETERMINISTIC",
-        "tool": "results.store-interpretation"
+        "tool": "results.store-interpretation",
+        "weight": 0.18
       }
     ]
   },

@@ -18,6 +18,8 @@ require('../../assets/js/ai/action-steps.js');
 require('../../assets/js/ai/prompt-bundle.js');
 require('../../assets/js/ai/action-registry.js');
 require('../../assets/js/ai/structured.js');
+require('../../assets/js/page-context.js');
+require('../../assets/js/ai/assistant-core.js');
 require('../../assets/js/ai/context.js');
 require('../../assets/js/ai/actions.js');
 function assert(actual, expected, label) {
@@ -40,7 +42,7 @@ module.exports=function(t,LF){
     return e;
   }
   function state(e){
-    LF.State={state:{experiment:e,ui:{}},ensureDerived:function(x){x.derived=x.derived||{};x.derived.actions=x.derived.actions||{};x.derived.chat=x.derived.chat||{conversation:[]};return x.derived;},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.State={state:{experiment:e,ui:{route:'experiment-results'}},ensureDerived:function(x){x.derived=x.derived||{};x.derived.actions=x.derived.actions||{};x.derived.chat=x.derived.chat||{conversation:[]};return x.derived;},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
   }
 
   t['canonical store exposes one single current grouped representation']=function(){const e=fake(),s=LF.CanonicalStore.ensure(e);assert(s.format,'labflow-canonical','format');assert(s.records.samples[0].id,'s1','entity');assert(s.scientific.results.summary.bestSample,'DEVICE A','results');assert(Object.prototype.hasOwnProperty.call(s,'samples'),false,'no alias arrays');};
@@ -66,9 +68,24 @@ module.exports=function(t,LF){
   };
 
 
-  t['assistant answers with one provider request using deterministic context']=async function(){const e=fake();state(e);let calls=0,finalMessages=null;LF.Storage={getEffectiveAction:function(id){return LF.ActionRegistry.action(id);},getAiSettings:function(){return{provider:'custom',endpoint:'http://local/v1',model:'demo',streaming:false,maxOutputTokensCap:0};},getAssistantSettings:function(){return{maxOutputTokens:2048,contextChars:12000,memoryTurns:0,memoryChars:0,messageChars:1000,memoryEnabled:false};},getEffectivePrompt:function(id){return LF.ActionRegistry.prompt(id);}};LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},buildRequest:function(x){return x;},send:async function(spec){calls++;finalMessages=spec.messages;return{content:'DEVICE A is the current best sample at 21.2%.',finishReason:'stop',model:'demo',provider:'custom'};}};const out=await LF.ActionRunner.run('assistant.chat',{userText:'Which sample is best?'});assert(out.status,'done','status');assert(out.result,'DEVICE A is the current best sample at 21.2%.','answer');truthy(JSON.stringify(finalMessages).indexOf('DEVICE A')>=0,'deterministic experiment context in request');assert(calls,1,'one LLM request per Assistant turn');};
+  t['assistant answer Action accepts only a routed plan and makes one bounded answer request']=async function(){
+    const e=fake();state(e);let calls=0,finalMessages=null;
+    LF.Storage={getEffectiveAction:function(id){return LF.ActionRegistry.action(id);},getAiSettings:function(){return{provider:'custom',endpoint:'http://local/v1',model:'demo',streaming:false,maxOutputTokensCap:0};},getAssistantSettings:function(){return{maxOutputTokens:280,contextChars:4200,thinkingMode:'off'};},getEffectivePrompt:function(id){return LF.ActionRegistry.prompt(id);}};
+    LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},buildRequest:function(x){return x;},send:async function(spec){calls++;finalMessages=spec.messages;return{content:'DEVICE A has the highest supplied PCE.',finishReason:'stop',model:'demo',provider:'custom'};}};
+    const text='Explain the current result.',scope=LF.AssistantCore.scope(e),plan=LF.AssistantCore.planFromRoute(e,text,{intent:'explain',target:'results',knowledge:false,cabinet:false,followup:false},scope);
+    const out=await LF.ActionRunner.run('assistant.chat',{userText:text,params:{assistantPlan:plan}});
+    assert(out.status,'done','status');assert(out.result,'DEVICE A has the highest supplied PCE.','answer');
+    truthy(JSON.stringify(finalMessages).indexOf('DEVICE A')>=0,'deterministic experiment facts in request');assert(calls,1,'one answer request after routing');
+  };
 
-  t['assistant does not require provider JSON tool-choice support']=async function(){const e=fake();state(e);let calls=0;LF.Storage={getEffectiveAction:function(id){return LF.ActionRegistry.action(id);},getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'openrouter/free',streaming:false,maxOutputTokensCap:0};},getAssistantSettings:function(){return{maxOutputTokens:2048,contextChars:12000,memoryTurns:0,memoryChars:0,messageChars:1000,memoryEnabled:false};},getEffectivePrompt:function(id){return LF.ActionRegistry.prompt(id);}};LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},buildRequest:function(x){return x;},send:async function(){calls++;return{content:'I can answer directly from the available experiment context.',finishReason:'stop',model:'openrouter/free',provider:'openrouter'};}};const out=await LF.ActionRunner.run('assistant.chat',{userText:'Summarize this experiment.'});assert(out.status,'done','status');assert(out.result,'I can answer directly from the available experiment context.','direct answer');assert(calls,1,'single direct request');};
+  t['assistant answer Action does not require provider JSON tool-choice support']=async function(){
+    const e=fake();state(e);let calls=0;
+    LF.Storage={getEffectiveAction:function(id){return LF.ActionRegistry.action(id);},getAiSettings:function(){return{provider:'openrouter',endpoint:'https://openrouter.ai/api/v1',model:'openrouter/free',streaming:false,maxOutputTokensCap:0};},getAssistantSettings:function(){return{maxOutputTokens:280,contextChars:4200,thinkingMode:'off'};},getEffectivePrompt:function(id){return LF.ActionRegistry.prompt(id);}};
+    LF.AI={acceptController:function(){},estimateTokens:function(x){return Math.ceil(String(x||'').length/4);},buildRequest:function(x){return x;},send:async function(){calls++;return{content:'The supplied result needs interpretation.',finishReason:'stop',model:'openrouter/free',provider:'openrouter'};}};
+    const text='Explain this experiment result.',scope=LF.AssistantCore.scope(e),plan=LF.AssistantCore.planFromRoute(e,text,{intent:'explain',target:'results',knowledge:false,cabinet:false,followup:false},scope);
+    const out=await LF.ActionRunner.run('assistant.chat',{userText:text,params:{assistantPlan:plan}});
+    assert(out.status,'done','status');assert(out.result,'The supplied result needs interpretation.','direct answer');assert(calls,1,'single answer request');
+  };
 
   return t;
 };

@@ -57,7 +57,7 @@ module.exports=function(t,LF,env){
     assert(/Solutions · solvents · solutes/.test(html)&&/Layer stack/.test(html)&&/Fabrication process/.test(html),'three researcher-facing Design editors should be visible');
     assert(/design-chem-card/.test(html)&&/design-stack-diagram/.test(html),'solution chemistry and stack should have graphical views');
     assert((html.match(/data-design-card=/g)||[]).length===clean.design.devices.length,'every experimental variant should have one navigator card');
-    assert(/data-action-sequence="design-all"/.test(html)&&/Complete all missing with AI/.test(html),'one bulk completion control should exist when multiple experiments need work');
+    assert(/data-action-sequence="design-all"/.test(html)&&/Complete all missing/.test(html),'one bulk completion control should exist when multiple experiments need work');
     assert(/Accept all/.test(html),'global acceptance control should exist');
     assert(!/Proposal confidence/.test(html)&&!/NEXT STEP/.test(html),'old complex Design state-machine workflow should be absent');
 
@@ -74,7 +74,7 @@ module.exports=function(t,LF,env){
     assert(/class="button compact" type="button" data-discard-design-experiment/.test(html3),'Discard is a bordered secondary control');
     LF.ActionData.removeProposal(current,'design.infer',selected.id);LF.ActionData.setStatus(current,'design.infer',selected.id,{state:'error',message:'provider failed after internal retries'});
     const html4=LF.DesignPage.render({experiment:current,selectedDeviceId:selected.id,stepper:'',pageHead:function(title,sub,actions){return '<header><h1>'+title+'</h1><p>'+sub+'</p>'+actions+'</header>';}});
-    assert((html4.match(/Retry inference/g)||[]).length===1,'an exhausted selected experiment must expose exactly one Retry inference control');
+    assert((html4.match(/Retry completion/g)||[]).length===1,'an exhausted selected experiment must expose exactly one Retry completion control');
   };
   t['Design source projection is idempotent and does not overwrite researcher edits on render']=async function(){
     const exp=await LF.Importer.parseDataset(fixture('01_PRECISO_PERFETTO_COMPLETO.zip'),'clean.zip'),ui={};LF.DesignModel.ensure(exp,ui);

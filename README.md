@@ -1,112 +1,127 @@
 # LabFlow
 
-LabFlow is a local-first browser application for turning laboratory archives into an inspectable scientific data model, deterministic analysis, reviewable experiment Design, optional AI assistance, and deterministic export packages.
+LabFlow is a local-first browser application for turning laboratory archives into an inspectable scientific data model, deterministic analysis, reviewable experiment Design, and deterministic export packages. AI is optional and deliberately narrow.
 
-The project is intentionally small: vanilla JavaScript, local CSS, static assets, and no application backend. Extensibility comes from explicit ownership contracts and registries rather than framework layers.
+The application is vanilla JavaScript + CSS + static assets. There is no application backend and no in-browser model runtime.
 
-## What LabFlow guarantees
+## Core rule
 
-Four invariants define the product:
+**LabFlow solves what it can in code and asks a model only about unresolved semantics.**
 
-1. **RAW input is immutable evidence.** Uploaded archive bytes and source paths are never rewritten by cleanup or AI.
-2. **`ExperimentData` is the only mutable scientific aggregate.** Features may project or index it, but may not create a parallel editable scientific model.
-3. **Deterministic work stays deterministic.** Parsing, normalization, linking, JV analysis, validation, safe-cleanup detection, summaries, and export preparation never require an AI provider.
-4. **AI output is non-authoritative until explicitly accepted.** AI may propose, interpret, compare, or answer; it does not silently alter scientific truth.
+The authority order is:
 
-These are executable constraints, not only documentation. The release validators and unit tests enforce the main ownership boundaries.
+1. RAW evidence;
+2. canonical `ExperimentData`;
+3. deterministic rules and analysis;
+4. Workspace / Process / Cabinet / Knowledge Base references;
+5. optional model suggestion;
+6. explicit researcher review when scientific state could change.
 
-## Research workflow
+A model never owns parsing, arithmetic, ranking, validation, export mapping, or canonical mutation.
 
-```mermaid
-flowchart TD
-    U[Upload ZIP] --> I[Deterministic import and canonical naming]
-    I --> V[Structural validation and deterministic analysis]
-    V --> C[Safe corrections detected automatically]
-    C --> R[Researcher review and ambiguity resolution]
-    R --> O[Results]
-    O --> D[Design]
-    D --> E[Export]
+## Scientific model
+
+The product model remains:
+
+```text
+User → Workspace → Process → ExperimentData
+                              ├─ experiments
+                              ├─ samples
+                              ├─ runs
+                              ├─ measurements
+                              ├─ findings
+                              └─ design
 ```
 
-A clean archive can proceed directly to Results. AI availability is never a prerequisite for import or analysis.
+RAW archive bytes and original source identity remain evidence. `ExperimentData` is the single mutable scientific aggregate. Workspace, Process, Cabinet and Knowledge Base are contextual/reference stores, not measurement evidence.
 
-## Scientific state
+## Deterministic pipeline
 
-The product model is:
-
-```mermaid
-flowchart TD
-    U[User] --> W[Scientific Workspace]
-    W --> P[Process]
-    P --> ED[ExperimentData]
-    ED --> E[experiments]
-    E --> S[samples]
-    S --> R[runs]
-    R --> M[measurements]
-    M --> Q[parameters / observables]
-    M --> JV[optional JV FW/RV payload]
+```text
+ZIP
+ → inspect archive
+ → parse supported files
+ → canonicalize names/relations
+ → validate structure
+ → deterministic analysis
+ → detect safe cleanup + review findings
+ → Results / Design / Export
 ```
 
-`DomainSchema` owns record shapes and persistence metadata. `DataModel` owns aggregate mechanics. `DataPipeline` owns deterministic refresh. `ActionData` owns persisted Action proposals and annotations. Workspace/Process, Cabinet and Knowledge Base are separate reference/context sources, not measurement evidence. Workspace describes institution, responsibilities and the normal data-generating setup; Process definitions reference reusable Cabinet infrastructure.
+Import, parsing, normalization, linking, JV calculations, ranking, validation, summaries, Results interpretation/comparison, and export metadata preparation do not require an AI provider.
 
-## Cabinet, Knowledge Base, AI, Actions, Assistant
+Results also exposes deterministic quality/reproducibility analytics: eligible/validated coverage, paired FW/RV separation and hysteresis, within-group median/IQR/CV, and descriptive PCE relationships with Voc/Jsc/FF/hysteresis. These calculations use zero AI tokens.
 
-The cross-feature flow is deliberately one-way with explicit authority boundaries:
+## Actions
 
-```mermaid
-flowchart TD
-    C[Cabinet] --> RC[Reference context]
-    K[Knowledge Base] --> RC
-    RC --> AC[Action / Assistant context]
-    AC --> CB[Task-specific context builder]
-    CB --> MO[Model output]
-    MO --> P[Proposal / annotation / answer]
-    P --> EA[Explicit acceptance]
-    EA --> OM[Owner-controlled mutation]
-    OM --> ED[ExperimentData]
+Actions remain the typed application boundary. Their JSON contracts are for LabFlow, tests and UI; they are **not copied into model prompts**.
+
+| Action | Mode | Provider use |
+| --- | --- | --- |
+| `results.interpret` | deterministic | none |
+| `results.compare` | deterministic | none |
+| `export.prepare` | deterministic | none |
+| `dataset.resolve-ambiguities` | hybrid | only unresolved semantic findings |
+| `design.infer` | hybrid | only domains unresolved after evidence/Cabinet/KB |
+| `assistant.chat` | read-only | only when a deterministic Assistant fast-path cannot answer |
+
+Deterministic Actions still use the normal Action lifecycle so status, logging, UI and provenance remain consistent.
+
+## Small-model strategy
+
+LabFlow is designed so a small model does not need to understand the whole application.
+
+- prompts are task-specific and short;
+- Action manifests/contracts and full JSON schemas stay application-side;
+- deterministic code reduces the input before generation;
+- Design resolves references before creating any model work unit;
+- a Design run creates zero model work when all pending domains are covered;
+- ambiguity resolution sends only active ambiguous findings plus linked evidence;
+- no automatic semantic retry loops are used;
+- model output is validated deterministically before it can become a proposal.
+
+This keeps the provider boundary usable with roughly 500–600M-class models without adding WebGPU, wllama, Transformers.js, ONNX, model downloads, or another runtime layer to the browser app.
+
+## Assistant
+
+The Assistant is read-only. A conservative deterministic fast-path answers common factual questions with **zero provider calls**, including:
+
+- measurement/sample/experiment counts;
+- best eligible PCE;
+- open findings;
+- flagged/anomalous measurements;
+- a compact Results summary.
+
+Questions that require interpretation beyond those known facts fall through to one bounded provider request. Assistant messages are explicitly labelled **LOCAL · 0 tokens** or **LLM**. Normal Assistant turns stay entirely inside the conversation: transient progress is shown inline and LLM telemetry (provider/model, token usage, TTFT, tok/s, reasoning and grounding) lives under that message's **Details**. The Action Totem is reserved for explicit researcher Actions; the model does not orchestrate hidden workflows.
+The Assistant keeps a 2000-token Action input ceiling. If a prepared context is too large, LabFlow compacts it by priority instead of immediately failing: conversation memory and Action history go first, followed by redundant broad context and secondary records, while the current question and focused experiment facts are preserved.
+
+Assistant reasoning is configurable as **Prefer off / Automatic / Prefer on**. Provider-native reasoning and `<think>`, `<thinking>`, `<analysis>` or `<reasoning>` blocks are separated from the visible answer and exposed only under message **Details**. Prefer off is the default for small/fast models.
+
+## Design
+
+Design completion uses this hierarchy:
+
+```text
+experiment evidence
+ → compatible Cabinet reference
+ → targeted Knowledge Base reference
+ → optional model inference for unresolved domains
+ → unresolved
 ```
 
-Cabinet reuse writes Design only through `DesignModel` and copies detached snapshots. KB entries are cited reference knowledge. Action execution is governed by Action manifests and `ActionCapabilities`. The Assistant is read-only with respect to scientific state. Assistant context is intentionally broad and page-aware; every Action uses an explicit minimal context containing only the evidence needed for that task. Provider, endpoint, model, credential, timing and request-log metadata never enter semantic model context.
+Deterministic/reference-backed values win. Model output may fill only domains still unresolved, is validated, and remains a reviewable proposal. Reference provenance is never rewritten as RAW experiment evidence.
 
-For Design completion, a deterministic **Design Reference Resolver** selects small per-domain Cabinet/KB candidates and supplies the same logical candidates to both the model and the post-model validator. This prevents prompt compaction or weak small-model output from silently degrading a reference-backed Design into an empty suggestion.
+The Knowledge Base has two compact views: Design receives bibliography-free structured candidates (`KB:<id>` + `design_hint`), while reference-seeking Assistant questions may receive compact bibliographic sources so `[KB:<id>]` citations remain traceable. Assistant KB retrieval is based on the user question itself, with a higher relevance threshold; vague questions do not pull unrelated entries. Citations are validated against the exact KB ids supplied to the model, and unsupported ids cause the answer to be rejected rather than shown as grounded. The full KB is never pasted into a model prompt.
 
-## Repository map
+## Export
 
-```mermaid
-flowchart TD
-    ROOT[LabFlow repository] --> EXP[assets/js/experiment: canonical model and schema]
-    ROOT --> DATA[assets/js/data: import, parsing and pipeline]
-    ROOT --> CAB[assets/js/cabinet: reusable lab references]
-    ROOT --> KB[assets/js/knowledge: JSONL knowledge]
-    ROOT --> AI[assets/js/ai: providers, Actions and Assistant]
-    ROOT --> PAGES[assets/js/pages: route renderers]
-    ROOT --> UI[assets/js/ui: shared UI primitives]
-    ROOT --> ACT[actions: manifests, prompts and schemas]
-    ROOT --> PROMPTS[prompts: deterministic and AI policies]
-    ROOT --> KNOW[knowledge: bundled KB]
-    ROOT --> DOCS[docs: canonical documentation]
-    ROOT --> TOOLS[tools: builders and validators]
-    ROOT --> TESTS[tests: unit and browser regression]
-```
+NOMAD mapping, validation, readiness and package generation are deterministic. `export.prepare` reports remaining metadata that cannot be populated from current canonical Workspace/Process/Cabinet/Experiment data; it does not invent values. Manual projection overrides stay export-only and never mutate scientific source truth. Ready-PV remains a secondary projection.
 
-Generated JavaScript bundles are build artifacts. Edit their source Markdown/JSONL/manifest files and rebuild them; do not patch generated output by hand.
+## Providers
 
-## Runtime introspection
+Provider configuration is optional. Hosted providers are called directly from the browser through the existing provider boundary. Local OpenAI-compatible endpoints are also supported as external services.
 
-From browser DevTools:
-
-```js
-LabFlow.Data.help()
-LabFlow.Data.summary()
-LabFlow.Data.tree()
-LabFlow.Data.validate()
-LabFlow.Data.pipeline()
-LabFlow.Data.actions()
-LabFlow.Data.contracts()
-LabFlow.Data.structures()
-```
-
-`LabFlow.Data.structures()` exposes the cross-module structure catalog: owner, layer, persistence class, required fields, and descriptive field metadata. It is documentation over the real owner contracts, not another store.
+`labflow_engine.sh` is intentionally retained as the supported helper for running/diagnosing a local `llama.cpp` OpenAI-compatible server. LabFlow itself does not download or execute models in the browser.
 
 ## Run locally
 
@@ -114,70 +129,57 @@ LabFlow.Data.structures()
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Open `http://127.0.0.1:8000/`. Do not browse to `0.0.0.0`; it is a bind address, not a client address.
+Open `http://127.0.0.1:8000/`.
 
-For a local OpenAI-compatible llama.cpp server, `labflow_engine.sh` provides the supported launcher and diagnostics. It binds to loopback by default and requires an explicit `--lan` opt-in for LAN exposure.
+## Verification
 
-## AI providers
-
-LabFlow calls the endpoint configured in Settings directly from the browser. There is no hidden provider relay or backend fallback. Browser CORS, authentication, quota, model, and server errors therefore remain distinguishable.
-
-OpenRouter (`openrouter/free`) is the static-POC default because it is compatible with the browser-only deployment model. The built-in **GLM / Zhipu AI** preset targets `glm-4.7-flash` through the official `open.bigmodel.cn` Chat Completions endpoint; the exact model field remains editable and does not depend on catalogue discovery. Local OpenAI-compatible endpoints remain supported through provider adapters.
-
-Use:
-
-```js
-LabFlow.AIConsole.help()
-```
-
-for provider/model diagnostics without experiment data.
-
-## Verification and source-derived bundles
-
-The release gate is the preferred command. It validates generated-source consistency, JavaScript, contracts, context hygiene, import/export behavior and static assets; Python is maintenance tooling, not an application runtime dependency.
+Run the project release gate:
 
 ```bash
 ./release_check.sh
 ```
 
-For individual checks, see `docs/VALIDATION.md`. Relevant generated artifacts are rebuilt with:
+Unit tests can also be run directly:
 
 ```bash
-python tools/build_prompt_bundle.py
-python tools/build_knowledge_bundle.py
-python tools/build_action_registry.py
-python tools/build_action_reference.py
-python tools/build_docs_bundle.py
-python tools/build_ui_kit_inline.py
+node tests/unit/run.js
 ```
 
-## Documentation entry points
+Canonical generated artifacts are rebuilt from source with the scripts under `tools/`; do not edit generated bundles by hand.
 
-Start with:
+Long explicit Actions use one Action Totem: Overall progress and elapsed time stay visible. Deterministic runs show only local progress and relevant operation metrics. Provider/model, generated tokens, tok/s, TTFT, reasoning and request/response traces appear only after that Action actually sends a model request. Request payloads, budgets, checklists and history live under **Technical data**.
 
-- `docs/README.md` — documentation map;
-- `docs/ARCHITECTURE.md` — authoritative ownership and dependency boundaries;
-- `docs/specs/DATA_MODEL.md` — scientific aggregate and persistence contract;
-- `docs/specs/PIPELINE.md` — deterministic lifecycle;
-- `docs/specs/ACTIONS.md` — Action contract and execution semantics;
-- `docs/CONTEXT_HYGIENE.md` — Action-by-Action context boundaries and measured compaction;
-- `docs/guides/EXTENDING_LABFLOW.md` — extension recipes;
-- `docs/CONTRIBUTING.md` — change discipline and review expectations;
-- `docs/CODE_REVIEW.md` — reviewer-oriented checklist.
+## Repository map
 
-## Current scope
+```text
+actions/             Action manifests, model prompts and output schemas
+assets/js/data/      import, deterministic pipeline and analysis
+assets/js/experiment canonical scientific model and ownership
+assets/js/cabinet/   reusable laboratory references
+assets/js/knowledge/ scientific reference library
+assets/js/export/    deterministic projections and packages
+assets/js/ai/        optional provider transport, compact context and Action runtime
+assets/js/pages/     route UI
+docs/                canonical documentation
+knowledge/           bundled JSONL knowledge
+tests/               unit/regression fixtures
+tools/               builders and validators
+TEST_DATA/           retained test archives
+labflow_engine.sh     retained llama.cpp helper
+```
 
-This repository is a proof-of-concept, not a production LIMS. It deliberately avoids inventory management, remote multi-user synchronization, hidden server state, and automatic scientific claims that cannot be traced to source evidence or an explicit researcher decision.
+## Documentation
 
-## Design inference: useful without hiding provenance
+Start from [`docs/README.md`](docs/README.md). The most important contracts are:
 
-Design completion follows a fixed authority hierarchy: **experiment evidence → compatible Cabinet resource → targeted Knowledge Base reference → cautious model inference → unresolved**. Cabinet/KB are deliberately useful instead of being ignored: Design context retrieves them per missing domain and the runtime can materialize a review candidate from a valid structured reference when a model omits that domain.
+- `docs/ARCHITECTURE.md`
+- `docs/specs/DATA_MODEL.md`
+- `docs/specs/PIPELINE.md`
+- `docs/specs/ACTIONS.md`
+- `docs/CONTEXT_HYGIENE.md`
+- `docs/VALIDATION.md`
+- `docs/guides/DESIGN_INFERENCE.md`
+- `docs/guides/AI_ASSISTANCE.md`
+- `docs/guides/EXPORT_PROJECTIONS.md`
 
-Every proposal carries the nature of the choice (`experiment`, `cabinet_reference`, `knowledge_reference`, `model_inference`, or unresolved) and a calibrated confidence. Confidence is the suitability of the candidate for review, **not** the probability that the current experiment actually used that candidate. Cabinet and KB values remain review-only and never become experiment evidence merely because an AI used them.
-
-See `docs/guides/DESIGN_INFERENCE.md` for the full source hierarchy, confidence calibration, small-model fallback and known-unknown semantics.
-
-
-### Export and NOMAD
-
-The Export workspace is NOMAD-first: readiness, blockers, optional AI metadata preparation and package generation are the primary workflow. Detailed NOMAD and Ready-PV projections stay collapsed until inspection/editing is needed. Both remain deterministic views of canonical LabFlow data; manual edits and accepted `export.prepare` suggestions are export-only overrides and never modify scientific source truth. Ready-PV can be exported as JSON or copied in questionnaire-ready text, while NOMAD overrides flow into the generated archive YAML.
+LabFlow is a proof of concept, not a production LIMS. Prefer explicit deterministic behavior and traceable evidence over framework complexity.

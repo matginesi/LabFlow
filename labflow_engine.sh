@@ -17,29 +17,27 @@
 #   NO_COLOR
 #
 # Examples:
-#   ./start_llama.sh
-#   ./start_llama.sh -m ~/models/model.gguf
-#   ./start_llama.sh --server llama-server
-#   ./start_llama.sh --server ~/src/llama.cpp/build/bin/llama-server
-#   LABFLOW_LLAMA_SERVER=/usr/bin/llama-server ./start_llama.sh
-#   ./start_llama.sh --no-thinking
-#   ./start_llama.sh --dry-run
-#   ./start_llama.sh -- --repeat-penalty 1.1
+#   ./labflow_engine.sh
+#   ./labflow_engine.sh -m ~/models/model.gguf
+#   ./labflow_engine.sh --server llama-server
+#   ./labflow_engine.sh --server ~/src/llama.cpp/build/bin/llama-server
+#   LABFLOW_LLAMA_SERVER=/usr/bin/llama-server ./labflow_engine.sh
+#   ./labflow_engine.sh --no-thinking
+#   ./labflow_engine.sh --dry-run
+#   ./labflow_engine.sh -- --repeat-penalty 1.1
 
 set -euo pipefail
 
 PROG="$(basename "$0")"
 
-# DEFAULT_MODEL="$HOME/.lmstudio/models/lmstudio-community/NVIDIA-Nemotron-3-Nano-4B-GGUF/NVIDIA-Nemotron-3-Nano-4B-Q4_K_M.gguf"
-# DEFAULT_MODEL="/data/models/granite-4.0-h-tiny/granite-4.0-h-tiny-Q4_K_M.gguf"
-# DEFAULT_MODEL="/data/models/Qwen3.5-0.8B-Q4_0.gguf"
-# DEFAULT_MODEL="/data/models/gemma-3-270m-it-q4_k_m.gguf"  <- NA MERDA
-DEFAULT_MODEL="/data/models/LFM2-350M-Q4_K_M.gguf"
+DEFAULT_MODEL="/data/models/LFM2.5-350M-Q4_K_M.gguf"
 
 MODEL="${LABFLOW_MODEL:-$DEFAULT_MODEL}"
 SERVER="${LABFLOW_LLAMA_SERVER:-llama-server}"
 HOST="${LABFLOW_HOST:-127.0.0.1}"
 PORT="${LABFLOW_PORT:-8080}"
+# same launcher supports local LabFlow and https://matginesi.github.io/LabFlow/
+# omit --cors-origin for automatic local + GitHub Pages support
 CORS_ORIGINS="${LABFLOW_CORS_ORIGINS:-}"
 
 CTX=16384

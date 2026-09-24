@@ -1,0 +1,17 @@
+/* Shared compact components that are used by the production UI and UI Kit. */
+.activity-runtime{padding:10px 16px 12px;background:var(--surface);border-top:1px solid var(--border)}
+.activity-runtime-metrics,.results-insight-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.activity-runtime-metrics>div,.results-insight-grid>div{min-width:0;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.activity-runtime-metrics span,.results-insight-grid span{display:block;font-size:.72rem;line-height:1.25;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em}
+.activity-runtime-metrics strong,.results-insight-grid strong{display:block;margin-top:3px;font-size:.96rem;line-height:1.3;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.results-insight-grid small{display:block;margin-top:3px;color:var(--text-muted);line-height:1.35}
+.activity-subprogress{margin-top:10px}.activity-subprogress-meta{display:flex;justify-content:space-between;gap:12px;font-size:.78rem;color:var(--text-muted)}
+.activity-subprogress-meta strong{color:var(--text);font-variant-numeric:tabular-nums}.activity-subprogress-bar{margin-top:5px;height:6px}.activity-technical{margin-top:0}
+.results-derived-insights .two-col{margin-top:14px;align-items:start}.results-derived-insights .h3{margin:0 0 7px}.results-derived-insights>.panel-body{display:grid;gap:14px}
+.results-derived-insights .results-insight-grid{margin:0}
+.design-completion-guide .panel-body{display:grid;gap:12px}.design-completion-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.design-completion-flow>div{padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-2)}
+.design-completion-flow span{display:block;color:var(--text-muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}.design-completion-flow strong{display:block;margin-top:3px}.design-domain-status{display:flex;flex-wrap:wrap;gap:6px}
+.design-domain-status span{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface);font-size:.78rem}.design-domain-status b{font-weight:700}.design-domain-status .ready b{color:var(--success)}.design-domain-status .proposed b{color:var(--accent)}.design-domain-status .missing b{color:var(--warning)}
+@media(max-width:760px){.activity-runtime-metrics,.results-insight-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.design-completion-flow{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.activity-runtime-metrics,.results-insight-grid,.design-completion-flow{grid-template-columns:1fr}}

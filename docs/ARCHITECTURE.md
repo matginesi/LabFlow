@@ -1,257 +1,102 @@
 ---
 title: Architecture
-section: Operating model
-summary: Authoritative ownership, dependency, mutation and persistence boundaries for LabFlow.
-order: 5
+section: Engineering reference
+summary: Deterministic-first ownership, data flow and optional AI boundary.
+order: 10
 ---
 
 # Architecture
 
-This document is the contributor-facing architectural source of truth. LabFlow remains deliberately small: a static browser application with explicit contracts, owner modules and deterministic build/validation tools. Extensibility must preserve that simplicity.
+LabFlow is a local-first static browser application. Vanilla JavaScript owns the scientific model, import pipeline, analysis, review state, Design proposals, export projections and UI. There is no application backend and no in-browser model runtime.
 
-## 1. System boundary
-
-LabFlow has no application server owning scientific state.
-
-```mermaid
-flowchart TD
-    W[Scientific Workspace / Process context] --> ED[ExperimentData]
-    RAW[RAW ZIP bytes: immutable] --> IP[Importer / Parser]
-    DS[DomainSchema] --> ED[ExperimentData]
-    DC[DataContracts] --> ED
-    IP --> ED
-    ED --> DP[DataPipeline]
-    DP --> DA[Deterministic analysis]
-    DP --> CS[CanonicalStore read index]
-    DP --> RP[Review projection]
-    DP --> DES[Design projection]
-    DP --> SUM[Deterministic summaries]
-    DA --> SURF[Pages / Actions / Assistant / Export / NOMAD]
-    CS --> SURF
-    RP --> SURF
-    DES --> SURF
-    SUM --> SURF
-```
-
-External AI providers are optional network dependencies called directly from the browser. They are not part of the deterministic scientific lifecycle.
-
-## 2. Single aggregate rule
-
-There is exactly one mutable scientific aggregate:
+## Product model
 
 ```text
-LF.State.state.experiment : ExperimentData
+User → Workspace → Process → ExperimentData
+                              ├─ experiments
+                              ├─ samples
+                              ├─ runs
+                              ├─ measurements
+                              ├─ findings
+                              └─ design
 ```
 
-A feature may own a projection, index, reference library, runtime state, or Action output, but it must not create another editable representation of experiments/samples/runs/measurements.
+`ExperimentData` is the canonical mutable scientific aggregate. RAW files remain evidence. Workspace, Process, Cabinet and Knowledge Base provide reusable context/reference data and must not be confused with measured evidence.
 
-This rule prevents two classes of defects: disagreement between parallel models and mutations that bypass revision/provenance/invalidation.
+## Authority order
 
-## 3. Ownership model
+1. RAW archive evidence
+2. canonical ExperimentData
+3. deterministic normalization, validation and analysis
+4. explicit Workspace / Process / Cabinet / Knowledge Base references
+5. optional model suggestion for unresolved semantics
+6. researcher acceptance where scientific state may change
 
-### `DomainSchema`
+The model never owns parsing, arithmetic, ranking, validation, export mapping or canonical mutation.
 
-Owns record factories/defaults, root ownership metadata, persistent-root metadata, normalization, and the snapshot shape. New scientific defaults are defined here once.
+## Deterministic pipeline
 
-### `DataModel` / `ExperimentData`
-
-Owns aggregate mechanics, hydration/restoration, stable query helpers, revision-aware commit operations and serialization entry points. It does not own feature policy.
-
-### `DataContracts`
-
-Owns fail-closed validation of aggregate/snapshot invariants. External or persisted data must pass the current snapshot contract before hydration.
-
-### `DerivedState`
-
-Owns dependency-based invalidation for recomputable projections. Feature-specific invalidation must be registered here rather than accumulated inside `State.touch()`.
-
-### `DataPipeline`
-
-Owns deterministic lifecycle planning/execution. Stages declare dependencies, reads and writes and must be idempotent for unchanged input.
-
-### `CanonicalStore`
-
-Owns pure read indexes and evidence lookup over the current aggregate. It is disposable/rebuildable and may not become another source of truth.
-
-### `DesignModel`
-
-Owns every Design write. Pages, Cabinet, Actions and Assistant code coordinate Design changes through this API rather than assigning `exp.design.*` directly.
-
-### `DatasetCorrections`
-
-Owns reviewed dataset-correction semantics, patch/provenance commit and any canonical rebuild required by an accepted correction.
-
-### `ActionData`
-
-Owns persisted Action proposals, annotations and Action status. Action output must not leak into ad-hoc scientific root fields.
-
-### `Workspace`
-
-Owns the browser-local scientific environment: institution, role contacts, locations, storage descriptors and reusable scientific Process definitions. It is contextual/reference state, not measurement evidence. Experiments bind to it by stable `workspaceId`/`processId`. Workspace contacts are excluded from scientific export snapshots by default.
-
-### `Cabinet`
-
-Owns reusable laboratory reference resources and their browser-local storage contract. Cabinet is outside scientific truth until a resource is explicitly copied into Design through `DesignModel`.
-
-### `KnowledgeBase`
-
-Owns validated bundled/custom reference knowledge. KB entries can inform reasoning but are never evidence that a current experiment has a property.
-
-### `Structures`
-
-Owns metadata describing structures that cross module boundaries: owner, layer, persistence class, required fields and field descriptions. It owns no runtime values, defaults, validation or mutation behavior.
-
-### `State`
-
-Owns the application shell state: one `ExperimentData`, transient `ui` state and one active Action run. It coordinates revision/invalidation but is not a scientific feature owner.
-
-## 4. Persistence classes
-
-Every cross-module structure should fall into one of these classes:
-
-| Class | Meaning | Examples |
-|---|---|---|
-| scientific persistent | serialized with current experiment | measurements, Design, patches |
-| Action persistent | reviewable Action output | proposals, annotations, statuses |
-| reference persistent | separate reusable browser-local data | scientific Workspace/Processes, Cabinet, custom KB JSONL |
-| preference persistent | browser-local configuration | provider/UI/NOMAD settings |
-| runtime derived | recomputable/session-only | indexes, pipeline trace, active run |
-| UI runtime | presentation/session-only | route, selection, open panels |
-
-Persistence is explicit. Unknown runtime properties must not silently enter scientific snapshots.
-
-## 5. Mutation flow
-
-The safe pattern is:
-
-```mermaid
-flowchart TD
-    C[UI / Action / Cabinet] -->|intent| O[Owner API]
-    O -->|validated mutation| S[ExperimentData or owner store]
-    S -->|revision / invalidation| P[DataPipeline / projections]
-    P --> R[Rendered state]
+```text
+ZIP
+ → inspect
+ → parse
+ → canonicalize identities and links
+ → validate
+ → analyze
+ → findings / safe cleanup
+ → Results / Design / Export
 ```
 
-Pages and controllers may collect user input and choose an owner operation; they do not become owners by virtue of being the caller.
+The pipeline remains useful with no provider configured.
 
-## 6. RAW evidence and provenance
+## Actions are application operations
 
-Archive bytes and RAW paths are immutable. LabFlow stores normalized/canonical interpretations separately. Corrections are patches over LabFlow Data and retain target, operation, before/after meaning and reason/provenance.
+An Action is a typed unit of LabFlow behavior, not a synonym for an LLM call.
 
-A transformation that would require rewriting RAW evidence is out of scope for the current architecture.
-
-## 7. Workspace, Cabinet and KB boundary
-
-The three browser-local reference domains are intentionally separate:
-
-- **Workspace/Process:** describes where/how data is normally generated and managed;
-- **Cabinet:** reusable laboratory resources and infrastructure definitions;
-- **KB:** general/reference knowledge.
-
-A Process may reference Cabinet instruments, acquisition software, setups and file-format definitions by stable ID. These references describe the expected acquisition environment; they do not prove that a specific measurement used a resource unless experiment evidence or measurement provenance says so.
-
-
-Cabinet and KB solve different problems:
-
-- **Cabinet:** reusable lab definitions the researcher may intentionally copy into Design.
-- **KB:** general/reference knowledge used to support interpretation or reasoning.
-
-Neither source is experiment evidence by itself. Context builders must preserve this distinction so a model cannot mistake “available in my lab” or “known in literature” for “used/measured in this experiment.”
-
-## 8. AI and Action boundary
-
-AI is reached only through declared Action/provider paths. `ActionCapabilities` is the single preflight service for bindings and guards. The Runner re-checks capability immediately before execution.
-
-Actions produce one of three semantic classes:
-
-- proposal requiring explicit acceptance;
-- derived annotation over deterministic data;
-- read-only answer.
-
-Structured AI output is schema-validated and may additionally pass semantic validation before storage. Provider success (HTTP 200) is not equivalent to Action success.
-
-### Semantic context boundary
-
-Provider transport and semantic model input are separate structures:
-
-```mermaid
-flowchart LR
-    S[Scientific/reference state] --> C[Explicit context builder]
-    C --> M[messages: semantic content only]
-    P[Provider settings] --> T[HTTP transport]
-    R[Runtime request metadata] --> L[Diagnostics/logs]
-    M --> T
+```text
+Action
+ → validate prerequisites
+ → deterministic work
+ → unresolved semantics?
+      no  → validate/store/result
+      yes → compact provider request → deterministic validation → proposal
 ```
 
-The Assistant may receive bounded page context, conversation memory and several authority-labelled sources. Actions receive a small task-specific object. Runtime revision guards, prompt-budget flags, provider/model/endpoint configuration, credentials, browser routing, request IDs, timings and token counters remain outside `messages`.
+Current modes:
 
-Structured Actions keep full JSON Schema in the deterministic validator. Small-model-sensitive Actions use a compact semantic output shape in the prompt rather than repeating schema implementation keywords.
+- deterministic: `results.interpret`, `results.compare`, `export.prepare`
+- hybrid: `dataset.resolve-ambiguities`, `design.infer`
+- tiny language-agnostic Assistant intent router plus bounded read-only answer fallback: `assistant.chat`
 
-## 9. Dependency direction
+Contracts, schemas, guards and allowed writes stay application-side. They are used by runtime/tests/UI and are not pasted into prompts.
 
-High-level allowed direction:
+## Small-model boundary
 
-```mermaid
-flowchart TD
-    UI[Pages / UI] --> ACC[Actions / context / controllers]
-    ACC --> SVC[Data services / owner services]
-    SVC --> CORE[Core / schema / model]
-```
+A provider receives only the residue that code could not resolve. Context builders select the current target, compact evidence and small candidate lists. Output is bounded and validated before use. Current provider-backed scientific Actions do not use semantic retry loops.
 
-Reference services such as Cabinet/KB may depend on core/storage and owner APIs, but must not import page behavior. Pages may invoke services; services must not discover state by scraping DOM.
+This architecture supports small models without adding WebGPU, wllama, Transformers.js or model storage to the browser application.
 
-Classic scripts make load order visible in HTML rather than imports. Required module dependencies therefore fail fast with explicit checks. Silent fallback objects are prohibited for required architecture modules.
+## Reference stores
 
-## 10. Generated artifacts
+### Cabinet
 
-Prompt, KB, Action, docs and UI-kit bundles are deterministic generated artifacts. The source files are Markdown/JSONL/JSON/HTML. A generated bundle is never the place to make a semantic change.
+Researcher-owned reusable laboratory resources. Saving to an experiment copies the relevant value/provenance; past experiments are not live-linked to later Cabinet edits.
 
-## 11. Error philosophy
+### Knowledge Base
 
-Fail closed when a contract boundary is violated; degrade gracefully when an optional external capability is unavailable.
+Scientific reference knowledge stored as compact JSONL. The full record keeps source metadata. Model-facing views are task-specific:
 
-Examples:
+- Design: structured, bibliography-free candidates and design hints
+- Assistant: compact facts plus source metadata when reference knowledge is useful
 
-- invalid persisted scientific snapshot → contract error;
-- missing required runtime module → startup error;
-- malformed Action result → rejected Action result, not stored success;
-- provider unavailable → Action/Assistant failure, deterministic app remains usable;
-- incomplete Cabinet item → editable but excluded from AI context/application until valid.
+## Derived state and invalidation
 
-## 12. Extension rule
+Derived analysis, summaries, experiment briefs and Action annotations are disposable. Scientific mutations invalidate dependent derived state through the derived-state registry. Accepted proposals must preserve source/provenance distinctions.
 
-A new feature is acceptable when a reviewer can answer all of these without reading arbitrary code:
+## Export boundary
 
-- Who owns its data?
-- Is the data scientific truth, reference data, preference, derived state or UI state?
-- Which API is allowed to mutate it?
-- What invalidates its projections?
-- Does it belong in the deterministic pipeline, an Action, or a service?
-- How is the boundary tested?
-- How is the structure discoverable at runtime?
+NOMAD and Ready-PV are projections of canonical LabFlow data. Mapping/readiness/package generation are deterministic. Projection overrides are export-only and never rewrite canonical scientific truth.
 
-If those answers are unclear, the feature is not architecturally complete.
+## UI boundary
 
-## 13. Design inference reference architecture
-
-Design inference intentionally splits **generation** from **scientific authority**:
-
-```mermaid
-flowchart LR
-    EE[Experiment evidence] --> CP[Bounded Design context]
-    C[Cabinet] --> CP
-    K[Knowledge Base] --> CP
-    CP --> LLM[Configured model]
-    LLM --> N[Normalize + schema validation]
-    N --> RF[Deterministic reference fallback]
-    RF --> PC[Provenance + confidence calibration]
-    PC --> P[Stored review proposal]
-    P --> A[Researcher acceptance]
-    A --> DM[DesignModel]
-```
-
-`Context` retrieves Cabinet and KB candidates separately per missing Design domain. The model is never the authority for whether a reference is valid: `DesignAnalysis` verifies exact `CABINET:<id>` / `KB:<id>` markers and calibrates source nature. `ActionSteps` owns the deterministic reference fallback that can convert already supplied structured references into a proposal when a model omits them.
-
-This separation is important for model portability. Small models gain structured support instead of returning empty data; stronger models can synthesize richer candidates; neither can convert a reusable resource or literature reference into current-experiment evidence.
-
-Confidence is presentation/decision-support metadata over a proposal, not scientific state. The accepted value and its provenance are owned by `DesignModel`; the model's raw self-confidence has no authority by itself.
+Pages compose shared primitives. Long-running Actions use one Action Totem. The normal Totem view exposes meaningful progress and throughput; implementation diagnostics remain under **Technical data**.

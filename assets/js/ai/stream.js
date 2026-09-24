@@ -4,7 +4,7 @@
  */
 (function(){
   'use strict';
-  const LF=window.LabFlow=window.LabFlow||{},Errors=LF.AITransportErrors;
+  const LF=window.LabFlow=window.LabFlow||{},C=LF.Core,Errors=LF.AITransportErrors;
   if(!Errors)throw new Error('AI transport error module is not loaded.');
   const STREAM_DIAGNOSTIC_CHARS=131072;
   function estimateTokens(text){return Math.max(0,Math.round(String(text||'').length/4));}
@@ -18,7 +18,7 @@ if(!incoming)return current;if(!current)return incoming;if(incoming===current)re
   function outputLoopDetected(value){const s=String(value||'').replace(/\s+/g,' ').trim();for(const n of [512,1024,2048]){if(s.length<n*3)continue;const a=s.slice(-n),b=s.slice(-2*n,-n),c=s.slice(-3*n,-2*n);if(a===b&&b===c)return true;}return false;}
   async function readEventStream(response,onBytes,onProgress,onMeaningful,startedAt,budgetTokens,onReasoning,providerId){
     const reader=response.body&&response.body.getReader?response.body.getReader():null;if(!reader)throw new Error('The provider declared streaming but the browser exposed no readable response body.');
-    const decoder=new TextDecoder(),state={content:'',reasoning:'',finishReason:'',usage:null,model:'',requestId:'',events:0,meaningfulEvents:0,bytes:0,ttftMs:null,budgetTokens:budgetTokens||null,done:false},started=startedAt||performance.now();let raw='',buffer='';
+    const decoder=new TextDecoder(),state={content:'',rawContent:'',providerReasoning:'',reasoning:'',finishReason:'',usage:null,model:'',requestId:'',events:0,meaningfulEvents:0,bytes:0,ttftMs:null,budgetTokens:budgetTokens||null,done:false},started=startedAt||performance.now();let raw='',buffer='';
     function event(data){if(!data)return false;if(data==='[DONE]'){state.done=true;return true;}let obj;
 try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returned an invalid SSE JSON event.');
       invalid.cause=error;invalid.providerResponse=data;throw invalid;
@@ -30,10 +30,15 @@ try{obj=JSON.parse(data);}catch(error){const invalid=new Error('Provider returne
       state.requestId=obj.request_id||obj.id||state.requestId;
       const meaningful=!!(content||reasoning||choice.finish_reason||obj.usage);
       if((content||reasoning)&&state.ttftMs==null)state.ttftMs=Math.round(performance.now()-started);
-      state.content=mergeStreamContent(state.content,content);state.reasoning=mergeStreamContent(state.reasoning,reasoning);
+      state.rawContent=mergeStreamContent(state.rawContent,content);
+      state.providerReasoning=mergeStreamContent(state.providerReasoning,reasoning);
+      const split=C&&C.splitModelReasoning?C.splitModelReasoning(state.rawContent):{content:state.rawContent,reasoning:''},
+        priorReasoning=state.reasoning;
+      state.content=split.content;
+      state.reasoning=[state.providerReasoning,split.reasoning].filter(Boolean).join('\n\n').trim();
       state.finishReason=choice.finish_reason||state.finishReason;
-      if(reasoning&&onReasoning)onReasoning({requestId:state.requestId,model:state.model,reasoning:reasoning,
-      totalReasoning:state.reasoning});if(meaningful){state.meaningfulEvents++;if(onMeaningful)onMeaningful();
+      if(state.reasoning!==priorReasoning&&onReasoning)onReasoning({requestId:state.requestId,model:state.model,
+      reasoning:state.reasoning,totalReasoning:state.reasoning});if(meaningful){state.meaningfulEvents++;if(onMeaningful)onMeaningful();
       }if(outputLoopDetected(state.content)||outputLoopDetected(state.reasoning)){
       const repeated=outputLoopDetected(state.content)?state.content:state.reasoning,
       loop=new Error('The model entered a repeated-output loop. The checkpoint was stopped before storing duplicated content.');

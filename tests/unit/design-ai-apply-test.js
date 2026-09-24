@@ -290,7 +290,7 @@ module.exports=function(t,LF){
     const out=LF.DesignAnalysis.acceptProposal(exp,'a');
     assert(out.complete===false&&out.remaining.includes('stack')&&out.remaining.includes('solutions')&&out.remaining.includes('process'),'post-accept completeness must be checked against the real Design model');
     assert(status(exp,'a').state==='incomplete','stale partial proposal must not be marked accepted');
-    assert(!map(exp).a,'exhausted partial proposal is cleared so Complete with AI can run again');
+    assert(!map(exp).a,'exhausted partial proposal is cleared so Complete missing design can run again');
   };
 
   t['A sparse Design attempt can be downgraded safely without removing an independently stored success']=function(){

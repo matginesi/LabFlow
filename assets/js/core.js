@@ -161,8 +161,35 @@
   }
 
 
+  function splitModelReasoning(text) {
+    let source = String(text == null ? '' : text);
+    const reasoning = [];
+    let changed = false;
+    const tag = '(?:think|thinking|analysis|reasoning)';
+    const complete = new RegExp('<(' + tag.slice(3, -1) + ')\\b[^>]*>([\\s\\S]*?)<\\/\\1>', 'gi');
+    source = source.replace(complete, function (_whole, _name, inner) {
+      const value = String(inner || '').trim();
+      if (value) reasoning.push(value);
+      changed = true;
+      return '\n';
+    });
+    const opener = new RegExp('<' + tag + '\\b[^>]*>', 'i');
+    const open = opener.exec(source);
+    if (open) {
+      const tail = source.slice(open.index + open[0].length).replace(new RegExp('<\\/' + tag + '>\\s*$', 'i'), '').trim();
+      if (tail) reasoning.push(tail);
+      source = source.slice(0, open.index);
+      changed = true;
+    }
+    const closers = new RegExp('<\\/' + tag + '>', 'gi');
+    const stripped = source.replace(closers, '\n');
+    if (stripped !== source) changed = true;
+    source = stripped.replace(/\n[ \t]*\n+/g, '\n').trim();
+    return { content: source, reasoning: reasoning.join('\n\n').trim(), changed: changed };
+  }
+
   function cleanModelText(text) {
-    let out = String(text == null ? '' : text);
+    let out = splitModelReasoning(text).content;
 
     out = out
       .replace(/%%LF(?:MD|CODE)[^%]*%%\s+tool/gi, 'LabFlow read tool')
@@ -215,5 +242,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, splitModelReasoning, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels };
 }());

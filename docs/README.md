@@ -1,64 +1,64 @@
 ---
 title: LabFlow documentation
 section: Start here
-summary: Authoritative map of product, architecture, scientific and engineering documentation.
+summary: Authoritative map of product, scientific, UI and engineering documentation.
 order: 0
 ---
 
 # LabFlow documentation
 
-The documentation is split by **authority**, not by implementation accident. When two documents overlap, the more specific contract listed below wins.
+LabFlow is deterministic-first. RAW evidence and canonical experiment data are primary; optional model calls are narrow helpers for unresolved semantics, never owners of scientific state.
 
-## Start here
-
-For a researcher:
+## Researcher path
 
 1. [Getting started](guides/GETTING_STARTED.md)
 2. [Research workflow](guides/RESEARCH_WORKFLOW.md)
-3. [Lab Cabinet](guides/LAB_CABINET.md)
-4. [Knowledge Base](guides/KNOWLEDGE_BASE.md)
-5. [Design inference and confidence](guides/DESIGN_INFERENCE.md)
-6. [AI assistance](guides/AI_ASSISTANCE.md)
-7. [Troubleshooting](guides/TROUBLESHOOTING.md)
+3. [Results analysis](guides/RESULTS_ANALYSIS.md)
+4. [Lab Cabinet](guides/LAB_CABINET.md)
+5. [Knowledge Base](guides/KNOWLEDGE_BASE.md)
+6. [Design inference and confidence](guides/DESIGN_INFERENCE.md)
+7. [Export projections](guides/EXPORT_PROJECTIONS.md)
+8. [AI assistance](guides/AI_ASSISTANCE.md)
+9. [Troubleshooting](guides/TROUBLESHOOTING.md)
 
-For a contributor or reviewer:
+## Contributor path
 
 1. [Architecture](ARCHITECTURE.md)
 2. [Data model](specs/DATA_MODEL.md)
 3. [Deterministic pipeline](specs/PIPELINE.md)
 4. [Actions](specs/ACTIONS.md)
-5. [AI context hygiene](CONTEXT_HYGIENE.md)
-6. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
-7. [Extending LabFlow](guides/EXTENDING_LABFLOW.md)
-8. [Contributing](CONTRIBUTING.md)
-9. [Code review](CODE_REVIEW.md)
-10. [Validation](VALIDATION.md)
+5. [Context hygiene](CONTEXT_HYGIENE.md)
+6. [AI providers](specs/AI_PROVIDERS.md)
+7. [JavaScript modules](specs/JAVASCRIPT_MODULES.md)
+8. [UI contract](UI.md)
+9. [Validation](VALIDATION.md)
+10. [Contributing](CONTRIBUTING.md)
+11. [Code review](CODE_REVIEW.md)
 
 ## Authority map
 
-| Concern | Authoritative source |
+| Concern | Authority |
 |---|---|
-| aggregate/root ownership and dependencies | `ARCHITECTURE.md` + `DomainSchema` |
-| scientific record shape/persistence | `specs/DATA_MODEL.md` + `DomainSchema` |
-| deterministic lifecycle | `specs/PIPELINE.md` + `DataPipeline` registry |
-| Action behavior | `specs/ACTIONS.md` + `actions/*/action.json` |
-| semantic AI context | `CONTEXT_HYGIENE.md` + `assets/js/ai/context.js` |
-| AI transport/provider behavior | `specs/AI_PROVIDERS.md` + provider/transport modules |
-| reusable lab resources | `guides/LAB_CABINET.md` + `Cabinet` registry |
-| reference knowledge | `guides/KNOWLEDGE_BASE.md` + JSONL schema/validator |
-| Design inference source hierarchy/confidence | `guides/DESIGN_INFERENCE.md` + `design.infer` runtime/validators |
-| UI primitives and interaction | `UI.md` + `.agent/skills/labflow-ui/SKILL.md` |
-| release gates | `VALIDATION.md` + validator/test source |
+| scientific aggregate and ownership | `DomainSchema`, `ARCHITECTURE.md`, `specs/DATA_MODEL.md` |
+| deterministic import/analysis | `DataPipeline`, `specs/PIPELINE.md` |
+| Action behavior | `actions/*/action.json`, `specs/ACTIONS.md` |
+| model context | `assets/js/ai/context.js`, `CONTEXT_HYGIENE.md` |
+| provider transport | provider/transport modules, `specs/AI_PROVIDERS.md` |
+| reusable lab resources | Cabinet registry, `guides/LAB_CABINET.md` |
+| scientific reference knowledge | `knowledge/kb.jsonl`, KB validator, `guides/KNOWLEDGE_BASE.md` |
+| Design source hierarchy | `design.infer` runtime, `guides/DESIGN_INFERENCE.md` |
+| Results calculations | analysis modules, `guides/RESULTS_ANALYSIS.md` |
+| UI behavior | `UI.md`, `ui-kit.html`, `.agent/skills/labflow-ui/SKILL.md` |
+| release quality | validators/tests, `VALIDATION.md` |
 
-Executable manifests, schemas and validators take precedence over prose when a mismatch is discovered. The mismatch should then be fixed as documentation debt.
+Executable manifests, schemas and validators take precedence over prose if a mismatch is found; the documentation should then be corrected.
 
-## Generated documentation
+## Generated artifacts
 
-The in-app Documentation route is generated from `docs/**/*.md` by `tools/build_docs_bundle.py`. `assets/js/pages/docs-bundle.js` is an artifact and must not be edited directly.
+The in-app Documentation bundle and Action runtime matrix are generated. Do not hand-edit:
 
-The Action runtime matrix is generated from Action manifests. Rebuild generated references after source changes.
+- `assets/js/pages/docs-bundle.js`
+- `docs/reference/ACTION_RUNTIME_MATRIX.md`
+- generated Action/KB/UI bundles
 
-
-## Design inference semantics
-
-The authoritative explanation of Design source hierarchy, Cabinet/KB reference fallback, known unknowns and confidence calibration is [Design inference and confidence](guides/DESIGN_INFERENCE.md). Keep other documentation consistent with that guide rather than redefining confidence ad hoc.
+Use the builders or `./release_check.sh --fix` after changing source documentation, manifests, prompts, Knowledge Base records, or UI Kit source.

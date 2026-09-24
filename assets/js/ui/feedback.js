@@ -442,6 +442,32 @@
   }
 
 
+  function renderActivityPrimary(elapsedMs) {
+    const elapsed=byId('activityPrimaryElapsed');
+    if(elapsed)elapsed.textContent=elapsedMs<1000?elapsedMs+' ms':(elapsedMs/1000).toFixed(1)+' s';
+    const steps=activity.steps||[],done=steps.filter(function(step){return step.status==='done';}).length;
+    const stepShell=byId('activityStepProgressShell'),stepText=byId('activityStepProgressText'),stepProgress=byId('activityStepProgress'),stepBar=byId('activityStepBar');
+    const showSteps=steps.length>1&&activity.status!=='complete';
+    if(stepShell)stepShell.hidden=!showSteps;
+    if(showSteps){const pct=Math.round(done/steps.length*100);if(stepText)stepText.textContent=done+' / '+steps.length;if(stepProgress){stepProgress.setAttribute('aria-valuenow',String(pct));stepProgress.setAttribute('aria-valuetext',done+' of '+steps.length+' steps completed');}if(stepBar)stepBar.style.width=pct+'%';}
+    const stream=activity.stream,tokenShell=byId('activityTokenProgressShell'),tokensItem=byId('activityPrimaryTokensItem'),rateItem=byId('activityPrimaryRateItem'),speedItem=byId('activityPrimarySpeedItem');
+    const completion=stream?Math.max(0,Number(stream.completionTokens==null?stream.tokens:stream.completionTokens)||0):0,budget=stream?Math.max(0,Number(stream.budgetTokens)||0):0;
+    if(tokenShell)tokenShell.hidden=!stream;
+    if(tokensItem)tokensItem.hidden=!stream;
+    if(rateItem)rateItem.hidden=!(stream&&Number(stream.rate)>0);
+    if(stream){
+      const tokenText=byId('activityPrimaryTokens'),rate=byId('activityPrimaryRate'),
+        tokenProgressText=byId('activityTokenProgressText'),used=Math.round(completion).toLocaleString(),
+        limit=budget?' / '+Math.round(budget).toLocaleString():'';
+      if(tokenText)tokenText.textContent=used+limit;
+      if(rate)rate.textContent=Number(stream.rate)>0?Number(stream.rate).toFixed(1):'—';
+      if(tokenProgressText)tokenProgressText.textContent=used+limit+' tok';
+    }
+    const speedEl=byId('activityPrimarySpeed'),speedText=text(activity.speed);
+    if(speedItem)speedItem.hidden=!speedText;
+    if(speedEl)speedEl.textContent=speedText||'—';
+  }
+
   function renderActivityNow() {
     const shade = byId('activityShade');
     if (!shade || !activity) return;
@@ -482,6 +508,7 @@
 
     const details = Object.assign({}, activity.details || {});
     details.Elapsed = elapsedMs < 1000 ? elapsedMs + ' ms' : (elapsedMs / 1000).toFixed(1) + ' s';
+    renderActivityPrimary(elapsedMs);
     renderActivityDetails(details);
     renderActivityTimeline();
     renderActivityStream();
@@ -526,7 +553,9 @@
       activityResponse:'—',
       activityRequestState:'No request data',
       activityOutputLabel:'Provider output',
-      activityOutputState:'Waiting for response'
+      activityOutputState:'Waiting for response',
+      activityPrimaryElapsed:'0.0 s',activityPrimarySpeed:'—',activityPrimaryTokens:'—',activityPrimaryRate:'—',
+      activityStepProgressText:'0 / 0',activityTokenProgressText:'0 tok'
     };
     Object.keys(defaults).forEach(function (id) {
       const element = byId(id);
@@ -539,6 +568,9 @@
 
     // User-controlled diagnostic disclosure must survive progress/SSE re-renders.
     // Reset it only when the Activity Totem lifecycle itself is reset.
+    ['activityPrimarySpeedItem','activityPrimaryTokensItem','activityPrimaryRateItem','activityStepProgressShell','activityTokenProgressShell'].forEach(function(id){const el=byId(id);if(el)el.hidden=true;});
+    ['activityStepBar','activityStreamBar'].forEach(function(id){const el=byId(id);if(el)el.style.width='0%';});
+
     const technical = byId('activityTechnical');
     if (technical) technical.open = false;
 
@@ -604,7 +636,8 @@
       onCancel:typeof input.onCancel === 'function' ? input.onCancel : null,
       onRetry:typeof input.onRetry === 'function' ? input.onRetry : null,
       retryLabel:text(input.retryLabel || 'Retry checkpoint'),
-      closeLabel:text(input.closeLabel || 'Close details')
+      closeLabel:text(input.closeLabel || 'Close details'),
+      speed:text(input.speed)
     };
     activity.history.push({time:'0.0 s', stage:activity.stage});
     window.clearInterval(activityTimer);
@@ -621,7 +654,7 @@
   function activityUpdate(options) {
     if (!activity) return;
     const input = options || {};
-    const textFields = ['title', 'subtitle', 'kind', 'message', 'request', 'response', 'closeLabel', 'progressLabel'];
+    const textFields = ['title', 'subtitle', 'kind', 'message', 'request', 'response', 'closeLabel', 'progressLabel', 'speed'];
     textFields.forEach(function (field) {
       if (input[field] != null) activity[field] = text(input[field]);
     });

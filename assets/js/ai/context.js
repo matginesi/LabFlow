@@ -5,16 +5,18 @@
 (function(){
   'use strict';
   const LF=window.LabFlow=window.LabFlow||{},Log=LF.Logger?LF.Logger.scope('context'):null;
-  const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain ' +
-    'please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
   function expOf(){return(LF.DataModel&&LF.DataModel.getExperiment&&LF.DataModel.getExperiment())||(LF.State&&LF.State.state&&LF.State.state.experiment)||{};}
   function clean(v){return LF.PageContext&&LF.PageContext.cleanText?LF.PageContext.cleanText(v):String(v==null?'':v).replace(/%%LF(?:MD|CODE)[^%]*%%/g,'').trim();}
   function sanitize(v){if(v==null||typeof v==='number'||typeof v==='boolean')return v;if(typeof v==='string')return clean(v);if(Array.isArray(v))return v.map(sanitize);if(typeof v==='object'){const o={};Object.keys(v).forEach(function(k){o[k]=sanitize(v[k]);});return o;}return clean(v);}
-  function stripPolicy(md){return clean(md).replace(/```json\s+(?:labflow-rules|labflow-ground-truth)\s*\n[\s\S]*?\n```/g,'[Machine-readable policy omitted; deterministic code already applies it.]');}
-  function policy(id){return LF.PromptRegistry&&LF.PromptRegistry.promptText?stripPolicy(LF.PromptRegistry.promptText(id)):'';}
+  const MODEL_POLICY_SUMMARIES={
+    'policy.data-ground-truth':'RAW/source evidence is authoritative. Never invent values, identities, units or mappings. Missing evidence stays unknown. Apply only the requested ambiguity task.',
+    'policy.data-format-repair':'Only propose bounded semantic repairs supported by supplied evidence. Never fabricate numeric values or silently change scientific meaning.',
+    'policy.scientific-provenance':'Keep experiment evidence, Cabinet references, Knowledge Base references and model inference distinct. Reference knowledge is not proof of what the current experiment used.',
+    'policy.structured-output':'Return only the requested strict JSON value. No Markdown, commentary, schema text or hidden reasoning.'
+  };
+  function policy(id){return MODEL_POLICY_SUMMARIES[id]||'';}
   function take(v,n){return(Array.isArray(v)?v:[]).slice(0,n);}
   function clip(v,n){const s=clean(v);return s.length>n?s.slice(0,n)+'…':s;}
-  function words(text){return clean(text).toLowerCase().replace(/[^a-z0-9_\-.]+/g,' ').split(/\s+/).filter(function(x){return x.length>=3&&!STOP.has(x);}).slice(0,24);}
   function compact(v){return sanitize(LF.CanonicalStore&&LF.CanonicalStore.compact?LF.CanonicalStore.compact(v,360):v);}
   function pageContext(){
     const raw=LF.PageContext&&LF.PageContext.snapshot?LF.PageContext.snapshot():{},page=clean(raw&&raw.page),out={page:page,view:clean(raw&&raw.view),selected:sanitize(raw&&raw.selected||{}),filters:sanitize(raw&&raw.filters||{}),visible:take(raw&&raw.visible,16).map(clean)};
@@ -24,32 +26,6 @@
     if(raw&&raw.data&&typeof raw.data==='object')out.data=compact(raw.data);
     return out;
   }
-  function dataState(exp){const patches=exp.patches||[];return{basis:patches.length?'labflow_data_with_changes':'imported_data_interpretation',source_archive:exp.meta&&exp.meta.sourceName||'',applied_changes:patches.length};}
-  function sharedBrief(exp){const b=LF.ExperimentBrief&&
-LF.ExperimentBrief.ensure?LF.ExperimentBrief.ensure(exp):exp.experimentBrief||null;if(!b)return null;
-    const d=b.deterministic||{},det={scope:sanitize(d.scope||{}),performance:sanitize(Object.assign({},d.performance||{},{
-    top_reference:take(d.performance&&d.performance.top_reference,3),
-    top_non_reference:take(d.performance&&d.performance.top_non_reference,3)}
-    )),comparisons:sanitize(take(d.comparisons,8)),quality:sanitize(Object.assign({},d.quality||{},{
-    anomalies:take(d.quality&&d.quality.anomalies,6)})),design:sanitize(d.design||{}
-    ),unresolved:sanitize(take(d.unresolved,8))};
-    return{input_signature:b.inputSignature||'',status:'deterministic',deterministic:det};}
-  function actionCatalog(exp){if(!LF.ActionCapabilities||!LF.ActionCapabilities.assistantCatalog)return[];return LF.ActionCapabilities.assistantCatalog({exp:exp}).map(function(item){item.purpose=clip(item.purpose||'',260);item.blocked_reason=clip(item.blocked_reason||'',220);return item;});}
-  function recentActionEvents(exp){const conv=(exp&&exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[];
-return conv.filter(function(m){return m&&m.role==='system'&&m.actionId;
-    }).slice(-6).map(function(m){return{action_id:clean(m.actionId),title:clean(m.actionTitle||m.eventTitle),
-    command:LF.ActionCapabilities&&LF.ActionCapabilities.command?LF.ActionCapabilities.command(m.actionId):'',
-    status:m.error?'error':m.unavailable?'unavailable':'completed',route:clean(m.route||''),page:clean(m.page||''),
-    output:clip(m.content,1200),created_at:m.createdAt||''};});}
-  function chatMemory(exp){const settings=LF.Storage.getAssistantSettings?LF.Storage.getAssistantSettings():{
-memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!settings.memoryEnabled)return[];
-    const conv=(exp.derived&&exp.derived.chat&&exp.derived.chat.conversation)||[],messages=conv.filter(function(m){
-    return(m.role==='user'||m.role==='assistant')&&(!m.state||m.state==='complete');
-    }).slice(-Math.max(0,settings.memoryTurns*2)),out=[];let chars=0;for(let i=messages.length-1;i>=0;
-    i--){const m=messages[i],content=clip(m.content,settings.messageChars);if(!content)continue;
-    if(chars+content.length>settings.memoryChars)break;
-    out.unshift({role:m.role,content:content,route:clean(m.route||''),page:clean(m.page||''),view:clean(m.view||'')});
-    chars+=content.length;}return out;}
   function findingRef(f){return{id:f.id||'',type:f.type||'',severity:f.severity||'info',title:clean(f.title),detail:clip(f.detail,360),target:clean(f.target),measurement_id:f.measurementId||'',status:f.status||'open'};}
   function measurementRef(m){
     return{
@@ -89,6 +65,19 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
     if(JSON.stringify(fallback).length<=maxChars)return fallback;
     return boundValue(fallback,80,2,8,0);
   }
+  function assistantBudgetPack(obj,maxChars){
+    maxChars=Math.max(640,Number(maxChars)||4200);const full=sanitize(obj||{}),size=function(v){return JSON.stringify(v).length;};
+    if(size(full)<=maxChars)return full;const copy=JSON.parse(JSON.stringify(full));delete copy.previous_turn;if(size(copy)<=maxChars)return copy;
+    if(copy.knowledge&&Array.isArray(copy.knowledge.entries))copy.knowledge.entries=copy.knowledge.entries.slice(0,2).map(function(v){return boundValue(v,160,3,12,0);});
+    if(copy.cabinet&&Array.isArray(copy.cabinet.items))copy.cabinet.items=copy.cabinet.items.slice(0,2).map(function(v){return boundValue(v,140,3,10,0);});
+    if(size(copy)<=maxChars)return copy;
+    const levels=[{s:180,a:6,k:16},{s:120,a:4,k:12},{s:80,a:3,k:10},{s:56,a:2,k:8}];
+    for(const level of levels){const bounded={task:boundValue(copy.task||{},level.s,level.a,level.k,0),scope:boundValue(copy.scope||{},level.s,level.a,level.k,0),facts:boundValue(copy.facts||{},level.s,level.a,level.k,0)};
+      if(copy.knowledge)bounded.knowledge=boundValue(copy.knowledge,level.s,2,level.k,0);if(copy.cabinet)bounded.cabinet=boundValue(copy.cabinet,level.s,2,level.k,0);
+      if(size(bounded)<=maxChars)return bounded;}
+    return boundValue({task:copy.task||{},scope:copy.scope||{},facts:copy.facts||{}},48,1,6,0);
+  }
+
   function compactDesignDomainCandidates(value){
     const out={solutions:[],stack:[],process:[]};
     ['solutions','stack','process'].forEach(function(domain){
@@ -112,7 +101,7 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
       source_contract:full.source_contract||{},experiment:full.experiment||{},
       scope:full.scope||{},design_evidence_summary:full.design_evidence_summary||{},current_design:full.current_design||{},known_solutions:full.known_solutions||[],
       cabinet:{domain_candidates:compactDesignDomainCandidates(cab.domain_candidates),retrieval:cab.retrieval||{},note:cab.note||'',citation_contract:cab.citation_contract||''},
-      knowledge:{domain_candidates:compactDesignDomainCandidates(kb.domain_candidates),retrieval:kb.retrieval||{},note:kb.note||'',citation_contract:kb.citation_contract||''},
+      knowledge:{entries:(kb.entries||[]).slice(0,3),domain_candidates:compactDesignDomainCandidates(kb.domain_candidates),retrieval:kb.retrieval||{},note:kb.note||''},
       samples:(full.samples||[]).slice(0,6),evidence:(full.evidence||[]).slice(0,6),source_context:full.source_context||{},
       context_notice:full.context_notice||''
     };
@@ -142,72 +131,13 @@ memoryTurns:6,memoryChars:6000,messageChars:1800,memoryEnabled:true};if(!setting
   function actionBase(exp){
     return{source_contract:sourceContract(),experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name)}};
   }
-  function assistantBase(exp){
-    const sum=LF.CanonicalStore.summary(exp);
-    return{
-      source_contract:sourceContract(),
-      experiment:{id:exp.id||'',name:clean(exp.meta&&exp.meta.name),workspace_id:clean(exp.meta&&exp.meta.workspaceId),process_id:clean(exp.meta&&exp.meta.processId),summary:sum},
-      workspace:LF.Workspace&&LF.Workspace.compact?LF.Workspace.compact():null,
-      data_state:dataState(exp),experiment_brief:sharedBrief(exp),page_context:pageContext()
-    };
+  function packChat(_exp,opts){
+    opts=opts||{};
+    const supplied=opts.params&&opts.params.assistantPlan;
+    if(!(supplied&&supplied.mode==='llm'&&supplied.context))throw new Error('assistant.chat requires a routed Assistant plan.');
+    const requested=Number(opts.maxChars)||4200;
+    return assistantBudgetPack(supplied.context,Math.min(requested,5200));
   }
-  function relatedFromQuestion(exp,question){
-const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(function(x){return x.id;
-    }),samples=ids.map(function(id){return LF.CanonicalStore.record(exp,id);
-    }).filter(Boolean),names=new Set(samples.map(function(s){return String(s.name);
-    })),measurements=(exp.measurements||[]).filter(function(m){return names.has(String(m.sample));}).slice(0,24);
-    return{matches:matches,samples:samples,measurements:measurements,ids:ids};}
-  function pageEntityIds(exp,ctx){const out=[];const s=ctx.selected||{};
-[s.sample,s.measurement,s.finding,s.experiment,s.mapping].forEach(function(id){if(id){
-    const e=LF.CanonicalStore.record(exp,id)||LF.CanonicalStore.sample(exp,id);if(e&&e.id)out.push(e.id);
-    else out.push(String(id));}});if(Array.isArray(s.groups)){(exp.samples||[]).filter(function(x){
-    return s.groups.includes(x.group);}).forEach(function(x){out.push(x.id);});}return Array.from(new Set(out));}
-  function packChat(exp,opts){const q=clean(opts.question),out=assistantBase(exp),pc=out.page_context||{}
-,related=relatedFromQuestion(exp,q),ids=related.ids.concat(pageEntityIds(exp,pc));
-    const selectedMeasurement=(exp.measurements||[]).find(function(m){
-    return String(m.id)===String(pc.selected&&pc.selected.measurement||'');});
-    if(selectedMeasurement)ids.push(selectedMeasurement.id);const focus=[];
-    if(selectedMeasurement)focus.push(selectedMeasurement);
-    related.measurements.forEach(function(m){if(!focus.some(function(x){return x.id===m.id;}))focus.push(m);});
-    out.samples=related.samples.slice(0,12).map(sampleRef);out.measurements=focus.slice(0,18).map(measurementRef);
-    out.results={summary:compact(exp.analysis&&exp.analysis.summary||{}
-    ),top_non_ref:take(exp.analysis&&exp.analysis.topNonRef,6),top_ref:take(exp.analysis&&exp.analysis.topRef,6)};
-    out.action_catalog=actionCatalog(exp);out.action_outputs=LF.ActionData&&
-    LF.ActionData.assistantContext?LF.ActionData.assistantContext(exp,{limit:8}):{items:[]};
-    out.recent_actions=recentActionEvents(exp);
-    const terms=words(q),open=(exp.findings||[]).filter(function(f){return f.status!=='resolved';
-    }),matched=open.filter(function(f){const hay=clean([f.title,f.detail,f.target].join(' ')).toLowerCase();
-    return terms.some(function(t){return hay.indexOf(t)>=0;
-    })||ids.includes(String(f.measurementId||''))||ids.includes(String(f.id||''));});
-    out.findings=(matched.length?matched:(pc.page==='Review data'?open.slice(0,10):[])).slice(0,12).map(findingRef);
-    out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:Array.from(new Set(ids)),terms:terms,limit:18}).map(function(e){
-    return{id:e.id,type:e.type,fact:clean(e.fact),summary:clean(e.summary),source:clean(e.source_path||e.source_id)};});
-    const designId=pc.selected&&pc.selected.experiment;
-    out.design=designId?compact((exp.design&&exp.design.devices||[]).find(function(d){
-    return String(d.id)===String(designId);})||null):null;
-    if(pc.page==='Export'){
-      /* Export-page chat gets readiness and next actions, not the Results pack or a full
-         projection dump. This keeps local-model context centered on the export decision. */
-      delete out.results;delete out.samples;delete out.measurements;delete out.findings;delete out.evidence;
-      const plan=exp.nomad&&exp.nomad.mappingPlan||{},validation=exp.nomad&&exp.nomad.validation||{};
-      const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext
-        ?LF.ExportProjections.preparationContext(exp):null;
-      const problems=validation.problems||[],pending=LF.ActionData&&LF.ActionData.proposal?LF.ActionData.proposal(exp,'export.prepare',''):null;
-      function problemMessages(severities){return problems.filter(function(x){return severities.includes(x.severity);
-      }).map(function(x){return x.message;}).slice(0,6);}
-      out.nomad={status:validation.status||plan.readiness||'',blocking:problemMessages(['blocking']),
-        required:problemMessages(['required']),recommended:problemMessages(['recommended','warning']),
-        can_export_anyway:validation.status!=='blocked'};
-      out.export_projection=prep?{allowed_fields:prep.allowed_fields,nomad:{missing:take(prep.nomad&&prep.nomad.missing,12)},readypv:{missing:take(prep.readypv&&prep.readypv.missing,12)}}:null;
-      out.export_prepare={pending:!!pending,suggestions:pending&&pending.suggestions?pending.suggestions.length:0,unresolved:pending&&pending.unresolved?pending.unresolved.length:0};
-      out.export_assistant_rule='Prioritize NOMAD readiness and the smallest current blocker. Ready-PV is secondary. '+
-        'Explain whether export can proceed anyway. When export.prepare is available, recommend /prepare-export for missing export metadata rather than inventing values.';
-    }
-    const referenceQuery=[q,JSON.stringify(pc),JSON.stringify(out.design||{}),JSON.stringify(out.results||{})].join(' ');
-    if(pc.page!=='Export'&&LF.Cabinet)out.cabinet=LF.Cabinet.context(referenceQuery,{limit:6});
-    if(pc.page!=='Export'&&LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(referenceQuery,{limit:8,minScore:2});
-    out.history=chatMemory(exp);
-    return budgetPack(out,opts.maxChars||14000);}
   function packAmbiguity(exp,opts){const out=actionBase(exp),collect=opts.collect||{}
 ,ids=(collect.finding_ids||[]).map(String),
     findings=(exp.datasetAnalysis&&exp.datasetAnalysis.ambiguousFindings||[]).filter(function(f){
@@ -219,7 +149,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     ;out.findings=findings;out.measurements=measurements.map(measurementRef);
     out.samples=sampleIds.map(function(id){return LF.CanonicalStore.record(exp,id);}).filter(Boolean).map(sampleRef);
     out.evidence=LF.CanonicalStore.evidence(exp,{record_ids:sampleIds.concat(measurementIds),limit:20}).map(compact);
-    return budgetPack(out,12000);}
+    return budgetPack(out,5200);}
 
   function designCabinetContext(baseQuery,missingDomains){
     if(!LF.Cabinet)return null;
@@ -265,12 +195,8 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     }
     function compactEntry(entry){
       return{
-        id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,5),tags:(entry.tags||[]).slice(0,8),
-        summary:clip(entry.summary||'',180),facts:(entry.facts||[]).slice(0,2).map(function(x){return clip(x,180);}),
-        design_hint:entry.design_hint||null,cautions:(entry.cautions||[]).slice(0,1).map(function(x){return clip(x,140);}),
-        sources:(entry.sources||[]).slice(0,1).map(function(src){
-          return{title:clip(src&&src.title||'',120),year:src&&src.year||null,citation:clip(src&&src.citation||'',140),doi:clip(src&&src.doi||'',100)};
-        })
+        id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,4),
+        tags:(entry.tags||[]).slice(0,6),design_hint:entry.design_hint||null
       };
     }
     function unique(entries){
@@ -281,12 +207,12 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
 
     (missingDomains||[]).forEach(function(domain){
       domain=String(domain||'').toLowerCase();const spec=specs[domain];if(!spec)return;
-      const ctx=LF.KnowledgeBase.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:18,minScore:2});
+      const ctx=LF.KnowledgeBase.designContext?LF.KnowledgeBase.designContext(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:18,minScore:2}):LF.KnowledgeBase.context(spec.query+' '+String(baseQuery||''),{kinds:spec.kinds,limit:18,minScore:2});
       const retrieved=(ctx&&ctx.entries||[]);
-      const structured=typeof LF.KnowledgeBase.all==='function'&&typeof LF.KnowledgeBase.compactForAI==='function'
+      const structured=typeof LF.KnowledgeBase.all==='function'&&typeof LF.KnowledgeBase.compactForDesign==='function'
         ?LF.KnowledgeBase.all().filter(function(entry){
           return entry&&entry.status==='active'&&spec.kinds.includes(entry.kind)&&supportsHint(entry,domain);
-        }).map(LF.KnowledgeBase.compactForAI):[];
+        }).map(LF.KnowledgeBase.compactForDesign):[];
       const combined=unique(retrieved.concat(structured));
       const preferred=combined.filter(function(entry){return supportsHint(entry,domain);});
       const general=combined.filter(function(entry){return !supportsHint(entry,domain);});
@@ -313,8 +239,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
       entries:entries,
       domain_candidates:domainCandidates,
       retrieval:{requested_domains:(missingDomains||[]).slice(),domain_matches:counts,total:entries.length},
-      note:'Reference knowledge only. It can support review candidates but is not evidence that the current experiment used these materials, architectures or processes.',
-      citation_contract:'When a Design item materially relies on a supplied entry, set provenance_kind to knowledge_reference and put its exact id in evidence as KB:<id>. Never invent KB ids.'
+      note:'Compact reference candidates only. Bibliographic metadata is intentionally omitted from Design model context; KB ids remain internal provenance labels.'
     };
   }
 
@@ -354,9 +279,10 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
     const designEvidence=evidence.filter(function(item){
       return designPattern.test(JSON.stringify(item));
     });
-    const missingDomains=LF.DesignModel&&LF.DesignModel.pendingDomains
+    const requestedDomains=opts&&opts.workItem&&Array.isArray(opts.workItem.required_domains)?opts.workItem.required_domains:null;
+    const missingDomains=requestedDomains&&requestedDomains.length?requestedDomains:(LF.DesignModel&&LF.DesignModel.pendingDomains
       ?LF.DesignModel.pendingDomains(exp,device)
-      :(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]);
+      :(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]));
 
     out.scope={
       device_id:device.id,
@@ -409,7 +335,7 @@ const matches=LF.CanonicalStore.matchTerms(exp,question,12),ids=matches.map(func
         out.design_evidence_summary.inference_basis='knowledge_reference_and_model_inference';
       }
     }
-    return budgetPack(out,18000);
+    return budgetPack(out,6200);
   }
   function packResults(exp,opts){opts=opts||{};const out=actionBase(exp),a=exp.analysis||{};
 out.results={summary:compact(a.summary||{}
@@ -418,7 +344,7 @@ out.results={summary:compact(a.summary||{}
     out.anomalies=(exp.measurements||[]).filter(function(m){
     return!m.excluded&&(m.qualityStatus!=='valid'||(m.flags||[]).length);}).slice(0,24).map(measurementRef);
     out.findings=(exp.findings||[]).filter(function(f){return f.status!=='resolved';}).slice(0,24).map(findingRef);
-    return budgetPack(out,16000);}
+    return budgetPack(out,6200);}
   function comparisonStats(values){return LF.AnalysisSummary&&LF.AnalysisSummary.stats?LF.AnalysisSummary.stats(values):null;}
   function packResultsCompare(exp,opts){opts=opts||{};
 const out=actionBase(exp),p=opts.params||{}
@@ -441,16 +367,14 @@ const out=actionBase(exp),p=opts.params||{}
     out.evidence=selectedMeasurements.slice(0,24).map(function(m){return{id:m.id||'',sample:clean(m.sample),group:clean(m.group),quality:m.qualityStatus||'',eligible:!!m.rankingEligible};});
     out.findings=(exp.findings||[]).filter(function(f){const target=String(f.target||'');return f.status!=='resolved'&&(measurementIds.has(String(f.measurementId||''))||measurementIds.has(target)||sampleNames.has(target));}).slice(0,12).map(findingRef);
     out.instruction='Compare only the selected groups using the supplied deterministic statistics. Do not infer unprovided fabrication causes as facts.';
-    return budgetPack(out,9000);}
+    return budgetPack(out,5200);}
   function packDesign(exp,opts){
     const out=packDesignEvidence(exp,opts),id=String(opts&&opts.params&&opts.params.deviceId||''),device=(exp.design&&exp.design.devices||[]).find(function(item){return String(item.id)===id;})||null;
     if(!device||!out.scope)return out;
-    const missing=LF.DesignModel&&LF.DesignModel.pendingDomains?LF.DesignModel.pendingDomains(exp,device):(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]);
-    out.scope.unknown_fields=Array.from(new Set((out.scope.unknown_fields||[]).concat(missing)));
-    out.scope.instruction='For every domain in unknown_fields, prefer a useful review candidate. Use experiment evidence first, then cabinet.domain_candidates / cabinet.items, then knowledge.domain_candidates / knowledge.entries, then cautious qualitative model inference. ' +
-      'unresolved_domains is the last resort when no coherent review candidate can be formed; do not use unresolved merely because experiment-specific proof is absent. Experiment evidence is authoritative. Cabinet and Knowledge Base are reference context, not proof of use. Prefer exact Cabinet resources over KB archetypes when both are compatible. ' +
-      'Knowledge Base entries are deliberately retrieved by missing domain; use them before generic model memory when relevant, cite exact KB:<id> values, and keep knowledge-supported values review-only. ' +
-      'A stack proposal must be a coherent device architecture, not one isolated absorber layer. Leave unsupported exact quantities unknown.';
+    const requested=opts&&opts.workItem&&Array.isArray(opts.workItem.required_domains)?opts.workItem.required_domains:null;
+    const missing=requested&&requested.length?requested:(LF.DesignModel&&LF.DesignModel.pendingDomains?LF.DesignModel.pendingDomains(exp,device):(LF.DesignModel&&LF.DesignModel.missingDomains?LF.DesignModel.missingDomains(exp,device):[]));
+    out.scope.unknown_fields=Array.from(new Set(missing.map(function(x){return String(x||'').toLowerCase();})));
+    out.scope.instruction='Complete only unknown_fields. Prefer experiment evidence, then Cabinet candidates, then compact Knowledge Base design hints. Use cautious qualitative model inference only when references do not provide a coherent candidate. Bibliographic citations are not part of this context; KB:<id> is only an internal provenance label. Leave unsupported exact quantities unknown.';
     return out;
   }
   function packExport(exp,opts){
@@ -481,7 +405,7 @@ const out=actionBase(exp),p=opts.params||{}
     if(needsProcess&&process)out.process=compact(process);
     if(cabinetKinds.length&&LF.Cabinet)out.cabinet=LF.Cabinet.context(query,{kinds:Array.from(new Set(cabinetKinds)),limit:8});
     if(fieldIds.some(function(id){return /^measured\.description$|^data\.notes$/.test(id);})&&LF.KnowledgeBase)out.knowledge=LF.KnowledgeBase.context(query,{limit:4,minScore:2});
-    return budgetPack(out,16000);
+    return budgetPack(out,6000);
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,
     results_compare:packResultsCompare,export:packExport};
@@ -493,6 +417,7 @@ const out=actionBase(exp),p=opts.params||{}
     if(schemaId==='export_preparation')return 'Return one JSON object with: status, summary, suggestions[], unresolved[], warnings[]. Each suggestion has projection, field_id, value, source_kind, confidence, evidence. Each unresolved item has projection, field_id, reason and no value. Use only supplied allowed_fields.';
     if(schemaId==='results_comparison')return 'Return one JSON object with: status, groups[], summary, contrasts[], hypotheses[], limitations[], next_checks[]. Preserve selected group names exactly.';
     if(schemaId==='results_interpretation')return 'Return one JSON object with: status, summary, observations[], hypotheses[], limitations[], next_checks[]. Evidence must identify supplied deterministic facts.';
+    if(schemaId==='dataset_corrections')return 'Return one compact JSON object with proposals[] and unresolved[]. Each proposal must reference one supplied finding_id and use only an allowed patch_type. Unsupported cases belong in unresolved[].';
     if(schemaId!=='design_suggestion')return'';
     return [
       'Return exactly one compact JSON object and no Markdown.',
@@ -515,11 +440,11 @@ if(p)parts.push('# '+id.toUpperCase()+'\n\n'+p);});
     }return parts.join('\n\n---\n\n');}
   function build(def,step,opts){opts=opts||{};
 const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAssistantSettings?
-    LF.Storage.getAssistantSettings().contextChars:14000):undefined,requestedMax=Number(opts.maxChars)||assistantMax;
+    LF.Storage.getAssistantSettings().contextChars:4200):undefined,requestedMax=Number(opts.maxChars)||assistantMax;
     let ctx=pack(prof,{exp:expOf(),question:opts.userText||'',params:opts.params||{}
     ,selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{}
     ,workItem:opts.workItem||null,maxChars:requestedMax});if(requestedMax)ctx=budgetPack(ctx,requestedMax);
-    let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,5000);
+    let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,900);
     const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+
     (req?'\n\n<user_request>\n'+req+'\n</user_request>':'');
     if(Log){

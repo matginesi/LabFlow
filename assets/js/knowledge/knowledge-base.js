@@ -98,9 +98,15 @@ function duplicate(id){const src=get(id);if(!src)throw new Error('Knowledge Base
 function resetCustom(){persist([]);if(Log)Log.info('custom.reset');return true;}
 
 function textOf(e){return [e.id,e.kind,e.title].concat(e.aliases||[],e.tags||[],[e.summary]).concat(e.facts||[],e.cautions||[],[e.design_hint?JSON.stringify(e.design_hint):'']).join(' ').toLowerCase();}
-const STOP=new Set('the a an and or but for with from this that these those what why how which into about show tell compare explain ' +
-  'please can could would should are is was were has have had del della delle degli dei di da in con per su tra fra un una uno il lo la i gli le e o che come cosa quale quali quanto perché'.split(' '));
-function queryTokens(q){return Array.from(new Set(clean(q).toLowerCase().replace(/[^a-z0-9à-ž_.+\-]+/gi,' ').split(/\s+/).filter(function(x){return x.length>=2&&!STOP.has(x);}))).slice(0,48);}
+function queryTokens(q){
+  /* Retrieval must not encode a preferred researcher language. Keep Unicode words and
+     let exact title/alias/tag matches plus the router-provided scientific query drive ranking. */
+  const normalized=clean(q).toLowerCase();
+  let tokens=[];
+  try{tokens=normalized.match(/[\p{L}\p{N}_.+\-]{2,}/gu)||[];}
+  catch(_){tokens=normalized.replace(/[^a-z0-9_.+\-]+/gi,' ').split(/\s+/).filter(function(x){return x.length>=2;});}
+  return Array.from(new Set(tokens)).slice(0,48);
+}
 function score(e,query,kinds){
   if(e.status!=='active'||issues(e,true).length)return-1;
   if(kinds&&kinds.length&&!kinds.includes(e.kind))return-1;
@@ -114,15 +120,19 @@ function search(query,opts){
   const kinds=Array.isArray(opts.kinds)?opts.kinds.filter(function(k){return KINDS[k];}):null,limit=Math.max(1,Math.min(24,Number(opts.limit)||8)),minScore=opts.minScore==null?2:Number(opts.minScore);
   return all().map(function(e){return{entry:e,score:score(e,query,kinds)};}).filter(function(x){return x.score>=minScore;}).sort(function(a,b){return b.score-a.score||String(a.entry.title).localeCompare(String(b.entry.title));}).slice(0,limit).map(function(x){return clone(x.entry);});
 }
-function compactSource(s){return{title:clean(s.title,180),authors:clean(s.authors,180),year:s.year,citation:clean(s.citation,260),doi:s.doi,url:s.url};}
-function compactForAI(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,
-10),tags:(entry.tags||[]).slice(0,12),summary:clean(entry.summary,520),facts:(entry.facts||[]).slice(0,
-  7).map(function(x){return clean(x,320);}),cautions:(entry.cautions||[]).slice(0,4).map(function(x){return clean(x,280);
-  }),related_ids:(entry.related_ids||[]).slice(0,12),design_hint:entry.design_hint?clone(entry.design_hint):null,sources:(entry.sources||[]).slice(0,3).map(compactSource)};}
-function context(query,opts){const entries=search(query,opts).map(compactForAI);
-return{entries:entries,note:'Reference knowledge only. It is not evidence that the current experiment used or exhibited these materials, architectures, processes or causes.',
-  citation_contract:'When an answer or proposal relies on an entry, cite its exact id as KB:<id>. Assistant prose must use [KB:<id>] immediately after the supported claim.'}
-  ;}
+function compactSource(s){return{title:clean(s.title,140),authors:clean(s.authors,120),year:s.year,citation:clean(s.citation,180),doi:s.doi,url:s.url};}
+function compactForAssistant(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,6),
+  tags:(entry.tags||[]).slice(0,8),summary:clean(entry.summary,280),facts:(entry.facts||[]).slice(0,4).map(function(x){return clean(x,220);}),
+  cautions:(entry.cautions||[]).slice(0,2).map(function(x){return clean(x,180);}),related_ids:(entry.related_ids||[]).slice(0,6),
+  design_hint:entry.design_hint?clone(entry.design_hint):null,sources:(entry.sources||[]).slice(0,2).map(compactSource)};}
+function compactForDesign(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,4),
+  tags:(entry.tags||[]).slice(0,6),design_hint:entry.design_hint?clone(entry.design_hint):null};}
+function compactForAI(entry){return compactForAssistant(entry);}
+function context(query,opts){const entries=search(query,opts).map(compactForAssistant);
+  return{entries:entries,note:'Reference knowledge only. It is not evidence that the current experiment used or exhibited these materials, architectures, processes or causes.',
+  citation_contract:'When an answer relies on an entry, cite its exact id as [KB:<id>] immediately after the supported claim.'};}
+function designContext(query,opts){const entries=search(query,opts).map(compactForDesign);
+  return{entries:entries,note:'Compact Design reference candidates. Bibliographic metadata is intentionally omitted from Design model context.'};}
 function referenceIds(text){const out=[],re=/\[KB:([A-Za-z0-9._:-]+)\]/g;let m;while((m=re.exec(String(text||''))))if(!out.includes(m[1]))out.push(m[1]);return out;}
 function referencesFromText(text){return referenceIds(text).map(get).filter(Boolean).map(clone);}
 function sourceHref(s){const u=safeUrl(s&&s.url);if(u)return u;const doi=normalizeDoi(s&&s.doi);return doi?'https://doi.org/'+doi:'';}
@@ -215,7 +225,7 @@ if(LF.Structures){
 }
 LF.KnowledgeBase={
   kinds:function(){return clone(KINDS);},statuses:function(){return clone(STATUSES);},all:all,get:get,save:save,remove:remove,duplicate:duplicate,resetCustom:resetCustom,
-  validate:function(e,forUse){return issues(e,forUse);},search:search,context:context,compactForAI:compactForAI,referenceIds:referenceIds,referencesFromText:referencesFromText,
+  validate:function(e,forUse){return issues(e,forUse);},search:search,context:context,designContext:designContext,compactForAI:compactForAI,compactForAssistant:compactForAssistant,compactForDesign:compactForDesign,referenceIds:referenceIds,referencesFromText:referencesFromText,
   sourceHref:sourceHref,sourceLines:sourceLines,parseSourceLines:parseSourceLines,stats:stats,toJsonl:toJsonl,parseJsonl:parseJsonl,exportJsonl:exportJsonl,importJsonl:importJsonl,
   openJsonlFile:openJsonlFile,saveJsonlFile:saveJsonlFile,normalize:normalize,limits:function(){return clone(MAX);}
 };

@@ -1,49 +1,54 @@
 ---
 title: Knowledge Base
 section: Researcher guide
-summary: Bundled and custom JSONL reference knowledge for bounded, traceable AI context.
-order: 37
+summary: Compact scientific reference knowledge, JSONL extensions and task-specific context views.
+order: 45
 ---
 
 # Knowledge Base
 
-The Knowledge Base provides curated reference knowledge to Assistant/Actions without introducing another database.
+The Knowledge Base provides reusable scientific reference knowledge without turning long papers or documents into model context. It is deliberately structured and compact.
 
-## Storage model
+## Libraries
 
-```mermaid
-flowchart TD
-    B[Bundled knowledge/kb.jsonl: read-only baseline] --> A[Validated active entries]
-    C[Browser-local custom JSONL: editable overlay] --> A
-    A --> R[Bounded deterministic retrieval]
-```
+LabFlow combines:
 
-Custom entries can be exported/imported as JSONL. This keeps the data human-readable, versionable and easy to validate.
+- a built-in validated JSONL library;
+- **My JSONL**, researcher-added entries stored locally.
 
-## Entry semantics
+The current built-in scientific library contains **109 focused entries** covering materials, architectures, formulations, processes and related reference knowledge. Generated documentation/help entries are separate from that scientific count.
 
-A KB entry can contain identity/type, title/aliases/tags, summary, facts, cautions, related IDs and source records. Validation rejects malformed records before they become active context.
+## Entry design
 
-## Authority boundary
+Prefer small records with:
 
-KB content is reference knowledge, not evidence from the current experiment. If KB/reference knowledge conflicts with current source evidence or accepted LabFlow Data, experiment evidence wins.
+- stable `id` and `kind`;
+- concise title/aliases/tags;
+- short summary and focused facts/cautions where useful;
+- structured `design_hint` for Design-compatible entries;
+- a small number of high-quality sources;
+- related IDs instead of repeated prose.
 
-When an Assistant answer relies on a retrieved KB entry, the model is instructed to append `[KB:<id>]`. The UI resolves that marker to stored source metadata. The model must not invent an ID, DOI, URL or citation.
+Long narrative text, duplicated citations and broad unfocused notes increase noise without improving retrieval.
 
-`design.infer` also uses the KB directly. Retrieval is targeted independently for missing `solutions`, `stack` and `process` domains so small local models receive a short relevant subset instead of the whole library. A Design item based on KB content is marked `knowledge_reference` and carries an exact `KB:<id>` in its evidence. These values are review-only and are never treated as proof that the current experiment used that material, architecture or process.
+## Two model-facing views
 
-## Editing safely
+### Design view
 
-Prefer small factual entries with explicit cautions and source records. Avoid embedding transient UI instructions or experiment-specific claims in the KB; those belong in current scientific state/context instead.
+Design receives only what helps candidate resolution: id, kind, title, essential aliases/tags and `design_hint`. **Sources, DOI, URLs and bibliographic citation text are not sent.** The deterministic resolver can still keep full local provenance.
 
-## Structured Design hints
+### Assistant view
 
-The bundled KB contains **97 scientific/reference entries** in the current 0.0.32 source set; the generated browser bundle also includes the selected LabFlow documentation guides.
+The Assistant may receive a compact summary/facts/cautions plus at most a few source records. When reference knowledge is used, it cites `[KB:<id>]` so the UI can show the stored sources.
 
-Design-oriented scientific entries may optionally carry a validated `design_hint`. This is deliberately more structured than prose retrieval so a small model or deterministic fallback does not need to reverse-engineer a recipe from paragraphs. Supported hint content includes qualitative solution composition, coherent stack layers and qualitative process families. Exact recipe values are omitted unless the source and intended use justify them.
+## Retrieval
 
-`design_hint.reference_confidence` is a curated prior for the usefulness of that reference as a Design candidate; it is still recalibrated by LabFlow at proposal time and never means “probability this experiment used it”.
+Use structured/domain matching before model inference. Exact IDs/names/aliases and compatible design domains are stronger than generic textual similarity. Send only top relevant candidates rather than the whole library.
 
-The KB now includes multiple reference architecture families, absorber-precursor families and process families so Design inference has useful alternatives instead of a single generic archetype. Retrieval remains bounded and domain-targeted; adding more entries should improve coverage without sending the full KB to the model.
+## Scientific boundary
 
-For the full precedence and confidence rules see `DESIGN_INFERENCE.md`.
+A KB record is reference knowledge. It must never be presented as evidence that the current experiment actually used that material, architecture or process unless ExperimentData itself supports that claim.
+
+## Validation
+
+JSONL imports and the bundled library must pass the KB schema/validator. Invalid or duplicate records should be rejected/diagnosed rather than silently normalized into a different scientific meaning.

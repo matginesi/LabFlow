@@ -76,6 +76,30 @@
     });
   }
 
+  function pearson(pairs) {
+    pairs=(pairs||[]).filter(function(p){return p&&Number.isFinite(Number(p[0]))&&Number.isFinite(Number(p[1]));});
+    if(pairs.length<3)return null;
+    const xs=pairs.map(function(p){return Number(p[0]);}),ys=pairs.map(function(p){return Number(p[1]);});
+    const mx=xs.reduce(function(a,b){return a+b;},0)/xs.length,my=ys.reduce(function(a,b){return a+b;},0)/ys.length;
+    let nume=0,dx=0,dy=0;for(let i=0;i<xs.length;i++){const x=xs[i]-mx,y=ys[i]-my;nume+=x*y;dx+=x*x;dy+=y*y;}
+    if(!dx||!dy)return null;return{n:pairs.length,r:nume/Math.sqrt(dx*dy)};
+  }
+
+  function advancedOf(exp) {
+    const ms=A.measurementsOf(exp),factor=A.settingsOf(exp),active=ms.filter(function(m){return !m.excluded;}),eligible=active.filter(function(m){return m.rankingEligible;});
+    const quality={active:active.length,eligible:eligible.length,eligiblePct:active.length?eligible.length/active.length*100:0,valid:0,review:0,blocked:0,excluded:ms.length-active.length};
+    active.forEach(function(m){const k=String(m.qualityStatus||'review');quality[k]=(quality[k]||0)+1;});
+    const paired=active.filter(function(m){return m.fw&&m.rv;});
+    function deltaStats(key,absolute){return stats(paired.map(function(m){const a=num(m.fw&&m.fw[key]),b=num(m.rv&&m.rv[key]);if(a===null||b===null)return null;let d=b-a;if(key==='eff'||key==='jsc')d/=factor;return absolute?Math.abs(d):d;}));}
+    const pairedScans={count:paired.length,deltaPce:deltaStats('eff',false),absDeltaPce:deltaStats('eff',true),deltaVoc:deltaStats('voc',false),deltaJsc:deltaStats('jsc',false),deltaFf:deltaStats('ff',false),absHysteresisPct:stats(paired.map(function(m){const h=num(m.hysteresis);return h===null?null:Math.abs(h)*100;}))};
+    const groups={};eligible.forEach(function(m){const name=String(m.group||'').trim()||'Ungrouped',v=num(m.bestEff);if(v===null)return;(groups[name]=groups[name]||[]).push(v);});
+    const reproducibility=Object.keys(groups).sort().map(function(name){const s=stats(groups[name]);if(!s)return null;const iqr=s.q3-s.q1,cv=Math.abs(s.mean)>1e-12?s.std/Math.abs(s.mean)*100:null;return{name:name,n:s.n,mean:s.mean,median:s.median,iqr:iqr,cvPct:cv,min:s.min,max:s.max};}).filter(Boolean);
+    function scanFor(m){const fw=m.fw||null,rv=m.rv||null,fe=fw&&num(fw.eff),re=rv&&num(rv.eff);return re!==null&&(fe===null||re>=fe)?rv:fw;}
+    const correlations=[];[['Voc','voc'],['Jsc','jsc'],['FF','ff']].forEach(function(pair){const c=pearson(eligible.map(function(m){const scan=scanFor(m);return[num(m.bestEff),num(scan&&scan[pair[1]])];}));if(c)correlations.push({x:'PCE',y:pair[0],n:c.n,r:c.r});});
+    const hc=pearson(eligible.map(function(m){const h=num(m.hysteresis);return[num(m.bestEff),h===null?null:Math.abs(h)*100];}));if(hc)correlations.push({x:'PCE',y:'|hysteresis|',n:hc.n,r:hc.r});
+    return{quality:quality,pairedScans:pairedScans,reproducibility:reproducibility,correlations:correlations,note:'Descriptive diagnostics only; no causality or statistical significance is inferred.'};
+  }
+
   function findingsOf(exp) {
     const all = exp.findings || [], open = all.filter(function (f) { return f.status !== 'resolved'; });
     const bySeverity = { info: 0, warning: 0, danger: 0 };
@@ -94,6 +118,7 @@
       metrics: { eff: metricField(ms, 'eff', factor), voc: metricField(ms, 'voc', factor), jsc: metricField(ms, 'jsc', factor), ff: metricField(ms, 'ff', factor) },
       hysteresisAbsPct: hysteresisPct(ms),
       groupStatistics: groupStatisticsOf(exp),
+      advanced: advancedOf(exp),
       chartData: chartDataOf(exp),
       topNonRef: topOf(exp, 'topNonRef'), topRef: topOf(exp, 'topRef'), bestBySample: topOf(exp, 'bestBySample'), bestByExperiment: topOf(exp, 'bestByExperiment'),
       anomalies: anomaliesOf(exp),
@@ -149,6 +174,6 @@
   }
   function ensureBrief(exp){return briefFresh(exp)?exp.experimentBrief:brief(exp);}
 
-  LF.AnalysisSummary = { stats: stats, collect: collect, fresh: fresh, ensure: ensure };
+  LF.AnalysisSummary = { stats: stats, pearson: pearson, collect: collect, fresh: fresh, ensure: ensure };
   LF.ExperimentBrief = { collect:brief, ensure:ensureBrief, fresh:briefFresh, deterministic:deterministicBrief, signature:scientificSignature };
 }());

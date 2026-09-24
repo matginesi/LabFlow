@@ -9,7 +9,6 @@ Read before structural changes:
 3. `docs/specs/PIPELINE.md`
 4. `docs/specs/ACTIONS.md`
 5. `docs/guides/EXTENDING_LABFLOW.md`
-6. `.agent/skills/labflow-ui/SKILL.md` for UI/layout/chart work
 7. the feature-specific tests and documentation
 
 ## Non-negotiable invariants
@@ -27,6 +26,8 @@ Read before structural changes:
 - Design mutations go through `DesignModel`. Reviewed dataset mutations go through `DatasetCorrections`.
 - Cabinet resources are reusable references. Applying one copies a detached snapshot and records provenance; later Cabinet edits must not rewrite historical experiments.
 - KB entries are reference knowledge, never experiment evidence.
+- KB retrieval is task-specific: Design gets compact bibliography-free `design_hint` candidates; Assistant may get compact source metadata for traceable `[KB:<id>]` citations.
+- Results quality/reproducibility/relationship metrics are deterministic derived state. Do not route them through a model.
 - Required runtime dependencies fail fast. Do not hide architectural load-order errors behind fallback objects or no-op branches.
 - External/persisted snapshots cross the strict `DataModel.restore()` trust boundary. `hydrate()` is not a migration layer.
 

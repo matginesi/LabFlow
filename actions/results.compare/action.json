@@ -1,16 +1,13 @@
 {
   "id": "results.compare",
   "title": "Compare selected result groups",
-  "short_title": "Compare with AI",
+  "short_title": "Compare groups",
   "category": "results",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Explain deterministic differences between the currently selected Results comparison groups without recalculating statistics.",
-  "strategy": "The model receives only the selected groups, active metric/scan filters and deterministic per-group statistics. It reports supported contrasts, cautious hypotheses, limitations and next checks.",
-  "policies": [
-    "policy.scientific-provenance",
-    "policy.structured-output"
-  ],
+  "purpose": "Compare selected Results groups from deterministic statistics without calling an AI provider.",
+  "strategy": "LabFlow uses only the selected groups and calculated distributions. Contrasts are descriptive; no uncomputed causal or significance claims are produced.",
+  "policies": [],
   "contract": {
     "target": {
       "kind": "results_group_selection",
@@ -39,29 +36,21 @@
     ]
   },
   "execution": {
-    "mode": "hybrid",
-    "result_step": "compare",
+    "mode": "deterministic",
+    "result_step": "build",
     "steps": [
       {
-        "id": "compare",
-        "type": "AI",
-        "prompt": "prompt.md",
-        "output": "json",
-        "schema": "results_comparison",
-        "thinking": "off",
-        "timeout_ms": 120000,
-        "max_output_tokens": 1200,
-        "deadline_ms": 120000,
-        "max_retries": 1,
-        "min_output_tokens": 90,
-        "target_output_tokens": 520,
-        "max_input_tokens": 7000,
-        "validate_with": "results.validate-comparison"
+        "id": "build",
+        "type": "DETERMINISTIC",
+        "tool": "results.build-comparison",
+        "capture_result": true,
+        "weight": 0.82
       },
       {
         "id": "store",
         "type": "DETERMINISTIC",
-        "tool": "results.store-comparison"
+        "tool": "results.store-comparison",
+        "weight": 0.18
       }
     ]
   },

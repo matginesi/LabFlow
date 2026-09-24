@@ -97,8 +97,9 @@ module.exports=function(t){
     assert(settingsPage.includes('selected model may still require its own reasoning mode'),true,'reasoning caveat remains available without developer jargon');
   };
 
-  t['Action totem displays a readable llama.cpp model name without changing the request model id']=function(){
-    assert(actionUi.includes('Model:displayModel(settings)'),true,'Action totem uses the display-model helper');
+  t['Action totem displays a readable llama.cpp model name only after a provider request']=function(){
+    assert(actionUi.includes("Model:context.settings?displayModel(context.settings):'—'"),true,'provider request telemetry uses the display-model helper');
+    assert(actionUi.includes('showAiTrace:false'),true,'Action Totem starts without speculative model telemetry');
     assert(actionUi.includes('Model:settings.model'),false,'Action totem never exposes the raw llama.cpp path');
     assert(feedback.includes('C.modelDisplayName(providerId, body.model)'),true,'request activity uses the shared display-model helper');
     assert(feedback.includes('body:safeBody'),true,'request preview uses a display-only request clone');
@@ -112,13 +113,15 @@ module.exports=function(t){
     assert(designPage.includes('design-chem-card'),true,'graphical chemistry representation');
     assert(designPage.includes('design-stack-diagram'),true,'graphical layer representation');
     assert(designPage.includes('data-action-sequence="design-all"'),true,'global complete-all action');
-    assert(designPage.includes('Complete all missing with AI'),true,'bulk AI completion command is labelled clearly');
+    assert(designPage.includes('Complete all missing'),true,'bulk completion command is labelled clearly without implying an unnecessary model call');
     assert(designPage.includes('design-active-strip'),true,'selected experiment is represented by a compact active strip');
     assert(designPage.includes('SELECTED EXPERIMENT'),false,'legacy selected experiment panel is removed');
     assert(designPage.includes('Accept all'),true,'global explicit acceptance');
     assert(designPage.includes('Accept experiment'),true,'per-experiment explicit acceptance');
     assert(designPage.includes('Retry'),true,'per-experiment errors are retryable');
     assert(designPage.includes('Proposal confidence'),false,'global confidence dial removed');
+    assert(designPage.includes('How completion works')&&designPage.includes('Deterministic first, review before write'),true,'Design explains its completion workflow in the page');
+    assert(html.includes('assets/css/components.css'),true,'production shell loads shared component styles');
     assert(designPage.includes('NEXT STEP'),false,'old state-machine guidance removed');
     assert(css.includes('.design-two-column'),true,'simple two-panel Design layout styling');
     assert(css.includes('.design-stack-layer'),true,'layer visualization styling');
@@ -146,13 +149,16 @@ module.exports=function(t){
     assert(html.includes('data-route="ui-kit"'),false,'UI Kit is not a primary navigation route');
     assert(app.includes("document.querySelector('.ui-kit-frame')"),false,'no iframe dependency in app shell');
     assert(uiKitInline.includes('ui-kit-inline-host'),true,'inline catalog host exists');
+    assert(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8').includes('assets/css/components.css'),true,'UI Kit loads the same shared component styles');
     assert(uiKitInline.includes('id="documentation-pattern"'),true,'full catalog includes patterns after nested main elements');
+    assert(uiKitInline.includes('id="assistant-reasoning"')&&uiKitInline.includes('id="interaction-states"'),true,'UI Kit includes reasoning and interaction-state references');
     assert(uiKitInline.includes("root.querySelectorAll('[data-ui-kit-group]')"),true,'inline filters operate in host document');
     assert(html.includes('assets/js/pages/ui-kit-inline.js'),false,'inline catalog is not part of the startup payload');
     const lazyAssets=fs.readFileSync(path.join(root,'assets/js/pages/lazy-assets.js'),'utf8');
     assert(lazyAssets.includes('assets/js/pages/ui-kit-inline.js'),true,'inline catalog is loaded only when Settings opens UI Kit');
     const sourceHash=crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'ui-kit.html'),'utf8')).digest('hex');
     assert(uiKitInline.includes('sha256:'+sourceHash),true,'inline catalog is generated from current visual ground truth');
+    assert(html.includes('id="saveWorkingCopy"')||html.includes('id="exportWorkingCopy"'),false,'obsolete hidden working-copy controls are not shipped');
   };
 
 

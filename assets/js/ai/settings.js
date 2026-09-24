@@ -87,6 +87,19 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
   function finishProviderActivity(options){if(LF.UI&&typeof LF.UI.activityFinish==='function')LF.UI.activityFinish(Object.assign({holdMs:0},options||{}));}
   function failProviderActivity(error,options){if(LF.UI&&typeof LF.UI.activityError==='function')LF.UI.activityError(error,Object.assign({holdMs:3600},options||{}));}
 
+  function probeActivityStream(result,provider){
+    result=result||{};provider=provider||{};const usage=result.usage||{},completion=Number(usage.completionTokens),
+      answer=Number(usage.answerTokens),reasoning=Number(usage.reasoningTokens),rate=Number(result.tokensPerSecond),
+      budget=Math.max(1,Number(provider.connectionTestMaxTokens)||64),hasCompletion=Number.isFinite(completion)&&completion>=0,
+      hasAnswer=Number.isFinite(answer)&&answer>=0,hasReasoning=Number.isFinite(reasoning)&&reasoning>=0;
+    if(!hasCompletion&&!hasAnswer&&!hasReasoning&&!(Number.isFinite(rate)&&rate>0))return null;
+    const resolvedCompletion=hasCompletion?completion:Math.max(0,(hasAnswer?answer:0)+(hasReasoning?reasoning:0));
+    return{active:false,status:'complete',tokens:resolvedCompletion,completionTokens:resolvedCompletion,
+      answerTokens:hasAnswer?answer:null,reasoningTokens:hasReasoning?reasoning:null,rate:Number.isFinite(rate)&&rate>0?rate:null,
+      budgetTokens:budget,targetTokens:null,estimated:usage.estimated===true,completionEstimated:usage.estimated===true,
+      answerEstimated:usage.estimated===true,reasoningEstimated:usage.reasoningEstimated===true};
+  }
+
   function clearFieldErrors(){document.querySelectorAll('.settings-content .field-error').forEach(function(node){node.remove();});document.querySelectorAll('.settings-content [aria-invalid="true"]').forEach(function(node){node.removeAttribute('aria-invalid');});}
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
 
@@ -252,7 +265,7 @@ endpoint:settings.endpoint,remember:rememberKey});
         throw error;
       }
       if(!probe||probe.ok!==true)throw new Error((provider.name||providerId)+' did not pass the connection probe.');
-      if(useActivity)updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:(probe.elapsedMs?Math.round(probe.elapsedMs)+' ms':'Live response received'),stepId:'probe',stage:'Resolving capabilities',progress:.78});
+      if(useActivity)updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:(probe.elapsedMs?Math.round(probe.elapsedMs)+' ms':'Live response received'),stage:'Resolving capabilities',progress:.78,stream:probeActivityStream(probe,provider)});
       Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'chat-probe',status:'ok',model:selected,elapsedMs:probe.elapsedMs||null,transport:probe.transport||'direct'});
       if(useActivity)updateProviderActivity({stepId:'capabilities',stepStatus:'active',stage:'Resolving capabilities',message:'Inspecting known/runtime model capabilities.',progress:.84});
       Log.info('detect.stage',{diagnosticId:diagnosticId,provider:providerId,phase:'capabilities',status:'start',model:selected});
@@ -316,7 +329,7 @@ message:(provider.name||providerId)+' is reachable and the model answered the li
         return result;
       }
       if(!result||result.ok!==true)throw new Error((provider.name||config.providerId)+' did not pass the connection probe.');
-      updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:result.elapsedMs?Math.round(result.elapsedMs)+' ms':'Live response received',stage:'Saving verified settings',progress:.78});
+      updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:result.elapsedMs?Math.round(result.elapsedMs)+' ms':'Live response received',stage:'Saving verified settings',progress:.78,stream:probeActivityStream(result,provider)});
       updateProviderActivity({stepId:'persist',stepStatus:'active',message:'The service answered successfully. Saving these settings.',progress:.82});
       if(button)button.textContent='Saving…';
       Log.info('connection-test.stage',{diagnosticId:diagnosticId,provider:config.providerId,phase:'persist',status:'start'});

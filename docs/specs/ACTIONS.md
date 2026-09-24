@@ -1,126 +1,68 @@
 ---
 title: Actions
-section: AI and Actions
-summary: Manifest-driven researcher capabilities, execution contract, guards, effects and AI-result semantics.
-order: 10
+section: Engineering specification
+summary: Typed application operations with deterministic, hybrid and provider-backed execution modes.
+order: 20
 ---
 
 # Actions
 
-An Action is a researcher-facing capability with an explicit target, bounded context, semantic result and declared state effect. Actions are not a generic wrapper around internal functions.
+An Action is the unit of explicit LabFlow behavior. It is **not** synonymous with an AI request.
 
-## Current public catalog
+## Current public Actions
 
-| Action | Purpose | Result authority |
+| Action | Purpose | Mode |
 |---|---|---|
-| `dataset.resolve-ambiguities` | propose resolutions for semantic review ambiguity | proposal |
-| `design.infer` | propose missing qualitative Design content for one experiment | proposal |
-| `export.prepare` | prepare missing export metadata as reviewable projection overrides | proposal |
-| `results.interpret` | explain deterministic Results | derived annotation |
-| `results.compare` | compare selected deterministic result groups | derived annotation |
-| `assistant.chat` | answer from bounded current context | read-only answer |
+| `results.interpret` | summarize calculated Results | deterministic |
+| `results.compare` | describe selected group differences | deterministic |
+| `export.prepare` | reuse safe existing values for missing export metadata | deterministic |
+| `dataset.resolve-ambiguities` | propose resolutions for unresolved semantic findings | hybrid |
+| `design.infer` | complete unresolved Design domains | hybrid |
+| `assistant.chat` | answer routed interpretive/read-only questions | provider-backed bounded answer step; factual routed answers stay outside the Action |
 
-Safe cleanup, JV analysis, indexing and NOMAD package generation remain deterministic services. `export.prepare` is an Action only because it proposes reviewable metadata wording/values for missing export projection fields; it never builds or uploads the package itself.
+The generated runtime matrix is the authority for current guards, steps and numeric budgets.
 
-## Manifest
+## Manifest responsibility
 
-`actions/<id>/action.json` is the executable source of truth. A public Action declares:
+`actions/<id>/action.json` declares:
 
-```mermaid
-flowchart TD
-    A[Action manifest] --> T[contract.target]
-    A --> C[contract.context]
-    A --> R[contract.result]
-    A --> E[contract.effect]
-    A --> G[contract.guards]
-    A --> X[execution]
-    A --> CMD[ui.command]
-    A --> ROUTES[ui.routes]
-    A --> BIND[ui.bindings: optional]
-```
+- id/title/visibility/UI command;
+- execution mode and ordered steps;
+- guards/prerequisites;
+- allowed writes/effect boundary;
+- input/output contract;
+- provider budget only when an AI step exists.
 
-Prompt Markdown and structured-result JSON Schema live beside the manifest when needed.
+Contracts remain application-side and are not copied wholesale into prompts.
 
-## Capability preflight
+## Execution lifecycle
 
-`ActionCapabilities` resolves UI bindings and guards for every surface. Public Actions remain globally discoverable; the current route may mark them recommended but does not make them exist/disappear.
+1. resolve canonical definition;
+2. evaluate guards against current state;
+3. snapshot source revision;
+4. execute deterministic steps;
+5. for an AI step, build compact task-specific context and make the bounded request;
+6. validate returned candidate in code;
+7. store only through declared write-capable deterministic tools;
+8. publish outcome/status/provenance;
+9. invalidate dependent derived state when scientific state changes.
 
-The Runner resolves/re-checks the same capability at execution time so stale UI state cannot bypass a guard.
+## Deterministic Actions
 
-## Execution
+Deterministic Actions still use the Action runtime so UI progress, logging, history, guards and ownership remain consistent. They must not require provider configuration merely because they live under the Action subsystem.
 
-An Action run has one active runtime record, bounded steps, bounded retry policy, provider deadline where applicable, and a declared semantic result step. HTTP success is only transport success. The run succeeds only when the semantic result is produced and validated.
+## Hybrid Actions
 
-## AI structured output
+A hybrid Action performs deterministic resolution before any model request. The model receives only unresolved residue. `design.infer` may therefore complete with zero provider calls.
 
-For JSON Actions:
+## Failure policy
 
-1. build bounded deterministic Context Pack;
-2. call the configured provider;
-3. parse/normalize structured output;
-4. validate JSON Schema;
-5. run optional semantic validator;
-6. perform at most the manifest-defined semantic retry;
-7. store only the validated result through the owner step.
+Current provider-backed scientific Actions do not use automatic semantic retry loops. Validation/truncation/provider failure is surfaced. Retry is an explicit workflow decision where the UI/runtime permits it.
 
-A malformed, truncated or semantically rejected response remains a failed/retryable Action result; it is never stored as success.
+## Writes and provenance
 
-## Context profiles
+AI steps do not directly mutate canonical scientific state. Write-capable deterministic tools are checked against manifest `effect.writes`. Proposals/annotations are separate from accepted canonical changes.
 
-Assistant and Action contexts are deliberately different:
+## Assistant
 
-| Profile | Included | Deliberately omitted |
-|---|---|---|
-| `chat` | bounded page state, relevant experiment records/results, Action catalog/output, memory, targeted Cabinet/KB references | provider credentials and transport/request diagnostics |
-| `ambiguity` | selected findings, affected records and evidence | broad Workspace, rankings and unrelated findings |
-| `results` | deterministic result summary/statistics, eligible rankings, anomalies and relevant findings | Workspace, Cabinet, KB and export state |
-| `results_compare` | selected groups, deterministic statistics, selected measurement evidence and linked findings | unselected groups, global rankings and administrative/reference context |
-| `design` | selected Design target, missing domains, source evidence and per-domain Cabinet/KB candidates | global results, unrelated findings and export readiness |
-| `export` | missing field descriptors/allowed IDs plus field-specific Workspace, Process, Cabinet or KB support | generic experiment brief, performance rankings, curves and unrelated findings |
-
-Every semantic request carries a compact authority contract: experiment evidence is authoritative; Workspace is researcher-defined context; Cabinet and KB are references rather than experiment evidence; AI output remains review-only until accepted. Runtime context-profile names, source revisions and budget flags are logged/used by LabFlow but are not serialized into the model context.
-
-The context logger records the Action ID/profile, estimated input tokens, semantic bytes and included/omitted top-level sections. These diagnostics never feed a later prompt.
-
-## Effects
-
-Actions may write `ActionData`, interaction history, or call a deterministic owner-controlled apply operation after explicit user acceptance. They do not directly mutate arbitrary scientific roots.
-
-## Bulk operations
-
-A bulk UI operation should sequence the same single-target Action when each target is independently reviewable. `Complete all missing with AI` therefore runs `design.infer` per experiment instead of inventing a second batch semantic contract.
-
-Completed targets remain stored if a later target fails. Rate limiting stops future requests rather than creating hidden background retries.
-
-## Internal Action-step tools
-
-Manifest execution may use deterministic read/write tools registered through the tool/action-step registries. These are implementation capabilities and must not appear as separate researcher Actions.
-
-## Extending
-
-To add an Action, create its directory, define the manifest, add prompt/schema only when required, implement deterministic context/tool support, rebuild registries/references, and add contract/behavior tests. Do not add an Action-ID switch to the Assistant or pages.
-
-## `design.infer` semantic contract
-
-`design.infer` is unusual because a valid result can contain a mix of evidence-backed values, reusable references, qualitative inference and explicit unknowns. The semantic validator therefore operates on the **normalized proposal**, not on raw provider text.
-
-For each requested domain (`solutions`, `stack`, `process`) the runtime performs:
-
-```mermaid
-flowchart TD
-    P[Useful normalized provider candidate?] -->|yes| K[Keep candidate]
-    P -->|no| C[Compatible valid Cabinet candidate?]
-    C -->|yes| CR[Create cabinet_reference candidate]
-    C -->|no| KB[Structured KB design_hint?]
-    KB -->|yes| KR[Create knowledge_reference candidate]
-    KB -->|no| U[Record unresolved known unknown]
-```
-
-The deterministic fallback uses only content already present in bounded reference context. It does not perform free-form scientific invention. `validation.referenceFallbackDomains` records domains supplied by this path; `validation.autoUnresolvedDomains` records domains that had to be downgraded to unresolved because neither provider output nor supplied references were sufficient.
-
-The provider may report confidence, but LabFlow calibrates it from provenance before UI display/application decisions. See `guides/DESIGN_INFERENCE.md`.
-
-
-## Export preparation transport normalization
-
-`export.prepare` keeps a strict semantic schema, but LabFlow canonicalizes harmless provider-shape noise before schema validation. In particular, `value: null` on an `unresolved` item is discarded because unresolved fields have no export value. Common casing/alias variants for projection, field id and source kind are normalized. This repair never synthesizes scientific metadata or converts an unresolved field into a suggestion.
+The Assistant UI discovers public Actions from the capability catalog, but that catalog is not inserted into ordinary model prompts. Slash Action commands remain explicit researcher operations. Natural-language routing is a separate tiny read-only classifier; `assistant.chat` is invoked only for routed interpretive/scientific answers.

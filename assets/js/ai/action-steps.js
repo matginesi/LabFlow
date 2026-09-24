@@ -132,6 +132,46 @@
     return filled;
   }
 
+  function mergeDesignProposals(reference, inferred) {
+    const base=LF.DesignModel.normalizeProposal(reference||{}),ai=LF.DesignModel.normalizeProposal(inferred||{});
+    base.solutions=Array.isArray(base.solutions)?base.solutions:[];
+    base.stack=Array.isArray(base.stack)?base.stack:[];
+    base.devices=Array.isArray(base.devices)?base.devices:[];
+    ai.solutions=Array.isArray(ai.solutions)?ai.solutions:[];
+    ai.stack=Array.isArray(ai.stack)?ai.stack:[];
+    ai.devices=Array.isArray(ai.devices)?ai.devices:[];
+    if(!base.solutions.length)base.solutions=ai.solutions.slice();
+    if(!base.stack.length)base.stack=ai.stack.slice();
+    if(!base.devices.length)base.devices=ai.devices.slice();
+    else if(ai.devices[0]){
+      const bd=base.devices[0],ad=ai.devices[0];
+      if(!(bd.sample_names||[]).length)bd.sample_names=(ad.sample_names||[]).slice();
+      if(!(bd.solution_names||[]).length)bd.solution_names=(ad.solution_names||[]).slice();
+      if(!(bd.stack||[]).length)bd.stack=(ad.stack||[]).slice();
+      const bdp=bd.process||{},adp=ad.process||{};
+      ['coating','annealing','atmosphere','notes','evidence','reason','provenance_kind'].forEach(function(key){
+        if(!text(bdp[key])&&text(adp[key]))bdp[key]=adp[key];
+      });
+      if(bdp.confidence==null&&adp.confidence!=null)bdp.confidence=adp.confidence;
+      bd.process=bdp;
+      if(!text(bd.name)&&text(ad.name))bd.name=ad.name;
+    }
+    const bp=base.process||{},ap=ai.process||{};
+    ['coating','annealing','atmosphere','notes','evidence','reason','provenance_kind'].forEach(function(key){if(!text(bp[key])&&text(ap[key]))bp[key]=ap[key];});
+    if(bp.confidence==null&&ap.confidence!=null)bp.confidence=ap.confidence;
+    base.process=bp;
+    base.unresolved_domains=Array.from(new Set((ai.unresolved_domains||[]).filter(function(domain){
+      if(domain==='solutions')return !(base.solutions||[]).length;
+      if(domain==='stack')return !(base.stack||[]).length;
+      if(domain==='process')return ![base.process.coating,base.process.annealing,base.process.atmosphere,base.process.notes].some(function(v){return text(v);});
+      return false;
+    })));
+    base.unknowns=Array.from(new Set((base.unknowns||[]).concat(ai.unknowns||[]))).slice(0,10);
+    base.summary=text(base.summary)||text(ai.summary)||'Review-only Design candidate.';
+    base.status='suggested';
+    return base;
+  }
+
   function pipelineRefresh(exp, reason) {
     const pipeline = LF.DataPipeline.refresh(exp, { reason: reason || 'action' });
     return {
@@ -243,7 +283,7 @@
         pipelineRefresh(ctx.exp, 'dataset.resolve-ambiguities');
       }
 
-      const list = (ctx.exp.datasetAnalysis.ambiguousFindings || []).slice(0, 12);
+      const list = (ctx.exp.datasetAnalysis.ambiguousFindings || []).slice(0, 6);
       if (!list.length) throw new Error('No semantic ambiguity requires AI resolution.');
 
       return {
@@ -360,8 +400,59 @@
       };
     },
 
+    'results.build-interpretation': function (ctx) {
+      const bundle=LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(ctx.exp):null;
+      const analysis=ctx.exp.analysis||{},summary=analysis.summary||{},advanced=bundle&&bundle.advanced||{};
+      const observations=[],limitations=[],next=[];
+      function obs(statement,evidence,confidence){if(statement)observations.push({statement:statement,evidence:evidence||[],confidence:confidence==null?0.98:confidence});}
+      const total=Number(summary.measurementCount||advanced.quality&&advanced.quality.active||0),eligible=Number(summary.eligibleCount||advanced.quality&&advanced.quality.eligible||0);
+      if(total)obs(eligible+' of '+total+' active measurements are ranking eligible ('+Math.round(eligible/total*100)+'%).',['analysis.summary.eligibleCount','analysis.summary.measurementCount']);
+      const best=analysis.bestBySample&&analysis.bestBySample[0];
+      if(best&&Number.isFinite(Number(best.bestEff)))obs('Best eligible sample is '+best.sample+' at '+Number(best.bestEff).toFixed(2)+'% PCE.',['analysis.bestBySample[0]']);
+      const ref=analysis.topRef&&analysis.topRef[0],non=analysis.topNonRef&&analysis.topNonRef[0];
+      if(ref&&non&&Number.isFinite(Number(ref.bestEff))&&Number.isFinite(Number(non.bestEff)))obs('Best non-reference PCE differs from best reference by '+(Number(non.bestEff)-Number(ref.bestEff)).toFixed(2)+' percentage points.',['analysis.topNonRef[0]','analysis.topRef[0]']);
+      const paired=advanced.pairedScans;
+      if(paired&&paired.count)obs(paired.count+' measurements contain paired FW/RV scans; median |ΔPCE| is '+Number(paired.absDeltaPce&&paired.absDeltaPce.median||0).toFixed(2)+' percentage points.',['analysisSummary.advanced.pairedScans']);
+      if(advanced.quality&&advanced.quality.blocked)next.push('Review '+advanced.quality.blocked+' blocked measurement'+(advanced.quality.blocked===1?'':'s')+' before relying on rankings.');
+      if((ctx.exp.findings||[]).some(function(f){return f.status!=='resolved';}))next.push('Review open deterministic findings before drawing stronger conclusions.');
+      limitations.push('This interpretation is deterministic and descriptive; it does not establish causality or statistical significance.');
+      if(total<3)limitations.push('The dataset is small; aggregate comparisons are limited.');
+      return{status:observations.length?'interpreted':'limited',summary:observations.length?'Calculated Results summary from the current LabFlow analysis.':'Insufficient calculated Results for a useful interpretation.',observations:observations.slice(0,8),hypotheses:[],limitations:limitations,next_checks:next.slice(0,8)};
+    },
+
+    'results.build-comparison': function (ctx) {
+      const selection=resultsSelection(ctx);
+      if(selection.groups.length<2)throw new Error('Select at least two Results groups to compare.');
+      const pack=LF.ContextBuilder&&LF.ContextBuilder.pack?LF.ContextBuilder.pack('results_compare',{exp:ctx.exp,params:selection}):null;
+      const groups=pack&&pack.groups||[],contrasts=[],limitations=['Descriptive comparison only; no causal inference or significance test is performed.'];
+      function center(g){const vals=[];if(selection.direction!=='rv'&&g.fw&&Number.isFinite(Number(g.fw.median)))vals.push(Number(g.fw.median));if(selection.direction!=='fw'&&g.rv&&Number.isFinite(Number(g.rv.median)))vals.push(Number(g.rv.median));return vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:null;}
+      const ranked=groups.map(function(g){return{name:g.name,value:center(g),n:Number(g.measurements)||0};}).filter(function(g){return Number.isFinite(g.value);}).sort(function(a,b){return b.value-a.value;});
+      if(ranked.length>=2){const best=ranked[0];ranked.slice(1).forEach(function(g){contrasts.push({statement:best.name+' is '+(best.value-g.value).toFixed(3)+' '+selection.metric+' units above '+g.name+' for the selected scan summary.',evidence:['results_compare.groups:'+best.name,'results_compare.groups:'+g.name],confidence:0.99});});}
+      if(groups.some(function(g){return Number(g.measurements||0)<2;}))limitations.push('At least one selected group has fewer than two measurements.');
+      const status=contrasts.length?'compared':'insufficient_evidence';
+      return{status:status,groups:selection.groups.slice(),summary:status==='compared'?'Calculated comparison of the selected groups.':'Not enough finite selected-group statistics for a comparison.',contrasts:contrasts.slice(0,10),hypotheses:[],limitations:limitations,next_checks:status==='compared'?[]:['Add or select groups with finite measurements for the chosen metric and scan.']};
+    },
+
+    'export.build-preparation': function (ctx) {
+      const prep=LF.ExportProjections&&LF.ExportProjections.preparationContext?LF.ExportProjections.preparationContext(ctx.exp):null;
+      if(!prep)throw new Error('Export projections are unavailable.');
+      const nomad=LF.ExportProjections.nomad(ctx.exp),readypv=LF.ExportProjections.readyPv(ctx.exp),values={nomad:{},readypv:{}};
+      ;(nomad.fields||[]).forEach(function(f){values.nomad[f.id]=f.value;});
+      ;(readypv.fields||[]).forEach(function(f){values.readypv[f.id]=f.value;});
+      const aliases={
+        'nomad:data.institution':['readypv','contact.institution'],
+        'readypv:contact.institution':['nomad','data.institution']
+      },suggestions=[],unresolved=[];
+      ['nomad','readypv'].forEach(function(projection){(prep[projection]&&prep[projection].missing||[]).forEach(function(field){
+        const alias=aliases[projection+':'+field.id],v=alias&&values[alias[0]]&&values[alias[0]][alias[1]],rendered=Array.isArray(v)?v.join(' ').trim():text(v);
+        if(rendered)suggestions.push({projection:projection,field_id:field.id,value:v,source_kind:'workspace',confidence:0.93,reason:'Reused an equivalent populated projection field.',evidence:[alias[0]+':'+alias[1]]});
+        else unresolved.push({projection:projection,field_id:field.id,reason:'No explicit current LabFlow value or conservative equivalent field is available.'});
+      });});
+      return{status:suggestions.length?'suggested':'limited',summary:suggestions.length?'Prepared deterministic export-only suggestions from existing LabFlow values.':'Missing export metadata remains for human completion; LabFlow did not invent values.',suggestions:suggestions.slice(0,24),unresolved:unresolved.slice(0,24),warnings:[]};
+    },
+
     'results.store-interpretation': function (ctx) {
-      const value = ctx.outputs.interpret || ctx.lastResult;
+      const value = ctx.outputs.build || ctx.outputs.interpret || ctx.lastResult;
       if (!value || typeof value !== 'object') throw new Error('The Results interpretation is empty.');
       const markdown = resultsInterpretationMarkdown(value);
       LF.ActionData.setAnnotation(ctx.exp, 'results.interpret', {
@@ -378,20 +469,8 @@
       };
     },
 
-    'results.validate-comparison': function (ctx) {
-      const value = ctx.candidate || ctx.outputs.compare || ctx.lastResult || {};
-      const selection = resultsSelection(ctx);
-      const expected = selection.groups || [];
-      if (expected.length < 2) throw new Error('Select at least two Results groups to compare.');
-      value.groups = expected.slice();
-      if (value.status === 'compared' && !(value.contrasts || []).length && !(value.hypotheses || []).length) {
-        value.status = 'insufficient_evidence';
-      }
-      return value;
-    },
-
     'results.store-comparison': function (ctx) {
-      const value = ctx.outputs.compare || ctx.lastResult;
+      const value = ctx.outputs.build || ctx.outputs.compare || ctx.lastResult;
       if (!value || typeof value !== 'object') throw new Error('The Results comparison is empty.');
       const selection = resultsSelection(ctx);
       const markdown = resultsComparisonMarkdown(value, selection);
@@ -411,66 +490,8 @@
       };
     },
 
-    'export.validate-preparation': function (ctx) {
-      const value = ctx.candidate || ctx.outputs.prepare || ctx.lastResult || {};
-      const prep = LF.ExportProjections && LF.ExportProjections.preparationContext
-        ? LF.ExportProjections.preparationContext(ctx.exp) : null;
-      if (!prep) throw new Error('Export projections are unavailable.');
-      const allowed = {
-        nomad: new Set(prep.allowed_fields && prep.allowed_fields.nomad || []),
-        readypv: new Set(prep.allowed_fields && prep.allowed_fields.readypv || [])
-      };
-      const caps = {
-        experiment: 0.97, workspace: 0.93, process: 0.91,
-        cabinet_reference: 0.88, knowledge_reference: 0.74, model_inference: 0.56
-      };
-      const seen = new Set();
-      value.suggestions = (Array.isArray(value.suggestions) ? value.suggestions : []).filter(function (item) {
-        if (!item || !allowed[item.projection] || !allowed[item.projection].has(String(item.field_id || ''))) return false;
-        const key = item.projection + ':' + item.field_id;
-        if (seen.has(key)) return false;
-        const rendered = Array.isArray(item.value) ? item.value.join(' ').trim() : String(item.value == null ? '' : item.value).trim();
-        if (!rendered) return false;
-        seen.add(key);
-        item.source_kind = Object.prototype.hasOwnProperty.call(caps, item.source_kind)
-          ? item.source_kind : 'model_inference';
-        const raw = Number(item.confidence);
-        item.confidence = Math.max(0, Math.min(caps[item.source_kind], Number.isFinite(raw) ? raw : caps[item.source_kind]));
-        item.reason = text(item.reason).slice(0, 260);
-        item.evidence = (Array.isArray(item.evidence) ? item.evidence : []).map(text).filter(Boolean).slice(0, 5);
-        return true;
-      }).slice(0, 24);
-      value.unresolved = (Array.isArray(value.unresolved) ? value.unresolved : []).filter(function (item) {
-        if (!item || !allowed[item.projection] || !allowed[item.projection].has(String(item.field_id || ''))) return false;
-        item.reason = text(item.reason).slice(0, 240);
-        if (item.source_kind) {
-          item.source_kind = Object.prototype.hasOwnProperty.call(caps, item.source_kind)
-            ? item.source_kind : 'model_inference';
-        }
-        if (item.confidence != null) {
-          const raw = Number(item.confidence);
-          const cap = caps[item.source_kind || 'model_inference'];
-          item.confidence = Math.max(0, Math.min(cap, Number.isFinite(raw) ? raw : cap));
-        }
-        item.evidence = (Array.isArray(item.evidence) ? item.evidence : []).map(text).filter(Boolean).slice(0, 5);
-        return true;
-      }).slice(0, 24);
-      value.warnings = (Array.isArray(value.warnings) ? value.warnings : []).map(text).filter(Boolean).slice(0, 12);
-      value.status = value.suggestions.length ? 'suggested' : 'limited';
-      value.summary = text(value.summary).slice(0, 500) || (value.suggestions.length
-        ? 'Prepared review-only export metadata suggestions.'
-        : 'No evidence-backed export metadata suggestion could be prepared.');
-      value.validation = {
-        suggestions: value.suggestions.length,
-        unresolved: value.unresolved.length,
-        allowedNomad: allowed.nomad.size,
-        allowedReadyPv: allowed.readypv.size
-      };
-      return value;
-    },
-
     'export.store-preparation': function (ctx) {
-      const value = ctx.outputs.prepare || ctx.lastResult;
+      const value = ctx.outputs.build || ctx.outputs.prepare || ctx.lastResult;
       if (!value || typeof value !== 'object') throw new Error('The export preparation proposal is empty.');
       value.sourceRevision = ctx.sourceRevision;
       value.generatedAt = new Date().toISOString();
@@ -509,14 +530,17 @@
         );
       }
 
-      return {
-        device_id: id,
-        sample_names: (device.sampleNames || []).slice(),
-        manual_variant: !(device.sampleNames || []).length,
-        unknown_fields: unknown,
-        current_design: compact(device),
-        source_design: compact(exp.design && exp.design.evidenceSummary || {})
-      };
+      const scope={device_id:id,sample_names:(device.sampleNames||[]).slice(),manual_variant:!(device.sampleNames||[]).length,unknown_fields:unknown,current_design:compact(device),source_design:compact(exp.design&&exp.design.evidenceSummary||{})};
+      const reference=LF.DesignModel.normalizeProposal({status:'suggested',summary:'',solutions:[],stack:[],process:{},unresolved_domains:[],unknowns:[]});
+      reference.devices=[{name:text(device.name),sample_names:scope.sample_names.slice(),solution_names:[],process:{},stack:[],provenance_kind:'knowledge_reference',confidence:null,reason:''}];
+      const fake=Object.assign({},ctx,{outputs:{collect:scope}}),filled=proposalReferenceFallback(fake,reference,reference.devices[0],unknown);
+      const applicable=LF.DesignAnalysis.applicableFields(reference,unknown);
+      const unresolved=unknown.filter(function(domain){return !applicable.includes(domain);});
+      reference.unresolved_domains=[];
+      reference.summary=filled.length?'Review-only Design candidate resolved from Lab Cabinet / Knowledge Base references.':'No deterministic Design reference covered the requested domains.';
+      scope.reference_proposal=reference;scope.reference_filled=filled;scope.unresolved_fields=unresolved;
+      scope.ai_work=unresolved.length?[{label:'Unresolved Design',required_domains:unresolved.slice()}]:[];
+      return scope;
     },
 
     'design.validate-coverage': function (ctx) {
@@ -525,7 +549,7 @@
       const wanted = Array.from(new Set((scope.sample_names || []).map(String).filter(Boolean)));
       if (!String(scope.device_id || '')) throw new Error('The selected Design experiment is unavailable.');
 
-      proposal.devices = proposal.devices.slice(0, 1);
+      proposal.devices = (proposal.devices || []).slice(0, 1);
 
       if (!proposal.devices[0]) {
         proposal.devices = [{
@@ -564,7 +588,8 @@
           .filter(Boolean);
       }
 
-      const required = Array.from(new Set((scope.unknown_fields || []).map(function (field) {
+      const requiredSource=ctx.workItem&&Array.isArray(ctx.workItem.required_domains)?ctx.workItem.required_domains:(scope.unknown_fields||[]);
+      const required = Array.from(new Set(requiredSource.map(function (field) {
         return String(field).toLowerCase();
       }).filter(function(field){return ['solutions','stack','process'].includes(field);})));
       let applicable = LF.DesignAnalysis.applicableFields(proposal, required);
@@ -639,7 +664,9 @@
     },
 
     'design.store-proposal': function (ctx) {
-      const proposal = LF.DesignModel.normalizeProposal(ctx.outputs.infer || ctx.lastResult);
+      const inferred=Array.isArray(ctx.outputs.infer)?ctx.outputs.infer[0]:(ctx.outputs.infer||null);
+      const reference=ctx.outputs.collect&&ctx.outputs.collect.reference_proposal||null;
+      const proposal=mergeDesignProposals(reference,inferred||{});
       const deviceId = String(
         ctx.params && ctx.params.deviceId ||
         ctx.outputs.collect && ctx.outputs.collect.device_id ||
@@ -686,15 +713,16 @@
   LF.ActionSteps = steps;
 
   const actionStepTools = {
+    'results.build-interpretation': { domain: 'results', access: 'read' },
+    'results.build-comparison': { domain: 'results', access: 'read' },
+    'export.build-preparation': { domain: 'export', access: 'read' },
     'dataset.collect-ambiguities': { domain: 'dataset', access: 'read' },
     'dataset.store-corrections': { domain: 'dataset', access: 'write', writes: ['experiment.actionData.proposals.dataset.resolve-ambiguities'] },
-    'export.validate-preparation': { domain: 'export', access: 'read' },
     'export.store-preparation': { domain: 'export', access: 'write', writes: ['experiment.actionData.proposals.export.prepare','experiment.actionData.status.export.prepare'] },
     'design.collect-selected': { domain: 'design', access: 'read' },
     'design.validate-coverage': { domain: 'design', access: 'read' },
     'design.store-proposal': { domain: 'design', access: 'write', writes: ['experiment.actionData.proposals.design.infer','experiment.actionData.status.design.infer'] },
     'results.store-interpretation': { domain: 'results', access: 'write', writes: ['experiment.actionData.annotations.results.interpret'] },
-    'results.validate-comparison': { domain: 'results', access: 'read' },
     'results.store-comparison': { domain: 'results', access: 'write', writes: ['experiment.actionData.annotations.results.compare'] }
   };
   LF.ActionStepTools = actionStepTools;

@@ -1,5 +1,6 @@
 'use strict';
 require('../../assets/js/logger.js');
+require('../../assets/js/core.js');
 require('../../assets/js/ai/http.js');
 require('../../assets/js/ai/errors.js');
 require('../../assets/js/ai/stream.js');
@@ -54,6 +55,29 @@ module.exports = function (t, LF) {
     assert(out.resultBlocks,2,'duplicate result envelopes detected');
     const untouched=AI.normalizeAssistantEnvelope('<result>literal</result>','','openai');
     assert(untouched.content,'<result>literal</result>','non llama.cpp providers are untouched');
+  };
+
+  t['reasoning tags are separated for every provider, including thinking aliases'] = function () {
+    const out=AI.normalizeAssistantEnvelope('<thinking>inspect the evidence</thinking>Final answer','','openai');
+    assert(out.content,'Final answer','final answer remains visible');
+    assert(out.reasoning,'inspect the evidence','thinking block moved to reasoning');
+    const analysis=AI.normalizeAssistantEnvelope('<analysis>private analysis</analysis>Visible','','custom');
+    assert(analysis.content,'Visible','analysis block removed from answer');
+    assert(analysis.reasoning,'private analysis','analysis block retained as reasoning detail');
+  };
+
+  t['streamed thinking inside content never leaks into visible answer'] = async function () {
+    const oldFetch=global.fetch,oldLocation=global.location,encoder=new TextEncoder();let progress=null;
+    global.location={protocol:'https:',origin:'https://labflow.test'};
+    global.fetch=async function(){const body=new ReadableStream({start:function(controller){
+      controller.enqueue(encoder.encode('data: {"id":"think-test","model":"tiny","choices":[{"delta":{"content":"<thinking>check evidence"}}]}\n\n'));
+      controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":" carefully</thinking>Final answer"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'));controller.close();
+    }});return{ok:true,status:200,statusText:'OK',headers:new Headers({'content-type':'text/event-stream'}),body:body};};
+    LF.Storage={getAiSettings:function(){return{provider:'custom',endpoint:'https://example.com/v1',model:'tiny',inactivityTimeoutMs:60000,streaming:true};},getApiKey:function(){return'';}};
+    LF.AIProviders={custom:{keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    try{const spec=AI.buildRequest({messages:[{role:'user',content:'answer'}],stream:true,maxTokens:64}),result=await AI.send(spec,{onProgress:function(value){progress=value;}});
+      assert(result.content,'Final answer','tagged reasoning removed from final content');assert(result.reasoning,'check evidence carefully','reasoning preserved separately');assert(progress.content,'Final answer','progress final content is clean');}
+    finally{global.fetch=oldFetch;if(oldLocation===undefined)delete global.location;else global.location=oldLocation;delete LF.Storage;delete LF.AIProviders;}
   };
 
   t['repeated model output loop is detected before unbounded growth'] = function () {

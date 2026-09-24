@@ -1,34 +1,42 @@
 ---
-title: AI budgets and rate limits
+title: AI tokens and rate limits
 section: Researcher guide
-summary: Operational token ceilings, deadlines, semantic retries and rate-limit behavior.
-order: 31
+summary: Small bounded requests, manifest-owned limits and provider failure behavior.
+order: 75
 ---
 
-# AI budgets and rate limits
+# AI tokens and rate limits
 
-Each Action has an operational input ceiling, an answer reserve/target/maximum, a semantic retry policy and an inference deadline. These values come from Action manifests and may be smaller than the selected model's theoretical limits. The executable source for these limits is `actions/*/action.json`; prose documentation must not duplicate numeric values as a second authority.
+LabFlow reduces token use structurally: deterministic filtering happens before a provider request.
 
-LabFlow keeps **answer** and **completion** budgets distinct. `min_output_tokens` is the minimum answer space protected while fitting context, `target_output_tokens` is the desired answer size, and `max_output_tokens` is the Action's answer maximum. The provider request may be larger when reasoning headroom is needed; that larger value is the **completion request limit** and covers answer + reasoning. The optional global **Completion limit** clamps that provider request.
+## Limits belong to manifests
 
-A final-only Action (`thinking: "off"`) reserves **zero** hidden reasoning headroom. Providers with a hard per-request reasoning budget (currently llama.cpp) receive a zero reasoning budget for that Action. A reasoning-enabled/required Action receives a separate finite reasoning budget and a completion request sized for `answer + reasoning`. This policy is intentionally model-size agnostic: small and large models obey the same Action contract.
+The executable authority is `actions/*/action.json`. Each provider-backed Action defines its input ceiling, target/maximum output, deadline and retry allowance. The generated Action runtime matrix is the convenient human-readable view.
 
-If a final-only response is truncated, the semantic retry asks for a more compact final result but does **not** increase the completion budget merely to give unexpected reasoning more room. For reasoning-enabled Actions, bounded retry growth may still be used when provider usage shows that the declared completion budget was genuinely insufficient.
+Current design principles:
 
-The Action Totem defaults to researcher-facing stage, progress, result/failure summary and primary controls. Provider/model identity, token budgets, timing, HTTP/stream information, request preview and structured-output diagnostics remain available under **Technical details**. Provider-reported usage is shown exactly when available; otherwise LabFlow marks token counts as estimates.
+- Assistant router: tiny non-streaming language-agnostic classification, reasoning off, maximum 96 output tokens;
+- Assistant answer: only for interpretive/scientific routes, with a 1400-token input ceiling, 120-token target output and 280-token maximum output;
+- ambiguity resolution: only unresolved findings/evidence;
+- Design: only unresolved domains and a few compact candidates;
+- Results/Export: zero provider tokens.
 
-Use the generated [Action runtime matrix](../reference/ACTION_RUNTIME_MATRIX.md) for current values rather than duplicating numbers in prose.
+Do not increase context just because a provider supports a larger window. A large context window is capacity, not a target.
 
-## Semantic retries
+## No automatic semantic retry loops
 
-A semantic retry occurs only when the Action contract permits another model attempt after structured/semantic validation failure. It is bounded and may include concise validator feedback.
+Current provider-backed scientific Actions use zero semantic retries. If the output is invalid/truncated, the failure is surfaced rather than repeatedly spending tokens trying to repair an uncertain answer.
 
-Provider throttling (for example HTTP 429) is not silently replayed by transport. Bulk Design stops subsequent requests and leaves untouched targets pending.
+Transport-level behavior may still follow provider protocol where appropriate, but LabFlow must not create uncontrolled request loops.
 
-## Common diagnostic categories
+## Reasoning
 
-- `MODEL_OUTPUT_TRUNCATED` — completion ended before a usable structured result.
-- `MODEL_CONTEXT_LENGTH` — request/completion budget exceeded provider/model context.
-- structured/schema/semantic validation error — content was returned but did not satisfy the Action result contract.
+Prompts do not require chain-of-thought. LabFlow requests compact final output and keeps deterministic validation application-side. Provider-specific hidden reasoning is neither required nor treated as scientific evidence.
 
-These are different failure modes and should lead to different fixes.
+## Rate limits
+
+When a provider rejects a request for rate limiting, LabFlow reports the failure and any provider Retry-After information. It does not create a hidden local cooldown or continuously poll the provider.
+
+## Token telemetry
+
+During a model-backed Action, the primary Totem shows useful generated-token and tok/s information. Input-token estimates, TTFT, budgets and request/response diagnostics are available under **Technical data**.

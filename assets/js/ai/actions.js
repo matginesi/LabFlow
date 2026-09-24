@@ -263,7 +263,11 @@ actionThinking=requestOptions.thinkingMode||step.thinking||'auto',
     jsonSchemaName:requestOptions.schemaName||step.schema||run.actionId,temperature:requestOptions.temperature,
     thinkingMode:thinkingPolicy.transportMode,thinkingPolicy:thinkingPolicy,modelCapability:capability,
     reasoningBudgetTokens:reasoningBudgetTokens,guardThinking:thinkingPolicy.transportMode==='off'});
-  if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,reasoningHardLimitTokens:reasoningBudgetTokens,retryBoost:positive(requestOptions.minCompletionTokens)||null,thinkingEffective:thinkingPolicy.effective||'auto'});
+  if(Log)Log.info('output.budget',{actionId:run.actionId,step:step.id,answerTargetTokens:targetTokens,
+    answerRequestTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,
+    completionRequestTokens:maxTokens,completionCeilingTokens:b.ceiling,
+    reasoningHardLimitTokens:reasoningBudgetTokens,retryBoost:positive(requestOptions.minCompletionTokens)||null,
+    thinkingEffective:thinkingPolicy.effective||'auto'});
   if(opts.onRequest)opts.onRequest({actionId:run.actionId,stepId:step.id,index:run.currentIndex,
 workIndex:requestOptions.workIndex||0,workTotal:requestOptions.workTotal||1,phase:requestOptions.phase||'response',
     request:safeRequest(spec),targetTokens:targetTokens,maxTokens:maxTokens||null,answerMaxTokens:b.answerRequestTokens,reasoningReserveTokens:b.reasoningReserveTokens,tokenBudget:effectiveTokenBudget,
@@ -310,21 +314,21 @@ capabilityMs=Math.round(performance.now()-capabilityStarted),workItem=fitWorkIte
     let built=buildActionContext(run,step,contextOpts,null);
   if(workItem&&workItem.output_budget_adjusted&&Log)Log.info('output.work-item-adjusted',{actionId:run.actionId,step:step.id,requestedTargetWords:workItem.requested_target_words,targetWords:workItem.target_words,outputCeiling:outputCeiling(capability,settings,hardCap)});
     let tokens=promptTokens(built.messageList);if(tokens<=fit.inputBudget){if(Log)Log.info('request.prepare',{actionId:run.actionId,step:step.id,capabilityMs:capabilityMs,contextMs:Math.round(performance.now()-started-capabilityMs),totalMs:Math.round(performance.now()-started)});return{built:built,capability:capability,workItem:workItem};}
-  let currentChars=Math.max(1800,JSON.stringify(built.context||{}).length),attempt=0;
-  while(tokens>fit.inputBudget&&attempt<4){const ratio=Math.max(.18,Math.min(.82,fit.inputBudget/Math.max(tokens,1)*.78));currentChars=Math.max(1800,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);tokens=promptTokens(built.messageList);attempt++;}
+  const minimumContextChars=run.actionId==='assistant.chat'?640:1800;
+  let currentChars=Math.max(minimumContextChars,JSON.stringify(built.context||{}).length),attempt=0;
+  while(tokens>fit.inputBudget&&attempt<5){const ratio=Math.max(.15,Math.min(.82,fit.inputBudget/Math.max(tokens,1)*.76));currentChars=Math.max(minimumContextChars,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);tokens=promptTokens(built.messageList);attempt++;}
   let activeInputBudget=fit.inputBudget,activeOutputReserve=fit.outputReserve;
   if(tokens>activeInputBudget&&fit.maximumInputBudget>activeInputBudget){activeInputBudget=fit.maximumInputBudget;
 activeOutputReserve=fit.minimumOutputReserve;
-    while(tokens>activeInputBudget&&attempt<6){
-    const ratio=Math.max(.18,Math.min(.82,activeInputBudget/Math.max(tokens,1)*.78));
-    currentChars=Math.max(1800,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);
+    while(tokens>activeInputBudget&&attempt<7){
+    const ratio=Math.max(.15,Math.min(.82,activeInputBudget/Math.max(tokens,1)*.76));
+    currentChars=Math.max(minimumContextChars,Math.floor(currentChars*ratio));built=buildActionContext(run,step,contextOpts,currentChars);
     tokens=promptTokens(built.messageList);attempt++;}}
-  if(tokens>activeInputBudget){const reason=fit.contextWindow?('the detected model context ('+fit.contextWindow+
-' total tokens) and LabFlow input cap'):'the LabFlow operational input cap';
+  if(tokens>activeInputBudget){const modelNote=fit.contextWindow?(" The detected model context is "+fit.contextWindow+" tokens; the tighter limit is LabFlow's compact-input cap.") : '';
     const e=actionError('MODEL_CONTEXT_LENGTH',
-    'LabFlow could not fit this Action into '+reason+' ('+tokens+' estimated input tokens; '+fit.operationalInputCap+
-    ' token Action input cap; at least '+fit.minimumOutputReserve+
-    ' reserved for a valid output). Reduce the Action context.');e.isContextOverflow=true;e.promptTokens=tokens;
+    'LabFlow could not compact this Action below its '+fit.operationalInputCap+' token input cap ('+tokens+
+    ' estimated input tokens; at least '+fit.minimumOutputReserve+' reserved for a valid output).'+modelNote+
+    ' Narrow the question or reduce the Assistant context target.');e.isContextOverflow=true;e.promptTokens=tokens;
     e.contextWindow=fit.contextWindow||fit.operationalInputCap;e.operationalInputCap=fit.operationalInputCap;throw e;}
   if(Log)Log.info('context.compacted',{actionId:run.actionId,step:step.id,estimatedInputTokens:tokens,contextWindow:fit.contextWindow,operationalInputCap:fit.operationalInputCap,reservedOutputTokens:activeOutputReserve,contextChars:JSON.stringify(built.context||{}).length});
   if(Log)Log.info('request.prepare',{actionId:run.actionId,step:step.id,capabilityMs:capabilityMs,contextMs:Math.round(performance.now()-started-capabilityMs),totalMs:Math.round(performance.now()-started),compactionPasses:attempt});
@@ -337,8 +341,9 @@ async function runAi(run,step,opts,workItem,workIndex,workTotal){
   if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'request',label:'Sending model request'});
   const response=await sendModel(run,step,opts,key,context.messageList,settings,{
 phase:'response',stream:settings.streaming!==false,jsonMode:jsonMode,schema:schema,schemaName:step.schema||run.actionId,
-    temperature:jsonMode?0.2:undefined,actionCap:actionCap,workItem:fitted.workItem,workIndex:workIndex,workTotal:workTotal,
-    capability:fitted.capability,minCompletionTokens:run.retryCompletionBudget[key]||null},true);
+    temperature:jsonMode?0.2:undefined,thinkingMode:opts.thinkingMode||null,actionCap:actionCap,workItem:fitted.workItem,
+    workIndex:workIndex,workTotal:workTotal,capability:fitted.capability,
+    minCompletionTokens:run.retryCompletionBudget[key]||null},true);
   if(opts.onPhase)opts.onPhase({step:step.id,index:run.currentIndex,workIndex:workIndex,workTotal:workTotal,phase:'validate',label:jsonMode?'Validating structured output':'Finalizing model output'});
   if(jsonMode){let parsed;try{parsed=parseJson(step,response.content);
 parsed.value=validateAiCandidate(run,step,opts,parsed.value,workItem,workIndex,workTotal);

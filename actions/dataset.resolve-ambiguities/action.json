@@ -54,15 +54,15 @@
         "prompt": "prompt.md",
         "output": "json",
         "schema": "dataset_corrections",
-        "thinking": "on",
-        "timeout_ms": 120000,
+        "thinking": "off",
+        "timeout_ms": 70000,
         "weight": 0.8,
-        "max_output_tokens": 1800,
-        "deadline_ms": 120000,
-        "max_retries": 1,
-        "min_output_tokens": 120,
-        "target_output_tokens": 800,
-        "max_input_tokens": 7000
+        "max_output_tokens": 500,
+        "deadline_ms": 70000,
+        "max_retries": 0,
+        "min_output_tokens": 60,
+        "target_output_tokens": 220,
+        "max_input_tokens": 1800
       },
       {
         "id": "store",

@@ -5,8 +5,8 @@
   "category": "design",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Complete missing qualitative Design domains for one selected experiment using source evidence first, compatible Cabinet context second, targeted Knowledge Base references third, and cautious model inference only when useful. A deterministic Design Reference Resolver independently preserves Cabinet/KB candidates so small-model omissions or prompt compaction cannot silently erase usable reference-backed suggestions.",
-  "strategy": "One selected experiment per run. LabFlow deterministically defines missing domains and resolves compact per-domain reference candidates independently of the model prompt. The same Design Reference Resolver feeds both model context and post-model semantic fallback, preventing context compaction from removing Cabinet/Knowledge Base candidates at validation time. The model may synthesize a richer proposal, but omitted or unresolved domains are filled from compatible Cabinet resources first and structured KB design hints second when available; only genuinely unsupported domains become auditable known unknowns. Researcher/source values are never overwritten automatically.",
+  "purpose": "Complete missing qualitative Design domains using experiment evidence, compatible Cabinet resources and compact Knowledge Base design hints first; ask the model only for domains that remain unresolved.",
+  "strategy": "One selected experiment per run. A deterministic resolver builds review candidates before any model request. If all requested domains are covered, the Action completes with zero provider calls. Otherwise one compact work unit contains only the unresolved domains; deterministic candidates always win when merging the result.",
   "policies": [
     "policy.scientific-provenance",
     "policy.structured-output"
@@ -45,7 +45,7 @@
       {
         "id": "collect",
         "type": "DETERMINISTIC",
-        "weight": 0.1,
+        "weight": 0.28,
         "tool": "design.collect-selected"
       },
       {
@@ -55,21 +55,22 @@
         "output": "json",
         "schema": "design_suggestion",
         "thinking": "off",
-        "timeout_ms": 100000,
-        "weight": 0.8,
-        "max_output_tokens": 2200,
-        "deadline_ms": 100000,
-        "max_retries": 2,
-        "min_output_tokens": 120,
-        "target_output_tokens": 900,
-        "max_input_tokens": 7600,
+        "timeout_ms": 70000,
+        "weight": 0.54,
+        "max_output_tokens": 500,
+        "deadline_ms": 70000,
+        "max_retries": 0,
+        "min_output_tokens": 60,
+        "target_output_tokens": 180,
+        "max_input_tokens": 1500,
         "validate_with": "design.validate-coverage",
-        "provider_schema": false
+        "provider_schema": false,
+        "foreach": "collect.ai_work"
       },
       {
         "id": "store",
         "type": "DETERMINISTIC",
-        "weight": 0.1,
+        "weight": 0.18,
         "tool": "design.store-proposal"
       }
     ]

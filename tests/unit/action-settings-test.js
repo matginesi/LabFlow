@@ -22,9 +22,9 @@ module.exports=function(t,LF){
   t['Assistant uses a lightweight bounded request by default']=function(){
     const step=LF.ActionRegistry.steps('assistant.chat')[0];
     assert(step.thinking==='off','Assistant thinking must be off by default');
-    assert(step.max_output_tokens===2048,'Assistant output ceiling must stay compact');
-    assert(step.target_output_tokens===650,'Assistant target should suit normal chat');
-    assert(step.deadline_ms===90000,'Assistant cannot remain provider-blocked indefinitely');
+    assert(step.max_output_tokens===280,'Assistant output ceiling must stay compact');
+    assert(step.target_output_tokens===120,'Assistant target should suit small-model chat');
+    assert(step.max_input_tokens===1400,'Assistant input must stay small-model friendly');assert(step.max_retries===0,'Assistant must not spend tokens on semantic retries');assert(step.deadline_ms===70000,'Assistant cannot remain provider-blocked indefinitely');
   };
 
   t['Design inference uses evidence-first current context and bounded model inference']=function(){
@@ -128,10 +128,20 @@ module.exports=function(t,LF){
     assert(html.indexOf('>AI tools<')>=0,'AI tools tab missing');
     assert(html.indexOf('AI Helpers')<0,'AI Helpers surface must not exist');
     assert(html.indexOf('Operations Workshop')<0,'Operations Workshop surface must not exist');
-    assert(html.indexOf('Compare selected result groups')>=0||html.indexOf('Compare with AI')>=0,'Results compare Action missing from manager');
+    assert(html.indexOf('Compare selected result groups')>=0||html.indexOf('Compare groups')>=0,'Results compare Action missing from manager');
   };
   t['Actions manager exposes AI step thinking policy']=function(){
     actionSettingsState('design.infer');const design=LF.SettingsPage.render();assert(design.indexOf('thinking preference off')>=0,'Design inference thinking preference visible');
+  };
+
+  t['Assistant exposes an explicit reasoning preference and keeps tagged reasoning out of the final-answer contract']=function(){
+    localStorage.clear();LF.State={state:{ui:{settingsSection:'assistant'},experiment:{meta:{sourceName:''}}}};
+    const html=LF.SettingsPage.render(),controller=require('fs').readFileSync(require('path').join(__dirname,'../../assets/js/controllers/settings-controller.js'),'utf8'),assistant=require('fs').readFileSync(require('path').join(__dirname,'../../assets/js/ai/assistant.js'),'utf8');
+    assert(html.indexOf('id="assistantThinkingMode"')>=0,'Assistant reasoning selector missing');
+    assert(html.indexOf('Prefer off')>=0&&html.indexOf('Automatic')>=0&&html.indexOf('Prefer on')>=0,'Assistant reasoning choices missing');
+    assert(html.indexOf('&lt;thinking&gt;')>=0&&html.indexOf('&lt;analysis&gt;')>=0,'recognized reasoning tags must be documented in Settings');
+    assert(controller.indexOf("thinkingMode:value('assistantThinkingMode')")>=0,'Assistant reasoning preference is not saved');
+    assert(assistant.indexOf("thinkingMode:assistantSettings.thinkingMode||'off'")>=0,'Assistant reasoning preference is not passed to the Action');
   };
 
   t['Local model controls display only the model basename while retaining the exact ID']=function(){

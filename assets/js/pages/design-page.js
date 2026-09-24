@@ -28,25 +28,15 @@ function assistState(exp,id){return LF.ActionData?LF.ActionData.status(exp,'desi
 function meaningfulSolution(s){return!!(s&&[s.solutes,s.solvents].some(present));}
 function meaningfulLayer(l){return!!(l&&[l.role,l.material].some(present));}
 function proposalHasContent(p){const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};return!!(p&&((p.solutions||[]).some(meaningfulSolution)||(d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc)||(p.unresolved_domains||[]).length));}
-function proposalConfidence(p){const values=[];function add(v){const n=Number(v);
-if(Number.isFinite(n))values.push(Math.max(0,Math.min(1,n)));
-  }(p&&p.solutions||[]).forEach(function(x){if(meaningfulSolution(x))add(x.confidence);});
-  const d=p&&p.devices&&p.devices[0]||{},proc=d.process||p&&p.process||{};
-  if((d.stack||[]).some(meaningfulLayer)||meaningfulProcess(proc))add(d.confidence);
-  (d.stack||[]).forEach(function(x){if(meaningfulLayer(x))add(x.confidence);});
-  if(meaningfulProcess(proc))add(proc.confidence);if(!values.length)return null;
-  const unresolved=(p&&p.unresolved_domains||[]).length,avg=values.reduce(function(a,b){return a+b;},0)/values.length,
-    calibrated=Math.max(0,avg-(unresolved*0.04));
-  return Math.round(calibrated*100);}
 function proposalBasis(p){const labels={experiment:'Experiment evidence',cabinet_reference:'Lab Cabinet',knowledge_reference:'Knowledge Base',model_inference:'Model inference'},seen=[];
   function add(item){const key=String(item&&item.provenance_kind||item&&item.provenanceKind||'').toLowerCase();if(labels[key]&&!seen.includes(labels[key]))seen.push(labels[key]);}
   (p&&p.solutions||[]).filter(meaningfulSolution).forEach(add);const d=p&&p.devices&&p.devices[0]||{};(d.stack||[]).filter(meaningfulLayer).forEach(add);const proc=d.process||p&&p.process||{};if(meaningfulProcess(proc))add(proc);return seen;}
 function experimentState(exp,design,dev){
   const sols=linkedSolutions(design,dev),ready=completeness(dev,sols,exp),proposal=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
-  if(proposal&&proposalHasContent(proposal)){const score=proposalConfidence(proposal),unresolved=(proposal.unresolved_domains||[]).length;return{kind:'proposal',label:'Suggested',detail:'AI suggestion ready to review'+(score!=null?' · '+score+'% confidence':'')+(unresolved?' · '+unresolved+' known unknown'+(unresolved===1?'':'s'):''),ready:ready};}
-  if(ready.complete)return{kind:'complete',label:assist.state==='accepted'?'Accepted':'Ready',detail:assist.state==='accepted'?'Researcher accepted the AI suggestion':'Solution chemistry, stack and process available',ready:ready};
+  if(proposal&&proposalHasContent(proposal)){const unresolved=(proposal.unresolved_domains||[]).length;return{kind:'proposal',label:'Proposed',detail:'Completion proposal ready to review'+(unresolved?' · '+unresolved+' known unknown'+(unresolved===1?'':'s'):''),ready:ready};}
+  if(ready.complete)return{kind:'complete',label:assist.state==='accepted'?'Accepted':'Ready',detail:assist.state==='accepted'?'Researcher accepted the completion proposal':'Solution chemistry, stack and process available',ready:ready};
   if(ready.reviewed)return{kind:'complete',label:'Reviewed',detail:'Known unknowns acknowledged: '+ready.scientificMissingFields.join(' · '),ready:ready};
-  if(assist.state==='error')return{kind:'error',label:'Error',detail:assist.message||'AI suggestion failed',ready:ready};
+  if(assist.state==='error')return{kind:'error',label:'Error',detail:assist.message||'Design completion failed',ready:ready};
   return{kind:'missing',label:'Incomplete',detail:ready.missingFields.join(' · '),ready:ready};
 }
 function experimentCards(exp,design,devices,selectedId){return devices.map(function(dev){
@@ -59,7 +49,7 @@ const st=experimentState(exp,design,dev),count=(dev.sampleIds||dev.sampleNames||
   dev)+' measurements</span><small>'+esc(st.detail)+'</small></button>';}).join('');}
 function activeExperimentStrip(exp,design,dev){
 const sols=linkedSolutions(design,dev),st=experimentState(exp,design,dev),samples=dev.sampleNames||[],
-  canRun=st.kind==='missing'||st.kind==='error',actionLabel=st.kind==='error'?'Retry inference':'Complete with AI',
+  canRun=st.kind==='missing'||st.kind==='error',actionLabel=st.kind==='error'?'Retry completion':'Complete design',
   facts=[sols.length+' solution'+(sols.length===1?'':'s'),
   (dev.stack||[]).length+' layer'+((dev.stack||[]).length===1?'':'s'),
   meaningfulProcess(dev.process)?'process ready':'process missing',measurementCount(exp,dev)+' measurements'];
@@ -73,7 +63,7 @@ esc(dev.name||'')+'" placeholder="Experiment name…"><span class="design-active
     esc(st.ready.missingFields.join(' · '))+'</div>':(st.ready&&st.ready.reviewed?'<div class="design-active-missing"><strong>Known unknowns:</strong> '+esc(st.ready.scientificMissingFields.join(' · '))+' · reviewed</div>':''))+'</div>'; }
 function board(exp,design,devices,selected){
   const states=devices.map(function(d){return experimentState(exp,design,d);}),suggested=states.filter(function(s){return s.kind==='proposal';}).length,errors=states.filter(function(s){return s.kind==='error';}).length,untouched=states.filter(function(s){return s.kind==='missing';}).length,ready=states.filter(function(s){return s.kind==='complete';}).length;
-  const bulkLabel=errors?'Retry & complete remaining':'Complete all missing with AI',
+  const bulkLabel=errors?'Retry & complete remaining':'Complete all missing',
 bulk=devices.length>1?'<div class="row-wrap design-board-actions"><button type="button" class="button primary compact" data-action-sequence="design-all" '+
     ((untouched+errors)?'':'disabled')+'>'+bulkLabel+
     '</button><button type="button" class="button compact" id="acceptAllDesignInferences" '+(suggested?'':'disabled')+
@@ -163,16 +153,13 @@ rows.map(function(item){let detail='';if(item.kind==='solution')detail=[item.sol
 }
 function proposalPanel(exp,dev){
   const p=proposalFor(exp,dev.id),assist=assistState(exp,dev.id);
-  if(assist.state==='error'&&!p)return '<section class="panel design-suggestion-panel error"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Suggestion failed</h2><div class="meta">'+esc(assist.message||'The provider could not complete this experiment.')+' Retry from the active experiment strip above.</div></div></div></section>';
+  if(assist.state==='error'&&!p)return '<section class="panel design-suggestion-panel error"><div class="panel-head"><div><span class="eyebrow">Design completion</span><h2 class="h2">Completion failed</h2><div class="meta">'+esc(assist.message||'The provider could not complete this experiment.')+' Retry from the active experiment strip above.</div></div></div></section>';
   if(!p)return'';
-  const pd=p.devices&&p.devices[0]||{},unknown=p.unknowns||[],solutions=(p.solutions||[]).filter(meaningfulSolution),score=proposalConfidence(p),matches=p.cabinetMatches||[],basis=proposalBasis(p);
+  const pd=p.devices&&p.devices[0]||{},unknown=p.unknowns||[],solutions=(p.solutions||[]).filter(meaningfulSolution),matches=p.cabinetMatches||[],basis=proposalBasis(p);
   const cabinetMatches=matches.length?'<div class="design-cabinet-matches"><strong>Cabinet matches</strong>'+matches.map(function(m){return '<span>'+esc(m.name)+' <button class="button ghost compact" type="button" data-use-cabinet-item="'+esc(m.cabinetId)+'">Use Cabinet snapshot</button></span>';}).join('')+'</div>':'';
-  return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">AI suggestion</span><h2 class="h2">Review before accepting</h2><div class="meta">'+
+  return '<section class="panel design-suggestion-panel"><div class="panel-head"><div><span class="eyebrow">Completion proposal</span><h2 class="h2">Review before accepting</h2><div class="meta">'+
 esc(p.summary||'Suggested from the current experiment and available Lab Cabinet context.')+(basis.length?' · Basis: '+esc(basis.join(' + ')):'')+'</div></div><div class="spacer"></div>'+
-    '<div class="design-suggestion-review">'+
-    (score!=null?'<div class="design-ai-confidence"><span>AI confidence</span><strong>'+score+
-    '%</strong><small>Calibrated candidate confidence from source nature; not proof of experiment use.</small></div>':'')+
-    '<div class="row-wrap design-suggestion-actions"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
+    '<div class="design-suggestion-review"><div class="row-wrap design-suggestion-actions"><button class="button primary compact" type="button" data-accept-design-experiment="'+esc(dev.id)+
     '">Accept experiment</button><button class="button compact" type="button" data-discard-design-experiment="'+esc(dev.id)+
     '">Discard</button></div></div></div><div class="panel-body">'+cabinetMatches+
     '<div class="design-suggestion-grid"><div><span class="eyebrow">Solution chemistry</span>'+
@@ -182,6 +169,28 @@ esc(p.summary||'Suggested from the current experiment and available Lab Cabinet 
     true)+'</div><div><span class="eyebrow">Fabrication process</span>'+processSuggestion(pd.process||p.process||{}
     )+'</div></div>'+(unknown.length?'<div class="design-unknowns"><strong>Still unknown</strong><span>'+esc(unknown.join(' · '))+
     '</span></div>':'')+'</div></section>';
+}
+function completionGuide(exp,design,dev){
+  const ready=completeness(dev,linkedSolutions(design,dev),exp),proposal=proposalFor(exp,dev.id),basis=proposalBasis(proposal),
+    proposed={solutions:false,stack:false,process:false},pd=proposal&&proposal.devices&&proposal.devices[0]||{},proc=pd.process||proposal&&proposal.process||{};
+  proposed.solutions=!!(proposal&&(proposal.solutions||[]).some(meaningfulSolution));
+  proposed.stack=!!((pd.stack||[]).some(meaningfulLayer));
+  proposed.process=meaningfulProcess(proc);
+  const pending=new Set(ready.missingDomains||[]),labels={solutions:'Solution chemistry',stack:'Device stack',process:'Fabrication process'};
+  const status=['solutions','stack','process'].map(function(key){const state=!pending.has(key)?'ready':proposed[key]?'proposed':'missing';
+    return '<span class="'+state+'"><span>'+esc(labels[key])+'</span><b>'+esc(state==='ready'?'Ready':state==='proposed'?'Proposed':'Missing')+'</b></span>';}).join('');
+  const modelUsed=basis.includes('Model inference'),providerText=proposal?(modelUsed?'Used only for unresolved domains':'Not needed for this proposal'):'Used only if Experiment + Cabinet + KB cannot cover a missing domain';
+  return '<section class="panel design-completion-guide"><div class="panel-head"><div>'+
+    '<span class="eyebrow">How completion works</span><h2 class="h2">Deterministic first, review before write</h2>'+
+    '<div class="meta">Complete Design fills only missing qualitative domains. Existing researcher values are never overwritten automatically.</div>'+
+    '</div></div><div class="panel-body"><div class="design-completion-flow">'+
+    '<div><span>1 · Experiment</span><strong>Read current evidence</strong></div>'+
+    '<div><span>2 · References</span><strong>Try Cabinet + KB</strong></div>'+
+    '<div><span>3 · Provider</span><strong>'+esc(providerText)+'</strong></div>'+
+    '<div><span>4 · Researcher</span><strong>Accept, edit or discard</strong></div></div>'+
+    '<div class="design-domain-status">'+status+'</div>'+
+    '<div class="meta">Design sends compact KB design hints only; bibliography and citation metadata are not sent to the model. '+
+    'Accepted proposals remain editable.</div></div></section>';
 }
 function evidenceDetails(design,dev){const names=new Set(dev.sampleNames||[]),
 rows=(design.sourceEvidence||[]).filter(function(r){return names.has(r.sample);});if(!rows.length)return'';
@@ -217,7 +226,7 @@ picker=LF.State&&LF.State.state&&LF.State.state.ui&&LF.State.state.ui.designCabi
       'Build chemistry, stack and process for the next experiment.','<button class="button compact" type="button" '+
       'id="addAllDesignsCabinet">Add experiment designs to Cabinet</button><button class="button compact" '+
       'type="button" data-route="cabinet">Lab Cabinet</button><button class="button ' +
-      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>')+options.stepper)+board(exp,design,devices,selected)+proposal+(picker?cabinetPicker(picker):'')+
+      'compact" id="addDesignDevice" type="button">Add experiment</button><button class="button danger compact" id="removeSelectedDevice" type="button">Remove selected</button>')+options.stepper)+board(exp,design,devices,selected)+completionGuide(exp,design,selected)+proposal+(picker?cabinetPicker(picker):'')+
     '<div class="design-two-column"><details class="panel design-work-panel" '+(chemOpen?'open':'')+
 '><summary class="panel-head"><div><span class="eyebrow">01 · Solution chemistry</span><h2 class="h2">Solutions ' +
   '· solvents · solutes</h2><div class="meta">Reuse a known formulation or create one locally for this experiment.' +

@@ -1,48 +1,36 @@
 ---
 title: Research workflow
 section: Researcher guide
-summary: How evidence, review, Results, Design, Cabinet, AI and export fit together.
-order: 15
+summary: How evidence, review, deterministic Results, Design references and export fit together.
+order: 20
 ---
 
 # Research workflow
 
-## Upload and evidence
+LabFlow keeps evidence handling separate from optional semantic assistance.
 
-The uploaded ZIP is preserved as source evidence. LabFlow reads it into one canonical scientific aggregate without rewriting RAW files.
+## 1. Upload and review
 
-## Deterministic processing
+Import a supported archive. LabFlow parses files, builds canonical experiment/sample/run/measurement relationships, validates them, calculates deterministic analysis and raises findings. Review ambiguities before making strong comparisons.
 
-Naming, hierarchy recovery, validation, JV analysis, indexing and summaries run locally. When a correction is mechanically safe, LabFlow can detect it automatically but still requires explicit acceptance before changing LabFlow Data.
+## 2. Results
 
-## Review
+Results are calculated from canonical experiment data. Use the overview, data explorer, JV views and group comparison to inspect performance and quality. The deterministic diagnostics add ranking coverage, FW/RV agreement, reproducibility statistics and descriptive correlations.
 
-Review is reserved for decisions. Semantic uncertainty remains visible as an ambiguity/finding rather than being guessed. `dataset.resolve-ambiguities` can propose a resolution, but the proposal is not applied silently.
+`Interpret results` and `Compare groups` are Actions for consistent workflow/provenance, but they use deterministic code and no provider.
 
-## Results
+## 3. Design
 
-Results come from deterministic analysis. AI interpretation/comparison uses these results as evidence and cannot replace them.
+Use existing experiment evidence first. LabFlow then searches compatible Cabinet and Knowledge Base references for missing Design domains. Only unresolved residue may be sent to a configured provider. Suggestions remain reviewable and source-labelled.
 
-## Design and Cabinet
+## 4. Cabinet and Knowledge
 
-Design records experiment-specific chemistry, stack and process information. Cabinet stores reusable laboratory definitions. Applying a Cabinet item copies its current value into Design, so later Cabinet edits do not rewrite an experiment.
+Save reusable laboratory resources in Cabinet. Add focused scientific reference entries to My JSONL when needed. Cabinet describes what your lab defines/reuses; the Knowledge Base describes external/reference knowledge. Neither is RAW measurement evidence.
 
-## Knowledge and Assistant
+## 5. Export
 
-KB supplies reference knowledge; Assistant answers from bounded current context and may recommend available Actions. Neither is an authority over measurements or accepted Design.
+Review NOMAD readiness and remaining metadata. `Prepare missing metadata` reuses conservative existing LabFlow values where an equivalent field is known; it does not ask a model to invent metadata. Manual overrides remain export-only.
 
-## Export
+## 6. Assistant
 
-Export packages current validated LabFlow Data and optional payloads deterministically. NOMAD preparation is local; remote upload is not implemented in the current POC.
-
-## Reviewing AI-completed Design
-
-A useful Design suggestion should be read as a set of sourced candidates, not as one opaque AI answer. Inspect the source nature beside each part:
-
-1. **Experiment evidence** — strongest authority for the current experiment.
-2. **Lab Cabinet** — researcher-curated reusable candidate; verify it was actually used.
-3. **Knowledge Base** — sourced reference/archetype; useful for reconstruction, never proof of use.
-4. **Model inference** — qualitative suggestion without a specific supplied reference.
-5. **Unresolved** — explicitly preserved scientific gap.
-
-The displayed confidence is calibrated candidate suitability. It is intentionally lower for generic references/inference and capped for unsupported numeric values. Accept only the parts you can justify; LabFlow keeps unresolved information explicit rather than requiring a fabricated completion.
+Use the Assistant for questions across the current experiment. Explicit commands are zero-token local operations. Natural-language questions use a tiny language-agnostic router; factual routes are answered from LabFlow state, while interpretive routes may make one additional bounded provider request with targeted reference knowledge.

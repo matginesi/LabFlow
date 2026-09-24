@@ -5,12 +5,9 @@
   "category": "export",
   "role": "researcher",
   "visibility": "public",
-  "purpose": "Prepare missing or weak export metadata for NOMAD first and Ready-PV second, using current ExperimentData, Workspace, Process and Cabinet evidence without modifying canonical scientific data.",
-  "strategy": "One bounded review-only pass over the current export projections. The model may propose export-only values only for fields LabFlow marks as missing or incomplete. It must prefer experiment/workspace/process/cabinet evidence, cite the supplied source, preserve uncertainty, and leave unsupported fields unresolved. Accepted suggestions become projection overrides only after explicit user review.",
-  "policies": [
-    "policy.scientific-provenance",
-    "policy.structured-output"
-  ],
+  "purpose": "Prepare a deterministic review list for missing NOMAD and Ready-PV metadata without inventing values or calling an AI provider.",
+  "strategy": "LabFlow reuses only explicit current projection/workspace/process values when a conservative field alias is known. Everything else remains unresolved for human review.",
+  "policies": [],
   "contract": {
     "target": {
       "kind": "export_projection",
@@ -38,32 +35,21 @@
     ]
   },
   "execution": {
-    "mode": "hybrid",
-    "result_step": "prepare",
+    "mode": "deterministic",
+    "result_step": "build",
     "steps": [
       {
-        "id": "prepare",
-        "type": "AI",
-        "prompt": "prompt.md",
-        "output": "json",
-        "schema": "export_preparation",
-        "thinking": "off",
-        "timeout_ms": 90000,
-        "deadline_ms": 90000,
-        "max_retries": 1,
-        "min_output_tokens": 100,
-        "target_output_tokens": 700,
-        "max_output_tokens": 1600,
-        "max_input_tokens": 9000,
-        "validate_with": "export.validate-preparation",
-        "provider_schema": false,
-        "weight": 0.86
+        "id": "build",
+        "type": "DETERMINISTIC",
+        "tool": "export.build-preparation",
+        "capture_result": true,
+        "weight": 0.82
       },
       {
         "id": "store",
         "type": "DETERMINISTIC",
         "tool": "export.store-preparation",
-        "weight": 0.14
+        "weight": 0.18
       }
     ]
   },

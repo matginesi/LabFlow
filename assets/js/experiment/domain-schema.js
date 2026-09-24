@@ -162,7 +162,7 @@ function normalizeSampleLinkage(v,r){
   };
 }
 registerRecord('measurement',{
-  label:'Measurement',description:'One repeated scientific acquisition/source file inside a run. Technique-specific payload remains explicit; JV FW/RV scans are preserved for current analysis.',idPrefix:'m',required:['id','kind','sampleId','experimentId'],relations:{experimentId:'experiment',sampleId:'sample',runId:'run'},
+  label:'Measurement',description:'One repeated scientific acquisition/source file inside a run. Technique-specific payload remains explicit; for JV, FW/RV are scans preserved for current analysis.',idPrefix:'m',required:['id','kind','sampleId','experimentId'],relations:{experimentId:'experiment',sampleId:'sample',runId:'run'},
   defaults:function(){return{id:uid('m'),kind:'measurement',file:'',rawFile:'',path:'',rawSample:'',sample:'',
   sampleAliases:[],identitySource:'',sampleLinkage:{method:'unknown',rule:'',sourceField:'',evidencePaths:[],confidence:null},sampleId:'',experiment:'',experimentId:'',group:'',runId:'',position:'',cell:'',
     sequence:null,isRef:false,technique:'unknown',parameters:[],observables:[],setupRef:'',instrumentRefs:[],softwareRef:'',locationRef:'',startedAt:null,endedAt:null,

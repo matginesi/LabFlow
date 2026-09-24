@@ -13,12 +13,12 @@ The table below describes **LabFlow operational budgets**, not the theoretical l
 
 | Action / AI step | Role | Type | Max input | Answer target | Answer maximum | Retries | Inference deadline |
 |---|---|---|---:|---:|---:|---|---:|
-| assistant.chat | assistant | ai | 12000 | 650 | 2048 | 1 semantic | 90 s |
-| dataset.resolve-ambiguities | researcher | hybrid | 7000 | 800 | 1800 | 1 semantic | 120 s |
-| design.infer | researcher | hybrid | 7600 | 900 | 2200 | 2 semantic | 100 s |
-| export.prepare | researcher | hybrid | 9000 | 700 | 1600 | 1 semantic | 90 s |
-| results.compare | researcher | hybrid | 7000 | 520 | 1200 | 1 semantic | 120 s |
-| results.interpret | researcher | hybrid | 9000 | 600 | 1400 | 1 semantic | 120 s |
+| assistant.chat | assistant | ai | 1400 | 120 | 280 | 0 semantic | 70 s |
+| dataset.resolve-ambiguities | researcher | hybrid | 1800 | 220 | 500 | 0 semantic | 70 s |
+| design.infer | researcher | hybrid | 1500 | 180 | 500 | 0 semantic | 70 s |
+| export.prepare | researcher | deterministic | — | — | — | — | — |
+| results.compare | researcher | deterministic | — | — | — | — | — |
+| results.interpret | researcher | deterministic | — | — | — | — | — |
 
 ## How to read the table
 

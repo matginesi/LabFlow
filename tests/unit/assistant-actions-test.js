@@ -22,7 +22,7 @@ module.exports=function(t){
   };
   t['Assistant palette and ActionUI share one canonical availability service']=function(){
     assert(assistant.includes('LF.ActionCapabilities&&LF.ActionCapabilities.catalog'),'palette uses capability catalog');
-    assert(context.includes('LF.ActionCapabilities.assistantCatalog'),'Assistant context uses the same catalog');
+    assert(!context.includes('assistantCatalog({exp:exp})'),'Assistant provider context no longer embeds the Action catalog');
     assert(/LF\.ActionGuards\s*&&\s*LF\.ActionGuards\.check/.test(capabilities),'capability service evaluates canonical guards once');
     const runBlock=actionUi.slice(actionUi.indexOf('function run(id,userText,opts,retry){'),actionUi.indexOf('function bind(){'));assert(runBlock.indexOf('capability&&!capability.available')<runBlock.indexOf('LF.UI.activityStart'),'preflight happens before progress UI');
   };
@@ -33,11 +33,11 @@ module.exports=function(t){
     assert(assistant.includes('Structured Action output'),'raw structured output remains available in Details');
     assert(css.includes('.chat-action-result')&&css.includes('.chat-action-menu'),'Action result and launcher styles exist');
   };
-  t['Assistant model receives the Action catalog and Design uses the denser workbench layout']=function(){
-    assert(context.includes('action_catalog=actionCatalog(exp)'),'Action catalog is part of Assistant context');
-    assert(context.includes('action_outputs=LF.ActionData'),'persisted Action outputs use the owner API in Assistant context');
-    assert(context.includes('recent_actions=recentActionEvents(exp)'),'recent Action outcomes are separately available to later Assistant turns');
-    assert(prompt.includes('Treat `action_catalog` as the authoritative Action catalog'),'prompt uses Action catalog');
+  t['Assistant provider context is small and Design keeps the denser workbench layout']=function(){
+    assert(!context.includes('action_catalog=actionCatalog(exp)'),'Action catalog is absent from provider context');
+    assert(!context.includes('action_outputs=LF.ActionData'),'Action outputs are absent from provider context');
+    assert(!context.includes('recent_actions=recentActionEvents(exp)'),'Action history is absent from provider context');
+    assert(!prompt.includes('action_catalog'),'prompt does not teach the model the Action framework');
     assert(design.includes('design-experiment-workbench'),'Design selector and active experiment share one compact workbench');
     assert(design.includes('design-active-strip'),'active experiment is a compact strip rather than a duplicate panel');
     assert(!design.includes('SELECTED EXPERIMENT'),'legacy selected-experiment hero is removed');

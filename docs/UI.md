@@ -1,58 +1,68 @@
 ---
 title: UI contract
 section: Engineering reference
-summary: Shared interaction model, layout ownership, responsive behavior and UI-kit rules.
+summary: Shared interaction model, themes, density, Totems and task-specific scientific presentation.
 order: 30
 ---
 
 # UI contract
 
-LabFlow uses one researcher workflow and one visual system. Feature pages may compose shared primitives; they must not invent a second design language.
+LabFlow keeps one compact scientific UI language. Feature pages compose shared primitives rather than introducing page-specific design systems.
 
 ## Primary workflow
 
-The primary scientific navigation is:
-
-```mermaid
-flowchart LR
-    U[Upload & Review] --> R[Results]
-    R --> D[Design]
-    D --> E[Export]
+```text
+Upload & Review → Results → Design → Export
 ```
 
-Cabinet, Knowledge Base, Settings, Logs, Documentation and UI Kit are supporting workspaces. NOMAD is an export target, not a competing primary workflow.
+Cabinet, Knowledge Base, Settings, Logs, Documentation and UI Kit support that workflow.
 
 ## Ownership
 
-- `assets/css/tokens.css` owns design tokens and shared sizing.
-- `assets/css/ui.css` owns reusable controls, panels, badges, forms, tables and Totems.
-- `assets/css/app.css` owns application/page composition and responsive layout.
-- `ui-kit.html` plus `.agent/skills/labflow-ui/SKILL.md` are the implementation reference for shared patterns.
+- `assets/css/tokens.css`: design/density tokens
+- `assets/css/ui.css`: shared controls, panels, tables, badges and Totem shell
+- `assets/css/components.css`: compact runtime metrics, Results insight cards and Design completion primitives shared by production and UI Kit
+- `assets/css/app.css`: application/page composition
+- `ui-kit.html` and `.agent/skills/labflow-ui/SKILL.md`: implementation examples/rules
 
-Do not create page-local copies of shared controls to solve isolated styling problems.
+## Action Totem
 
-## Interaction primitives
+The normal view is intentionally small:
 
-Use Message Totem for feedback/confirmation and Action Totem for foreground execution progress/result. Inline notices are page content, not another overlay system.
+1. **Overall progress**
+2. only useful secondary progress bars (for example current work unit or token completion)
+3. elapsed time
+4. operation-specific speed only when it has a real unit/meaning
+5. generated tokens when a provider is involved
+6. tok/s when the provider exposes or LabFlow can measure it
 
-Controls remain keyboard/touch usable and labels are associated with native controls. Long scientific names/paths use intentional wrapping/truncation rather than forcing document-level horizontal scrolling.
+Everything diagnostic belongs under **Technical data**: provider/request details, input tokens, TTFT, budgets, payload excerpts, checklist, internal steps and history. Do not make the user read transport internals to understand whether work is progressing.
+
+## Message Totem
+
+Use the shared Message Totem for application feedback and confirmation. Inline notices remain page content. Do not create route-specific toast hosts.
+
+## Results
+
+Calculated statistics and deterministic Action output must be labelled as calculated/deterministic, not as AI. Descriptive correlations must not imply causality or significance.
+
+## Assistant
+
+Assistant is a local themed surface. Its menus, badges, notices, Markdown, code and structured output use Assistant tokens. `LOCAL · 0 tokens` means no provider was used; `LOCAL · LLM router` means a tiny language-agnostic routing call selected a deterministic LabFlow answer; `LLM` means an answer-generation request was also used. The Assistant never opens the Action Totem.
+
+## Cabinet
+
+Keep one searchable reusable-resource shelf and one focused editor. Mental model: **Save → Reuse → the experiment keeps its own copy**.
 
 ## Responsive behavior
 
-Pages reflow their own workspaces. Shared scientific canvas density remains consistent; a narrow viewport should not become a horizontally scrolling desktop page.
-
-Tables/data visualizations may have local scroll containers when the data genuinely requires it. Navigation tabs on narrow screens should reflow into compact grids where appropriate rather than relying on a long one-line scroller.
-
-Assistant on mobile is a dedicated full-screen surface rather than a squeezed desktop sidebar.
-
-## Themes
-
-The instrument theme uses dark structural chrome around a light scientific canvas; the light theme keeps all regions light. Shared tokens define contrast and density. Assistant-contained Markdown, badges, code and structured output use Assistant surface tokens.
+Pages reflow locally. Tables/charts may use contained scrolling when scientifically necessary; the whole page should not become a horizontally scrolling desktop canvas. Assistant becomes a dedicated mobile surface.
 
 ## Verification
 
-After UI changes, run `validate_ui_contract.py`, unit tests and the responsive browser audit when available. Search for obsolete/duplicate selectors when replacing a shared pattern so stale late overrides do not resurrect the previous layout.
+Run UI validators, unit tests and the browser audit when available. When replacing a component, remove obsolete selectors/markup instead of leaving hidden parallel implementations.
 
-## Design suggestion source indicators
 
-Design proposal cards expose the **basis** of a choice (experiment, Lab Cabinet, Knowledge Base, model inference) and a calibrated confidence. The percentage is candidate suitability for review, not probability that the experiment used that candidate. See `guides/DESIGN_INFERENCE.md`.
+## UI Kit parity
+
+`ui-kit.html` loads the same shared styles as production. Reusable components added to production must be represented in the UI Kit; examples must not depend on a private stylesheet or stale generated copy. Rebuild `assets/js/pages/ui-kit-inline.js` after changing the UI Kit source.

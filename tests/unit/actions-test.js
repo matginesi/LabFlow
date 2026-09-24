@@ -133,6 +133,19 @@ module.exports=function(t,LF){
     if(!sent||!sent.messages||Math.ceil(sent.messages[0].content.length/1.5)>28000)throw new Error('final request must fit comfortably inside the 32k runtime context');
   };
 
+  t['Assistant compaction may shrink below the old 1800-character floor before failing the 2000-token cap']=async function(){
+    const exp={id:'exp_assistant_fit',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'assistant.chat',contract:{context:{profile:'chat',scope:'current_page'},result:{format:'text',kind:'assistant_message'},effect:{mode:'read_only',writes:[]},guards:[]},execution:{mode:'ai',result_step:'chat',steps:[{id:'chat',type:'AI',output:'text',max_output_tokens:450,min_output_tokens:50,target_output_tokens:180,max_input_tokens:2000,max_retries:0}]}};
+    const builds=[];let sent=null;
+    LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'small-model',streaming:false,maxOutputTokensCap:0};},getAssistantSettings:function(){return{maxOutputTokens:450};}};
+    LF.ActionContext={build:function(action,step,opts){const limit=Number(opts&&opts.maxChars)||12000;builds.push(limit);const content='X'.repeat(Math.max(640,Math.min(12000,limit)));return{context:{payload:content},messageList:[{role:'system',content:'S'.repeat(4000)},{role:'user',content:content}]};}};
+    LF.State={state:{experiment:exp,ui:{route:'results'}},ensureDerived:function(e){e.derived=e.derived||{actions:{},chat:{conversation:[]}};},startActionRun:function(){},endActionRun:function(){},touch:function(){}};
+    LF.AI={acceptController:function(){},estimatePromptTokens:function(messages){return Math.ceil(messages.map(function(m){return String(m.content||'');}).join('\n').length/2.7)+messages.length*8;},resolveModelCapabilities:async function(){return{contextWindow:16384,maxOutputTokens:4096};},resolveOutputBudget:function(cap,actionCap,globalCap,inputTokens){return Math.min(actionCap,cap.maxOutputTokens,cap.contextWindow-inputTokens-512);},resolveThinkingPolicy:function(){return{transportMode:'off',effective:'off'};},buildRequest:function(opts){sent=opts;return opts;},send:async function(){return{content:'done',finishReason:'stop'};}};
+    const out=await LF.ActionRunner.run('assistant.chat',{userText:'Explain the current experiment.'});
+    assert(out.status,'done','Assistant fits instead of surfacing an internal cap error');
+    if(!builds.some(function(v){return v<1800;}))throw new Error('Assistant fitter never crossed the obsolete 1800-character floor: '+JSON.stringify(builds));
+    if(!sent||LF.AI.estimatePromptTokens(sent.messages)>2000)throw new Error('Assistant request exceeded its 2000-token input cap');
+  };
+
   t['structured Action reserves its target rather than falsely requiring its full output ceiling']=async function(){
     const exp={id:'exp_context_target',sync:{revision:0},derived:{actions:{},chat:{conversation:[]}}},def={id:'design.infer',type:'AI',steps:[{id:'infer',type:'AI',output:'json',max_output_tokens:6144,min_output_tokens:1200,target_output_tokens:2800,max_retries:0}]},previousStructured=LF.StructuredOutput;let sent=null;
     LF.Storage={getEffectiveAction:function(){return current(def);},getAiSettings:function(){return{provider:'custom',endpoint:'https://example.test/v1',model:'mid-context',streaming:false,maxOutputTokensCap:0};}};

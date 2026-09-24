@@ -71,23 +71,40 @@ C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{retu
       '<button type="button" class="button" id="saveAiSettings">Save</button><button type="button" class="button primary" id="testAiConnection">Save &amp; test</button></div></div>'
     +'</div></section>';
 }
-function assistantPanel(s){return'<div class="stack assistant-settings-simple"><section class="panel"><div class="panel-head"><div><h2 class="h2">' +
-  'Conversation memory</h2><div class="meta">Keep recent exchanges available while you work.</div></div></div><div ' +
-  'class="panel-body stack"><label class="switch-row"><input type="checkbox" id="assistantMemoryEnabled" '+
-(s.memoryEnabled?'checked':'')+'> Remember recent conversation</label>'+field('Recent turns',
-    '<input class="input" id="assistantMemoryTurns" type="number" min="0" max="20" value="'+s.memoryTurns+
-    '"><div class="help">How many recent exchanges can be reused as context.</div>')+
-    '<details class="settings-advanced"><summary>Advanced conversation settings</summary><div class="settings-advanced-body"><div class="form-grid">'+
-    field('Conversation memory size','<input class="input" id="assistantMemoryChars" type="number" min="500" max="32000" step="500" value="'+
-    s.memoryChars+'">')+field('Single message size',
-    '<input class="input" id="assistantMessageChars" type="number" min="250" max="8000" step="250" value="'+s.messageChars+
-    '">')+field('Answer limit','<input class="input" id="assistantMaxOutputTokens" type="number" min="0" max="1048576" step="256" value="'+
-    s.maxOutputTokens+'"><div class="help">Leave 0 to use the normal Assistant limit.</div>')+field('Creativity',
-    '<input class="input" id="assistantTemperature" type="number" min="0" max="2" step="0.1" value="'+s.temperature+'">')+
-    field('Research context size','<input class="input" id="assistantContextChars" type="number" min="2000" max="48000" step="500" value="'+
-    s.contextChars+'">')+'</div></div></details><div class="settings-savebar"><span class="help">These preferences affect Assistant ' +
-  'conversations only.</span><div class="row-wrap"><button type="button" class="button primary" id="saveAssistantSettings">' +
-  'Save</button><button type="button" class="button danger" id="clearAssistantConversation">Clear conversation</button></div></div></div></section></div>';}
+function assistantPanel(s){
+  const intro=[
+    '<div class="stack assistant-settings-simple"><section class="panel"><div class="panel-head"><div>',
+    '<h2 class="h2">Assistant behavior</h2>',
+    '<div class="meta">Explicit local commands stay deterministic. Natural-language requests use a tiny language-agnostic intent router; only interpretive questions receive a second bounded answer request.</div>',
+    '</div></div><div class="panel-body stack">',
+    '<div class="notice info"><strong>Conversation context</strong><br>LabFlow does not send long chat history. A previous turn is included only when the intent router marks the request as a follow-up.</div>',
+    '<div class="form-grid">'
+  ].join('');
+  const thinking=[
+    '<select class="select" id="assistantThinkingMode">',
+    '<option value="off" '+(s.thinkingMode==='off'?'selected':'')+'>Prefer off</option>',
+    '<option value="auto" '+(s.thinkingMode==='auto'?'selected':'')+'>Automatic</option>',
+    '<option value="on" '+(s.thinkingMode==='on'?'selected':'')+'>Prefer on</option></select>',
+    '<div class="help">Recognized &lt;think&gt;, &lt;thinking&gt;, &lt;analysis&gt;, &lt;reasoning&gt; and provider-native reasoning are separated from the final answer and kept under Details.</div>'
+  ].join('');
+  const answerLimit=[
+    '<input class="input" id="assistantMaxOutputTokens" type="number" min="0" max="1048576" step="64" value="'+s.maxOutputTokens+'">',
+    '<div class="help">Leave 0 to use the compact Assistant Action limit.</div>'
+  ].join('');
+  const contextTarget=[
+    '<input class="input" id="assistantContextChars" type="number" min="1200" max="8000" step="250" value="'+s.contextChars+'">',
+    '<div class="help">Character target for the task-specific fact pack before token fitting. The provider input cap remains authoritative.</div>'
+  ].join('');
+  const footer=[
+    '</div><div class="settings-savebar">',
+    '<span class="help">Deterministic state answers use LabFlow facts; the model never receives the full experiment or long conversation history.</span>',
+    '<div class="row-wrap"><button type="button" class="button primary" id="saveAssistantSettings">Save</button>',
+    '<button type="button" class="button danger" id="clearAssistantConversation">Clear conversation</button></div>',
+    '</div></div></section></div>'
+  ].join('');
+  return intro+field('Reasoning / thinking',thinking)+field('Answer limit',answerLimit)+
+    field('Research context target',contextTarget)+footer;
+}
 function knowledgePanel(){
   const kb=LF.KnowledgeBase;if(!kb)return'<div class="notice warning">Knowledge Base is unavailable.</div>';
   const state=LF.State.state;state.ui=state.ui||{};
@@ -287,7 +304,7 @@ mn=Number(step.min_output_tokens)||0,tg=Number(step.target_output_tokens)||0,mx=
 function actionSteps(def){return def&&def.execution&&Array.isArray(def.execution.steps)?def.execution.steps:[];}
 function toolSummary(def){const map={'dataset.resolve-ambiguities':
 'Suggest how to resolve data items that still need scientific review.',
-  'results.compare':'Explain the main differences between the result groups you selected.',
+  'results.compare':'Calculate the main differences between the result groups you selected.',
   'results.interpret':'Summarize and interpret the current experimental results.',
   'design.infer':'Suggest missing chemistry, stack or process details for the selected experiment.'};
   return map[def&&def.id]||'Use this tool with the current experiment.';}
@@ -400,7 +417,7 @@ const allowed=['provider','actions','assistant','knowledge','nomad','workspace',
     ntRemembered=LF.Storage.isNomadTokenRemembered?LF.Storage.isNomadTokenRemembered(n.apiEndpoint):false;
     if(state.ui.settingsSection!==active)state.ui.settingsSection=active;
   const config={provider:['AI connection','Choose the AI service and model LabFlow should use.',true,providerPanel(s,
-key,keyRemembered)],assistant:['Assistant','Choose how LabFlow keeps recent conversation context.',true,
+key,keyRemembered)],assistant:['Assistant','Configure the compact language-agnostic Assistant pipeline.',true,
     assistantPanel(a)],actions:['AI tools','Choose and run the AI tools available in LabFlow.',false,actionsPanel()],
     knowledge:['Knowledge Base','Manage the scientific references available to LabFlow.',false,knowledgePanel()],
     nomad:['NOMAD','Prepare NOMAD exports and, if needed, connection details.',true,nomadPanel(n,nt,ntRemembered)],

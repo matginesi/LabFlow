@@ -106,10 +106,8 @@ const profile=nomadProfile(),instance=value('nomadInstance').trim(),username=val
       }catch(err){LF.UI.message('NOMAD settings not saved: '+(err.message||String(err)),'error');}return true;}
     if(e.target.closest('#clearNomadToken')){LF.Storage.saveNomadToken('',{remember:false,endpoint:LF.Storage.getNomadSettings().apiEndpoint});LF.UI.message('NOMAD token cleared from this browser.','success');render();return true;}
     if(e.target.closest('#saveAssistantSettings')){LF.Storage.saveAssistantSettings({
-memoryEnabled:document.getElementById('assistantMemoryEnabled').checked,
-      memoryTurns:Number(value('assistantMemoryTurns')),memoryChars:Number(value('assistantMemoryChars')),
-      messageChars:Number(value('assistantMessageChars')),maxOutputTokens:Number(value('assistantMaxOutputTokens')),
-      temperature:Number(value('assistantTemperature')),contextChars:Number(value('assistantContextChars'))});
+      maxOutputTokens:Number(value('assistantMaxOutputTokens')),thinkingMode:value('assistantThinkingMode'),
+      contextChars:Number(value('assistantContextChars'))});
       LF.UI.message('Assistant settings saved.','success');render();return true;}
     if(e.target.closest('#validateActionEditor')||e.target.closest('#saveActionEditor')){
 const save=!!e.target.closest('#saveActionEditor'),
@@ -134,8 +132,8 @@ const save=!!e.target.closest('#saveActionEditor'),
       }return true;}
     if(e.target.closest('#resetActionEditor')){const id=e.target.closest('#resetActionEditor').dataset.actionId;if(await LF.UI.confirmAction('Reset '+id+' to its source action.json and prompt.md?',{title:'Reset Action configuration',confirmLabel:'Reset Action'})){LF.Storage.resetActionOverride(id);LF.UI.message('Action reset to source definition.','success');render();}return true;}
     if(e.target.closest('#clearAssistantConversation')){
-if(ctx.hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation and its memory?',{
-      title:'Clear Assistant memory',confirmLabel:'Clear conversation',danger:true})){
+if(ctx.hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation?',{
+      title:'Clear Assistant conversation',confirmLabel:'Clear conversation',danger:true})){
       const d=LF.State.ensureDerived(S.state.experiment);d.chat={conversation:[]};ctx.markModified('ai');
       LF.UI.message('Assistant conversation cleared.','success');render();}return true;}
     if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({

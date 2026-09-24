@@ -274,27 +274,24 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
   }
 
   function normalizeAssistantEnvelope(content,reasoning,providerId){
-    let finalText=String(content||'').trim(),reasoningText=String(reasoning||'').trim(),changed=false;
-    if(String(providerId||'').toLowerCase()!=='llamacpp')return{content:finalText,reasoning:reasoningText,changed:false,resultBlocks:0};
+    let finalText=String(content||'').trim(),reasoningText=String(reasoning||'').trim(),changed=false,resultBlocks=0;
+    const split=C&&C.splitModelReasoning?C.splitModelReasoning(finalText):{content:finalText,reasoning:'',changed:false};
+    finalText=split.content;changed=!!split.changed;
+    if(split.reasoning)reasoningText=[reasoningText,split.reasoning].filter(Boolean).join('\n\n').trim();
 
-    const leakedThoughts=[];
-    finalText=finalText.replace(/<think\b[^>]*>([\s\S]*?)<\/think>/gi,function(_,inner){const value=String(inner||'').trim();if(value)leakedThoughts.push(value);changed=true;return '\n';});
-
-    const withoutClosers=finalText.replace(/(?:^|\n)\s*<\/think>\s*(?=\n|$)/gi,'\n');
-    if(withoutClosers!==finalText){finalText=withoutClosers;changed=true;}
-
-    if(leakedThoughts.length){reasoningText=[reasoningText].concat(leakedThoughts).filter(Boolean).join('\n\n').trim();}
-
-    const results=[];
-    finalText.replace(/<result\b[^>]*>([\s\S]*?)<\/result>/gi,function(_,inner){results.push(String(inner||'').trim());return _;});
-    if(results.length){finalText=results[results.length-1];changed=true;}
-    else{
-      const open=finalText.toLowerCase().lastIndexOf('<result>');
-      if(open>=0){finalText=finalText.slice(open+8).replace(/<\/result>\s*$/i,'').trim();changed=true;}
+    // llama.cpp-compatible templates may wrap the actual answer in <result>. Keep that
+    // provider-specific envelope handling, but reasoning-tag separation is provider agnostic.
+    if(String(providerId||'').toLowerCase()==='llamacpp'){
+      const results=[];
+      finalText.replace(/<result\b[^>]*>([\s\S]*?)<\/result>/gi,function(_,inner){results.push(String(inner||'').trim());return _;});
+      if(results.length){resultBlocks=results.length;finalText=results[results.length-1];changed=true;}
+      else{
+        const open=finalText.toLowerCase().lastIndexOf('<result>');
+        if(open>=0){finalText=finalText.slice(open+8).replace(/<\/result>\s*$/i,'').trim();changed=true;}
+      }
+      finalText=finalText.replace(/\s*<\/result>\s*$/i,'').trim();
     }
-
-    finalText=finalText.replace(/^\s*<\/think>\s*/i,'').replace(/\s*<\/result>\s*$/i,'').trim();
-    return{content:finalText,reasoning:reasoningText,changed:changed,resultBlocks:results.length};
+    return{content:finalText,reasoning:reasoningText,changed:changed,resultBlocks:resultBlocks};
   }
 
   function extractAssistant(obj){

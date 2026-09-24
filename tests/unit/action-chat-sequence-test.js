@@ -9,7 +9,7 @@ module.exports=function(t,LF){
 
   function loadUi(runImpl){
     delete require.cache[require.resolve(uiPath)];
-    let messages=[],errors=[],updates=[],finishes=[];
+    let messages=[],errors=[],updates=[],finishes=[],starts=[];
     LF.Storage={
       getAiSettings:function(){return{endpoint:'http://127.0.0.1:1234/v1',model:'test-model',provider:'lmstudio'};},
       getApiKey:function(){return'';}
@@ -17,14 +17,14 @@ module.exports=function(t,LF){
     LF.AIProviders={lmstudio:{keyRequired:false}};
     LF.State={state:{experiment:{id:'exp',derived:{chat:{conversation:[]}}},ui:{}},ensureExperiment:function(){return this.state.experiment;},touch:function(){}};
     LF.PageContext={summary:function(){return'Results · Design';}};
-    LF.UI={activityStart:function(){},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},message:function(){}};
+    LF.UI={activityStart:function(options){starts.push(options);},activityUpdate:function(options){updates.push(options);},activityFinish:function(options){finishes.push(options);},activityError:function(error,options){errors.push({error:error,options:options});},message:function(){}};
     LF.Assistant={addActionMessage:function(m){messages.push(m);return m;},render:function(){}};
     LF.ActionRunner={
       effective:function(id){if(id==='results.interpret')return{id:id,title:'Interpret results',short_title:'Interpret results',contract:{result:{format:'text'}},execution:{mode:'ai',steps:[{id:'interpret',type:'AI'}]}};return{id:id,title:id,contract:{result:{format:id==='design.infer'?'json':'text'}},execution:{mode:id==='design.infer'?'hybrid':'deterministic',steps:id==='design.infer'?[{id:'infer',type:'AI'}]:[]}};},
       isRunning:function(){return false;},cancel:function(){return true;},retry:function(cb){return runImpl('results.interpret',cb);},run:function(id,cb){return runImpl(id,cb);}
     };
     require(uiPath);
-    return{messages:messages,errors:errors,updates:updates,finishes:finishes};
+    return{messages:messages,errors:errors,updates:updates,finishes:finishes,starts:starts};
   }
 
   t['SSE progress is token-based and ignores transport event fragmentation']=function(){
@@ -57,6 +57,28 @@ module.exports=function(t,LF){
     const live=env.updates.find(function(update){return update.stream&&Number(update.stream.rate)>0;});
     assert(live&&live.stream.rate===22.5&&live.stream.estimated===true,'live tok/s telemetry not passed to totem');
     assert(env.finishes[0]&&env.finishes[0].details['Output rate']==='24.3 tok/s','final tok/s missing from totem details');
+  };
+
+
+  t['Action Totem exposes LLM telemetry only after a provider request is actually sent']=async function(){
+    const deterministic=loadUi(function(id){return Promise.resolve({status:'done',actionId:id,result:{stored:true},requestMeta:{}});});
+    await LF.ActionUI.run('export.prepare','',{params:{}});
+    assert(deterministic.starts.length===1,'deterministic Action opens one Totem');
+    assert(deterministic.starts[0].showAiTrace===false,'deterministic Totem starts without AI trace');
+    assert(!Object.prototype.hasOwnProperty.call(deterministic.starts[0].details||{},'Provider'),'deterministic Totem has no Provider field');
+    assert(!Object.prototype.hasOwnProperty.call(deterministic.starts[0].details||{},'Model'),'deterministic Totem has no Model field');
+
+    const modelFacing=loadUi(function(id,cb){
+      cb.onRequest({stepId:'infer',index:0,workIndex:0,workTotal:1,inputTokens:120,inputCapTokens:1500,targetTokens:80,maxTokens:120,request:{method:'POST',endpoint:'http://127.0.0.1:1234/v1/chat/completions',body:{}}});
+      return Promise.resolve({status:'error',actionId:id,message:'test stop',failedStep:'infer',code:'TEST',requestMeta:{}});
+    });
+    const exp=LF.State.state.experiment;exp.design={solutions:[],devices:[{id:'d1',name:'D1',sampleNames:[],solutionIds:[],stack:[],process:{}}]};
+    await LF.ActionUI.run('design.infer','',{params:{deviceId:'d1'}});
+    assert(modelFacing.starts[0].showAiTrace===false,'hybrid Totem starts without speculative AI telemetry');
+    const requestUpdate=modelFacing.updates.find(function(update){return update.showAiTrace===true;});
+    assert(!!requestUpdate,'actual provider request reveals AI trace');
+    assert(requestUpdate.details&&requestUpdate.details.Provider==='lmstudio','provider appears only after request');
+    assert(requestUpdate.details&&requestUpdate.details.Model==='test-model','model appears only after request');
   };
 
   t['Design inference publishes a useful proposal summary instead of an empty structured result']=async function(){

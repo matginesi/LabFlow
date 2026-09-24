@@ -69,8 +69,8 @@ function resultSummary(d,out){
     return lines.join('\n');
   }
 
-  if(d&&d.id==='export.prepare'&&out&&out.aiOutput&&typeof out.aiOutput==='object'){
-    const proposal=out.aiOutput;
+  if(d&&d.id==='export.prepare'&&out&&out.result&&typeof out.result==='object'){
+    const proposal=out.result;
     if(proposal.summary)lines.push(String(proposal.summary));
     lines.push('- export-only suggestions: '+((proposal.suggestions||[]).length));
     lines.push('- unresolved fields: '+((proposal.unresolved||[]).length));
@@ -158,6 +158,7 @@ requestLimit=Number(completion.requestLimit||info.maxTokens)||0;emit(local,{
       progressLabel:(Number(info.workTotal)>1?'Unit '+(Number(info.workIndex||
       0)+1)+' / '+info.workTotal+' · ':'')+'request sent',showAiTrace:true,request:JSON.stringify(info.request,null,2),
       requestIsJson:true,details:{'AI checkpoint':info.stepId,
+      Provider:context.settings&&context.settings.provider||'—',Model:context.settings?displayModel(context.settings):'—',
       'Estimated input':Number(info.inputTokens)>0?Math.round(Number(info.inputTokens)).toLocaleString()+' tok':'—',
       'Action input cap':Number(info.inputCapTokens)>0?Math.round(Number(info.inputCapTokens)).toLocaleString()+' tok':'—',
       'Answer target':target?target.toLocaleString()+' tok':'provider default',
@@ -195,17 +196,17 @@ emit(local,{stage:fine.tokens?'Receiving model response':'Waiting for first toke
 function providerLimit(out){const code=String(out&&((out.code)||(out.error&&out.error.code))||'');return code==='MODEL_RATE_LIMIT'||code==='MODEL_QUOTA_LIMIT'||!!(out&&out.error&&out.error.rateLimited);}
 function retryAfterFrom(out){const e=out&&out.error||{};return Math.max(0,Number(e.retryAfterMs||e.retryInMs)||0);}
 async function runDesignAllSequence(){
-  if(busy()){LF.UI.message('Another action is already running.','warning');return null;}if(!configured())return null;
+  if(busy()){LF.UI.message('Another action is already running.','warning');return null;}
   const exp=LF.State.ensureExperiment('sequence:design-all'),devices=exp.design&&exp.design.devices||[];
   const targets=devices.filter(function(dev){return designMissing(exp,dev)>0&&!designProposal(exp,dev.id);});
   if(!targets.length){LF.UI.message('Every incomplete experiment already has a suggestion. Accept, edit or discard the existing suggestions first.','info');return null;}
-  const started=performance.now(),settings=LF.Storage.getAiSettings(),stepsUi=targets.map(function(dev,i){return{id:'experiment-'+i,label:dev.name||('Experiment '+(i+1)),status:'pending',note:'Waiting'};});
+  const started=performance.now(),stepsUi=targets.map(function(dev,i){return{id:'experiment-'+i,label:dev.name||('Experiment '+(i+1)),status:'pending',note:'Waiting'};});
   let suggested=0,failed=0,stopped=false,throttled=false,throttleMessage='',throttleRetryMs=0;const failures=[];sequenceRunning=true;
   LF.UI.activityStart({title:'Complete all experiment designs',
-subtitle:'One independent suggestion per incomplete experiment',kind:'AI',stage:'Preparing experiments',progress:.01,
+subtitle:'One independent suggestion per incomplete experiment',kind:'HYBRID',stage:'Preparing experiments',progress:.01,
     cancellable:true,onCancel:function(){return LF.ActionRunner.cancel();
-    },message:'LabFlow processes each experiment separately and saves each suggestion as soon as it is ready.',
-    showAiTrace:true,details:{Experiments:targets.length,Model:displayModel(settings),Provider:settings.provider}
+    },message:'LabFlow resolves each experiment locally first and saves each suggestion as soon as it is ready.',
+    showAiTrace:false,details:{Experiments:targets.length,Engine:'Deterministic first · AI only for unresolved domains'}
     ,steps:stepsUi});
   try{
     for(let i=0;i<targets.length;i++){
@@ -275,15 +276,15 @@ function run(id,userText,opts,retry){
   const currentExp=LF.State&&LF.State.state&&LF.State.state.experiment||{},capability=!retry&&LF.ActionCapabilities&&LF.ActionCapabilities.evaluate?LF.ActionCapabilities.evaluate(id,{exp:currentExp,params:opts.params||{},selection:opts.selection||null,userText:userText||''}):null;
   if(capability&&!capability.available){const out={actionId:id,status:'unavailable',code:'ACTION_UNAVAILABLE',message:capability.reason,guards:capability.failures||[],steps:[]};LF.UI.message(capability.reason||'Action unavailable.','info');if(opts.fromAssistant&&!opts.suppressChat)publishActionUnavailable(d,out);return Promise.resolve(out);}
   if(capability)opts.params=capability.params;
-  const ai=usesAi(d);if(ai&&!configured())return Promise.resolve(null);const exp=LF.State.ensureExperiment('action:'+id);if(!exp.id)return Promise.resolve(null);const settings=LF.Storage.getAiSettings(),checkpoints=steps(d),nested=!!opts.sequence,started=performance.now();
+  const ai=usesAi(d),conditionalAi=id==='design.infer';if(ai&&!conditionalAi&&!configured())return Promise.resolve(null);const exp=LF.State.ensureExperiment('action:'+id);if(!exp.id)return Promise.resolve(null);const settings=LF.Storage.getAiSettings(),checkpoints=steps(d),nested=!!opts.sequence,started=performance.now();
   if(!nested){LF.UI.activityStart({title:label(id),subtitle:LF.PageContext?LF.PageContext.summary():'Current page',
-kind:ai?'AI':'LOCAL',stage:retry?'Retrying failed checkpoint':'Starting action',progress:.01,cancellable:true,
+kind:conditionalAi?'HYBRID':(ai?'AI':'LOCAL'),stage:retry?'Retrying failed checkpoint':'Starting action',progress:.01,cancellable:true,
     onCancel:function(){return LF.ActionRunner.cancel();
-    },message:d.purpose||'',showAiTrace:ai,response:ai?
-    'Provider output will appear here.':'Deterministic action; no provider request.',details:{
-    Action:id,Engine:ai?'AI-assisted':'Deterministic',Model:ai?displayModel(settings):'—',Provider:ai?settings.provider:'—'}
+    },message:d.purpose||'',showAiTrace:false,response:conditionalAi?
+    'Resolving known evidence locally first.':(ai?'Preparing Action.':'Running locally.'),details:{
+    Action:id,Engine:conditionalAi?'Deterministic first · AI fallback':(ai?'AI-assisted':'Deterministic')}
     ,steps:checkpoints});active={actionId:id,started:started};}
-  const progress=progressCallbacks(d,{sequence:opts.sequence||null});
+  const progress=progressCallbacks(d,{sequence:opts.sequence||null,settings:settings});
   const cb={params:opts.params||{},selection:opts.selection||null,userText:userText||'',onStep:progress.onStep,onWork:progress.onWork,onPhase:progress.onPhase,onRequest:progress.onRequest,onAutoRetry:progress.onAutoRetry,onProgress:progress.onProgress};
   const promise=retry?LF.ActionRunner.retry(cb):LF.ActionRunner.run(id,cb);
   return promise.then(function(out){const elapsed=Math.round(performance.now()-started);

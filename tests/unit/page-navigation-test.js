@@ -42,8 +42,8 @@ module.exports=function(t,LF,ctx){
   t['Design runtime uses the shared workflow header so Previous and Next cannot disappear']=function(){
     const design=fs.readFileSync(path.join(root,'assets/js/pages/design-page.js'),'utf8');
     if(!design.includes("options.workflowHead?options.workflowHead('Design Experiment'"))throw new Error('Design must render the shared workflow header');
-    if(!design.includes("'Complete with AI'"))throw new Error('Design must expose one completion action rather than a second Suggest missing step');
-    if(!design.includes("'Retry inference'"))throw new Error('Design must expose Retry inference only after an exhausted attempt');
+    if(!design.includes("'Complete design'"))throw new Error('Design must expose one completion action without implying that AI is always required');
+    if(!design.includes("'Retry completion'"))throw new Error('Design must expose Retry completion only after an exhausted attempt');
   };
 
 

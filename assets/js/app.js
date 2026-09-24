@@ -625,7 +625,7 @@ if(acceptDesignExperiment){try{const exp=S.state.experiment,out=LF.DesignAnalysi
           message:out.state==='reviewed'?'Reviewed unknowns: '+(out.scientificRemaining||[]).join(', '):(out.complete?'':'Still pending: '+(out.remaining||[]).join(', '))});render();
           LF.UI.message(out.state==='reviewed'?'AI suggestion accepted. Unsupported domains are recorded as reviewed known unknowns and will not be requested again unless the Design changes.':
           (out.complete?'AI suggestion accepted. The experiment Design is complete.':
-          'AI values were accepted, but this suggestion did not cover: '+(out.remaining||[]).join(', ')+'. Run Complete with AI once more for the remaining domains.'),out.complete?'success':'warning');
+          'Accepted values did not cover: '+(out.remaining||[]).join(', ')+'. Run Complete missing design again for the remaining domains.'),out.complete?'success':'warning');
           }catch(err){LF.UI.message(err.message||String(err),'error');}return;}
         const discardDesignExperiment=e.target.closest('[data-discard-design-experiment]');
 if(discardDesignExperiment){const exp=S.state.experiment,

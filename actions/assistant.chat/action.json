@@ -5,8 +5,8 @@
   "category": "assistant",
   "role": "assistant",
   "visibility": "internal",
-  "purpose": "Answer a question about the current experiment and page without mutating scientific data.",
-  "strategy": "One bounded read-only request over current page context, selected experiment evidence and bounded conversation memory.",
+  "purpose": "Answer questions about the current LabFlow scope after deterministic routing and fact selection.",
+  "strategy": "LabFlow answers state/factual questions locally. Only interpretive questions reach one bounded provider request containing a small task-specific fact pack.",
   "policies": [
     "policy.scientific-provenance"
   ],
@@ -17,7 +17,7 @@
     },
     "context": {
       "profile": "chat",
-      "scope": "current_page"
+      "scope": "resolved_current_scope"
     },
     "result": {
       "format": "text",
@@ -43,12 +43,12 @@
         "output": "text",
         "thinking": "off",
         "timeout_ms": 60000,
-        "max_output_tokens": 2048,
-        "deadline_ms": 90000,
-        "max_retries": 1,
-        "min_output_tokens": 100,
-        "target_output_tokens": 650,
-        "max_input_tokens": 12000
+        "max_output_tokens": 280,
+        "deadline_ms": 70000,
+        "max_retries": 0,
+        "min_output_tokens": 32,
+        "target_output_tokens": 120,
+        "max_input_tokens": 1400
       }
     ]
   }

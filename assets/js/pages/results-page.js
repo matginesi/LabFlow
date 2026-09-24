@@ -232,6 +232,38 @@ safe(note)+'</div></div><div class="results-pulse-grid">'+cards.map(function(c){
         (!c.action?'disabled':'')+'><span>'+c.label+'</span><strong>'+c.value+'</strong><small>'+safe(c.detail)+
         '</small></button>';}).join('')+'</div></section>';
   }
+  function advancedInsights(e){
+    const bundle=LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(e):null,a=bundle&&bundle.advanced;
+    if(!a)return'';
+    const q=a.quality||{},pair=a.pairedScans||{},repro=(a.reproducibility||[]).slice(0,8),corr=a.correlations||[];
+    const pairMedian=pair.absDeltaPce&&Number.isFinite(Number(pair.absDeltaPce.median))?C.fmt(pair.absDeltaPce.median,2)+' pp':'—';
+    const cards='<div class="results-insight-grid">'+
+      '<div><span>Ranking coverage</span><strong>'+C.fmt(q.eligiblePct||0,0)+'%</strong><small>'+
+      Number(q.eligible||0)+' / '+Number(q.active||0)+' active</small></div>'+
+      '<div><span>FW/RV pairs</span><strong>'+Number(pair.count||0)+'</strong><small>median |ΔPCE| '+
+      pairMedian+'</small></div><div><span>Blocked</span><strong>'+Number(q.blocked||0)+'</strong><small>'+
+      Number(q.review||0)+' review · '+Number(q.valid||0)+' valid</small></div></div>';
+    const reproRows=repro.map(function(g){
+      return '<tr><td>'+safe(g.name)+'</td><td class="num">'+g.n+'</td><td class="num">'+
+        C.fmt(g.median,2)+'</td><td class="num">'+C.fmt(g.iqr,2)+'</td><td class="num">'+
+        (Number.isFinite(Number(g.cvPct))?C.fmt(g.cvPct,1)+'%':'—')+'</td></tr>';
+    }).join('');
+    const corrRows=corr.map(function(c){return '<tr><td>'+safe(c.x+' ↔ '+c.y)+'</td><td class="num">'+c.n+'</td><td class="num">'+C.fmt(c.r,3)+'</td></tr>';}).join('');
+    const reproTable=tableShell('<tr><th>Group</th><th class="num">n</th><th class="num">Median PCE</th>'+
+      '<th class="num">IQR</th><th class="num">CV</th></tr>',
+      reproRows||emptyRow(5,'Not enough eligible group data.'),'dense-table stack-table');
+    const corrTable=tableShell('<tr><th>Pair</th><th class="num">n</th><th class="num">Pearson r</th></tr>',
+      corrRows||emptyRow(3,'Not enough paired finite data.'),'dense-table stack-table');
+    return '<section class="panel results-derived-insights"><div class="panel-head"><div>'+
+      '<span class="eyebrow">Deterministic diagnostics</span>'+
+      '<h2 class="h2">Quality, reproducibility & relationships</h2>'+
+      '<div class="meta">Calculated from the current eligible data; no model call.</div></div></div>'+
+      '<div class="panel-body">'+cards+'<div class="two-col"><div><h3 class="h3">Reproducibility by group</h3>'+
+      reproTable+'</div><div><h3 class="h3">Descriptive relationships</h3>'+corrTable+'</div></div>'+
+      '<div class="notice info compact-notice"><strong>Descriptive only</strong><span>'+
+      safe(a.note||'No causal or significance claim is made.')+'</span></div></div></section>';
+  }
+
   function overview(e){
     const a=e.analysis||{},eligible=e.measurements.filter(function(m){return m.rankingEligible;
 }),best=a.bestBySample&&a.bestBySample[0],bestM=best&&e.measurements.find(function(m){return m.id===best.id;
@@ -280,7 +312,7 @@ tableShell('<tr><th>#</th><th>Sample</th><th>Experiment</th><th class="num">PCE<
         rankingRows((a.bestBySample||[]).slice(0,6))||emptyRow(6,'No eligible measurements.'),
         'dense-table stack-table')+'</section><section class="panel"><div class="panel-head"><div><h2 class="h2">Needs attention</h2><div class="meta">' +
       'Measurements carrying calculated warnings.</div></div><button class="button ghost compact" data-results-quick="warnings">Review all</button></div>'+tableShell(measurementHead(),measurementRows(warnings.slice(0,4))||emptyRow(7,'No warnings.'),'dense-table measurement-table stack-table')+'</section></div>';
-    return researchBrief(e)+'<div class="results-overview-grid">'+groupChart+bestChart+hist+'</div>'+tables+(eligible.length?'':'<div class="notice warning">No measurement is currently ranking eligible. Results remain visible; review calculated warnings before interpreting rankings.</div>');
+    return researchBrief(e)+'<div class="results-overview-grid">'+groupChart+bestChart+hist+'</div>'+advancedInsights(e)+tables+(eligible.length?'':'<div class="notice warning">No measurement is currently ranking eligible. Results remain visible; review calculated warnings before interpreting rankings.</div>');
   }
   function dataWorkbench(e){const mode=dataMode(),nav=modeNav('data',mode,[['all','Active'],['best','Best/sample'],
 ['warnings','Warnings'],['excluded','Excluded'],['top','Top non-REF'],['topref','Top REF']]);let body;
@@ -534,14 +566,18 @@ selectedCount+'</span></div><div class="panel-body stack"><div class="compare-co
 safe(metricInfo.label)+' distribution</h2><div class="meta">Per-scan FW and RV boxes · Q1–Q3, median and 1.5×IQR whiskers. '+
       (totalN>150?'Raw points hidden.':'Raw values shown.')+
       '</div></div><div class="row-wrap"><button class="button primary compact" data-action="results.compare" '+
-      (selectedCount<2?'disabled':'')+'>Compare with AI</button>'+chartActions('boxCanvas',
+      (selectedCount<2?'disabled':'')+'>Compare groups</button>'+chartActions('boxCanvas',
       'box')+'</div></div>'+summary+boxSvg(data,'boxCanvas')+'</section>';
     const stats='<section class="panel compare-stats-panel"><div class="panel-head"><div><h2 class="h2">Comparison ' +
       'statistics</h2><div class="meta">Per-scan median±IQR and observed range for the selected groups.</div></div><span class="badge">'+
 data.length+' groups</span></div>'+tableShell('<tr><th>Experiment</th><th>n</th><th class="num">FW median±IQR</th><th class="num">FW min–max</th><th class="num">RV median±IQR</th><th class="num">RV min–max</th></tr>',statsRows||emptyRow(6,'No comparison data.'),'dense-table stack-table')+'</section>';
     const ai=LF.ActionData&&LF.ActionData.annotation(e,'results.compare'),currentKey=compareSelectionKey(bp),
 aiPanel=ai&&Number(ai.sourceRevision)===Number(e.sync&&e.sync.revision||0)&&
-      ai.selectionKey===currentKey?'<section class="panel ai-result-panel"><div class="panel-head"><div><h2 class="h2">AI comparison</h2><div class="meta">AI interpretation of the selected comparison.</div></div>'+badge(ai.data&&ai.data.status==='insufficient_evidence'?'Limited':'AI','ai')+'</div><div class="panel-body markdown-view">'+C.markdown(ai.markdown||'')+'</div></section>':'';
+      ai.selectionKey===currentKey?'<section class="panel ai-result-panel"><div class="panel-head"><div>'+
+      '<h2 class="h2">Calculated comparison</h2>'+
+      '<div class="meta">Deterministic interpretation of the selected comparison.</div></div>'+
+      badge(ai.data&&ai.data.status==='insufficient_evidence'?'Limited':'Calculated','info')+
+      '</div><div class="panel-body markdown-view">'+C.markdown(ai.markdown||'')+'</div></section>':'';
     return '<div class="compare-workbench">'+controls+'<main class="compare-analysis">'+chart+aiPanel+stats+'</main></div>';
   }
 
@@ -562,8 +598,8 @@ list.length+' samples</span></div>'+tableShell(measurementHead(),measurementRows
   function analysisSettings(){return '<details class="panel results-analysis-settings"><summary class="panel-head"><div><strong>Analysis settings</strong><div class="meta">Advanced normalization controls · current mismatch '+C.fmt(factor(),2)+'×</div></div></summary><div class="panel-body"><label class="field results-mismatch-field"><span ' +
     'class="field-label">Mismatch factor</span><input class="input mismatch-input" id="resultMismatchFactor" type="number" min="0.01" step="0.01" value="'+factor()+'"><small class="help">Changes calculated analysis values; leave at 1.00 unless your measurement workflow requires a correction.</small></label></div></details>';}
   function interpretationPanel(annotation){if(!annotation)return'';
-if(annotation.markdown)return '<section class="panel ai-result-panel"><div class="panel-head"><h2 class="h2">AI interpretation</h2>'+
-    badge('AI','ai')+'</div><div class="panel-body markdown-view">'+C.markdown(annotation.markdown)+'</div></section>';
+if(annotation.markdown)return '<section class="panel ai-result-panel"><div class="panel-head"><h2 class="h2">Calculated interpretation</h2>'+
+    badge('Calculated','info')+'</div><div class="panel-body markdown-view">'+C.markdown(annotation.markdown)+'</div></section>';
     const data=annotation.data||annotation;if(!data||typeof data!=='object')return'';let md='';
     if(data.summary)md+='## Summary\n\n'+String(data.summary)+'\n\n';
     if(Array.isArray(data.observations)&&data.observations.length){
@@ -574,8 +610,8 @@ if(annotation.markdown)return '<section class="panel ai-result-panel"><div class
     return '- '+String(x);}).join('\n')+'\n\n';
     if(Array.isArray(data.next_checks)&&data.next_checks.length)md+='## Next checks\n\n'+data.next_checks.map(function(x){
     return '- '+String(x);}).join('\n');return md?
-    '<section class="panel ai-result-panel"><div class="panel-head"><h2 class="h2">AI interpretation</h2>'+badge('AI',
-    'ai')+'</div><div class="panel-body markdown-view">'+C.markdown(md)+'</div></section>':'';}
+    '<section class="panel ai-result-panel"><div class="panel-head"><h2 class="h2">Calculated interpretation</h2>'+badge('Calculated',
+    'info')+'</div><div class="panel-body markdown-view">'+C.markdown(md)+'</div></section>':'';}
   function render(){if(!hasExperiment())return needExperiment();const e=exp();
 if(!e.analysis||!e.analysis.summary)LF.Analysis.analyze(e);
     const main=resultsMainTab(),excluded=e.measurements.filter(function(m){return m.excluded;}).length;
@@ -590,7 +626,7 @@ if(!e.analysis||!e.analysis.summary)LF.Analysis.analyze(e);
     interp=main==='overview'?interpretationPanel(interpretation):'';
     return '<section class="page results-page">'+workflowHead('Results',
     'Explore performance, inspect outliers and compare experiments.',
-    '<button class="button primary" data-action="results.interpret">Interpret with AI</button>')+tabs()+
+    '<button class="button primary" data-action="results.interpret">Interpret results</button>')+tabs()+
     (main==='overview'?analysisSettings():'')+interp+renderBody(e)+'</section>';}
 
   function renderResultInspector(){const shade=document.getElementById('resultInspectorShade'),

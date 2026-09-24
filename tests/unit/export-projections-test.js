@@ -21,7 +21,7 @@ module.exports=function(t){
     truthy(prep.allowed_fields.readypv.includes('samples.locations')===false,'populated locations are not repair targets');
     truthy(prep.allowed_fields.readypv.includes('instruments.docs')===false,'documented format is not missing');
   };
-  t['AI export preparation applies only to still-missing projection fields']=function(){
+  t['Deterministic export preparation applies only to still-missing projection fields']=function(){
     const current=LF.Workspace.current;
     LF.Workspace.current=function(){const w=current();w.processes[0].typicalOutputSize='';return w;};
     const prep=LF.ExportProjections.preparationContext(exp);

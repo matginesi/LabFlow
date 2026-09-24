@@ -141,39 +141,25 @@
 
   function getAssistantSettings() {
     const defaults = {
-      memoryEnabled: true,
-      memoryTurns: 6,
-      memoryChars: 6000,
-      messageChars: 1800,
-      contextChars: 12000,
+      contextChars: 4200,
       maxOutputTokens: 0,
-      temperature: 0.4
+      thinkingMode: 'off'
     };
     const out = Object.assign(
       {},
       defaults,
       read(LOCAL_KEYS.ASSISTANT_SETTINGS, {})
     );
-    out.memoryEnabled = out.memoryEnabled !== false;
-    out.memoryTurns = Math.max(0, Math.min(20, Number(out.memoryTurns) || 0));
-    out.memoryChars = Math.max(
-      500,
-      Math.min(32000, Number(out.memoryChars) || defaults.memoryChars)
-    );
-    out.messageChars = Math.max(
-      250,
-      Math.min(8000, Number(out.messageChars) || defaults.messageChars)
-    );
     out.contextChars = Math.max(
-      2000,
-      Math.min(48000, Number(out.contextChars) || defaults.contextChars)
+      1200,
+      Math.min(8000, Number(out.contextChars) || defaults.contextChars)
     );
     out.maxOutputTokens = Math.max(
       0,
       Math.min(1048576, Number(out.maxOutputTokens) || 0)
     );
-    out.temperature = Math.max(0, Math.min(2, Number(out.temperature)));
-    if (!Number.isFinite(out.temperature)) out.temperature = defaults.temperature;
+    out.thinkingMode = ['off','auto','on'].includes(String(out.thinkingMode || '').toLowerCase())
+      ? String(out.thinkingMode).toLowerCase() : defaults.thinkingMode;
     return out;
   }
 
@@ -679,8 +665,8 @@
     }, getAiSettings(), { required: ['provider','endpoint','model','thinkingMode','streaming'] });
     LF.Structures.defineFromExample('assistant.settings', {
       owner: 'Storage', layer: 'configuration', persistence: 'browser_local',
-      description: 'Assistant memory, context budget and answer-generation preferences.'
-    }, getAssistantSettings(), { required: ['memoryEnabled','memoryTurns','contextChars','messageChars'] });
+      description: 'Assistant small-model context and answer-generation preferences.'
+    }, getAssistantSettings(), { required: ['contextChars','thinkingMode'] });
   }
 
   LF.Storage = {

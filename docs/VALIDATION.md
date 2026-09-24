@@ -1,77 +1,54 @@
 ---
 title: Validation and release gates
 section: Engineering reference
-summary: Reproducible build, architecture, privacy, unit and regression checks for a distributable LabFlow release.
-order: 10
+summary: Required checks for logic, generated artifacts, UI, source hygiene and distribution.
+order: 40
 ---
 
 # Validation and release gates
 
-Use the release wrapper for a distributable check:
+Validation is layered so deterministic scientific behavior is checked independently from optional provider behavior.
+
+## Main commands
 
 ```bash
+node tests/unit/run.js
 ./release_check.sh
 ```
 
-Use `./release_check.sh --full` when the environment permits browser automation.
-
-## What the default gate proves
-
-The default gate rebuilds/validates generated artifacts and runs static/contract/unit/self-contained regression checks. It is designed to work without credentials and without private scientific fixtures.
-
-Key validators protect:
-
-- build/generated consistency;
-- single-aggregate architecture and schema ownership;
-- source/mutation hygiene and portable defaults;
-- Action manifest/result/execution contracts;
-- state/UI persistence and binding boundaries;
-- UI route/design-system contract;
-- local-first/privacy constraints;
-- JavaScript syntax and deterministic unit behavior;
-- synthetic Upload & Review regression behavior.
-
-## Private and environment-dependent checks
-
-Private real-dataset fixtures under `TEST_DATA/` provide additional integration evidence but are intentionally excluded from the distributable repository/gate.
-
-Browser automation requires an environment that allows Playwright to reach the local static server. `--full` runs one responsive startup/workflow audit across supported routes and viewports; component lifecycle and Action-state behavior remain in the self-contained JavaScript suites. A browser-policy failure to navigate localhost is an environment limitation, not application evidence; record it separately rather than relabeling it as a test failure.
-
-Live provider tests are also separate because they require credentials, provider availability, quota and browser network permission.
-
-## Generated artifacts
-
-Run the builders after changing their source:
+After source changes that affect generated assets:
 
 ```bash
-python tools/build_prompt_bundle.py
-python tools/build_knowledge_bundle.py
-python tools/build_action_registry.py
-python tools/build_action_reference.py
-python tools/build_docs_bundle.py
-python tools/build_ui_kit_inline.py
+./release_check.sh --fix
+./release_check.sh
 ```
 
-A release should fail when generated output is stale rather than silently shipping inconsistent source/artifacts.
+Use the full browser audit when the environment can launch/navigate a local page:
 
-## Test-fixture policy
+```bash
+./release_check.sh --full
+```
 
-Synthetic fixtures are deterministic and safe to distribute. Real/private archives remain local and ignored by Git. See `specs/TEST_FIXTURES.md`.
+## What the gate checks
 
-## Design inference regression coverage
+- source/architecture ownership;
+- Action manifests, guards and generated registry;
+- prompt bundle consistency;
+- Knowledge Base schema/bundle consistency;
+- documentation and UI Kit generated assets;
+- source hygiene/readability;
+- deterministic pipeline/import regressions;
+- UI contracts and responsive/browser checks where available;
+- distribution structure.
 
-Design regression tests must cover both correctness and usefulness. At minimum they verify:
+## Generated files
 
-- strict JSON handling plus bounded `True`/`False`/`None` transport repair;
-- no raw JSON Schema leakage into the model prompt;
-- per-domain Cabinet and KB retrieval survives context bounding;
-- Cabinet is preferred over generic KB fallback when a compatible valid resource exists;
-- structured KB `design_hint` fallback is used before automatic unresolved downgrade;
-- exact Cabinet/KB IDs preserve `cabinet_reference` / `knowledge_reference` provenance;
-- invented reference IDs are downgraded to `model_inference`;
-- incomplete scientific candidates are never silently applied;
-- unsupported exact quantitative values stay review-only;
-- accepted known unknowns become workflow-reviewed without pretending to be scientifically known;
-- editing a reviewed domain reopens only that domain.
+Do not patch generated artifacts to make a test pass. Change their source, rebuild, then verify. Important generated files include Action registry/prompt bundle, KB bundle, docs bundle, UI Kit inline bundle and Action runtime matrix.
 
-A release that merely avoids Action errors but regresses Design proposals to systematically empty/unresolved output is not considered behaviorally correct.
+## Provider failure tests
+
+Some unit suites intentionally simulate network/provider/rate-limit/error paths and therefore emit warning/error log lines. A logged simulated error is not a failed test; the suite exit status and assertions are authoritative.
+
+## Test fixtures
+
+`TEST_DATA/` is retained as regression evidence and must not be removed by cleanup. Existing archive fixtures are also retained when packaging a release.
