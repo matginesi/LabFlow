@@ -187,6 +187,18 @@ module.exports=function(t){
     assert(html.includes('id="resetAll"'),true,'visible reset control');assert(html.includes('topbar-reset')&&html.includes('Reset session'),true,'reset is prominent in topbar');assert(css.includes('.topbar .button.topbar-reset'),true,'topbar reset overrides normal transparent topbar buttons');
   };
 
+
+  t['Browser Local runtime is CSP-whitelisted narrowly and missing models use a blocking setup Totem']=function(){
+    const browserLocal=fs.readFileSync(path.join(root,'assets/js/ai/browser-local.js'),'utf8');
+    assert(html.includes("script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;"),true,'pinned runtime CDN is allowed by the script CSP');
+    assert(browserLocal.includes("const WLLAMA_VERSION = '3.6.1'"),true,'wllama runtime version is pinned');
+    assert(browserLocal.includes("https://cdn.jsdelivr.net/npm/@wllama/wllama@"),true,'runtime origin is explicit');
+    assert(app.includes("title:'Install local AI model'"),true,'missing local model opens the blocking setup Totem');
+    assert(app.includes("if(!checked.cached)"),true,'setup Totem is conditional on the cache check');
+    assert(app.includes("kind:'SETUP'"),true,'setup lifecycle is not labelled as an LLM Action');
+    assert(app.includes("downloadBytesPerSecond"),true,'download telemetry is projected into the setup Totem');
+  };
+
   t['Local development canonicalizes bind-address URLs and llama.cpp permits LabFlow browser origins']=function(){
     const engine=fs.readFileSync(path.join(root,'labflow_engine.sh'),'utf8');
     assert(app.includes("location.hostname!=='0.0.0.0'"),true,'0.0.0.0 browser origin is detected');

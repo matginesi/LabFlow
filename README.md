@@ -120,7 +120,7 @@ NOMAD mapping, validation, readiness and package generation are deterministic. `
 
 ## Providers
 
-Provider configuration is optional for the scientific core. Fresh LabFlow settings default to **Browser Local · GGUF** with `LFM2.5-350M-Q4_K_M.gguf`. At startup LabFlow checks the browser model cache, downloads the selected default model when needed (unless automatic download is disabled or browser Data Saver is active), loads it, performs a tiny warm-up, and then exposes the active backend. WebGPU is preferred; load/warm-up/inference failure before visible output falls back to WASM CPU using the same GGUF.
+Provider configuration is optional for the scientific core. Fresh LabFlow settings default to **Browser Local · GGUF** with `LFM2.5-350M-Q4_K_M.gguf`. At startup LabFlow checks the browser model cache. If the selected GGUF is missing, a blocking setup Totem owns the one-time download, load and warm-up lifecycle; if it is already cached, normal startup remains unobtrusive. Automatic download can still be disabled, in which case the Totem exposes an explicit Download model action instead of a passive warning. LabFlow then exposes the active backend. WebGPU is preferred; load/warm-up/inference failure before visible output falls back to WASM CPU using the same GGUF.
 
 The Browser Local model manager lives under **Settings → AI connection**. It shows download/load progress, cache state, active backend, WebGPU availability, model size, browser storage usage/quota and storage-persistence status. Additional HTTP(S) GGUF URLs can be added to the local catalogue and cached independently. Cached models can be removed individually or cleared together.
 

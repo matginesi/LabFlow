@@ -23,7 +23,7 @@ The model file is not stored in the LabFlow repository. It is downloaded by the 
 
 ## Startup lifecycle
 
-When Browser Local is the selected provider, application startup launches model preparation in the background:
+When Browser Local is the selected provider, application startup checks the model cache first:
 
 ```text
 check browser cache
@@ -34,9 +34,9 @@ check browser cache
   -> ready
 ```
 
-The UI itself is not blocked while this happens. The top model indicator reflects the current phase. Settings → AI connection provides the detailed progress bar and cache/runtime state.
+If the selected GGUF is already cached, load and warm-up can continue without interrupting the normal workflow. If the model is missing, LabFlow opens a blocking setup Totem for the one-time download. The Totem shows overall progress, bytes downloaded, transfer speed, ETA, cache state, load state and warm-up state. It does not show LLM token telemetry because model setup is not an Assistant/Action inference turn.
 
-Automatic download and automatic warm-up can be disabled independently. Browser Data Saver disables automatic model download so a large transfer is never started against that preference.
+Automatic download and automatic warm-up can be disabled independently. When automatic download is disabled, the blocking setup Totem stays at the required-download checkpoint and exposes an explicit **Download model** retry action instead of degrading to a passive warning. Browser Data Saver also prevents an implicit large transfer; an explicit user retry may override that preference for this one download.
 
 ## WebGPU and WASM fallback
 
@@ -76,7 +76,7 @@ The model registry intentionally stays small. It is not an online model marketpl
 
 ## Runtime dependency
 
-LabFlow pins `@wllama/wllama` 3.6.1 and loads its ESM runtime and WASM binary from jsDelivr. Model files are separate and remain in the browser model cache. If the runtime module cannot be loaded, LabFlow reports Browser Local as unavailable without affecting import, analysis, Design review or export.
+LabFlow pins `@wllama/wllama` 3.6.1 and loads its ESM runtime and WASM binary from jsDelivr. The Content Security Policy allows scripts/workers only from LabFlow itself plus the pinned jsDelivr origin, and permits WebAssembly compilation through `wasm-unsafe-eval` without enabling general JavaScript `unsafe-eval`. Model files are separate and remain in the browser model cache. If the runtime module cannot be loaded, LabFlow reports Browser Local as unavailable without affecting import, analysis, Design review or export.
 
 ## Privacy boundary
 

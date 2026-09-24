@@ -36,6 +36,7 @@
     warmed: false, webgpuAvailable: false, backend: '', modelId: DEFAULT_MODEL.id,
     modelName: DEFAULT_MODEL.name, modelBytes: null, downloadedBytes: 0, totalBytes: 0,
     storageUsage: null, storageQuota: null, storagePersistent: null,
+    downloadBytesPerSecond: 0, downloadEtaSeconds: null,
     error: '', note: '', checkedAt: 0
   };
 
@@ -145,15 +146,23 @@
   }
   async function download(modelId, options) {
     options = options || {}; const model = resolveModel(modelId), instance = await ensureRuntime(false);
-    emit({ status: 'downloading', stage: 'Downloading GGUF', modelId: model.id, modelName: model.name, cached: false, error: '', progress: 0, downloadedBytes: 0, totalBytes: model.expectedBytes || 0 });
+    let sampleAt = performance.now(), sampleBytes = 0, smoothedRate = 0;
+    emit({ status: 'downloading', stage: 'Downloading GGUF', modelId: model.id, modelName: model.name, cached: false, error: '', progress: 0, downloadedBytes: 0, totalBytes: model.expectedBytes || 0, downloadBytesPerSecond: 0, downloadEtaSeconds: null });
     const downloaded = await instance.modelManager.getModelOrDownload({ url: model.url }, { progressCallback: function (p) {
       const loaded = Math.max(0, Number(p && p.loaded) || 0), total = Math.max(0, Number(p && p.total) || model.expectedBytes || 0), progress = total ? loaded / total : 0;
-      emit({ status: 'downloading', stage: 'Downloading GGUF', progress: Math.min(0.82, progress * 0.82), downloadedBytes: loaded, totalBytes: total });
+      const now = performance.now(), elapsed = Math.max(0, (now - sampleAt) / 1000);
+      if (elapsed >= 0.2 && loaded >= sampleBytes) {
+        const instantRate = (loaded - sampleBytes) / elapsed;
+        if (Number.isFinite(instantRate) && instantRate > 0) smoothedRate = smoothedRate > 0 ? smoothedRate * 0.72 + instantRate * 0.28 : instantRate;
+        sampleAt = now; sampleBytes = loaded;
+      }
+      const eta = smoothedRate > 0 && total > loaded ? (total - loaded) / smoothedRate : null;
+      emit({ status: 'downloading', stage: 'Downloading GGUF', progress: Math.min(0.82, progress * 0.82), downloadedBytes: loaded, totalBytes: total, downloadBytesPerSecond: smoothedRate, downloadEtaSeconds: eta });
       if (typeof options.onProgress === 'function') options.onProgress(getState());
     } });
     if (!downloaded || downloaded.validate() !== 'valid') throw new Error('The downloaded GGUF is incomplete or invalid.');
     activeModel = downloaded;
-    emit({ status: 'cached', stage: 'Download complete', cached: true, modelBytes: downloaded.size, downloadedBytes: downloaded.size, totalBytes: downloaded.size, progress: 0.82 });
+    emit({ status: 'cached', stage: 'Download complete', cached: true, modelBytes: downloaded.size, downloadedBytes: downloaded.size, totalBytes: downloaded.size, progress: 0.82, downloadBytesPerSecond: 0, downloadEtaSeconds: 0 });
     await refreshStorageInfo(true);
     return downloaded;
   }
@@ -206,7 +215,7 @@
     initPromise = (async function () {
       try {
         const checked = await check(modelId); let cached = checked.cached;
-        const saveData = typeof navigator !== 'undefined' && !!(navigator.connection && navigator.connection.saveData);
+        const saveData = options.allowSaveData !== true && typeof navigator !== 'undefined' && !!(navigator.connection && navigator.connection.saveData);
         const autoDownload = options.autoDownload != null ? !!options.autoDownload : s.browserLocalAutoDownload !== false;
         if (!cached) {
           if (!autoDownload || saveData) {
@@ -235,7 +244,7 @@
     const model = resolveModel(modelId), instance = await ensureRuntime(false), cached = await cachedModel(instance, model);
     if (runtime && runtime.isModelLoaded && runtime.isModelLoaded() && activeModelId === model.id) { await runtime.exit(); runtime = null; activeModelId = ''; activeModel = null; }
     if (cached) await cached.remove();
-    emit({ status: 'not_installed', stage: 'Model removed', cached: false, loaded: false, warmed: false, modelBytes: null, progress: 0, backend: '', modelId: model.id, modelName: model.name });
+    emit({ status: 'not_installed', stage: 'Model removed', cached: false, loaded: false, warmed: false, modelBytes: null, progress: 0, backend: '', modelId: model.id, modelName: model.name, downloadBytesPerSecond: 0, downloadEtaSeconds: null });
     await refreshStorageInfo(false);
     return getState();
   }
@@ -247,7 +256,7 @@
     activeModelId = '';
     const instance = await ensureRuntime(false);
     await instance.modelManager.clear();
-    emit({ status: 'not_installed', stage: 'Model cache cleared', cached: false, loaded: false, warmed: false, modelBytes: null, progress: 0, backend: '' });
+    emit({ status: 'not_installed', stage: 'Model cache cleared', cached: false, loaded: false, warmed: false, modelBytes: null, progress: 0, backend: '', downloadBytesPerSecond: 0, downloadEtaSeconds: null });
     await refreshStorageInfo(false);
   }
   async function cachedModels() {
@@ -353,7 +362,7 @@
     initPromise = null;
     state = Object.assign({}, state, {
       status: 'idle', stage: 'Idle', progress: 0, cached: false, loaded: false,
-      warmed: false, backend: '', error: ''
+      warmed: false, backend: '', downloadBytesPerSecond: 0, downloadEtaSeconds: null, error: ''
     });
   }
 
