@@ -7,6 +7,15 @@
 
   const LF = window.LabFlow = window.LabFlow || {};
   LF.AIProviders = {
+    browserlocal: {
+      id:'browserlocal', name:'Browser Local · GGUF', local:true, browserRuntime:true, endpoint:'browser://local',
+      model:'lfm2.5-350m-q4_k_m', keyRequired:false, modelSelect:true, modelCatalogueRequired:false,
+      modelSelectLabel:'Cached / configured GGUF model', supportsStreaming:true, tokenParam:'max_tokens',
+      supportsTemperature:true, supportsJsonMode:true, supportsJsonSchema:true, jsonSchemaStrict:false,
+      requestTimeoutMs:300000, connectionTestTimeoutMs:120000, connectionTestMaxTokens:16,
+      connectionTestThinkingMode:'off', thinkingPromptGuard:true, thinkingModes:{off:{},on:{}},
+      note:'Runs GGUF directly in the browser with wllama. WebGPU is preferred; WASM CPU is the fallback.'
+    },
     openrouter: {
       id:'openrouter', name:'OpenRouter', catalogueFallbackToConfiguredModel:true,
 endpoint:'https://openrouter.ai/api/v1/chat/completions', model:'openrouter/free', keyRequired:true, modelSelect:true,
@@ -79,7 +88,7 @@ keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:tr
         id: { type: 'string', required: true }, name: { type: 'string', required: true },
         endpoint: { type: 'string', required: true }, model: { type: 'string', required: true },
         keyRequired: { type: 'boolean' }, optionalKey: { type: 'boolean' }, local: { type: 'boolean' },
-        supportsStreaming: { type: 'boolean' }, supportsJsonMode: { type: 'boolean' },
+        browserRuntime: { type: 'boolean' }, supportsStreaming: { type: 'boolean' }, supportsJsonMode: { type: 'boolean' },
         supportsJsonSchema: { type: 'boolean' }, jsonSchemaStyle: { type: 'string' }, supportsTemperature: { type: 'boolean' },
         supportsReasoningBudget: { type: 'boolean' }, reasoningBudgetParam: { type: 'string' },
         tokenParam: { type: 'string' }, thinkingModes: { type: 'object' }, note: { type: 'string' }
@@ -87,5 +96,5 @@ keyRequired:false, optionalKey:true, modelSelect:true, modelCatalogueRequired:tr
     });
   }
   LF.AIProviderList = Object.keys(LF.AIProviders).map(function(id){return LF.AIProviders[id];});
-  if(LF.Logger) LF.Logger.info('providers','registry.ready',{defaultProvider:'openrouter',defaultModel:'openrouter/free',providers:LF.AIProviderList.map(function(p){return{id:p.id,name:p.name,model:p.model,endpoint:p.endpoint,keyRequired:p.keyRequired};})});
+  if(LF.Logger) LF.Logger.info('providers','registry.ready',{defaultProvider:'browserlocal',defaultModel:'lfm2.5-350m-q4_k_m',providers:LF.AIProviderList.map(function(p){return{id:p.id,name:p.name,model:p.model,endpoint:p.endpoint,keyRequired:p.keyRequired};})});
 }());

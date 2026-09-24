@@ -8,7 +8,59 @@ const LF=window.LabFlow=window.LabFlow||{},C=LF.Core;
 function badge(t,k){return'<span class="badge '+(k||'')+'">'+C.escapeHtml(t)+'</span>';}
 function field(label,control,wide){return'<div class="field '+(wide?'field-wide':'')+'"><label>'+label+'</label>'+control+'</div>';}
 function sectionBody(content,wide){return'<div class="settings-section-body '+(wide?'settings-section-body-wide':'')+'">'+content+'</div>';}
+function formatBytes(value){const n=Math.max(0,Number(value)||0);if(!n)return'—';const units=['B','KB','MB','GB'];let v=n,i=0;while(v>=1000&&i<units.length-1){v/=1000;i++;}return(v>=100||i===0?Math.round(v):v.toFixed(1))+' '+units[i];}
 function releaseInfo(){const build=String(window.LABFLOW_BUILD||'dev'),label=String(window.LABFLOW_VERSION||'POC');return{build:build,label:label};}
+function browserLocalPanel(s,state,displayModel){
+  if(!state||!LF.BrowserLocal)return'';
+  const models=LF.BrowserLocal.catalog(),selected=LF.BrowserLocal.resolveModel(s.model),pct=Math.max(0,Math.min(100,Math.round((Number(state.progress)||0)*100)));
+  const busy=['checking','downloading','loading','warming'].includes(state.status),storage=state.storageQuota?
+    formatBytes(state.storageUsage)+' / '+formatBytes(state.storageQuota):'Browser managed';
+  const downloadDetail=state.status==='downloading'&&state.totalBytes?
+    formatBytes(state.downloadedBytes)+' / '+formatBytes(state.totalBytes):'';
+  const custom=selected&&selected.bundled!==true;
+  return [
+    '<section class="browser-model-manager">',
+    '<div class="browser-model-manager-head"><div><span class="eyebrow">Browser model</span><h3>',
+    C.escapeHtml(state.modelName||selected&&selected.name||displayModel),
+    '</h3><div class="meta">One GGUF · WebGPU preferred · WASM CPU fallback</div></div>',
+    '<span class="badge info" id="browserLocalBadge">',C.escapeHtml(state.status||'idle'),'</span></div>',
+    '<div class="browser-model-progress"><div class="progress-track"><span id="browserLocalProgressBar" style="width:',pct,
+    '%"></span></div><div class="browser-model-progress-meta"><strong id="browserLocalStage">',
+    C.escapeHtml(state.stage||'Idle'),'</strong><span id="browserLocalProgressText">',pct,'% ',C.escapeHtml(downloadDetail),'</span></div></div>',
+    '<div class="browser-model-stats">',
+    '<div><span>Cache</span><strong id="browserLocalCache">',state.cached?'Ready':'Missing','</strong></div>',
+    '<div><span>Runtime</span><strong id="browserLocalBackend">',C.escapeHtml(state.backend||'Not loaded'),'</strong></div>',
+    '<div><span>WebGPU</span><strong id="browserLocalWebgpu">',state.webgpuAvailable?'Available':'Not detected','</strong></div>',
+    '<div><span>Model size</span><strong id="browserLocalSize">',C.escapeHtml(formatBytes(state.modelBytes||selected&&selected.expectedBytes)),'</strong></div>',
+    '<div><span>Browser storage</span><strong id="browserLocalStorage">',C.escapeHtml(storage),'</strong></div>',
+    '<div><span>Storage protection</span><strong id="browserLocalPersistence">',
+    state.storagePersistent===true?'Persistent':state.storagePersistent===false?'Best effort':'Browser managed','</strong></div>',
+    '</div>',
+    '<div class="row-wrap">',
+    '<button type="button" class="button" id="browserLocalDownload" ',busy?'disabled':'','>Download / repair</button>',
+    '<button type="button" class="button primary" id="browserLocalLoad" ',(!state.cached||busy)?'disabled':'','>Load &amp; warm</button>',
+    '<button type="button" class="button ghost" id="browserLocalRemove" ',(!state.cached||busy)?'disabled':'','>Remove cached model</button>',
+    custom?'<button type="button" class="button ghost" id="browserLocalRemoveDefinition">Remove from catalogue</button>':'',
+    '</div>',
+    '<details class="settings-advanced"><summary>Model cache &amp; runtime</summary><div class="settings-advanced-body stack">',
+    '<label class="switch-row"><input type="checkbox" id="browserLocalAutoDownload" ',
+    s.browserLocalAutoDownload!==false?'checked':'','> Download the selected default GGUF automatically when missing</label>',
+    '<label class="switch-row"><input type="checkbox" id="browserLocalAutoWarmup" ',
+    s.browserLocalAutoWarmup!==false?'checked':'','> Load and warm the model at LabFlow startup</label>',
+    '<label class="switch-row"><input type="checkbox" id="browserLocalPreferWebGPU" ',
+    s.browserLocalPreferWebGPU!==false?'checked':'','> Prefer WebGPU; fall back to WASM CPU on failure</label>',
+    '<label class="field"><span>Runtime context</span><input class="input" id="browserLocalContextWindow" type="number" ',
+    'min="2048" max="16384" step="1024" value="',Number(s.browserLocalContextWindow||4096),'"></label>',
+    '<div class="field"><label>Additional GGUF URL</label><div class="input-action">',
+    '<input class="input mono" id="browserLocalModelUrl" type="url" placeholder="https://…/model.gguf">',
+    '<button type="button" class="button" id="browserLocalAddModel">Add</button></div>',
+    '<div class="help">Additional models use the same browser cache and WebGPU → WASM fallback. ',
+    models.length,' model',models.length===1?'':'s',' in the catalogue.</div></div>',
+    '<button type="button" class="button danger" id="browserLocalClearCache">Clear all Browser Local models</button>',
+    '<div class="help" id="browserLocalNote">',C.escapeHtml(state.error||state.note||''),'</div>',
+    '</div></details></section>'
+  ].join('');
+}
 function nav(active,s,a){
   const kb=LF.KnowledgeBase&&LF.KnowledgeBase.stats?LF.KnowledgeBase.stats():{active:0},defs=(LF.ActionRegistry&&LF.ActionRegistry.actions?LF.ActionRegistry.actions():[]).map(function(id){return LF.ActionRegistry.action(id);}).filter(function(d){return d&&d.visibility!=='internal';});
   const groups=[['AI',[['provider','AI connection','Service & model'],['assistant','Assistant',
@@ -27,19 +79,19 @@ function sectionHead(title,description,dirty){return'<header class="settings-sec
 function providerPanel(s,key,remembered){
   const providers=(LF.AIProviderList||[]).map(function(p){return'<option value="'+p.id+'" '+(s.provider===p.id?'selected':'')+'>'+C.escapeHtml(p.name)+'</option>';}).join('');
   const activeProvider=LF.AIProviders[s.provider]||LF.AIProviders.custom,selectMode=!!activeProvider.modelSelect,modelLabel=activeProvider.modelSelectLabel||activeProvider.name+' model',displayModel=C.modelDisplayName?C.modelDisplayName(s.provider,s.model):s.model;
-  const detectHint=activeProvider.keyRequired&&!key?'Add the API key, then check the connection.':activeProvider.modelSelect?'Check the connection to refresh the available models.':'Check the connection before using AI tools.';
+  const detectHint=activeProvider.browserRuntime===true?'Check the browser cache and configured GGUF models.':activeProvider.keyRequired&&!key?'Add the API key, then check the connection.':activeProvider.modelSelect?'Check the connection to refresh the available models.':'Check the connection before using AI tools.';
   const modelControl='<div class="input-action ai-model-control" data-model-select="'+(selectMode?'true':'false')+
 '"><input class="input mono" id="aiModel" list="aiModelList" value="'+
     C.escapeHtml(activeProvider.local?displayModel:s.model)+'" '+(activeProvider.local&&
     s.model?'data-raw-model="'+C.escapeHtml(s.model)+'" ':'')+(selectMode?'hidden':'')+
     '><select class="select mono" id="aiModelSelect" aria-label="'+C.escapeHtml(modelLabel)+'" '+(selectMode?'':'hidden')+
-    '><option value="'+C.escapeHtml(s.model)+'">'+C.escapeHtml(displayModel)+
-    '</option></select><button type="button" class="button compact" id="detectProviderModel">Check</button></div><datalist id="aiModelList"></datalist><div class="help" id="aiModelHint">'+detectHint+'</div>';
+    '>'+(activeProvider.browserRuntime===true&&LF.BrowserLocal?LF.BrowserLocal.catalog().map(function(item){return '<option value="'+C.escapeHtml(item.id)+'" '+(item.id===s.model?'selected':'')+'>'+C.escapeHtml(item.name)+'</option>';}).join(''):'<option value="'+C.escapeHtml(s.model)+'">'+C.escapeHtml(displayModel)+'</option>')+
+    '</select><button type="button" class="button compact" id="detectProviderModel">Check</button></div><datalist id="aiModelList"></datalist><div class="help" id="aiModelHint">'+detectHint+'</div>';
   const thinkingControl='<select class="select" id="aiThinkingMode"><option value="auto" '+
 (s.thinkingMode==='auto'?'selected':'')+'>Automatic</option><option value="off" '+
     (s.thinkingMode==='off'?'selected':'')+'>Prefer off</option><option value="on" '+(s.thinkingMode==='on'?'selected':'')+
     '>Prefer on</option></select><div class="help">Automatic is recommended. The selected model may still require its own reasoning mode.</div>';
-  const endpointHint=activeProvider.local?'<div class="help" id="aiEndpointHint">For a model running on this computer, the default local address is usually correct.</div>':'';
+  const endpointHint=activeProvider.browserRuntime===true?'<div class="help" id="aiEndpointHint">Browser Local has no HTTP endpoint: inference stays inside this page.</div>':activeProvider.local?'<div class="help" id="aiEndpointHint">For a model running on this computer, the default local address is usually correct.</div>':'';
   let githubLocalHint='';try{if(activeProvider.id==='llamacpp'&&location&&/^https:\/\/matginesi\.github\.io$/i.test(location.origin)){
     githubLocalHint='<div class="notice info compact-notice settings-local-bridge"><strong>GitHub Pages → local llama.cpp.</strong> '+
       'Keep the endpoint on <code>http://127.0.0.1:8080/v1</code> and start the bundled launcher normally with '+
@@ -48,6 +100,8 @@ function providerPanel(s,key,remembered){
       '<button class="button ghost compact" type="button" data-copy-github-llama>Copy launcher</button></div>';
   }}catch(_){}
   const keyHelp=activeProvider.keyRequired?'Required for this service.':activeProvider.optionalKey?'Only needed when this service requires authentication.':'No API key is needed for this service.';
+  const browserState=activeProvider.browserRuntime===true&&LF.BrowserLocal?LF.BrowserLocal.state():null;
+  const browserPanel=browserLocalPanel(s,browserState,displayModel);
   return '<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Service &amp; model</h3><div class="meta">'+C.escapeHtml(activeProvider.name||s.provider)+'</div></div><div class="spacer"></div><span class="badge info" id="aiConnectivityBadge">Not checked</span></div>'
     +'<div class="panel-body stack">'
     +'<div class="form-grid settings-provider-grid">'
@@ -60,9 +114,10 @@ C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{retu
       '> Remember this key on this browser</label><div class="help">Otherwise the key lasts only for this browser session. Changing the service host requires its own key.</div></div>'
     +'</div>'
     +githubLocalHint
+    +browserPanel
     +'<div class="settings-connection-summary" id="aiConnectivitySummary"><div><strong>Status</strong><span id="aiConnectivityText">Check the connection when you are ready.</span></div></div>'
     +'<details class="settings-advanced"><summary>Advanced connection settings</summary><div class="settings-advanced-body stack"><div class="form-grid">'
-    +field('Service address','<input class="input mono" id="aiEndpoint" type="url" required value="'+C.escapeHtml(s.endpoint)+'">'+endpointHint,true)
+    +field('Service address','<input class="input mono" id="aiEndpoint" '+(activeProvider.browserRuntime===true?'readonly':'type="url" required')+' value="'+C.escapeHtml(s.endpoint)+'">'+endpointHint,true)
     +field('Reasoning mode',thinkingControl)
     +field('Wait time · seconds','<input class="input" id="aiInactivityTimeout" type="number" min="15" max="600" step="5" value="'+Math.round(s.inactivityTimeoutMs/1000)+'">')
     +field('Completion limit','<input class="input" id="aiMaxOutputTokensCap" type="number" min="0" max="1048576" step="256" value="'+Number(s.maxOutputTokensCap||0)+'"><div class="help">Optional hard ceiling for answer + reasoning tokens sent to the provider. Leave 0 to use the Action and model limits.</div>')

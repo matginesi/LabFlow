@@ -36,6 +36,10 @@ module.exports=function(t,LF){
   };
 
   t['provider registry includes browser and local presets']=function(){
+    assert(LF.AIProviders.browserlocal.browserRuntime===true,'Browser Local uses the in-page runtime');
+    assert(LF.AIProviders.browserlocal.local===true,'Browser Local is local');
+    assert(LF.AIProviders.browserlocal.model==='lfm2.5-350m-q4_k_m','Browser Local default model');
+    assert(LF.AIProviders.browserlocal.endpoint==='browser://local','Browser Local has no HTTP endpoint');
     assert(LF.AIProviders.openrouter.endpoint==='https://openrouter.ai/api/v1/chat/completions','OpenRouter endpoint');
     assert(LF.AIProviders.openrouter.keyRequired===true,'OpenRouter key required');
     assert(LF.AIProviders.openai.modelSelect===true&&LF.AIProviders.openai.modelCatalogueRequired===true,'OpenAI Detect uses the official model catalogue');
@@ -66,21 +70,24 @@ module.exports=function(t,LF){
     assert(LF.AIProviders.gemini.model==='gemini-3.7-flash','Gemini preset tracks the current OpenAI-compatible example model');
   };
 
-  t['fresh browser settings default to OpenRouter for the static POC']=function(){
+  t['fresh browser settings default to Browser Local GGUF']=function(){
     localStorage.clear();
     const settings=LF.Storage.getAiSettings();
-    assert(settings.provider==='openrouter','fresh default provider');
-    assert(settings.endpoint==='https://openrouter.ai/api/v1/chat/completions','fresh default endpoint');
-    assert(settings.model==='openrouter/free','fresh default model');
+    assert(settings.provider==='browserlocal','fresh default provider');
+    assert(settings.endpoint==='browser://local','fresh default endpoint');
+    assert(settings.model==='lfm2.5-350m-q4_k_m','fresh default model');
+    assert(settings.browserLocalAutoDownload===true,'default model auto-download');
+    assert(settings.browserLocalAutoWarmup===true,'default model auto-warmup');
+    assert(settings.browserLocalPreferWebGPU===true,'WebGPU preferred by default');
   };
 
   t['settings discard a persisted provider that is no longer in the registry']=function(){
     localStorage.clear();
     localStorage.setItem('labflow.ai.settings',JSON.stringify({provider:'removed-provider',endpoint:'https://removed.example/v1',model:'old-model'}));
     const settings=LF.Storage.getAiSettings();
-    assert(settings.provider==='openrouter','removed provider falls back to POC default');
-    assert(settings.endpoint==='https://openrouter.ai/api/v1/chat/completions','removed provider endpoint is discarded');
-    assert(settings.model==='openrouter/free','removed provider model is discarded');
+    assert(settings.provider==='browserlocal','removed provider falls back to Browser Local default');
+    assert(settings.endpoint==='browser://local','removed provider endpoint is discarded');
+    assert(settings.model==='lfm2.5-350m-q4_k_m','removed provider model is discarded');
     localStorage.clear();
   };
 

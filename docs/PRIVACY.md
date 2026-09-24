@@ -11,7 +11,7 @@ LabFlow is a local-first static browser application. Scientific parsing, determi
 
 ## Local assets and runtime
 
-The POC intentionally avoids analytics/tracking services, remote fonts, service-worker infrastructure and hidden application backends. Runtime assets are shipped with the application.
+LabFlow avoids analytics/tracking services, remote fonts, service-worker infrastructure and hidden application backends. Core UI/runtime assets are shipped with the application. Browser Local is the explicit exception: when selected, LabFlow may fetch the pinned wllama runtime and the chosen GGUF model, then inference runs on-device in the browser.
 
 ## Browser persistence
 
@@ -21,7 +21,7 @@ Resetting the scientific session does not silently erase unrelated provider cred
 
 ## External network requests
 
-External requests occur only through explicit capabilities such as an AI Action/Assistant/provider test. The configured provider endpoint is contacted directly; there is no hidden relay.
+External model inference requests occur only through the selected provider capability. For Browser Local, inference stays in the page, but first-use runtime/model preparation may fetch the pinned wllama runtime from jsDelivr and the selected GGUF from its configured model URL. External providers are contacted directly; there is no hidden relay.
 
 The current NOMAD direct-upload control is a non-networking stub. Package generation remains local.
 

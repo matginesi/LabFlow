@@ -2,7 +2,7 @@
 
 LabFlow is a local-first browser application for turning laboratory archives into an inspectable scientific data model, deterministic analysis, reviewable experiment Design, and deterministic export packages. AI is optional and deliberately narrow.
 
-The application is vanilla JavaScript + CSS + static assets. There is no application backend and no in-browser model runtime.
+The application is vanilla JavaScript + CSS + static assets. There is no application backend. A browser-local GGUF runtime is available as the default AI provider, while the deterministic scientific core remains independent of it.
 
 ## Core rule
 
@@ -80,20 +80,21 @@ LabFlow is designed so a small model does not need to understand the whole appli
 - no automatic semantic retry loops are used;
 - model output is validated deterministically before it can become a proposal.
 
-This keeps the provider boundary usable with roughly 500–600M-class models without adding WebGPU, wllama, Transformers.js, ONNX, model downloads, or another runtime layer to the browser app.
+This keeps the provider boundary usable with roughly 350–600M-class models. The default Browser Local provider uses one GGUF model through wllama, prefers WebGPU when it passes runtime checks, and falls back to WASM CPU on the same cached model. No ONNX or second model copy is required.
 
 ## Assistant
 
-The Assistant is read-only. A conservative deterministic fast-path answers common factual questions with **zero provider calls**, including:
+The Assistant is read-only and is deliberately split into a tiny routing step and a bounded answer step. It does not paste the LabFlow workspace, Action catalog, Action history or long conversation history into a general chat prompt.
 
-- measurement/sample/experiment counts;
-- best eligible PCE;
-- open findings;
-- flagged/anomalous measurements;
-- a compact Results summary.
+Explicit Assistant commands such as `/summary`, `/missing`, `/best` and related manifest-backed shortcuts are deterministic and use **zero provider calls**. Natural-language questions in any language first use one tiny language-agnostic intent router (maximum 96 output tokens):
 
-Questions that require interpretation beyond those known facts fall through to one bounded provider request. Assistant messages are explicitly labelled **LOCAL · 0 tokens** or **LLM**. Normal Assistant turns stay entirely inside the conversation: transient progress is shown inline and LLM telemetry (provider/model, token usage, TTFT, tok/s, reasoning and grounding) lives under that message's **Details**. The Action Totem is reserved for explicit researcher Actions; the model does not orchestrate hidden workflows.
-The Assistant keeps a 2000-token Action input ceiling. If a prepared context is too large, LabFlow compacts it by priority instead of immediately failing: conversation memory and Action history go first, followed by redundant broad context and secondary records, while the current question and focused experiment facts are preserved.
+- factual routes are answered by LabFlow from canonical/derived state, without a second answer-generation request;
+- interpretive/scientific routes receive one bounded answer request containing only current scope, focused facts, optional task-relevant references and at most one previous turn when the router marks the question as a follow-up;
+- requests that cannot be resolved safely become a clarification rather than an invented answer.
+
+Assistant messages are labelled **LOCAL · 0 tokens**, **LOCAL · LLM router** or **LLM** so the execution path is visible. The Assistant never opens the Action Totem: transient chat state stays inline and provider telemetry lives under that message's **Details**. The Action Totem is reserved for explicit researcher Actions.
+
+The answer step keeps a 2000-token input ceiling, but normal small-model turns target much less. Context compaction preserves the current question, scope and focused facts before optional references or follow-up context. Knowledge Base entries are retrieved only when the router explicitly marks scientific/background knowledge as useful, and any `[KB:<id>]` citation is validated against the exact ids supplied to the model.
 
 Assistant reasoning is configurable as **Prefer off / Automatic / Prefer on**. Provider-native reasoning and `<think>`, `<thinking>`, `<analysis>` or `<reasoning>` blocks are separated from the visible answer and exposed only under message **Details**. Prefer off is the default for small/fast models.
 
@@ -119,9 +120,11 @@ NOMAD mapping, validation, readiness and package generation are deterministic. `
 
 ## Providers
 
-Provider configuration is optional. Hosted providers are called directly from the browser through the existing provider boundary. Local OpenAI-compatible endpoints are also supported as external services.
+Provider configuration is optional for the scientific core. Fresh LabFlow settings default to **Browser Local · GGUF** with `LFM2.5-350M-Q4_K_M.gguf`. At startup LabFlow checks the browser model cache, downloads the selected default model when needed (unless automatic download is disabled or browser Data Saver is active), loads it, performs a tiny warm-up, and then exposes the active backend. WebGPU is preferred; load/warm-up/inference failure before visible output falls back to WASM CPU using the same GGUF.
 
-`labflow_engine.sh` is intentionally retained as the supported helper for running/diagnosing a local `llama.cpp` OpenAI-compatible server. LabFlow itself does not download or execute models in the browser.
+The Browser Local model manager lives under **Settings → AI connection**. It shows download/load progress, cache state, active backend, WebGPU availability, model size, browser storage usage/quota and storage-persistence status. Additional HTTP(S) GGUF URLs can be added to the local catalogue and cached independently. Cached models can be removed individually or cleared together.
+
+The wllama runtime JavaScript/WASM is loaded from the pinned `@wllama/wllama` 3.6.1 CDN module; model bytes are stored by wllama's browser model manager. The default GGUF comes from the official LiquidAI Hugging Face repository. `labflow_engine.sh` remains available as the supported external `llama.cpp` OpenAI-compatible alternative and defaults to `/data/models/LFM2.5-350M-Q4_K_M.gguf`. Hosted providers remain available through the same provider boundary.
 
 ## Run locally
 
@@ -158,7 +161,7 @@ assets/js/experiment canonical scientific model and ownership
 assets/js/cabinet/   reusable laboratory references
 assets/js/knowledge/ scientific reference library
 assets/js/export/    deterministic projections and packages
-assets/js/ai/        optional provider transport, compact context and Action runtime
+assets/js/ai/        provider transport, Browser Local GGUF lifecycle, compact context and Action runtime
 assets/js/pages/     route UI
 docs/                canonical documentation
 knowledge/           bundled JSONL knowledge
@@ -180,6 +183,7 @@ Start from [`docs/README.md`](docs/README.md). The most important contracts are:
 - `docs/VALIDATION.md`
 - `docs/guides/DESIGN_INFERENCE.md`
 - `docs/guides/AI_ASSISTANCE.md`
+- `docs/guides/BROWSER_LOCAL_AI.md`
 - `docs/guides/EXPORT_PROJECTIONS.md`
 
 LabFlow is a proof of concept, not a production LIMS. Prefer explicit deterministic behavior and traceable evidence over framework complexity.

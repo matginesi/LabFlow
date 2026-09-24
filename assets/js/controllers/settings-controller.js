@@ -148,6 +148,63 @@ enabled:document.getElementById('logEnabled').checked,level:value('logLevel'),
       }if(e.target.closest('#downloadLogs')){LF.Logger.download();return true;
       }if(e.target.closest('#clearLogs')){if(await LF.UI.confirmAction('Clear all buffered LabFlow logs? Download them first if you need to keep this diagnostic history.',
       {title:'Clear runtime logs',confirmLabel:'Clear logs',danger:true})){LF.Logger.clear();render();}return true;}
+    if(e.target.closest('#browserLocalAddModel')){try{
+      const row=LF.BrowserLocal.addModel(value('browserLocalModelUrl'));
+      LF.UI.message('GGUF model added to the Browser Local catalogue.','success');render();
+      setTimeout(function(){
+        const select=document.getElementById('aiModelSelect'),input=document.getElementById('aiModel');
+        if(select)select.value=row.id;if(input)input.value=row.id;
+      },0);
+    }catch(err){LF.UI.message(err.message||String(err),'error');}return true;}
+    if(e.target.closest('#browserLocalRemoveDefinition')){
+      const model=value('aiModelSelect')||value('aiModel'),entry=LF.BrowserLocal.resolveModel(model);
+      if(entry&&entry.bundled!==true&&await LF.UI.confirmAction(
+        'Remove this custom GGUF from the Browser Local catalogue? A cached copy is not removed automatically.',
+        {title:'Remove model definition',confirmLabel:'Remove from catalogue',danger:true})){
+        LF.BrowserLocal.removeModelDefinition(model);
+        const settings=LF.Storage.getAiSettings();settings.model=LF.BrowserLocal.defaultModel.id;
+        LF.Storage.saveAiSettings(settings);render();
+        LF.UI.message('Custom model definition removed. The default Browser Local model is selected.','success');
+      }
+      return true;
+    }
+    if(e.target.closest('#browserLocalDownload')){
+      try{
+        LF.AISettings.saveFromForm({toast:false});
+        const model=value('aiModelSelect')||value('aiModel');await LF.BrowserLocal.download(model);
+        LF.UI.message('Browser model downloaded and cached.','success');render();
+      }catch(err){LF.UI.message('Model download failed: '+(err.message||String(err)),'error');}
+      return true;
+    }
+    if(e.target.closest('#browserLocalLoad')){
+      try{
+        LF.AISettings.saveFromForm({toast:false});const model=value('aiModelSelect')||value('aiModel');
+        const ready=await LF.BrowserLocal.ensureReady({modelId:model,autoDownload:true,warmup:true,force:true});
+        LF.UI.message('Browser Local ready · '+(ready.backend||'runtime ready')+'.','success');render();
+      }catch(err){LF.UI.message('Browser Local could not start: '+(err.message||String(err)),'error');}
+      return true;
+    }
+    if(e.target.closest('#browserLocalRemove')){
+      const model=value('aiModelSelect')||value('aiModel');
+      const confirmed=await LF.UI.confirmAction(
+        'Remove this GGUF from the browser cache? The model definition remains available for downloading again.',
+        {title:'Remove cached model',confirmLabel:'Remove model',danger:true});
+      if(confirmed){
+        try{await LF.BrowserLocal.removeCached(model);LF.UI.message('Cached GGUF removed.','success');render();}
+        catch(err){LF.UI.message('Cached model could not be removed: '+(err.message||String(err)),'error');}
+      }
+      return true;
+    }
+    if(e.target.closest('#browserLocalClearCache')){
+      const confirmed=await LF.UI.confirmAction(
+        'Remove every Browser Local GGUF cached by LabFlow in this browser?',
+        {title:'Clear Browser Local cache',confirmLabel:'Clear model cache',danger:true});
+      if(confirmed){
+        try{await LF.BrowserLocal.clearCache();LF.UI.message('Browser Local model cache cleared.','success');render();}
+        catch(err){LF.UI.message('Model cache could not be cleared: '+(err.message||String(err)),'error');}
+      }
+      return true;
+    }
     if(e.target.closest('#saveAiSettings')){LF.AISettings.saveFromForm();return true;}if(e.target.closest('#detectProviderModel')){LF.AISettings.detectModel();return true;}if(e.target.closest('#testAiConnection')){await LF.AISettings.testConnection(e.target.closest('#testAiConnection'));return true;}
     if(e.target.closest('#reanalyzeDataset')){ctx.refreshPipeline(S.state.experiment,'manual-review');render();LF.UI.message('Data checks refreshed.','success');return true;}
     return false;

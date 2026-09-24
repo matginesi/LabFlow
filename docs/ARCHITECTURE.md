@@ -7,7 +7,7 @@ order: 10
 
 # Architecture
 
-LabFlow is a local-first static browser application. Vanilla JavaScript owns the scientific model, import pipeline, analysis, review state, Design proposals, export projections and UI. There is no application backend and no in-browser model runtime.
+LabFlow is a local-first static browser application. Vanilla JavaScript owns the scientific model, import pipeline, analysis, review state, Design proposals, export projections and UI. There is no application backend. Optional model inference can run either through the Browser Local GGUF provider or through an external provider endpoint.
 
 ## Product model
 
@@ -74,7 +74,7 @@ Contracts, schemas, guards and allowed writes stay application-side. They are us
 
 A provider receives only the residue that code could not resolve. Context builders select the current target, compact evidence and small candidate lists. Output is bounded and validated before use. Current provider-backed scientific Actions do not use semantic retry loops.
 
-This architecture supports small models without adding WebGPU, wllama, Transformers.js or model storage to the browser application.
+This architecture supports small models without changing the scientific core. Browser Local is an isolated provider: it owns GGUF download/cache/load/warm-up and inference, prefers WebGPU, and falls back to WASM CPU. Other providers continue to use the same transport-facing request/result contract.
 
 ## Reference stores
 

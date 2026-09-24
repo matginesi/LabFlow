@@ -7,11 +7,11 @@ order: 20
 
 # AI providers and transport
 
-AI provider support is an optional external capability. It is deliberately isolated from scientific parsing/analysis so provider failure cannot invalidate deterministic LabFlow behavior.
+AI provider support is optional for the scientific core. A provider may be browser-local or external, but it is deliberately isolated from scientific parsing/analysis so provider failure cannot invalidate deterministic LabFlow behavior.
 
-## Direct-browser boundary
+## Provider boundary
 
-LabFlow sends requests from the browser to the endpoint visible in Settings. There is no hidden relay, server proxy or fallback transport.
+External providers receive requests directly from the browser at the endpoint visible in Settings. There is no hidden relay or server proxy. The `browserlocal` provider is the exception to HTTP transport: it runs the selected GGUF in-page through wllama and therefore has no service endpoint.
 
 This gives failures clear meaning:
 
@@ -20,6 +20,15 @@ This gives failures clear meaning:
 - model-output failure: HTTP response may be successful but content violates the Action contract.
 
 These categories must not be collapsed into a generic “AI failed” path in diagnostics.
+
+
+### Browser Local · GGUF
+
+Fresh browser settings select `browserlocal` with `LFM2.5-350M-Q4_K_M.gguf`. `assets/js/ai/browser-local.js` owns only model lifecycle and inference: catalogue metadata, cache checks, download progress, WebGPU/WASM runtime selection, warm-up, inference and model removal. Scientific routing stays in the Assistant/Action layers.
+
+The default GGUF is downloaded from the official LiquidAI Hugging Face repository only when it is absent from the browser cache and automatic download is allowed. wllama is pinned to 3.6.1. WebGPU is preferred; the same GGUF is reloaded with `n_gpu_layers: 0` when GPU load, warm-up or a pre-output inference fails. LabFlow never silently falls back from Browser Local to a hosted provider.
+
+Additional HTTP(S) GGUF definitions can be added in Settings. Definitions are tiny metadata records; model bytes are downloaded only when requested.
 
 ## Provider registry
 
@@ -78,7 +87,7 @@ Use `LabFlow.AIConsole` for provider diagnosis without experiment data. See `gui
 
 ## Provider settings draft behavior
 
-Provider form edits are drafts until **Save** or a successful **Save & test**. Changing the provider, API-key persistence checkbox, reasoning preference, streaming option, or other connection fields must not re-render the Settings form from the previously persisted provider. **Save & test** probes the configuration visible at the start of the operation and persists that verified provider/model/endpoint only after the probe succeeds.
+Provider form edits are drafts until **Save** or a successful provider initialization/test. Changing the provider, API-key persistence checkbox, reasoning preference, streaming option, or other connection fields must not re-render the Settings form from the previously persisted provider. External providers use **Save & test**; Browser Local uses **Save & initialize** to verify cache/load/warm-up for the exact selected GGUF before persisting the verified selection.
 
 ## GitHub Pages → local llama.cpp
 

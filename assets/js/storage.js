@@ -96,14 +96,18 @@
 
   function getAiSettings() {
     const defaults = {
-      provider: 'openrouter',
-      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-      model: 'openrouter/free',
+      provider: 'browserlocal',
+      endpoint: 'browser://local',
+      model: 'lfm2.5-350m-q4_k_m',
       temperature: 0.7,
       thinkingMode: 'auto',
       streaming: true,
       inactivityTimeoutMs: 90000,
-      maxOutputTokensCap: 0
+      maxOutputTokensCap: 0,
+      browserLocalAutoDownload: true,
+      browserLocalAutoWarmup: true,
+      browserLocalPreferWebGPU: true,
+      browserLocalContextWindow: 4096
     };
     const out = Object.assign({}, defaults, read(LOCAL_KEYS.AI_SETTINGS, {}));
     if (LF.AIProviders && !LF.AIProviders[out.provider]) {
@@ -128,6 +132,10 @@
       0,
       Math.min(1048576, Number(out.maxOutputTokensCap) || 0)
     );
+    out.browserLocalAutoDownload = out.browserLocalAutoDownload !== false;
+    out.browserLocalAutoWarmup = out.browserLocalAutoWarmup !== false;
+    out.browserLocalPreferWebGPU = out.browserLocalPreferWebGPU !== false;
+    out.browserLocalContextWindow = Math.max(2048, Math.min(16384, Number(out.browserLocalContextWindow) || 4096));
     return out;
   }
 

@@ -104,6 +104,36 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
   function invalidField(id,message){const input=field(id),wrap=input&&input.closest('.field');if(input){input.setAttribute('aria-invalid','true');input.focus();}if(wrap){const error=document.createElement('div');error.className='field-error';error.textContent=message;wrap.appendChild(error);}throw new Error(message);}
 
 
+  function formatBytes(value){const n=Math.max(0,Number(value)||0);if(!n)return '—';const units=['B','KB','MB','GB'];let v=n,i=0;while(v>=1000&&i<units.length-1){v/=1000;i++;}return(v>=100||i===0?Math.round(v):v.toFixed(1))+' '+units[i];}
+  function decorateBrowserLocal(){
+    if(!LF.BrowserLocal)return;
+    const st=LF.BrowserLocal.state(),pct=Math.max(0,Math.min(100,Math.round((Number(st.progress)||0)*100)));
+    const detail=st.status==='downloading'&&st.totalBytes?
+      ' · '+formatBytes(st.downloadedBytes)+' / '+formatBytes(st.totalBytes):'';
+    const storage=st.storageQuota?formatBytes(st.storageUsage)+' / '+formatBytes(st.storageQuota):'Browser managed';
+    const persistence=st.storagePersistent===true?'Persistent':
+      st.storagePersistent===false?'Best effort':'Browser managed';
+    const map={
+      browserLocalStage:st.stage||'Idle',browserLocalProgressText:pct+'%'+detail,
+      browserLocalCache:st.cached?'Ready':'Missing',browserLocalBackend:st.backend||'Not loaded',
+      browserLocalWebgpu:st.webgpuAvailable?'Available':'Not detected',browserLocalSize:formatBytes(st.modelBytes),
+      browserLocalStorage:storage,browserLocalPersistence:persistence,browserLocalNote:st.error||st.note||''
+    };
+    Object.keys(map).forEach(function(id){const el=field(id);if(el)el.textContent=map[id];});
+    const bar=field('browserLocalProgressBar');if(bar)bar.style.width=pct+'%';
+    const badge=field('browserLocalBadge');
+    if(badge){
+      badge.textContent=st.status||'idle';
+      badge.className='badge '+(st.status==='ready'?'success':st.status==='error'?'danger':
+        ['checking','downloading','loading','warming'].includes(st.status)?'warning':'info');
+    }
+    const busy=['checking','downloading','loading','warming'].includes(st.status);
+    const download=field('browserLocalDownload'),load=field('browserLocalLoad'),remove=field('browserLocalRemove');
+    if(download)download.disabled=busy;
+    if(load)load.disabled=busy||!st.cached;
+    if(remove)remove.disabled=busy||!st.cached;
+  }
+
   function decorate() {
     const providerSelect=field('aiProvider');
     if(!providerSelect)return;
@@ -111,7 +141,17 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
     let parsed=null;try{parsed=new URL(endpoint);}catch(_){}
     const space=LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(endpoint):'',host=parsed?parsed.hostname:'';
     const summary=field('aiConnectivityText'),badge=field('aiConnectivityBadge'),endpointHint=field('aiEndpointHint');
-    if(provider.local===true){
+    if(provider.browserRuntime===true){
+      const st=LF.BrowserLocal&&LF.BrowserLocal.state?LF.BrowserLocal.state():{};
+      if(summary)summary.textContent='On-device browser inference · '+(st.stage||'not initialized');
+      if(badge){
+        badge.className='badge '+(st.status==='ready'?'success':'info');
+        badge.textContent=st.status==='ready'?'Ready':'Browser Local';
+      }
+      if(endpointHint)endpointHint.textContent=
+        'No HTTP service is required. The GGUF stays in this browser cache and inference runs on this device.';
+      decorateBrowserLocal();
+    }else if(provider.local===true){
       if(space==='loopback'){if(summary)summary.textContent='Running on this computer';if(badge){badge.className='badge warning';badge.textContent='Local';}}
       else if(space==='local'){if(summary)summary.textContent='Available on your local network';if(badge){badge.className='badge info';badge.textContent='Local';}}
       else{if(summary)summary.textContent='Using a custom address';if(badge){badge.className='badge info';badge.textContent='Custom';}}
@@ -125,7 +165,7 @@ const providerId=providerIdFromForm(),provider=LF.AIProviders[providerId]||LF.AI
     if(keyField){keyField.disabled=!providerUsesKey;keyField.placeholder=providerUsesKey?'Stored only in this browser…':'Not needed for this service';if(!providerUsesKey)keyField.value='';}
     if(keyWrap)keyWrap.classList.toggle('settings-key-unused',!providerUsesKey);
     if(keyHint)keyHint.textContent=provider.keyRequired?'Required for this service.':provider.optionalKey?'Optional; only needed if this service requires authentication.':'No API key is needed for this service.';
-    const testButton=field('testAiConnection');if(testButton)testButton.textContent='Save & test';
+    const testButton=field('testAiConnection');if(testButton)testButton.textContent=provider.browserRuntime===true?'Save & initialize':'Save & test';
     syncModelControls(null,{preserveHint:true});
   }
 
@@ -144,9 +184,11 @@ key=String(field('aiKey')&&field('aiKey').value||'').trim(),saved=LF.Storage.get
   function validateConnectionForm(config,options){
     options=options||{};
     clearFieldErrors();
-    if(!config.endpoint)invalidField('aiEndpoint','Enter the service address.');
-    let endpointUrl;try{endpointUrl=new URL(config.endpoint);}catch(_){invalidField('aiEndpoint','Enter a complete http(s) endpoint URL.');}
-    if(endpointUrl&&!['http:','https:'].includes(endpointUrl.protocol))invalidField('aiEndpoint','Use an http:// or https:// endpoint.');
+    if(config.provider.browserRuntime!==true){
+      if(!config.endpoint)invalidField('aiEndpoint','Enter the service address.');
+      let endpointUrl;try{endpointUrl=new URL(config.endpoint);}catch(_){invalidField('aiEndpoint','Enter a complete http(s) endpoint URL.');}
+      if(endpointUrl&&!['http:','https:'].includes(endpointUrl.protocol))invalidField('aiEndpoint','Use an http:// or https:// endpoint.');
+    }
     if(!config.model&&!(options.allowCatalogueModel===true&&config.provider.modelSelect===true))invalidField(config.provider.modelSelect?'aiModelSelect':'aiModel','Choose or enter an exact model ID.');
     if(config.provider.keyRequired&&!config.apiKey)invalidField('aiKey','Enter the '+(config.provider.name||config.providerId)+' API key.');
     return config;
@@ -166,7 +208,11 @@ key=String(field('aiKey')&&field('aiKey').value||'').trim(),saved=LF.Storage.get
       thinkingMode: field('aiThinkingMode') ? field('aiThinkingMode').value : previous.thinkingMode || 'auto',
       streaming: field('aiStreaming') ? field('aiStreaming').checked : previous.streaming !== false,
       inactivityTimeoutMs: field('aiInactivityTimeout') ? Math.max(15000,Number(field('aiInactivityTimeout').value||90)*1000) : previous.inactivityTimeoutMs,
-      maxOutputTokensCap: field('aiMaxOutputTokensCap') ? Math.max(0,Number(field('aiMaxOutputTokensCap').value)||0) : previous.maxOutputTokensCap||0
+      maxOutputTokensCap: field('aiMaxOutputTokensCap') ? Math.max(0,Number(field('aiMaxOutputTokensCap').value)||0) : previous.maxOutputTokensCap||0,
+      browserLocalAutoDownload: field('browserLocalAutoDownload') ? field('browserLocalAutoDownload').checked : previous.browserLocalAutoDownload !== false,
+      browserLocalAutoWarmup: field('browserLocalAutoWarmup') ? field('browserLocalAutoWarmup').checked : previous.browserLocalAutoWarmup !== false,
+      browserLocalPreferWebGPU: field('browserLocalPreferWebGPU') ? field('browserLocalPreferWebGPU').checked : previous.browserLocalPreferWebGPU !== false,
+      browserLocalContextWindow: field('browserLocalContextWindow') ? Math.max(2048,Math.min(16384,Number(field('browserLocalContextWindow').value)||4096)) : previous.browserLocalContextWindow||4096
     };
     const provider=LF.AIProviders[settings.provider]||LF.AIProviders.custom,key=String(field('aiKey')&&field('aiKey').value||'').trim(),rememberKey=!!(field('aiRememberKey')&&field('aiRememberKey').checked);
     validateConnectionForm({providerId:settings.provider,provider:provider,endpoint:settings.endpoint,model:settings.model,apiKey:key});
@@ -217,6 +263,17 @@ endpoint:settings.endpoint,remember:rememberKey});
     }
     const providerId=config.providerId,provider=config.provider,endpoint=config.endpoint,apiKey=config.apiKey;
     const oldText=button&&button.textContent||'Check';
+    if(provider.browserRuntime===true&&LF.BrowserLocal){
+      try{
+        const rows=LF.BrowserLocal.catalog(),ids=rows.map(function(x){return x.id;});
+        if(list){list.replaceChildren();ids.forEach(function(id){const option=document.createElement('option');option.value=id;list.appendChild(option);});}
+        syncModelControls(ids,{preserveHint:true});
+        const status=await LF.BrowserLocal.check(config.model||provider.model);
+        if(useActivity)finishProviderActivity({stage:'Browser model checked',message:status.cached?'The selected GGUF is cached.':'The selected GGUF is not downloaded yet.',response:status.note||status.stage,details:{Provider:provider.name,Model:modelLabel(providerId,config.model||provider.model),Cache:status.cached?'Ready':'Missing',Backend:status.backend||'Not loaded'}});
+        return ids;
+      }catch(error){if(useActivity)failProviderActivity(error,{stage:'Browser model check failed',message:error.message||String(error),response:error.message||String(error),details:{Provider:provider.name}});return[];}
+      finally{if(button){delete button.dataset.loading;button.disabled=false;button.textContent=oldText;}}
+    }
     if(button){button.disabled=true;button.textContent='Checking…';button.dataset.loading='true';}
     Log.info('detect.start',{diagnosticId:diagnosticId,provider:providerId,endpoint:endpointHost(endpoint),model:config.model||'',keyConfigured:!!apiKey,source:'visible-form',origin:typeof location!=='undefined'?location.origin:'',targetAddressSpace:LF.AI&&LF.AI.targetAddressSpace?LF.AI.targetAddressSpace(endpoint):'',transport:'direct'});
     try{
@@ -317,6 +374,18 @@ message:(provider.name||providerId)+' is reachable and the model answered the li
       return null;
     }
     const provider=config.provider;
+    if(provider.browserRuntime===true&&LF.BrowserLocal){
+      try{
+        updateProviderActivity({stepId:'probe',stepStatus:'active',stage:'Preparing browser model',message:'Checking cache, loading the GGUF and warming the runtime.',progress:.30});
+        saveFromForm({toast:false});
+        const ready=await LF.BrowserLocal.ensureReady({modelId:config.model,autoDownload:true,warmup:true,force:true});
+        updateProviderActivity({stepId:'probe',stepStatus:'done',stepNote:ready.backend||'Ready',progress:.82});
+        updateProviderActivity({stepId:'persist',stepStatus:'done',stepNote:'Saved',progress:.97});
+        finishProviderActivity({stage:'Browser Local ready',message:'The GGUF is cached, loaded and warmed.',response:'Active backend: '+(ready.backend||'WASM CPU'),details:{Provider:provider.name,Model:modelLabel(config.providerId,config.model),Backend:ready.backend||'—',Cache:ready.cached?'Ready':'—'}});
+        return{ok:true,model:config.model,provider:config.providerId,transport:'browser-local',backend:ready.backend,elapsedMs:0};
+      }catch(error){failProviderActivity(error,{stage:'Browser Local failed',message:error.message||String(error),response:error.message||String(error),details:{Provider:provider.name,Model:modelLabel(config.providerId,config.model)}});return null;}
+      finally{if(button){button.textContent=oldText;button.disabled=false;}}
+    }
     Log.info('connection-test.start',{diagnosticId:diagnosticId,provider:config.providerId,endpoint:endpointHost(config.endpoint),model:config.model,keyConfigured:!!config.apiKey,source:'visible-form',transport:'direct'});
     try{
       updateProviderActivity({stepId:'probe',stepStatus:'active',stage:'Testing the LLM',message:'Sending a minimal Chat Completions request to '+(provider.name||config.providerId)+'.',progress:.34,details:{Provider:provider.name||config.providerId,Endpoint:endpointHost(config.endpoint),Model:modelLabel(config.providerId,config.model),Transport:'direct'}});
@@ -357,5 +426,6 @@ message:(summary&&summary.category)||'Connection check failed',
     }finally{if(button){button.textContent=oldText;button.disabled=false;}}
   }
 
-  LF.AISettings = {decorate:decorate, saveFromForm:saveFromForm, selectProvider:selectProvider, detectModel:detectModel, testConnection:testConnection, syncModelControls:syncModelControls};
+  if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('labflow:browser-local-state',decorateBrowserLocal);
+  LF.AISettings = {decorate:decorate, decorateBrowserLocal:decorateBrowserLocal, saveFromForm:saveFromForm, selectProvider:selectProvider, detectModel:detectModel, testConnection:testConnection, syncModelControls:syncModelControls};
 }());

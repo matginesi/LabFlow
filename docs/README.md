@@ -62,3 +62,7 @@ The in-app Documentation bundle and Action runtime matrix are generated. Do not 
 - generated Action/KB/UI bundles
 
 Use the builders or `./release_check.sh --fix` after changing source documentation, manifests, prompts, Knowledge Base records, or UI Kit source.
+
+## Browser Local AI
+
+- [Browser Local AI](guides/BROWSER_LOCAL_AI.md) — GGUF lifecycle, cache, WebGPU/WASM fallback and startup warmup.

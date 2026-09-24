@@ -138,6 +138,27 @@ module.exports = function (t, LF) {
     delete LF.Storage; delete LF.AIProviders;
   };
 
+  t['Browser Local transport bypasses HTTP and normalizes tagged reasoning'] = async function () {
+    LF.Storage={
+      getAiSettings:function(){return{provider:'browserlocal',endpoint:'browser://local',model:'lfm2.5-350m-q4_k_m',streaming:true,thinkingMode:'off'};},
+      getApiKey:function(){return'';}
+    };
+    LF.AIProviders={browserlocal:{id:'browserlocal',browserRuntime:true,local:true,endpoint:'browser://local',model:'lfm2.5-350m-q4_k_m',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true}};
+    let calls=0;
+    LF.BrowserLocal={chat:async function(options){calls++;if(!options.controller)throw new Error('transport controller missing');return{content:'<think>private</think>final',reasoning:'',finishReason:'stop',requestElapsedMs:12,latencyMs:12,usage:{completionTokens:3},backend:'WASM CPU'};}};
+    const controller=new AbortController();AI.acceptController(controller);
+    try{
+      const spec=AI.buildRequest({messages:[{role:'user',content:'answer'}],stream:true,maxTokens:32,thinkingMode:'off'});
+      assert(spec.url,'browser://local','browser-local pseudo URL');
+      const result=await AI.send(spec,{label:'browser-local-test'});
+      assert(calls,1,'one browser inference call');
+      assert(result.content,'final','final answer');
+      assert(result.reasoning,'private','tagged reasoning separated');
+      assert(result.httpRequests,0,'no HTTP request');
+      assert(result.backend,'WASM CPU','runtime backend');
+    }finally{AI.acceptController(null);delete LF.BrowserLocal;delete LF.Storage;delete LF.AIProviders;}
+  };
+
   t['llama.cpp LFM requests force deepseek reasoning parsing instead of raw think tags'] = function () {
     LF.Storage={getAiSettings:function(){return{provider:'llamacpp',endpoint:'http://127.0.0.1:8080/v1',model:'/models/LFM2.5-8B-A1B-Q4_K_M.gguf',streaming:true,thinkingMode:'on'};},getApiKey:function(){return'';}};
     LF.AIProviders={llamacpp:{id:'llamacpp',keyRequired:false,tokenParam:'max_tokens',supportsStreaming:true,supportsTemperature:true,thinkingModes:{on:{chat_template_kwargs:{enable_thinking:true}}}}};

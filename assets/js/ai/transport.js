@@ -227,6 +227,7 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
   }
 
   function abort(){
+    if(LF.BrowserLocal&&LF.BrowserLocal.abort&&LF.Storage&&LF.Storage.getAiSettings&&LF.Storage.getAiSettings().provider==='browserlocal')return LF.BrowserLocal.abort();
     if(!activeRequest)return false;
     activeRequest.cancelled=true;
     try{activeRequest.controller.abort();}catch(_){}
@@ -238,9 +239,9 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     const settings=LF.Storage.getAiSettings();
     const key=LF.Storage.getApiKey(settings.provider);
     const provider=(LF.AIProviders&&LF.AIProviders[settings.provider])||{};
-    if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
+    if(!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||settings.provider)+' requires an API key. Open Settings.');
-    const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    const url=provider.browserRuntime===true?'browser://local':validateHttpUrl(resolveChatUrl(settings.endpoint));
     const baseHeaders=providerAuthHeaders(provider,key);
     const headers=Object.assign({'Content-Type':'application/json'},baseHeaders);
 
@@ -252,9 +253,9 @@ transport:failure&&failure.transport||responseMeta&&responseMeta.transport||'',e
     const saved=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId])||{};
     const key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(providerId);
     const settings=Object.assign({},saved,{provider:providerId,endpoint:endpoint!=null?String(endpoint):String(saved.endpoint||''),model:model!=null?String(model):String(saved.model||''),streaming:true,thinkingMode:'auto'});
-    if(!settings.endpoint||!settings.model)throw new Error('AI provider is not configured. Open Settings.');
+    if(!settings.model)throw new Error('AI provider is not configured. Open Settings.');
     if(provider.keyRequired&&!key)throw new Error((provider.name||providerId)+' requires an API key. Open Settings.');
-    const url=validateHttpUrl(resolveChatUrl(settings.endpoint));
+    const url=provider.browserRuntime===true?'browser://local':validateHttpUrl(resolveChatUrl(settings.endpoint));
     return{settings:settings,provider:provider,url:url,headers:Object.assign({'Content-Type':'application/json'},providerAuthHeaders(provider,key))};
   }
 
@@ -487,6 +488,18 @@ endpoint=options.endpoint||settings.endpoint,model=options.model||settings.model
       ,key=options.apiKey!=null?String(options.apiKey):LF.Storage.getApiKey(providerId,endpoint),
       cacheKey=capabilityKey(providerId,endpoint,model);
     if(!options.force&&capabilityCache.has(cacheKey))return capabilityCache.get(cacheKey);
+    if(provider.browserRuntime===true&&LF.BrowserLocal){
+      const def=LF.BrowserLocal.resolveModel(model),st=LF.BrowserLocal.state();
+      const localCap={
+        provider:providerId,model:model,maxOutputTokens:1024,
+        contextWindow:Number(def&&def.contextWindow)||4096,exactOutput:false,
+        reasoningStatus:'none',reasoningAllowedOptions:['off'],reasoningDefault:'off',
+        source:'Browser Local GGUF runtime',runtimeProfileStatus:'ok',
+        runtimeProfileMessage:st.backend?('Active backend: '+st.backend):'Model not loaded yet',
+        resolvedAt:Date.now()
+      };
+      capabilityCache.set(cacheKey,localCap);return localCap;
+    }
     const known=knownCapability(providerId,model);
     if(known&&!options.force){const immediate=Object.assign({provider:providerId,model:model,probeError:'',resolvedAt:Date.now()},known);capabilityCache.set(cacheKey,immediate);return immediate;}
     if(!options.force){const fallback={provider:providerId,model:model,maxOutputTokens:null,contextWindow:null,exactOutput:false,reasoningStatus:'unknown',reasoningAllowedOptions:[],reasoningDefault:'',source:'conservative fallback; run Detect for provider metadata',probeError:'',resolvedAt:Date.now()};capabilityCache.set(cacheKey,fallback);return fallback;}
@@ -528,6 +541,17 @@ cap.loadedModel!==model)capabilityCache.set(capabilityKey(providerId,endpoint,ca
     const settings=LF.Storage.getAiSettings(),provider=(LF.AIProviders&&LF.AIProviders[providerId||settings.provider])||{};
     const activeProviderId=providerId||settings.provider,key=apiKey!=null?String(apiKey):LF.Storage.getApiKey(activeProviderId,endpoint!=null?String(endpoint):settings.endpoint),base=endpoint!=null?String(endpoint):String(settings.endpoint||''),headers=providerAuthHeaders(provider,key);
     const started=performance.now();
+    if(provider.browserRuntime===true&&LF.BrowserLocal){
+      const rows=LF.BrowserLocal.catalog();
+      const cached=await LF.BrowserLocal.cachedModels().catch(function(){return[];});
+      const localState=LF.BrowserLocal.state(),loaded=localState.loaded?[localState.modelId]:[];
+      return{
+        models:rows.map(function(x){return x.id;}),
+        entries:rows.map(function(x){return{id:x.id,name:x.name,url:x.url,local:true};}),
+        loadedModels:loaded,cachedModels:cached,elapsedMs:Math.round(performance.now()-started),
+        url:'browser://local',source:'Browser Local model registry'
+      };
+    }
     if(provider.keyRequired&&!String(key||'').trim()){const error=new Error((provider.name||activeProviderId)+' requires an API key before model detection.');error.providerId=activeProviderId;error.phase='models';Log.error('models.list-failed',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:false,error:error});throw error;}
     if(!base){const error=new Error((provider.name||activeProviderId)+' endpoint is empty.');error.providerId=activeProviderId;error.phase='models';Log.error('models.list-failed',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:!!key,error:error});throw error;}
     Log.info('models.list-start',{provider:activeProviderId,phase:'models',endpoint:base,keyConfigured:!!String(key||'').trim(),origin:pageOrigin()});
@@ -688,6 +712,44 @@ responseHeadersMs:r.responseHeadersMs,requestElapsedMs:r.requestElapsedMs,finali
     opts=opts||{};const overallStarted=performance.now();
     let r,technicalThinkingRetry=false;
     const providerId=spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'';
+    if(spec.provider&&spec.provider.browserRuntime===true){
+      if(!LF.BrowserLocal||!LF.BrowserLocal.chat)throw new Error('Browser Local runtime is not loaded.');
+      const result=await LF.BrowserLocal.chat({
+        model:spec.model,
+        messages:spec.body.messages,
+        maxTokens:spec.body.max_tokens||spec.body.max_completion_tokens||spec.body.max_output_tokens,
+        temperature:spec.body.temperature,
+        stream:spec.body.stream!==false,
+        jsonMode:spec.body.response_format&&spec.body.response_format.type==='json_object',
+        jsonSchema:spec.body.response_format&&spec.body.response_format.json_schema&&spec.body.response_format.json_schema.schema,
+        jsonSchemaName:spec.body.response_format&&spec.body.response_format.json_schema&&spec.body.response_format.json_schema.name,
+        controller:injectedController||undefined,
+        onProgress:opts.onProgress
+      });
+      const normalized=normalizeAssistantEnvelope(
+        result.content,
+        result.reasoning,
+        spec.settings&&spec.settings.provider||spec.provider&&spec.provider.id||'browserlocal'
+      );
+      result.content=normalized.content;
+      result.reasoning=normalized.reasoning;
+      return Object.assign({
+        thinkingMode:'off',
+        thinkingPolicy:spec.thinkingPolicy||{
+          requested:'off',effective:'off',capability:'none',reason:'Browser Local model profile'
+        },
+        prepareMs:spec.prepareMs||0,
+        httpRequests:0,
+        requestId:'browser_'+Date.now().toString(36),
+        requestLogId:'',
+        reasoningObserved:!!normalized.reasoning,
+        reasoningControlRequests:0,
+        reasoningControlOk:false,
+        finalizeMs:0,
+        responseHeadersMs:0,
+        generationMs:Math.max(1,Number(result.requestElapsedMs)||Number(result.latencyMs)||1)
+      },result);
+    }
     try{
       r=await request(spec.url,spec.headers,spec.body,opts.label||'AI request',spec.timeoutMs,opts.onProgress,Math.max(0,Number(spec.hardTimeoutMs)||0),providerId);
     }catch(err){

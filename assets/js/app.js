@@ -116,10 +116,52 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
   function renderPageContext(){const host=document.getElementById('topbarPageContext');if(!host)return;if(!hasExperiment()||!LF.PageContext){host.hidden=true;host.textContent='';return;}const text=LF.PageContext.summary();host.hidden=!text;host.textContent=text;}
 
   function renderModelStatus(){
-    const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');if(!host||!detail)return;
-    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{},ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||LF.Storage.getApiKey(settings.provider,settings.endpoint))),displayModel=LF.Core&&LF.Core.modelDisplayName?LF.Core.modelDisplayName(settings.provider,settings.model):settings.model;
+    const host=document.getElementById('modelStatus'),detail=document.getElementById('modelStatusDetail');
+    if(!host||!detail)return;
+    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{};
+    const displayModel=LF.Core&&LF.Core.modelDisplayName?
+      LF.Core.modelDisplayName(settings.provider,settings.model):settings.model;
+    if(provider.browserRuntime===true&&LF.BrowserLocal){
+      const local=LF.BrowserLocal.state(),ready=local.status==='ready';
+      const active=local.status==='downloading'||local.status==='loading'||local.status==='warming'||local.status==='checking';
+      host.classList.toggle('available',ready);
+      host.classList.toggle('unavailable',!ready&&!active);
+      if(active){
+        const pct=Math.max(0,Math.min(100,Math.round((Number(local.progress)||0)*100)));
+        detail.textContent=(local.stage||'Preparing local model')+(pct?' · '+pct+'%':'');
+      }else if(ready)detail.textContent=(local.modelName||displayModel)+' · '+(local.backend||'ready');
+      else detail.textContent=local.stage||'Local model not ready';
+      host.title=ready?'Browser Local ready: '+(local.modelName||displayModel)+' · '+(local.backend||''):
+        (local.error||local.note||'Browser Local is preparing the selected GGUF model.');
+      return;
+    }
+    const ready=!!(settings.endpoint&&settings.model&&(!provider.keyRequired||
+      LF.Storage.getApiKey(settings.provider,settings.endpoint)));
     host.classList.toggle('available',ready);host.classList.toggle('unavailable',!ready);
-    detail.textContent=ready?displayModel:'Not configured';host.title=ready?'AI model available: '+displayModel:'Configure the AI provider in Settings';
+    detail.textContent=ready?displayModel:'Not configured';
+    host.title=ready?'AI model available: '+displayModel:'Configure the AI provider in Settings';
+  }
+
+  function startBrowserLocal(){
+    if(!LF.BrowserLocal||!LF.Storage)return;
+    const settings=LF.Storage.getAiSettings(),provider=LF.AIProviders&&LF.AIProviders[settings.provider]||{};
+    if(provider.browserRuntime!==true)return;
+    Log.info('browser-local.startup',{model:settings.model,autoDownload:settings.browserLocalAutoDownload!==false,
+      autoWarmup:settings.browserLocalAutoWarmup!==false,preferWebGPU:settings.browserLocalPreferWebGPU!==false});
+    LF.BrowserLocal.startup().then(function(local){
+      renderModelStatus();
+      Log.info('browser-local.ready',{status:local.status,model:local.modelId,backend:local.backend||'',cached:local.cached});
+      if(local.status==='not_installed'&&LF.UI&&LF.UI.message){
+        LF.UI.message(local.note||'The default Browser Local model must be downloaded before local AI can run.',
+          'info','Browser Local');
+      }
+    }).catch(function(error){
+      renderModelStatus();
+      Log.warn('browser-local.startup-failed',{error:error});
+      if(LF.UI&&LF.UI.message)LF.UI.message(
+        'Browser Local could not initialize. LabFlow remains usable; open Settings → AI connection to retry or choose another provider. '+
+        String(error&&error.message||error),'warning','Local AI unavailable');
+    });
   }
 
   function renderAppRelease(){
@@ -869,7 +911,10 @@ if(proposalDeviceField){const proposal=selectedDesignProposal(),
         if(persistNeeded)scheduleWorkspaceSave(reason);
       });window.addEventListener('pagehide',function(){if(hasExperiment())persistWorkspace('pagehide');});
 document.addEventListener('visibilitychange',function(){
-        if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});render();
+        if(document.visibilityState==='hidden'&&hasExperiment())persistWorkspace('hidden');});
+      document.addEventListener('labflow:browser-local-state',renderModelStatus);
+      render();
+      window.setTimeout(startBrowserLocal,0);
         if(workspaceRestoreError)LF.UI.message('The saved workspace could not be loaded. The stored copy was left untouched.',
         'warning');end({route:S.state.ui.route,experimentId:hasExperiment()?S.state.experiment.id:'',
         logEntries:LF.Logger.entries().length},'info');
