@@ -1,3 +1,3 @@
 window.LABFLOW_VERSION="0.0.39";
 window.LABFLOW_BUILD="2026.09.24-0.0.39";
-window.LABFLOW_ASSET_REV="b5a6e2bf71c6";
+window.LABFLOW_ASSET_REV="e5b6db38aa50";

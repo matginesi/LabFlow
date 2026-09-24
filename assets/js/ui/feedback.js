@@ -453,7 +453,7 @@
     const showSteps=steps.length>1&&activity.status!=='complete';
     if(stepShell)stepShell.hidden=!showSteps;
     if(showSteps){const pct=Math.round(done/steps.length*100);if(stepText)stepText.textContent=done+' / '+steps.length;if(stepProgress){stepProgress.setAttribute('aria-valuenow',String(pct));stepProgress.setAttribute('aria-valuetext',done+' of '+steps.length+' steps completed');}if(stepBar)stepBar.style.width=pct+'%';}
-    const stream=activity.stream,tokenShell=byId('activityTokenProgressShell'),tokensItem=byId('activityPrimaryTokensItem'),rateItem=byId('activityPrimaryRateItem'),speedItem=byId('activityPrimarySpeedItem');
+    const stream=activity.stream,tokenShell=byId('activityTokenProgressShell'),tokensItem=byId('activityPrimaryTokensItem'),rateItem=byId('activityPrimaryRateItem'),speedItem=byId('activityPrimarySpeedItem'),transferItem=byId('activityPrimaryTransferItem');
     const completion=stream?Math.max(0,Number(stream.completionTokens==null?stream.tokens:stream.completionTokens)||0):0,budget=stream?Math.max(0,Number(stream.budgetTokens)||0):0;
     if(tokenShell)tokenShell.hidden=!stream;
     if(tokensItem)tokensItem.hidden=!stream;
@@ -469,6 +469,9 @@
     const speedEl=byId('activityPrimarySpeed'),speedText=text(activity.speed);
     if(speedItem)speedItem.hidden=!speedText;
     if(speedEl)speedEl.textContent=speedText||'—';
+    const transferEl=byId('activityPrimaryTransfer'),transferText=text(activity.transfer);
+    if(transferItem)transferItem.hidden=!transferText;
+    if(transferEl)transferEl.textContent=transferText||'—';
   }
 
   function renderActivityNow() {
@@ -559,7 +562,7 @@
       activityRequestState:'No request data',
       activityOutputLabel:'Provider output',
       activityOutputState:'Waiting for response',
-      activityPrimaryElapsed:'0.0 s',activityPrimarySpeed:'—',activityPrimaryTokens:'—',activityPrimaryRate:'—',
+      activityPrimaryElapsed:'0.0 s',activityPrimarySpeed:'—',activityPrimaryTransfer:'—',activityPrimaryTokens:'—',activityPrimaryRate:'—',
       activityStepProgressText:'0 / 0',activityTokenProgressText:'0 tok'
     };
     Object.keys(defaults).forEach(function (id) {
@@ -573,7 +576,7 @@
 
     // User-controlled diagnostic disclosure must survive progress/SSE re-renders.
     // Reset it only when the Activity Totem lifecycle itself is reset.
-    ['activityPrimarySpeedItem','activityPrimaryTokensItem','activityPrimaryRateItem','activityStepProgressShell','activityTokenProgressShell'].forEach(function(id){const el=byId(id);if(el)el.hidden=true;});
+    ['activityPrimarySpeedItem','activityPrimaryTransferItem','activityPrimaryTokensItem','activityPrimaryRateItem','activityStepProgressShell','activityTokenProgressShell'].forEach(function(id){const el=byId(id);if(el)el.hidden=true;});
     ['activityStepBar','activityStreamBar'].forEach(function(id){const el=byId(id);if(el)el.style.width='0%';});
 
     const technical = byId('activityTechnical');
@@ -643,7 +646,8 @@
       onRetry:typeof input.onRetry === 'function' ? input.onRetry : null,
       retryLabel:text(input.retryLabel || 'Retry checkpoint'),
       closeLabel:text(input.closeLabel || 'Close details'),
-      speed:text(input.speed)
+      speed:text(input.speed),
+      transfer:text(input.transfer)
     };
     activity.history.push({time:'0.0 s', stage:activity.stage});
     window.clearInterval(activityTimer);
@@ -660,7 +664,7 @@
   function activityUpdate(options) {
     if (!activity) return;
     const input = options || {};
-    const textFields = ['title', 'subtitle', 'kind', 'message', 'request', 'response', 'closeLabel', 'progressLabel', 'speed'];
+    const textFields = ['title', 'subtitle', 'kind', 'message', 'request', 'response', 'closeLabel', 'progressLabel', 'speed', 'transfer'];
     textFields.forEach(function (field) {
       if (input[field] != null) activity[field] = text(input[field]);
     });

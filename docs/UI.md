@@ -33,10 +33,11 @@ The normal view is intentionally small:
 2. only useful secondary progress bars (for example current work unit or token completion)
 3. elapsed time
 4. operation-specific speed only when it has a real unit/meaning
-5. generated tokens when a provider is involved
-6. tok/s when the provider exposes or LabFlow can measure it
+5. transferred bytes (`downloaded / total`) while a model or asset is being fetched
+6. generated tokens when a provider is involved
+7. tok/s when the provider exposes or LabFlow can measure it
 
-Everything diagnostic belongs under **Technical data**: provider/request details, input tokens, TTFT, budgets, payload excerpts, checklist, internal steps and history. Do not make the user read transport internals to understand whether work is progressing.
+Everything diagnostic belongs under **Technical data**: provider/request details, input tokens, TTFT, budgets, payload excerpts, the model source/file/transfer/ETA/backend detail, checklist, internal steps and history. Do not make the user read transport internals to understand whether work is progressing.
 
 The Browser Local startup checks (runtime, model cache and adapter) use the same Action Totem with a blurred backdrop (`activity-shade.blurred`) because they block local AI availability. The blur is opt-in per Totem and is removed with the Totem; other Actions keep the standard shade.
 

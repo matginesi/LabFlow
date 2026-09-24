@@ -81,7 +81,7 @@ Startup follows the **selected** model when it can be obtained:
 
 Loading, warming and the WebGPU → WASM CPU fallback apply to whichever model is selected, and the other catalogue entries stay untouched.
 
-If the selected GGUF is already cached, load and warm-up can continue without interrupting the normal workflow. If the model is missing, LabFlow opens a blocking setup Totem for the one-time download. The Totem shows overall progress, bytes downloaded, transfer speed, ETA, cache state, load state and warm-up state. It does not show LLM token telemetry because model setup is not an Assistant/Action inference turn.
+If the selected GGUF is already cached, load and warm-up can continue without interrupting the normal workflow. If the model is missing, LabFlow opens a blocking setup Totem for the one-time download. Download speed and transferred/total bytes stay visible without opening **Technical data**; the transfer, ETA, cache, load and warm-up detail lives there. The Totem does not show LLM token telemetry because model setup is not an Assistant/Action inference turn.
 
 When the model is cached, the same setup Totem covers the runtime/cache/adapter check when it is not instantaneous: after a short grace period it appears as a loading Totem with a blurred backdrop, so a fast start stays uninterrupted while a slow load is explicit instead of leaving the interface apparently idle.
 

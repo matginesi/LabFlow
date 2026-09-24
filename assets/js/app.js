@@ -178,11 +178,17 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     if(!LF.UI||!LF.UI.isActivityOpen||!LF.UI.isActivityOpen())return;
     const rate=Number(local&&local.downloadBytesPerSecond)||0;
     const speed=rate>0?formatBrowserBytes(rate)+'/s':'';
-    const name=browserModelLabel(local);
+    const downloaded=Math.max(0,Number(local&&local.downloadedBytes)||0),total=Math.max(0,Number(local&&local.totalBytes)||0);
+    // Compact metrics stay visible without opening Technical data: speed and transferred/total bytes.
+    const transfer=total>0?formatBrowserBytes(downloaded)+' / '+formatBrowserBytes(total):(downloaded>0?formatBrowserBytes(downloaded):'');
+    const name=browserModelLabel(local),entry=selectedBrowserModel()||{};
     const details={
       Model:name,
+      Source:entry.bundled?'Bundled':(entry.source==='file'?'Uploaded file':'URL model'),
+      File:entry.file||'—',
       'Model size':formatBrowserBytes(browserModelBytes(local)),
-      Downloaded:formatBrowserBytes(local.downloadedBytes||0),
+      Transferred:transfer||'—',
+      Speed:speed||'—',
       ETA:formatBrowserEta(local.downloadEtaSeconds),
       Cache:local.cached?'Ready':'Preparing',
       Backend:local.backend||'Not loaded yet'
@@ -190,7 +196,7 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     if(Number.isFinite(Number(local.storageUsage)))details['Browser storage']=formatBrowserBytes(local.storageUsage)+' / '+formatBrowserBytes(local.storageQuota);
     LF.UI.activityUpdate({
       kind:'SETUP',stage:local.stage||'Preparing local model',message:local.status==='downloading'?'Downloading '+name+' into the browser model cache. LabFlow will continue after the model is ready.':'Preparing '+name+'.',
-      progress:Number(local.progress)||0,progressLabel:local.status==='ready'?'Ready':'Local model setup',speed:speed,details:details,
+      progress:Number(local.progress)||0,progressLabel:local.status==='ready'?'Ready':'Local model setup',speed:speed,transfer:transfer,details:details,
       steps:browserLocalSetupSteps(local)
     });
   }

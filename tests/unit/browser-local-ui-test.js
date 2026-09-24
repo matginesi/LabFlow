@@ -72,5 +72,16 @@ module.exports=function(t){
     assert(app.includes('if(!totemShown&&LF.UI&&LF.UI.activityStart)openSetupTotem(LF.BrowserLocal.state(),true);'),true,'a startup failure still opens the setup Totem');
     assert(app.includes("stage:'Selected model unavailable'"),true,'an unavailable model opens the Totem with a retry');
   };
+  t['The setup Totem shows download speed and transferred bytes without opening Technical data']=function(){
+    const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');
+    const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
+    const feedback=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
+    assert(html.includes('id="activityPrimarySpeedItem"')&&html.includes('id="activityPrimaryTransferItem"'),true,'compact runtime row owns speed and transfer metrics');
+    assert(html.indexOf('activityPrimaryTransferItem')<html.indexOf('activityTechnical'),true,'transfer metric sits outside the technical disclosure');
+    assert(feedback.includes('transfer:text(input.transfer)')&&feedback.includes("'speed', 'transfer'"),true,'the shared Totem carries the transfer metric');
+    assert(app.includes('speed:speed,transfer:transfer,details:details'),true,'the setup Totem publishes speed and transfer');
+    assert(app.includes("const transfer=total>0?formatBrowserBytes(downloaded)+' / '+formatBrowserBytes(total)"),true,'transfer shows downloaded / total');
+    assert(app.includes("Transferred:transfer||'—'")&&app.includes("Speed:speed||'—'"),true,'technical details repeat speed and transfer');
+  };
   return t;
 };
