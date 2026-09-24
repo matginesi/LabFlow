@@ -65,9 +65,12 @@
     if(JSON.stringify(fallback).length<=maxChars)return fallback;
     return boundValue(fallback,80,2,8,0);
   }
+  /* Assistant budget tiers, most expendable first:
+     P3 previous_turn + facts_digest, P2 references, P1 facts/scope, P0 task. */
   function assistantBudgetPack(obj,maxChars){
     maxChars=Math.max(640,Number(maxChars)||4200);const full=sanitize(obj||{}),size=function(v){return JSON.stringify(v).length;};
     if(size(full)<=maxChars)return full;const copy=JSON.parse(JSON.stringify(full));delete copy.previous_turn;if(size(copy)<=maxChars)return copy;
+    delete copy.facts_digest;if(size(copy)<=maxChars)return copy;
     if(copy.knowledge&&Array.isArray(copy.knowledge.entries))copy.knowledge.entries=copy.knowledge.entries.slice(0,2).map(function(v){return boundValue(v,160,3,12,0);});
     if(copy.cabinet&&Array.isArray(copy.cabinet.items))copy.cabinet.items=copy.cabinet.items.slice(0,2).map(function(v){return boundValue(v,140,3,10,0);});
     if(size(copy)<=maxChars)return copy;
@@ -445,7 +448,11 @@ const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAs
     ,selection:opts.selection||null,collect:opts.outputs&&opts.outputs.collect||{}
     ,workItem:opts.workItem||null,maxChars:requestedMax});if(requestedMax)ctx=budgetPack(ctx,requestedMax);
     let sys=system(def,step),retry=clean(opts.retryFeedback);if(retry)sys+='\n\n# RETRY CORRECTION\n'+clip(retry,900);
-    const req=clean(opts.userText),user='<research_context_pack>\n'+JSON.stringify(ctx)+'\n</research_context_pack>'+
+    const req=clean(opts.userText),digest=Array.isArray(ctx.facts_digest)?ctx.facts_digest.slice():[];
+    // facts_digest reaches the model as flat text; the JSON pack stays machine-parseable and digest-free.
+    const packJson=JSON.stringify(ctx,function(key,value){return key==='facts_digest'?undefined:value;});
+    const digestBlock=digest.length?'\n\n<facts>\n'+digest.map(function(line){return String(line).replace(/[\r\n]+/g,' ');}).join('\n')+'\n</facts>':'';
+    const user='<research_context_pack>\n'+packJson+'\n</research_context_pack>'+digestBlock+
     (req?'\n\n<user_request>\n'+req+'\n</user_request>':'');
     if(Log){
       const included=Object.keys(ctx),known=['workspace','process','page_context','experiment_brief','results','groups',

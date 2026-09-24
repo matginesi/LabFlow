@@ -6,12 +6,106 @@
 (function(){
 'use strict';
 const LF=window.LabFlow=window.LabFlow||{};
+const Log=LF.Logger?LF.Logger.scope('assistant-memory'):null;
 const LOCAL_INTENTS=new Set(['missing','count','best','anomalies','summary','status','clarify']);
 const INTENTS=new Set(['missing','count','best','anomalies','summary','status','compare','explain','design_review','scientific','clarify']);
 const TARGETS=new Set(['current','measurements','samples','experiments','findings','pce','design','results','export','review','experiment']);
 function clean(v){return String(v==null?'':v).replace(/\s+/g,' ').trim();}
 function lower(v){return clean(v).toLowerCase();}
 function take(v,n){return(Array.isArray(v)?v:[]).slice(0,n);}
+
+/* Session-only Assistant memory.
+   `derived` is persisted inside the saved workspace, so conversation focus and the router
+   cache deliberately live in module state instead. State.resetSession() and clearing the
+   conversation both call clearMemory(); nothing here is ever serialized with an experiment. */
+const session={experimentId:'',memory:null};
+function emptyMemory(experimentId){
+  return{experimentId:String(experimentId||''),focus:null,lastIntent:'',lastTarget:'',lastFocusAt:'',routeCache:[]};
+}
+function memoryFor(exp){
+  const id=String(exp&&exp.id||'');
+  if(!session.memory||session.experimentId!==id){session.experimentId=id;session.memory=emptyMemory(id);}
+  return session.memory;
+}
+function clearMemory(){session.experimentId='';session.memory=null;if(Log)Log.info('memory.clear',{});}
+function memorySnapshot(){return session.memory?JSON.parse(JSON.stringify(session.memory)):null;}
+function noteTurn(patch){
+  const memory=session.memory;if(!memory)return null;
+  Object.assign(memory,patch||{});
+  delete memory.turn;
+  if(Array.isArray(memory.routeCache)&&memory.routeCache.length>32)memory.routeCache=memory.routeCache.slice(-32);
+  if(Log)Log.info('memory.update',{focusKind:memory.focus&&memory.focus.kind||'',focusId:memory.focus&&memory.focus.id||'',
+    lastIntent:memory.lastIntent||'',lastTarget:memory.lastTarget||'',cacheEntries:memory.routeCache.length});
+  return memory;
+}
+function normalizeText(value){return clean(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').replace(/\s+/g,' ').trim();}
+function entityList(exp){
+  const out=[];
+  function push(kind,id,label,aliases){
+    const name=clean(label)||clean(id);if(!name)return;
+    const keys=[],nameKey=normalizeText(name);
+    if(nameKey.length>=3)keys.push(nameKey);
+    [].concat(aliases||[]).forEach(function(alias){const key=normalizeText(alias);if(key.length>=3&&keys.indexOf(key)<0)keys.push(key);});
+    if(keys.length)out.push({kind:kind,id:String(id||''),label:name,keys:keys});
+  }
+  (exp&&exp.samples||[]).forEach(function(s){push('sample',s.id,s.name,[s.rawName]);});
+  (exp&&exp.measurements||[]).forEach(function(m){push('measurement',m.id,m.sample||m.file,[m.file,m.rawSample,m.path]);});
+  (exp&&exp.experiments||[]).forEach(function(e){push('group',e.id,e.name,[]);});
+  (exp&&exp.design&&exp.design.devices||[]).forEach(function(d){push('design_device',d.id,d.name,[d.group]);});
+  return out;
+}
+// Language-agnostic entity linking: it matches canonical LabFlow identifiers only, never a word lexicon.
+function resolveEntities(exp,text,scope,limit){
+  const hay=normalizeText(text);if(!hay)return[];
+  const padded=' '+hay+' ';
+  const matches=entityList(exp).filter(function(entity){return entity.keys.some(function(key){return padded.indexOf(' '+key+' ')>=0;});});
+  matches.sort(function(a,b){return b.label.length-a.label.length;});
+  const seen=new Set(),out=[];
+  matches.forEach(function(entity){const id=entity.kind+':'+entity.id;if(seen.has(id))return;seen.add(id);out.push({kind:entity.kind,id:entity.id,label:entity.label});});
+  return out.slice(0,Math.max(1,Number(limit)||3));
+}
+function selectionFocus(exp,scope){
+  const selected=scope&&scope.selected||{},deviceId=selected.experiment||'';
+  const device=(exp&&exp.design&&exp.design.devices||[]).find(function(d){return String(d.id)===String(deviceId);});
+  if(device)return{kind:'design_device',id:device.id,label:clean(device.name)||clean(device.group)||device.id};
+  const measurementId=selected.measurement||'';
+  const measurement=(exp&&exp.measurements||[]).find(function(m){return String(m.id)===String(measurementId);});
+  if(measurement)return{kind:'measurement',id:measurement.id,label:clean(measurement.sample)||clean(measurement.file)||measurement.id};
+  return null;
+}
+function focusFor(exp,text,scope){
+  const matched=resolveEntities(exp,text,scope,3),order=['sample','measurement','design_device','group'];
+  for(const kind of order){const hit=matched.find(function(item){return item.kind===kind;});if(hit)return hit;}
+  // Page selection is promoted only for short messages without a named entity, so general questions stay unbiased.
+  return normalizeText(text).split(' ').filter(Boolean).length<=8?selectionFocus(exp,scope):null;
+}
+function routeCacheKey(text,scope){return normalizeText(scope&&scope.page)+'|'+normalizeText(scope&&scope.view)+'|'+normalizeText(text).slice(0,160);}
+function cachedRoute(text,scope){
+  const memory=session.memory;if(!memory)return null;
+  const key=routeCacheKey(text,scope),hit=(memory.routeCache||[]).find(function(item){return item.key===key;});
+  if(!hit)return null;
+  hit.hits=Number(hit.hits||0)+1;hit.at=new Date().toISOString();
+  if(Log)Log.info('memory.route-cache',{page:scope&&scope.page||'',hits:hit.hits});
+  return JSON.parse(JSON.stringify(hit.route));
+}
+function rememberRoute(text,scope,route){
+  if(!session.memory||!route||route.intent==='clarify')return null;
+  const key=routeCacheKey(text,scope),cache=session.memory.routeCache||(session.memory.routeCache=[]),existing=cache.find(function(item){return item.key===key;});
+  if(existing){existing.route=JSON.parse(JSON.stringify(route));existing.at=new Date().toISOString();return existing;}
+  const entry={key:key,route:JSON.parse(JSON.stringify(route)),hits:0,at:new Date().toISOString()};cache.push(entry);return entry;
+}
+// The tiny router stays the single intent authority; this only recovers a dropped follow-up.
+function refineRoute(route,exp,text,scope){
+  const normalized=normalizeRoute(route);if(normalized.intent!=='clarify')return normalized;
+  const memory=session.memory;
+  if(memory&&memory.lastIntent&&!resolveEntities(exp,text,scope,1).length){
+    const prior=normalizeRoute({intent:memory.lastIntent,target:memory.lastTarget||'current',followup:true});
+    if(Log)Log.info('memory.route-recovered',{intent:prior.intent,target:prior.target});
+    return prior;
+  }
+  return normalized;
+}
+
 function compact(v,depth){
   depth=depth||0;
   if(v==null||typeof v==='number'||typeof v==='boolean')return v;
@@ -181,13 +275,38 @@ async function classify(text,scope,opts){
   return{route:route,response:response,inputTokens:inputTokens,messages:messages};
 }
 function tokenize(text){return clean(text).toLowerCase().replace(/[^\p{L}\p{N}_\-.]+/gu,' ').split(/\s+/).filter(function(x){return x.length>=3;}).slice(0,24);}
-function focusedMeasurements(exp,text){
-  const terms=tokenize(text);if(!terms.length)return[];
-  return take((exp.measurements||[]).filter(function(m){const hay=lower([m.sample,m.group,m.path,m.file].join(' '));return terms.some(function(t){return hay.indexOf(t)>=0;});}),4).map(function(m){return{id:m.id||'',sample:m.sample||'',group:m.group||'',quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,fw:compact(m.fw),rv:compact(m.rv),hysteresis:m.hysteresis};});
+function focusedMeasurements(exp,text,focus){
+  const all=exp&&exp.measurements||[],rows=[];
+  if(focus&&focus.kind==='sample')all.forEach(function(m){if(rows.length<4&&clean(m.sample)===clean(focus.label))rows.push(m);});
+  else if(focus&&focus.kind==='measurement')all.forEach(function(m){if(String(m.id)===String(focus.id))rows.push(m);});
+  else if(focus&&focus.kind==='group')all.forEach(function(m){if(rows.length<4&&clean(m.group)===clean(focus.label))rows.push(m);});
+  if(!rows.length){const terms=tokenize(text);if(terms.length)all.forEach(function(m){if(rows.length>=4)return;const hay=lower([m.sample,m.group,m.path,m.file].join(' '));if(terms.some(function(t){return hay.indexOf(t)>=0;}))rows.push(m);});}
+  return take(rows,4).map(function(m){return{id:m.id||'',sample:m.sample||'',group:m.group||'',quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff,fw:compact(m.fw),rv:compact(m.rv),hysteresis:m.hysteresis};});
 }
-function llmFacts(exp,text,scope,intentName){
-  const page=lower(scope.page),bundle=LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):{},summary=exp.analysis&&exp.analysis.summary||{},facts={experiment:{name:clean(exp.meta&&exp.meta.name),samples:Number(summary.sampleCount||(exp.samples||[]).length||0),measurements:Number(summary.measurementCount||(exp.measurements||[]).length||0)},scope:scope};
-  if(page.indexOf('design')>=0||intentName==='design_review'){
+function focusRef(exp,focus){
+  if(!focus)return null;
+  if(focus.kind==='sample'){const base=(exp.samples||[]).find(function(s){return String(s.id)===String(focus.id);})||{};return{kind:'sample',id:focus.id,label:focus.label,group:clean(base.group),is_ref:!!base.isRef,measurement_count:take(base.measurementIds,40).length};}
+  if(focus.kind==='measurement'){const m=(exp.measurements||[]).find(function(x){return String(x.id)===String(focus.id);})||{};return{kind:'measurement',id:focus.id,label:focus.label,sample:clean(m.sample),group:clean(m.group),quality:m.qualityStatus||'',eligible:!!m.rankingEligible,best_efficiency:m.bestEff};}
+  if(focus.kind==='design_device'){const d=(exp.design&&exp.design.devices||[]).find(function(x){return String(x.id)===String(focus.id);})||{};return{kind:'design_device',id:focus.id,label:focus.label,samples:take(d.sampleNames,8)};}
+  if(focus.kind==='group'){const count=(exp.measurements||[]).filter(function(m){return clean(m.group)===clean(focus.label);}).length;return{kind:'group',id:focus.id,label:focus.label,measurement_count:count};}
+  return{kind:focus.kind,id:focus.id,label:focus.label};
+}
+// Section choice follows intent and target first; the open page is only a secondary signal.
+function factSectionWanted(kind,intentName,target,page){
+  if(target===kind)return true;
+  if(kind==='results')return intentName==='explain'||intentName==='compare'||intentName==='scientific'||intentName==='best'||intentName==='anomalies'||page.indexOf('result')>=0||target==='pce';
+  if(kind==='design')return intentName==='design_review'||target==='design'||page.indexOf('design')>=0;
+  if(kind==='review')return target==='review'||target==='findings'||page.indexOf('upload')>=0||page.indexOf('review')>=0;
+  if(kind==='export')return target==='export'||page.indexOf('export')>=0;
+  return false;
+}
+function llmFacts(exp,text,scope,intentName,target,focus){
+  const page=lower(scope&&scope.page),intent=String(intentName||''),wantedTarget=lower(target||'current');
+  const bundle=LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):{},summary=exp&&exp.analysis&&exp.analysis.summary||{};
+  const facts={experiment:{name:clean(exp&&exp.meta&&exp.meta.name),samples:Number(summary.sampleCount||(exp&&exp.samples||[]).length||0),measurements:Number(summary.measurementCount||(exp&&exp.measurements||[]).length||0)},scope:scope};
+  const entity=focus||focusFor(exp,text,scope);
+  if(entity)facts.focus=focusRef(exp,entity);
+  if(factSectionWanted('design',intent,wantedTarget,page)){
     const d=designMissing(exp,scope),device=d.device,ids=new Set(device&&device.solutionIds||[]);
     facts.design=device?{
       name:device.name||'',samples:take(device.sampleNames,8),missing_domains:d.missing,
@@ -199,13 +318,31 @@ function llmFacts(exp,text,scope,intentName){
       process:compact(device.process||{})
     }:null;
   }
-  if(page.indexOf('result')>=0||intentName==='explain'||intentName==='compare'||intentName==='scientific'){
+  if(factSectionWanted('results',intent,wantedTarget,page)){
     facts.results={summary:compact(summary),quality:compact(bundle.advanced&&bundle.advanced.quality||{}),paired_scans:compact(bundle.advanced&&bundle.advanced.pairedScans||{}),reproducibility:take(bundle.advanced&&bundle.advanced.reproducibility,6),correlations:take(bundle.advanced&&bundle.advanced.correlations,6),top_non_reference:take(bundle.topNonRef,4),top_reference:take(bundle.topRef,3)};
-    const ms=focusedMeasurements(exp,text);if(ms.length)facts.measurements=ms;
   }
-  if(page.indexOf('upload')>=0||page.indexOf('review')>=0)facts.open_findings=take((exp.findings||[]).filter(function(f){return f.status!=='resolved';}),6).map(function(f){return{id:f.id||'',severity:f.severity||'',title:f.title||'',detail:clean(f.detail).slice(0,220),target:f.target||''};});
-  if(page.indexOf('export')>=0){const x=exportMissing(exp);facts.export={nomad_missing:listLabels(x.nomad,8),readypv_missing:listLabels(x.readypv,6)};}
+  if(entity){const ms=focusedMeasurements(exp,text,entity);if(ms.length)facts.measurements=ms;}
+  if(factSectionWanted('review',intent,wantedTarget,page))facts.open_findings=take((exp.findings||[]).filter(function(f){return f.status!=='resolved';}),6).map(function(f){return{id:f.id||'',severity:f.severity||'',title:f.title||'',detail:clean(f.detail).slice(0,220),target:f.target||''};});
+  if(factSectionWanted('export',intent,wantedTarget,page)){const x=exportMissing(exp);facts.export={nomad_missing:listLabels(x.nomad,8),readypv_missing:listLabels(x.readypv,6)};}
   return facts;
+}
+// Compact scalar digest for tiny models: rendered as flat text while the JSON pack keeps validation data.
+function digestLines(ctx){
+  const facts=ctx&&ctx.facts||{},lines=[],push=function(key,value){if(value==null||value==='')return;lines.push(key+'='+String(value));};
+  push('page',ctx&&ctx.scope&&ctx.scope.page);
+  push('intent',ctx&&ctx.task&&ctx.task.intent);
+  if(ctx&&ctx.focus)push('focus',String(ctx.focus.kind||'')+':'+String(ctx.focus.label||ctx.focus.id||''));
+  const summary=facts.results&&facts.results.summary||{},quality=facts.results&&facts.results.quality||{},paired=facts.results&&facts.results.paired_scans||{};
+  push('samples',summary.sampleCount);push('measurements',summary.measurementCount);
+  push('eligible',Number.isFinite(Number(quality.eligible))?Number(quality.eligible):summary.eligibleCount);
+  if(Number.isFinite(Number(summary.bestEfficiency)))push('best_pce',Number(summary.bestEfficiency).toFixed(2));
+  push('best_sample',summary.bestSample);
+  if(Number.isFinite(Number(paired.count)))push('paired_scans',Number(paired.count));
+  if(paired.absDeltaPce&&Number.isFinite(Number(paired.absDeltaPce.median)))push('paired_median_delta',Number(paired.absDeltaPce.median).toFixed(2));
+  if(Array.isArray(facts.open_findings))push('open_findings',facts.open_findings.length);
+  if(facts.design)push('design_missing',take(facts.design.missing_domains,4).join(','));
+  if(facts.export)push('nomad_missing',take(facts.export.nomad_missing,4).length);
+  return lines.slice(0,14);
 }
 function references(route,text){
   const out={},query=clean(route&&route.search_terms)||clean(text);
@@ -220,20 +357,84 @@ function lastTurn(exp,route){
   return items.map(function(m){return{role:m.role,content:clean(m.content).slice(0,420)};});
 }
 function planFromRoute(exp,text,route,scope){
-  scope=scope||currentScope(exp);route=normalizeRoute(route);
+  scope=scope||currentScope(exp);
+  memoryFor(exp);
+  route=refineRoute(route,exp,text,scope);
+  const focus=focusFor(exp,text,scope);
   if(LOCAL_INTENTS.has(route.intent)){
-    const local=localAnswerFromRoute(exp,scope,route);if(local)return local;
+    const local=localAnswerFromRoute(exp,scope,route);
+    if(local){local.focus=focus;return local;}
   }
-  const facts=llmFacts(exp,text,scope,route.intent),refs=references(route,text),previous=lastTurn(exp,route);
+  const facts=llmFacts(exp,text,scope,route.intent,route.target,focus),refs=references(route,text),previous=lastTurn(exp,route);
   const instruction=route.intent==='design_review'
     ?'Review the supplied Design facts. Separate observation from hypothesis and mention missing domains before speculation.'
     :'Answer the researcher using only supplied facts and explicitly supplied references.';
   const ctx={task:{intent:route.intent,instruction:instruction},scope:scope,facts:facts};
+  if(focus)ctx.focus={kind:focus.kind,id:focus.id,label:focus.label};
   if(refs.knowledge)ctx.knowledge=refs.knowledge;
   if(refs.cabinet)ctx.cabinet=refs.cabinet;
   if(previous)ctx.previous_turn=previous;
+  const digest=digestLines(ctx);if(digest.length)ctx.facts_digest=digest;
   const fallback=route.intent==='design_review'?missingAnswer(exp,scope,'design').answer:'I do not have enough verified evidence to answer this safely. Please narrow the question or inspect the current LabFlow state.';
-  return{mode:'llm',intent:route.intent,scope:scope,context:ctx,fallback:fallback,reason:'Intent router selected a bounded provider answer.',route:route};
+  return{mode:'llm',intent:route.intent,scope:scope,context:ctx,pack:ctx,focus:focus,fallback:fallback,reason:'Intent router selected a bounded provider answer.',route:route};
+}
+
+/* Envelope parsing keeps the model output machine-checkable without adding a second provider call.
+   Labels are fixed ASCII tokens; the answer prose stays in the researcher's language. */
+function envelopeLabel(line){
+  const match=/^\s*[*_#>•\-\s]*([A-Za-z]+)[*_]*\s*[:\-–]\s*[*_]*\s*(.*)$/.exec(String(line||''));
+  if(!match)return null;
+  const key=match[1].toUpperCase();
+  if(key!=='ANSWER'&&key!=='BASIS'&&key!=='UNKNOWN')return null;
+  return{key:key.toLowerCase(),rest:match[2]};
+}
+function parseEnvelope(text){
+  const lines=String(text==null?'':text).replace(/\r\n/g,'\n').split('\n'),parts={answer:[],basis:[],unknown:[]};
+  let current=null,found=false;
+  lines.forEach(function(line){
+    const label=envelopeLabel(line);
+    if(label){current=label.key;found=true;if(label.rest)parts[current].push(label.rest);return;}
+    if(current)parts[current].push(line);
+  });
+  if(!found)return null;
+  const join=function(values){return values.join('\n').trim();};
+  const basis=join(parts.basis).split(/[,;\n]+/).map(function(item){return clean(item).replace(/^[-*•]\s*/,'');}).filter(Boolean);
+  return{answer:join(parts.answer),basis:basis,unknown:join(parts.unknown),raw:String(text||'')};
+}
+function numberTokens(value){const out=[],re=/-?\d+(?:[.,]\d+)?/g;let match;const raw=String(value==null?'':value);
+  while((match=re.exec(raw)))out.push(match[0].replace(',','.'));return out;}
+function knownNumbers(value,depth,out){
+  depth=depth||0;out=out||[];
+  if(depth>6||value==null)return out;
+  if(typeof value==='number'&&Number.isFinite(value)){out.push(value);return out;}
+  if(typeof value==='string'){numberTokens(value).forEach(function(token){const n=Number(token);if(Number.isFinite(n))out.push(n);});return out;}
+  if(Array.isArray(value)){value.slice(0,40).forEach(function(item){knownNumbers(item,depth+1,out);});return out;}
+  if(typeof value==='object'){Object.keys(value).slice(0,40).forEach(function(key){knownNumbers(value[key],depth+1,out);});}
+  return out;
+}
+function numberSupported(token,known){
+  const n=Number(token);if(!Number.isFinite(n))return true;
+  return known.some(function(value){return Math.abs(value-n)<=Math.max(0.05,Math.abs(value)*0.01);});
+}
+function packKeys(pack){
+  const keys=new Set(),walk=function(value,path,depth){
+    if(depth>5||value==null)return;
+    if(Array.isArray(value)){if(path)keys.add(path);value.slice(0,20).forEach(function(item){walk(item,path,depth+1);});return;}
+    if(typeof value==='object'){Object.keys(value).slice(0,60).forEach(function(key){const next=path?path+'.'+key:key;keys.add(next);walk(value[key],next,depth+1);});}
+  };
+  walk(pack||{},'',0);
+  return keys;
+}
+function validateEnvelope(envelope,pack,question){
+  if(!envelope||!envelope.answer)return{ok:false,reason:'missing_answer',unknownBasis:[],unsupportedNumbers:[]};
+  const keys=packKeys(pack),leafs=new Set(Array.from(keys).map(function(key){return key.split('.').pop();}));
+  const unknownBasis=(envelope.basis||[]).filter(function(key){const k=clean(key);if(!k)return false;const leaf=k.split('.').pop();return !keys.has(k)&&!leafs.has(leaf);});
+  const known=knownNumbers(pack,0,[]);numberTokens(question||'').forEach(function(token){const n=Number(token);if(Number.isFinite(n))known.push(n);});
+  const numbers=numberTokens(envelope.answer);
+  const unsupported=numbers.filter(function(token){return !numberSupported(token,known);});
+  // A tiny model that produced numbers none of which exist in the pack is not grounded enough to show.
+  const severe=numbers.length>0&&unsupported.length===numbers.length;
+  return{ok:!severe&&!unknownBasis.length,severe:severe,unknownBasis:unknownBasis,unsupportedNumbers:unsupported};
 }
 function initialPlan(exp,text){
   const scope=currentScope(exp),route=explicitCommand(text);
@@ -244,6 +445,10 @@ function localAnswer(exp,text){const p=initialPlan(exp,text);return p&&p.mode===
 LF.AssistantCore={
   scope:currentScope,missingState:missingState,initialPlan:initialPlan,explicitCommand:explicitCommand,
   localAnswer:localAnswer,localAnswerFromRoute:localAnswerFromRoute,routeMessages:routeMessages,
-  normalizeRoute:normalizeRoute,classify:classify,planFromRoute:planFromRoute,llmFacts:llmFacts
+  normalizeRoute:normalizeRoute,classify:classify,planFromRoute:planFromRoute,llmFacts:llmFacts,
+  resolveEntities:resolveEntities,focusFor:focusFor,digestLines:digestLines,
+  parseEnvelope:parseEnvelope,validateEnvelope:validateEnvelope,
+  memory:memoryFor,memorySnapshot:memorySnapshot,noteTurn:noteTurn,clearMemory:clearMemory,
+  cachedRoute:cachedRoute,rememberRoute:rememberRoute,refineRoute:refineRoute
 };
 }());

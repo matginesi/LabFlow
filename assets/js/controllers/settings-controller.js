@@ -135,6 +135,7 @@ const save=!!e.target.closest('#saveActionEditor'),
 if(ctx.hasExperiment()&&await LF.UI.confirmAction('Clear the current Assistant conversation?',{
       title:'Clear Assistant conversation',confirmLabel:'Clear conversation',danger:true})){
       const d=LF.State.ensureDerived(S.state.experiment);d.chat={conversation:[]};ctx.markModified('ai');
+      if(LF.Assistant&&LF.Assistant.clearMemory)LF.Assistant.clearMemory();
       LF.UI.message('Assistant conversation cleared.','success');render();}return true;}
     if(e.target.closest('#saveLogSettings')){LF.Logger.saveSettings({
 enabled:document.getElementById('logEnabled').checked,level:value('logLevel'),

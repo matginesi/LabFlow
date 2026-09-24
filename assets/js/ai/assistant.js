@@ -43,12 +43,21 @@ function syncAssistantPhase(run,info){if(!active||active!==run)return;const phas
   else if(phase==='request')updateTransient(run,'LLM · Waiting for provider');
   else if(phase==='validate')updateTransient(run,'LLM · Validating answer');
 }
-function answerHtml(m){const clean=compact(m.content||''),detected=!m.structured?parseJson(clean):null;if(m.structured||detected)return jsonHtml(m.structured||detected);return clean?C.markdown(clean):'';}
+function answerHtml(m){const env=m&&m.envelope;if(env&&env.answer)return C.markdown(env.answer);const clean=compact(m.content||''),detected=!m.structured?parseJson(clean):null;if(m.structured||detected)return jsonHtml(m.structured||detected);return clean?C.markdown(clean):'';}
+// Envelope extras reuse existing help/notice primitives; the answer prose stays in the message body.
+function envelopeExtra(m){const env=m&&m.envelope;if(!env)return'';
+  const basis=Array.isArray(env.basis)?env.basis.filter(Boolean):[];
+  const basisHtml=basis.length?'<div class="help chat-envelope-basis">Basis · '+C.escapeHtml(basis.join(', '))+'</div>':'';
+  const unknownHtml=env.unknown?'<div class="notice info compact-notice"><strong>Unknown</strong><span>'+C.markdown(env.unknown)+'</span></div>':'';
+  return basisHtml+unknownHtml;}
 function copyButton(id){return '<button class="button ghost compact icon-only chat-copy" type="button" data-copy-message="'+C.escapeHtml(id)+'" aria-label="Copy message" title="Copy">'+(LF.Icons?LF.Icons.icon('copy'):'⧉')+'</button>';}
 function detailRows(m){const u=m.usage||{},rows=[],providerUsed=Number(m.requestCount)>0||m.executionMode==='llm'||m.executionMode==='routed-local';function row(label,value){if(value==null||value==='')return;
 rows.push('<div><dt>'+C.escapeHtml(label)+'</dt><dd>'+C.escapeHtml(String(value))+'</dd></div>');
   }if(m.executionMode){const label=m.executionMode==='local'?'Deterministic · no provider':m.executionMode==='routed-local'?'Deterministic answer · LLM intent router':'LLM answer';row('Execution',label);}
   if(m.routeReason)row('Route',m.routeReason);
+  if(m.routeCached)row('Intent routing','Reused cached route');
+  if(m.focusLabel)row('Conversation focus',m.focusLabel);
+  if(m.envelopeWarning)row('Answer grounding',m.envelopeWarning);
   if(m.intent)row('Intent',m.intent);if(m.scopeLabel)row('Scope',m.scopeLabel);
   if(providerUsed&&(m.provider||m.model))row('Provider / model',(m.provider||'—')+' / '+(C.modelDisplayName?C.modelDisplayName(m.provider,m.model||'—'):(m.model||'—')));
   if(Number.isFinite(Number(m.latencyMs)))row('Total turn',fmtMs(m.latencyMs));
@@ -98,6 +107,7 @@ cancelled=m.state==='cancelled';return '<div class="chat-message-label"><strong>
   (m.state==='complete'?copyButton(m.id):'')+'</div>'+
   (pending?transientHtml(m):'<div class="chat-transient" data-chat-status hidden></div>')+
   '<div class="chat-body markdown-view" data-chat-body'+(!m.content?' hidden':'')+'>'+answerHtml(m)+'</div>'+
+  envelopeExtra(m)+
   (m.state==='complete'?kbSourcesHtml(m):'')+
   (failed?'<div class="chat-error-actions"><button class="button compact" type="button" data-retry-message="'+
   C.escapeHtml(m.id)+'">Retry</button></div>':'')+(cancelled?'<small class="chat-cancelled">Request stopped.</small>':'')+
@@ -180,11 +190,11 @@ if(!exp||!exp.id)return null;const failed=!!payload.error,unavailable=!!payload.
   tools:Array.isArray(payload.tools)?payload.tools:[]},false);render();
   if(LF.State&&LF.State.notify)LF.State.notify('assistant');return item;}
 function addUsage(target,source){source=source||{};['promptTokens','completionTokens','totalTokens','cachedTokens'].forEach(function(k){if(Number.isFinite(Number(source[k])))target[k]+=Number(source[k]);});target.estimated=target.estimated||!!source.estimated;}
-function routerTelemetry(classified,settings){const r=classified&&classified.response||{},usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};addUsage(usage,r.usage||{});return{
+function routerTelemetry(classified,settings){const r=classified&&classified.response||{},cached=!!(classified&&classified.cached),usage={promptTokens:0,completionTokens:0,totalTokens:0,cachedTokens:0,estimated:false};addUsage(usage,r.usage||{});return{
   model:r.model||settings.model,provider:r.provider||settings.provider,providerElapsedMs:Number(r.latencyMs)||0,
   ttftMs:Number(r.ttftMs)||null,tokensPerSecond:Number(r.tokensPerSecond)||null,thinkingMode:r.thinkingPolicy&&r.thinkingPolicy.requested||r.thinkingMode||'off',
   thinkingEffective:r.thinkingPolicy&&r.thinkingPolicy.effective||r.thinkingMode||'off',reasoningObserved:!!r.reasoningObserved,
-  usage:usage.totalTokens||usage.promptTokens||usage.completionTokens?usage:null,requestCount:1,routerCalls:1,
+  usage:usage.totalTokens||usage.promptTokens||usage.completionTokens?usage:null,requestCount:cached?0:1,routerCalls:cached?0:1,cached:cached,
   responseBytes:Number(r.responseBytes)||0,requestId:r.requestId||'',requestLogId:r.requestLogId||'',streamed:false,
   finishReason:r.finishReason||'',routerInputTokens:Number(classified&&classified.inputTokens)||null
 };}
@@ -206,6 +216,8 @@ async function runTurn(exp,text,message,plan){const settings=LF.Storage.getAiSet
 started:performance.now(),message:message,controller:null,clock:null,firstContentLogged:false,requestContext:null,allowedKbIds:[],plan:plan||{}};active=run;
   message.state='requesting';message.content='';message.error=false;message.statusLabel='Preparing provider request';message.executionMode='llm';
   message.routeReason=run.plan.reason||'Deterministic routing selected provider fallback.';message.intent=run.plan.intent||'';message.scopeLabel=run.plan.scope&&run.plan.scope.page||'';message.provider=settings.provider;message.model=settings.model;
+  message.routeCached=!!(run.plan.routerTelemetry&&run.plan.routerTelemetry.cached);
+  message.focusLabel=run.plan.focus?String(run.plan.focus.kind||'')+':'+String(run.plan.focus.label||run.plan.focus.id||''):'';
   if(Log)Log.info('turn.start',{messageId:message.id,provider:settings.provider,model:settings.model,
   questionChars:String(text||'').length});render({forceBottom:true});
   run.clock=setInterval(function(){if(active===run&&message.state==='requesting'&&!message.content)updateTransient(run,
@@ -220,20 +232,32 @@ started:performance.now(),message:message,controller:null,clock:null,firstConten
   reject(e);},95000);})]);const elapsed=Math.round(performance.now()-run.started);
   if(out&&out.status==='done'){let finalMeta=null;
   Object.keys(out.requestMeta||{}).forEach(function(k){finalMeta=out.requestMeta[k]||finalMeta;});
-  const raw=compact(out.result||message.content||''),grounding=validateKbAnswer(raw,run.allowedKbIds||[]),requestMeta=run.requestContext||{};
-  const safeContent=grounding.ok?grounding.content:(run.plan&&run.plan.fallback||grounding.content);
+  const raw=compact(out.result||message.content||''),requestMeta=run.requestContext||{},pack=(run.plan&&(run.plan.pack||run.plan.context))||null;
+  const envelope=LF.AssistantCore&&LF.AssistantCore.parseEnvelope?LF.AssistantCore.parseEnvelope(raw):null;
+  const envelopeCheck=envelope&&LF.AssistantCore&&LF.AssistantCore.validateEnvelope?LF.AssistantCore.validateEnvelope(envelope,pack,text):null;
+  const envelopeSevere=!!(envelopeCheck&&envelopeCheck.severe),answerText=envelope&&!envelopeSevere?envelope.answer:raw;
+  const grounding=validateKbAnswer(answerText,run.allowedKbIds||[]),fallback=run.plan&&run.plan.fallback;
+  const safeContent=grounding.ok?(envelopeSevere&&fallback?fallback:answerText):(fallback||grounding.content);
+  const envelopeWarnings=[];
+  if(envelopeCheck&&envelopeCheck.unknownBasis&&envelopeCheck.unknownBasis.length)envelopeWarnings.push('Basis keys not supplied: '+envelopeCheck.unknownBasis.join(', '));
+  if(envelopeCheck&&envelopeCheck.unsupportedNumbers&&envelopeCheck.unsupportedNumbers.length)envelopeWarnings.push('Numbers not present in supplied facts: '+envelopeCheck.unsupportedNumbers.join(', '));
+  if(envelopeSevere)envelopeWarnings.push('Answer grounding failed; returned the deterministic fallback.');
   Object.assign(message,{state:'complete',content:compact(safeContent),
+  envelope:envelope&&!envelopeSevere&&grounding.ok?{answer:compact(envelope.answer),basis:envelope.basis,unknown:compact(envelope.unknown)}:null,
   reasoning:compact(finalMeta&&finalMeta.reasoning||message.reasoning||''),error:false,executionMode:'llm',
   contextTokens:requestMeta.inputTokens||null,contextChars:requestMeta.messageChars||null,
   completionBudgetTokens:requestMeta.maxTokens||null,answerTargetTokens:requestMeta.targetTokens||null,
   reasoningReserveTokens:requestMeta.reasoningReserveTokens||0,contextMessageCount:requestMeta.messageCount||0,
   evidenceItemsSupplied:requestMeta.evidenceCount||0,measurementsSupplied:requestMeta.measurementCount||0,
   samplesSupplied:requestMeta.sampleCount||0,kbEntriesSupplied:requestMeta.knowledgeCount||0,
+  envelopeWarning:envelopeWarnings.join(' · '),
   groundingWarning:grounding.ok?'':('Rejected unsupported KB citation'+(grounding.invalid.length===1?'':'s')+': '+grounding.invalid.join(', '))}
   ,aggregateRunMeta(out,settings,elapsed,run.plan&&run.plan.routerTelemetry));
   if(!grounding.ok)message.finishReason='grounding_fallback';
+  else if(envelopeSevere)message.finishReason='envelope_fallback';
   if(Log)Log.info('turn.done',{messageId:message.id,elapsedMs:elapsed,requests:message.requestCount||1,
-  ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length,grounding:grounding.ok?'passed':'rejected'});
+  ttftMs:message.ttftMs||null,answerChars:String(message.content||'').length,grounding:grounding.ok?'passed':'rejected',
+  envelope:envelope?'parsed':'absent',envelopeSevere:envelopeSevere});
   }else if(out&&(out.status==='cancelled'||out.status==='aborted')){Object.assign(message,{
   state:'cancelled',content:'',error:false,finishReason:'cancelled',latencyMs:elapsed,executionMode:'llm'});
   if(Log)Log.info('turn.cancelled',{messageId:message.id,elapsedMs:elapsed});
@@ -271,8 +295,12 @@ async function resolveNaturalTurn(exp,text,message,initial){const settings=LF.St
   message.state='requesting';message.content='';message.error=false;message.statusLabel='Routing request';message.executionMode='routing';message.provider=settings.provider;message.model=settings.model;message.scopeLabel=initial&&initial.scope&&initial.scope.page||'';
   render({forceBottom:true});setComposer(true);
   try{
-    const classified=await LF.AssistantCore.classify(text,initial.scope),rmeta=routerTelemetry(classified,settings),plan=LF.AssistantCore.planFromRoute(exp,text,classified.route,initial.scope);
+    const cached=LF.AssistantCore&&LF.AssistantCore.cachedRoute?LF.AssistantCore.cachedRoute(text,initial.scope):null;
+    const classified=cached?{route:cached,response:null,inputTokens:0,cached:true}:await LF.AssistantCore.classify(text,initial.scope),rmeta=routerTelemetry(classified,settings),plan=LF.AssistantCore.planFromRoute(exp,text,classified.route,initial.scope);
     plan.routerTelemetry=rmeta;
+    if(!cached&&LF.AssistantCore.rememberRoute)LF.AssistantCore.rememberRoute(text,initial.scope,classified.route);
+    if(LF.AssistantCore.noteTurn)LF.AssistantCore.noteTurn({focus:plan.focus||null,lastIntent:plan.intent||'',
+      lastTarget:classified.route&&classified.route.target||'',lastFocusAt:new Date().toISOString()});
     if(plan.mode==='local'){
       applyLocalMessage(message,plan,rmeta,performance.now()-routeRun.started);if(classified.response&&classified.response.reasoning)message.reasoning=compact(classified.response.reasoning);
       if(Log)Log.info('route.local',{messageId:message.id,intent:plan.intent,scope:message.scopeLabel,providerCalls:1});
@@ -324,7 +352,7 @@ function retryMessage(id){
 function cancel(){if(!active)return;if(LF.ActionRunner&&LF.ActionRunner.isRunning&&LF.ActionRunner.isRunning()&&LF.ActionRunner.cancel)LF.ActionRunner.cancel();else if(LF.AI&&LF.AI.abort)LF.AI.abort();else if(active.controller)active.controller.abort();}
 function bind(){document.addEventListener('click',function(e){const c=e.target.closest('[data-copy-message]');
 if(c){const m=conversation(LF.State.state.experiment).find(function(x){return x.id===c.dataset.copyMessage;});
-  if(m)C.copyText(m.structured?JSON.stringify(m.structured,null,2):m.content);return;
+  if(m)C.copyText(m.envelope&&m.envelope.answer?m.envelope.answer:(m.structured?JSON.stringify(m.structured,null,2):m.content));return;
   }const retry=e.target.closest('[data-retry-message]');if(retry){retryMessage(retry.dataset.retryMessage);return;
   }const action=e.target.closest('[data-assistant-action]');if(action){e.preventDefault();
   runAction(action.dataset.assistantAction,'');return;}if(e.target.closest('#assistantActionsToggle')){e.preventDefault();
@@ -353,5 +381,11 @@ if(LF.Structures){
     }
   });
 }
-LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,deterministicAnswer:deterministicAnswer,plan:function(exp,text){return LF.AssistantCore&&LF.AssistantCore.initialPlan?LF.AssistantCore.initialPlan(exp,text):null;},isActive:function(){return!!active;},cancel:cancel};
+function clearMemory(){if(LF.AssistantCore&&LF.AssistantCore.clearMemory)LF.AssistantCore.clearMemory();}
+LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,
+deterministicAnswer:deterministicAnswer,clearMemory:clearMemory,
+plan:function(exp,text){return LF.AssistantCore&&LF.AssistantCore.initialPlan?LF.AssistantCore.initialPlan(exp,text):null;},
+isActive:function(){return!!active;},cancel:cancel};
+// Session memory follows the session lifecycle, not the persisted experiment snapshot.
+if(LF.State&&LF.State.subscribe)LF.State.subscribe(function(reason){if(reason==='reset')clearMemory();});
 }());

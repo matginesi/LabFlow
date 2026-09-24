@@ -28,6 +28,7 @@ One sanitizer (`LF.Redact`, `assets/js/redact.js`) serves logging, diagnostics a
 - At buffer time, credential-like keys, Authorization/Bearer/Basic values, key-shaped tokens, URL userinfo, credential query parameters and direct personal identifiers (contact names, emails, phone-like fields, personal notes inside a contact container) are replaced with `[redacted]`.
 - Diagnostic exports are privacy-safe by default: the JSONL export and the diagnostic bundle drop prompts, provider responses and free-text fields while keeping timing, HTTP status, provider/model, scope, event name and correlation identifiers. The in-page buffer keeps the full locally inspectable payload.
 - Organization names, scientific identifiers, workspace/experiment/process IDs, file sizes and hashes are technical metadata and are not redacted.
+- Assistant session memory logs only structured state (`focusKind`, `focusId`, last intent/target, cache-hit counters) and never the researcher's question or answer text.
 
 Do not log RAW file bodies or large research payloads by default. Prefer IDs, paths, sizes, hashes, counts and short bounded evidence excerpts when they are necessary for diagnosis.
 
