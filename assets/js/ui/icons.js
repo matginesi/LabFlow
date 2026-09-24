@@ -47,6 +47,6 @@
     });
   }
 
-  LF.Icons = {icon:icon, hydrate:hydrate, names:function(){return Object.keys(PATHS);}};
+  LF.Icons = {icon:icon, hydrate:hydrate};
   document.addEventListener('DOMContentLoaded', function () { hydrate(document); });
 }());

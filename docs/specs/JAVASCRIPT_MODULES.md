@@ -12,6 +12,7 @@ LabFlow uses classic browser scripts rather than a bundler/module framework. Loa
 ## Core and state
 
 - `core.js` — generic deterministic helpers and required-module checks.
+- `redact.js` — centralized field-aware redaction shared by logging, diagnostics and shareable exports.
 - `logger.js` — structured sanitized diagnostics.
 - `storage.js` — browser persistence/preferences and Action overrides.
 - `state.js` — one application state object: scientific aggregate, UI runtime state and active Action run.

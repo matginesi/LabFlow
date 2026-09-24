@@ -4,6 +4,7 @@ global.window=globalThis;
 const path=require('path'),fs=require('fs'),root=path.resolve(__dirname,'../..');
 global.localStorage={getItem:function(){return null;},setItem:function(){},removeItem:function(){},clear:function(){}};
 try{global.window.JSZip=require(path.join(root,'vendor','jszip','jszip.min.js'));}catch(_e){}
+require(path.join(root,'assets/js/redact.js'));
 require(path.join(root,'assets/js/logger.js'));
 require(path.join(root,'assets/js/core.js'));
 require(path.join(root,'assets/js/ai/prompt-bundle.js'));

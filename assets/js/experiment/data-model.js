@@ -12,7 +12,6 @@
   const C = LF.Core;
   const Schema = LF.DomainSchema;
   if (!Schema) throw new Error('LabFlow.DomainSchema must be loaded before data-model.js.');
-  const uid = C.uid;
   const OPERATIONS = ['set', 'remove', 'add'];
 
   function nowIso() { return new Date().toISOString(); }
@@ -130,15 +129,15 @@
     (exp.patches || []).forEach(function (p) {
       if (!patchTargetsBlock(p, id)) return;
       if (p.operation === 'set' && typeof p.field === 'string') {
-        const seg = p.field.split('.'); let node = copy;
+        const seg = C.safePathSegments(p.field); if (!seg) return; let node = copy;
         for (let i = 0; i < seg.length - 1 && node; i++) node = node != null && typeof node === 'object' ? node[seg[i]] : undefined;
         if (node != null && typeof node === 'object') node[seg[seg.length - 1]] = clone(p.to);
       } else if (p.operation === 'remove' && typeof p.field === 'string') {
-        const seg = p.field.split('.'); let node = copy;
+        const seg = C.safePathSegments(p.field); if (!seg) return; let node = copy;
         for (let i = 0; i < seg.length - 1 && node; i++) node = node != null && typeof node === 'object' ? node[seg[i]] : undefined;
         if (node != null && typeof node === 'object') delete node[seg[seg.length - 1]];
       } else if (p.operation === 'add') {
-        const seg = (p.field || 'data.rows').split('.'); let node = copy;
+        const seg = C.safePathSegments(p.field || 'data.rows'); if (!seg) return; let node = copy;
         for (let i = 0; i < seg.length - 1 && node; i++) node = node != null && typeof node === 'object' ? node[seg[i]] : undefined;
         if (node != null && Array.isArray(node[seg[seg.length - 1]])) node[seg[seg.length - 1]].push(clone(p.to));
       }
@@ -329,5 +328,5 @@ const limit = Number.isInteger(opts.rows) && opts.rows >= 0 ? opts.rows : b.data
 serialize: serialize, normalize: normalize, touch: touch, stage: stage, commitStage: commitStage, transact: transact,
     getExperiment: getExperiment, getFile: getFile, getBlock: getBlock, selectBlocks: selectBlocks, readBlock: readBlock,
     getBlockSummary: getBlockSummary, getEffectiveBlock: getEffectiveBlock, applyPatch: applyPatch, addPatch: addPatch,
-    toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord, _uid: uid };
+    toWorkingJSON: toWorkingJSON, addFile: addFile, addBlock: addBlock, addRecord: addRecord };
 }());

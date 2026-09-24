@@ -272,11 +272,14 @@ function nomadMission(exp,settings,validation,plan){
     '<button type="button" class="button" id="exportNomadEntry" '+(blocked?'disabled':'')+'>Entry YAML</button></div></div>'+ 
     metadataNeeds(exp)+preparationProposal(exp)+issueList(validation)+
     '<details class="export-options-details"><summary>Package options <small>'+(settings.includeRaw?'RAW':'no RAW')+' · '+ 
-    (settings.includeDerived?'analysis tables':'no analysis tables')+'</small></summary><div class="export-option-grid">'+
+    (settings.includeDerived?'analysis tables':'no analysis tables')+' · '+ 
+    (settings.redactPersonal?'personal fields redacted':'personal fields included')+'</small></summary><div class="export-option-grid">'+
     '<label class="export-option"><input type="checkbox" id="nomadRaw" '+(settings.includeRaw?'checked':'')+'><span>'+ 
     '<strong>Include RAW source</strong><small>Include the original source ZIP.</small></span></label>'+ 
     '<label class="export-option"><input type="checkbox" id="nomadDerived" '+(settings.includeDerived?'checked':'')+'><span>'+ 
-    '<strong>Include analysis tables</strong><small>Include deterministic LabFlow tables.</small></span></label>'+ 
+    '<strong>Include analysis tables</strong><small>Include deterministic LabFlow tables.</small></span></label>'+
+    '<label class="export-option"><input type="checkbox" id="exportRedactPersonal" '+(settings.redactPersonal?'checked':'')+'><span>'+
+    '<strong>Privacy-safe projections</strong><small>Replace contact names, emails and free-text remarks with '+safe((LF.Redact&&LF.Redact.VALUE)||'[redacted]')+' in Ready-PV and data-management exports. Backups stay complete.</small></span></label>'+
     '<button class="button compact" type="button" id="saveExportOptions">Apply options</button></div></details>'+ 
     '<details class="export-mapping-details"><summary><span>Mapping details</span><small>'+mapped+' mapped · '+missing+
     ' missing</small></summary>'+mappingTable(plan)+'</details></div></section>';

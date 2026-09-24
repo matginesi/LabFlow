@@ -102,6 +102,8 @@ function providerPanel(s,key,remembered){
   const keyHelp=activeProvider.keyRequired?'Required for this service.':activeProvider.optionalKey?'Only needed when this service requires authentication.':'No API key is needed for this service.';
   const browserState=activeProvider.browserRuntime===true&&LF.BrowserLocal?LF.BrowserLocal.state():null;
   const browserPanel=browserLocalPanel(s,browserState,displayModel);
+  const externalProvider=!(activeProvider.browserRuntime===true||activeProvider.local===true);
+  const egressNotice=externalProvider?'<div class="notice info compact-notice"><strong>Data leaves this browser.</strong> '+C.escapeHtml(activeProvider.name||s.provider)+' receives the bounded research context and your question for each AI request. Browser Local models keep inference on this device.</div>':'';
   return '<section class="panel settings-primary-panel settings-provider-panel"><div class="panel-head"><div><h3 class="h2">Service &amp; model</h3><div class="meta">'+C.escapeHtml(activeProvider.name||s.provider)+'</div></div><div class="spacer"></div><span class="badge info" id="aiConnectivityBadge">Not checked</span></div>'
     +'<div class="panel-body stack">'
     +'<div class="form-grid settings-provider-grid">'
@@ -113,6 +115,7 @@ C.escapeHtml(key)+'" data-credential-origin="'+C.escapeHtml((function(){try{retu
       '</div><label class="switch-row compact-switch"><input type="checkbox" id="aiRememberKey" '+(remembered?'checked':'')+
       '> Remember this key on this browser</label><div class="help">Otherwise the key lasts only for this browser session. Changing the service host requires its own key.</div></div>'
     +'</div>'
+    +egressNotice
     +githubLocalHint
     +browserPanel
     +'<div class="settings-connection-summary" id="aiConnectivitySummary"><div><strong>Status</strong><span id="aiConnectivityText">Check the connection when you are ready.</span></div></div>'

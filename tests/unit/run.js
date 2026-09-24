@@ -48,10 +48,16 @@ global.LabFlow.Core = global.LabFlow.Core || {
       if (ArrayBuffer.isView(v)) return Array.from(v);
       return v;
     }, space == null ? 2 : space);
+  },
+  safePathSegments: function (value) {
+    const segments = String(value == null ? '' : value).split('.').filter(function (segment) { return segment !== ''; });
+    if (!segments.length) return null;
+    return segments.some(function (segment) { return /^(?:__proto__|prototype|constructor)$/.test(segment); }) ? null : segments;
   }
 };
 
 require(path.join(root, 'assets', 'js', 'data-structures.js'));
+require(path.join(root, 'assets', 'js', 'redact.js'));
 require(path.join(root, 'assets', 'js', 'experiment', 'domain-schema.js'));
 require(path.join(root, 'assets', 'js', 'experiment', 'action-data.js'));
 

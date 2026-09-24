@@ -10,6 +10,8 @@
     throw new Error('dataset-corrections.js requires Core, DomainSchema, DataModel, Parser, CanonicalStore, DataContracts, DerivedState and DesignModel.');
   }
   const Log = LF.Logger ? LF.Logger.scope('dataset-corrections') : null;
+  // Stored/AI proposals cross the restore boundary, so the commit path re-validates the correction kind itself.
+  const PATCH_TYPES=['sample_mapping','group_mapping','reference_classification','exclude_measurement','restore_measurement','metadata_value','field_mapping','unit_mapping','scale_factor','derived_metric_recovery'];
 
   function compact(v){return LF.CanonicalStore.compact(v,420);}
   function clip(v,n){const s=String(v==null?'':v);return s.length>(n||500)?s.slice(0,n||500)+'…':s;}
@@ -125,21 +127,23 @@ field:patchField(type,field||String(p.target||'')),from:before,to:p.after,source
   function applyProposal(exp,p,source){
     if(source==='ai'){const finding=activeAmbiguity(exp,p&&p.finding_id);if(!finding)throw new Error('This AI proposal no longer resolves an active ambiguity in the current revision. Re-run AI suggestions.');}
     const type=String(p.patch_type||''),raw=p.after,after=raw&&typeof raw==='object'&&!Array.isArray(raw)&&raw.value!=null?raw.value:raw,matches=proposalMeasurements(exp,p),field=String(p.field||'').trim();let changed=0;
+    if(!PATCH_TYPES.includes(type))throw new Error('Unsupported correction type: '+(type||'(missing)'));
+    const safeField=field?LF.Core.safePathSegments(field):null;
     if(type==='sample_mapping'){
       const canonical=LF.Parser.canonicalSample(after);if(!canonical)throw new Error('The proposed sample name is empty.');
       matches.forEach(function(m){const group=LF.Parser.groupFromSample(canonical),isRef=LF.Parser.isReference(canonical);if(m.sample===canonical&&m.group===group&&!!m.isRef===!!isRef)return;m.sample=canonical;m.group=group;m.isRef=isRef;changed++;});
     }else if(type==='group_mapping'){changed=applyGroupMapping(exp,matches,after).changed;}
     else if(type==='reference_classification'){const val=after===true||String(after).toLowerCase()==='true'||LF.Parser.isReference(String(after||''));matches.forEach(function(m){if(!!m.isRef===val)return;m.isRef=val;changed++;});}
     else if(type==='exclude_measurement'||type==='restore_measurement')matches.forEach(function(m){const value=type==='exclude_measurement';if(!!m.excluded===value)return;m.excluded=value;changed++;});
-    else if(type==='metadata_value'&&field)matches.forEach(function(m){m.meta=m.meta||{};if(JSON.stringify(m.meta[field])===JSON.stringify(after))return;m.meta[field]=after;changed++;});
-    else if(type==='field_mapping'){const key=String(p.target||field||'field');if(JSON.stringify(exp.interpretationOverrides.fields[key])!==JSON.stringify(after)){exp.interpretationOverrides.fields[key]=after;changed=1;}}
-    else if(type==='unit_mapping'){const key=String(field||p.target||'field');if(JSON.stringify(exp.interpretationOverrides.units[key])!==JSON.stringify(after)){exp.interpretationOverrides.units[key]=after;changed=1;}}
-    else if(type==='scale_factor'){const factor=Number(after),parts=field.split('.');
-if(Number.isFinite(factor)&&factor!==0){matches.forEach(function(m){
+    else if(type==='metadata_value'&&field&&safeField)matches.forEach(function(m){m.meta=m.meta||{};if(JSON.stringify(m.meta[field])===JSON.stringify(after))return;m.meta[field]=after;changed++;});
+    else if(type==='field_mapping'){const key=String(p.target||field||'field');if(LF.Core.safePathSegments(key)&&JSON.stringify(exp.interpretationOverrides.fields[key])!==JSON.stringify(after)){exp.interpretationOverrides.fields[key]=after;changed=1;}}
+    else if(type==='unit_mapping'){const key=String(field||p.target||'field');if(LF.Core.safePathSegments(key)&&JSON.stringify(exp.interpretationOverrides.units[key])!==JSON.stringify(after)){exp.interpretationOverrides.units[key]=after;changed=1;}}
+    else if(type==='scale_factor'){const factor=Number(after),parts=safeField||[];
+if(Number.isFinite(factor)&&factor!==0&&parts.length){matches.forEach(function(m){
       const dirs=parts.length===2?[parts[0]]:['fw','rv'],key=parts.length===2?parts[1]:parts[0];
       dirs.forEach(function(d){if(m[d]&&Number.isFinite(Number(m[d][key])))m[d][key]=Number(m[d][key])*factor;});changed++;});
-      if(field)exp.interpretationOverrides.scales[field]=factor;}}
-    else if(type==='derived_metric_recovery'){const val=Number(after),parts=field.split('.');if(Number.isFinite(val)&&field)matches.forEach(function(m){const d=parts.length===2?parts[0]:'fw',key=parts.length===2?parts[1]:parts[0];m[d]=m[d]||{};m[d][key]=val;changed++;});}
+      exp.interpretationOverrides.scales[field]=factor;}}
+    else if(type==='derived_metric_recovery'){const val=Number(after),parts=safeField||[];if(Number.isFinite(val)&&parts.length)matches.forEach(function(m){const d=parts.length===2?parts[0]:'fw',key=parts.length===2?parts[1]:parts[0];m[d]=m[d]||{};m[d][key]=val;changed++;});}
     if(!changed)throw new Error('No unambiguous target matched this proposal.');
     recordProposalPatches(exp,p,source,matches,field);
     if(source==='ai')markFindingResolved(exp,p,source);p.applied=true;p.decision='accepted';p.appliedAt=new Date().toISOString();return changed;

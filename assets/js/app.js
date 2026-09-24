@@ -124,14 +124,16 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
     if(provider.browserRuntime===true&&LF.BrowserLocal){
       const local=LF.BrowserLocal.state(),ready=local.status==='ready';
       const active=local.status==='downloading'||local.status==='loading'||local.status==='warming'||local.status==='checking';
+      // The sidebar names the selected model only: quantization and runtime backend stay in Settings diagnostics.
+      const modelLabel=String(local.modelName||displayModel||'').split('·')[0].trim()||'Local model';
       host.classList.toggle('available',ready);
       host.classList.toggle('unavailable',!ready&&!active);
       if(active){
         const pct=Math.max(0,Math.min(100,Math.round((Number(local.progress)||0)*100)));
         detail.textContent=(local.stage||'Preparing local model')+(pct?' · '+pct+'%':'');
-      }else if(ready)detail.textContent=(local.modelName||displayModel)+' · '+(local.backend||'ready');
+      }else if(ready)detail.textContent=modelLabel;
       else detail.textContent=local.stage||'Local model not ready';
-      host.title=ready?'Browser Local ready: '+(local.modelName||displayModel)+' · '+(local.backend||''):
+      host.title=ready?'Browser Local ready: '+modelLabel:
         (local.error||local.note||'Browser Local is preparing the selected GGUF model.');
       return;
     }
@@ -410,7 +412,15 @@ LF.UI.activityStart({title:'Export LabFlow ZIP',kind:'ZIP',stage:'Building porta
     Bytes:blob.size},holdMs:0});LF.UI.message('LabFlow ZIP exported.','success');
     }catch(err){Log.error('export.labflow-failed',{error:err});LF.UI.activityError(err);
     LF.UI.message(err.message||String(err),'error');}}
-  function saveExportOptions(){LF.Storage.saveExportSettings(Object.assign({},LF.Storage.getExportSettings(),{includeRaw:document.getElementById('nomadRaw').checked,includeDerived:document.getElementById('nomadDerived').checked}));LF.UI.message('Export options saved.','success');}
+  function saveExportOptions(){
+    const current=LF.Storage.getExportSettings(),redact=document.getElementById('exportRedactPersonal');
+    LF.Storage.saveExportSettings(Object.assign({},current,{
+      includeRaw:document.getElementById('nomadRaw').checked,
+      includeDerived:document.getElementById('nomadDerived').checked,
+      redactPersonal:redact?redact.checked:current.redactPersonal
+    }));
+    LF.UI.message('Export options saved.','success');
+  }
   function projectionEntries(kind){const out={};document.querySelectorAll('[data-projection-kind="'+kind+'"] [data-projection-input]').forEach(function(node){out[node.dataset.projectionInput]=node.value;});return out;}
   function saveProjectionOverrides(kind){if(!hasExperiment()||!LF.ExportProjections)return;LF.ExportProjections.saveFieldEdits(kind,S.state.experiment,projectionEntries(kind));S.state.ui.exportProjectionEdit='';render();LF.UI.message((kind==='nomad'?'NOMAD':'Ready-PV')+' export overrides saved. Canonical LabFlow data was not changed.','success');}
   function downloadProjection(kind,format){if(!hasExperiment()||!LF.ExportProjections)return;const text=LF.ExportProjections.serialize(kind,S.state.experiment,format),blob=C.textBlob(text,format==='json'?'application/json;charset=utf-8':format==='yaml'?'text/yaml;charset=utf-8':'text/plain;charset=utf-8');C.downloadBlob(blob,LF.ExportProjections.filename(kind,S.state.experiment,format));}

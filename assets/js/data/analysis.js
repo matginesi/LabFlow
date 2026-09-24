@@ -20,7 +20,6 @@
   function samplesOf(exp) { return exp && typeof exp.selectSamples === 'function' ? exp.selectSamples() : listOf(exp, 'samples'); }
   function runsOf(exp) { return exp && typeof exp.selectRuns === 'function' ? exp.selectRuns() : listOf(exp, 'runs'); }
   function findingsOf(exp) { return listOf(exp, 'findings'); }
-  function manifestOf(exp) { return listOf(exp, 'manifest'); }
   function analysisOf(exp) {
     return (exp && exp.analysis) || { summary: {}, bestBySample: [], bestByExperiment: [], topNonRef: [], topRef: [] };
   }
@@ -219,5 +218,5 @@ m.sequence==null?'':m.sequence,m.group,m.isRef,m.qualityStatus,!!m.excluded,m.ra
     return h.join(',') + '\n' + rows.join('\n');
   }
 
-  LF.Analysis = { analyze, deriveMeasurement, hysteresis, toCSV, rules, measurementsOf, experimentsOf, samplesOf, runsOf, findingsOf, manifestOf, analysisOf, settingsOf, designOf };
+  LF.Analysis = { analyze, deriveMeasurement, hysteresis, toCSV, rules, measurementsOf, experimentsOf, samplesOf, runsOf, findingsOf, analysisOf, settingsOf, designOf };
 }());

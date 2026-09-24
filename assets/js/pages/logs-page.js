@@ -36,7 +36,7 @@
     if (active.scope !== 'all' && entry.scope !== active.scope) return false;
     if (active.category !== 'all' && categoryOf(entry) !== active.category) return false;
     if (!active.query) return true;
-    const haystack = [entry.ts, entry.level, entry.scope, entry.event, entry.route, entry.experimentId].concat(boundedSearchText(entry.data,12000)).join(' ').toLowerCase();
+    const haystack = [entry.ts, entry.level, entry.scope, entry.event, entry.route, entry.workspaceId, entry.experimentId, entry.processId].concat(boundedSearchText(entry.data,12000)).join(' ').toLowerCase();
     return haystack.includes(active.query.toLowerCase());
   }
 
@@ -79,7 +79,7 @@ const full=pretty(valueToPrint),limit=Math.max(600,Number(maxChars)||PAYLOAD_PRE
     const status=data.status || response.status;
     return '<div class="log-detail-body">'+
       '<dl class="log-facts">'+fact('Sequence','#'+value(entry.seq))+fact('Timestamp',entry.ts)+fact('Session',
-entry.sessionId)+fact('Route',entry.route)+fact('Experiment',entry.experimentId)+fact('Duration',
+entry.sessionId)+fact('Route',entry.route)+fact('Workspace',entry.workspaceId)+fact('Experiment',entry.experimentId)+fact('Process',entry.processId)+fact('Duration',
         data.elapsedMs != null ? data.elapsedMs+' ms' : '')+fact('HTTP',status ? status+' '+value(response.statusText,
         '') : '')+fact('Request ID',data.requestId || response.requestId || data.requestLogId)+'</dl>'+
       (error.message || data.message || data.providerMessage ? '<div class="log-error-message"><strong>Message</strong><span>'+C.escapeHtml(value(error.message || data.message || data.providerMessage))+'</span></div>' : '')+

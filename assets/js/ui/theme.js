@@ -61,5 +61,5 @@
   });
 
 
-  LF.Theme = {apply:apply, current:current, toggle:toggle, syncControls:syncControls, themes:THEMES.slice()};
+  LF.Theme = {apply:apply, current:current, toggle:toggle, syncControls:syncControls};
 }());

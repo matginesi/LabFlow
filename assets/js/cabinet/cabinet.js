@@ -581,7 +581,7 @@
       if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Cabinet item ' + (index + 1) + ' must be an object.');
       const id = clean(item.id);
       if (id) { if (seen.has(id)) throw new Error('Cabinet JSON contains duplicate id "' + id + '".'); seen.add(id); }
-      if (!KINDS[item.kind]) throw new Error('Cabinet item ' + (index + 1) + ' has an unknown kind.');
+      if (!Object.prototype.hasOwnProperty.call(KINDS, item.kind)) throw new Error('Cabinet item ' + (index + 1) + ' has an unknown kind.');
       if (clean(item.name).length > LIMITS.maxName) throw new Error('Cabinet item ' + (index + 1) + ' name is too long.');
       if (clean(item.notes).length > LIMITS.maxNotes) throw new Error('Cabinet item ' + (index + 1) + ' notes are too long.');
       const tags = arr(item.tags);
@@ -659,7 +659,6 @@
       const def = KINDS[kind];
       return def ? def.fields.map(function (name) { return Object.assign({ name: name }, clone(FIELDS[name] || { label: name, type: 'text' })); }) : [];
     },
-    summaryFields: function (kind) { return KINDS[kind] ? KINDS[kind].summary.slice() : []; },
     all: all, list: list, search: search, get: get, create: create, update: update, remove: remove,
     duplicate: duplicate, validate: validate, normalize: normalize, snapshot: snapshot,
     applyToDesign: applyToDesign, saveDesignSolution: saveDesignSolution, saveDesignStack: saveDesignStack,

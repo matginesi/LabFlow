@@ -8,7 +8,8 @@
   function value(id){const el=document.getElementById(id);return el?el.value:null;}
   function selectedValues(id){const el=document.getElementById(id);return el?Array.from(el.selectedOptions||[]).map(function(option){return option.value;}).filter(Boolean):[];}
   function splitList(text){return String(text||'').split(/[\n,;]/).map(function(item){return item.trim();}).filter(Boolean);}
-  function downloadJson(name,data){const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},500);}
+  // Shareable data-management profile: personal contact fields follow the Export privacy option.
+  function dataManagementProfile(){const summary=LF.Workspace.readyPvSummary(),settings=LF.Storage.getExportSettings();return settings.redactPersonal&&LF.Redact?LF.Redact.sanitize(summary,{personal:true,freeText:true}):summary;}
   function nomadProfile(){const webUrl=value('nomadWebUrl').trim(),apiEndpoint=value('nomadApiEndpoint').trim(),
 web=new URL(webUrl),api=new URL(apiEndpoint),local=u=>['localhost','127.0.0.1','::1','[::1]'].includes(u.hostname);
     if(!['http:','https:'].includes(web.protocol)||!['http:',
@@ -44,7 +45,7 @@ web=new URL(webUrl),api=new URL(apiEndpoint),local=u=>['localhost','127.0.0.1','
       return true;
     }
     if(e.target.closest('#workspaceExportProfile')){
-      try{downloadJson('labflow-data-management-profile.json',LF.Workspace.readyPvSummary());LF.UI.message('Data-management profile exported.','success');}
+      try{LF.Core.downloadBlob(LF.Core.textBlob(JSON.stringify(dataManagementProfile(),null,2),'application/json;charset=utf-8'),'labflow-data-management-profile.json');LF.UI.message('Data-management profile exported.','success');}
       catch(err){LF.UI.message('Profile export failed: '+(err.message||String(err)),'error');}
       return true;
     }
@@ -88,8 +89,7 @@ if(host)host.innerHTML='<span>Storage use</span><strong>Checking…</strong><sma
       0)+' RAW archive'+(Number(info.rawItems||
       0)===1?'':'s')+'. Browser origin '+origin+' / quota '+quota+(info.persistent===null?'':(' · persistent storage '+
       (info.persistent?'yes':'no')))+'.</small>';
-      }catch(err){if(host)host.innerHTML='<span>Storage use</span><strong>Unavailable</strong><small>'+String(err&&
-      err.message||err)+'</small>';}return true;}
+      }catch(err){if(host)host.innerHTML='<span>Storage use</span><strong>Unavailable</strong><small>'+LF.Core.escapeHtml(String(err&&err.message||err))+'</small>';}return true;}
     if(e.target.closest('#clearLocalLabFlowData')){
 if(!await LF.UI.confirmAction('Remove the current experiment, saved preferences, AI/NOMAD credentials, custom Knowledge Base entries and AI tool customizations from this browser?',
       {title:'Clear LabFlow data on this browser',confirmLabel:'Clear local data',danger:true}))return true;
@@ -226,5 +226,5 @@ return true;}if(e.target.id==='aiKey'){LF.AISettings.syncModelControls&&LF.AISet
     handleInput._timer=setTimeout(function(){ctx.render();const search=document.getElementById('logSearch');
     if(search){search.focus();search.setSelectionRange(search.value.length,search.value.length);}},180);return true;
     }return false;}
-  LF.SettingsController={handleClick,handleChange,handleInput,validateNomadProfile:nomadProfile};
+  LF.SettingsController={handleClick,handleChange,handleInput};
 })();

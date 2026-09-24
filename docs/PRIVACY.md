@@ -23,6 +23,8 @@ Resetting the scientific session does not silently erase unrelated provider cred
 
 External model inference requests occur only through the selected provider capability. For Browser Local, inference stays in the page, but first-use runtime/model preparation may fetch the pinned wllama runtime from jsDelivr and the selected GGUF from its configured model URL. External providers are contacted directly; there is no hidden relay.
 
+Settings → AI connection states which side receives the bounded research context: Browser Local keeps inference on this device, while an external provider receives the context and the question for each request. The Action Totem repeats the exact request payload per operation under **Data sent to provider**, with credentials masked.
+
 The current NOMAD direct-upload control is a non-networking stub. Package generation remains local.
 
 ## Context minimization
@@ -33,7 +35,13 @@ Cabinet and KB context remain labelled reference data so a model cannot legitima
 
 ## Diagnostics
 
-Credential-bearing headers/fields and common secret names are redacted before events enter the logger. Diagnostics may contain endpoint host/path, HTTP status, provider error codes/messages, request timing and bounded sanitized response details.
+Credential-bearing headers/fields and common secret names are redacted before events enter the logger. Direct personal identifiers (contact names, emails, phone-like fields) and credential-shaped values are removed by the shared `LF.Redact` sanitizer as well.
+
+The in-page buffer keeps the locally inspectable diagnostic payload. Exports are stricter: the JSONL log export and the diagnostic bundle are privacy-safe by default and drop prompts, provider responses and free-text fields, keeping endpoint host/path, HTTP status, provider error codes, timing, scope and correlation identifiers.
+
+## Exports
+
+Backups (LabFlow ZIP, Cabinet JSON, custom Knowledge Base JSONL) preserve original content so a workspace can be restored; credentials never enter them because they live outside scientific payloads. Shareable projections can enable **Privacy-safe projections** in Export → Package options, which replaces declared personal contact fields, contact notes and free-text remarks with `[redacted]` while preserving measurements, materials, process parameters and provenance.
 
 A new network integration must document what leaves the browser, what credentials it uses, and how a user can tell that a request will occur.
 

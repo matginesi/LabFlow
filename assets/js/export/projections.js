@@ -37,8 +37,17 @@ function roleContact(w,role){return arr(w.contacts).find(function(c){return c.ro
 function measurementQuantities(exp,role){const names=[];arr(exp&&exp.measurements).forEach(function(m){arr(role==='controlled_variable'?m.parameters:m.observables).forEach(function(q){if(q&&(q.name||q.symbol||q.id))names.push([q.name||q.symbol||q.id,q.unit].filter(Boolean).join(' [' )+(q.unit?']':'') );});});return unique(names);}
 function extensionFormats(exp){return unique(arr(exp&&exp.files).map(function(f){const p=clean(f.path||f.name);const m=p.match(/\.([A-Za-z0-9]{1,12})$/);return m?'.'+m[1].toLowerCase():'';}));}
 function formatDocs(items,ids){const docs=[];arr(ids).forEach(function(id){const x=cabinetById(items,id);if(x&&x.kind==='file_format')arr(x.documentationRefs).forEach(function(v){docs.push(v);});});return unique(docs);}
-function field(id,label,value,source,opts){opts=opts||{};return{id:id,label:label,value:value,baseValue:clone(value),source:source||'DERIVED',required:!!opts.required,recommended:!!opts.recommended,editable:opts.editable!==false,note:opts.note||'',valueType:Array.isArray(value)?'array':typeof value};}
+function field(id,label,value,source,opts){opts=opts||{};return{id:id,label:label,value:value,baseValue:clone(value),source:source||'DERIVED',required:!!opts.required,recommended:!!opts.recommended,editable:opts.editable!==false,note:opts.note||'',personal:!!opts.personal,freeText:!!opts.freeText,valueType:Array.isArray(value)?'array':typeof value};}
 function applyFieldOverrides(fields,kind){const map=overrides(kind);fields.forEach(function(f){if(Object.prototype.hasOwnProperty.call(map,f.id)){f.value=clone(map[f.id]);f.source='OVERRIDE';f.overridden=true;}});return fields;}
+// Shareable projections drop declared personal/free-text fields only when the researcher opts in.
+function redactPersonal(fields){
+  const enabled=settings().redactPersonal===true,placeholder=(LF.Redact&&LF.Redact.VALUE)||'[redacted]';
+  if(!enabled)return fields;
+  fields.forEach(function(f){
+    if(f.personal||f.freeText){f.value=placeholder;f.redacted=true;}
+  });
+  return fields;
+}
 function readiness(fields){
   let possible=0,earned=0,requiredMissing=0,recommendedMissing=0;
   fields.forEach(function(f){
@@ -106,10 +115,10 @@ function readyPv(exp){const w=currentWorkspace(),p=currentProcess(exp,w),items=c
   const storages=storageNames(w,p&&p.storageProfileIds||[]);
   const rows=[
     ['contact.institution','Institution',w.institution,'WORKSPACE',{required:true}],
-    ['contact.name','Contact person name',responsible.name,'WORKSPACE',{required:true}],
-    ['contact.email','Contact person email',responsible.email,'WORKSPACE',{required:true}],
-    ['contact.parser','Parser contact person & email',[parser.name,parser.email].filter(Boolean).join(' · '),'WORKSPACE',{}],
-    ['contact.plugin','Plugin development contributor',[contributor.name,contributor.email].filter(Boolean).join(' · '),'WORKSPACE',{}],
+    ['contact.name','Contact person name',responsible.name,'WORKSPACE',{required:true,personal:true}],
+    ['contact.email','Contact person email',responsible.email,'WORKSPACE',{required:true,personal:true}],
+    ['contact.parser','Parser contact person & email',[parser.name,parser.email].filter(Boolean).join(' · '),'WORKSPACE',{personal:true}],
+    ['contact.plugin','Plugin development contributor',[contributor.name,contributor.email].filter(Boolean).join(' · '),'WORKSPACE',{personal:true}],
     ['measured.description','General measurement / characterization / simulation description',p&&p.description||[p&&p.name,unique(arr(exp&&exp.measurements).map(function(m){return m.technique;})).join(', ')].filter(Boolean).join(' · '),'PROCESS',{required:true}],
     ['measured.variables','Measurement variables',vars,p&&p.variables&&p.variables.length?'PROCESS':'DERIVED',{required:true}],
     ['measured.observables','Measurement observables',obs,p&&p.observables&&p.observables.length?'PROCESS':'DERIVED',{required:true}],
@@ -125,7 +134,7 @@ function readyPv(exp){const w=currentWorkspace(),p=currentProcess(exp,w),items=c
     ['storage.normal','Where data is stored normally',storages,'WORKSPACE',{required:true}],
     ['metadata.location','Where sample metadata is recorded',p&&p.metadataPolicy&&p.metadataPolicy.metadataLocation||'','PROCESS',{recommended:true}],
     ['metadata.linkage','How data is linked to samples',[linkage.method,linkage.rule].filter(Boolean).join(' · '),'PROCESS',{required:true}],
-    ['remarks.additional','Additional remarks',[p&&p.notes,w.description].filter(Boolean).join('\n'),'WORKSPACE',{}]
+    ['remarks.additional','Additional remarks',[p&&p.notes,w.description].filter(Boolean).join('\n'),'WORKSPACE',{freeText:true}]
   ].map(function(x){return field(x[0],x[1],x[2],x[3],x[4]);});
   applyFieldOverrides(rows,'readypv');
   const sectionOrder=[['CONTACT','contact.'],['MEASURED QUANTITIES','measured.'],['SAMPLES & SETUP','samples.'],['INSTRUMENTS & FILE FORMATS','instruments.'],['STORAGE','storage.'],['METADATA & DOCUMENTATION','metadata.'],['ADDITIONAL REMARKS','remarks.']];
@@ -135,7 +144,8 @@ function projection(kind,exp){return kind==='nomad'?nomad(exp):readyPv(exp);}
 function saveFieldEdits(kind,exp,entries){const p=projection(kind,exp),byId={};p.fields.forEach(function(f){byId[f.id]=f;});const map=overrides(kind);Object.keys(entries||{}).forEach(function(id){const f=byId[id];if(!f||f.editable===false)return;const parsed=parseLike(entries[id],f.baseValue);if(same(parsed,f.baseValue))delete map[id];else map[id]=parsed;});return saveOverrides(kind,map);}
 function reset(kind){return saveOverrides(kind,{});}
 function projectionObject(kind,exp){
-  const p=projection(kind,exp),out={
+  const p=projection(kind,exp);redactPersonal(p.fields);
+  const out={
     format:kind==='nomad'?'labflow-nomad-projection':'labflow-readypv-profile',
     formatVersion:1,generatedAt:new Date().toISOString(),experimentId:exp&&exp.id||'',
     readiness:p.readiness,sections:{}
@@ -147,7 +157,7 @@ function projectionObject(kind,exp){
   });
   return out;
 }
-function readyPvText(exp){const p=readyPv(exp),lines=[];p.sections.forEach(function(sec){lines.push(sec.name);sec.fields.forEach(function(f){lines.push(f.label+':');lines.push(display(f.value)||'');lines.push('');});});return lines.join('\n').trim()+'\n';}
+function readyPvText(exp){const p=readyPv(exp);redactPersonal(p.fields);const lines=[];p.sections.forEach(function(sec){lines.push(sec.name);sec.fields.forEach(function(f){lines.push(f.label+':');lines.push(display(f.value)||'');lines.push('');});});return lines.join('\n').trim()+'\n';}
 function serialize(kind,exp,format){format=String(format||'json');if(kind==='nomad'&&format==='yaml')return LF.NomadExport.dataYaml(exp,settings(),LF.NomadExport.ensureMapping(exp));if(kind==='readypv'&&format==='text')return readyPvText(exp);return JSON.stringify(projectionObject(kind,exp),null,2)+'\n';}
 function filename(kind,exp,format){const base=C.safeName(exp&&exp.meta&&exp.meta.name||'experiment');if(kind==='nomad')return base+(format==='yaml'?'_nomad.archive.yaml':'_nomad_projection.json');if(format==='text')return base+'_readypv_answers.txt';return base+'_readypv_profile.json';}
 function preparationFields(kind,exp){

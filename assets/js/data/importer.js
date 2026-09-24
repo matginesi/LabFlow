@@ -621,5 +621,5 @@ rawSample: parsed.sample, sample: sample, sampleAliases: Array.from(new Set([ent
     return exp;
   }
 
-  LF.Importer = { parseDataset: parseDataset, importLimits: importLimits, zipEntrySizes: function(file){return ZipMetadataAdapter.sizes(file);} };
+  LF.Importer = { parseDataset: parseDataset, importLimits: importLimits };
 }());

@@ -327,12 +327,14 @@ return {format:'labflow-nomad-staging',formatVersion:2,generatedAt:new Date().to
     zip.file(SCHEMA_FILE,schemaYaml());
     zip.file(ENTRY_FILE,dataYaml(exp,settings,plan));
     const working = (LF.DataModel && LF.DataModel.toWorkingJSON) ? LF.DataModel.toWorkingJSON(exp,{rows:null}) : exp;
-    zip.file('metadata/labflow_experiment.json',C.safeJson(working,2));
-    zip.file('metadata/patches.json',C.safeJson({patches:exp.patches||[]},2));
+    const privacy = settings.redactPersonal && LF.Redact ? {personal:true,freeText:true} : null;
+    const shareable = function(value){return privacy?LF.Redact.sanitize(value,privacy):value;};
+    zip.file('metadata/labflow_experiment.json',C.safeJson(shareable(working),2));
+    zip.file('metadata/patches.json',C.safeJson(shareable({patches:exp.patches||[]}),2));
     zip.file('metadata/provenance.json',C.safeJson(provenanceSnapshot(exp),2));
-    if(LF.Workspace&&LF.Workspace.snapshot)zip.file('metadata/workspace.json',C.safeJson(LF.Workspace.snapshot({includeContacts:false}),2));
+    if(LF.Workspace&&LF.Workspace.snapshot)zip.file('metadata/workspace.json',C.safeJson(shareable(LF.Workspace.snapshot({includeContacts:false})),2));
     if(LF.Export&&LF.Export.canonicalSnapshot)zip.file('metadata/canonical.json',C.safeJson(LF.Export.canonicalSnapshot(exp),2));
-    if(plan)zip.file('metadata/mapping_plan.json',C.safeJson(plan,2));
+    if(plan)zip.file('metadata/mapping_plan.json',C.safeJson(shareable(plan),2));
     if(settings.includeDerived){zip.file('derived/measurements.csv',LF.Analysis.toCSV(exp,{excludeExcluded:true}));zip.file('derived/analysis.json',C.safeJson({analysis:A.analysisOf(exp),analysisSummary:LF.AnalysisSummary&&LF.AnalysisSummary.ensure?LF.AnalysisSummary.ensure(exp):null},2));}
     if(settings.includeRaw&&rawArchive)zip.file('raw/source.zip',rawArchive);
     const packageFiles=Object.keys(zip.files).concat(['manifest.json']);

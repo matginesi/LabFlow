@@ -369,9 +369,10 @@
     const payload = clone(value && typeof value === 'object' && !Array.isArray(value) ? value : {}) || {};
     payload.updatedAt = new Date().toISOString();
     const ok = write(LOCAL_KEYS.WORKSPACE_PROFILE, payload);
+    // Institution stays out of diagnostics: it identifies the researcher's organization without helping support.
     if (ok) Log.info('workspace-profile.saved', {
       id: payload.id || '',
-      institution: payload.institution || '',
+      hasInstitution: !!payload.institution,
       processes: Array.isArray(payload.processes) ? payload.processes.length : 0
     });
     return ok;
@@ -426,6 +427,8 @@
     return {
       includeRaw: raw.includeRaw !== false,
       includeDerived: raw.includeDerived !== false,
+      // Shareable projections replace personal contact fields on request; backups stay complete.
+      redactPersonal: raw.redactPersonal === true,
       projectionOverrides: {
         nomad: overrides.nomad && typeof overrides.nomad === 'object' ? clone(overrides.nomad) : {},
         readypv: overrides.readypv && typeof overrides.readypv === 'object' ? clone(overrides.readypv) : {}

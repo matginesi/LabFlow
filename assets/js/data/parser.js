@@ -138,7 +138,6 @@
   }
 
   function groupFromSample(sample) { return sampleHierarchy(sample).experiment; }
-  function experimentFromSample(sample) { return sampleHierarchy(sample).experiment; }
 
   function parseSummary(text, direction) {
     const cfg = rules().summary_format || {};
@@ -308,5 +307,5 @@
   }
 
 
-  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, canonicalFileName, canonicalFilePath, sampleFromFilename, sampleHierarchy, experimentFromSample, groupFromSample, isReference, rules, basename, classify, formatEvidence };
+  LF.Parser = { parseSummary, parseJVFile, parseAuxiliaryFile, canonicalSample, canonicalFileName, canonicalFilePath, sampleFromFilename, sampleHierarchy, groupFromSample, isReference, rules, basename, classify, formatEvidence };
 }());

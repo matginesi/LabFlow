@@ -6,8 +6,10 @@
   'use strict';
 
   const LF = window.LabFlow = window.LabFlow || {};
+  if (!LF.Redact) throw new Error('LabFlow.Redact must be loaded before logger.js.');
   const LEVELS = { trace: 10, debug: 20, info: 30, warn: 40, error: 50, off: 99 };
   const MAX_LOG_STRING_CHARS = 60000;
+  const LOG_REDACTION = { personal:true, freeText:false, maxChars:MAX_LOG_STRING_CHARS, maxDepth:10, maxKeys:300, maxArray:300 };
   const DEFAULTS = {
     enabled: true,
     level: 'info',
@@ -18,7 +20,6 @@
     network: true
   };
   const buffer = [];
-  const onceKeys = new Set();
   const sessionId = 'session_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
   const sessionStartedAt = nowIso();
   const sessionStartedPerf = perfNow();
@@ -58,18 +59,8 @@
     return (LEVELS[level] || LEVELS.info) >= (LEVELS[settings.level] || LEVELS.debug);
   }
 
-  function isSecretKey(key) {
-    return /api.?key|authorization|password|passwd|secret|access.?token|refresh.?token|bearer|credential|cookie|session.?token/i.test(String(key || ''));
-  }
-
   function sanitizeString(value, maxChars) {
-    const cleaned=String(value)
-      .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+/gi, 'Bearer [redacted]')
-      .replace(/([?&](?:api_?key|access_?token|token|key)=)[^&#\s]+/gi, '$1[redacted]');
-    const limit=Math.max(1200,Number(maxChars)||MAX_LOG_STRING_CHARS);
-    if(cleaned.length<=limit)return cleaned;
-    const head=Math.floor(limit*.78),tail=Math.floor(limit*.18);
-    return cleaned.slice(0,head)+'\n… [LabFlow log payload bounded · '+cleaned.length+' chars total] …\n'+cleaned.slice(-tail);
+    return LF.Redact.redactText(value, { maxChars: Math.max(1200, Number(maxChars) || MAX_LOG_STRING_CHARS) });
   }
 
   function consoleScalar(value) {
@@ -110,53 +101,25 @@
     return parts.join(' · ');
   }
 
-  function normalizeError(value, depth, seen) {
-    const out = {
-      name:value.name || 'Error', message:sanitizeString(value.message || String(value)),
-      stack:sanitizeString(value.stack || '')
-    };
-    ['status','statusText','code','providerCode','providerMessage','requestId','requestLogId','providerId','phase','url','transport','directBrowser','isNetwork','isContract','cancelled','timedOut','truncated','finishReason','timeoutMs','elapsedMs','usage'].forEach(function (key) {
-      if (value[key] != null && value[key] !== '') out[key] = sanitize(value[key], depth + 1, seen);
-    });
-    if (value.providerResponse) out.providerResponse = sanitizeString(value.providerResponse);
-    if (value.rawProviderResponse) {
-      const raw=String(value.rawProviderResponse),provider=String(value.providerResponse||'');
-      out.rawProviderResponse = raw===provider?'[same as providerResponse]':sanitizeString(raw);
-    }
-    if (value.cause) out.cause = sanitize(value.cause, depth + 1, seen);
-    return out;
+  function sanitize(value) {
+    return LF.Redact.sanitize(value, LOG_REDACTION);
   }
 
-  function sanitize(value, depth, seen) {
-    depth = depth == null ? 0 : depth;
-    seen = seen || new WeakSet();
-    if (depth > 10) return '[max-depth]';
-    if (value == null || typeof value === 'number' || typeof value === 'boolean') return value;
-    if (typeof value === 'string') return sanitizeString(value);
-    if (value instanceof Error) return normalizeError(value, depth, seen);
-    if (value instanceof Blob) return { type:'Blob', mime:value.type || '', size:value.size };
-    if (value instanceof File) return { type:'File', name:value.name, mime:value.type || '', size:value.size, lastModified:value.lastModified };
-    if (value instanceof ArrayBuffer) return { type:'ArrayBuffer', bytes:value.byteLength };
-    if (ArrayBuffer.isView(value)) return { type:value.constructor && value.constructor.name || 'TypedArray', length:value.length, bytes:value.byteLength };
-    if (typeof value !== 'object') return String(value);
-    if (seen.has(value)) return '[circular]';
-    seen.add(value);
-    if (Array.isArray(value)) {
-      const max = 300;
-      const arr = value.slice(0, max).map(function (x) { return sanitize(x, depth + 1, seen); });
-      if (value.length > max) arr.push('[+' + (value.length - max) + ' more]');
-      return arr;
-    }
-    const out = {};
-    Object.keys(value).slice(0, 300).forEach(function (key) {
-      if (isSecretKey(key)) out[key] = '[redacted]';
-      else out[key] = sanitize(value[key], depth + 1, seen);
-    });
-    return out;
+  function contextIds() {
+    const state = LF.State && LF.State.state ? LF.State.state : null;
+    const experiment = state && state.experiment ? state.experiment : null;
+    const meta = experiment && experiment.meta ? experiment.meta : {};
+    return {
+      route: state && state.ui ? state.ui.route || '' : '',
+      workspaceId: state && state.workspace ? state.workspace.id || '' : '',
+      experimentId: meta.id || '',
+      processId: meta.processId || ''
+    };
   }
 
   function write(level, scopeName, event, data) {
     if (!shouldLog(level)) return;
+    const context = contextIds();
     const entry = {
       id: sessionId + '_' + (++sequence),
       seq: sequence,
@@ -166,8 +129,10 @@
       level: level.toUpperCase(),
       scope: scopeName || 'app',
       event: event || '',
-      route: LF.State && LF.State.state ? LF.State.state.ui.route || '' : '',
-      experimentId: LF.State && LF.State.state && LF.State.state.experiment && LF.State.state.experiment.meta ? LF.State.state.experiment.meta.id || '' : '',
+      route: context.route,
+      workspaceId: context.workspaceId,
+      experimentId: context.experimentId,
+      processId: context.processId,
       data: sanitize(data)
     };
     if (settings.buffer) {
@@ -225,27 +190,29 @@
     };
   }
 
-  function once(key, level, scopeName, event, data) {
-    if (onceKeys.has(key)) return;
-    onceKeys.add(key);
-    write(level || 'info', scopeName, event, data);
-  }
-
   function entries() { return buffer.slice(); }
   function clear() {
     buffer.splice(0, buffer.length);
     info('logger', 'buffer.cleared', { maxEntries:settings.maxEntries });
   }
 
+  // Diagnostics leave the browser, so exported bundles drop prompts, responses and free text by default.
+  function diagnosticEntries() {
+    return buffer.map(function (entry) {
+      return LF.Redact.sanitize(entry, { personal:true, freeText:true, maxChars:MAX_LOG_STRING_CHARS });
+    });
+  }
+
   function download() {
-    const lines = buffer.map(function (e) { return JSON.stringify(e); }).join('\n') + '\n';
+    const exported = diagnosticEntries();
+    const lines = exported.map(function (e) { return JSON.stringify(e); }).join('\n') + '\n';
     const blob = new Blob([lines], { type:'application/x-ndjson;charset=utf-8' });
     const name = 'labflow-debug-' + new Date().toISOString().replace(/[:.]/g, '-') + '.jsonl';
     if (LF.Core && LF.Core.downloadBlob) LF.Core.downloadBlob(blob, name);
     else {
       const u = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(u);},1000);
     }
-    info('logger', 'buffer.downloaded', { entries:buffer.length, filename:name });
+    info('logger', 'buffer.downloaded', { entries:buffer.length, filename:name, redacted:true });
   }
 
   function environmentSnapshot() {
@@ -260,12 +227,14 @@
   }
 
   function downloadDiagnostics() {
-    const payload={format:'labflow-diagnostics', environment:environmentSnapshot(), entries:buffer.slice()};
+    const payload={format:'labflow-diagnostics', generatedAt:nowIso(), redaction:'privacy-safe',
+      environment:LF.Redact.sanitize(environmentSnapshot(),{personal:true,freeText:true}),
+      entries:diagnosticEntries()};
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'});
     const name='labflow-diagnostics-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
     if (LF.Core && LF.Core.downloadBlob) LF.Core.downloadBlob(blob,name);
     else { const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1000); }
-    info('logger','diagnostics.downloaded',{entries:buffer.length,filename:name});
+    info('logger','diagnostics.downloaded',{entries:buffer.length,filename:name,redacted:true});
   }
 
   function installErrorHooks() {
@@ -323,7 +292,7 @@
   LF.Logger = {
     LEVELS:LEVELS,
     trace:trace, debug:debug, info:info, warn:warn, error:error,
-    scope:scope, timer:timer, once:once,
+    scope:scope, timer:timer,
     sanitize:sanitize, entries:entries, clear:clear, download:download, downloadDiagnostics:downloadDiagnostics,
     environmentSnapshot:environmentSnapshot,
     getSettings:getSettings, saveSettings:saveSettings,

@@ -92,7 +92,7 @@
       .replace(/~~([^~]+)~~/g,'<del>$1</del>')
       .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>')
       .replace(/(^|[^_])_([^_\n]+)_(?!_)/g,'$1<em>$2</em>');
-    protectedHtml.forEach(function(html,i){out=out.replace('@@LFPROTECTED'+i+'@@',html);});
+    protectedHtml.forEach(function(html,i){out=out.replace('@@LFPROTECTED'+i+'@@',function(){return html;});});
     return out;
   }
 
@@ -153,7 +153,18 @@
 
   function csvEscape(value) {
     const s = String(value == null ? '' : value);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    // Untrusted archive labels can start with a spreadsheet formula trigger; numeric values must stay numeric.
+    const numeric = s !== '' && Number.isFinite(Number(s));
+    const guarded = /^[=@\t\r]/.test(s) || (!numeric && /^[+\-]/.test(s)) ? "'" + s : s;
+    return /[",\n]/.test(guarded) ? '"' + guarded.replace(/"/g, '""') + '"' : guarded;
+  }
+
+  const UNSAFE_PATH_SEGMENT = /^(?:__proto__|prototype|constructor)$/;
+  // Dotted field paths come from stored/AI proposals; reject prototype-walking segments before any write.
+  function safePathSegments(path) {
+    const segments = String(path == null ? '' : path).split('.').filter(function (segment) { return segment !== ''; });
+    if (!segments.length) return null;
+    return segments.some(function (segment) { return UNSAFE_PATH_SEGMENT.test(segment); }) ? null : segments;
   }
 
   function normalizeSpace(s) {
@@ -242,5 +253,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, splitModelReasoning, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, splitModelReasoning, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels, safePathSegments };
 }());
