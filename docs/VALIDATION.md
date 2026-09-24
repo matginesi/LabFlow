@@ -29,6 +29,23 @@ Use the full browser audit when the environment can launch/navigate a local page
 ./release_check.sh --full
 ```
 
+## Asset cache revision
+
+`assets/js/build-info.js` owns `LABFLOW_VERSION` (human release label), `LABFLOW_BUILD` (human build label) and `LABFLOW_ASSET_REV`. The revision is a deterministic hash of `index.html`, `ui-kit.html`, the CSS and the authored JavaScript, excluding `build-info.js` and the generated `ui-kit-inline.js` (which embeds a hash of `ui-kit.html`). `tools/sync_build_metadata.py` stamps it into every `?v=` query in `index.html`/`ui-kit.html`, so any source change produces a new cache key and browsers fetch fresh CSS/JS once they receive the new HTML.
+
+```bash
+python3 tools/sync_build_metadata.py --write   # stamp (also run by ./release_check.sh --fix)
+python3 tools/sync_build_metadata.py           # verify
+```
+
+`release_check.sh` fails closed when the revision is stale, so a release that changed code but not the stamp is rejected.
+
+## GitHub Pages deployment and cache
+
+There is no GitHub Actions workflow in this repository. `https://matginesi.github.io/LabFlow/` is published from the `main` branch root by GitHub Pages, so every push to `main` deploys automatically after the Pages build. GitHub Pages serves HTML and assets with `Cache-Control: max-age=600`, so a new deployment can take a few minutes to reach a returning visitor even though the deploy itself is immediate.
+
+Settings → About shows Version, Build and the Assets revision, and provides **Reload latest build**, which reloads with a changing query string to bypass the HTML cache and load the newest `?v=` assets.
+
 ## What the gate checks
 
 - source/architecture ownership;

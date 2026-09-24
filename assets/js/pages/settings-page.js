@@ -9,7 +9,7 @@ function badge(t,k){return'<span class="badge '+(k||'')+'">'+C.escapeHtml(t)+'</
 function field(label,control,wide){return'<div class="field '+(wide?'field-wide':'')+'"><label>'+label+'</label>'+control+'</div>';}
 function sectionBody(content,wide){return'<div class="settings-section-body '+(wide?'settings-section-body-wide':'')+'">'+content+'</div>';}
 function formatBytes(value){const n=Math.max(0,Number(value)||0);if(!n)return'—';const units=['B','KB','MB','GB'];let v=n,i=0;while(v>=1000&&i<units.length-1){v/=1000;i++;}return(v>=100||i===0?Math.round(v):v.toFixed(1))+' '+units[i];}
-function releaseInfo(){const build=String(window.LABFLOW_BUILD||'dev'),label=String(window.LABFLOW_VERSION||'POC');return{build:build,label:label};}
+function releaseInfo(){const build=String(window.LABFLOW_BUILD||'dev'),label=String(window.LABFLOW_VERSION||'POC'),assets=String(window.LABFLOW_ASSET_REV||'dev');return{build:build,label:label,assets:assets};}
 function browserLocalPanel(s,state,displayModel){
   if(!state||!LF.BrowserLocal)return'';
   const models=LF.BrowserLocal.catalog(),selected=LF.BrowserLocal.resolveModel(s.model),pct=Math.max(0,Math.min(100,Math.round((Number(state.progress)||0)*100)));
@@ -344,7 +344,10 @@ function workspacePanel(p,w){
       '<div class="meta">Release information for this installation.</div></div><div class="spacer"></div>'+
       '<span class="badge info">Prototype</span></div><div class="panel-body"><div class="settings-about-grid">'+
       '<div><span>Version</span><strong>'+C.escapeHtml(releaseInfo().label)+'</strong></div>'+
-      '<div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div></div></div></section>'
+      '<div><span>Build</span><strong class="mono">'+C.escapeHtml(releaseInfo().build)+'</strong></div>'+
+      '<div><span>Assets</span><strong class="mono">'+C.escapeHtml(releaseInfo().assets)+'</strong></div></div>'+
+      '<div class="settings-savebar"><span class="help">The deployed page may be cached for a few minutes after an update.</span>'+
+      '<button type="button" class="button" id="reloadLatestBuild">Reload latest build</button></div></div></section>'
     +'</div></div>';
 }
 function stepCard(step){const ai=step.type==='AI',inp=Number(step.max_input_tokens)||0,

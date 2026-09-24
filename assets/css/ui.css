@@ -231,6 +231,7 @@ body.activity-open { overflow: hidden; }
   background: var(--overlay-shade);
 }
 .activity-shade[hidden] { display: none !important; }
+.activity-shade.blurred { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .activity-totem {
   width: 100%;
   max-width: min(780px, calc(100vw - 24px));

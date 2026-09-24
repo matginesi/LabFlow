@@ -38,6 +38,8 @@ The normal view is intentionally small:
 
 Everything diagnostic belongs under **Technical data**: provider/request details, input tokens, TTFT, budgets, payload excerpts, checklist, internal steps and history. Do not make the user read transport internals to understand whether work is progressing.
 
+The Browser Local startup checks (runtime, model cache and adapter) use the same Action Totem with a blurred backdrop (`activity-shade.blurred`) because they block local AI availability. The blur is opt-in per Totem and is removed with the Totem; other Actions keep the standard shade.
+
 ## Message Totem
 
 Use the shared Message Totem for application feedback and confirmation. Inline notices remain page content. Do not create route-specific toast hosts.
@@ -49,6 +51,8 @@ Calculated statistics and deterministic Action output must be labelled as calcul
 ## Assistant
 
 Assistant is a local themed surface. Its menus, badges, notices, Markdown, code and structured output use Assistant tokens. `LOCAL · 0 tokens` means no provider was used; `LOCAL · LLM router` means a tiny language-agnostic routing call selected a deterministic LabFlow answer; `LLM` means an answer-generation request was also used. The Assistant never opens the Action Totem.
+
+The Assistant starts closed in the initial markup, so a fresh session never flashes an open panel. It reopens only when the researcher left it open in the previous browser session (`labflow.ui.settings.assistantOpen`), and only on wide viewports.
 
 ## Cabinet
 

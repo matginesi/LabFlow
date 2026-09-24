@@ -90,6 +90,12 @@ if(host)host.innerHTML='<span>Storage use</span><strong>Checking…</strong><sma
       0)===1?'':'s')+'. Browser origin '+origin+' / quota '+quota+(info.persistent===null?'':(' · persistent storage '+
       (info.persistent?'yes':'no')))+'.</small>';
       }catch(err){if(host)host.innerHTML='<span>Storage use</span><strong>Unavailable</strong><small>'+LF.Core.escapeHtml(String(err&&err.message||err))+'</small>';}return true;}
+    if(e.target.closest('#reloadLatestBuild')){
+      // A changing query string bypasses the GitHub Pages HTML cache so the newest ?v= assets load.
+      try{const url=new URL(window.location.href);url.searchParams.set('refresh',String(Date.now()));window.location.replace(url.toString());}
+      catch(_error){window.location.reload();}
+      return true;
+    }
     if(e.target.closest('#clearLocalLabFlowData')){
 if(!await LF.UI.confirmAction('Remove the current experiment, saved preferences, AI/NOMAD credentials, custom Knowledge Base entries and AI tool customizations from this browser?',
       {title:'Clear LabFlow data on this browser',confirmLabel:'Clear local data',danger:true}))return true;

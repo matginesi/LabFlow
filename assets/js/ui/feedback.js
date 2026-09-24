@@ -482,6 +482,7 @@
         : progressPercent + '%' + (activity.progressLabel ? ' · ' + activity.progressLabel : activity.indeterminate ? ' · Waiting' : '');
 
     if (shade.hidden) openModalSurface(shade,{escape:false});
+    shade.classList.toggle('blurred', !!activity.shadeBlur);
     shade.setAttribute('aria-busy', activity.status === 'running' ? 'true' : 'false');
     document.body.classList.add('activity-open');
     byId('activityTitle').textContent = activity.title || 'Working';
@@ -537,6 +538,7 @@
 
     const shade = byId('activityShade');
     if (shade) {
+      shade.classList.remove('blurred');
       closeModalSurface(shade);
       shade.setAttribute('aria-busy', 'false');
     }
@@ -627,6 +629,7 @@
       startedAt:Date.now(),
       endedAt:null,
       showAiTrace:Boolean(input.showAiTrace),
+      shadeBlur:Boolean(input.shadeBlur),
       request:text(input.request),
       requestIsJson:Boolean(input.requestIsJson),
       response:text(input.response),

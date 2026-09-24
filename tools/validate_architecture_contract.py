@@ -36,14 +36,15 @@ if any(x < 0 for x in pos) or pos != sorted(pos):
 
 build_info=(ROOT/'assets/js/build-info.js').read_text(encoding='utf-8') if (ROOT/'assets/js/build-info.js').exists() else ''
 build_match=re.search(r'window\.LABFLOW_BUILD=[\"\']([^\"\']+)[\"\']', build_info)
-if not build_match:
-    errors.append('assets/js/build-info.js must declare LABFLOW_BUILD')
+rev_match=re.search(r'window\.LABFLOW_ASSET_REV=[\"\']([^\"\']+)[\"\']', build_info)
+if not build_match and not rev_match:
+    errors.append('assets/js/build-info.js must declare LABFLOW_BUILD or LABFLOW_ASSET_REV')
 else:
-    build=build_match.group(1)
+    cache_key=(rev_match or build_match).group(1)
     first_party_refs=re.findall(r'(?:src|href)="(assets/[^"]+)"', index)
-    stale=[ref for ref in first_party_refs if f'?v={build}' not in ref]
+    stale=[ref for ref in first_party_refs if f'?v={cache_key}' not in ref]
     if stale:
-        errors.append('first-party assets must carry the current LABFLOW_BUILD cache key: '+', '.join(stale[:5]))
+        errors.append('first-party assets must carry the current cache key: '+', '.join(stale[:5]))
 
 schema=(ROOT/'assets/js/experiment/domain-schema.js').read_text(encoding='utf-8')
 if re.search(r"registerRoot\(\s*['\"]entities['\"]", schema):

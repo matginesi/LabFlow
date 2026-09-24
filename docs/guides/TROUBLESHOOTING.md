@@ -9,6 +9,10 @@ order: 90
 
 Diagnose the failing boundary first; do not treat every symptom as an AI or parser problem.
 
+## The deployed page looks stale
+
+GitHub Pages publishes the `main` branch on every push and serves HTML with `Cache-Control: max-age=600`, so a new build may take a few minutes to reach a returning browser. Check Settings → About: Version, Build and Assets must match the release you expect. Use **Reload latest build** to bypass the cached HTML and load the newest `?v=` assets. If the Assets value is missing, the browser served an older cached document.
+
 ## Import fails before Results
 
 Check Settings → Diagnostics for importer/parser/pipeline events. A structural contract failure should identify the invalid root/relation rather than continuing with partial scientific state.
