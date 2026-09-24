@@ -14,6 +14,7 @@ Validation is layered so deterministic scientific behavior is checked independen
 ```bash
 node tests/unit/run.js
 ./release_check.sh
+./release_check.sh --help
 ```
 
 After source changes that affect generated assets:
@@ -28,6 +29,14 @@ Use the full browser audit when the environment can launch/navigate a local page
 ```bash
 ./release_check.sh --full
 ```
+
+## Release gate behavior
+
+`release_check.sh` prints an environment banner (mode, commit and dirty state, tool versions, step count), runs numbered steps with per-step timing, stops at the first failure with the failing step named on stderr, and ends with a summary that lists every step, its duration, the total time and what was skipped. The exit status is the gate; `--help` documents the flags.
+
+Step order matters for the asset cache revision: the contract/documentation bundles are regenerated **first**, the revision is then stamped from those regenerated sources, and the UI Kit inline bundle is rebuilt **last** from the stamped `ui-kit.html`. Stamping before regeneration would leave the revision describing a tree that no longer exists, so a `--fix` run followed by a plain check would fail.
+
+The gate also compiles `tools/*.py` and syntax-checks `tools/*.js`, and runs the structured-output parser regression (`tools/test_structured_json.js`) alongside the unit suites. When `node` is unavailable those steps are reported as skipped instead of silently passing.
 
 ## Asset cache revision
 
@@ -54,9 +63,12 @@ Settings → About shows Version, Build and the Assets revision, and provides **
 - Knowledge Base schema/bundle consistency;
 - documentation and UI Kit generated assets;
 - source hygiene/readability;
-- deterministic pipeline/import regressions;
+- tooling syntax (`tools/*.py` compiled, `tools/*.js` syntax-checked);
+- deterministic pipeline/import regressions and the structured-output parser regression;
 - UI contracts and responsive/browser checks where available;
 - distribution structure.
+
+The gate stops at the first failure and names the failing step, so a red run points at one boundary instead of an unattributed exit code.
 
 ## Generated files
 

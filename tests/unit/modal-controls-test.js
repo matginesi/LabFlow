@@ -41,5 +41,17 @@ module.exports=function(t){
     assert(designPage.includes('<button class="button compact" type="button" data-discard-design-experiment='),true,'Discard is bordered');
     assert(designPage.includes('<button class="button ghost compact" type="button" data-discard-design-experiment='),false,'Discard is not ghost');
   };
+  t['Action Totem closes by its button, Escape, or a 5 second idle window']=function(){
+    assert(feedback.includes('const ACTIVITY_IDLE_CLOSE_MS = 5000;'),true,'idle close window is 5 seconds');
+    assert(feedback.includes("if (event.key !== 'Escape' || !activity) return;"),true,'Escape targets the Action Totem');
+    assert(feedback.includes('else activityHide();'),true,'Escape closes a terminal totem');
+    assert(feedback.includes('scheduleActivityHide(input.holdMs);'),true,'terminal totems arm the idle window');
+    const fixedHides=feedback.match(/scheduleActivityHide\([^)]*,\s*(?:\d|activity\.showAiTrace)/g)||[];
+    assert(fixedHides,[],'no fixed short auto-hide remains');
+    assert(feedback.includes('function activityInteracted()'),true,'interaction restarts the idle window');
+    assert(feedback.includes("if (activity && activity.status !== 'running') scheduleActivityHide();"),true,'a running Action is never auto-hidden');
+    assert(feedback.includes("['pointerdown','pointermove','keydown','wheel','touchstart','focusin']"),true,'interaction listeners are bound inside the totem');
+    assert(feedback.includes("byId('activityClose')"),true,'dedicated close control remains');
+  };
   return t;
 };

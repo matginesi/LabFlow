@@ -13,6 +13,9 @@
   let hideTimer = null;
   let activityFrame = 0;
   let activityTimer = null;
+  /* Terminal Action totems close with their button, with Escape, or after this idle window.
+     Interaction inside the totem restarts the window; a running Action is never auto-hidden. */
+  const ACTIVITY_IDLE_CLOSE_MS = 5000;
   let modalSession = null;
 
   function modalFocusable(dialog) {
@@ -698,10 +701,17 @@
   }
 
 
-  function scheduleActivityHide(holdMs, fallback) {
+  function scheduleActivityHide(holdMs) {
     window.clearTimeout(hideTimer);
-    const delay = Number.isFinite(Number(holdMs)) ? Number(holdMs) : fallback;
-    if (delay > 0) hideTimer = window.setTimeout(activityHide, delay);
+    const explicit = Number(holdMs);
+    // A caller may ask for a longer window than the default; shorter holds no longer hide a result early.
+    const delay = Number.isFinite(explicit) && explicit > ACTIVITY_IDLE_CLOSE_MS ? explicit : ACTIVITY_IDLE_CLOSE_MS;
+    hideTimer = window.setTimeout(activityHide, delay);
+  }
+
+
+  function activityInteracted() {
+    if (activity && activity.status !== 'running') scheduleActivityHide();
   }
 
 
@@ -733,7 +743,7 @@
       stage:activity.stage,
       elapsedMs:activityElapsedMs()
     });
-    scheduleActivityHide(input.holdMs, activity.showAiTrace ? 3000 : 650);
+    scheduleActivityHide(input.holdMs);
   }
 
 
@@ -764,7 +774,7 @@
       message:message,
       elapsedMs:activityElapsedMs()
     });
-    scheduleActivityHide(input.holdMs, 2800);
+    scheduleActivityHide(input.holdMs);
   }
 
   function activityCancel() {
@@ -814,6 +824,13 @@
     if(!activity||activity.status!=='error'||typeof activity.onRetry!=='function')return;
     const retry=activity.onRetry;activityHide();Promise.resolve().then(retry).catch(function(error){Log.error('activity.retry-failed',{error:error});});
   });
+
+  const activityTotem = document.querySelector('#activityShade .activity-totem');
+  if (activityTotem) {
+    ['pointerdown','pointermove','keydown','wheel','touchstart','focusin'].forEach(function (type) {
+      activityTotem.addEventListener(type, activityInteracted, { passive:true });
+    });
+  }
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape' || !activity) return;

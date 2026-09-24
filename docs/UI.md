@@ -40,6 +40,8 @@ Everything diagnostic belongs under **Technical data**: provider/request details
 
 The Browser Local startup checks (runtime, model cache and adapter) use the same Action Totem with a blurred backdrop (`activity-shade.blurred`) because they block local AI availability. The blur is opt-in per Totem and is removed with the Totem; other Actions keep the standard shade.
 
+Closing contract: a finished or failed Totem stays open until the researcher closes it with its dedicated button, presses **Escape**, or leaves it untouched for **5 seconds**. Any interaction inside the Totem (click, key, wheel, touch, focus) restarts that window. A running Action is never auto-hidden: Escape stops it when it is cancellable, otherwise the Totem stays until the Action completes.
+
 ## Message Totem
 
 Use the shared Message Totem for application feedback and confirmation. Inline notices remain page content. Do not create route-specific toast hosts.
