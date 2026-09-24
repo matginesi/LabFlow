@@ -16,25 +16,31 @@ Design completion is a reference-resolution workflow with an optional model fall
 
 The page shows three domains separately: **Solution chemistry**, **Device stack** and **Fabrication process**. For each domain LabFlow marks the current state as Ready, Proposed or Missing. Running completion creates a proposal only for missing information. The proposal is never written into the experiment until the researcher chooses **Accept experiment**; **Discard** leaves the current Design untouched, and accepted values remain editable afterward.
 
-The provider step is conditional. If Experiment + Cabinet + KB references cover all missing domains, the same Complete design button finishes with **zero model calls**. If a provider is needed, only the unresolved domains and compact candidate hints are sent.
+The provider step is conditional. If Lab Cabinet and Knowledge Base candidates already cover every missing domain, the same Complete design button finishes with **zero model calls** and creates no model work unit, and the resulting proposal stays reviewable with its source basis. If a provider is needed, only the unresolved domains and compact candidate hints are sent.
 
 ## Resolution order
 
 For each missing Design domain LabFlow uses:
 
 ```text
-current experiment evidence
+experiment evidence already imported (authoritative basis, never overwritten)
  → compatible Lab Cabinet candidate
  → compatible Knowledge Base candidate
  → optional model inference
  → unresolved
 ```
 
-The first three stages are deterministic. Model inference is created only for domains still unresolved after reference matching.
+The first line is the basis, not a gap filler: what the import already recovered is part of the current Design, and it is supplied to the model as the strongest evidence. Only the Cabinet and KB stages are deterministic gap fillers, and a compatible Cabinet resource is preferred over a generic Knowledge Base hint. Model inference is created only for domains still unresolved after reference matching.
 
-## Zero-call completion
+## What counts as resolved
 
-If Cabinet/KB/reference evidence covers every pending domain, `design.infer` creates no model work unit. The resulting proposal remains reviewable and carries its source basis.
+A candidate counts only when it is useful and verifiable:
+
+- **solutions** need at least solutes or solvents;
+- **stack** needs at least three layers including an absorber, a boundary/electrode and a transport layer;
+- **process** needs at least one of coating, annealing, atmosphere or notes.
+
+If a required domain still has no useful candidate, its partial content is discarded and the domain is recorded as an unresolved known unknown. A `CABINET:<id>` or `KB:<id>` claim that does not resolve to a stored item is downgraded to plain model inference, so an invented citation cannot masquerade as a verified reference.
 
 ## Compact model context
 
@@ -54,7 +60,11 @@ Deterministic/reference-backed values win. Model output may only fill still-miss
 
 ## Precision
 
-Do not infer exact concentration, thickness, temperature, time or similar process precision unless supported by explicit evidence/reference data. A qualitative candidate or `unknown` is preferable to invented precision.
+Do not infer exact concentration, thickness, temperature, time or similar process precision unless the current experiment evidence explicitly contains it. A Cabinet recipe or Knowledge Base hint may carry an evidenced value, but reference-backed fields are never applied automatically and a quantitative value without experiment support is confidence-capped for review. A qualitative candidate or `unknown` is preferable to invented precision.
+
+## Automatic and explicit application
+
+Field decisions are source-aware. A bulk apply fills only fields that pass the automatic rule: qualitative model candidates above the confidence threshold, and quantitative/experiment-backed values. Cabinet- and KB-backed fields are always review items on that path. The explicit **Accept experiment** / **Accept all** actions apply the reviewed proposal through the researcher decision, and never overwrite fields that already contain researcher or imported values.
 
 ## Confidence
 
