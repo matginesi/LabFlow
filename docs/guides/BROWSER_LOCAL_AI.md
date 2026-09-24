@@ -21,6 +21,39 @@ The bundled model definition is:
 
 The model file is not stored in the LabFlow repository. It is downloaded by the browser when needed and kept in the wllama model cache.
 
+## Model sources
+
+The Browser Local catalogue accepts two kinds of GGUF entries:
+
+- **URL model** — an `http(s)` link ending in `.gguf`. LabFlow downloads it once through wllama, keeps it in the browser model cache and can re-download or remove it later. The bundled default is a URL model.
+- **Uploaded file** — a `.gguf` file chosen from this device. LabFlow reads its header, then passes the file directly to `wllama.loadModel(Blob[])`, so the bytes never leave the device and are never uploaded anywhere. Only the name, size and compatibility metadata are stored in the catalogue; the file itself stays attached for the current session and is re-attached by choosing it again after a reload.
+
+## Cache management
+
+Settings → AI connection → **Model cache & runtime** lists every catalogue entry with its source, size and state (cached, not cached, or not attached). Actions:
+
+- **Download / repair** caches the selected URL model.
+- **Load & warm** loads the selected model (cached URL entry or attached file) and runs the warm-up probe.
+- **Remove cached model** / **Detach file** releases the selected entry from this browser without deleting its catalogue definition.
+- **Refresh cache** lists the models currently stored by wllama. Per-row **Remove** releases one entry.
+- **Clear all Browser Local models** empties the wllama cache and detaches every uploaded file.
+
+Removing a cached URL model never deletes its catalogue definition, so it can be downloaded again.
+
+## Compatibility check
+
+LabFlow inspects the GGUF header before use and reports the result in the model panel:
+
+- GGUF signature and version (1, 2 or 3);
+- `general.architecture` and `general.file_type` (shown as a quantization label such as `Q4_K_M`);
+- declared context length;
+- file size against the remaining browser storage quota;
+- warnings when the architecture is outside the known list for the pinned runtime, when the context is very small, or when the model context is below the configured LabFlow context.
+
+The check runs entirely on local bytes: for an uploaded file it reads the file header, and for a cached URL model it reads the shards through `Model.open()`. No extra network request is made. After a successful load, LabFlow also records the metadata reported by the runtime (`getModelMetadata`) so the report reflects what the runtime actually accepted.
+
+An uploaded file that is not a GGUF, or whose header is unreadable, is rejected before it joins the catalogue. A URL model is only fully checked after it is cached, because LabFlow intentionally avoids extra network requests for metadata.
+
 ## Startup lifecycle
 
 When Browser Local is the selected provider, application startup checks the model cache first:
@@ -72,7 +105,7 @@ A cached model can be removed without deleting its catalogue definition. Clearin
 
 ## Additional GGUF models
 
-Settings accepts an additional HTTP(S) URL ending in `.gguf`. LabFlow stores only the small model definition until that model is explicitly downloaded or selected for initialization. Custom models use the same cache, runtime and WebGPU → WASM fallback.
+Settings accepts an additional HTTP(S) URL ending in `.gguf` or a local `.gguf` file from this device. URL definitions stay small until the model is explicitly downloaded or selected for initialization; uploaded files are validated from their own bytes and used directly, so they add no network traffic. All catalogue entries share the same runtime, WebGPU → WASM CPU fallback and compatibility report.
 
 The model registry intentionally stays small. It is not an online model marketplace and LabFlow does not scrape arbitrary model catalogues.
 
@@ -82,7 +115,7 @@ LabFlow pins `@wllama/wllama` 3.6.1 and loads its ESM runtime and WASM binary fr
 
 ## Privacy boundary
 
-Browser Local inference does not send prompts to an AI provider endpoint. A model download necessarily contacts the configured model URL and loading the runtime contacts the pinned runtime CDN when it is not already browser-cached.
+Browser Local inference does not send prompts to an AI provider endpoint. A model download necessarily contacts the configured model URL and loading the runtime contacts the pinned runtime CDN when it is not already browser-cached. An uploaded GGUF file is read locally and is never transmitted by LabFlow.
 
 Switching to a hosted provider is explicit. LabFlow does not silently fall back from Browser Local to a remote provider because that would change the data boundary.
 

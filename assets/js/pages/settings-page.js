@@ -10,6 +10,28 @@ function field(label,control,wide){return'<div class="field '+(wide?'field-wide'
 function sectionBody(content,wide){return'<div class="settings-section-body '+(wide?'settings-section-body-wide':'')+'">'+content+'</div>';}
 function formatBytes(value){const n=Math.max(0,Number(value)||0);if(!n)return'—';const units=['B','KB','MB','GB'];let v=n,i=0;while(v>=1000&&i<units.length-1){v/=1000;i++;}return(v>=100||i===0?Math.round(v):v.toFixed(1))+' '+units[i];}
 function releaseInfo(){const build=String(window.LABFLOW_BUILD||'dev'),label=String(window.LABFLOW_VERSION||'POC'),assets=String(window.LABFLOW_ASSET_REV||'dev');return{build:build,label:label,assets:assets};}
+function compatibilityNotice(state){
+  const report=state&&state.compatibility;if(!report)return '';
+  const tone=(report.problems&&report.problems.length)?'danger':(report.ok?'success':'warning');
+  const summary=report.ok
+    ?['Compatible',report.architecture,report.quantization,report.contextLength?report.contextLength+' tokens':''].filter(Boolean).join(' · ')
+    :((report.problems&&report.problems.length)?'Not compatible':'Needs review');
+  const detail=[].concat(report.problems||[],report.warnings||[]);
+  return '<div class="notice '+tone+' compact-notice"><strong>Compatibility · '+C.escapeHtml(summary)+'</strong>'+
+    (detail.length?'<span>'+detail.map(function(item){return C.escapeHtml(item);}).join(' ')+'</span>':'')+'</div>';
+}
+function browserLocalCacheList(state){
+  const rows=Array.isArray(state&&state.cacheEntries)?state.cacheEntries:[];
+  if(!rows.length)return '<div class="help">Refresh to list the models currently stored in this browser.</div>';
+  return '<div class="table-wrap"><table class="data-table dense-table"><thead><tr><th>Model</th><th>Source</th><th>Size</th><th>State</th><th>Action</th></tr></thead><tbody>'+
+    rows.map(function(row){
+      const stateLabel=row.cached?(row.current?'Loaded / cached':'Cached'):(row.source==='file'?'Not attached':'Not cached');
+      return '<tr><td>'+C.escapeHtml(row.name)+'</td><td>'+C.escapeHtml(row.source)+'</td><td>'+C.escapeHtml(formatBytes(row.size))+
+        '</td><td>'+C.escapeHtml(stateLabel)+'</td><td>'+
+        (row.cached?'<button type="button" class="button compact" data-browser-local-cache-remove="'+C.escapeHtml(row.id)+'">Remove</button>':'—')+
+        '</td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
 function browserLocalPanel(s,state,displayModel){
   if(!state||!LF.BrowserLocal)return'';
   const models=LF.BrowserLocal.catalog(),selected=LF.BrowserLocal.resolveModel(s.model),pct=Math.max(0,Math.min(100,Math.round((Number(state.progress)||0)*100)));
@@ -17,12 +39,13 @@ function browserLocalPanel(s,state,displayModel){
     formatBytes(state.storageUsage)+' / '+formatBytes(state.storageQuota):'Browser managed';
   const downloadDetail=state.status==='downloading'&&state.totalBytes?
     formatBytes(state.downloadedBytes)+' / '+formatBytes(state.totalBytes):'';
-  const custom=selected&&selected.bundled!==true;
+  const custom=selected&&selected.bundled!==true,isFile=!!(selected&&selected.source==='file');
+  const report=state.compatibility||null;
   return [
     '<section class="browser-model-manager">',
     '<div class="browser-model-manager-head"><div><span class="eyebrow">Browser model</span><h3>',
     C.escapeHtml(state.modelName||selected&&selected.name||displayModel),
-    '</h3><div class="meta">One GGUF · WebGPU preferred · WASM CPU fallback</div></div>',
+    '</h3><div class="meta">',isFile?'Uploaded GGUF file · session scope':'One GGUF · WebGPU preferred · WASM CPU fallback','</div></div>',
     '<span class="badge info" id="browserLocalBadge">',C.escapeHtml(state.status||'idle'),'</span></div>',
     '<div class="browser-model-progress"><div class="progress-track"><span id="browserLocalProgressBar" style="width:',pct,
     '%"></span></div><div class="browser-model-progress-meta"><strong id="browserLocalStage">',
@@ -32,16 +55,19 @@ function browserLocalPanel(s,state,displayModel){
     '<div><span>Runtime</span><strong id="browserLocalBackend">',C.escapeHtml(state.backend||'Not loaded'),'</strong></div>',
     '<div><span>WebGPU</span><strong id="browserLocalWebgpu">',state.webgpuAvailable?'Available':'Not detected','</strong></div>',
     '<div><span>Model size</span><strong id="browserLocalSize">',C.escapeHtml(formatBytes(state.modelBytes||selected&&selected.expectedBytes)),'</strong></div>',
+    '<div><span>Architecture</span><strong id="browserLocalArchitecture">',C.escapeHtml(report&&report.architecture||selected&&selected.architecture||'—'),'</strong></div>',
+    '<div><span>Quantization</span><strong id="browserLocalQuantization">',C.escapeHtml(report&&report.quantization||selected&&selected.quantization||'—'),'</strong></div>',
     '<div><span>Browser storage</span><strong id="browserLocalStorage">',C.escapeHtml(storage),'</strong></div>',
     '<div><span>Storage protection</span><strong id="browserLocalPersistence">',
     state.storagePersistent===true?'Persistent':state.storagePersistent===false?'Best effort':'Browser managed','</strong></div>',
     '</div>',
     '<div class="row-wrap">',
-    '<button type="button" class="button" id="browserLocalDownload" ',busy?'disabled':'','>Download / repair</button>',
+    isFile?'':('<button type="button" class="button" id="browserLocalDownload" '+(busy?'disabled':'')+'>Download / repair</button>'),
     '<button type="button" class="button primary" id="browserLocalLoad" ',(!state.cached||busy)?'disabled':'','>Load &amp; warm</button>',
-    '<button type="button" class="button ghost" id="browserLocalRemove" ',(!state.cached||busy)?'disabled':'','>Remove cached model</button>',
+    '<button type="button" class="button ghost" id="browserLocalRemove" ',(!state.cached||busy)?'disabled':'','>',isFile?'Detach file':'Remove cached model','</button>',
     custom?'<button type="button" class="button ghost" id="browserLocalRemoveDefinition">Remove from catalogue</button>':'',
     '</div>',
+    compatibilityNotice(state),
     '<details class="settings-advanced"><summary>Model cache &amp; runtime</summary><div class="settings-advanced-body stack">',
     '<label class="switch-row"><input type="checkbox" id="browserLocalAutoDownload" ',
     s.browserLocalAutoDownload!==false?'checked':'','> Download the selected default GGUF automatically when missing</label>',
@@ -53,8 +79,19 @@ function browserLocalPanel(s,state,displayModel){
     'min="2048" max="16384" step="1024" value="',Number(s.browserLocalContextWindow||4096),'"></label>',
     '<div class="field"><label>Additional GGUF URL</label><div class="input-action">',
     '<input class="input mono" id="browserLocalModelUrl" type="url" placeholder="https://…/model.gguf">',
-    '<button type="button" class="button" id="browserLocalAddModel">Add</button></div>',
-    '<div class="help">Additional models use the same browser cache and WebGPU → WASM fallback. ',
+    '<button type="button" class="button" id="browserLocalAddModel">Add URL</button></div>',
+    '<div class="help">Additional models use the same browser cache and WebGPU → WASM CPU fallback.</div></div>',
+    '<div class="field"><label>Local GGUF file</label><div class="input-action">',
+    '<input class="input mono" id="browserLocalModelFileLabel" placeholder="No file selected" readonly>',
+    '<input type="file" id="browserLocalModelFile" accept=".gguf,application/octet-stream" hidden>',
+    '<button type="button" class="button" id="browserLocalPickFile">Choose file</button>',
+    '<button type="button" class="button" id="browserLocalAddFile">Add file</button></div>',
+    '<div class="help">LabFlow reads the GGUF header, stores only name, size and compatibility metadata, and uses the file directly from this device for the session.</div></div>',
+    '<div class="field field-wide"><label>Model cache</label><div class="row-wrap">',
+    '<button type="button" class="button compact" id="browserLocalRefreshCache">Refresh cache</button>',
+    '<button type="button" class="button compact" id="browserLocalCheckModel">Check compatibility</button></div>',
+    browserLocalCacheList(state),
+    '<div class="help">Downloaded URL models live in the wllama browser cache. Uploaded files are never uploaded anywhere and are released when the session ends. ',
     models.length,' model',models.length===1?'':'s',' in the catalogue.</div></div>',
     '<button type="button" class="button danger" id="browserLocalClearCache">Clear all Browser Local models</button>',
     '<div class="help" id="browserLocalNote">',C.escapeHtml(state.error||state.note||''),'</div>',

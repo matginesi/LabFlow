@@ -13,6 +13,8 @@ LabFlow is a local-first static browser application. Scientific parsing, determi
 
 LabFlow avoids analytics/tracking services, remote fonts, service-worker infrastructure and hidden application backends. Core UI/runtime assets are shipped with the application. Browser Local is the explicit exception: when selected, LabFlow may fetch the pinned wllama runtime and the chosen GGUF model, then inference runs on-device in the browser.
 
+A Browser Local model can also be an **uploaded local file**. LabFlow reads the GGUF header for the compatibility report and passes the file directly to the runtime; the bytes are never transmitted, and only the file name, size and compatibility metadata are stored in the browser catalogue. The attached file itself is session-scoped and is released at the end of the session.
+
 ## Browser persistence
 
 Scientific working state and immutable source snapshot are persisted locally so a session can be restored. UI/provider/NOMAD preferences use browser storage. Provider API keys and the optional future NOMAD token are stored separately from scientific/export payloads.
