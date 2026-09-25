@@ -13,6 +13,10 @@ button, a, input, select, textarea, summary { touch-action: manipulation; }
 button { cursor: pointer; }
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A modal container receives focus only to trap Tab: keep its indicator flush with the totem edge, not 2px away. */
+.activity-totem:focus-visible,
+.message-totem:focus-visible,
+.result-inspector:focus-visible { outline-offset: -1px; }
 
 .h1 { margin: 0; font-size: var(--font-xl); line-height: 1.2; font-weight: 650; letter-spacing: -0.01em; }
 .h2 { margin: 0; font-size: var(--font-lg); font-weight: 650; }

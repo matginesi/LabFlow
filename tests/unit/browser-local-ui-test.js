@@ -71,6 +71,7 @@ module.exports=function(t){
     assert(app.includes('if(!totemShown)openSetupTotem(ready,true);'),true,'a model that is not ready always opens the setup Totem');
     assert(app.includes('if(!totemShown&&LF.UI&&LF.UI.activityStart)openSetupTotem(LF.BrowserLocal.state(),true);'),true,'a startup failure still opens the setup Totem');
     assert(app.includes("stage:'Selected model unavailable'"),true,'an unavailable model opens the Totem with a retry');
+    assert(app.includes('openSetupTotem(LF.BrowserLocal.state(),false);},300)'),true,'the setup Totem covers a slow cache/runtime check');
   };
   t['The setup Totem shows download speed and transferred bytes without opening Technical data']=function(){
     const app=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8');

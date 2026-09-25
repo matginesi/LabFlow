@@ -198,6 +198,15 @@ module.exports=function(t){
     assert(app.includes("if(!checked.cached)"),true,'setup Totem is conditional on the cache check');
     assert(app.includes("kind:'SETUP'"),true,'setup lifecycle is not labelled as an LLM Action');
     assert(app.includes("downloadBytesPerSecond"),true,'download telemetry is projected into the setup Totem');
+    assert(app.includes('openSetupTotem(checked,true,true)'),true,'a missing model upgrades the setup Totem to install');
+  };
+
+  t['First paint and modal focus stay intentional while the app boots']=function(){
+    assert(html.includes('class="page boot-page"'),true,'first-paint boot card exists');
+    assert(html.includes('boot-progress'),true,'boot progress indicator exists');
+    assert(html.indexOf('id="main"')<html.indexOf('boot-page'),true,'boot card lives inside the workspace host');
+    assert(uiCss.includes('.activity-totem:focus-visible'),true,'totem focus indicator is scoped');
+    assert(uiCss.includes('outline-offset: -1px'),true,'totem focus indicator stays flush with the edge');
   };
 
   t['Local development canonicalizes bind-address URLs and llama.cpp permits LabFlow browser origins']=function(){

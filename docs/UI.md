@@ -27,6 +27,8 @@ Cabinet, Documentation and Settings are routes; Knowledge Base, Logs/Diagnostics
 
 The Totem hosts, Assistant token overrides and structured-output styles live in `ui.css`/`app.css` by shell ownership; that is the deliberate exception where composition styling sits next to the surface that renders it.
 
+`index.html` renders a first-paint boot card inside `#main` (mark, title, status, indeterminate progress). The first real `render()` replaces it; it is a startup state, not a page component, and stays token-based and reduced-motion safe. Modal containers (Action/Message Totem, result inspector) keep their `:focus-visible` indicator flush with the element edge instead of offset, so a programmatically focused dialog never shows a detached colored ring.
+
 ## Action Totem
 
 The normal view is intentionally small:

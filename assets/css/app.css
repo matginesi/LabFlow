@@ -1781,6 +1781,16 @@ body{ overflow: hidden; }
 .upload-next-steps>div{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface-2);font-size:var(--font-xs)}
 .upload-next-steps strong{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:var(--font-micro)}
 
+/* First paint before app.js renders: an intentional loading card instead of an empty workspace. */
+.boot-page{display:grid;place-items:center;min-height:min(72vh,640px)}
+.boot-card{display:grid;justify-items:center;gap:14px;width:min(420px,100%);padding:26px 24px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:var(--shadow-float);text-align:center}
+.boot-mark img{width:44px;height:44px}
+.boot-copy{display:grid;gap:6px}
+.boot-progress{width:min(240px,60vw)}
+.boot-progress>span{width:38%;border-radius:999px;animation:boot-slide 1.2s ease-in-out infinite}
+@keyframes boot-slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+@media(prefers-reduced-motion:reduce){.boot-progress>span{animation:none;width:100%;opacity:.55}}
+
 .upload-source-card{margin:0;overflow:hidden}
 .upload-source-summary{display:flex;align-items:center;gap:10px;padding:10px 12px}
 .upload-source-icon{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:var(--radius-sm);background:var(--surface-2);color:var(--accent)}

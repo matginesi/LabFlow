@@ -218,8 +218,10 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
       if(LF.UI&&LF.UI.message)LF.UI.message('The previously selected Browser Local model is no longer in the catalogue. LabFlow is preparing the bundled model.','info','Local AI');
     }
     let unsubscribe=null,totemShown=false,showTimer=null;
-    function openSetupTotem(local,install){
-      if(totemShown||!LF.UI||!LF.UI.activityStart)return;
+    function openSetupTotem(local,install,force){
+      if((totemShown&&force!==true)||!LF.UI||!LF.UI.activityStart)return;
+      // Re-opening upgrades the visible state (checking -> install required): replace the old subscription.
+      if(typeof unsubscribe==='function'){unsubscribe();unsubscribe=null;}
       totemShown=true;
       const name=browserModelLabel(local);
       LF.UI.activityStart(install?{
@@ -239,7 +241,11 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
       unsubscribe=LF.BrowserLocal.subscribe(function(next){renderModelStatus();updateBrowserLocalSetupTotem(next);});
     }
     try{
+      // A fast start stays uninterrupted, but the researcher must never watch an apparently idle page while
+      // the runtime, adapter and cache are checked: the blurred setup Totem opens if the check is not instant.
+      showTimer=window.setTimeout(function(){showTimer=null;openSetupTotem(LF.BrowserLocal.state(),false);},300);
       const checked=await LF.BrowserLocal.check(settings.model);
+      if(showTimer){window.clearTimeout(showTimer);showTimer=null;}
       renderModelStatus();
       if(checked.status==='error'){
         const reason=checked.error||'The selected Browser Local model is unavailable.';
@@ -266,9 +272,9 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
         if(LF.UI&&LF.UI.message)LF.UI.message('The uploaded GGUF is not attached in this session. Open Settings → AI connection and choose the file again.','warning','Local AI unavailable');
         return checked;
       }
-      // Downloading the selected model opens the setup Totem immediately; a cached load/warm-up only when it is not instant.
-      if(!checked.cached)openSetupTotem(checked,true);
-      else showTimer=window.setTimeout(function(){openSetupTotem(LF.BrowserLocal.state(),false);},600);
+      // Downloading the selected model upgrades the setup Totem immediately; a cached load/warm-up only when it is not instant.
+      if(!checked.cached)openSetupTotem(checked,true,true);
+      else if(!totemShown)showTimer=window.setTimeout(function(){showTimer=null;openSetupTotem(LF.BrowserLocal.state(),false);},600);
       const allowDownload=forceDownload===true||settings.browserLocalAutoDownload!==false;
       const ready=await LF.BrowserLocal.ensureReady({
         modelId:settings.model,autoDownload:checked.cached?false:allowDownload,warmup:settings.browserLocalAutoWarmup!==false,force:true,allowSaveData:forceDownload===true
@@ -300,7 +306,10 @@ const state=scrollMemory.get(scrollNodeKey(el,root,context));if(!state)return;
         LF.UI.message('Browser Local could not initialize. Open Settings → AI connection to retry or choose another provider. '+String(error&&error.message||error),'warning','Local AI unavailable');
       }
       return null;
-    }finally{if(typeof unsubscribe==='function')unsubscribe();}
+    }finally{
+      if(showTimer){window.clearTimeout(showTimer);showTimer=null;}
+      if(typeof unsubscribe==='function')unsubscribe();
+    }
   }
 
   function renderAppRelease(){
