@@ -16,12 +16,20 @@
   // Credential-bearing field names: values under these keys never enter a log, diagnostic or shareable export.
   const SECRET_KEY = /api.?key|authorization|password|passwd|secret|access.?token|refresh.?token|bearer|credential|cookie|session.?token|auth.?token|private.?key|client.?secret|nomad.?token/i;
   // Direct personal identifiers. Kept narrow so technical keys (targetAddressSpace, experiment name) stay visible.
-  const PERSONAL_KEY = /e-?mails?|phones?|telephones?|mobiles?|contacts?|orcid|ssn|passport|postal|street|full.?name|first.?name|last.?name|surname|researcher|author|username|user.?name|account.?id|user.?id|reviewed.?by/i;
+  // Word-bounded person keys avoid swallowing lookalike technical keys such as userAgent.
+  const PERSONAL_KEY = new RegExp([
+    'e-?mails?','phones?','telephones?','mobiles?','contacts?','orcid','ssn','passport','postal','street',
+    'full.?name','first.?name','last.?name','surname','display.?name','nickname','initials',
+    'researcher','author','username','user.?name','account.?id','user.?id',
+    'reviewed.?by','created.?by','modified.?by','updated.?by','deleted.?by','requested.?by','signed.?by','approved.?by',
+    '\\busers?\\b','\\boperators?\\b','\\bmembers?\\b','\\bparticipants?\\b','\\battendees?\\b','\\brecipients?\\b','\\bpresenters?\\b',
+    '\\bnome\\b','\\bcognome\\b','\\butente\\b','\\bcontatto\\b','\\brecapito\\b'
+  ].join('|'), 'i');
   const PERSONAL_LEAF = /^(?:name|e-?mail|phone|telephone|mobile|id)$/i;
   // Non-identifying fields keep their value even inside a personal container (Ready-PV institution is required).
   const NON_PERSONAL_LEAF = /^(?:institution|organisation|organization|role|department|laboratory|site|building|room)$/i;
   // Personal container segments make their identifying leaves (name/email/phone) redactable.
-  const PERSONAL_CONTEXT = /contact|responsible|parser|contributor|researcher|author|person|profile|account|owner/i;
+  const PERSONAL_CONTEXT = /contact|responsible|parser|contributor|researcher|author|person|profile|account|owner|created.?by|modified.?by|updated.?by|\busers?\b|\boperators?\b|\bmembers?\b|\bparticipants?\b|\battendees?\b|\brecipients?\b|\bpresenters?\b/i;
   // Free text that can embed personal or identifying content. Only applied when the caller opts in.
   const FREE_TEXT_KEY = /^(?:messages?|content|prompt|prompts|providerResponse|rawProviderResponse|rawResponse|requestBody|responseBody|body|answer|reasoning|notes?|remarks?|comments?|annotations?)$/i;
 
@@ -108,14 +116,27 @@
       return out;
     }
     const out = {};
+    // Metadata tables are stored as {key, value} rows: the row is as sensitive as the key it names.
+    const pairLabel = typeof value.key === 'string'
+      ? value.key
+      : (typeof value.name === 'string' && Object.prototype.hasOwnProperty.call(value, 'value') ? value.name : '');
+    const pairPersonal = !!pairLabel && options.personal === true && isPersonalAt([], pairLabel);
+    const pairSecret = !!pairLabel && isSecretKey(pairLabel);
+    const pairFreeText = !!pairLabel && options.freeText === true && isFreeTextKey(pairLabel);
     Object.keys(value).slice(0, Math.max(1, Number(options.maxKeys) || MAX_KEYS)).forEach(function (key) {
       const childPath = path.concat(String(key));
       if (isSecretKey(key)) { out[key] = VALUE; return; }
       const child = value[key];
+      if ((key === 'value' || key === 'val') && (typeof child === 'string' || typeof child === 'number')) {
+        if (pairSecret || pairPersonal || (pairFreeText && typeof child === 'string')) { out[key] = VALUE; return; }
+      }
       const personalHit = options.personal === true && isPersonalAt(path, key);
       if (personalHit && (typeof child === 'string' || typeof child === 'number')) { out[key] = VALUE; return; }
       if (typeof child === 'string') {
         if (options.freeText === true && (isFreeTextKey(key) || path.some(isFreeTextKey))) { out[key] = VALUE; return; }
+        // Free text inside a personal container (for example contact notes) never reaches a log,
+        // even in the local buffer that keeps scientific prompts and responses.
+        if (isFreeTextKey(key) && path.some(function (segment) { return PERSONAL_CONTEXT.test(String(segment || '')); })) { out[key] = VALUE; return; }
         out[key] = redactText(child, options);
         return;
       }

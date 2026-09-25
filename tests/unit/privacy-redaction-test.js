@@ -162,4 +162,52 @@ module.exports = function (t, LF) {
     assertNoMatch(LF.Core.markdown('<script>alert(1)</script>'), /<script/i, 'raw HTML escaped');
     assertNoMatch(LF.Core.markdown('[x](javascript:alert(1))'), /javascript:/i, 'unsafe URL dropped');
   };
+
+  t['person keys and key/value metadata rows are redacted without touching scientific data'] = function () {
+    const out = LF.Redact.sanitize({
+      user: { name: 'Ada Researcher', email: 'ada@example.test', role: 'operator' },
+      operators: [{ name: 'Ada Researcher', id: 'u1' }],
+      createdBy: 'Ada Researcher',
+      surname: 'Researcher',
+      metadata: [
+        { key: 'General info.User', value: 'Ada Researcher' },
+        { key: 'General info.Device', value: 'N3_1_1A' },
+        { key: 'Cell area (cm2)', value: '0.09' }
+      ]
+    }, LF.Redact.profile('log'));
+    assert(out.user.name, '[redacted]', 'user.name');
+    assert(out.user.email, '[redacted]', 'user.email');
+    assert(out.user.role, 'operator', 'non-identifying role preserved');
+    assert(out.operators[0].name, '[redacted]', 'operator name');
+    assert(out.createdBy, '[redacted]', 'createdBy');
+    assert(out.surname, '[redacted]', 'surname');
+    assert(out.metadata[0].value, '[redacted]', 'personal metadata row value');
+    assert(out.metadata[0].key, 'General info.User', 'metadata key label preserved');
+    assert(out.metadata[1].value, 'N3_1_1A', 'scientific device row preserved');
+    assert(out.metadata[2].value, '0.09', 'scientific measurement row preserved');
+    const diag = LF.Redact.sanitize({ metadata: [{ key: 'Note', value: 'call Ada on the usual number' }] }, LF.Redact.profile('diagnostic'));
+    assert(diag.metadata[0].value, '[redacted]', 'free-text metadata row dropped from diagnostics');
+    const localLog = LF.Redact.sanitize({ contact: { name: 'Ada Researcher', notes: 'call the mobile' }, notes: 'spin coating 4000 rpm' }, LF.Redact.profile('log'));
+    assert(localLog.contact.notes, '[redacted]', 'contact free text redacted even in the local log');
+    assert(localLog.notes, 'spin coating 4000 rpm', 'scientific free text preserved in the local log');
+    const technical = LF.Redact.sanitize({ userAgent: 'Mozilla/5.0', users: 3 }, LF.Redact.profile('log'));
+    assert(technical.userAgent, 'Mozilla/5.0', 'lookalike technical key preserved');
+    assert(technical.users, '[redacted]', 'standalone users key redacted');
+  };
+
+  t['console mirroring stays redacted and keeps failure metadata'] = function () {
+    const lines = [], saved = { info: console.info, error: console.error, groupCollapsed: console.groupCollapsed, groupEnd: console.groupEnd };
+    console.info = function (line, payload) { lines.push({ line: String(line), payload: payload }); };
+    console.error = function (line, payload) { lines.push({ line: String(line), payload: payload }); };
+    try {
+      LF.Logger.info('test', 'console.redact', { message: 'ping ada@example.test', contact: { name: 'Ada Researcher' } });
+      LF.Logger.error('test', 'console.failure', { status: 500, error: new Error('boom ada@example.test') });
+    } finally {
+      console.info = saved.info; console.error = saved.error; console.groupCollapsed = saved.groupCollapsed; console.groupEnd = saved.groupEnd;
+    }
+    const all = lines.map(function (item) { return item.line + ' ' + JSON.stringify(item.payload); }).join('\n');
+    assertNoMatch(all, /ada@example\.test/, 'console output never prints an email');
+    assertNoMatch(all, /Ada Researcher/, 'console output never prints a contact name');
+    assertMatch(all, /status=500/, 'failure metadata stays visible');
+  };
 };

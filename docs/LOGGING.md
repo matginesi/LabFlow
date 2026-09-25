@@ -13,7 +13,7 @@ LabFlow keeps structured browser diagnostics enabled during the POC because impo
 
 Default logging is INFO-level to console plus a bounded in-memory ring buffer. Settings → Diagnostics exposes filtering, recent errors and downloadable JSONL. Large strings are clipped before buffering so diagnostics cannot grow without bound during long AI sessions.
 
-Each event carries timestamp, monotonic/performance time, level, scope, event name and sanitized structured data. Console output promotes only useful scalar fields; the structured payload remains expandable. Entries also carry route, workspace, experiment and process identifiers when they exist, so a report can be tied to one piece of work without exposing its content.
+Each event carries timestamp, monotonic/performance time, level, scope, event name and sanitized structured data. Console output promotes only useful scalar fields; the structured payload remains expandable, and an error prints its stack/cause in a collapsed DevTools group so one failure stays one scannable line. Entries also carry route, workspace, experiment and process identifiers when they exist, so a report can be tied to one piece of work without exposing its content.
 
 ## Correlation
 
@@ -23,11 +23,13 @@ A successful HTTP response that produces malformed/truncated/schema-invalid/sema
 
 ## Privacy
 
-One sanitizer (`LF.Redact`, `assets/js/redact.js`) serves logging, diagnostics and shareable export projections.
+One sanitizer (`LF.Redact`, `assets/js/redact.js`) serves logging, diagnostics, console mirroring and shareable export projections.
 
-- At buffer time, credential-like keys, Authorization/Bearer/Basic values, key-shaped tokens, URL userinfo, credential query parameters and direct personal identifiers (contact names, emails, phone-like fields, personal notes inside a contact container) are replaced with `[redacted]`.
+- At buffer time, credential-like keys, Authorization/Bearer/Basic values, key-shaped tokens, URL userinfo, credential query parameters and direct personal identifiers are replaced with `[redacted]`. Personal identifiers cover person names and surnames, emails, phone-like fields, contact containers, and operator/creator/reviewer authorship keys (`operator`, `createdBy`, `modifiedBy`, `reviewedBy`, `approvedBy`, `user`/`users`, `member`, `participant`, `attendee`, `recipient`). Lookalike technical keys such as `userAgent` stay visible. Free text inside a personal container (for example contact notes) is redacted even in the local buffer; scientific free text outside personal containers stays locally inspectable and is dropped from diagnostic exports.
+- Metadata rows shaped as `{key, value}` (RAW Parameters/Tracking metadata) are judged by their key label: `General info.User` or a `Note` row is redacted, while `General info.Device` and numeric measurement rows keep their value. Free-text rows are dropped from diagnostic exports.
+- Console mirroring uses the sanitized entry for both the scalar summary line and the expandable payload, so an email or contact name cannot leak through the DevTools summary.
 - Diagnostic exports are privacy-safe by default: the JSONL export and the diagnostic bundle drop prompts, provider responses and free-text fields while keeping timing, HTTP status, provider/model, scope, event name and correlation identifiers. The in-page buffer keeps the full locally inspectable payload.
-- Organization names, scientific identifiers, workspace/experiment/process IDs, file sizes and hashes are technical metadata and are not redacted.
+- Organization names, scientific identifiers, workspace/experiment/process IDs, file sizes and hashes are technical metadata and are not redacted. Experiment values (measurements, materials, process parameters, provenance) are never removed.
 - Assistant session memory logs only structured state (`focusKind`, `focusId`, last intent/target, cache-hit counters) and never the researcher's question or answer text.
 
 Do not log RAW file bodies or large research payloads by default. Prefer IDs, paths, sizes, hashes, counts and short bounded evidence excerpts when they are necessary for diagnosis.

@@ -60,7 +60,8 @@
   }
 
   function sanitizeString(value, maxChars) {
-    return LF.Redact.redactText(value, { maxChars: Math.max(1200, Number(maxChars) || MAX_LOG_STRING_CHARS) });
+    // The console summary line must apply the same personal redaction as the buffered payload.
+    return LF.Redact.redactText(value, { personal: true, maxChars: Math.max(1200, Number(maxChars) || MAX_LOG_STRING_CHARS) });
   }
 
   function consoleScalar(value) {
@@ -73,7 +74,7 @@
   function consoleSummary(data) {
     if (data == null) return '';
     if (typeof data !== 'object') return consoleScalar(data);
-    const preferred = ['diagnosticId','action','provider','phase','transport','model','endpoint','url','status','providerCode','code','elapsedMs','durationMs','requestId','targetAddressSpace','keyConfigured','step','route','experimentId','entries','policies','message'];
+    const preferred = ['diagnosticId','action','provider','phase','transport','model','endpoint','url','status','providerCode','code','elapsedMs','durationMs','requestId','requestLogId','providerMessage','targetAddressSpace','keyConfigured','step','route','experimentId','entries','policies','message'];
     const parts = [];
     const used = new Set();
     preferred.forEach(function (key) {
@@ -150,9 +151,17 @@
           const summary = consoleSummary(entry.data), line=summary ? prefix + ' · ' + summary : prefix;
           console[method](line, entry.data);
           if (level === 'error' && entry.data && entry.data.error) {
-            const err=entry.data.error;
-            if(err.stack) console[method]('[LabFlow][stack] '+String(err.stack));
-            if(err.cause) console[method]('[LabFlow][cause]',err.cause);
+            const err=entry.data.error, hasDetails=!!(err.stack||err.cause);
+            // Keep one scannable console entry per error: stack/cause live in a collapsed child group.
+            if(hasDetails&&typeof console.groupCollapsed==='function'){
+              console.groupCollapsed('[LabFlow][details] '+entry.event);
+              if(err.stack)console[method]('[LabFlow][stack] '+String(err.stack));
+              if(err.cause)console[method]('[LabFlow][cause]',err.cause);
+              console.groupEnd();
+            }else{
+              if(err.stack) console[method]('[LabFlow][stack] '+String(err.stack));
+              if(err.cause) console[method]('[LabFlow][cause]',err.cause);
+            }
           }
         }
       } catch (_) {}
