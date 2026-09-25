@@ -138,10 +138,6 @@
     return '<div class="code-shell json-shell '+(compact?'compact-json':'')+'"><div class="code-toolbar"><span>json</span><button class="button ghost compact" type="button" data-copy-code>Copy code</button></div><pre class="code-block json-highlight"><code data-lang="json">'+highlighted+'</code></pre></div>';
   }
 
-  function markdownOutline(text) {
-    const items=[]; String(text||'').split(/\r?\n/).forEach(function(line){const m=line.match(/^(#{1,4})\s+(.+)$/);if(m)items.push({level:m[1].length,text:m[2].replace(/[*_`]/g,'')});}); return items;
-  }
-
   function copyText(text) {
     const value=String(text == null ? '' : text);
     if (!value) return false;
@@ -253,5 +249,5 @@
     });
   }
 
-  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, markdownOutline, copyText, csvEscape, normalizeSpace, splitModelReasoning, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels, safePathSegments };
+  LF.Core = { uid, escapeHtml, downloadBlob, textBlob, fmt, bytes, safeJson, highlightCode, markdown, jsonBlock, copyText, csvEscape, normalizeSpace, splitModelReasoning, cleanModelText, safeName, modelDisplayName, requireModules, bindFieldLabels, safePathSegments };
 }());

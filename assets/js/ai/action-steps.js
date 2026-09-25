@@ -734,18 +734,4 @@
       }
     });
   }
-
-  LF.ActionStepRegistry = {
-    ids: function () { return Object.keys(steps); },
-    has: function (id) { return typeof steps[id] === 'function'; },
-    register: function (id, fn, meta) {
-      if (!id || typeof fn !== 'function') throw new Error('Action step id and function are required.');
-      if (steps[id]) throw new Error('Action step already registered: ' + id);
-      steps[id] = fn;
-      if (LF.ToolRegistry && LF.ToolRegistry.registerActionStep) {
-        LF.ToolRegistry.registerActionStep(id, meta || {});
-      }
-      return id;
-    }
-  };
 }());

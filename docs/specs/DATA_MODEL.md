@@ -13,18 +13,24 @@ order: 10
 
 ```mermaid
 flowchart TD
-    ED[ExperimentData] --> SRC[source / files / blocks]
+    ED[ExperimentData] --> RAW[raw + manifest + rawFormatEvidence]
+    ED --> SRC[files / blocks]
     ED --> EXP[experiments]
     ED --> S[samples]
     ED --> R[runs]
     ED --> M[measurements]
+    ED --> AZ[auxiliaryEvidence]
     ED --> F[findings]
     ED --> P[patches]
     ED --> A[analysis + summaries]
     ED --> D[design]
     ED --> AD[actionData]
-    ED --> PM[pipeline metadata]
+    ED --> DER[derived + canonical caches]
+    ED --> EX[export / nomad / interpretationOverrides]
+    ED --> PM[pipeline metadata + sync]
 ```
+
+This is a readable subset. `DomainSchema` is the executable authority and currently registers 29 roots, including runtime caches and export/interpretation state. The root key holding RAW identity is `raw` (not `source`).
 
 The exact current root contract is executable in `DomainSchema`; prose describes semantics and ownership rather than duplicating every default value.
 

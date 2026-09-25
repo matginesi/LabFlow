@@ -127,30 +127,6 @@
     return items;
   }
 
-  function assistantCatalog(opts) {
-    return catalog(opts).map(function (item) {
-      return {
-        id: item.id,
-        title: item.title,
-        purpose: item.purpose,
-        command: item.command,
-        available: item.available,
-        status: item.status,
-        recommended: item.recommended,
-        blocked_reason: item.reason
-      };
-    });
-  }
-
-  function attributes(actionId, opts) {
-    const item = evaluate(actionId, opts);
-    return {
-      disabled: !item.available,
-      title: item.available ? item.purpose : item.reason,
-      'aria-disabled': item.available ? 'false' : 'true'
-    };
-  }
-
   function resolveCommand(text) {
     const raw = String(text || '').trim();
     const lower = raw.toLowerCase();
@@ -166,7 +142,6 @@
   LF.ActionCapabilities = {
     evaluate: evaluate,
     catalog: catalog,
-    assistantCatalog: assistantCatalog,
     params: function (actionId, explicitParams) {
       const definition = effective(actionId);
       return definition
@@ -178,6 +153,5 @@
       return definition ? command(definition) : '/action ' + actionId;
     },
     resolveCommand: resolveCommand,
-    attributes: attributes
   };
 }());

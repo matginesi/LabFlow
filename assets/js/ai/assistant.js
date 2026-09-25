@@ -384,8 +384,7 @@ if(LF.Structures){
 function clearMemory(){if(LF.AssistantCore&&LF.AssistantCore.clearMemory)LF.AssistantCore.clearMemory();}
 LF.Assistant={render:render,bind:bind,sendChat:sendChat,runAction:runAction,addActionMessage:addActionMessage,
 deterministicAnswer:deterministicAnswer,clearMemory:clearMemory,
-plan:function(exp,text){return LF.AssistantCore&&LF.AssistantCore.initialPlan?LF.AssistantCore.initialPlan(exp,text):null;},
-isActive:function(){return!!active;},cancel:cancel};
+cancel:cancel};
 // Session memory follows the session lifecycle, not the persisted experiment snapshot.
 if(LF.State&&LF.State.subscribe)LF.State.subscribe(function(reason){if(reason==='reset')clearMemory();});
 }());

@@ -15,15 +15,17 @@ LabFlow keeps one compact scientific UI language. Feature pages compose shared p
 Upload & Review → Results → Design → Export
 ```
 
-Cabinet, Knowledge Base, Settings, Logs, Documentation and UI Kit support that workflow.
+Cabinet, Documentation and Settings are routes; Knowledge Base, Logs/Diagnostics and UI Kit are Settings sections that support the workflow.
 
 ## Ownership
 
 - `assets/css/tokens.css`: design/density tokens
 - `assets/css/ui.css`: shared controls, panels, tables, badges and Totem shell
-- `assets/css/components.css`: compact runtime metrics, Results insight cards and Design completion primitives shared by production and UI Kit
+- `assets/css/components.css`: Action Totem runtime metrics, Results insight cards, Design completion primitives and Browser model cards shared by production and UI Kit
 - `assets/css/app.css`: application/page composition
 - `assets/js/pages/ui-kit-inline.js` and `.agent/skills/labflow-ui/SKILL.md`: implementation examples/rules
+
+The Totem hosts, Assistant token overrides and structured-output styles live in `ui.css`/`app.css` by shell ownership; that is the deliberate exception where composition styling sits next to the surface that renders it.
 
 ## Action Totem
 
@@ -53,9 +55,9 @@ Calculated statistics and deterministic Action output must be labelled as calcul
 
 ## Assistant
 
-Assistant is a local themed surface. Its menus, badges, notices, Markdown, code and structured output use Assistant tokens. `LOCAL · 0 tokens` means no provider was used; `LOCAL · LLM router` means a tiny language-agnostic routing call selected a deterministic LabFlow answer; `LLM` means an answer-generation request was also used. The Assistant never opens the Action Totem.
+Assistant is a local themed surface. Its menus, badges, notices, Markdown, code and structured output use Assistant tokens. `LOCAL · 0 tokens` means no provider was used; `LOCAL · LLM router` means a tiny language-agnostic routing call selected a deterministic LabFlow answer; `LLM` means an answer-generation request was also used. Normal Assistant turns never open the Action Totem; explicit Assistant Actions do.
 
-The Assistant starts closed in the initial markup, so a fresh session never flashes an open panel. It reopens only when the researcher left it open in the previous browser session (`labflow.ui.settings.assistantOpen`), and only on wide viewports.
+The Assistant starts closed in the initial markup, so a fresh session never flashes an open panel. It reopens only when the researcher left it open in the previous browser session (`localStorage['labflow.ui.settings'].assistantOpen`), and only on wide viewports.
 
 ## Cabinet
 
@@ -63,7 +65,7 @@ Keep one searchable reusable-resource shelf and one focused editor. Mental model
 
 ## Responsive behavior
 
-Pages reflow locally. Tables/charts may use contained scrolling when scientifically necessary; the whole page should not become a horizontally scrolling desktop canvas. Assistant becomes a dedicated mobile surface.
+Pages reflow locally. Tables/charts may use contained scrolling when scientifically necessary; the whole page should not become a horizontally scrolling desktop canvas. The shell collapses at 1100 px; the Assistant is a right drawer up to 1100 px and a full-screen surface at 700 px and below. Two-pane pages use `@container` rules (1100/820/760/700/480/430 px) keyed to the real workspace width.
 
 ## Verification
 

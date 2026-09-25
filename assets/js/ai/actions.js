@@ -10,7 +10,6 @@ function expOf(){return LF.State&&LF.State.state&&LF.State.state.experiment||nul
 function effective(id){return LF.Storage&&LF.Storage.getEffectiveAction?LF.Storage.getEffectiveAction(id):(LF.ActionRegistry&&LF.ActionRegistry.action?LF.ActionRegistry.action(id):null);}
 function stepsOf(def){return def&&def.execution&&Array.isArray(def.execution.steps)?def.execution.steps:[];}
 function modeOf(def){return String(def&&def.execution&&def.execution.mode||'').toLowerCase();}
-function usesAi(def){return stepsOf(def).some(function(s){return s.type==='AI';});}
 function cancel(){if(!controller||controller.signal.aborted)return false;controller.abort();return true;}
 function actionError(code,message){const e=new Error(message);e.code=code;return e;}
 function cancelError(){const e=actionError('ACTION_ABORTED','Action stopped by the user.');e.cancelled=true;return e;}
@@ -484,5 +483,5 @@ if(LF.Structures){
     }
   });
 }
-LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},failed:function(){return failedRun;},effective:effective,usesAi:usesAi,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,budgetFor:budgetFor,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
+LF.ActionRunner={run:run,retry:retry,cancel:cancel,isRunning:function(){return running;},effective:effective,autoRetryDelays:AUTO_RETRY_DELAYS.slice(),tokenProfile:tokenProfile,budgetFor:budgetFor,retryable:retryable,reasoningHeadroom:reasoningHeadroom};
 }());

@@ -4,12 +4,16 @@ This file is the shortest enforceable guide for humans and coding agents changin
 
 Read before structural changes:
 
-1. `docs/ARCHITECTURE.md`
-2. `docs/specs/DATA_MODEL.md`
-3. `docs/specs/PIPELINE.md`
-4. `docs/specs/ACTIONS.md`
-5. `docs/guides/EXTENDING_LABFLOW.md`
-7. the feature-specific tests and documentation
+1. `docs/agents/README.md` — how agents work here (orientation, rules, verification loop)
+2. `docs/agents/DATA_FLOW.md` — end-to-end data flow and module ownership
+3. `docs/agents/UI_MAP.md` — shell, routes, rendering model and page map
+4. `docs/ARCHITECTURE.md`
+5. `docs/specs/DATA_MODEL.md`
+6. `docs/specs/PIPELINE.md`
+7. `docs/specs/ACTIONS.md`
+8. `docs/guides/EXTENDING_LABFLOW.md`
+9. `.agent/skills/labflow-ui/SKILL.md` for UI work
+10. the feature-specific tests and documentation
 
 ## Non-negotiable invariants
 

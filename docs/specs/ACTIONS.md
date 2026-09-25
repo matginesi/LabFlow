@@ -9,7 +9,7 @@ order: 20
 
 An Action is the unit of explicit LabFlow behavior. It is **not** synonymous with an AI request.
 
-## Current public Actions
+## Current Actions
 
 | Action | Purpose | Mode |
 |---|---|---|
@@ -18,20 +18,21 @@ An Action is the unit of explicit LabFlow behavior. It is **not** synonymous wit
 | `export.prepare` | reuse safe existing values for missing export metadata | deterministic |
 | `dataset.resolve-ambiguities` | propose resolutions for unresolved semantic findings | hybrid |
 | `design.infer` | complete unresolved Design domains | hybrid |
-| `assistant.chat` | answer routed interpretive/read-only questions | provider-backed bounded answer step; factual routed answers stay outside the Action |
+| `assistant.chat` | answer routed interpretive questions | ai; internal visibility (read-only effect); factual routed answers stay outside the Action |
 
-The generated runtime matrix is the authority for current guards, steps and numeric budgets.
+The generated runtime matrix is the authority for current guards, steps and numeric budgets. Only public Actions appear in the researcher-facing catalog; `assistant.chat` is internal and is invoked by the Assistant runtime.
 
 ## Manifest responsibility
 
 `actions/<id>/action.json` declares:
 
-- id/title/visibility/UI command;
-- execution mode and ordered steps;
-- guards/prerequisites;
-- allowed writes/effect boundary;
-- input/output contract;
-- provider budget only when an AI step exists.
+- `id`, `title`, `category`, `role`, `visibility`, `purpose`, `strategy`;
+- `contract`: `target`, `context`, `result`, `effect` (`mode` and `writes`), `guards`;
+- `execution`: `mode`, `result_step`, ordered `steps`;
+- UI metadata (`command`, `routes`, `bindings`) where the Action is researcher-facing;
+- provider budget fields on an AI step only (`max_input_tokens`, `target_output_tokens`, `max_output_tokens`, `max_retries`, `timeout_ms`, `deadline_ms`).
+
+The Action contract validator enforces this surface; an incomplete manifest fails the release gate.
 
 Contracts remain application-side and are not copied wholesale into prompts.
 
@@ -57,7 +58,7 @@ A hybrid Action performs deterministic resolution before any model request. The 
 
 ## Failure policy
 
-Current provider-backed scientific Actions do not use automatic semantic retry loops. Validation/truncation/provider failure is surfaced. Retry is an explicit workflow decision where the UI/runtime permits it.
+Provider-backed scientific Actions do not use automatic semantic retry loops. One bounded exception exists: a model response truncated by the output budget (`MODEL_OUTPUT_TRUNCATED`) is retried once by the runner with the same request, because a truncated answer is a transport-level limit rather than a semantic failure. Every other validation/provider failure is surfaced, and further retry is an explicit workflow decision.
 
 ## Writes and provenance
 

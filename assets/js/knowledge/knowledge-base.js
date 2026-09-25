@@ -127,7 +127,6 @@ function compactForAssistant(entry){return{id:entry.id,kind:entry.kind,title:ent
   design_hint:entry.design_hint?clone(entry.design_hint):null,sources:(entry.sources||[]).slice(0,2).map(compactSource)};}
 function compactForDesign(entry){return{id:entry.id,kind:entry.kind,title:entry.title,aliases:(entry.aliases||[]).slice(0,4),
   tags:(entry.tags||[]).slice(0,6),design_hint:entry.design_hint?clone(entry.design_hint):null};}
-function compactForAI(entry){return compactForAssistant(entry);}
 function context(query,opts){const entries=search(query,opts).map(compactForAssistant);
   return{entries:entries,note:'Reference knowledge only. It is not evidence that the current experiment used or exhibited these materials, architectures, processes or causes.',
   citation_contract:'When an answer relies on an entry, cite its exact id as [KB:<id>] immediately after the supported claim.'};}
@@ -224,8 +223,8 @@ if(LF.Structures){
   },{entries:[],note:'',citation_contract:''},{required:['entries','note','citation_contract']});
 }
 LF.KnowledgeBase={
-  kinds:function(){return clone(KINDS);},statuses:function(){return clone(STATUSES);},all:all,get:get,save:save,remove:remove,duplicate:duplicate,resetCustom:resetCustom,
-  validate:function(e,forUse){return issues(e,forUse);},search:search,context:context,designContext:designContext,compactForAI:compactForAI,compactForAssistant:compactForAssistant,compactForDesign:compactForDesign,referenceIds:referenceIds,referencesFromText:referencesFromText,
+  kinds:function(){return clone(KINDS);},all:all,get:get,save:save,remove:remove,duplicate:duplicate,resetCustom:resetCustom,
+  validate:function(e,forUse){return issues(e,forUse);},search:search,context:context,designContext:designContext,compactForAssistant:compactForAssistant,compactForDesign:compactForDesign,referenceIds:referenceIds,referencesFromText:referencesFromText,
   sourceHref:sourceHref,sourceLines:sourceLines,parseSourceLines:parseSourceLines,stats:stats,toJsonl:toJsonl,parseJsonl:parseJsonl,exportJsonl:exportJsonl,importJsonl:importJsonl,
   openJsonlFile:openJsonlFile,saveJsonlFile:saveJsonlFile,normalize:normalize,limits:function(){return clone(MAX);}
 };

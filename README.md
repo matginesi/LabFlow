@@ -63,7 +63,7 @@ Actions remain the typed application boundary. Their JSON contracts are for LabF
 | `export.prepare` | deterministic | none |
 | `dataset.resolve-ambiguities` | hybrid | only unresolved semantic findings |
 | `design.infer` | hybrid | only domains unresolved after evidence/Cabinet/KB |
-| `assistant.chat` | read-only | only when a deterministic Assistant fast-path cannot answer |
+| `assistant.chat` | ai (read-only effect) | only when a deterministic Assistant fast-path cannot answer |
 
 Deterministic Actions still use the normal Action lifecycle so status, logging, UI and provenance remain consistent.
 
@@ -77,7 +77,7 @@ LabFlow is designed so a small model does not need to understand the whole appli
 - Design resolves references before creating any model work unit;
 - a Design run creates zero model work when all pending domains are covered;
 - ambiguity resolution sends only active ambiguous findings plus linked evidence;
-- no automatic semantic retry loops are used;
+- truncated model output is retried once by the Action runner; no semantic retry loop is used;
 - model output is validated deterministically before it can become a proposal.
 
 This keeps the provider boundary usable with roughly 350–600M-class models. The default Browser Local provider uses one GGUF model through wllama, prefers WebGPU when it passes runtime checks, and falls back to WASM CPU on the same cached model. No ONNX or second model copy is required.
@@ -92,9 +92,9 @@ Explicit Assistant commands such as `/summary`, `/missing`, `/best` and related 
 - interpretive/scientific routes receive one bounded answer request containing only current scope, focused facts, optional task-relevant references and at most one previous turn when the router marks the question as a follow-up;
 - requests that cannot be resolved safely become a clarification rather than an invented answer.
 
-Assistant messages are labelled **LOCAL · 0 tokens**, **LOCAL · LLM router** or **LLM** so the execution path is visible. The Assistant never opens the Action Totem: transient chat state stays inline and provider telemetry lives under that message's **Details**. The Action Totem is reserved for explicit researcher Actions.
+Assistant messages are labelled **LOCAL · 0 tokens**, **LOCAL · LLM router** or **LLM** so the execution path is visible. Normal Assistant turns never open the Action Totem: transient chat state stays inline and provider telemetry lives under that message's **Details**. Explicit Assistant Actions do open the Action Totem, which stays reserved for explicit Actions.
 
-The answer step keeps a 2000-token input ceiling, but normal small-model turns target much less. Context compaction preserves the current question, scope and focused facts before optional references or follow-up context. Knowledge Base entries are retrieved only when the router explicitly marks scientific/background knowledge as useful, and any `[KB:<id>]` citation is validated against the exact ids supplied to the model.
+The answer step keeps a 1400-token input ceiling, but normal small-model turns target much less. Context compaction preserves the current question, scope and focused facts before optional references or follow-up context. Knowledge Base entries are retrieved only when the router explicitly marks scientific/background knowledge as useful, and any `[KB:<id>]` citation is validated against the exact ids supplied to the model.
 
 Assistant reasoning is configurable as **Prefer off / Automatic / Prefer on**. Provider-native reasoning and `<think>`, `<thinking>`, `<analysis>` or `<reasoning>` blocks are separated from the visible answer and exposed only under message **Details**. Prefer off is the default for small/fast models.
 

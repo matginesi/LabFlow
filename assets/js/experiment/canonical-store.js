@@ -97,7 +97,6 @@ return{revision:s.revision||0,files:(records.files||[]).length,experiments:(reco
     x){return n+(x.aliases||[]).length;},0)};}
   function record(exp,id){const idx=index(exp);return idx&&idx.byId.get(String(id))||null;}
   function sample(exp,nameOrId){const idx=index(exp);return record(exp,nameOrId)||(idx&&idx.sampleByAlias.get(norm(nameOrId)))||null;}
-  function related(exp,id,type){const idx=index(exp);const list=idx&&idx.relationsByNode.get(String(id))||[];return type?list.filter(function(r){return r.type===type;}):list.slice();}
   function evidence(exp,opts){opts=opts||{};
 const store=ensure(exp),ids=new Set((opts.record_ids||opts.recordIds||[]).map(String)),
     types=new Set((opts.types||[]).map(String)),terms=(opts.terms||[]).map(norm).filter(Boolean),limit=Math.max(1,
@@ -106,12 +105,5 @@ const store=ensure(exp),ids=new Set((opts.record_ids||opts.recordIds||[]).map(St
     }))return false;if(types.size&&!types.has(ev.type))return false;
     if(terms.length){const hay=norm([ev.fact,ev.summary,ev.source_path].join(' '));
     if(!terms.some(function(t){return hay.indexOf(t)>=0;}))return false;}return true;});return rows.slice(0,limit);}
-  function matchTerms(exp,text,limit){const terms=norm(text).split(' ').filter(function(x){return x.length>=3;
-}),store=ensure(exp),out=[];if(!terms.length)return out;
-    ((store.records&&store.records.samples)||[]).forEach(function(s){
-    const hay=norm([s.name,s.rawName,s.group,(s.aliases||[]).join(' ')].join(' '));
-    if(terms.some(function(t){return hay.indexOf(t)>=0;}))out.push({kind:'sample',id:s.id,name:s.name,group:s.group||''});
-    });return out.slice(0,limit||12);}
-  function domain(exp,name){const s=ensure(exp);if(!s)return null;const map={experiment:s.experiment,source:s.source,records:s.records,scientific:s.scientific,evidence:s.evidence,relations:s.relations,aliases:s.aliases,provenance:s.provenance};return map[name]!==undefined?map[name]:null;}
-  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,record:record,sample:sample,related:related,evidence:evidence,matchTerms:matchTerms,domain:domain,compact:compact};
+  LF.CanonicalStore={build:build,ensure:ensure,summary:summary,record:record,sample:sample,evidence:evidence,compact:compact};
 }());

@@ -135,7 +135,5 @@
   LF.ActionGuards = {
     register: register,
     check: check,
-    ids: function () { return Object.keys(GUARDS).sort(); },
-    definition: function (id) { return GUARDS[id] || null; }
   };
 }());

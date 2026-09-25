@@ -412,8 +412,6 @@ const out=actionBase(exp),p=opts.params||{}
   }
   const PACKERS={chat:packChat,ambiguity:packAmbiguity,design:packDesign,results:packResults,
     results_compare:packResultsCompare,export:packExport};
-  function registerProfile(name,fn){name=clean(name).toLowerCase();if(!name||typeof fn!=='function')throw new Error('Context profile requires name and function.');if(PACKERS[name])throw new Error('Context profile already registered: '+name);PACKERS[name]=fn;return name;}
-  function profiles(){return Object.keys(PACKERS).sort();}
   function pack(profile,opts){opts=opts||{};const exp=opts.exp||expOf();LF.CanonicalStore.ensure(exp);profile=clean(profile||'generic').toLowerCase();if(profile==='assistant')profile='chat';const fn=PACKERS[profile];return fn?fn(exp,opts):budgetPack(actionBase(exp),10000);}
   function profile(def){const declared=def&&def.contract&&def.contract.context&&clean(def.contract.context.profile);return declared||'generic';}
   function compactOutputContract(schemaId){
@@ -463,5 +461,5 @@ const prof=profile(def),assistantMax=def.id==='assistant.chat'?(LF.Storage.getAs
         omitted:known.filter(function(key){return !Object.prototype.hasOwnProperty.call(ctx,key);})});
     }
     return{messageList:[{role:'system',content:sys},{role:'user',content:user}],context:ctx,user:user};}
-  LF.ContextBuilder={pack:pack,profiles:profiles,registerProfile:registerProfile,designReferences:designReferences};LF.ActionContext={build:build};
+  LF.ContextBuilder={pack:pack,designReferences:designReferences};LF.ActionContext={build:build};
 }());

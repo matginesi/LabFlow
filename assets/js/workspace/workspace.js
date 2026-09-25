@@ -257,21 +257,6 @@
     return exp;
   }
 
-  function validate(value) {
-    const w = normalize(value || profile), issues = [], warnings = [];
-    if (!w.name) issues.push('Workspace name is required.');
-    if (!w.institution) warnings.push('Institution is not defined.');
-    const dataResponsible = w.contacts.find(function (item) { return item.role === 'data_responsible'; });
-    if (!dataResponsible || !dataResponsible.name || !dataResponsible.email) warnings.push('Data responsible contact is incomplete.');
-    w.processes.forEach(function (item) {
-      if (!item.name) issues.push('Every Process requires a name.');
-      if (!item.description) warnings.push('Process "' + (item.name || item.id) + '" has no measurement/characterization description.');
-      if (!item.variables.length) warnings.push('Process "' + (item.name || item.id) + '" has no controlled variables defined.');
-      if (!item.observables.length) warnings.push('Process "' + (item.name || item.id) + '" has no observables defined.');
-    });
-    return { ok: issues.length === 0, issues: issues, warnings: warnings };
-  }
-
   function snapshot(options) {
     options = options || {};
     const out = current();
@@ -280,19 +265,6 @@
         return { id: contact.id, role: contact.role, institution: contact.institution, notes: contact.notes };
       });
     }
-    return out;
-  }
-
-  function compact() {
-    const out = snapshot({ includeContacts: false });
-    out.locations = out.locations.slice(0, 12);
-    out.storageProfiles = out.storageProfiles.slice(0, 8);
-    out.processes = out.processes.slice(0, 12).map(function (item) {
-      return Object.assign({}, item, {
-        variables: item.variables.slice(0, 24),
-        observables: item.observables.slice(0, 24)
-      });
-    });
     return out;
   }
 
@@ -364,10 +336,10 @@
   LF.Workspace = {
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
     experimentSchemaVersion: EXPERIMENT_SCHEMA_VERSION,
-    current: current, save: save, reset: reset, normalize: normalize, validate: validate,
+    current: current, save: save, reset: reset, normalize: normalize,
     process: process, addProcess: addProcess, updateProcess: updateProcess, removeProcess: removeProcess,
     roleContact: roleContact, setRoleContact: setRoleContact, setLocationsFromNames: setLocationsFromNames,
-    setPrimaryStorage: setPrimaryStorage, bindExperiment: bindExperiment, snapshot: snapshot, compact: compact,
+    setPrimaryStorage: setPrimaryStorage, bindExperiment: bindExperiment, snapshot: snapshot,
     readyPvSummary: readyPvSummary, parseQuantityLines: parseQuantityLines, quantityLines: quantityLines
   };
 

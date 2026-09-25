@@ -15,7 +15,7 @@ Tools are implementation capabilities. They exist to make execution boundaries e
 
 ## Action-step tools
 
-Current Action manifests use deterministic steps such as collecting ambiguities, validating comparison/design coverage, and storing proposals/annotations. Their exact IDs are implementation detail discoverable from the registry/manifests.
+Current Action manifests use deterministic steps such as collecting ambiguities, validating Design coverage, and storing proposals/annotations. Their exact IDs are implementation detail discoverable from the registry/manifests.
 
 The important rule is ownership: a write step stores through the relevant owner (`ActionData`, Design apply service, correction service) rather than assigning arbitrary state.
 

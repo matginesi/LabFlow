@@ -1,6 +1,7 @@
 /*
- * Deterministic completeness and quality analysis over Design state.
- * Boundary: Remain read-only; Design mutation belongs to DesignModel.
+ * Deterministic Design completeness analysis plus proposal sanitization, provenance confidence and
+ * the reviewed apply/accept paths.
+ * Boundary: Design state is only mutated through DesignModel; analysis and field decisions stay deterministic.
  */
 (function () {
   'use strict';

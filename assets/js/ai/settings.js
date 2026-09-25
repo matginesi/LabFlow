@@ -423,5 +423,5 @@ message:(summary&&summary.category)||'Connection check failed',
   }
 
   if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('labflow:browser-local-state',decorateBrowserLocal);
-  LF.AISettings = {decorate:decorate, decorateBrowserLocal:decorateBrowserLocal, saveFromForm:saveFromForm, selectProvider:selectProvider, detectModel:detectModel, testConnection:testConnection, syncModelControls:syncModelControls};
+  LF.AISettings = {decorate:decorate, saveFromForm:saveFromForm, selectProvider:selectProvider, detectModel:detectModel, testConnection:testConnection, syncModelControls:syncModelControls};
 }());

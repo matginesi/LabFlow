@@ -8,7 +8,7 @@
   const LF = window.LabFlow = window.LabFlow || {};
   const TEMPLATE = `<div class="page ui-kit-layout">
           <header class="page-head ui-kit-section" id="principles" data-ui-kit-group="core">
-            <div><h1 class="h1">UI Kit</h1><div class="meta">Executable visual ground truth for the complete LabFlow scientific workbench.</div></div><div class="spacer"></div><div class="toolbar"><span class="badge success">Ground truth</span><span class="meta mono">0.0.36</span></div>
+            <div><h1 class="h1">UI Kit</h1><div class="meta">Executable visual ground truth for the complete LabFlow scientific workbench.</div></div><div class="spacer"></div><div class="toolbar"><span class="badge success">Ground truth</span><span class="meta mono">Current build</span></div>
           </header>
           <dl class="ui-kit-facts ui-kit-section" data-ui-kit-group="core"><div><dt>Visual character</dt><dd>Scientific instrument</dd></div><div><dt>Themes</dt><dd>Instrument + Light</dd></div><div><dt>Shell breakpoint</dt><dd>1100 px</dd></div><div><dt>Runtime</dt><dd>file:// safe</dd></div></dl>
 

@@ -53,7 +53,6 @@ function describe(kind){return RECORDS[String(kind||'')]||null;}
 function kinds(){return Object.keys(RECORDS);}
 function registerRoot(key,meta){ROOT[key]=Object.assign({owner:'domain',layer:'working',persistence:'persistent',description:''},meta||{});}
 function rootFields(){return Object.keys(ROOT).map(function(key){return Object.assign({key:key},ROOT[key]);});}
-function rootField(key){return ROOT[key]||null;}
 function persistentKeys(){return Object.keys(ROOT).filter(function(key){return ROOT[key].persistence!=='runtime';});}
 function rootForRecordKind(kind){const key=Object.keys(ROOT).find(function(k){return ROOT[k]&&ROOT[k].recordKind===kind;});return key?Object.assign({key:key},ROOT[key]):null;}
 function contract(){return{records:kinds().map(function(kind){const spec=RECORDS[kind];return{kind:kind,label:spec.label||kind,description:spec.description||'',required:(spec.required||[]).slice(),relations:Object.assign({},spec.relations||{})};}),roots:rootFields(),scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};}
@@ -357,5 +356,5 @@ function registerStructureDefinitions(){
 }
 registerStructureDefinitions();
 
-LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootField:rootField,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,values:VALUES,scopes:['dataset','analysis','design','metadata','ai','nomad','validation']};
+LF.DomainSchema={registerRecord:registerRecord,create:create,normalize:normalize,describe:describe,kinds:kinds,rootFields:rootFields,rootForRecordKind:rootForRecordKind,persistentKeys:persistentKeys,createRoot:createRoot,normalizeRoot:normalizeRoot,snapshot:snapshot,contract:contract,values:VALUES};
 }());

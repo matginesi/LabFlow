@@ -25,7 +25,7 @@ Do not increase context just because a provider supports a larger window. A larg
 
 ## No automatic semantic retry loops
 
-Current provider-backed scientific Actions use zero semantic retries. If the output is invalid/truncated, the failure is surfaced rather than repeatedly spending tokens trying to repair an uncertain answer.
+Provider-backed scientific Actions use zero *semantic* retries. One bounded exception exists: a response truncated by the output budget (`MODEL_OUTPUT_TRUNCATED`) is retried once with the same request, because the model was cut off rather than wrong. Any other invalid output is surfaced instead of repeatedly spending tokens trying to repair an uncertain answer.
 
 Transport-level behavior may still follow provider protocol where appropriate, but LabFlow must not create uncontrolled request loops.
 

@@ -323,5 +323,5 @@ if(id==='design.infer'){const deviceId=String(opts.params&&opts.params.deviceId|
 }
 
 function bind(){document.addEventListener('click',function(e){const b=e.target.closest('button[data-action]')||e.target.closest('button[data-action-sequence]');if(!b)return;e.preventDefault();e.stopPropagation();if(b.dataset.actionSequence){runSequence(b.dataset.actionSequence);return;}run(b.dataset.action,'',{params:params(b)});});}
-LF.ActionUI={run:run,runSequence:runSequence,bind:bind,isActive:function(){return!!(active||sequenceRunning);},params:params,publishActionResult:publishActionResult,publishActionFailure:publishActionFailure,publishActionUnavailable:publishActionUnavailable,weighted:weighted,streamFraction:streamFraction,actionProgress:actionProgress};
+LF.ActionUI={run:run,runSequence:runSequence,bind:bind,publishActionResult:publishActionResult,streamFraction:streamFraction,actionProgress:actionProgress};
 }());
