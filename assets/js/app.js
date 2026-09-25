@@ -545,6 +545,21 @@ const mobile=!!(window.matchMedia&&window.matchMedia('(max-width:1100px)').match
   function bindEvents(){
     Log.debug('events.bind.start');
     document.addEventListener('click',function(e){const b=e.target&&e.target.closest?e.target.closest('button'):null;if(b&&!b.hasAttribute('type'))e.preventDefault();},true);
+    // Drag and drop the experiment ZIP onto the upload start card; the explicit button stays the accessible path.
+    const datasetDropTarget=function(node){return node&&node.closest?node.closest('[data-dataset-drop]'):null;};
+    const dragHasFiles=function(e){const types=e.dataTransfer&&e.dataTransfer.types;
+      return !!types&&Array.from(types).indexOf('Files')>=0;};
+    document.addEventListener('dragover',function(e){const zone=datasetDropTarget(e.target);
+      if(!zone||!dragHasFiles(e))return;e.preventDefault();if(e.dataTransfer)e.dataTransfer.dropEffect='copy';
+      zone.classList.add('is-drop-target');});
+    document.addEventListener('dragleave',function(e){const zone=datasetDropTarget(e.target);if(!zone)return;
+      if(e.relatedTarget&&zone.contains(e.relatedTarget))return;zone.classList.remove('is-drop-target');});
+    document.addEventListener('drop',function(e){const zone=datasetDropTarget(e.target),files=e.dataTransfer&&e.dataTransfer.files;
+      if(!zone){if(files&&files.length)e.preventDefault();return;}
+      e.preventDefault();zone.classList.remove('is-drop-target');const file=files&&files[0];if(!file)return;
+      if(!/\.zip$/i.test(String(file.name||''))&&file.type!=='application/zip'){
+        LF.UI.message('Drop the experiment ZIP archive (.zip) to import it.','warning');return;}
+      importDataset(file);});
     document.addEventListener('click',async function(e){
       try {
         const route=e.target.closest('[data-route]');
@@ -575,6 +590,7 @@ if(chartExport){const format=chartExport.dataset.chartExport,id=chartExport.data
         const chartCsv=e.target.closest('[data-chart-csv]');if(chartCsv){const kind=chartCsv.dataset.chartCsv,base=C.safeName(S.state.experiment&&S.state.experiment.meta&&S.state.experiment.meta.name||'labflow')+'_'+C.safeName(kind||'chart');LF.ResultsPage.exportChartCsv(kind,base+'.csv');return;}
         const copyDoc=e.target.closest('[data-copy-doc]');if(copyDoc){const ok=C.copyText(LF.DocsPage.markdownFor(copyDoc.dataset.copyDoc));LF.UI.message(ok?'Markdown copied.':'Could not copy Markdown.',ok?'success':'warning');return;}
         if(e.target.closest('[data-open-dataset]')){document.getElementById('datasetInput').click();return;}
+        if(e.target.closest('[data-dataset-drop]')){document.getElementById('datasetInput').click();return;}
         if(e.target.closest('[data-retry-page]')){render();return;}
         if(e.target.closest('[data-rebuild-derived]')){try{
 if(!hasExperiment())throw new Error('No experiment is loaded.');

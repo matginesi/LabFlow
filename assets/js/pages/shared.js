@@ -64,12 +64,13 @@
 
   function needExperiment() {
     return '<section class="page start-page upload-start-page">'+workflowHead('Upload experiment','Choose the experiment ZIP to begin.')+
-      '<section class="panel upload-start-card"><div class="upload-start-main"><div class="upload-source-mark" ' +
+      '<section class="panel upload-start-card"><div class="upload-start-main" data-dataset-drop><div class="upload-source-mark" ' +
         'aria-hidden="true"><span>LAB</span><strong>ZIP</strong></div><div class="upload-copy"><span class="eyebrow">' +
         'Experiment source</span><h2>Choose your experiment ZIP</h2><p>LabFlow will import the data and show anything ' +
         'that needs your attention before analysis.</p><div class="row-wrap"><button type="button" class="button primary ' +
         'upload-primary" data-open-dataset>Choose ZIP file</button><span class="upload-simple-note"><span data-icon="check" ' +
-        'aria-hidden="true"></span> Your original file stays unchanged.</span></div></div></div><details ' +
+        'aria-hidden="true"></span> Your original file stays unchanged.</span></div><p class="upload-drop-hint"><span ' +
+        'data-icon="upload" aria-hidden="true"></span> or drag and drop the ZIP file onto this card</p></div></div><details ' +
         'class="upload-start-details"><summary>What happens next?</summary><div class="upload-next-steps"><div><strong>' +
         '1</strong><span>Import the experiment</span></div><div><strong>2</strong><span>Review anything unusual</span>' +
         '</div><div><strong>3</strong><span>Explore Results</span></div></div></details></section></section>';

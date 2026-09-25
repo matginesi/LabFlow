@@ -11,7 +11,7 @@ The normal workflow is intentionally short. A researcher should not need to unde
 
 ## Shortest workflow
 
-1. Open **Upload & Review** and select the laboratory ZIP.
+1. Open **Upload & Review** and select the laboratory ZIP with **Choose ZIP file** or by dragging it onto the upload card.
 2. Let LabFlow preserve RAW evidence, normalize names, rebuild the hierarchy and calculate deterministic analysis.
 3. Review any mechanically safe correction that is still pending; LabFlow Data changes only after explicit acceptance.
 4. If **Scientific decisions** is clear, continue directly to **Results**.

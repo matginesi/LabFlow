@@ -36,8 +36,15 @@ async function main(){
   const empty=LF.PageShell.needExperiment();
   ok(empty.includes('Upload &amp; Review')||empty.includes('Upload & Review'),'first step is Upload & Review');
   ok(empty.includes('Choose ZIP file'),'upload remains the entry gate');
+  ok(empty.includes('data-dataset-drop'),'upload card is a drag and drop target');
+  ok(empty.includes('upload-drop-hint')&&empty.includes('drag and drop'),'drop affordance is explained in the UI language');
+  ok(empty.includes('data-open-dataset'),'explicit Choose ZIP file button remains');
   ok(count(LF.PageShell.experimentStepper(),'class="step ' )===4,'workflow has four steps');
-  const appSource=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),feedbackSource=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8');
+  const appSource=fs.readFileSync(path.join(root,'assets/js/app.js'),'utf8'),feedbackSource=fs.readFileSync(path.join(root,'assets/js/ui/feedback.js'),'utf8'),appCss=fs.readFileSync(path.join(root,'assets/css/app.css'),'utf8');
+  ok(appSource.includes('datasetDropTarget')&&appSource.includes('dragHasFiles'),'drag and drop handlers exist');
+  ok(appSource.includes("e.dataTransfer.dropEffect='copy'"),'drag over marks the drop target');
+  ok(appSource.includes('zone.classList.add(\'is-drop-target\')')&&appCss.includes('.upload-start-main.is-drop-target'),'drop hover state is owned by the shared stylesheet');
+  ok(appSource.includes('importDataset(file)'),'dropped ZIP goes through the same import path');
   ok(appSource.includes('await LF.Storage.loadExperiment()'),'startup restores a persisted LabFlow Data when present');
   ok(appSource.includes("persistWorkspace('pagehide')"),'workspace is persisted when the app is closed/backgrounded');
   ok(appSource.includes('LF.Storage.clearSavedExperiment'),'Reset remains the explicit persisted-session clear boundary');
